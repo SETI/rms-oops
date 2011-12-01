@@ -1,0 +1,163 @@
+## Load the SPICE toolkit...
+from cspice import *
+
+## Furnish some kernels
+furnsh("kernels/naif0009.tls")
+furnsh("kernels/pck00008.tpc")
+furnsh("kernels/cas00112.tsc")
+furnsh("kernels/de421.bsp")
+furnsh("kernels/cas_v39.tf")
+furnsh("kernels/cas_iss_v10.ti")
+furnsh("kernels/070209AP_SCPSE_06356_08222.bsp")
+furnsh("kernels/07362_08002ra.bc")
+furnsh("kernels/cas_status_v04.tf")
+furnsh("kernels/cpck08Jul2009.tpc")
+furnsh("kernels/cas_status_v04.tf")
+
+## Test some basic time operations...
+utc2et("2009 july 18 11:38")
+# 301189146.18362463
+et = _
+
+tpictr("Saturday, July 18 2009/11:36 am")
+# 'Weekday, DD Month YYYY/AP:MN ampm'
+picture = _
+
+timout(et,picture)
+# 'Saturday, 18 July 2009/11:38 a.m.'
+timout(0,picture)
+# 'Saturday, 01 January 2000/11:58 a.m.'
+
+## Test some routines to convert between names and SPICE ids
+bodn2c("cassini")
+# -82
+cassini_id = _
+
+bodc2n(699)
+# 'SATURN'
+
+bodn2c("whatever")
+# Traceback (most recent call last):
+#  File "<stdin>", line 2, in <module>
+#  File "cspice.py", line 78, in bodn2c
+#    return _cspice.bodn2c(*args)
+# KeyError: 'Keyword lookup failure in bodn2c'
+
+boddef("whatever",-222)
+bodn2c("whatever")
+# -222
+
+bodfnd(699,"radii")
+# False
+
+bodvcd(699,"RADII")
+# array([ 60268.,  60268.,  54364.])
+
+bodvrd("SATURN","RADII")
+# array([ 60268.,  60268.,  54364.])
+
+bodn2c("cassini_iss_nac")
+# -82360
+nac_id = _
+
+wac_id = bodn2c("cassini_iss_wac")
+wac_id
+# -82361
+
+## Conversions to/from the Cassini spacecraft clock counts
+et = utc2et("2008-01-01")
+
+sce2c(cassini_id,et)
+# 226205426920.37192
+scdecd(cassini_id,_)
+# '1/1577838967.232'
+scencd(-82,_)
+# 226205426920.0
+sce2s(-82,et)
+# '1/1577838967.232'
+et2utc(sct2e(cassini_id, sce2c(cassini_id,et)), "ISOC", 3)
+# '2008-01-01T00:00:00.000'
+et2utc(scs2e(-82, '1/1577838967.232'), "D", 3)
+# '2007-365 // 23:59:59.999''
+
+## Coordinate transformations between the Saturn frame and the camera frame
+pxform("CASSINI_ISS_NAC","IAU_SATURN",et)
+# array([[ -9.64672467e-01,  -1.42826269e-01,  -2.21376802e-01],
+#        [ -2.63450676e-01,   5.25783166e-01,   8.08792807e-01],
+#        [  8.79336725e-04,   8.38542020e-01,  -5.44836221e-01]])
+nac_to_saturn = _
+
+nac_to_cassini = pxform("CASSINI_ISS_NAC","CASSINI_SC_COORD",et)
+cassini_to_j2000 = pxform("CASSINI_SC_COORD","J2000",et)
+j2000_to_saturn2 = pxform("j2000","IAU_SATURN",et)
+
+nac_to_j2000 = mxm(cassini_to_j2000, nac_to_cassini)
+nac_to_saturn2 = mxm(j2000_to_saturn2, nac_to_j2000)
+nac_to_saturn2
+# array([[ -9.64672467e-01,  -1.42826269e-01,  -2.21376802e-01],
+#        [ -2.63450676e-01,   5.25783166e-01,   8.08792807e-01],
+#        [  8.79336725e-04,   8.38542020e-01,  -5.44836221e-01]])
+
+## Note that operations can be nested
+mxm(j2000_to_saturn2, mxm(cassini_to_j2000, nac_to_cassini) )
+# array([[ -9.64672467e-01,  -1.42826269e-01,  -2.21376802e-01],
+#        [ -2.63450676e-01,   5.25783166e-01,   8.08792807e-01],
+#        [  8.79336725e-04,   8.38542020e-01,  -5.44836221e-01]])
+
+## A rotation matrix has the property that its inverse is its transpose
+mtxm(nac_to_saturn, nac_to_saturn2)
+# array([[  1.00000000e+00,  -1.03866568e-16,   2.37277645e-16],
+#        [ -1.03866568e-16,   1.00000000e+00,   5.55111512e-17],
+#        [  2.37277645e-16,   5.55111512e-17,   1.00000000e+00]])
+
+## Note that we have only loaded a single C kernel above:
+## furnsh("kernels/07362_08002ra.bc")
+## This only spans a few days, from teh 362nd day of 2007 to the 2nd day of
+## 2008. We will need to gather a large collection of C kernels and just load
+## the ones we need at any given time.
+
+## One way to get the apparent position of Saturn as seen from Cassini
+spkezr("SATURN", et, "IAU_SATURN", "LT+S", "CASSINI")
+#[array([ -2.15174300e+05,   1.31041952e+06,  -8.55238802e+05,
+#         2.12766671e+02,   3.17115546e+01,   1.01486816e+00]),
+#  5.2687636214886044]
+result = _
+pos = result[0][0:3]
+vel = result[0][3:6]
+lt = result[1]
+
+## The z-axis of the NAC frame is the middle of the camera's field of view
+los = mxv(nac_to_saturn, [0,0,1])
+los
+# array([-0.2213768 ,  0.80879281, -0.54483622])
+
+## Find the point where the line of sight intersects the ring plane in the
+## IAU_SATURN frame. We work with Cassini at the origin.
+##
+## Line of sight = a * los[z] = pos[z
+## a = pos[z]/los[z]
+##
+## ringpt_from_cassini = a * los
+##
+## ringpt_from_saturn = a * los - pos
+
+ringpt = pos[2]/los[2] * los - pos
+ringpt
+# array([-132324.68039789,  -40843.51594634,       0.        ])
+
+## Convert to polar coordinates
+reccyl(ringpt)
+# [138484.7061493138, 3.4409765871834099, 0.0]
+(radius,longitude,z) = _
+radius
+# 138484.7061493138
+longitude
+# 3.4409765871834099
+z
+# 0.0
+
+## Note that IAU_SATURN is a frame rotating with the planet. We will need to
+## modify this procedure to convert to a frame using inertial coordinates.
+
+nac_to_saturn2 = mxm(j2000_to_saturn2, mxm(cassini_to_j2000, nac_to_cassini) )
+

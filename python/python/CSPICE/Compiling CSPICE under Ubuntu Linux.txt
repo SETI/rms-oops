@@ -1,0 +1,23 @@
+From: Robert French <rfrench@rfrench.org>
+Date: June 30, 2010 2:54:02 PM PDT
+To: <mshowalter@seti.org>
+Subject: Compiling CSPICE under Ubuntu Linux
+Reply-To: rfrench@rfrench.org
+
+To link cspice with Python, it must be compiled with the option
+"-fno-stack-protector" to avoid linker errors.  The cspice build
+environment allows this by saying:
+
+TKCOMPILEOPTIONS = "-c -ansi -DNON_UNIX_STDIO -fno-stack-protector"
+export TKCOMPILEOPTIONS
+./makeall.csh
+
+In addition, the Python cspice link line needs to be changed from the Mac
+version:
+
+Delete -bundle
+Delete -flat_namespace
+Delete -undefined suppress
+Add -shared
+Add the library libpython2.6.a (or equivalent) with -lpython2.6
+
