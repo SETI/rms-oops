@@ -908,7 +908,7 @@ class test_spicedb(unittest.TestCase):
         # select_kernels()
         ################################
 
-        open_db("test/SPICE.db")
+        open_db("test_data/SPICE.db")
 
         self.assertEqual(select_kernels("LSK")[0].kernel_name, "NAIF0009")
 

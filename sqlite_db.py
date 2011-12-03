@@ -94,7 +94,7 @@ class test_sqlite_db(unittest.TestCase):
         self.assertTrue(CONNECTION is None)
         self.assertTrue(CURSOR is None)
 
-        open("test/SPICE.db")
+        open("test_data/SPICE.db")
 
         self.assertTrue(CONNECTION is not None)
         self.assertTrue(CURSOR is not None)
