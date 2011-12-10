@@ -77,20 +77,102 @@ def mtxv(m,v):
     """mtxv(m,v) = transpose (inverse) of matrix m times 3-vector v."""
     return np.sum(np.asfarray(m) * np.asfarray(v)[..., np.newaxis], axis=-2)
 
+# The standard numpy method for multiplying matrices uses the dot() function,
+# but does not generalize to the case of multiplying arrays of 3x3 matrices,
+# incorporating the rules of broadcasting.
+
+# The matrix multiply functions below are written in a way that uses tricky
+# indexing to avoid loops, which would slow down the operation substantially.
+# The first case below is written out in explicit detail. The others are just
+# variations that involve alternative  index orders to transpose either or both
+# of the matrices prior to the multiplication.
+
 # Element ordering needed below for matrix multiplies
 _ORDER1 = [0]*9 + [1]*9 + [2]*9
 _ORDER2 = [0,1,2]*9
 _ORDER3 = [0,0,0,1,1,1,2,2,2]*3
 
+# _ORDER1 = [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2]
+# _ORDER2 = [0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2]
+# _ORDER3 = [0,0,0,1,1,1,2,2,2,0,0,0,1,1,1,2,2,2,0,0,0,1,1,1,2,2,2]
+
 def mxm(m1,m2):
     """mxm(m1,m2) = matrix m1 times matrix m2."""
 
     # Duplicate the final 3x3 elements, reorder and pair-wise multiply
+
     prods = (np.asfarray(m1)[..., _ORDER1, _ORDER2] *
              np.asfarray(m2)[..., _ORDER2, _ORDER3])
 
-    # Reshape and sum over the final axis
+    # Note that m1 and m2 need not have the same shape, as long as they
+    # broadcast to the same shape. For purposes of this illustation, we neglect
+    # any leading axes, so m1 and m2 are just 3x3 matrices.
+    #
+    # m1[_ORDER1, _ORDER2] = is a 1-D array with 27 elements:
+    #   = array(m1[0,0], m1[0,1], m1[0,2],
+    #           m1[0,0], m1[0,1], m1[0,2],
+    #           m1[0,0], m1[0,1], m1[0,2],
+    #           m1[1,0], m1[1,1], m1[1,2],
+    #           m1[1,0], m1[1,1], m1[1,2],
+    #           m1[1,0], m1[1,1], m1[1,2],
+    #           m1[2,0], m1[2,1], m1[2,2],
+    #           m1[2,0], m1[2,1], m1[2,2],
+    #           m1[2,0], m1[2,1], m1[2,2])
+    #
+    # m2[_ORDER2, _ORDER3] = is a 1-D array with 27 elements:
+    #   = array(m2[0,0], m2[1,0], m2[2,0],
+    #           m2[0,1], m2[1,1], m2[2,1],
+    #           m2[0,2], m2[1,2], m2[2,2],
+    #           m2[0,0], m2[1,0], m2[2,0],
+    #           m2[0,1], m2[1,1], m2[2,1],
+    #           m2[0,2], m2[1,2], m2[2,2],
+    #           m2[0,0], m2[1,0], m2[2,0],
+    #           m2[0,1], m2[1,1], m2[2,1],
+    #           m2[0,2], m2[1,2], m2[2,2])
+    #
+    # prods = the pairwise product of all 27 elements:
+    #   = array(m1[0,0]*m2[0,0], m1[0,1]*m2[1,0], m1[0,2]*m2[2,0],
+    #           m1[0,0]*m2[0,1], m1[0,1]*m2[1,1], m1[0,2]*m2[2,1],
+    #           m1[0,0]*m2[0,2], m1[0,1]*m2[1,2], m1[0,2]*m2[2,2],
+    #           m1[1,0]*m2[0,0], m1[1,1]*m2[1,0], m1[1,2]*m2[2,0],
+    #           m1[1,0]*m2[0,1], m1[1,1]*m2[1,1], m1[1,2]*m2[2,1],
+    #           m1[1,0]*m2[0,2], m1[1,1]*m2[1,2], m1[1,2]*m2[2,2],
+    #           m1[2,0]*m2[0,0], m1[2,1]*m2[1,0], m1[2,2]*m2[2,0],
+    #           m1[2,0]*m2[0,1], m1[2,1]*m2[1,1], m1[2,2]*m2[2,1],
+    #           m1[2,0]*m2[0,2], m1[2,1]*m2[1,2], m1[2,2]*m2[2,2])
+
+    # Reshape to (...,3,3,3)
     prods = prods.reshape(list(prods.shape)[0:-1]+[3,3,3])
+
+    # prods is replaced by a 3x3x3 array
+    # The old shape is (...,27)
+    # The new shape is (...,3,3,3)
+
+    # prods = the pairwise product of all 27 elements:
+    #   = array((((m1[0,0]*m2[0,0], m1[0,1]*m2[1,0], m1[0,2]*m2[2,0]),
+    #             (m1[0,0]*m2[0,1], m1[0,1]*m2[1,1], m1[0,2]*m2[2,1]),
+    #             (m1[0,0]*m2[0,2], m1[0,1]*m2[1,2], m1[0,2]*m2[2,2])),
+    #            ((m1[1,0]*m2[0,0], m1[1,1]*m2[1,0], m1[1,2]*m2[2,0]),
+    #             (m1[1,0]*m2[0,1], m1[1,1]*m2[1,1], m1[1,2]*m2[2,1]),
+    #             (m1[1,0]*m2[0,2], m1[1,1]*m2[1,2], m1[1,2]*m2[2,2])),
+    #            ((m1[2,0]*m2[0,0], m1[2,1]*m2[1,0], m1[2,2]*m2[2,0]),
+    #             (m1[2,0]*m2[0,1], m1[2,1]*m2[1,1], m1[2,2]*m2[2,1]),
+    #             (m1[2,0]*m2[0,2], m1[2,1]*m2[1,2], m1[2,2]*m2[2,2]))))
+
+    # Sum over the final axis and return
+
+    #   = array(((m1[0,0]*m2[0,0] + m1[0,1]*m2[1,0] + m1[0,2]*m2[2,0]),
+    #             m1[0,0]*m2[0,1] + m1[0,1]*m2[1,1] + m1[0,2]*m2[2,1]),
+    #             m1[0,0]*m2[0,2] + m1[0,1]*m2[1,2] + m1[0,2]*m2[2,2])),
+    #            (m1[1,0]*m2[0,0] + m1[1,1]*m2[1,0] + m1[1,2]*m2[2,0]),
+    #             m1[1,0]*m2[0,1] + m1[1,1]*m2[1,1] + m1[1,2]*m2[2,1]),
+    #             m1[1,0]*m2[0,2] + m1[1,1]*m2[1,2] + m1[1,2]*m2[2,2])),
+    #            (m1[2,0]*m2[0,0] + m1[2,1]*m2[1,0] + m1[2,2]*m2[2,0]),
+    #             m1[2,0]*m2[0,1] + m1[2,1]*m2[1,1] + m1[2,2]*m2[2,1]),
+    #             m1[2,0]*m2[0,2] + m1[2,1]*m2[1,2] + m1[2,2]*m2[2,2]))))
+    #
+    # The above result is the matrix product sought.
+
     return np.sum(prods, axis=-1)
 
 def mtxm(m1,m2):
