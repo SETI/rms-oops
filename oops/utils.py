@@ -84,7 +84,7 @@ def mtxv(m,v):
 # The matrix multiply functions below are written in a way that uses tricky
 # indexing to avoid loops, which would slow down the operation substantially.
 # The first case below is written out in explicit detail. The others are just
-# variations that involve alternative  index orders to transpose either or both
+# variations that involve alternative index orders to transpose either or both
 # of the matrices prior to the multiplication.
 
 # Element ordering needed below for matrix multiplies
@@ -148,7 +148,7 @@ def mxm(m1,m2):
     # The old shape is (...,27)
     # The new shape is (...,3,3,3)
 
-    # prods = the pairwise product of all 27 elements:
+    # prods = the pairwise product of all 27 elements as a 3x3x3 array:
     #   = array((((m1[0,0]*m2[0,0], m1[0,1]*m2[1,0], m1[0,2]*m2[2,0]),
     #             (m1[0,0]*m2[0,1], m1[0,1]*m2[1,1], m1[0,2]*m2[2,1]),
     #             (m1[0,0]*m2[0,2], m1[0,1]*m2[1,2], m1[0,2]*m2[2,2])),
