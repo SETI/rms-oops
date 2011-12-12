@@ -6,6 +6,9 @@ import oops
 ################################################################################
 ################################################################################
 # Pair
+#
+# Modified 12/12/2011 (BSW) - removed redundant floor calls on astype('int')
+#                           - added some comments
 ################################################################################
 ################################################################################
 
@@ -72,7 +75,8 @@ class Pair(oops.Array):
 
 
     def swapxy(self):
-        """Returns a pair object in which the first and sec.
+        """Returns a pair object in which the first and second values are
+            switched.
         """
 
         return Pair(self.vals[..., -1::-1])
@@ -82,12 +86,12 @@ class Pair(oops.Array):
         numpy ndarray, thereby returning an ndarray of the same shape as the
         Tuple object. Each value is rounded down to the nearest integer."""
 
-        return list(np.rollaxis(np.floor(self.vals).astype("int"),-1,0))
+        return list(np.rollaxis(self.vals.astype("int"),-1,0))
 
     def int(self):
         """Returns the integer (floor) component of each index."""
 
-        return Pair(np.floor(self.vals).astype("int"))
+        return Pair(self.vals.astype("int"))
 
     def frac(self):
         """Returns the fractional component of each index."""

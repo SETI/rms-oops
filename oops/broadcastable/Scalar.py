@@ -5,6 +5,8 @@ import unittest
 ################################################################################
 # Superclass of Scalar, Pair, Vector3, Matrix3 and Tuple. All represent
 # N-dimensional arrays of intrinsically dimensional objects.
+#
+# Modified 12/12/2011 (BSW) - added help comments to most methods
 ################################################################################
 ################################################################################
 
@@ -40,6 +42,9 @@ class Array(object):
         return obj
 
     def __repr__(self):
+        """show values of Array or subtype. repr() call returns array at start
+            of string, replace with object type, else just prefix entire string
+            with object type."""
         string = repr(self.vals)
         if string[:5] == "array":
             return type(self).__name__ + string[5:]
@@ -47,6 +52,9 @@ class Array(object):
             return type(self).__name__ + "(" + string + ")"
 
     def __str__(self):
+        """show values of Array or subtype. repr() call returns array at start
+            of string, replace with object type, else just prefix entire string
+            with object type."""
         string = str(self.vals)
         if string[:5] == "array":
             return type(self).__name__ + string[5:]
@@ -58,6 +66,9 @@ class Array(object):
     ####################################
 
     def __getitem__(self, i):
+        """returns the item value at a specific index. copies data to new
+            location in memory. if self has no items, i.e. - no shape in the
+            object-sense, then raise IndexError. called from x = obj[i]"""
         if self.shape == []: raise IndexError("too many indices")
 
         if np.size(self.vals[i]) == 1: return self.vals[i]
@@ -67,6 +78,9 @@ class Array(object):
         return obj
 
     def __setitem__(self, i, arg):
+        """sets the item value at a specific index. if self has no items,
+            i.e. - no shape in the object-sense, then raise IndexError. called
+            from obj[i] = arg."""
         if self.shape == []: raise IndexError("too many indices")
 
         if isinstance(arg, Array): arg = arg.vals
@@ -74,6 +88,9 @@ class Array(object):
         return self
 
     def __getslice__(self, i, j):
+        """returns slice of items. copies data to new location in memory. if
+            self has no items, i.e. - no shape in the object-sense, then raise
+            IndexError. called from x = obj[i:j]."""
         if self.shape == []: raise IndexError("too many indices")
 
         obj = Array.__new__(type(self))
@@ -81,6 +98,9 @@ class Array(object):
         return obj
 
     def __setslice__(self, i, j, arg):
+        """sets slice of items' values to values of arg. if self has no items,
+            i.e. - no shape in the object-sense, then raise IndexError. called
+            from obj[i:j] = arg."""
         if self.shape == []: raise IndexError("too many indices")
 
         if isinstance(arg, Array): arg = arg.vals
@@ -94,13 +114,15 @@ class Array(object):
     def __pos__(self): return self
 
     def __neg__(self):
+        """returns newly created instance of object with values equal to self
+            except the negative. called from x = -obj."""
         obj = Array.__new__(type(self))
         obj.__init__(-self.vals)
         return obj
 
     def __nonzero__(self):
-
-        # An "if" clause is True if every Array element is True
+        """returns true if all values of each item are non-zero, else false.
+            called from if(obj != 0) of if(boj)."""
         return bool(np.all(self.vals))
 
     ####################################
@@ -108,7 +130,20 @@ class Array(object):
     ####################################
 
     def __add__(self, arg):
-
+        """returns newly created instance of same type as self, adding self and
+            arg together. returns object of class Empty if either object is of
+            class Empty. raises type mismatch error if objects are of different
+            types, and item mismatch if objects have different shape. for
+            optimal performance, immediately add object elements together and
+            return if of same type, else convert second operand to np array and
+            then add elements. called from x = obj + arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   Array with elements of self + arg elements.
+            """
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
             obj = Array.__new__(type(self))
@@ -137,7 +172,21 @@ class Array(object):
         return obj
 
     def __sub__(self, arg):
-
+        """returns newly created instance of same type as self, subtracting arg
+            (second operand) from self (first operand). returns object of class
+            Empty if either object is ofclass Empty. raises type mismatch error
+            if objects are of different types, and item mismatch if objects have
+            different shape. for optimal performance, immediately subtract arg
+            elements from self elements and return if of same type, else convert
+            second operand to np array and then subtract arg elements from self
+            elements. called from x = obj - arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   Array with elements of self - arg elements.
+            """
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
             obj = Array.__new__(type(self))
@@ -166,7 +215,16 @@ class Array(object):
         return obj
 
     def __mul__(self, arg):
-
+        """returns newly created instance of same type as self, multiplying
+            elements of self (first operand) with elements of arg (second
+            operand). called from x = obj * arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   Array with elements of self * arg elements.
+            """
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
             obj = Array.__new__(type(self))
@@ -216,7 +274,16 @@ class Array(object):
         self.raise_type_mismatch("*", arg)
 
     def __div__(self, arg):
-
+        """returns newly created instance of same type as self, dividing
+            elements of self (first operand) by elements of arg (second
+            operand). called from x = obj / arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   Array with elements of self / arg elements.
+            """
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
             obj = Array.__new__(type(self))
@@ -264,6 +331,19 @@ class Array(object):
     ####################################
 
     def __iadd__(self, arg):
+        """add arg to self and return self. raises type mismatch error if
+            objects are of different types, and item mismatch if objects have
+            different shape. for optimal performance, immediately add object
+            elements of arg to those of self and return if of same type, else
+            convert second operand to np array and then add elements. called
+            from self += arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   self.  Operates on left operand.
+            """
 
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
@@ -287,7 +367,19 @@ class Array(object):
         return self
 
     def __isub__(self, arg):
-
+        """subtract arg from self and return self. raises type mismatch error if
+            objects are of different types, and item mismatch if objects have
+            different shape. for optimal performance, immediately subtract
+            object elements of arg from that of self and return if of same type,
+            else convert second operand to np array and then subtract elements.
+            called from self -= arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   self.  Operates on left operand.
+            """
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
             self.vals -= arg.vals
@@ -310,7 +402,19 @@ class Array(object):
         return self
 
     def __imul__(self, arg):
-
+        """multiply arg with self and return self. raises type mismatch error if
+            objects are of different types, and item mismatch if objects have
+            different shape. for optimal performance, immediately multiply
+            object elements of arg to those of self and return if of same type,
+            else convert second operand to np array and then multiply elements.
+            called from self *= arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   self.  Operates on left operand.
+            """
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
             self.vals *= arg.vals
@@ -344,7 +448,19 @@ class Array(object):
         self.raise_type_mismatch("*=", arg)
 
     def __idiv__(self, arg):
-
+        """divide self by arg and return self. raises type mismatch error if
+            objects are of different types, and item mismatch if objects have
+            different shape. for optimal performance, immediately divide
+            object elements of arg by those of self and return if of same type,
+            else convert second operand to np array and then divide elements.
+            called from self /= arg.
+            
+            Input:
+            self      left operand.
+            arg       right operand.
+            
+            Return:   self.  Operates on left operand.
+            """
         # If the operands are of the same subclass, operate element-by-element
         if isinstance(arg, type(self)):
             self.vals /= arg.vals
@@ -382,7 +498,19 @@ class Array(object):
     ####################################
 
     def __eq__(self, arg):
-
+        """return list of bools describing whether each item within list has all
+            equal elements. if arguments are not of same instance, convert to
+            nparray and test each element. if we do not have sufficient size in
+            arg to test all elements of at least one item of self, or shape of
+            elemnts in trailing dimensions of arg do not have identical shape to
+            that of items in self, then return false. called by (self == arg).
+            
+            Input:
+            self        left operand
+            arg         right operand
+            
+            Return:     list of bools indicating equivalence of items.
+            """
         # If second operand has the same subclass, operate item-by-item
         if isinstance(arg, type(self)):
 
@@ -419,7 +547,19 @@ class Array(object):
         return Scalar(bools)
 
     def __ne__(self, arg):
-
+        """return list of bools describing whether each item within list has any
+            unequal elements. if arguments are not of same instance, convert to
+            nparray and test each element. if we do not have sufficient size in
+            arg to test all elements of at least one item of self, or shape of
+            elemnts in trailing dimensions of arg do not have identical shape to
+            that of items in self, then return true. called by (self != arg).
+            
+            Input:
+            self        left operand
+            arg         right operand
+            
+            Return:     list of bools indicating unequivalence of items.
+            """
         # If second operand has the same subclass, operate item-by-item
         if isinstance(arg, type(self)):
 
@@ -460,6 +600,13 @@ class Array(object):
     ####################################
 
     def __copy__(self):
+        """describes how python should handle copying of Array types. if vals
+            are instance of type nparray then create new instance of Array with
+            a copy of the values, else just use the memory location of the
+            values.
+            
+            Return:     a new instance of type Array.
+            """
         obj = Array.__new__(type(self))
         if isinstance(self.vals, np.ndarray):
             obj.__init__(self.vals.copy())
@@ -471,6 +618,14 @@ class Array(object):
     def copy(self): return self.__copy__()
 
     def astype(self, dtype):
+        """converts dtype of elements of Array to said type. creates new
+            instance of Array and returns it.
+            
+            Input:
+            dtype:      type, such as int, float32, etc.
+            
+            Return:     new instance of Array with converted elements.
+            """
         obj = Array.__new__(type(self))
 
         if isinstance(self.vals, np.ndarray):
@@ -483,6 +638,19 @@ class Array(object):
         return obj
 
     def swapaxes(self, axis1, axis2):
+        """returns a new instance of Array with the elements in axis1 and axis2
+            swapped. use nparray.swapaxes on Array vals. if axis1 or axis2
+            is greater than rank of self then raise ValueError. note that new
+            data is not created, but a new Array shell is created that indexes
+            its axes in a swapped fashion, therefore changing values of original
+            Array will change values of newly created Array.
+            
+            Input:
+            axis1       first axis to swap from/to.
+            axis2       second axis to swap to/from.
+            
+            Return:     new instance of Array with axes swapped.
+            """
         if axis1 >= len(self.shape):
             raise ValueError("bad axis1 argument to swapaxes")
         if axis2 >= len(self.shape):
@@ -493,11 +661,31 @@ class Array(object):
         return obj
 
     def reshape(self, shape):
+        """returns a new instance of Array with the list of items reshaped to
+            that of shape. note that the argument shape refers to the shape of
+            Array, not that of the nparray. note that new data is not created,
+            but a new Array shell is created that indexes its elemnts according
+            to the new shape, therefore changing values of the original
+            Array will change values of newly created Array.
+            
+            Input:
+            shape       shape of Array
+            
+            Return:     new instance of Array with new shape.
+            """
         obj = Array.__new__(type(self))
         obj.__init__(self.vals.reshape(list(shape) + self.item))
         return obj
 
     def flatten(self):
+        """returns a new instance of Array with the items flattened into a one-
+            dimensional nparray of Arrays. note that new data is not created,
+            but a new Array shell is created that indexes its elemnts according
+            to the new shape, therefore changing values of the original
+            Array will change values of newly created Array.
+            
+            Return:     new instance of Array with 1D shape.
+            """
         if len(self.shape) < 2: return self
 
         count = np.product(self.shape)
