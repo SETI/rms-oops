@@ -22,6 +22,9 @@
 # Mark R. Showalter
 # PDS Rings Node
 # August 2011
+#
+# Revised December 23, 2011 (BSW) - changed DOY parsing to allow 3rd digit to be
+#                                   greater than 5 for values >= 300
 ################################################################################
 
 from pyparsing import *
@@ -55,7 +58,7 @@ DAY         = Word("0123",nums,exact=2)
 DAY.setParseAction(lambda s,l,t: [["DAY", int(t[0])]])
 
 DOY         = ( Word("012",nums,exact=3)
-              | Combine("3"  + Word("012345",exact=2))
+              | Combine("3"  + Word("012345",nums,exact=2))
               | Combine("36" + Word("0123456",exact=1))
               )
 DOY.setParseAction(lambda s,l,t: [["DAY", int(t[0])]])
