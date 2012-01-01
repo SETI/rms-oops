@@ -6,18 +6,30 @@
 # kernels into their proper load order.
 #
 # Deukkwon Yoon & Mark Showalter, PDS Rings Node, SETI Institute, November 2011
+#
+# 12/31/11 (MRS) Replaced calls to julian pyparsing routines with calls to much
+#   faster ISO parser routines. Added "after" constraint option to queries.
+#   Revised remove_overlaps() algorithm to improve performance. Defined
+#   set/get_spice_path to check an environment variable if the path has not been
+#   defined. Revised open_db() to search for an environment variable if the
+#   database name or path is not passed to it. Added furnish_solar_system()
+#   function to load a set of kernels sufficient for every moon and planet
+#   (including Pluto!)
 ################################################################################
 
-import sqlite_db as db      # Here we choose the SQLite3 version
-#import mysql_db as db      # Here we choose the MySQL version
 import julian
 import interval
 import cspice
 import unittest
+import os
 
-# Database description info
-SPICE_DB_PATH = "/Library/WebServer/SPICE/SPICE.db"
-SPICE_FILE_PATH = "/Library/WebServer/SPICE/"
+# This is the SQLite3 version of the program
+import sqlite_db as db
+SPICE_DB_VARNAME = "SPICE_DB_NAME"
+
+# This would be the alternative mechanism for accessing a MySQL database.
+# NOT YET IMPLEMENTED!
+#import mysql_db as db
 
 TABLE_NAME = "SPICEDB"
 COLUMN_NAMES = ["KERNEL_NAME", "KERNEL_TYPE", "FILESPEC", "START_TIME",
@@ -36,12 +48,14 @@ SPICE_ID_INDEX      = COLUMN_NAMES.index("SPICE_ID")
 LOAD_PRIORITY_INDEX = COLUMN_NAMES.index("LOAD_PRIORITY")
 
 # For testing at debugging
-DEBUG = False
-FILE_LIST = []
+DEBUG = False   # If true, no files are furnished.
+FILE_LIST = []  # If DEBUG, lists the files that would have been furnished.
 
 ################################################################################
 # Definitions of useful sets of bodies
 ################################################################################
+
+MARS_ALL_MOONS = range(401,403)
 
 JUPITER_CLASSICAL = range(501,505)
 JUPITER_REGULAR   = range(501,506) + range(514,517)
@@ -70,6 +84,32 @@ PLUTO_REGULAR     = range(901,905)
 PLUTO_ALL_MOONS   = range(901,905)
 
 ################################################################################
+# SPICE file directory tree support
+################################################################################
+
+SPICE_FILE_PATH = ""
+
+def set_spice_path(spice_path=""):
+    """Call to define the directory path to the root of the SPICE file directory
+    tree. Call with no argument to reset."""
+
+    global SPICE_FILE_PATH
+
+    SPICE_FILE_PATH = spice_path
+
+def get_spice_path():
+    """Returns the current path to the root of the SPICE file directory tree.
+    If the path is undefined, it uses the value of environment variable
+    SPICE_FILE_PATH."""
+
+    global SPICE_FILE_PATH
+
+    if SPICE_FILE_PATH == "":
+        SPICE_FILE_PATH = os.environ["SPICE_FILE_PATH"]
+
+    return SPICE_FILE_PATH
+
+###############################################################################
 # Kernel Information class
 ################################################################################
 
@@ -404,6 +444,7 @@ def sort_kernels(kernel_list):
     """Sorts a list of kernels immediately prior to loading. It removes
     duplicate kernels and puts the rest into their proper load order."""
 
+
     # Sort into load order
     kernel_list.sort()
 
@@ -421,19 +462,15 @@ def sort_kernels(kernel_list):
 
 ################################################################################
 
-def remove_overlaps(kernel_list, body, start_time, stop_time):
+def remove_overlaps(kernel_list, start_time, stop_time):
     """For kernels that have time limits such as CKs and SPKs, this method
     determines which kernels overlap higher-priority kernels, and removes
     kernels from the list if they are not required. It returns the filtered
     list in the proper load order.
 
     Input:
-        kernel_list     a sorted list of kernels as returned by sort_kernels,
-                        typically after one or more calls to
+        kernel_list     a list of kernels as returned by one or more calls to
                         select_kernels("SPK", ...).
-
-        body            an numeric SPICE ID or list of multiple IDs, identifying
-                        the complete set of bodies that are required.
 
         start_time      the start time of the interval of interest, is ISO
                         format "yyyy-hh-mmThh:mm:ss".
@@ -445,30 +482,47 @@ def remove_overlaps(kernel_list, body, start_time, stop_time):
                         entire time range is covered by higher-priority kernels.
     """
 
-    # Define the time interval of interest
-    (day, sec) = julian.day_sec_type_from_string(start_time)[0:2]
-    interval_start_tai = julian.tai_from_day(day) + sec
+    # Sort the kernels
+    kernel_list.sort()
 
-    (day, sec) = julian.day_sec_type_from_string(stop_time)[0:2]
-    interval_stop_tai = julian.tai_from_day(day) + sec
+    # Construct a list of kernels, one for each body
+    body_dict = {}
+    for kernel in kernel_list:
+        try:
+            body_dict[kernel.spice_id] += [kernel,]
+        except KeyError:
+            body_dict[kernel.spice_id] = [kernel,]
+
+        # Once the list is sorted, we can forget the body id
+        kernel.spice_id = None
+
+    # Delete any duplicated lists, because the overlaps will be the same
+    for this_id in body_dict.keys():
+        for that_id in body_dict.keys():
+            if this_id != that_id and body_dict[this_id] == body_dict[that_id]:
+                body_dict[this_id] = None
+                continue
+
+    for this_id in body_dict.keys():
+        if body_dict[this_id] is None:
+            del body_dict[this_id]
+
+    # Define the time interval of interest
+    interval_start_tai = julian.tai_from_iso(start_time)
+    interval_stop_tai  = julian.tai_from_iso(stop_time)
 
     # Remove overlaps for each body individually
-    if type(body) == type(0): body = [body]
     filtered_kernels = []
-    for id in body:
+    for id in body_dict.keys():
 
         # Create an empty interval
         inter = interval.Interval(interval_start_tai, interval_stop_tai)
 
         # Insert the kernels for this body, beginning with the lowest priority
-        for kernel in kernel_list:
-            if kernel.spice_id != id: continue
+        for kernel in body_dict[id]:
 
-            (day, sec) = julian.day_sec_type_from_string(kernel.start_time)[0:2]
-            kernel_start_tai = julian.tai_from_day(day) + sec
-
-            (day, sec) = julian.day_sec_type_from_string(kernel.stop_time)[0:2]
-            kernel_stop_tai = julian.tai_from_day(day) + sec
+            kernel_start_tai = julian.tai_from_iso(kernel.start_time)
+            kernel_stop_tai  = julian.tai_from_iso(kernel.stop_time)
 
             inter[(kernel_start_tai,kernel_stop_tai)] = kernel
 
@@ -493,13 +547,15 @@ def furnish_kernels(kernel_list):
 
     global DEBUG, FILE_LIST
 
+    if not DEBUG: spice_path = get_spice_path()
+
     name_list = []
     for kernel in kernel_list:
 
         if DEBUG:
             FILE_LIST.append(kernel.filespec)
         else:
-            cspice.furnsh(SPICE_FILE_PATH + kernel.filespec)
+            cspice.furnsh(os.path.join(spice_path, kernel.filespec))
 
         name = kernel.kernel_name
         if name not in name_list: name_list.append(name)
@@ -510,10 +566,13 @@ def furnish_kernels(kernel_list):
 # High-level Database I/O
 ################################################################################
 
-def open_db(filepath=SPICE_DB_PATH):
-    """Opens the SPICE database."""
+def open_db(name=None):
+    """Opens the SPICE database given its name or file path."""
 
-    db.open(filepath)
+    if name is None:
+        name = os.environ[SPICE_DB_VARNAME]
+
+    db.open(name)
 
 def close_db():
     """Opens the SPICE database."""
@@ -523,7 +582,7 @@ def close_db():
 ################################################################################
 
 def select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
-                                path=None):
+                                after=None, path=None):
     """Returns a list of KernelInfo objects containing the information returned
     from a query performed on the SPICE kernel database.
 
@@ -539,10 +598,14 @@ def select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
                         expressed as a string in ISO format:
                             "yyyy-mm-ddThh:mm:ss"
 
-        asof            an optional earlier date for which values should be 
-                        returned. Wherever possible, the kernels selected will
-                        have release dates earlier than this date. The date is
-                        expressed as a string in ISO format.
+        asof            an optional date earlier than today for which values
+                        should be returned. Wherever possible, the kernels
+                        selected will have release dates earlier than this date.
+                        The date is expressed as a string in ISO format.
+
+        after           an optional date such that files originating earlier are
+                        not considered. The date is expressed as a string in ISO
+                        format.
 
         path            an optional string that must appear within the file
                         specification path of the kernel.
@@ -552,12 +615,14 @@ def select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
     """
 
     # Query the database
-    sql_string = _sql_query(kernel_type, name, body, time, asof)
+    sql_string = _sql_query(kernel_type, name, body, time, asof, after, path)
     table = db.query(sql_string)
 
-    # If nothing was returned, relax the "asof" constraint and try again
+    # If nothing was returned, relax the "asof" and "after" constraints and try
+    # again
     if len(table) == 0 and asof is not None:
-        sql_string = _sql_query(kernel_type, name, body, time, "redo", path)
+        sql_string = _sql_query(kernel_type, name, body, time, "redo", after,
+                                path)
         table = db.query(sql_string)
 
     # If we still have nothing, raise an exception
@@ -573,7 +638,7 @@ def select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
 ################################################################################
 
 def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
-                            path=None):
+                            path=None, after=None):
     """This internal routine generates a query string based on constraints
     involving the kernel type, name, body or bodies, time range, and release
     date.
@@ -590,10 +655,14 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
                         expressed as a string in ISO format:
                             "yyyy-mm-ddThh:mm:ss"
 
-        asof            an optional earlier date for which values should be
-                        returned. Wherever possible, the kernels selected will
-                        have release dates earlier than this date. The date is
-                        expressed as a string in ISO format.
+        asof            an optional date earlier than today for which values
+                        should be returned. Wherever possible, the kernels
+                        selected will have release dates earlier than this date.
+                        The date is expressed as a string in ISO format.
+
+        after           an optional date such that files originating earlier are
+                        not considered. The date is expressed as a string in ISO
+                        format.
 
         path            an optional string that must appear within the file
                         specification path of the kernel.
@@ -604,11 +673,11 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
     query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
     query_list += ["WHERE KERNEL_TYPE = '", kernel_type, "'\n"]
 
-    if name != None:
+    if name is not None:
         query_list += ["AND KERNEL_NAME LIKE '", name, "'\n"]
 
     bodies = 0
-    if body != None:
+    if body is not None:
         if type(body) == type([]) or type(body) == type(()):
             query_list += ["AND SPICE_ID in (", str(body)[1:-1], ")\n"]
             bodies = len(body)
@@ -616,20 +685,23 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
             query_list += ["AND SPICE_ID = '", str(body), "'\n"]
             bodies = 1
 
-    if time != None:
+    if time is not None:
         query_list += ["AND START_TIME < '", time[1], "'\n"]
         query_list += ["AND STOP_TIME  > '", time[0], "'\n"]
 
-    if path != None:
+    if after is not None and asof != "redo":
+        query_list += ["AND RELEASE_DATE >= '", after, "'\n"]
+
+    if path is not None:
         query_list += ["AND FILESPEC LIKE '", path, "'\n"]
 
     if asof == "redo":
         query_list += ["ORDER BY RELEASE_DATE ASC\n"]
         query_list += ["LIMIT 1\n"]
-    elif asof != None:
+    elif asof is not None:
         query_list += ["AND RELEASE_DATE <= '", asof, "'\n"]
 
-    if time == None and bodies <= 1:
+    if time is None and bodies <= 1:
         query_list += ["ORDER BY LOAD_PRIORITY DESC, RELEASE_DATE DESC\n"]
         query_list += ["LIMIT 1"]
     else:
@@ -688,8 +760,7 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
     # Ephemerides (SP Kernels)
     sat_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
                                      body=bodies, name="SAT%")
-    sat_spks.sort()
-    sat_spks = remove_overlaps(sat_spks, bodies, start_time, stop_time)
+    sat_spks = remove_overlaps(sat_spks, start_time, stop_time)
 
     cas_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
                                      body=-82)
@@ -719,8 +790,7 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
         # C (pointing) Kernels
         cks = select_kernels("CK", asof=asof, time=(start_time, stop_time),
                                    body=-82)
-        cks.sort()
-        cks = remove_overlaps(cks, [-82], start_time, stop_time)
+        cks = remove_overlaps(cks, start_time, stop_time)
 
     if DEBUG: FILE_LIST = []
 
@@ -733,6 +803,77 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
 
     # Sort and load the CKs, if any
     if cks != []: names += furnish_kernels(cks)
+
+    return names
+
+################################################################################
+# Special kernel loader for every planet and moon
+################################################################################
+
+def furnish_solar_system(start_time, stop_time, asof=None):
+    """A routine designed to load all the SPK, FK and planetary constants files
+    needed for the planets and moons of the Solar System.
+
+    Input:
+        start_time      the start time of the period of interest, in ISO
+                        format, "yyyy-mm-ddThh:mm:ss".
+
+        stop_time       the stop time of the period of interest.
+
+        asof            an optional earlier date for which values should be
+                        returned. Wherever possible, the kernels selected will
+                        have release dates earlier than this date. The date is
+                        expressed as a string in ISO format.
+
+    Return:             a list of the names of all the kernels loaded.
+    """
+
+    list = []
+    spks = []
+
+    # Planetary Constants, including the latest from Cassini
+    list += select_kernels("PCK", asof=asof, name="PCK%")
+    list += select_kernels("PCK", asof=asof, name="CPCK_ROCK%")
+    list += select_kernels("PCK", asof=asof, name="CPCK_________")
+
+    # Planetary Frames, including Cassini
+    list += select_kernels("FK", asof=asof, name="CAS_ROCKS%")
+
+    # Ephemerides (SP Kernels)
+    mar_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
+                                     body=MARS_ALL_MOONS, name="MAR%")
+    mar_spks = remove_overlaps(mar_spks, start_time, stop_time)
+
+    jup_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
+                                     body=JUPITER_ALL_MOONS, name="JUP%")
+    jup_spks = remove_overlaps(jup_spks, start_time, stop_time)
+
+    sat_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
+                                     body=SATURN_ALL_MOONS, name="SAT%")
+    sat_spks = remove_overlaps(sat_spks, start_time, stop_time)
+
+    ura_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
+                                     body=URANUS_ALL_MOONS, name="URA%")
+    ura_spks = remove_overlaps(ura_spks, start_time, stop_time)
+
+    nep_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
+                                     body=NEPTUNE_ALL_MOONS, name="NEP%")
+    nep_spks = remove_overlaps(nep_spks, start_time, stop_time)
+
+    plu_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
+                                     body=PLUTO_ALL_MOONS, name="PLU%")
+    plu_spks = remove_overlaps(plu_spks, start_time, stop_time)
+
+    de_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
+                                    body=[10,199,299,301,399], name="DE%")
+    de_spks.sort()
+
+    spks = (mar_spks + jup_spks + sat_spks + ura_spks + nep_spks + plu_spks +
+            de_spks[-1:])
+
+    # Load the kernels
+    names = furnish_kernels(list)
+    names += furnish_kernels(spks)
 
     return names
 
@@ -865,43 +1006,43 @@ class test_spicedb(unittest.TestCase):
                 "2004-07-01", "2050-01-01", "2003-08-01", 6, 100])
 
         body6 = [info0, info1, info2, info3, info4, info5, info6, info7, info8]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info7, info8])
 
         body6 = [info0, info1, info2, info3, info4, info5, info6, info7]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info7])
 
         body6 = [info0, info1, info2, info3, info4, info5, info6, info8]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info3, info4, info6, info8])
 
         body6 = [info0, info1, info2, info3, info4, info5, info6]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info3, info4, info5, info6])
 
         body6 = [info0, info1, info2, info3, info4, info5]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info3, info4, info5])
 
         body6 = [info0, info1, info2, info3, info4]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info0, info3, info4])
 
         body6 = [info0, info1, info2, info3]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info0, info2, info3])
 
         body6 = [info0, info1, info2]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info0, info2])
 
         body6 = [info0, info1]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info0, info1])
 
         body6 = [info0]
-        self.assertEqual(remove_overlaps(body6, 6, start_time, stop_time),
+        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
                                          [info0])
 
         ################################
@@ -998,6 +1139,22 @@ class test_spicedb(unittest.TestCase):
              'CPCK_ROCK_21JAN2011_MERGED', 'CPCK14OCT2011', 'PCK00010',
              'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS',
              'SPK-RECONSTRUCTED', 'DE421', 'CK-RECONSTRUCTED'])
+
+        DEBUG = False
+
+        ################################
+        # furnish_solar_system()
+        ################################
+
+        DEBUG = True        # Avoid attempting to load kernels
+
+        names1 = furnish_solar_system("1980-01-01", "2010-01-01")
+        self.assertEqual(names1,
+            ['PCK00010', 'CPCK_ROCK_21JAN2011_MERGED', 'CPCK14OCT2011',
+             'CAS_ROCKS_V18', 'MAR085', 'JUP204', 'JUP230', 'JUP230-ROCKS',
+             'JUP282', 'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS', 'URA083',
+             'URA091', 'URA095', 'NEP077', 'NEP081', 'NEP085', 'PLU021',
+             'DE421'])
 
         DEBUG = False
 
