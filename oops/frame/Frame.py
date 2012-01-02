@@ -1,11 +1,14 @@
+################################################################################
+# Frame
+#
+# 1/2/12 MRS - Fixed minor bug in unregister(), where a NullFrame would be
+#   deleted twice.
+################################################################################
+
 import numpy as np
 import unittest
 
 import oops
-
-################################################################################
-# Frame
-################################################################################
 
 class Frame(object):
     """A Frame is an abstract class that returns a Transform (rotation matrix
@@ -164,8 +167,10 @@ class Frame(object):
             if frame_id == key: del oops.FRAME_REGISTRY[key]
 
             if type(key) == type(()):
-                if frame_id == key[0]: del oops.FRAME_REGISTRY[key]
-                if frame_id == key[1]: del oops.FRAME_REGISTRY[key]
+                if frame_id == key[0]:
+                    del oops.FRAME_REGISTRY[key]
+                elif frame_id == key[1]: 
+                    del oops.FRAME_REGISTRY[key]
 
         oops.Path.unregister_frame(frame_id)
 
