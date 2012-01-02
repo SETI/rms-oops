@@ -32,14 +32,13 @@ from path.SpicePath         import Test_SpicePath
 from surface.Surface        import Test_Surface
 from surface.RingPlane      import Test_RingPlane
 
-from instrument.hst         import Test_Instrument_HST
 from observation.Observation import Test_Observation
 
 # Set CSPICE up for testing...
 
-cspice.furnsh("unittest_data/spice/naif0009.tls")
-cspice.furnsh("unittest_data/spice/pck00010.tpc")
-cspice.furnsh("unittest_data/spice/de421.bsp")
+cspice.furnsh("test_data/spice/naif0009.tls")
+cspice.furnsh("test_data/spice/pck00010.tpc")
+cspice.furnsh("test_data/spice/de421.bsp")
 
 ################################################################################
 # To run all unittests...
