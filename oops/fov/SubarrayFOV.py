@@ -17,8 +17,9 @@ class SubarrayFOV(oops.FOV):
         Inputs:
             fov         the FOV object within which this subarray is defined.
 
-            new_los     a tuple defining the location of the subarray's line of
-                        sight in the (u,v) coordinates of the original FOV.
+            new_los     a tuple or Pair defining the location of the subarray's
+                        line of sight in the (u,v) coordinates of the original
+                        FOV.
 
             uv_shape    a single value, tuple or Pair defining the new size of
                         the field of view in pixels.

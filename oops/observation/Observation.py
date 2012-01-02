@@ -35,7 +35,7 @@ class Observation(object):
     of an integration, or a location inside the boundaries of a spatial pixel.
     Half-integer indices falls at the midpoint of each sample.
 
-    These attributes are used to describe the field of view:
+    At minimum, attributes are used to describe the observation:
         data            the data array, reshaped for indexing using standard
                         order.
 
@@ -60,24 +60,13 @@ class Observation(object):
                         Z-axis pointing outward near the center of the line of
                         sight, with the X-axis pointing rightward and the y-axis
                         pointing downward.
-
     """
 
     OOPS_CLASS = "Observation"
 
-    # Works for a standard 2-D image
-    def __init__(self, data, axes, time, fov, path_id, frame_id):
+    def __init__(self):
 
-        self.data  = data
-        self.path_id = path_id
-        self.frame_id = frame_id
-        self.t0 = time[0]
-        self.t1 = time[1]
-        self.fov = fov
-
-        self.u_axis = axes.index("u")
-        self.v_axis = axes.index("v")
-        self.t_axis = None
+        pass
 
 ########################################
 # UNIT TESTS

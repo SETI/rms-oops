@@ -12,6 +12,8 @@ __all__ = ["Array", "Scalar", "Pair", "Vector3", "Matrix3", "Tuple",
 
 DEBUG = False
 
+C = 299792.458  # speed of light in km/s
+
 ################################################################################
 # Programmer's Note
 #
@@ -64,6 +66,12 @@ FRAME_REGISTRY = {}
 SSBPATH = None
 PATH_REGISTRY = {}
 
+########################################
+
+def is_id(item):
+    abbr = item.__class__.__name__[0:3]
+    return abbr in ("int", "str")
+
 ################################################################################
 # Imports...
 ################################################################################
@@ -71,7 +79,9 @@ PATH_REGISTRY = {}
 # Basics
 import utils
 
-from broadcastable.Scalar   import Array, Empty, Scalar
+from broadcastable.Array    import Array
+from broadcastable.Empty    import Empty
+from broadcastable.Scalar   import Scalar
 from broadcastable.Pair     import Pair
 from broadcastable.Vector3  import Vector3
 from broadcastable.Matrix3  import Matrix3
@@ -93,6 +103,7 @@ from frame.RingFrame        import RingFrame
 from frame.SpiceFrame       import SpiceFrame
 
 from observation.Observation import Observation
+from observation.Snapshot   import Snapshot
 
 from path.Path              import Path, Waypoint
 from path.MultiPath         import MultiPath
@@ -103,9 +114,10 @@ from surface.RingPlane      import RingPlane
 
 import instrument
 import instrument.hst
-import instrument.hst.acs.hrc
-import instrument.hst.acs.wfc
-import instrument.hst.wfc3.uvis
+from instrument.hst.acs     import *
+from instrument.hst.nicmos  import *
+from instrument.hst.wfc3    import *
+from instrument.hst.wfpc2   import *
 
 ################################################################################
 # Global Frames Registry
@@ -184,23 +196,5 @@ def as_primary_path(path):
         return PATH_REGISTRY[path.path_id]
     except AttributeError:
         return PATH_REGISTRY[path]
-
-################################################################################
-# Useful constants and functions
-################################################################################
-
-C = 299792.458  # speed of light in km/s
-
-def raise_type_mismatch(item, op, arg):
-    """Raises a TypeError with text indicating that the operand types are
-    unsupported."""
-
-    raise TypeError("unsupported operand types for " + op +
-                    ": '"     + type(self).__name__ +
-                    "' and '" + type(arg).__name__  + "'")
-
-def is_id(item):
-    abbr = item.__class__.__name__[0:3]
-    return abbr in ("int", "str")
 
 ################################################################################

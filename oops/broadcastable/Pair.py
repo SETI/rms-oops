@@ -1,18 +1,21 @@
-import numpy as np
-import unittest
-
-import oops
-
-################################################################################
 ################################################################################
 # Pair
 #
 # Modified 12/12/2011 (BSW) - removed redundant floor calls on astype('int')
 #                           - added some comments
-################################################################################
+#
+# Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 ################################################################################
 
-class Pair(oops.Array):
+import numpy as np
+import unittest
+
+from oops.broadcastable.Array  import Array
+from oops.broadcastable.Scalar import Scalar
+
+from oops import utils
+
+class Pair(Array):
     """An arbitrary Array of coordinate pairs or 2-vectors.
     """
 
@@ -49,19 +52,19 @@ class Pair(oops.Array):
         return Pair.as_pair(arg, duplicate) * 1.
 
     def as_scalar(self, axis):
-        """Returns one of the components of a Pair as a oops.Scalar.
+        """Returns one of the components of a Pair as a Scalar.
 
         Input:
             axis        0 for the x-axis; 1 for the y-axis.
         """
 
-        return oops.Scalar(self.vals[...,axis])
+        return Scalar(self.vals[...,axis])
 
     def as_scalars(self):
         """Returns the components of a Pair as a pair of Scalars.
         """
 
-        return (oops.Scalar(self.vals[...,0]), oops.Scalar(self.vals[...,1]))
+        return (Scalar(self.vals[...,0]), Scalar(self.vals[...,1]))
 
     @staticmethod
     def from_scalars(x,y):
@@ -69,8 +72,8 @@ class Pair(oops.Array):
         components provided as scalars.
         """
 
-        (x,y) = oops.Array.broadcast_arrays((oops.Scalar.as_scalar(x),
-                                             oops.Scalar.as_scalar(y)))
+        (x,y) = Array.broadcast_arrays((Scalar.as_scalar(x),
+                                        Scalar.as_scalar(y)))
         return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1))
 
 
@@ -103,19 +106,19 @@ class Pair(oops.Array):
         """
 
         if isinstance(arg, Pair): arg = arg.vals
-        return oops.Scalar(oops.utils.dot(self.vals, arg))
+        return Scalar(utils.dot(self.vals, arg))
 
     def norm(self):
         """Returns the length of the Pair as a Scalar.
         """
 
-        return oops.Scalar(oops.utils.norm(self.vals))
+        return Scalar(utils.norm(self.vals))
 
     def unit(self):
         """Returns a the Pair converted to unit length as a new Pair.
         """
 
-        return Pair(oops.utils.unit(self.vals))
+        return Pair(utils.unit(self.vals))
 
     def cross(self, arg):
         """Returns the magnitude of the cross products of the Pairs as a new
@@ -128,7 +131,7 @@ class Pair(oops.Array):
             if np.shape(arg)[-1] != 2:
                 raise ValueError("shape of a Pair array must be [...,2]")
 
-        return oops.Scalar(oops.utils.cross2d(self.vals,arg))
+        return Scalar(utils.cross2d(self.vals,arg))
 
     def sep(self, arg):
         """Returns returns angle between two Pairs as a Scalar.
@@ -140,7 +143,7 @@ class Pair(oops.Array):
             if np.shape(arg)[-1] != 2:
                 raise ValueError("shape of a Pair array must be [...,2]")
 
-        return oops.Scalar(oops.utils.sep(self.vals,arg))
+        return Scalar(utils.sep(self.vals,arg))
 
 ########################################
 # UNIT TESTS
@@ -156,9 +159,9 @@ class Test_Pair(unittest.TestCase):
 
         # Basic comparisons and indexing
         pairs = Pair([[1,2],[3,4],[5,6]])
-        self.assertEqual(oops.Array.item(pairs),  [2])
-        self.assertEqual(oops.Array.shape(pairs), [3])
-        self.assertEqual(oops.Array.rank(pairs),   1)
+        self.assertEqual(Array.item(pairs),  [2])
+        self.assertEqual(Array.shape(pairs), [3])
+        self.assertEqual(Array.rank(pairs),   1)
 
         test = [[1,2],[3,4],[5,6]]
         self.assertEqual(pairs, test)
@@ -174,10 +177,10 @@ class Test_Pair(unittest.TestCase):
         self.assertEqual((pairs != test), False)
         self.assertEqual((pairs == test), (True,  True,  True))
         self.assertEqual((pairs != test), (False, False, False))
-        self.assertEqual((pairs == test), oops.Scalar(True))
-        self.assertEqual((pairs != test), oops.Scalar(False))
-        self.assertEqual((pairs == test), oops.Scalar((True,  True,  True)))
-        self.assertEqual((pairs != test), oops.Scalar((False, False, False)))
+        self.assertEqual((pairs == test), Scalar(True))
+        self.assertEqual((pairs != test), Scalar(False))
+        self.assertEqual((pairs == test), Scalar((True,  True,  True)))
+        self.assertEqual((pairs != test), Scalar((False, False, False)))
 
         self.assertEqual(pairs[0], (1,2))
         self.assertEqual(pairs[0], [1,2])
@@ -209,10 +212,10 @@ class Test_Pair(unittest.TestCase):
         self.assertEqual(pairs * Pair((1,2)), Pair([[1,4],[3,8],[5,12]]))
         self.assertEqual(pairs * 2, [[2,4],[6,8],[10,12]])
         self.assertEqual(pairs * 2, [[2,4],[6,8],[10,12]])
-        self.assertEqual(pairs * oops.Scalar(2), [[2,4],[6,8],[10,12]])
-        self.assertEqual(pairs * oops.Scalar(2), [[2,4],[6,8],[10,12]])
+        self.assertEqual(pairs * Scalar(2), [[2,4],[6,8],[10,12]])
+        self.assertEqual(pairs * Scalar(2), [[2,4],[6,8],[10,12]])
         self.assertEqual(pairs * (1,2,3), [[1,2],[6,8],[15,18]])
-        self.assertEqual(pairs * oops.Scalar((1,2,3)), [[1,2],[6,8],[15,18]])
+        self.assertEqual(pairs * Scalar((1,2,3)), [[1,2],[6,8],[15,18]])
 
         self.assertEqual(pairs / (2,2), [[0,1],[1,2],[2,3]])
         self.assertEqual(pairs / (2,2), Pair([[0,1],[1,2],[2,3]]))
@@ -222,15 +225,15 @@ class Test_Pair(unittest.TestCase):
         self.assertEqual(pairs / Pair((1,2)), Pair([[1,1],[3,2],[5,3]]))
         self.assertEqual(pairs / 2, [[0,1],[1,2],[2,3]])
         self.assertEqual(pairs / 2, Pair([[0,1],[1,2],[2,3]]))
-        self.assertEqual(pairs / oops.Scalar(2), [[0,1],[1,2],[2,3]])
-        self.assertEqual(pairs / oops.Scalar(2), Pair([[0,1],[1,2],[2,3]]))
+        self.assertEqual(pairs / Scalar(2), [[0,1],[1,2],[2,3]])
+        self.assertEqual(pairs / Scalar(2), Pair([[0,1],[1,2],[2,3]]))
         self.assertEqual(pairs / (1,2,3), [[1,2],[1,2],[1,2]])
-        self.assertEqual(pairs / oops.Scalar((1,2,3)), [[1,2],[1,2],[1,2]])
+        self.assertEqual(pairs / Scalar((1,2,3)), [[1,2],[1,2],[1,2]])
 
         self.assertRaises(ValueError, pairs.__add__, 2)
         self.assertRaises(ValueError, pairs.__sub__, 2)
-        self.assertRaises(TypeError, pairs.__add__, oops.Scalar(2))
-        self.assertRaises(TypeError, pairs.__sub__, oops.Scalar(2))
+        self.assertRaises(TypeError, pairs.__add__, Scalar(2))
+        self.assertRaises(TypeError, pairs.__sub__, Scalar(2))
 
         # In-place operations
         test = pairs.copy()
@@ -259,26 +262,26 @@ class Test_Pair(unittest.TestCase):
         self.assertEqual(test, [[1,4],[3,8],[5,12]])
         test /= Pair((1,2))
         self.assertEqual(test, [[1,2],[3,4],[5,6]])
-        test *= oops.Scalar((1,2,3))
+        test *= Scalar((1,2,3))
         self.assertEqual(test, [[1,2],[6,8],[15,18]])
-        test /= oops.Scalar((1,2,3))
+        test /= Scalar((1,2,3))
         self.assertEqual(test, [[1,2],[3,4],[5,6]])
-        test *= oops.Scalar(2)
+        test *= Scalar(2)
         self.assertEqual(test, [[2,4],[6,8],[10,12]])
-        test /= oops.Scalar(2)
+        test /= Scalar(2)
         self.assertEqual(test, [[1,2],[3,4],[5,6]])
 
         # Other functions...
 
         # as_scalar()
-        self.assertEqual(pairs.as_scalar(0),  oops.Scalar((1,3,5)))
-        self.assertEqual(pairs.as_scalar(1),  oops.Scalar((2,4,6)))
-        self.assertEqual(pairs.as_scalar(-1), oops.Scalar((2,4,6)))
-        self.assertEqual(pairs.as_scalar(-2), oops.Scalar((1,3,5)))
+        self.assertEqual(pairs.as_scalar(0),  Scalar((1,3,5)))
+        self.assertEqual(pairs.as_scalar(1),  Scalar((2,4,6)))
+        self.assertEqual(pairs.as_scalar(-1), Scalar((2,4,6)))
+        self.assertEqual(pairs.as_scalar(-2), Scalar((1,3,5)))
 
         # as_scalars()
-        self.assertEqual(pairs.as_scalars(), (oops.Scalar((1,3,5)),
-                                              oops.Scalar((2,4,6))))
+        self.assertEqual(pairs.as_scalars(), (Scalar((1,3,5)),
+                                              Scalar((2,4,6))))
 
         # swapxy()
         self.assertEqual(pairs.swapxy(), Pair(((2,1),(4,3),(6,5))))
@@ -291,7 +294,7 @@ class Test_Pair(unittest.TestCase):
 
         # norm()
         self.assertEqual(pairs.norm(), np.sqrt((5.,25.,61.)))
-        self.assertEqual(pairs.norm(), oops.Scalar(np.sqrt((5.,25.,61.))))
+        self.assertEqual(pairs.norm(), Scalar(np.sqrt((5.,25.,61.))))
 
         self.assertTrue(pairs.unit().norm() > lo)
         self.assertTrue(pairs.unit().norm() < hi)

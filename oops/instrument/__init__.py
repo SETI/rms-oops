@@ -1,36 +1,23 @@
 # oops/instrument/__init__.py
 
+import numpy as np
+import pylab
 import unittest
 
 import oops
-import oops.instrument.hst
 
-def from_file(file_spec):
-    """Given the name of a file, this function returns an associated Observation
-    object describing the data found in the file."""
+################################################################################
+# Instrument Class
+################################################################################
 
-    # Confirm that the file exists
-    f = open(file_spec)
-    f.close()
+class Instrument(object):
+    """An Instrument is an abstract class that interprets a given data file and
+    returns the associated Observation object. Instrument classes have no
+    instances but use inheritance to define the relationships between different
+    missions and instruments.
+    """
 
-    ####################################
-    # HST case
-    ####################################
-
-    # See if this is an HST file
-    try:
-        return oops.instrument.hst.from_file(file_spec)
-
-    # A RuntimeError means this file is from HST but is not supported
-
-    # An IOError means this is not an HST file
-    except IOError: pass
-
-    ####################################
-    # Unrecognized case
-    ####################################
-
-    raise IOError("unidentified instrument host: " + file_spec)
+    pass
 
 ################################################################################
 # UNIT TESTS

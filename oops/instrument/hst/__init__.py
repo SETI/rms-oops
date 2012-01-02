@@ -1,519 +1,627 @@
+################################################################################
 # oops/instrument/hst/__init__.py
+################################################################################
 
 import numpy as np
-import unittest
-
 import os
 import re
 import pyfits
-import cspice
+import glob
+import unittest
+
+import julian
+import solar
+import tabulation as tab
 
 import oops
-import oops.instrument.hst.acs.hrc
-import oops.instrument.hst.acs.wfc
-import oops.instrument.hst.wfc3.uvis
+import oops.instrument
 
-################################################################################
+########################################
 # Global Variables
-################################################################################
+########################################
 
 # A handy constant
 RADIANS_PER_ARCSEC = np.pi / 180. / 3600.
-
-# This table enables a small correction to pixel locations within the distortion
-# model when dealing with subarrays. The difference they make is probably
-# infinitesimal.
-
-OVERSCAN_CENTER_OFFSET = {
-    ("HST","ACS",   "HRC" ): oops.Pair((19,10)), # Consistent with the IHB
-    ("HST","ACS",   "SBC" ): 0.,                 # No SBC overscan
-    ("HST","ACS",   "WFC" ): oops.Pair((24,10)), # Uncertain, but probably close
-    ("HST","NICMOS","NIC1"): 0.,                 # No NICMOS overscan (?)
-    ("HST","NICMOS","NIC2"): 0.,
-    ("HST","NICMOS","NIC3"): 0.,
-    ("HST","WFC3",  "IR"  ): 0.,                 # No IR overscan (?)
-    ("HST","WFC3",  "UVIS"): oops.Pair((13, 0)), # ?, consistent with C512C
-    ("HST","WFPC2", ""    ): 0.                  # No info in IHB, probably OK
-}
-
-# For each instrument and detector, this dictionary returns the list of fields
-# in an IDC record that define the key for that record
-
-IDC_FILE_KEY_LISTS = {
-    ("HST","ACS",   "HRC" ): ["FILTER1","FILTER2"],
-    ("HST","ACS",   "SBC" ): ["FILTER1","FILTER2"],
-    ("HST","ACS",   "WFC" ): ["DETCHIP","FILTER1","FILTER2"],
-    ("HST","NICMOS","NIC1"): ["FILTER"],
-    ("HST","NICMOS","NIC2"): ["FILTER"],
-    ("HST","NICMOS","NIC3"): ["FILTER"],
-    ("HST","WFC3",  "IR"  ): ["FILTER"],
-    ("HST","WFC3",  "UVIS"): ["DETCHIP","FILTER"],
-    ("HST","WFPC2", ""    ): ["FILTER1","FILTER2","DETCHIP"]
-}
-
-# For each instrument and detector, this dictionary returns the list of
-# keyword and header number where the information can be found in the header of
-# a FITS data file.
-
-DATA_FILE_KEY_LISTS = {
-    ("HST","ACS",   "HRC" ): [("FILTER1",0),("FILTER2",0)],
-    ("HST","ACS",   "SBC" ): [("FILTER1",0),("FILTER2",0)],
-    ("HST","ACS",   "WFC" ): [("CCDCHIP",0),("FILTER1",0),("FILTER2",0)],
-    ("HST","NICMOS","NIC1"): [("FILTER", 0)],
-    ("HST","NICMOS","NIC2"): [("FILTER", 0)],
-    ("HST","NICMOS","NIC3"): [("FILTER", 0)],
-    ("HST","WFC3",  "IR"  ): [("FILTER", 0)],
-    ("HST","WFC3",  "UVIS"): [("CCDCHIP",1),("FILTER",0)],
-    ("HST","WFPC2", ""    ): [("FILTNAM1",0),("FILTNAM2",0)]
-}
 
 # After a call to set_idc_path(), these global variables will be defined:
 
 HST_IDC_PATH = None
     # The directory prefix pointing to the location where all HST IDC files
-    # reside.
+    # reside. IDC files contain the distortion model of each HST field of view.
 
 IDC_FILE_NAME_DICT = None
     # A dictionary that associates each instrument and detector with the name of
     # a particular IDC file.
 
-IDC_DICTS_LOADED = None
-    # A dictionary that returns True if the IDC file for a particular instrument
-    # and detector has been loaded; False otherwise.
+# After a call to set_syn_path(), this global variable will be defined:
 
-# This is the global dictionary containing all IDC information as function of
-# instrument, detector, chip and filter(s). It is updated by load_idc_dict()
-# every time a new instrument/detector combination is required.
+HST_SYN_PATH = None
+    # The directory prefix pointing to the location where all HST SYN files
+    # reside. SYN files tabulate the filter throughput as a function of
+    # wavelength in Angstroms. This directory has subdirectories named ACS,
+    # WFC3, WFPC2, NICMOS, etc.
 
-GLOBAL_IDC_DICT = {}
+# This should be a reasonably complete procedure for mapping the first three
+# letters of the P.I.'s target name to the SPICE name of the target body.
+
+HST_TARGET_DICT = {"MAR": "MARS",
+                   "JUP": "JUPITER",
+                   "SAT": "SATURN",
+                   "URA": "URANUS",
+                   "NEP": "NEPTUNE",
+                   "PLU": "PLUTO",
+                   "IO" : "JUPITER",
+                   "EUR": "JUPITER",
+                   "GAN": "JUPITER",
+                   "CAL": "JUPITER",
+                   "ENC": "SATURN",
+                   "TIT": "SATURN",
+                   "PHO": "PHOEBE"}
 
 ################################################################################
-# from_file()
+# Standard class methods
 ################################################################################
 
-def from_file(file_spec):
-    """Given the name of a file, this function returns an associated Observation
-    object describing the data found in the file."""
+def from_file(filespec, parameters={}):
+    """A general, static method to return an Observation object based on a given
+    data file generated by the Hubble Space Telescope."""
 
-    (host, instrument, detector) = get_file_info(file_spec)
-    if host != "HST":
-        raise IOError("instrument host is not HST: " + file_spec)
+    hst_file = pyfits.open(filespec)
+    return from_opened_fitsfile(hst_file, parameters)
+
+def from_opened_fitsfile(hst_file, parameters={}):
+    """A general, static method to return an Observation object based on an hst
+    data file generated by the Hubble Space Telescope."""
+
+    # Make an instance of the HST class
+    this = HST()
+
+    # Confirm that the telescope is HST
+    if this.telescope_name(hst_file) != "HST":
+        raise IOError("not an HST file: " + this.filespec(hst_file))
+
+    # Figure out the instrument
+    instrument = this.instrument_name(hst_file)
 
     if instrument == "ACS":
-        if detector == "HRC":
-            return oops.instrument.hst.acs.hrc.from_file(file_spec)
-        elif detector == "WFC":
-            return oops.instrument.hst.acs.wfc.from_file(file_spec)
-        else:
-            raise RuntimeError("HST/ACS/" + detector +
-                               " is not supported: " + file_spec)
+        return oops.instrument.hst.acs.from_opened_fitsfile(
+                                    hst_file, parameters)
 
-    elif instrument == "WFC3":
-        if detector == "UVIS":
-            return oops.instrument.hst.wfc3.uvis.from_file(file_spec)
-        else:
-            raise RuntimeError("HST/WFC3/" + detector +
-                               " is not supported: " + file_spec)
+    if instrument == "WFC3":
+        return oops.instrument.hst.wfc3.from_opened_fitsfile(
+                                    hst_file, parameters)
 
-    else:
-        raise RuntimeError("HST instrument " + instrument +
-                           " is not supported: " + file_spec)
-
-################################################################################
-# Helper functions for most HST images
-################################################################################
-
-def get_file_info(file_spec):
-    """Returns the instrument_host, instrument and detector associated with
-    a data file.
-
-    Input:
-        file_spec       the full path to a data file.
-
-    Return:             a tuple containing (instrument_host, instrument
-                        detector).
-    """
-
-    # See if it is a FITS file
-    try:
-        hst_file = pyfits.open(file_spec)
-    except IOError:
-        # Replace the uninformative error message from pyfits
-        raise IOError("unrecognized file format: " + file_spec)
-
-    info = get_hst_info(hst_file)
-    hst_file.close()
-
-    return info
-
-def get_hst_info(hst_file):
-    """Returns the instrument_host, instrument and detector associated with
-    a data file already opened by pyfits.open().
-    """
-
-    # Extract the instrument_host
-    try:
-        host = hst_file[0].header["TELESCOP"]
-    except KeyError:
-        fits_file.close()
-        raise IOError("unidentified instrument host: " + file_spec)
-
-    # Confirm the instrument host
-    if host != "HST":
-        raise IOError("instrument host is not HST: " + file_spec)
-
-    # Get the instrument
-    try:
-        instrument = hst_file[0].header["INSTRUME"]
-    except KeyError:
-        raise IOError("unidentified instrument: " + file_spec)
-
-    # Get the detector
-    detector = ""
     if instrument == "WFPC2":
-        detector == ""
-    elif instrument == "NICMOS":
-        detector = hst_file[0].header["APERTURE"][0:4]
-    else:
+        return oops.instrument.hst.wfpc2.from_opened_fitsfile(
+                                    hst_file, parameters)
+
+    if instrument == "NICMOS":
+        return oops.instrument.hst.nicmos.from_opened_fitsfile(
+                                    hst_file, parameters)
+
+    raise IOError("unsupported instrument in HST file " +
+                   hst.filespec(hst_file) + ": " + instrument)
+
+################################################################################
+# Class HST
+################################################################################
+
+class HST(oops.instrument.Instrument):
+    """This class defines functions and properties unique to the Hubble Space
+    Telescope. Other attributes may be inherited from higher levels in the
+    Iinstrument class hierarchy.
+
+    Objects of this class are empty; they only exist to support inheritance.
+    """
+
+    def filespec(self, hst_file):
+        """Returns the full directory path and name of the file."""
+
+        # Found by poking around inside a pyfits object
+        return hst_file._HDUList__file._File__file.name
+
+    def telescope_name(self, hst_file):
+        """Returns the name of the telescope from which the observation was
+        obtained."""
+
+        return hst_file[0].header["TELESCOP"]
+
+    def instrument_name(self, hst_file):
+        """Returns the name of the HST instrument associated with the file."""
+
+        return hst_file[0].header["INSTRUME"]
+
+    # The default FITS keyword defining the HST instrument's detector is
+    # "DETECTOR". However, this must be overridden by some instruments.
+    def detector_name(self, hst_file):
+        """Returns the name of the detector on the HST instrument that was used
+        to obtain this file."""
+
+        return hst_file[0].header["DETECTOR"]
+
+    def data_array(self, hst_file, layer=None):
+        """Returns an array containing the data. The layer parameter is ignored
+        for all instruments except WFPC2."""
+
+        return hst_file[1].data
+
+    def mask_array(self, hst_file, layer=None):
+        """Returns an array containing the data. The layer parameter is ignored
+        for all instruments except WFPC2."""
+
+        return hst_file[2].data
+
+    # This works for Snapshot observations. Others must override.
+    def time_limits(self, hst_file):
+        """Returns a tuple containing the overall start and end times of the
+        observation."""
+
+        date_obs = hst_file[0].header["DATE-OBS"]
+        time_obs = hst_file[0].header["TIME-OBS"]
+        exptime  = hst_file[0].header["EXPTIME"]
+
+        tdb0 = julian.tdb_from_tai(julian.tai_from_iso(date_obs + "T" +
+                                                       time_obs))
+        tdb1 = tdb0 + exptime
+
+        return (tdb0, tdb1)
+
+    def register_frame(self, hst_file, layer=None):
+        """Returns the Cmatrix Frame that rotates from J2000 coordinates into
+        the frame of the HST observation. The layer parameter is ignored by
+        every instrument except WFPC2.
+        """
+
+        header1 = hst_file[1].header
+        ra    = header1["CRVAL1"]
+        dec   = header1["CRVAL2"]
+        clock = header1["ORIENTAT"]
+        frame_id = hst_file[0].header["FILENAME"]
+
+        oops.Frame.reregister(oops.Cmatrix(ra, dec, clock, frame_id))
+        return frame_id
+
+    def iof_calibration(self, hst_file, fov, parameters={}):
+        """Returns a Calibration object suitable for integrating the I/F of
+        point objects in an HST image.
+
+        Input:
+            hst_file        the object returned by pyfits.open().
+            fov             the field of view describing the observation.
+            parameters      a dictionary of arbitrary parameters.
+                parameters["solar_range"]
+                            if present, this parameters defines the Sun-target
+                            distance in AU. If not defined or None, the range
+                            is inferred from the observation's target name and
+                            mid-time and the mid-time of the exposure, using 
+                            the loaded SPICE kernels.
+                parameters["solar_model"]
+                            if present, this is the name of the model to use for
+                            the solar flux density, either "STIS" or "COLINA".
+                            If not defined or None, the "STIS" model is used.
+
+        Return              a Calibration object that converts from DN to
+                            reflectivity.
+        """
+
+        # Look up the solar range...
         try:
-            detector = hst_file[0].header["DETECTOR"]
+            solar_range = parameters["solar_range"]
         except KeyError:
-            raise IOError("unidentified detector: " + file_spec)
+            solar_range = None
 
-    return ("HST", instrument, detector)
+        # If necessary, get the solar range from the target name
+        if solar_range is None:
+            target_body = self.target_body(hst_file)
+            target_sun_path = oops.Path.connect(target_body, "SUN")
+                # Paths of the relevant bodies need to be defined in advance!
 
-def from_hst_image_file(file_spec):
-    """This version of from_file() should work for most HST images but has only
-    been tested for WFC3 and ACS."""
+            times = self.get_time(hst_file)
+            tdb = (times[0] + times[1]) / 2.
+            sun_event = target_sun_path.event_at_time(tdb)
+            solar_range = sun_event.pos.norm() / solar.AU
 
-    hst_file = pyfits.open(file_spec)
+        # Look up the solar model...
+        try:
+            solar_model = parameters["solar_model"]
+        except KeyError:
+            solar_model = None
 
-    times = get_times(hst_file)
-    fov   = get_fov(hst_file)
-    frame = get_frame(hst_file, fov.uv_los)
-    data  = get_data(hst_file)
-    axes  = ("v","u")
+        if solar_model is None:
+            solar_model = "STIS"
 
-    return oops.Observation(data, axes, times, fov, "EARTH", frame.frame_id)
+        # Generate the calibration factor
+        factor = hst_file[1].header["PHOTFLAM"] / self.solar_f(hst_file,
+                                                       solar_range, solar_model)
 
-def set_idc_path(idc_path):
-    """Defines the directory path to the IDC files. It must be called before
-    any HST files are loaded. The alternative is to define the environment
-    variable HST_IDC_PATH."""
+        # Create and return the calibration
+        return oops.AreaCalibration("REFLECTIVITY", factor, fov)
 
-    global HST_IDC_PATH
-    global IDC_FILE_NAME_DICT
-    global IDC_DICTS_LOADED
+    def target_body(self, hst_file):
+        """This procedure returns the SPICE name of a target body based on
+        target name used by the program P.I."""
 
-    # Save the argument as a global variable. Make sure it ends with slash.
-    HST_IDC_PATH = idc_path
+        global HST_TARGET_DICT
 
-    if HST_IDC_PATH[-1] != "/":
-        HST_IDC_PATH += "/"
+        targname = hst_file[0].header["TARGNAME"]
 
-    # We associate files with specific instruments and detector combinations
-    # via a dictionary. The definition of this dictionary resides in the
-    # same directory as the IDC files themselves, in a file called
-    #   IDC_FILE_NAME_DICT.txt
-    # Every time we update an IDC file, we will need to update this file
-    # too.
-    #
-    # The file has this syntax:
-    #   ("HST","ACS",   "HRC"): "p7d1548qj_idc.fits"
-    #   ("HST","WFPC2", ""   ): "v5r1512gi_idc.fits"
-    # etc., where each row defines a dictionary entry comprising a key
-    # ("HST", instrument name, detector name) and the name of the associated
-    # IDC file in FITS format.
+        if len(targname) >= 2:      # Needed to deal with 2-letter "IO"
+            key2 = targname[0:2]
+            key3 = key2
+        if len(targname) >= 3:
+            key3 = targname[0:3]
 
-    # Compile a regular expression that ensures nothing bad is contained in
-    # this file.
-    regex = re.compile(r' *\( *("\w*" *, *)*"\w*" *\) *: *"\w+\.fits" *$',
-                       re.IGNORECASE)
+        try:
+            return HST_TARGET_DICT[key3]
+        except KeyError:
+            return HST_TARGET_DICT[key2]
 
-    # Read the key:value pairs and make sure they are clean
-    f = open(HST_IDC_PATH + "IDC_FILE_NAME_DICT.txt")
-    lines = []
-    for line in f:
-        if regex.match(line) is False:
-            raise IOError("syntax error in IDC definition: " + line)
+        # Raises a KeyError on failure
 
-        lines.append(line)
-    f.close()
+    def construct_snapshot(self, hst_file, parameters={}):
+        """Returns a Snapshot object for the data found in the specified image.
+        Parameter layer is ignored here. This method is overridden by WFPC2
+        to support layers."""
 
-    # Define the global dictionary
-    IDC_FILE_NAME_DICT = eval("{" + ", ".join(lines) + "}")
+        fov = self.define_fov(hst_file, parameters)
+        return oops.Snapshot(self.data_array(hst_file),
+                             self.mask_array(hst_file),
+                             ["v","u"],
+                             self.time_limits(hst_file),
+                             fov,
+                             "EARTH",
+                             self.register_frame(hst_file),
+                             self.iof_calibration(hst_file, fov, parameters))
 
-    # This dictionary tracks the IDC files loaded
+    ############################################################################
+    # IDC (distortion model) support functions
+    ############################################################################
 
-    IDC_DICTS_LOADED = {}
-    for key in IDC_FILE_NAME_DICT.keys():
-        IDC_DICTS_LOADED[key] = False
+    def set_idc_path(self, idc_path):
+        """Defines the directory path to the IDC files. It must be called before
+        any HST files are loaded. The alternative is to define the environment
+        variable HST_IDC_PATH."""
 
-    return
+        global HST_IDC_PATH
+        global IDC_FILE_NAME_DICT
 
-def load_idc_dict(detector_key):
-    """Loads the IDC dictionary information for a specified HST detector.
-    If the dictionary has already been loaded, it does nothing.
+        # Save the argument as a global variable. Make sure it ends with slash.
+        HST_IDC_PATH = idc_path
 
-    Input:
-        detector_key    a tuple ("HST", instrument, detector) as returned by
-                        get_hst_file_info()
-    """
+        # We associate files with specific instruments and detector combinations
+        # via a dictionary. The definition of this dictionary resides in the
+        # same directory as the IDC files themselves, in a file called
+        #   IDC_FILE_NAME_DICT.txt
+        # Every time we update an IDC file, we will need to update this file
+        # too.
+        #
+        # The file has this syntax:
+        #   ("ACS",   "HRC"): "p7d1548qj_idc.fits"
+        #   ("WFPC2", ""   ): "v5r1512gi_idc.fits"
+        # etc., where each row defines a dictionary entry comprising a key
+        # (instrument name, detector name) and the name of the associated
+        # IDC file in FITS format.
 
-    # If the dictionary was never initialized, find the HST_IDC_PATH
-    # environment variable and initialize it now.
-    if HST_IDC_PATH is None:
-        set_idc_path(os.environ["HST_IDC_PATH"])
+        # Compile a regular expression that ensures nothing bad is contained in
+        # this file.
+        regex = re.compile(r' *\( *("\w*" *, *)*"\w*" *\) *: *"\w+\.fits" *$',
+                           re.IGNORECASE)
 
-    # See if the info has been loaded already
-    if IDC_DICTS_LOADED[detector_key]: return
+        # Read the key:value pairs and make sure they are clean
+        f = open(HST_IDC_PATH + "IDC_FILE_NAME_DICT.txt")
+        lines = []
+        for line in f:
+            if regex.match(line) is False:
+                raise IOError("syntax error in IDC definition: " + line)
 
-    # Get the key name info for the dictionary
-    key_name_list = IDC_FILE_KEY_LISTS[detector_key]
+            lines.append(line)
+        f.close()
 
-    # Open the file
-    hst_file = pyfits.open(HST_IDC_PATH + IDC_FILE_NAME_DICT[detector_key])
+        # Define the global dictionary
+        IDC_FILE_NAME_DICT = eval("{" + ", ".join(lines) + "}")
 
-    # Get the names of columns
-    fits_obj = hst_file[1]
-    ncolumns = fits_obj.header["TFIELDS"]
-    names = []
-    for c in range(ncolumns):
-        key = "TTYPE" + str(c+1)
-        names.append(fits_obj.header[key])
+        return
 
-    # Read the rows of the IDC table...
-    nrows = fits_obj.header["NAXIS2"]
-    for r in range(nrows):
+    def idc_filespec(self, hst_file):
+        """Returns the full directory path and file name of an IDC file, given
+        the associated FITS file object.
+        """
 
-        row_dict = {}
-        is_forward = False
+        # Define the directory path and load the dictionary if necessary
+        if HST_IDC_PATH is None:
+            self.set_idc_path(os.environ["HST_IDC_PATH"])
 
-        # For each column...
+        # Look up and return the filespec
+        detector_key = (self.instrument_name(hst_file),
+                        self.detector_name(hst_file))
+
+        return os.path.join(HST_IDC_PATH, IDC_FILE_NAME_DICT[detector_key])
+
+    def load_idc_dict(self, hst_file, keys):
+        """Returns the IDC dictionary containing all the parameters in an IDC
+        file.
+
+        Input:
+            hst_file        the information returned by pyfits.open().
+
+            keys            a tuple containing the names of the columns to use
+                            as the keys of the returned dictionary. For example,
+                            if keys = ("FILTER1","FILTER2"), then the pair of
+                            filter names will be the key into the dictionary.
+
+        Return:             A dictionary in which each entry is itself a
+                            dictionary containing the parameter/value pairs from
+                            a single row of the IDC file. The rows are keyed by
+                            a tuple of the values in the columns specified by
+                            the keys.
+        """
+
+        # Open the IDC FITS file
+        idc_filespec = self.idc_filespec(hst_file)
+        idc_file = pyfits.open(idc_filespec)
+        object1 = idc_file[1]
+        header1 = object1.header
+
+        # Get the names of columns
+        ncolumns = header1["TFIELDS"]
+        names = []
         for c in range(ncolumns):
+            key = "TTYPE" + str(c+1)
+            names.append(header1[key])
 
-            # Convert the value to a standard Python type
-            value = fits_obj.data[r][c]
-            dtype = str(fits_obj.data.dtype[c])
+        # Initiailize the dictionary to be returned
+        idc_dict = {}
 
-            if   "S" in dtype: value = str(value)
-            elif "i" in dtype: value = int(value)
-            elif "f" in dtype: value = float(value)
-            else:
-                raise ValueError("Unrecognized dtype: " + dtype)
+        # For each row of the IDC table...
+        nrows = header1["NAXIS2"]
+        for r in range(nrows):
 
-            # Make sure this is a FORWARD transform
-            if names[c] == "DIRECTION" and value == "FORWARD":
-                is_forward = True
+            # if the direction is not FORWARD, skip this row
+            if object1.data[r]["DIRECTION"] != "FORWARD": continue
 
-            # Append to the row's list and dictionary
-            row_dict[names[c]] = value
+            # Initialize the row's dictionary
+            row_dict = {}
 
-        # Only save forward transforms
-        if is_forward:
+            # For each column...
+            for c in range(ncolumns):
 
-            # Make the dictionary key for the row
-            key = []
-            for name in key_name_list:
-                key.append(row_dict[name])
+                # Convert the value to a standard Python type
+                value = object1.data[r][c]
+                dtype = str(object1.data.dtype[c])
 
-            key = detector_key + tuple(key)
+                if   "S" in dtype: value = str(value)
+                elif "i" in dtype: value = int(value)
+                elif "f" in dtype: value = float(value)
+                else:
+                    raise ValueError("Unrecognized dtype: " + dtype)
 
-            # Add to the dictionary
-            GLOBAL_IDC_DICT[key] = row_dict
+                # Add to the row's dictionary
+                row_dict[names[c]] = value
 
-    IDC_DICTS_LOADED[detector_key] = True
-    return
+            # Derive the key for this row
+            tuple = ()
+            for key in keys:
+                tuple += (row_dict[key].strip(),)
 
-def idc_key(hst_file, quadrant=0):
-    """Returns the key into the IDC dictionary associated with this file.
-    The file must already have been opened via pyfits.open(). Use
-    quadrant = 0-3 for the four quadrants of WFPC2"""
+            # Add a new entry to the dictionary
+            idc_dict[tuple] = row_dict
 
-    key = get_hst_info(hst_file)
+        return idc_dict
 
-    key_name_tuples = DATA_FILE_KEY_LISTS[key]
-    for (name,i) in key_name_tuples:
-        key += (hst_file[i].header[name],)
+    def construct_idc_fov(self, fov_dict):
+        """Returns the FOV object associated with the full field of view of an
+        HST instrument, based on a dictionary of associated IDC parameter
+        values.
 
-    if key[1] == "WFPC2": key += (quadrant,)
+        Input:
+            fov_dict    a dictionary defining the associated IDC parameters.
+                        This is one of the entries in the dictionary returned by
+                        load_idc_file().
 
-    return key
+        Return:         a PolynomialFOV object.
+        """
 
-def get_fov(hst_file, quadrant=0):
-    """Returns the FOV object associated with the file. The FOV includes the
-    HST distortion model, and allows for possible subarrays and possible
-    sub-sampling. 
+        # Determine the order of the transform
+        if "CX11" in fov_dict: order = 1
+        if "CX22" in fov_dict: order = 2
+        if "CX33" in fov_dict: order = 3
+        if "CX44" in fov_dict: order = 4
+        if "CX55" in fov_dict: order = 5
+        if "CX66" in fov_dict: order = 6
 
-    Input:
-        hst_file    the FITS file object, as returned by pyfits.open().
-        quadrant    for WFPC2, enter 0-3 to select PC1, WF2, WF3 or WF4;
-                    otherwise, ignored.
+        # Create an empty array for the coefficients
+        cxy = np.zeros((order+1, order+1, 2))
 
-    Return:         the associated FOV object.
-    """
+        # The first index is the order of the term.
+        # The second index is the coefficient on the sample axis.
+        for   i in range(1, order+1):
+          for j in range(i+1):
+            try:
+                # In these arrays, the indices are the powers of x (increasing
+                # rightward) and y (increasing upward).
+                cxy[j,i-j,0] =  fov_dict["CX" + str(i) + str(j)]
+                cxy[j,i-j,1] = -fov_dict["CY" + str(i) + str(j)]
+            except KeyError: pass
 
-    header1 = hst_file[1].header
+        return oops.PolynomialFOV(cxy * RADIANS_PER_ARCSEC,
+                        (fov_dict["XSIZE"], fov_dict["YSIZE"]),
+                        (fov_dict["XREF" ], fov_dict["YREF" ]),
+                        (fov_dict["SCALE"] * RADIANS_PER_ARCSEC)**2)
 
-    # Get the IDC dictionary entry for this file
-    detector_key = get_hst_info(hst_file)
+    def construct_drz_fov(self, fov_dict, hst_file):
+        """Returns the FOV object associated with the full field of view of a
+        "drizzled" (geometrically reprojected) image.
 
-    # Load the IDC information if necessary
-    load_idc_dict(detector_key)
+        Input:
+            fov_dict    a dictionary defining the associated IDC parameters.
+                        This is one of the entries in the dictionary returned by
+                        load_idc_file().
+            hst_file    the FITS file object returned by pyfits.open().
 
-    # Get the associated dictionary entry
-    idc_dict = GLOBAL_IDC_DICT[idc_key(hst_file, quadrant)]
-
-    # If this is a drizzled file, we can treat it as a FlatFOV
-    try:
-        drizcorr = hst_file[0].header["DRIZCORR"]
-    except KeyError:
-        drizcorr = ""
-
-    if drizcorr == "COMPLETE":
+        Return:         a FlatFOV object.
+        """
 
         # Define the field of view without sub-sampling
         # *** SHOULD BE CHECKED ***
-        scale = idc_dict["SCALE"] * RADIANS_PER_ARCSEC
-        fov = oops.FlatFOV((scale,-scale),
-                      (header1["NAXIS1"], header1["NAXIS2"]))
+        scale = fov_dict["SCALE"] * RADIANS_PER_ARCSEC
+        scale = oops.Pair((scale, -scale))
 
-        # Apply the sub-sampling if necessary
-        binaxis1 = header1["BINAXIS1"]
-        binaxis2 = header1["BINAXIS2"]
-        if binaxis1 != 1 or binaxis2 != 1:
-            fov = oops.SubsampledFOV(fov, (binaxis1, binaxis2))
+        # Extract all size and offset parameters from the header
+        header1 = hst_file[1].header
+        crpix   = oops.Pair((header1["CRPIX1"],   header1["CRPIX2"]  ))
+        sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS1"]))
+        binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS1"]))
 
-        return fov
+        return oops.FlatFOV(scale * binaxis, sizaxis, crpix)
 
-    # Determine the order of the transform
-    if "CX11" in idc_dict: order = 1
-    if "CX22" in idc_dict: order = 2
-    if "CX33" in idc_dict: order = 3
-    if "CX44" in idc_dict: order = 4
-    if "CX55" in idc_dict: order = 5
-    if "CX66" in idc_dict: order = 6
+    def construct_fov(self, fov_dict, hst_file):
+        """Returns the FOV object associated with an HST instrument, allowing for
+        drizzling, for subarrays, overscan pixels and pixel binning.
 
-    # Create arrays of the coefficients
-    cxy = np.zeros((order+1, order+1, 2))
+        Input:
+            fov_dict    a dictionary defining the associated IDC parameters.
+                        This is one of the entries in the dictionary returned by
+                        load_idc_file().
+            hst_file    the FITS file object returned by pyfits.open().
+        """
 
-    # The first index is the order of the term.
-    # The second index is the coefficient on the sample axis.
-    for   i in range(1, order+1):
-      for j in range(i+1):
+        # Check for a drizzle correction
         try:
-            # In these arrays, the indices are the powers of x (increasing
-            # rightward) and y (increasing upward).
-            cxy[j,i-j,0] =  idc_dict["CX" + str(i) + str(j)]
-            cxy[j,i-j,1] = -idc_dict["CY" + str(i) + str(j)]
-        except KeyError: pass
+            drizcorr = hst_file[0].header["DRIZCORR"]
+        except KeyError:
+            drizcorr = ""
 
-    # Figure out the shape and center, which might have been altered by
-    # overscan pixels
-    idc_shape  = oops.Pair((idc_dict["XSIZE"], idc_dict["YSIZE"]))
-    true_shape = oops.Pair((header1["NAXIS1"], header1["NAXIS2"]))
+        # If drizzled, construct and return a FlatFOV
+        if drizcorr == "COMPLETE":
+            return self.construct_drz_fov(fov_dict, hst_file)
 
-    # If the image is not smaller than the full FOV, center it appropriately
-    # and return the FOV. It can be larger because of overscan pixels.
-    if np.all(true_shape.vals >= idc_shape.vals):
-        return oops.PolynomialFOV(cxy * RADIANS_PER_ARCSEC,
-                        true_shape,
-                        (header1["CRPIX1"], header1["CRPIX2"]),
-                        (idc_dict["SCALE"] * RADIANS_PER_ARCSEC)**2)
+        # Otherwise, construct the default PolynomialFOV
+        fov = self.construct_idc_fov(fov_dict)
 
-    # Otherwise, first define the nominal full FOV using IDC info alone
-    fov = oops.PolynomialFOV(cxy * RADIANS_PER_ARCSEC,
-                    (idc_dict["XSIZE"], idc_dict["YSIZE"]),
-                    (idc_dict["XREF" ], idc_dict["YREF" ]),
-                    (idc_dict["SCALE"] * RADIANS_PER_ARCSEC)**2)
+        # Extract all size and offset parameters from the header
+        header1 = hst_file[1].header
+        crpix   = oops.Pair((header1["CRPIX1"],   header1["CRPIX2"]  ))
+        centera = oops.Pair((header1["CENTERA1"], header1["CENTERA1"]))
+        sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS1"]))
+        binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS1"]))
 
-    # Shift it to the actual subarray
-    # For ACS and WFC3, apply a small correction for the overscan pixels,
-    # which are included in the CENTERA1/2 parameters but not in the IDC
-    # model.
-    fov = oops.SubarrayFOV(fov,
-                    (oops.Pair((header1["CENTERA1"],header1["CENTERA2"]))
-                                - OVERSCAN_CENTER_OFFSET[detector_key]),
-                    true_shape,
-                    oops.Pair(((header1["CRPIX1"],header1["CRPIX2"]))))
+        # Apply the subarray correction
+        subarray_fov = oops.SubarrayFOV(fov, centera,               # new_los
+                                             sizaxis * binaxis,     # uv_shape
+                                             crpix * binaxis)       # uv_los
 
-    # Apply the sub-sampling if necessary
-    binaxis1 = header1["BINAXIS1"]
-    binaxis2 = header1["BINAXIS2"]
-    if binaxis1 != 1 or binaxis2 != 1:
-        fov = oops.SubsampledFOV(fov, (binaxis1, binaxis2))
+        # Apply the subsampling if necessary
+        if binaxis == (1,1):
+            return subarray_fov
+        else:
+            return oops.SubsampledFOV(subarray_fov, binaxis)
 
-    return fov
+    ############################################################################
+    # SYN (filter bandpass and instrument throughput) support functions
+    ############################################################################
 
-def get_times(hst_file):
-    """Returns the times in seconds at the beginning and end of the
-    exposure.
+    def set_syn_path(self, syn_path):
+        """Defines the directory path to the root directory of the SYN files.
+        The alternative is to define the environment variable HST_SYN_PATH.
+        """
 
-    Input:
-        hst_file    the FITS file object, as returned by pyfits.open().
+        global HST_SYN_PATH
 
-    Return:         a tuple containing the start and end times in seconds
-                    TDB.
-    """
+        HST_SYN_PATH = syn_path
 
-    date_obs = hst_file[0].header["DATE-OBS"]
-    time_obs = hst_file[0].header["TIME-OBS"]
-    exptime  = hst_file[0].header["EXPTIME"]
+    def get_syn_path(self):
+        """Returns the directory path to the root directory of the SYN files. It
+        uses the value of environment variable HST_SYN_PATH if the value is
+        currently undefined.
+        """
 
-    time0 = cspice.str2et(date_obs + " " + time_obs)
-    time1 = time0 + exptime
+        global HST_SYN_PATH
 
-    return (time0, time1)
+        if HST_SYN_PATH is None:
+            self.set_syn_path(os.environ["HST_SYN_PATH"])
 
-def get_frame(hst_file, uv_los, quadrant=0):
-    """Returns the CmatrixFrame that rotates from J2000 coordinates into the
-    frame of the HST observation. 
+        return HST_SYN_PATH
 
-    Input:
-        hst_file    the FITS file object, as returned by pyfits.open().
-        uv_los      the pixel coordinates in the image that correspond to the
-                    optic axis of the image or subarray.
-        quadrant    for WFPC2, enter 0-3 to select PC1, WF2, WF3 or WF4;
-                    otherwise, ignored.
+    def load_syn_throughput(self, hst_file):
+        """Returns a Tabulation of throughput vs. wavelength in Angstroms for
+        the combined set of SYN files returned by self.select_syn_files().
+        """
 
-    Return:         the associated FOV object.
-    """
+        # Multiply all the Tabulations of throughputs
+        syn_filenames = self.select_syn_files(hst_file)
 
-    u_ref   = hst_file[1].header["CRPIX1"]
-    v_ref   = hst_file[1].header["CRPIX2"]
-    ra_ref  = hst_file[1].header["CRVAL1"]
-    dec_ref = hst_file[1].header["CRVAL2"]
+        tabulation = self._load_syn_file(syn_filenames[0])
+        for syn_filename in syn_filenames[1:]:
+            tabulation *= self._load_syn_file(syn_filename)
 
-    dra_du  = hst_file[1].header["CD1_1"]
-    dra_dv  = hst_file[1].header["CD1_2"]
-    ddec_du = hst_file[1].header["CD2_1"]
-    ddec_dv = hst_file[1].header["CD2_2"]
+        return tabulation
 
-    # We need (ra,dec) at the optic axis coordinates uv_los
-    # dra  = dra_du  * (u_los - u_ref) + dra_dv  * (v_los - v_ref)
-    # ddec = ddec_du * (u_los - u_ref) + ddec_dv * (v_los - v_ref)
+    def _load_syn_file(self, syn_filename):
+        """Private function to return a Tabulation of throughput vs. wavelength
+        in Angstroms for a single HST SYN file.
+        """
 
-    duv = uv_los - (u_ref,v_ref)
-    ra_los  = ra_ref  + duv.dot((dra_du,  dra_dv)).vals
-    dec_los = dec_ref + duv.dot((ddec_du, ddec_dv)).vals
+        # Construct the full file path
+        syn_pattern = os.path.join(self.get_syn_path(), syn_filename)
+        print syn_pattern
 
-    clock = hst_file[1].header["ORIENTAT"]
-    file_name = hst_file[0].header["FILENAME"]
+        # Find the most recent file
+        filespec_list = glob.glob(syn_pattern)
+        filespec_list.sort()
 
-    return oops.Cmatrix(ra_los, dec_los, clock, file_name)
+        try:
+            syn_filespec = filespec_list[-1]
+        except IndexError:
+            raise IOError("file not found: " + syn_filename)
 
-def get_data(hst_file, quadrant=0):
-    """Returns the data array associated with the image. 
+        # Read the tabulation and return
+        syn_file = pyfits.open(syn_filespec)
 
-    Input:
-        hst_file    the FITS file object, as returned by pyfits.open().
-        quadrant    for WFPC2, enter 0-3 to select PC1, WF2, WF3 or WF4;
-                    otherwise, ignored. ***NOT YET IMPLEMENTED***
+        x = syn_file[1].data.WAVELENGTH
+        y = syn_file[1].data.THROUGHPUT
 
-    Return:         the associated FOV object.
-    """
+        syn_file.close()
 
-    return hst_file[1].data
+        return tab.Tabulation(x,y)
+
+    def solar_f(self, hst_file, sun_range=1., model="STIS"):
+        """Returns the solar F averaged over the instrument throughput.
+
+        Input:
+            bandpass        the instrument/detector/filter throughput, tabulated
+                            in units of Angstroms.
+            hst_file        the object returned by pyfits.open().
+            sun_range       the distance from the Sun to the target in AU.
+            model           the solar model, "STIS" or "COLINA"; "STIS" is the
+                            default.
+
+        Return:             solar F in units of erg/s/cm^2/Angstrom.
+        """
+
+        # Convert bandpass tabulation from Angstroms to microns
+        bandpass = self.load_syn_throughput(hst_file)
+        bandpass = tab.Tabulation(bandpass.x * 1.e-4, bandpass.y)
+
+        # Convert units of solar F back to CGS per Angstrom
+        solar_f_mks_per_micron = solar.bandpass_f(bandpass, sun_range, model)
+
+        return solar_f_mks_per_micron * solar.TO_CGS * solar.TO_PER_ANGSTROM
+
+    def compare_pivot_mean(self, hst_file):
+        """Returns a tuple containing the pivot wavelength as derived from the
+        SYN file and that extracted directly from the file header. They should
+        be nearly equal. Both are given in units of Angstroms."""
+
+        return (self.load_syn_throughput(hst_file).pivot_mean(),
+                hst_file[1].header["PHOTPLAM"])
+        
+    def compare_bandwidth_rms(self, hst_file):
+        """Returns a tuple containing the RMS bandwidth as derived from the SYN
+        file and that extracted directly from the file header. They should
+        be nearly equal. Both are given in units of Angstroms."""
+
+        return (self.load_syn_throughput(hst_file).bandwidth_rms(),
+                hst_file[1].header["PHOTBW"])
 
 ################################################################################
 # UNIT TESTS
@@ -525,7 +633,7 @@ class Test_Instrument_HST(unittest.TestCase):
 
         APR = 180./np.pi * 3600.
 
-        prefix = "unittest_data/hst/"
+        prefix = "test_data/hst/"
         self.assertEqual(get_file_info(prefix + "ibht07svq_drz.fits"),
                          ('HST', 'WFC3', 'IR'))
         self.assertEqual(get_file_info(prefix + "ibht07svq_ima.fits"),
@@ -548,7 +656,7 @@ class Test_Instrument_HST(unittest.TestCase):
         self.assertRaises(IOError, get_file_info, prefix + "a.b.c.d")
 
         # Raw ACS, full-frame with overscan pixels
-        prefix = "unittest_data/hst/"
+        prefix = "test_data/hst/"
         hst_file = pyfits.open(prefix + "j9dh35h7q_raw.fits")
 
         # Test get_time()

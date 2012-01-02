@@ -1,15 +1,19 @@
+################################################################################
+# Vector3
+#
+# Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
+################################################################################
+
 import numpy as np
 import unittest
 
-import oops
+from oops.broadcastable.Array  import Array
+from oops.broadcastable.Scalar import Scalar
+from oops.broadcastable.Pair   import Pair
 
-################################################################################
-################################################################################
-# Vector3
-################################################################################
-################################################################################
+from oops import utils
 
-class Vector3(oops.Array):
+class Vector3(Array):
     """An arbitrary Array of 3-vectors."""
 
     OOPS_CLASS = "Vector3"
@@ -47,15 +51,15 @@ class Vector3(oops.Array):
             axis        axis index.
         """
 
-        return oops.Scalar(self.vals[...,axis])
+        return Scalar(self.vals[...,axis])
 
     def as_scalars(self):
         """Returns the components of a Vector3 as a triplet of Scalars.
         """
 
-        return (oops.Scalar(self.vals[...,0]),
-                oops.Scalar(self.vals[...,1]),
-                oops.Scalar(self.vals[...,2]))
+        return (Scalar(self.vals[...,0]),
+                Scalar(self.vals[...,1]),
+                Scalar(self.vals[...,2]))
 
     @staticmethod
     def from_scalars(x,y,z):
@@ -63,9 +67,9 @@ class Vector3(oops.Array):
         components provided as scalars.
         """
 
-        (x,y,z) = oops.Array.broadcast_arrays((oops.Scalar.as_scalar(x),
-                                               oops.Scalar.as_scalar(y),
-                                               oops.Scalar.as_scalar(z)))
+        (x,y,z) = Array.broadcast_arrays((Scalar.as_scalar(x),
+                                          Scalar.as_scalar(y),
+                                          Scalar.as_scalar(z)))
         return Vector3(np.vstack((x.vals,y.vals,z.vals)).swapaxes(0,-1))
 
     def dot(self, arg):
@@ -77,17 +81,17 @@ class Vector3(oops.Array):
             if np.shape(arg)[-1] != 3:
                 raise ValueError("shape of a Vector3 array must be [...,3]")
 
-        return oops.Scalar(oops.utils.dot(self.vals, arg))
+        return Scalar(utils.dot(self.vals, arg))
 
     def norm(self):
         """Returns the length of the Vector3 as a Scalar."""
 
-        return oops.Scalar(oops.utils.norm(self.vals))
+        return Scalar(utils.norm(self.vals))
 
     def unit(self):
         """Returns a the vector converted to unit length as a Vector3."""
 
-        return Vector3(oops.utils.unit(self.vals))
+        return Vector3(utils.unit(self.vals))
 
     def cross(self, arg):
         """Returns the cross products of the vectors as a Vector3."""
@@ -98,7 +102,7 @@ class Vector3(oops.Array):
             if np.shape(arg)[-1] != 3:
                 raise ValueError("shape of a Vector3 array must be [...,3]")
 
-        return Vector3(oops.utils.cross3d(self.vals, arg))
+        return Vector3(utils.cross3d(self.vals, arg))
 
     def ucross(self, arg):
         """Returns the unit vector in the direction of the cross products of the
@@ -110,20 +114,20 @@ class Vector3(oops.Array):
             if np.shape(arg)[-1] != 3:
                 raise ValueError("shape of a Vector3 array must be [...,3]")
 
-        return Vector3(oops.utils.ucross3d(self.vals, arg))
+        return Vector3(utils.ucross3d(self.vals, arg))
 
     def perp(self, arg):
         """Returns the component of a Vector3 perpendicular to another Vector3.
         """
 
         argvals = np.asfarray(Vector3(arg).vals)
-        return Vector3(oops.utils.perp(self.vals, argvals))
+        return Vector3(utils.perp(self.vals, argvals))
 
     def proj(self, arg):
         """Returns the component of a Vector3 projected into another Vector3."""
 
         argvals = np.asfarray(Vector3(arg).vals)
-        return Vector3(oops.utils.proj(self.vals, argvals))
+        return Vector3(utils.proj(self.vals, argvals))
 
     def sep(self, arg, reversed=False):
         """Returns returns angle between two Vector3 objects as a Scalar."""
@@ -131,45 +135,45 @@ class Vector3(oops.Array):
         argvals = np.asfarray(Vector3(arg).vals)
         if reversed: argvals = -argvals
 
-        return oops.Scalar(oops.utils.sep(self.vals, argvals))
+        return Scalar(utils.sep(self.vals, argvals))
 
     # Vector3 (*) operator
     def __mul__(self, arg):
 
         # Vector3 * Matrix3 rotates the coordinate frame
         if arg.__class__.__name__ == "Matrix3":
-            return Vector3(oops.utils.mxv(arg.vals, self.vals))
+            return Vector3(utils.mxv(arg.vals, self.vals))
 
-        return oops.Array.__mul__(self, arg)
+        return Array.__mul__(self, arg)
 
     # Vector3 (/) operator
     def __div__(self, arg):
 
         # Vector3 / Matrix3 un-rotates the coordinate frame
         if arg.__class__.__name__ == "Matrix3":
-            return Vector3(oops.utils.mtxv(arg.vals, self.vals))
+            return Vector3(utils.mtxv(arg.vals, self.vals))
 
-        return oops.Array.__div__(self, arg)
+        return Array.__div__(self, arg)
 
     # Vector3 (*=) operator
     def __imul__(self, arg):
 
         # Vector3 *= Matrix3 rotates the coordinate frame
         if arg.__class__.__name__ == "Matrix3":
-            self.vals[...] = oops.oops.utils.mxv(arg.vals, self.vals)
+            self.vals[...] = utils.mxv(arg.vals, self.vals)
             return self
 
-        return oops.Array.__imul__(self, arg)
+        return Array.__imul__(self, arg)
 
     # Vector3 (/=) operator
     def __idiv__(self, arg):
 
         # Vector3 /= Matrix3 un-rotates the coordinate frame
         if arg.__class__.__name__ == "Matrix3":
-            self.vals[...] = oops.utils.mtxv(arg.vals, self.vals)
+            self.vals[...] = utils.mtxv(arg.vals, self.vals)
             return self
 
-        return oops.Array.__idiv__(self, arg)
+        return Array.__idiv__(self, arg)
 
 ########################################
 # UNIT TESTS
@@ -185,9 +189,9 @@ class Test_Vector3(unittest.TestCase):
 
         # Basic comparisons and indexing
         vecs = Vector3([[1,2,3],[3,4,5],[5,6,7]])
-        self.assertEqual(oops.Array.item(vecs),  [3])
-        self.assertEqual(oops.Array.shape(vecs), [3])
-        self.assertEqual(oops.Array.rank(vecs),   1)
+        self.assertEqual(Array.item(vecs),  [3])
+        self.assertEqual(Array.shape(vecs), [3])
+        self.assertEqual(Array.rank(vecs),   1)
 
         test = [[1,2,3],[3,4,5],[5,6,7]]
         self.assertEqual(vecs, test)
@@ -202,12 +206,12 @@ class Test_Vector3(unittest.TestCase):
         self.assertEqual((vecs != test), False)
         self.assertEqual((vecs == test), (True,  True,  True))
         self.assertEqual((vecs != test), (False, False, False))
-        self.assertEqual((vecs == test), oops.Scalar(True))
-        self.assertEqual((vecs != test), oops.Scalar(False))
-        self.assertEqual((vecs == test), oops.Scalar((True,  True,  True)))
-        self.assertEqual((vecs != test), oops.Scalar((False, False, False)))
+        self.assertEqual((vecs == test), Scalar(True))
+        self.assertEqual((vecs != test), Scalar(False))
+        self.assertEqual((vecs == test), Scalar((True,  True,  True)))
+        self.assertEqual((vecs != test), Scalar((False, False, False)))
 
-        self.assertEqual((vecs == [1,2,3]), oops.Scalar((True, False, False)))
+        self.assertEqual((vecs == [1,2,3]), Scalar((True, False, False)))
 
         self.assertEqual(vecs[0], (1,2,3))
         self.assertEqual(vecs[0], [1,2,3])
@@ -238,8 +242,8 @@ class Test_Vector3(unittest.TestCase):
                                                            [5,12,21]]))
         self.assertEqual(vecs * 2, [[2,4,6],[6,8,10],[10,12,14]])
         self.assertEqual(vecs * 2, Vector3([[2,4,6],[6,8,10],[10,12,14]]))
-        self.assertEqual(vecs * oops.Scalar(2), [[2,4,6],[6,8,10],[10,12,14]])
-        self.assertEqual(vecs * oops.Scalar(2), Vector3([[2,4,6],[6,8,10],
+        self.assertEqual(vecs * Scalar(2), [[2,4,6],[6,8,10],[10,12,14]])
+        self.assertEqual(vecs * Scalar(2), Vector3([[2,4,6],[6,8,10],
                                                                  [10,12,14]]))
 
         self.assertEqual(vecs / (1,1,2), [[1,2,1.5],[3,4,2.5],[5,6,3.5]])
@@ -247,24 +251,24 @@ class Test_Vector3(unittest.TestCase):
                                                              [5,6,3.5]])
 
         self.assertEqual(vecs / 2, [[0.5,1,1.5],[1.5,2,2.5],[2.5,3,3.5]])
-        self.assertEqual(vecs / oops.Scalar(2), [[0.5,1,1.5],[1.5,2,2.5],
+        self.assertEqual(vecs / Scalar(2), [[0.5,1,1.5],[1.5,2,2.5],
                                                              [2.5,3,3.5]])
 
         self.assertRaises(ValueError, vecs.__add__, 1)
-        self.assertRaises(TypeError,  vecs.__add__, oops.Scalar(1))
+        self.assertRaises(TypeError,  vecs.__add__, Scalar(1))
         self.assertRaises(ValueError, vecs.__add__, (1,2))
-        self.assertRaises(TypeError,  vecs.__add__, oops.Pair((1,2)))
+        self.assertRaises(TypeError,  vecs.__add__, Pair((1,2)))
 
         self.assertRaises(ValueError, vecs.__sub__, 1)
-        self.assertRaises(TypeError,  vecs.__sub__, oops.Scalar(1))
+        self.assertRaises(TypeError,  vecs.__sub__, Scalar(1))
         self.assertRaises(ValueError, vecs.__sub__, (1,2))
-        self.assertRaises(TypeError,  vecs.__sub__, oops.Pair((1,2)))
+        self.assertRaises(TypeError,  vecs.__sub__, Pair((1,2)))
 
         self.assertRaises(ValueError, vecs.__mul__, (1,2))
-        self.assertRaises(TypeError,  vecs.__mul__, oops.Pair((1,2)))
+        self.assertRaises(TypeError,  vecs.__mul__, Pair((1,2)))
 
         self.assertRaises(ValueError, vecs.__div__, (1,2))
-        self.assertRaises(TypeError,  vecs.__div__, oops.Pair((1,2)))
+        self.assertRaises(TypeError,  vecs.__div__, Pair((1,2)))
 
         # In-place operations
         test = vecs.copy()
@@ -280,43 +284,43 @@ class Test_Vector3(unittest.TestCase):
         self.assertEqual(test, [[2,4,6],[6,8,10],[10,12,14]])
         test /= 2
         self.assertEqual(test, vecs)
-        test *= oops.Scalar(2)
+        test *= Scalar(2)
         self.assertEqual(test, [[2,4,6],[6,8,10],[10,12,14]])
-        test /= oops.Scalar(2)
+        test /= Scalar(2)
         self.assertEqual(test, vecs)
-        test *= oops.Scalar((1,2,3))
+        test *= Scalar((1,2,3))
         self.assertEqual(test, [[1,2,3],[6,8,10],[15,18,21]])
-        test /= oops.Scalar((1,2,3))
+        test /= Scalar((1,2,3))
         self.assertEqual(test, vecs)
 
-        self.assertRaises(TypeError,  test.__iadd__, oops.Scalar(1))
+        self.assertRaises(TypeError,  test.__iadd__, Scalar(1))
         self.assertRaises(ValueError, test.__iadd__, 1)
         self.assertRaises(ValueError, test.__iadd__, (1,2))
 
-        self.assertRaises(TypeError,  test.__isub__, oops.Scalar(1))
+        self.assertRaises(TypeError,  test.__isub__, Scalar(1))
         self.assertRaises(ValueError, test.__isub__, 1)
         self.assertRaises(ValueError, test.__isub__, (1,2,3,4))
 
-        self.assertRaises(TypeError,  test.__imul__, oops.Pair((1,2)))
+        self.assertRaises(TypeError,  test.__imul__, Pair((1,2)))
         self.assertRaises(ValueError, test.__imul__, (1,2,3,4))
 
-        self.assertRaises(TypeError,  test.__idiv__, oops.Pair((1,2)))
+        self.assertRaises(TypeError,  test.__idiv__, Pair((1,2)))
         self.assertRaises(ValueError, test.__idiv__, (1,2,3,4))
 
         # Other functions...
 
         # as_scalar()
-        self.assertEqual(vecs.as_scalar(0),  oops.Scalar((1,3,5)))
-        self.assertEqual(vecs.as_scalar(1),  oops.Scalar((2,4,6)))
-        self.assertEqual(vecs.as_scalar(2),  oops.Scalar((3,5,7)))
-        self.assertEqual(vecs.as_scalar(-1), oops.Scalar((3,5,7)))
-        self.assertEqual(vecs.as_scalar(-2), oops.Scalar((2,4,6)))
-        self.assertEqual(vecs.as_scalar(-3), oops.Scalar((1,3,5)))
+        self.assertEqual(vecs.as_scalar(0),  Scalar((1,3,5)))
+        self.assertEqual(vecs.as_scalar(1),  Scalar((2,4,6)))
+        self.assertEqual(vecs.as_scalar(2),  Scalar((3,5,7)))
+        self.assertEqual(vecs.as_scalar(-1), Scalar((3,5,7)))
+        self.assertEqual(vecs.as_scalar(-2), Scalar((2,4,6)))
+        self.assertEqual(vecs.as_scalar(-3), Scalar((1,3,5)))
 
         # as_scalars()
-        self.assertEqual(vecs.as_scalars(), (oops.Scalar((1,3,5)),
-                                             oops.Scalar((2,4,6)),
-                                             oops.Scalar((3,5,7))))
+        self.assertEqual(vecs.as_scalars(), (Scalar((1,3,5)),
+                                             Scalar((2,4,6)),
+                                             Scalar((3,5,7))))
 
         # dot()
         self.assertEqual(vecs.dot((1,0,0)), vecs.as_scalar(0))
