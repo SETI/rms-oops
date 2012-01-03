@@ -64,7 +64,7 @@ class HRC(oops.instrument.hst.acs.ACS):
     Objects of this class are empty; they only exist to support inheritance.
     """
 
-    def define_fov(self, hst_file):
+    def define_fov(self, hst_file, parameters={}):
         """Returns an FOV object defining the field of view of the given image
         file.
         """

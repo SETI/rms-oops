@@ -65,7 +65,7 @@ class UVIS(oops.instrument.hst.wfc3.WFC3):
     """
 
     # The IDC dictionaries for WFC3/IR are all keyed by (FILTER,).
-    def define_fov(self, hst_file, layer=None):
+    def define_fov(self, hst_file, parameters={}):
         """Returns an FOV object defining the field of view of the given image
         file.
         """
@@ -77,11 +77,11 @@ class UVIS(oops.instrument.hst.wfc3.WFC3):
             IDC_DICT = self.load_idc_dict(hst_file, ("DETCHIP", "FILTER"))
 
         # Define the key into the dictionary
-        idc_key = (hst_file[1].header["DETCHIP"],hst_file[0].header["FILTER"])
+        idc_key = (hst_file[1].header["CCDCHIP"],hst_file[0].header["FILTER"])
 
         return self.construct_fov(IDC_DICT[idc_key], hst_file)
 
-    def select_syn_files(self, hst_file):
+    def select_syn_files(self, hst_file, parameters={}):
         """Returns the list of SYN files containing profiles that are to be
         multiplied together to obtain the throughput of the given instrument,
         detector and filter combination."""
@@ -96,9 +96,16 @@ class UVIS(oops.instrument.hst.wfc3.WFC3):
                              hst_file[0].header["FILTER"].lower() +
                              FILTER_SYN_FILE_PARTS[1])
 
+        # Determine the layer of the FITS file to read
+        try:
+            layer = parameters["layer"]
+            assert hst_file[layer].header["EXTTYPE"] == "SCI"
+        except KeyError:
+            layer = 1
+
         # Add the CCD file name
         syn_filenames.append(CCD_SYN_FILE_PARTS[0] +
-                             str(hst_file[1].header["CCDCHIP"]) +
+                             str(hst_file[layer].header["CCDCHIP"]) +
                              CCD_SYN_FILE_PARTS[1])
 
         return syn_filenames

@@ -12,38 +12,34 @@ class MultiPath(oops.Path):
     """A MultiPath gathers a set of paths into a single N-dimensional Path
     object."""
 
-    def __init__(self, paths, origin, frame="J2000", path_id=None):
+    def __init__(self, paths, origin_id="SSB", frame_id="J2000", id=None):
         """Constructor for a MultiPath.
 
         Input:
             paths           a tuple, list or ndarray of path IDs or objects.
-            origin_id       the name or integer ID of the origin body as
-                            used in the SPICE toolkit; "SSB" for the Solar
-                            System Barycenter by default.
-            spice_frame     the name or integer ID of the reference frame or of
-                            the a body with which the frame is primarily
-                            associated, as used in the SPICE toolkit.
-            path_id         the name or ID under which this MultiPath will be
+            origin_id       the name or integer ID of the origin body's path.
+            frame_id        the name or integer ID of the reference frame.
+            id              the name or ID under which this MultiPath will be
                             registered. Default is the ID of the first path
                             with a "+" appended.
         """
 
-        self.origin_id = oops.as_path_id(origin)
-        self.frame_id  = oops.as_frame_id(frame)
+        self.origin_id = oops.as_path_id(origin_id)
+        self.frame_id  = oops.as_frame_id(frame_id)
 
         self.path_ids = np.array(paths, dtype="object")
         self.paths = np.empty(self.path_ids.shape, dtype="object")
 
         for index, path in np.ndenumerate(self.path_ids):
-            id = oops.as_path_id(path)
-            self.path_ids[index] = id
-            self.paths[index] = oops.Path.connect(id, self.origin_id,
-                                                      self.frame_id)
+            this_id = oops.as_path_id(path)
+            self.path_ids[index] = this_id
+            self.paths[index] = oops.Path.connect(this_id, self.origin_id,
+                                                           self.frame_id)
 
         self.shape = list(self.paths.shape)
 
         # Fill in the path_id
-        if path_id is None:
+        if id is None:
             self.path_id = self.path_ids.ravel()[0] + "+"
         else:
             self.path_id = id

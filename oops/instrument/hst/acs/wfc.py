@@ -58,7 +58,7 @@ class WFC(oops.instrument.hst.acs.ACS):
     properties are inherited from higher levels in the class hierarcy. All
     functions are static so this class requires no instances."""
 
-    def define_fov(self, hst_file, layer=None):
+    def define_fov(self, hst_file, parameters={}):
         """Returns an FOV object defining the field of view of the given image
         file.
         """
@@ -70,15 +70,23 @@ class WFC(oops.instrument.hst.acs.ACS):
             IDC_DICT = self.load_idc_dict(hst_file, ("DETCHIP", "FILTER1",
                                                                 "FILTER2"))
 
+        # Determine the layer of the FITS file to read
+        try:
+            layer = parameters["layer"]
+            assert hst_file[layer].header["EXTTYPE"] == "SCI"
+        except KeyError:
+            layer = 1
+
         # Define the key into the dictionary
-        idc_key = (hst_file[0].header["CCDCHIP"],hst_file[0].header["FILTER1"],
-                                                 hst_file[0].header["FILTER2"])
+        idc_key = (hst_file[layer].header["CCDCHIP"],
+                   hst_file[0].header["FILTER1"],
+                   hst_file[0].header["FILTER2"])
 
         # Use the default function defined at the HST level for completing the
         # definition of the FOV
         return self.construct_fov(IDC_DICT[idc_key], hst_file)
 
-    def select_syn_files(self, hst_file):
+    def select_syn_files(self, hst_file, parameters={}):
         """Returns the list of SYN files containing profiles that are to be
         multiplied together to obtain the throughput of the given instrument,
         detector and filter combination."""
@@ -103,9 +111,16 @@ class WFC(oops.instrument.hst.acs.ACS):
                                      filter_name.lower() +
                                      FILTER_SYN_FILE_PARTS[1])
 
+        # Determine the layer of the FITS file to read
+        try:
+            layer = parameters["layer"]
+            assert hst_file[layer].header["EXTTYPE"] == "SCI"
+        except KeyError:
+            layer = 1
+
         # Add the CCD file name
         syn_filenames.append(CCD_SYN_FILE_PARTS[0] +
-                             str(hst_file[1].header["CCDCHIP"]) +
+                             str(hst_file[layer].header["CCDCHIP"]) +
                              CCD_SYN_FILE_PARTS[1])
 
         return syn_filenames

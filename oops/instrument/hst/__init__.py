@@ -139,15 +139,13 @@ class HST(oops.instrument.Instrument):
 
         return hst_file[0].header["DETECTOR"]
 
-    def data_array(self, hst_file, layer=None):
-        """Returns an array containing the data. The layer parameter is ignored
-        for all instruments except WFPC2."""
+    def data_array(self, hst_file, parameters={}):
+        """Returns an array containing the data."""
 
         return hst_file[1].data
 
-    def mask_array(self, hst_file, layer=None):
-        """Returns an array containing the data. The layer parameter is ignored
-        for all instruments except WFPC2."""
+    def mask_array(self, hst_file, parameters={}):
+        """Returns an array containing the data."""
 
         return hst_file[2].data
 
@@ -166,10 +164,9 @@ class HST(oops.instrument.Instrument):
 
         return (tdb0, tdb1)
 
-    def register_frame(self, hst_file, layer=None):
+    def register_frame(self, hst_file, parameters={}):
         """Returns the Cmatrix Frame that rotates from J2000 coordinates into
-        the frame of the HST observation. The layer parameter is ignored by
-        every instrument except WFPC2.
+        the frame of the HST observation.
         """
 
         header1 = hst_file[1].header
@@ -216,10 +213,10 @@ class HST(oops.instrument.Instrument):
             target_sun_path = oops.Path.connect(target_body, "SUN")
                 # Paths of the relevant bodies need to be defined in advance!
 
-            times = self.get_time(hst_file)
+            times = self.time_limits(hst_file)
             tdb = (times[0] + times[1]) / 2.
             sun_event = target_sun_path.event_at_time(tdb)
-            solar_range = sun_event.pos.norm() / solar.AU
+            solar_range = sun_event.pos.norm().vals / solar.AU
 
         # Look up the solar model...
         try:
@@ -231,11 +228,15 @@ class HST(oops.instrument.Instrument):
             solar_model = "STIS"
 
         # Generate the calibration factor
-        factor = hst_file[1].header["PHOTFLAM"] / self.solar_f(hst_file,
-                                                       solar_range, solar_model)
+        try:
+            photflam = hst_file[1].header["PHOTFLAM"]
+        except KeyError:    # no PHOTFLAM, so calibration is impossible
+            return oops.Scaling("DN", 1.)
 
-        # Create and return the calibration
-        return oops.AreaCalibration("REFLECTIVITY", factor, fov)
+        factor = photflam / self.solar_f(hst_file, solar_range, solar_model)
+
+        # Create and return the calibration for solar reflectivity
+        return oops.AreaScaling("REFLECTIVITY", factor, fov)
 
     def target_body(self, hst_file):
         """This procedure returns the SPICE name of a target body based on
@@ -260,8 +261,7 @@ class HST(oops.instrument.Instrument):
 
     def construct_snapshot(self, hst_file, parameters={}):
         """Returns a Snapshot object for the data found in the specified image.
-        Parameter layer is ignored here. This method is overridden by WFPC2
-        to support layers."""
+        """
 
         fov = self.define_fov(hst_file, parameters)
         return oops.Snapshot(self.data_array(hst_file),
@@ -401,7 +401,10 @@ class HST(oops.instrument.Instrument):
             # Derive the key for this row
             tuple = ()
             for key in keys:
-                tuple += (row_dict[key].strip(),)
+                value = row_dict[key]
+                if type(value) == type(""): value = value.strip()
+
+                tuple += (value,)
 
             # Add a new entry to the dictionary
             idc_dict[tuple] = row_dict
@@ -501,9 +504,15 @@ class HST(oops.instrument.Instrument):
         # Extract all size and offset parameters from the header
         header1 = hst_file[1].header
         crpix   = oops.Pair((header1["CRPIX1"],   header1["CRPIX2"]  ))
-        centera = oops.Pair((header1["CENTERA1"], header1["CENTERA1"]))
-        sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS1"]))
-        binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS1"]))
+
+        try:
+            centera = oops.Pair((header1["CENTERA1"], header1["CENTERA1"]))
+            sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS1"]))
+            binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS1"]))
+
+        # If subarrays are unsupported...
+        except KeyError:
+            return fov
 
         # Apply the subarray correction
         subarray_fov = oops.SubarrayFOV(fov, centera,               # new_los
@@ -563,7 +572,6 @@ class HST(oops.instrument.Instrument):
 
         # Construct the full file path
         syn_pattern = os.path.join(self.get_syn_path(), syn_filename)
-        print syn_pattern
 
         # Find the most recent file
         filespec_list = glob.glob(syn_pattern)
@@ -659,8 +667,8 @@ class Test_Instrument_HST(unittest.TestCase):
         prefix = "test_data/hst/"
         hst_file = pyfits.open(prefix + "j9dh35h7q_raw.fits")
 
-        # Test get_time()
-        (time0, time1) = get_times(hst_file)
+        # Test time_limits()
+        (time0, time1) = time_limits(hst_file)
 
         self.assertTrue(time1 - time0 - hst_file[0].header["EXPTIME"] > -1.e-8)
         self.assertTrue(time1 - time0 - hst_file[0].header["EXPTIME"] <  1.e-8)

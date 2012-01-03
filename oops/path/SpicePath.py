@@ -110,7 +110,12 @@ class SpicePath(oops.Path):
             return (name, id)
 
         # Otherwise, interpret the argument given as an integer
-        name = cspice.bodc2n(arg)       # raises LookupError if not found
+        try:
+            name = cspice.bodc2n(arg)
+        except LookupError:
+            # In rare cases, a body has no name; use the ID instead
+            name = str(arg)
+
         return (name, arg)
 
 ########################################

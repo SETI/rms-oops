@@ -4,6 +4,7 @@
 
 __all__ = ["Array", "Scalar", "Pair", "Vector3", "Matrix3", "Tuple",
            "Body", "Event", "Transform",
+           "Calibration", "AreaScaling", "Scaling",
            "FOV", "FlatFOV", "PolynomialFOV", "SubarrayFOV", "SubsampledFOV",
            "Frame", "Cmatrix", "RingFrame", "SpiceFrame",
            "Observation",
@@ -91,6 +92,10 @@ from Event                  import Event
 from Transform              import Transform
 
 # Multiple-instance classes
+from calibration.Calibration import Calibration
+from calibration.AreaScaling import AreaScaling
+from calibration.Scaling     import Scaling
+
 from fov.FOV                import FOV
 from fov.FlatFOV            import FlatFOV
 from fov.PolynomialFOV      import PolynomialFOV
@@ -196,5 +201,106 @@ def as_primary_path(path):
         return PATH_REGISTRY[path.path_id]
     except AttributeError:
         return PATH_REGISTRY[path]
+
+################################################################################
+# A useful class method to define the paths of all planets and moons
+################################################################################
+
+import spicedb
+import julian
+
+def define_solar_system(start_time, stop_time, asof=None):
+    """Constructs SpicePaths for all the planets and moons in the solar system
+    (including Pluto). Each planet is defined relative to the SSB. Each moon
+    is defined relative to its planet. Names are as defined within the SPICE
+    toolkit.
+
+    Input:
+        start_time      start_time of the period to be convered, in ISO format.
+        stop_time       stop_time of the period to be covered, in ISO format.
+        asof            a UTC date such that only kernels released earlier than
+                        that date will be included, in ISO format.
+    """
+
+    # Convert the formats to times as recognized by spicedb.
+    (day,sec) = julian.day_sec_from_iso(start_time)
+    start_time = julian.ymdhms_format_from_day_sec(day, sec)
+
+    (day,sec) = julian.day_sec_from_iso(stop_time)
+    stop_time = julian.ymdhms_format_from_day_sec(day, sec)
+
+    if asof is not None:
+        (day,sec) = julian.day_sec_from_iso(stop_time)
+        asof = julian.ymdhms_format_from_day_sec(day, sec)
+
+    # Load the necessary SPICE kernels
+    spicedb.open_db()
+    spicedb.furnish_solar_system(start_time, stop_time, asof)
+    spicedb.close_db()
+
+    # Sun and planets...
+    ignore = oops.SpicePath("SUN","SSB")
+
+    for id in range(199, 1099, 100):    # Planets are 100*n + 99
+        ignore = oops.SpicePath(id, "SSB")
+
+    # Earth...
+    ignore = oops.SpicePath("MOON","EARTH")
+    ignore = oops.MultiPath(["EARTH", "MOON"], "SSB", id="EARTH_SYSTEM")
+
+    # Mars...
+    _define_planet("MARS", spicedb.MARS_ALL_MOONS, [])
+
+    # Jupiter...
+    _define_planet("JUPITER", spicedb.JUPITER_REGULAR,
+                              spicedb.JUPITER_IRREGULAR)
+
+    # Saturn...
+    _define_planet("SATURN", spicedb.SATURN_REGULAR,
+                             spicedb.SATURN_IRREGULAR)
+
+    # Uranus...
+    _define_planet("URANUS", spicedb.URANUS_REGULAR,
+                             spicedb.URANUS_IRREGULAR)
+
+    # Neptune...
+    _define_planet("NEPTUNE", spicedb.NEPTUNE_REGULAR,
+                              spicedb.NEPTUNE_IRREGULAR)
+
+    # Pluto...
+    _define_planet("PLUTO", spicedb.PLUTO_ALL_MOONS, [])
+
+def _define_planet(planet, regular_ids, irregular_ids):
+
+    # Define the SpicePaths of individual regular moons
+    regulars = []
+    for id in regular_ids:
+        regulars += [oops.SpicePath(id, planet)]
+
+    # Define the Multipath of the regular moons, with and without the planet
+    ignore = oops.MultiPath(regulars, planet,
+                            id=(planet + "_REGULARS"))
+    ignore = oops.MultiPath([planet] + regulars, "SSB",
+                            id=(planet + "+REGULARS"))
+
+    # Without irregulars, we're just about done
+    if irregular_ids == []:
+        ignore = oops.MultiPath([planet] + regulars, "SSB",
+                                 id=(planet + "+MOONS"))
+        return
+
+    # Define the SpicePaths of individual irregular moons
+    irregulars = []
+    for id in irregular_ids:
+        irregulars += [oops.SpicePath(id, planet)]
+
+    # Define the Multipath of all the irregular moons
+    ignore = oops.MultiPath(regulars, planet, id=(planet + "_IRREGULARS"))
+
+    # Define the Multipath of all the moons, with and without the planet
+    ignore = oops.MultiPath(regulars + irregulars, planet,
+                            id=(planet + "_MOONS"))
+    ignore = oops.MultiPath([planet] + regulars + irregulars, "SSB",
+                            id=(planet + "+MOONS"))
 
 ################################################################################

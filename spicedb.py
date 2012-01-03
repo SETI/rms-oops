@@ -25,7 +25,7 @@ import os
 
 # This is the SQLite3 version of the program
 import sqlite_db as db
-SPICE_DB_VARNAME = "SPICE_DB_NAME"
+SPICE_DB_VARNAME = "SPICE_SQLITE_DB_NAME"
 
 # This would be the alternative mechanism for accessing a MySQL database.
 # NOT YET IMPLEMENTED!
@@ -63,8 +63,8 @@ JUPITER_IRREGULAR = range(506,514) + range(517,550) + [55062, 55063]
 JUPITER_ALL_MOONS = range(501,550) + [55062, 55063]
 
 SATURN_CLASSICAL  = range(601,610)      # Mimas through Phoebe
-SATURN_REGULAR    = range(601,609) + range(610,619) + range(632,636) + [649,653]
-SATURN_IRREGULAR  = ([609] + range(636,649) + range(650,653) +
+SATURN_REGULAR    = range(601,619) + range(632,636) + [649,653] # with Phoebe
+SATURN_IRREGULAR  = (range(636,649) + range(650,653) +
                      [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
 SATURN_ALL_MOONS  = (range(601,654) + 
                      [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
@@ -87,27 +87,27 @@ PLUTO_ALL_MOONS   = range(901,905)
 # SPICE file directory tree support
 ################################################################################
 
-SPICE_FILE_PATH = ""
+SPICE_PATH = ""
 
 def set_spice_path(spice_path=""):
     """Call to define the directory path to the root of the SPICE file directory
     tree. Call with no argument to reset."""
 
-    global SPICE_FILE_PATH
+    global SPICE_PATH
 
-    SPICE_FILE_PATH = spice_path
+    SPICE_PATH = spice_path
 
 def get_spice_path():
     """Returns the current path to the root of the SPICE file directory tree.
     If the path is undefined, it uses the value of environment variable
-    SPICE_FILE_PATH."""
+    SPICE_PATH."""
 
-    global SPICE_FILE_PATH
+    global SPICE_PATH
 
-    if SPICE_FILE_PATH == "":
-        SPICE_FILE_PATH = os.environ["SPICE_FILE_PATH"]
+    if SPICE_PATH == "":
+        SPICE_PATH = os.environ["SPICE_PATH"]
 
-    return SPICE_FILE_PATH
+    return SPICE_PATH
 
 ###############################################################################
 # Kernel Information class
@@ -747,7 +747,8 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
     list += select_kernels("LSK", asof=asof)
 
     # While we are at it, load the LSK file for the Julian Library
-    if not DEBUG: julian.load_from_kernel(list[0].filespec)
+    if not DEBUG:
+       julian.load_from_kernel(os.path.join(get_spice_path(), list[0].filespec))
 
     # Planetary Constants
     list += select_kernels("PCK", asof=asof, name="PCK%")
@@ -830,6 +831,14 @@ def furnish_solar_system(start_time, stop_time, asof=None):
 
     list = []
     spks = []
+
+    # Leapseconds Kernel (LSK)
+    list += select_kernels("LSK", asof=asof)
+
+    # While we are at it, load the LSK file for the Julian Library
+    if not DEBUG:
+    
+       julian.load_from_kernel(os.path.join(get_spice_path(), list[0].filespec))
 
     # Planetary Constants, including the latest from Cassini
     list += select_kernels("PCK", asof=asof, name="PCK%")
@@ -1150,10 +1159,14 @@ class test_spicedb(unittest.TestCase):
 
         names1 = furnish_solar_system("1980-01-01", "2010-01-01")
         self.assertEqual(names1,
-            ['PCK00010', 'CPCK_ROCK_21JAN2011_MERGED', 'CPCK14OCT2011',
-             'CAS_ROCKS_V18', 'MAR085', 'JUP204', 'JUP230', 'JUP230-ROCKS',
-             'JUP282', 'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS', 'URA083',
-             'URA091', 'URA095', 'NEP077', 'NEP081', 'NEP085', 'PLU021',
+            ['NAIF0009', 'PCK00010',
+             'CPCK_ROCK_21JAN2011_MERGED', 'CPCK14OCT2011', 'CAS_ROCKS_V18',
+             'MAR085',
+             'JUP204', 'JUP230', 'JUP230-ROCKS', 'JUP282',
+             'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS',
+             'URA083', 'URA091', 'URA095',
+             'NEP077', 'NEP081', 'NEP085',
+             'PLU021',
              'DE421'])
 
         DEBUG = False

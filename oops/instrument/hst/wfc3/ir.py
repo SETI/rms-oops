@@ -91,7 +91,7 @@ class IR(oops.instrument.hst.wfc3.WFC3):
 
         return self.construct_fov(IDC_DICT[idc_key], hst_file)
 
-    def select_syn_files(self, hst_file):
+    def select_syn_files(self, hst_file, parameters={}):
         """Returns the list of SYN files containing profiles that are to be
         multiplied together to obtain the throughput of the given instrument,
         detector and filter combination."""
