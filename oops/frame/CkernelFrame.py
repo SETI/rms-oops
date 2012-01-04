@@ -46,7 +46,7 @@ class CkernelFrame(Frame):
 
 ########################################
 
-    def at_time(self, time):
+    def transform_at_time(self, time):
         """Returns a Transform object that rotates coordinates in a reference
         frame into the new frame.
 

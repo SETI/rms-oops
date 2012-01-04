@@ -78,6 +78,7 @@ def is_id(item):
 ################################################################################
 
 # Basics
+import cspice
 import utils
 
 from broadcastable.Array    import Array
@@ -241,8 +242,9 @@ def define_solar_system(start_time, stop_time, asof=None):
     # Sun and planets...
     ignore = oops.SpicePath("SUN","SSB")
 
-    for id in range(199, 1099, 100):    # Planets are 100*n + 99
+    for id in range(199, 1000, 100):    # Planets are 100*n + 99
         ignore = oops.SpicePath(id, "SSB")
+        ignore = oops.SpiceFrame(id)
 
     # Earth...
     ignore = oops.SpicePath("MOON","EARTH")
@@ -276,6 +278,10 @@ def _define_planet(planet, regular_ids, irregular_ids):
     regulars = []
     for id in regular_ids:
         regulars += [oops.SpicePath(id, planet)]
+        try:        # Some frames for small moons are not defined
+            ignore = oops.SpiceFrame(id)
+        except RuntimeError: pass
+        except LookupError: pass
 
     # Define the Multipath of the regular moons, with and without the planet
     ignore = oops.MultiPath(regulars, planet,
@@ -293,6 +299,10 @@ def _define_planet(planet, regular_ids, irregular_ids):
     irregulars = []
     for id in irregular_ids:
         irregulars += [oops.SpicePath(id, planet)]
+        try:        # Some frames for small moons are not defined
+            ignore = oops.SpiceFrame(id)
+        except RuntimeError: pass
+        except LookupError: pass
 
     # Define the Multipath of all the irregular moons
     ignore = oops.MultiPath(regulars, planet, id=(planet + "_IRREGULARS"))

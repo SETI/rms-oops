@@ -15,6 +15,8 @@
 #   database name or path is not passed to it. Added furnish_solar_system()
 #   function to load a set of kernels sufficient for every moon and planet
 #   (including Pluto!)
+#
+# 1/4/12 (MRS) Minor bugs fixed for cassini and solar system load order.
 ################################################################################
 
 import julian
@@ -443,7 +445,6 @@ class test_KernelInfo(unittest.TestCase):
 def sort_kernels(kernel_list):
     """Sorts a list of kernels immediately prior to loading. It removes
     duplicate kernels and puts the rest into their proper load order."""
-
 
     # Sort into load order
     kernel_list.sort()
@@ -881,6 +882,7 @@ def furnish_solar_system(start_time, stop_time, asof=None):
             de_spks[-1:])
 
     # Load the kernels
+    list = sort_kernels(list)
     names = furnish_kernels(list)
     names += furnish_kernels(spks)
 
@@ -1159,8 +1161,9 @@ class test_spicedb(unittest.TestCase):
 
         names1 = furnish_solar_system("1980-01-01", "2010-01-01")
         self.assertEqual(names1,
-            ['NAIF0009', 'PCK00010',
-             'CPCK_ROCK_21JAN2011_MERGED', 'CPCK14OCT2011', 'CAS_ROCKS_V18',
+            ['NAIF0009',
+             'CAS_ROCKS_V18', 'CPCK_ROCK_21JAN2011_MERGED',
+             'CPCK14OCT2011', 'PCK00010',
              'MAR085',
              'JUP204', 'JUP230', 'JUP230-ROCKS', 'JUP282',
              'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS',

@@ -16,7 +16,7 @@ class SpiceFrame(oops.Frame):
 
     SPICE_TRANSLATION = {"J2000":"J2000"}
 
-    def __init__(self, spice_id, spice_reference="J2000", frame_id=None):
+    def __init__(self, spice_id, spice_reference="J2000", id=None):
         """Constructor for a SpiceFrame.
 
         Input:
@@ -24,7 +24,7 @@ class SpiceFrame(oops.Frame):
                             of the central body as used in the SPICE toolkit.
             spice_reference the name or integer ID of the reference frame as
                             used in the SPICE toolkit; "J2000" by default.
-            frame_id        the name or ID under which the frame will be
+            id              the name or ID under which the frame will be
                             registered. By default, this will be the value of
                             spice_id if that is given as a string; otherwise
                             it will be the name as used by the SPICE toolkit.
@@ -37,13 +37,13 @@ class SpiceFrame(oops.Frame):
         test = cspice.sxform(self.spice_reference, self.spice_name, 0.)
 
         # Fill in the frame_id
-        if frame_id is None:
+        if id is None:
             if type(spice_id) == type(""):
                 self.frame_id = spice_id
             else:
                 self.frame_id = self.spice_name
         else:
-            self.frame_id = frame_id
+            self.frame_id = id
 
         # Save it in the global dictionary of translations under alternative
         # names
@@ -103,10 +103,10 @@ class SpiceFrame(oops.Frame):
         if name != "": return name
 
         # Otherwise, see if this is the ID of a body
-        name = cspice.bodc2n(id)            # raises LookupError if not found
+        name = cspice.bodc2n(arg)           # raises LookupError if not found
 
         # If so, return the name of the body's associated frame
-        return cspice.cidfrm(id)[1]
+        return cspice.cidfrm(arg)[1]
 
 ########################################
 
