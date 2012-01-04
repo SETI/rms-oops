@@ -48,6 +48,13 @@ class MultiPath(oops.Path):
 
 ########################################
 
+    def __str__(self):
+        return ("MultiPath([" + self.path_id   + " - " +
+                                self.origin_id + "]/" +
+                                self.frame_id + ")")
+
+########################################
+
     def event_at_time(self, time):
         """Returns an Event object corresponding to a specified Scalar time on
         this path. The times are broadcasted across the shape of the MultiPath.

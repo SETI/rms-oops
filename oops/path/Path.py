@@ -856,8 +856,8 @@ class Waypoint(Path):
 
         return oops.Event.null_event(time, self.path_id, self.frame_id)
 
-    def __str__():
-        return "Path(" + self.path_id + "/" + self.frame_id + ")"
+    def __str__(self):
+        return "Waypoint(" + self.path_id + "/" + self.frame_id + ")"
 
 ####################
 # SSBpath
@@ -879,7 +879,7 @@ class SSBpath(Path):
 
         return oops.Event.null_event(time, self.path_id, self.frame_id)
 
-    def __str__(): return "Path(SSB/J2000)"
+    def __str__(self): return "Waypoint(SSB/J2000)"
 
 # Initialize the registry...
 Path.initialize_registry()
