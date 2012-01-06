@@ -217,8 +217,10 @@ def define_solar_system(start_time, stop_time, asof=None):
     toolkit.
 
     Input:
-        start_time      start_time of the period to be convered, in ISO format.
-        stop_time       stop_time of the period to be covered, in ISO format.
+        start_time      start_time of the period to be convered, in ISO date or
+                        date-time format.
+        stop_time       stop_time of the period to be covered, in ISO date or
+                        date-time format.
         asof            a UTC date such that only kernels released earlier than
                         that date will be included, in ISO format.
     """
@@ -248,6 +250,7 @@ def define_solar_system(start_time, stop_time, asof=None):
 
     # Earth...
     ignore = oops.SpicePath("MOON","EARTH")
+    ignore = oops.SpiceFrame("MOON")
     ignore = oops.MultiPath(["EARTH", "MOON"], "SSB", id="EARTH_SYSTEM")
 
     # Mars...
@@ -312,5 +315,67 @@ def _define_planet(planet, regular_ids, irregular_ids):
                             id=(planet + "_MOONS"))
     ignore = oops.MultiPath([planet] + regulars + irregulars, "SSB",
                             id=(planet + "+MOONS"))
+
+def define_cassini_saturn(start_time, stop_time, instrument=None, asof=None):
+    """Constructs a SpicePath for Cassini relative to Saturn, and also defines
+    C kernel coordinate frames for the selection of Instruments requested.
+
+    Input:
+        start_time      start_time of the period to be convered, in ISO date
+                        or date-time format.
+
+        stop_time       stop_time of the period to be covered, in ISO date or
+                        date-time format.
+
+        instrument      an optional list of the names of instruments to be used
+                        using the standard abbreviations, e.g., "ISS", "VIMS",
+                        "CIRS", "UVIS", etc. The appropriate set of
+                        CKernelFrames is created for each instrument listed.
+                        *NOT CURRENTLY IMPLEMENTED*.
+
+        asof            a UTC date such that only kernels released earlier than
+                        that date will be included, in ISO format.
+    """
+
+    # Convert the formats to times as recognized by spicedb.
+    (day,sec) = julian.day_sec_from_iso(start_time)
+    start_time = julian.ymdhms_format_from_day_sec(day, sec)
+
+    (day,sec) = julian.day_sec_from_iso(stop_time)
+    stop_time = julian.ymdhms_format_from_day_sec(day, sec)
+
+    if asof is not None:
+        (day,sec) = julian.day_sec_from_iso(stop_time)
+        asof = julian.ymdhms_format_from_day_sec(day, sec)
+
+    # Load the necessary SPICE kernels
+    spicedb.open_db()
+    spicedb.furnish_cassini_kernels(start_time, stop_time, instrument, asof)
+    spicedb.close_db()
+
+    # Sun...
+    ignore = oops.SpicePath("SUN", "SSB")
+
+    # Earth...
+    ignore = oops.SpicePath("MOON", "EARTH")
+    ignore = oops.SpiceFrame("MOON")
+    ignore = oops.MultiPath(["EARTH", "MOON"], "SSB", id="EARTH_SYSTEM")
+
+    # Saturn...
+    ignore = oops.SpicePath("SATURN", "SSB")
+    ignore = oops.SpiceFrame("SATURN")
+
+    # Saturn system...
+    _define_planet("SATURN", spicedb.SATURN_REGULAR,
+                             spicedb.SATURN_IRREGULAR)
+
+    # Cassini...
+    ignore = oops.SpicePath("CASSINI", "SATURN")
+
+    # C kernels and instruments
+    if instrument is None: instrument = []
+
+    if len(instrument) > 0.:
+        pass        # TBD
 
 ################################################################################

@@ -86,7 +86,7 @@ class SpiceFrame(oops.Frame):
             if id != 0: return cspice.frmnam(id)
 
             # See if this is the name of a body
-            id = cspice.bodn2c(frame)       # raises LookupError if not found
+            id = cspice.bodn2c(arg)         # raises LookupError if not found
 
             # If so, return the name of the associated frame
             return cspice.cidfrm(id)[1]
