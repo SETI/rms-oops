@@ -22,6 +22,7 @@ from fov.SubsampledFOV      import Test_SubsampledFOV
 
 from frame.Frame            import Test_Frame
 from frame.Cmatrix          import Test_Cmatrix
+from frame.MatrixFrame      import Test_MatrixFrame
 from frame.RingFrame        import Test_RingFrame
 from frame.SpiceFrame       import Test_SpiceFrame
 

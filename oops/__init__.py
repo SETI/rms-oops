@@ -120,6 +120,7 @@ from surface.RingPlane      import RingPlane
 
 import instrument
 import instrument.hst
+import instrument.cassini
 from instrument.hst.acs     import *
 from instrument.hst.nicmos  import *
 from instrument.hst.wfc3    import *
@@ -241,41 +242,45 @@ def define_solar_system(start_time, stop_time, asof=None):
     spicedb.furnish_solar_system(start_time, stop_time, asof)
     spicedb.close_db()
 
-    # Sun and planets...
+    # Sun...
     ignore = oops.SpicePath("SUN","SSB")
 
-    for id in range(199, 1000, 100):    # Planets are 100*n + 99
-        ignore = oops.SpicePath(id, "SSB")
-        ignore = oops.SpiceFrame(id)
+    # Mercury...
+    define_planet("MERCURY", [], [])
+
+    # Venus...
+    define_planet("VENUS", [], [])
 
     # Earth...
-    ignore = oops.SpicePath("MOON","EARTH")
-    ignore = oops.SpiceFrame("MOON")
-    ignore = oops.MultiPath(["EARTH", "MOON"], "SSB", id="EARTH_SYSTEM")
+    define_planet("EARTH", ["MOON"], [])
 
     # Mars...
-    _define_planet("MARS", spicedb.MARS_ALL_MOONS, [])
+    define_planet("MARS", spicedb.MARS_ALL_MOONS, [])
 
     # Jupiter...
-    _define_planet("JUPITER", spicedb.JUPITER_REGULAR,
-                              spicedb.JUPITER_IRREGULAR)
+    define_planet("JUPITER", spicedb.JUPITER_REGULAR,
+                             spicedb.JUPITER_IRREGULAR)
 
     # Saturn...
-    _define_planet("SATURN", spicedb.SATURN_REGULAR,
-                             spicedb.SATURN_IRREGULAR)
+    define_planet("SATURN", spicedb.SATURN_REGULAR,
+                            spicedb.SATURN_IRREGULAR)
 
     # Uranus...
-    _define_planet("URANUS", spicedb.URANUS_REGULAR,
-                             spicedb.URANUS_IRREGULAR)
+    define_planet("URANUS", spicedb.URANUS_REGULAR,
+                            spicedb.URANUS_IRREGULAR)
 
     # Neptune...
-    _define_planet("NEPTUNE", spicedb.NEPTUNE_REGULAR,
-                              spicedb.NEPTUNE_IRREGULAR)
+    define_planet("NEPTUNE", spicedb.NEPTUNE_REGULAR,
+                             spicedb.NEPTUNE_IRREGULAR)
 
     # Pluto...
-    _define_planet("PLUTO", spicedb.PLUTO_ALL_MOONS, [])
+    define_planet("PLUTO", spicedb.PLUTO_ALL_MOONS, [])
 
-def _define_planet(planet, regular_ids, irregular_ids):
+def define_planet(planet, regular_ids, irregular_ids):
+
+    # Define the planet's path and frame
+    ignore = oops.SpicePath(planet, "SSB")
+    ignore = oops.SpiceFrame(planet)
 
     # Define the SpicePaths of individual regular moons
     regulars = []
@@ -366,8 +371,8 @@ def define_cassini_saturn(start_time, stop_time, instrument=None, asof=None):
     ignore = oops.SpiceFrame("SATURN")
 
     # Saturn system...
-    _define_planet("SATURN", spicedb.SATURN_REGULAR,
-                             spicedb.SATURN_IRREGULAR)
+    define_planet("SATURN", spicedb.SATURN_REGULAR,
+                            spicedb.SATURN_IRREGULAR)
 
     # Cassini...
     ignore = oops.SpicePath("CASSINI", "SATURN")

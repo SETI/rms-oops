@@ -16,7 +16,7 @@ class Cmatrix(oops.Frame):
 
     RPD = np.pi/180.
 
-    def __init__(self, ra, dec, clock, frame_id, reference_id="J2000"):
+    def __init__(self, ra, dec, clock, id, reference="J2000"):
         """Constructor for a CmatrixFrame.
 
         Input:
@@ -30,10 +30,10 @@ class Cmatrix(oops.Frame):
                             degrees, measured clockwise from the "up" direction
                             in the observation.
 
-            frame_id        the ID to use when registering this frame. Note that
-                            any prior frame using the same ID is replaced.
+            id              the name ID to use when registering this frame. Note
+                            that any prior frame using the same ID is replaced.
 
-            reference_id    the ID of the coordinate reference frame, typically
+            reference       the ID of the coordinate reference frame, typically
                             J2000.
 
         Note that this Frame can have an arbitrary shape. This shape is defined

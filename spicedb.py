@@ -17,9 +17,12 @@
 #   (including Pluto!)
 #
 # 1/4/12 (MRS) Minor bugs fixed for cassini and solar system load order.
+#
+# 1/6/12 (MRS) Added functions as_dict() and as_names().
 ################################################################################
 
 import julian
+import textkernel
 import interval
 import cspice
 import unittest
@@ -558,6 +561,43 @@ def furnish_kernels(kernel_list):
         else:
             cspice.furnsh(os.path.join(spice_path, kernel.filespec))
 
+        name = kernel.kernel_name
+        if name not in name_list: name_list.append(name)
+    
+    return name_list
+
+################################################################################
+
+def as_dict(kernel_list):
+    """Returns a dictionary containing all the information in the listed text
+    kernels. Binary kernels are ignored.
+    """
+
+    spice_path = get_spice_path()
+
+    clear_dict = True       # clear dictionary on the first pass
+    for kernel in kernel_list:
+
+        # Check for a text kernel
+        ext = os.path.splitext(kernel.filespec)[1].lower()
+        if ext[0:2] != ".t": continue
+
+        filespec = os.path.join(spice_path, kernel.filespec)
+        result = textkernel.from_file(filespec, clear=clear_dict)
+
+        # On later passes, don't clear the dictionary
+        clear_dict = False
+    
+    return result
+
+################################################################################
+
+def as_names(kernel_list):
+    """Returns a list of the names found in the given kernel list.
+    """
+
+    name_list = []
+    for kernel in kernel_list:
         name = kernel.kernel_name
         if name not in name_list: name_list.append(name)
     

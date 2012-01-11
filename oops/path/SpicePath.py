@@ -47,14 +47,16 @@ class SpicePath(oops.Path):
         (self.spice_origin_name,
          self.spice_origin_id) = SpicePath.spice_name_and_id(spice_origin)
 
-        self.spice_frame_name  = oops.SpiceFrame.spice_name(spice_frame)
+        self.spice_frame_name = oops.SpiceFrame.spice_id_and_name(
+                                                                spice_frame)[1]
 
         # Test the SPICE toolkit. This raises a RuntimeError if it fails
-        test = cspice.spkez(self.spice_target_id,
-                            0.,        # time zero
-                            self.spice_frame_name,
-                            "NONE",    # no aberration or light time fix
-                            self.spice_origin_id)
+        # Removed because not every SpicePath is defined for time 0!
+        # test = cspice.spkez(self.spice_target_id,
+        #                     0.,        # time zero
+        #                     self.spice_frame_name,
+        #                     "NONE",    # no aberration or light time fix
+        #                     self.spice_origin_id)
 
         # Fill in the path_id
         if id is None:

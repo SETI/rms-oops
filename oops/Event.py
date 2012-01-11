@@ -422,25 +422,26 @@ class Event(object):
     def __repr__(self): return self.__str__()
 
     # indexing []
-    def __getitem__(self, i):
-        (time, pos, vel,
-         perp, arr, dep, vflat) = oops.Array.broadcast_arrays(
-                                    (self.time, self.pos, self.vel,
-                                     self.perp, self.arr, self.dep, self.vflat))
-
-        return Event(time[i], pos[i], vel[i],
-                     self.get_origin_param(), self.frame_id,
-                     perp[i], arr[i], dep[i], vflat[i])
-
-    def __getslice__(self, i, j):
-        (time, pos, vel,
-         perp, arr, dep, vflat) = oops.Array.broadcast_arrays(
-                                    (self.time, self.pos, self.vel,
-                                     self.perp, self.arr, self.dep, self.vflat))
-
-        return Event(time[i:j], pos[i:j], vel[i:j],
-                     self.get_origin_param(), self.frame_id,
-                     perp[i:j], arr[i:j], dep[i:j], vflat[i:j])
+    # Probably not a good idea
+#     def __getitem__(self, i):
+#         (time, pos, vel,
+#          perp, arr, dep, vflat) = oops.Array.broadcast_arrays(
+#                                     (self.time, self.pos, self.vel,
+#                                      self.perp, self.arr, self.dep, self.vflat))
+# 
+#         return Event(time[i], pos[i], vel[i],
+#                      self.get_origin_param(), self.frame_id,
+#                      perp[i], arr[i], dep[i], vflat[i])
+# 
+#     def __getslice__(self, i, j):
+#         (time, pos, vel,
+#          perp, arr, dep, vflat) = oops.Array.broadcast_arrays(
+#                                     (self.time, self.pos, self.vel,
+#                                      self.perp, self.arr, self.dep, self.vflat))
+# 
+#         return Event(time[i:j], pos[i:j], vel[i:j],
+#                      self.get_origin_param(), self.frame_id,
+#                      perp[i:j], arr[i:j], dep[i:j], vflat[i:j])
 
 ################################################################################
 # Photon event calculations

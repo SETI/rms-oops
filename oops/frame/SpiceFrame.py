@@ -14,51 +14,52 @@ class SpiceFrame(oops.Frame):
     # Maintain a dictionary that translates names in SPICE toolkit with their
     # corresponding names in the Frame registry.
 
-    SPICE_TRANSLATION = {"J2000":"J2000"}
+    SPICE_TRANSLATION = {"J2000":"J2000", cspice.namfrm("J2000"):"J2000"}
 
-    def __init__(self, spice_id, spice_reference="J2000", id=None):
+    def __init__(self, spice_frame, spice_reference="J2000", id=None):
         """Constructor for a SpiceFrame.
 
         Input:
-            spice_id        the name or integer ID of the destination frame or
+            spice_frame     the name or integer ID of the destination frame or
                             of the central body as used in the SPICE toolkit.
+
             spice_reference the name or integer ID of the reference frame as
                             used in the SPICE toolkit; "J2000" by default.
+
             id              the name or ID under which the frame will be
                             registered. By default, this will be the value of
                             spice_id if that is given as a string; otherwise
                             it will be the name as used by the SPICE toolkit.
         """
 
-        self.spice_name      = SpiceFrame.spice_name(spice_id)
-        self.spice_reference = SpiceFrame.spice_name(spice_reference)
+        # Interpret the SPICE frame and reference IDs
+        (self.spice_frame_id,
+         self.spice_frame_name) = SpiceFrame.spice_id_and_name(spice_frame)
 
-        # Test the SPICE toolkit. This raises a RuntimeError if it fails
-        test = cspice.sxform(self.spice_reference, self.spice_name, 0.)
+        (self.spice_reference_id,
+         self.spice_reference_name) = SpiceFrame.spice_id_and_name(
+                                                               spice_reference)
 
-        # Fill in the frame_id
-        if id is None:
-            if type(spice_id) == type(""):
-                self.frame_id = spice_id
-            else:
-                self.frame_id = self.spice_name
-        else:
+        # Fill in the OOPS frame_id and reference_id
+        if id is not None:
             self.frame_id = id
+        else:
+            self.frame_id = self.spice_frame_name
+
+        self.reference_id = SpiceFrame.SPICE_TRANSLATION[
+                                                        self.spice_reference_id]
 
         # Save it in the global dictionary of translations under alternative
         # names
-        SpiceFrame.SPICE_TRANSLATION[self.spice_name] = self.frame_id
-        SpiceFrame.SPICE_TRANSLATION[spice_id]        = self.frame_id
-
-        # Fill in the reference_id
-        self.reference_id = SpiceFrame.SPICE_TRANSLATION[self.spice_reference]
+        SpiceFrame.SPICE_TRANSLATION[self.spice_frame_id]   = self.frame_id
+        SpiceFrame.SPICE_TRANSLATION[self.spice_frame_name] = self.frame_id
 
         # Fill in the origin ID
-        body_id = cspice.frinfo(cspice.namfrm(self.spice_name))[0]
-        self.origin_id = oops.SpicePath.SPICE_TRANSLATION[body_id]
+        self.spice_origin_id   = cspice.frinfo(self.spice_frame_id)[0]
+        self.spice_origin_name = cspice.bodc2n(self.spice_origin_id)
 
-        if self.origin_id == "SSB":
-            self.origin_id = None
+        self.origin_id = oops.SpicePath.SPICE_TRANSLATION[self.spice_origin_id]
+        if self.origin_id == "SSB": self.origin_id = None
 
         # No shape
         self.shape = []
@@ -69,9 +70,24 @@ class SpiceFrame(oops.Frame):
 ########################################
 
     @staticmethod
-    def spice_name(arg):
-        """Inteprets the argument as the name or ID of a SPICE body or SPICE
-        body."""
+    def spice_id_and_name(arg):
+        """Inteprets the argument as the name or ID of a SPICE frame or SPICE
+        body, and returns a tuple (spice_id, spice_name)."""
+
+        # Interpret the SPICE frame ID as an int
+        if type(arg) == type(0):
+            try:
+                name = cspice.frmnam(arg)   # does not raise an error; I may fix
+            except ValueError:
+                name = ""
+            except KeyError:
+                name = ""
+
+            # If the int is recognized as a frame ID, return it
+            if name != "": return (arg, name)
+
+            # Otherwise, perhaps it is a body ID
+            return cspice.cidfrm(arg)       # raises LookupError if not found
 
         # Interpret the argument given as a string
         if type(arg) == type(""):
@@ -81,32 +97,17 @@ class SpiceFrame(oops.Frame):
                 id = cspice.namfrm(arg)     # does not raise an error; I may fix
             except ValueError:
                 id = 0
+            except KeyError:
+                id = 0
 
             # If a nonzero ID is found, return the official, capitalized name
-            if id != 0: return cspice.frmnam(id)
+            if id != 0: return (id, cspice.frmnam(id))
 
             # See if this is the name of a body
             id = cspice.bodn2c(arg)         # raises LookupError if not found
 
             # If so, return the name of the associated frame
-            return cspice.cidfrm(id)[1]
-
-        # Otherwise, interpret the argument given as an integer
-
-        # See if the id has an associated frame name
-        try:
-            name = cspice.frmnam(arg)       # does not raise an error; I may fix
-        except ValueError:
-            name = ""
-
-        # If found, return it
-        if name != "": return name
-
-        # Otherwise, see if this is the ID of a body
-        name = cspice.bodc2n(arg)           # raises LookupError if not found
-
-        # If so, return the name of the body's associated frame
-        return cspice.cidfrm(arg)[1]
+            return cspice.cidfrm(id)
 
 ########################################
 
@@ -124,7 +125,8 @@ class SpiceFrame(oops.Frame):
         # A single input time can be handled quickly
         time = oops.Scalar.as_scalar(time)
         if time.shape == []:
-            matrix6 = cspice.sxform(self.spice_reference, self.spice_name,
+            matrix6 = cspice.sxform(self.spice_reference_name,
+                                    self.spice_frame_name,
                                     time.vals)
             (matrix, omega) = cspice.xf2rav(matrix6)
             return oops.Transform(matrix, omega, self.frame_id,
@@ -136,7 +138,9 @@ class SpiceFrame(oops.Frame):
 
         # Fill in the matrix and omega using CSPICE
         for i,t in np.ndenumerate(time.vals):
-            matrix6 = cspice.sxform(self.spice_reference, self.spice_name, t)
+            matrix6 = cspice.sxform(self.spice_reference_name,
+                                    self.spice_frame_name,
+                                    t)
             (matrix[i], omega[i]) = cspice.xf2rav(matrix6)
 
         return oops.Transform(matrix, omega, self.frame_id, self.reference_id)
@@ -252,6 +256,53 @@ class Test_SpiceFrame(unittest.TestCase):
 
             self.assertTrue(np.all(np.abs(dmatrix) < 1.e-14))
             self.assertTrue(np.all(np.abs(domega)  < 1.e-14))
+
+        oops.Frame.initialize_registry()
+        oops.Path.initialize_registry()
+
+        ########################################
+        # Test for a Cassini C kernel
+        ########################################
+
+        # Load all the required kernels for Cassini ISS on 2007-312
+        dir = "test_data/SPICE/"
+        cspice.furnsh(dir + "naif0009.tls")
+        cspice.furnsh(dir + "cas00149.tsc")
+        cspice.furnsh(dir + "cas_v40.tf")
+        cspice.furnsh(dir + "cas_status_v04.tf")
+        cspice.furnsh(dir + "cas_iss_v10.ti")
+        cspice.furnsh(dir + "pck00010.tpc")
+        cspice.furnsh(dir + "cpck14Oct2011.tpc")
+        cspice.furnsh(dir + "de421.bsp")
+        cspice.furnsh(dir + "sat052.bsp")
+        cspice.furnsh(dir + "sat083.bsp")
+        cspice.furnsh(dir + "sat125.bsp")
+        cspice.furnsh(dir + "sat128.bsp")
+        cspice.furnsh(dir + "sat164.bsp")
+        cspice.furnsh(dir + "07312_07317ra.bc")
+        cspice.furnsh(dir + "080123R_SCPSE_07309_07329.bsp")
+
+        ignore = oops.SpicePath("CASSINI", "SSB")
+        ignore = SpiceFrame("CASSINI_ISS_NAC")
+        ignore = SpiceFrame("CASSINI_ISS_WAC")
+
+        # Look up N1573186009_1.IMG from COISS_2039/data/1573186009_1573197826/
+        timestring = "2007-312T03:34:16.391"
+        tdb = cspice.str2et(timestring)
+
+        nacframe = oops.Frame.connect("J2000", "CASSINI_ISS_NAC")
+        matrix = nacframe.transform_at_time(tdb).matrix
+        optic_axis = (matrix * (0,0,1)).vals
+
+        test_ra  = (np.arctan2(optic_axis[1], optic_axis[0]) *
+                    180./np.pi) % 360
+        test_dec = np.arcsin(optic_axis[2]) * 180./np.pi
+
+        right_ascension = 194.30861     # from the index table
+        declination = 3.142808
+
+        self.assertTrue(np.abs(test_ra - right_ascension) < 0.5)
+        self.assertTrue(np.abs(test_dec - declination) < 0.5)
 
         oops.Frame.initialize_registry()
         oops.Path.initialize_registry()

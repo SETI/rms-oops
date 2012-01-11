@@ -824,9 +824,9 @@ class ReversedPath(Path):
         event.pos = -event.pos
         event.vel = -event.vel
 
-        event.perp  = None
-        event.arr   = None
-        event.dep   = None
+        event.perp  = oops.Empty()
+        event.arr   = oops.Empty()
+        event.dep   = oops.Empty()
         event.vflat = oops.Vector3((0.,0.,0.))
 
         return event
