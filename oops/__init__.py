@@ -1,19 +1,34 @@
 ################################################################################
 # oops/__init__.py
+#
+# 1/11/12 (MRS) - Updated define_solar_system() and added load_leap_seconds().
+#   Removed define_saturn_cassni() because it is now part of instrument.cassini.
 ################################################################################
 
 __all__ = ["Array", "Scalar", "Pair", "Vector3", "Matrix3", "Tuple",
            "Body", "Event", "Transform",
            "Calibration", "AreaScaling", "Scaling",
            "FOV", "FlatFOV", "PolynomialFOV", "SubarrayFOV", "SubsampledFOV",
-           "Frame", "Cmatrix", "RingFrame", "SpiceFrame",
-           "Observation",
+           "Frame", "Cmatrix", "MatrixFrame", "RingFrame", "SpiceFrame",
+           "Observation", "Snapshot",
            "Path", "SpicePath",
            "Surface", "RingPlane"]
 
+import numpy as np
+import os
+import spicedb
+import julian
+
 DEBUG = False
 
-C = 299792.458  # speed of light in km/s
+# Handy constants
+
+C = 299792.458                  # speed of light in km/s
+RPD = np.pi / 180.              # radians per degree
+DPR = 180. / np.pi              # degrees per radian
+SPR = 3600. * 180. / np.pi      # arcseconds per radian
+RPS = np.pi / (3600. * 180.)    # radians per arcsecond
+SPD = 86400.                    # seconds per day
 
 ################################################################################
 # Programmer's Note
@@ -105,6 +120,7 @@ from fov.SubsampledFOV      import SubsampledFOV
 
 from frame.Frame            import Frame
 from frame.Cmatrix          import Cmatrix
+from frame.MatrixFrame      import MatrixFrame
 from frame.RingFrame        import RingFrame
 from frame.SpiceFrame       import SpiceFrame
 
@@ -120,11 +136,13 @@ from surface.RingPlane      import RingPlane
 
 import instrument
 import instrument.hst
-import instrument.cassini
 from instrument.hst.acs     import *
 from instrument.hst.nicmos  import *
 from instrument.hst.wfc3    import *
 from instrument.hst.wfpc2   import *
+
+import instrument.cassini
+import instrument.cassini.iss
 
 ################################################################################
 # Global Frames Registry
@@ -205,11 +223,32 @@ def as_primary_path(path):
         return PATH_REGISTRY[path]
 
 ################################################################################
-# A useful class method to define the paths of all planets and moons
+# Useful class methods to define SPICE-related quantities
 ################################################################################
 
-import spicedb
-import julian
+LSK_LOADED = False
+
+def load_leap_seconds():
+    """Loads the most recent leap seconds kernel if it was not already loaded.
+    """
+
+    global LSK_LOADED
+
+    if LSK_LOADED: return
+
+    # Query for the most recent LSK
+    spicedb.open_db()
+    lsk = spicedb.select_kernels("LSK")
+    spicedb.close_db()
+
+    # Furnish the LSK to the SPICE toolkit
+    spicedb.furnish_kernels(lsk)
+
+    # Initialize the Julian toolkit
+    julian.load_from_kernel(os.path.join(spicedb.get_spice_path(),
+                                         lsk[0].filespec))
+
+    LSK_LOADED = True
 
 def define_solar_system(start_time, stop_time, asof=None):
     """Constructs SpicePaths for all the planets and moons in the solar system
@@ -226,15 +265,18 @@ def define_solar_system(start_time, stop_time, asof=None):
                         that date will be included, in ISO format.
     """
 
+    # Always load the most recent Leap Seconds kernel, but only once
+    load_leap_seconds()
+
     # Convert the formats to times as recognized by spicedb.
-    (day,sec) = julian.day_sec_from_iso(start_time)
+    (day, sec) = julian.day_sec_from_iso(start_time)
     start_time = julian.ymdhms_format_from_day_sec(day, sec)
 
-    (day,sec) = julian.day_sec_from_iso(stop_time)
+    (day, sec) = julian.day_sec_from_iso(stop_time)
     stop_time = julian.ymdhms_format_from_day_sec(day, sec)
 
     if asof is not None:
-        (day,sec) = julian.day_sec_from_iso(stop_time)
+        (day, sec) = julian.day_sec_from_iso(stop_time)
         asof = julian.ymdhms_format_from_day_sec(day, sec)
 
     # Load the necessary SPICE kernels
@@ -320,67 +362,5 @@ def define_planet(planet, regular_ids, irregular_ids):
                             id=(planet + "_MOONS"))
     ignore = oops.MultiPath([planet] + regulars + irregulars, "SSB",
                             id=(planet + "+MOONS"))
-
-def define_cassini_saturn(start_time, stop_time, instrument=None, asof=None):
-    """Constructs a SpicePath for Cassini relative to Saturn, and also defines
-    C kernel coordinate frames for the selection of Instruments requested.
-
-    Input:
-        start_time      start_time of the period to be convered, in ISO date
-                        or date-time format.
-
-        stop_time       stop_time of the period to be covered, in ISO date or
-                        date-time format.
-
-        instrument      an optional list of the names of instruments to be used
-                        using the standard abbreviations, e.g., "ISS", "VIMS",
-                        "CIRS", "UVIS", etc. The appropriate set of
-                        CKernelFrames is created for each instrument listed.
-                        *NOT CURRENTLY IMPLEMENTED*.
-
-        asof            a UTC date such that only kernels released earlier than
-                        that date will be included, in ISO format.
-    """
-
-    # Convert the formats to times as recognized by spicedb.
-    (day,sec) = julian.day_sec_from_iso(start_time)
-    start_time = julian.ymdhms_format_from_day_sec(day, sec)
-
-    (day,sec) = julian.day_sec_from_iso(stop_time)
-    stop_time = julian.ymdhms_format_from_day_sec(day, sec)
-
-    if asof is not None:
-        (day,sec) = julian.day_sec_from_iso(stop_time)
-        asof = julian.ymdhms_format_from_day_sec(day, sec)
-
-    # Load the necessary SPICE kernels
-    spicedb.open_db()
-    spicedb.furnish_cassini_kernels(start_time, stop_time, instrument, asof)
-    spicedb.close_db()
-
-    # Sun...
-    ignore = oops.SpicePath("SUN", "SSB")
-
-    # Earth...
-    ignore = oops.SpicePath("MOON", "EARTH")
-    ignore = oops.SpiceFrame("MOON")
-    ignore = oops.MultiPath(["EARTH", "MOON"], "SSB", id="EARTH_SYSTEM")
-
-    # Saturn...
-    ignore = oops.SpicePath("SATURN", "SSB")
-    ignore = oops.SpiceFrame("SATURN")
-
-    # Saturn system...
-    define_planet("SATURN", spicedb.SATURN_REGULAR,
-                            spicedb.SATURN_IRREGULAR)
-
-    # Cassini...
-    ignore = oops.SpicePath("CASSINI", "SATURN")
-
-    # C kernels and instruments
-    if instrument is None: instrument = []
-
-    if len(instrument) > 0.:
-        pass        # TBD
 
 ################################################################################

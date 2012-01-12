@@ -19,6 +19,8 @@
 # 1/4/12 (MRS) Minor bugs fixed for cassini and solar system load order.
 #
 # 1/6/12 (MRS) Added functions as_dict() and as_names().
+#
+# 1/11/12 (MRS) Fixed bug in select_kernels() using path constraint.
 ################################################################################
 
 import julian
@@ -679,7 +681,7 @@ def select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
 ################################################################################
 
 def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
-                            path=None, after=None):
+                            after=None, path=None):
     """This internal routine generates a query string based on constraints
     involving the kernel type, name, body or bodies, time range, and release
     date.
@@ -734,7 +736,7 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
         query_list += ["AND RELEASE_DATE >= '", after, "'\n"]
 
     if path is not None:
-        query_list += ["AND FILESPEC LIKE '", path, "'\n"]
+        query_list += ["AND FILESPEC LIKE '%", path, "%'\n"]
 
     if asof == "redo":
         query_list += ["ORDER BY RELEASE_DATE ASC\n"]
@@ -878,7 +880,6 @@ def furnish_solar_system(start_time, stop_time, asof=None):
 
     # While we are at it, load the LSK file for the Julian Library
     if not DEBUG:
-    
        julian.load_from_kernel(os.path.join(get_spice_path(), list[0].filespec))
 
     # Planetary Constants, including the latest from Cassini

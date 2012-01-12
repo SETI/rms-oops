@@ -35,6 +35,8 @@ from surface.RingPlane      import Test_RingPlane
 
 from observation.Observation import Test_Observation
 
+from instrument.cassini.iss import Test_Cassini_ISS
+
 # Set CSPICE up for testing...
 
 cspice.furnsh("test_data/spice/naif0009.tls")
