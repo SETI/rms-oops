@@ -185,6 +185,35 @@ class Test_Cassini_ISS(unittest.TestCase):
         snapshots = from_index("test_data/cassini/ISS/index.lbl")
 
         snapshot = from_file("test_data/cassini/ISS/W1575634136_1.IMG")
+        vimg = vicar.VicarImage.from_file("test_data/cassini/ISS/W1575634136_1.IMG")
+        self.assertTrue(np.all(snapshot.data == vimg.data[0]))
+        ptable = pdstable.PdsTable("test_data/cassini/ISS/index.lbl")
+        
+        #print 'FRAME_REGISTRY'
+        #print oops.FRAME_REGISTRY['SATURN_DESPUN']
+        bp_data = snapshot.radius_back_plane()
+
+        #test START_TIME for this file
+        t0_col = ptable.column_dict['START_TIME']
+        t0_str = t0_col[3940]
+        (day,sec) = julian.day_sec_from_iso(t0_str)
+        t0_tai = julian.tai_from_day(day) + sec
+        t0_tdb = julian.tdb_from_tai(t0_tai)
+        print "t0s:"
+        print snapshot.t0
+        print t0_tdb
+        self.assertTrue(snapshot.t0 == t0_tdb)
+
+        #test STOP_TIME for this file
+        t1_col = ptable.column_dict['STOP_TIME']
+        t1_str = t1_col[3940]
+        (day,sec) = julian.day_sec_from_iso(t1_str)
+        t1_tai = julian.tai_from_day(day) + sec
+        t1_tdb = julian.tdb_from_tai(t1_tai)
+        print "t1s:"
+        print snapshot.t1
+        print t1_tdb
+        self.assertTrue(snapshot.t1 == t1_tdb)
 
 ################################################################################
 if __name__ == '__main__':
