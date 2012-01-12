@@ -134,15 +134,16 @@ from path.SpicePath         import SpicePath
 from surface.Surface        import Surface
 from surface.RingPlane      import RingPlane
 
-import instrument
-import instrument.hst
-from instrument.hst.acs     import *
-from instrument.hst.nicmos  import *
-from instrument.hst.wfc3    import *
-from instrument.hst.wfpc2   import *
-
-import instrument.cassini
-import instrument.cassini.iss
+# NOTE: Instrument modules have to be loaded last. See bottom of file.
+# import instrument
+# import instrument.hst
+# from instrument.hst.acs     import *
+# from instrument.hst.nicmos  import *
+# from instrument.hst.wfc3    import *
+# from instrument.hst.wfpc2   import *
+# 
+# import instrument.cassini
+# import instrument.cassini.iss
 
 ################################################################################
 # Global Frames Registry
@@ -362,5 +363,17 @@ def define_planet(planet, regular_ids, irregular_ids):
                             id=(planet + "_MOONS"))
     ignore = oops.MultiPath([planet] + regulars + irregulars, "SSB",
                             id=(planet + "+MOONS"))
+
+################################################################################
+
+import instrument
+import instrument.hst
+from instrument.hst.acs     import *
+from instrument.hst.nicmos  import *
+from instrument.hst.wfc3    import *
+from instrument.hst.wfpc2   import *
+
+import instrument.cassini
+import instrument.cassini.iss
 
 ################################################################################

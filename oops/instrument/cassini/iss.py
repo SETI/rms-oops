@@ -111,6 +111,14 @@ def from_index(filespec, parameters={}):
 
         snapshots.append(item)
 
+    # Make sure all the SPICE kernels are loaded
+    tdb0 = row_dicts[0]["START_TIME"]
+    tdb1 = row_dicts[-1]["STOP_TIME"]
+
+    utils.load_cks( tdb0, tdb1)
+    utils.load_spks(tdb0, tdb1)
+
+
     return snapshots
 
 ################################################################################
