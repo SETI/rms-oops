@@ -48,7 +48,7 @@ class Scalar(Array):
     def int(self):
         """Returns the integer (floor) component of each value."""
 
-        return Scalar(np.floor(self.vals).astype("int"))
+        return Scalar((self.vals // 1.).astype("int"))
 
     def frac(self):
         """Returns the fractional component of each value."""

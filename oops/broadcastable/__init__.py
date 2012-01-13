@@ -1,4 +1,4 @@
 # oops/array/__init__.py
 
-__all__ = ["Array", "Empty", "Scalar", "Pair", "Vector3", "Matrix3"]
+__all__ = ["Array", "Empty", "Scalar", "Pair", "Tuple", "Vector3", "Matrix3"]
 

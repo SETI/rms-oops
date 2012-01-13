@@ -521,6 +521,11 @@ class Array(object):
             
             Return:     list of bools indicating equivalence of items.
             """
+
+        # If self is a subclass of arg, reverse
+        if issubclass(type(self), type(arg)) and type(self) != type(arg):
+            return arg.__eq__(self)
+
         # If second operand has the same subclass, operate item-by-item
         if isinstance(arg, type(self)):
 
@@ -570,6 +575,11 @@ class Array(object):
             
             Return:     list of bools indicating unequivalence of items.
             """
+
+        # If self is a subclass of arg, reverse
+        if issubclass(type(self), type(arg)) and type(self) != type(arg):
+            return arg.__eq__(self)
+
         # If second operand has the same subclass, operate item-by-item
         if isinstance(arg, type(self)):
 

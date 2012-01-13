@@ -5,6 +5,7 @@
 #                           - added some comments
 #
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
+# Modified 1/12/11 (MRS) -- Added method cross_scalars()
 ################################################################################
 
 import numpy as np
@@ -76,6 +77,29 @@ class Pair(Array):
                                         Scalar.as_scalar(y)))
         return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1))
 
+    @staticmethod
+    def cross_scalars(x,y):
+        """Returns a new Pair constructed by combining every possible pairs of
+        x- and y-components provided as scalars. The returned pair will have a
+        shape defined by concatenating the shapes of the x and y arrays.
+        """
+
+        x = Scalar.as_scalar(x)
+        y = Scalar.as_scalar(y)
+
+        newshape = x.shape + y.shape
+        if x.vals.dtype.kind != "f" and y.vals.dtype.kind != "f":
+            dtype = "int"
+        else:
+            dtype = "float"
+
+        buffer = np.empty(newshape + [2], dtype=dtype)
+
+        x = x.reshape(x.shape + len(y.shape) * [1])
+        buffer[...,0] = x.vals
+        buffer[...,1] = y.vals
+
+        return Pair(buffer)
 
     def swapxy(self):
         """Returns a pair object in which the first and second values are
@@ -318,6 +342,17 @@ class Test_Pair(unittest.TestCase):
         vecs = Pair.from_scalars(np.cos(angles), -np.sin(angles))
         self.assertTrue(Pair([2,0]).sep(vecs) > angles - 3*eps)
         self.assertTrue(Pair([2,0]).sep(vecs) < angles + 3*eps)
+
+        # cross_scalars()
+        pair = Pair.cross_scalars(np.arange(10), np.arange(5))
+        self.assertEqual(pair.shape, [10,5])
+        self.assertTrue(np.all(pair.vals[9,:,0] == 9))
+        self.assertTrue(np.all(pair.vals[:,4,1] == 4))
+
+        pair = Pair.cross_scalars(np.arange(12).reshape(3,4), np.arange(5))
+        self.assertEqual(pair.shape, [3,4,5])
+        self.assertTrue(np.all(pair.vals[2,3,:,0] == 11))
+        self.assertTrue(np.all(pair.vals[:,:,4,1] == 4))
 
 ################################################################################
 if __name__ == '__main__':
