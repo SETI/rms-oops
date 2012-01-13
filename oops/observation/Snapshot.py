@@ -62,22 +62,24 @@ class Snapshot(oops.Observation):
                                  self.frame_id, oops.Empty(), arrivals)
         
         #print oops.FRAME_REGISTRY['CASSINI']
-        ignore = oops.RingFrame("SATURN")
-        surface = oops.RingPlane("SATURN", "SATURN_DESPUN")
+        ignore = oops.RingFrame("IAU_SATURN")
+        surface = oops.RingPlane("SATURN", "IAU_SATURN_DESPUN")
         #even the following commented out line gives a FRAME_REGISTRY error
         #surface = oops.RingPlane("CASSINI", "CASSINI")
         ring_event = surface.photon_to_event(image_event)[0]
-        
-        bp_data = np.sqrt(ring_event.pos[0]**2 + ring_event.pos[1]**2)
+
+        bp_data = np.sqrt(ring_event.pos.vals[...,0]**2 +
+                          ring_event.pos.vals[...,1]**2)
+
         #for i in range(self.fov.uv_shape[0]):
             #for j in range(self.fov.uv_shape[1]):
         #figure out the proper syntax... for initial testing, just use 1024x1024
-        for i in range(1024):
-            for j in range(1024):
-                if bp_data[i][j] < 60298.:
-                    bp_data[i][j] = 0.
-                elif bp_data[i][j] > 483000.:   #include just for testing purposes
-                    bp_data[i][j] = 0.
+#         for i in range(1024):
+#             for j in range(1024):
+#                 if bp_data[i][j] < 60298.:
+#                     bp_data[i][j] = 0.
+#                 elif bp_data[i][j] > 483000.:   #include just for testing purposes
+#                     bp_data[i][j] = 0.
         return bp_data
 
 
