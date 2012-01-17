@@ -5,6 +5,11 @@ import oops
 
 ################################################################################
 # Cmatrix
+#
+# 1/17/12 (BSW) - id and reference, declared as arguments to __init__, were not
+#   refereced (instead frane_id and referece_id were refereced, which did not
+#   exist, so replaced frame_id with id and reference_id with reference in body
+#   of __init__
 ################################################################################
 
 class Cmatrix(oops.Frame):
@@ -44,8 +49,8 @@ class Cmatrix(oops.Frame):
         self.dec = oops.Scalar.as_scalar(dec)
         self.clock = oops.Scalar.as_scalar(clock)
 
-        self.frame_id = frame_id
-        self.reference_id = reference_id
+        self.frame_id = id
+        self.reference_id = reference
         self.origin_id = None       # Frame is fixed, inertial
         self.shape = oops.Array.broadcast_shape((self.ra, self.dec, self.clock))
 
