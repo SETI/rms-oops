@@ -37,7 +37,8 @@ class RingFrame(oops.Frame):
 
         self.frame_id = frame.frame_id
         self.reference_id = frame.reference_id
-        self.origin_id = frame.origin_id
+        #self.origin_id = frame.origin_id
+        self.origin_id = None           # It's close to inertial, if not exactly
         self.shape = frame.shape
 
         self.planet_frame = frame
