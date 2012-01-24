@@ -793,6 +793,10 @@ def spkez(*args):
     """
   return _cspice.spkez(*args)
 
+def spkez_vector(*args):
+  """spkez_vector(int targ, double et, char ref, char abcorr, int obs)"""
+  return _cspice.spkez_vector(*args)
+
 def spkezp(*args):
   """
     spkezp(int targ, double et, char arg2, char CONST_STRING, 
@@ -866,6 +870,10 @@ def surfpt(*args):
 def sxform(*args):
   """sxform(char arg0, char CONST_STRING, double et)"""
   return _cspice.sxform(*args)
+
+def sxform_vector(*args):
+  """sxform_vector(char _from, char to, double et)"""
+  return _cspice.sxform_vector(*args)
 
 def timdef(*args):
   """timdef(char arg0, char CONST_STRING, int lenout)"""
