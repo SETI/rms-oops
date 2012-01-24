@@ -5,6 +5,7 @@ import unittest
 import oops
 import julian
 import solar
+import sys
 
 ################################################################################
 # Snapshot Class
@@ -30,57 +31,63 @@ class Snapshot(oops.Observation):
         self.v_axis = axes.index("v")
         self.t_axis = None
 
-    def radius_back_plane(self):
+    def radius_back_plane(self, min_range=0., max_range=sys.float_info.max):
         """the backplane for radius values for the given snapshot. currently
             just for Cassini to rings... needs to be updated for all spacecraft
             and all targets.
             
             Return:     2D array of radius values
             """
+        #test some values relative to the LBL table file
+        avg_time = (self.t0 + self.t1) * 0.5
+        event_at_cassini = oops.Event(avg_time, (0,0,0), (0,0,0), "CASSINI")
+        saturn_wrt_cassini = oops.Path.connect("SATURN", "CASSINI", "J2000")
+        (abs_ev, rel_ev) = saturn_wrt_cassini.photon_to_event(event_at_cassini)
+
+
+        surface_event = self.back_plane_setup()
+
+        bp_data = np.sqrt(surface_event.pos.vals[...,0]**2 +
+                          surface_event.pos.vals[...,1]**2)
+        bp_data[np.isnan(bp_data)] = 0.
+        bp_data[bp_data < min_range] = 0.
+        bp_data[bp_data > max_range] = 0.
+
+        return bp_data
+
+    def back_plane_setup(self):
+        """Currently this is set up purely for ring planes.  Must be generalized
+            in the future.
+            
+            Return:     surface_event - the event where the photons left the
+                        surface.
+            """
         #first get the tdb time when instrument took measurement
         #get the average between the start and stop time to get the mid time
         tdb = (self.t0 + self.t1) * 0.5
         
         #construct a buffer from which we will create rays through these pixels
-        #buffer = np.empty((self.fov.uv_shape[0], self.fov.uv_shape[1],2))
-        #buffer[:,:,0] = np.arange(uv_shape[0]).reshape(uv_shape[0],1)
-        #buffer[:,:,1] = np.arange(uv_shape[1])
+        #buffer = np.empty((self.fov.uv_shape[0].vals, self.fov.uv_shape[1].vals,2))
+        #buffer[:,:,0] = np.arange(uv_shape[0].vals).reshape(uv_shape[0].vals,1)
+        #buffer[:,:,1] = np.arange(uv_shape[1].vals)
         #figure out the proper syntax... for initial testing, just use 1024x1024
         buffer = np.empty((1024, 1024,2))
-        buffer[:,:,0] = np.arange(1024).reshape(1024,1)
-        buffer[:,:,1] = np.arange(1024)
+        buffer[:,:,1] = np.arange(1024).reshape(1024,1)
+        buffer[:,:,0] = np.arange(1024)
         indices = oops.Pair(buffer + 0.5)
         
         rays = self.fov.los_from_uv(indices)
-        
-        print 'frame id:'
-        print self.frame_id
-        frame = oops.Frame.connect("J2000", self.frame_id)
-        transform = frame.transform_at_time(tdb)
-        arrivals = transform.rotate(-rays)
+
+        #reverse so that they are arrival rays
+        arrivals = -rays
         image_event = oops.Event(tdb, (0,0,0), (0,0,0), "CASSINI",
                                  self.frame_id, oops.Empty(), arrivals)
         
-        #print oops.FRAME_REGISTRY['CASSINI']
         ignore = oops.RingFrame("IAU_SATURN")
         surface = oops.RingPlane("SATURN", "IAU_SATURN_DESPUN")
-        #even the following commented out line gives a FRAME_REGISTRY error
-        #surface = oops.RingPlane("CASSINI", "CASSINI")
-        ring_event = surface.photon_to_event(image_event)[0]
+        surface_event = surface.photon_to_event(image_event, 1)[0]
 
-        bp_data = np.sqrt(ring_event.pos.vals[...,0]**2 +
-                          ring_event.pos.vals[...,1]**2)
-
-        #for i in range(self.fov.uv_shape[0]):
-            #for j in range(self.fov.uv_shape[1]):
-        #figure out the proper syntax... for initial testing, just use 1024x1024
-#         for i in range(1024):
-#             for j in range(1024):
-#                 if bp_data[i][j] < 60298.:
-#                     bp_data[i][j] = 0.
-#                 elif bp_data[i][j] > 483000.:   #include just for testing purposes
-#                     bp_data[i][j] = 0.
-        return bp_data
+        return surface_event
 
 
 ########################################

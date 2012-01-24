@@ -216,6 +216,7 @@ class ColumnInfoWindow:
         print rel_event.vel
         print event_at_cassini.arr
         print abs_event.dep
+        
 
         sun_wrt_saturn = oops.Path.connect("SUN",SATURN_label)
         sun_dep_event = sun_wrt_saturn.photon_to_event(abs_event)
@@ -409,13 +410,20 @@ class MainFrame:
         """will create backplane then show it with pylab. for the moment, just
             show random data in pylab."""
         print "snapshot t0 = %s" % self.snapshot.t0
+        bp_data = None
         if self.snapshot != None:
-            bo_data = self.snapshot.radius_back_plane()
+            print "creating back plane..."
+            bp_data = self.snapshot.radius_back_plane(60298., 136775.)
         else:
             bp_data = self.create_sample_backplane_data()
         d_max = bp_data.max()
+        print "d_max:"
+        print d_max
         bp_data = bp_data / d_max
+        print "normalized bp_data:"
+        print bp_data
         pylab.imshow(bp_data)
+        pylab.imsave("/Users/bwells/backplane.png", bp_data)
 
 
     def open_file_callback(self):
@@ -451,11 +459,16 @@ class MainFrame:
         self.current_metadata_index = iter
         title = self.lbl_list.get(iter)
         self.image_data_list.delete(0, END)
+        f_ndx = 0
         for line in self.ptable.column_dict[title]:
             self.image_data_list.insert(END, line)
+            if 'W1575634136_1.IMG' in line:
+                self.file_ndx = f_ndx
+            f_ndx += 1
         self.image_data_list.update_idletasks()
         self.current_metadata_category = title
-        self.file_ndx = 3940
+        #self.file_ndx = iter
+        print "self.file_ndx = %d" % self.file_ndx
         self.open_image()
 
     def search_callback(self):
@@ -499,8 +512,9 @@ class MainFrame:
         self.image_data = vimg.data[0]
         pylab.gray()
         pylab.imshow(self.image_data)
+        pylab.imsave("/Users/bwells/saturnImage.png", self.image_data)
         #print out data
-        for title in self.ptable.column_dict:
+        for title in sorted(self.ptable.column_dict.iterkeys()):
             col = self.ptable.column_dict[title]
             print "%s: %s" % (title, col[self.file_ndx])
         self.snapshot = oops.instrument.cassini.iss.from_file(path)

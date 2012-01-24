@@ -53,6 +53,7 @@ def from_file(filespec, parameters={}):
     utils.load_cks( tdb0, tdb1)
     utils.load_spks(tdb0, tdb1)
 
+        
     # Create a Snapshot
     result = oops.Snapshot(vic.get_2d_array(),      # data
                            None,                    # mask
@@ -86,8 +87,8 @@ def from_index(filespec, parameters={}):
     snapshots = []
     for dict in row_dicts:
 
-        tdb0 = dict["START_TIME"]
-        tdb1 = dict["STOP_TIME"]
+        tdb0 = julian.tdb_from_tai(dict["START_TIME"])
+        tdb1 = julian.tdb_from_tai(dict["STOP_TIME"])
 
         mode = dict["INSTRUMENT_MODE_ID"]
 
@@ -178,6 +179,8 @@ def initialize():
 # UNIT TESTS
 ################################################################################
 
+ERROR_ALLOTMENT = 1e-3
+
 class Test_Cassini_ISS(unittest.TestCase):
 
     def runTest(self):
@@ -185,13 +188,15 @@ class Test_Cassini_ISS(unittest.TestCase):
         snapshots = from_index("test_data/cassini/ISS/index.lbl")
 
         snapshot = from_file("test_data/cassini/ISS/W1575634136_1.IMG")
+        
+        snapshot3940 = snapshots[3940]  #should be same as snapshot
+        
+        #self.assertTrue(snapshot.t0 == snapshot3940.t0)
+        #self.assertTrue(snapshot.t1 == snapshot3940.t1)
+
         vimg = vicar.VicarImage.from_file("test_data/cassini/ISS/W1575634136_1.IMG")
         self.assertTrue(np.all(snapshot.data == vimg.data[0]))
         ptable = pdstable.PdsTable("test_data/cassini/ISS/index.lbl")
-        
-        #print 'FRAME_REGISTRY'
-        #print oops.FRAME_REGISTRY['SATURN_DESPUN']
-        bp_data = snapshot.radius_back_plane()
 
         #test START_TIME for this file
         t0_col = ptable.column_dict['START_TIME']
@@ -199,10 +204,6 @@ class Test_Cassini_ISS(unittest.TestCase):
         (day,sec) = julian.day_sec_from_iso(t0_str)
         t0_tai = julian.tai_from_day(day) + sec
         t0_tdb = julian.tdb_from_tai(t0_tai)
-        print "t0s:"
-        print snapshot.t0
-        print t0_tdb
-        self.assertTrue(snapshot.t0 == t0_tdb)
 
         #test STOP_TIME for this file
         t1_col = ptable.column_dict['STOP_TIME']
@@ -210,10 +211,13 @@ class Test_Cassini_ISS(unittest.TestCase):
         (day,sec) = julian.day_sec_from_iso(t1_str)
         t1_tai = julian.tai_from_day(day) + sec
         t1_tdb = julian.tdb_from_tai(t1_tai)
-        print "t1s:"
-        print snapshot.t1
-        print t1_tdb
-        self.assertTrue(snapshot.t1 == t1_tdb)
+        
+        diff0 = abs(snapshot.t0 - t0_tdb)
+        diff1 = abs(snapshot.t1 - t1_tdb)
+        self.assertTrue(diff0 < ERROR_ALLOTMENT)
+        self.assertTrue(diff1 < ERROR_ALLOTMENT)
+        
+        bp_data = snapshot.radius_back_plane()
 
 ################################################################################
 if __name__ == '__main__':

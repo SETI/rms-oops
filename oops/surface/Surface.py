@@ -273,7 +273,7 @@ class Surface(object):
             # Evaluate the current time
             surface_time = event.time + lt
 
-            # Locate the photons relative to the current origin in SSB/J2000
+            # Locate the photons relative to the current origin in J2000
             pos_in_j2000 = (obs_wrt_ssb + lt * vel_wrt_ssb
                             - origin_wrt_ssb.event_at_time(surface_time).pos)
 
@@ -284,7 +284,7 @@ class Surface(object):
 
             # Update the intercept times; save the intercept positions
             (intercept, dlt) = self.intercept(pos_in_frame, vel_in_frame)
-            lt = lt + dlt
+            lt += dlt
 
             if oops.DEBUG:
                 print iter
