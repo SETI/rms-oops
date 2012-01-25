@@ -10,35 +10,35 @@ import unittest
 import oops
 
 class Spherical(oops.System):
-    """A CoordinateSystem that defines locations using (longitude, latitude,
-    radius) coordinates."""
+    """A System that defines locations using (longitude, latitude, radius)
+    coordinates."""
 
-    def __init__(self, radius    = Coordinate.Longitude(),
-                       longitude = Coordinate.Latitude(),
-                       elevation = Coordinate.Radius()):
-        """Constructor for a Spherical CoordinateSystem.
+    def __init__(self, longitude=None, latitude=None, radius=None):
+        """Constructor for a Spherical coordinate system.
 
         Input:
-            longitude       a Coordinate.Longitude object.
-            latitude        a Coordinate.Latitude object.
-            elevation       a Coordinat.Radius object; default is
-                            CoordinateModel.Radius(offset=1.) to measure
-                            locations relative to the surface of a unit sphere.
+            longitude       a Longitude object.
+            latitude        a Latitude object.
+            radius          a Radius object.
 
         The three models independently describe the properties of each
         coordinate."""
 
-        self.models = (longitude, latitude, elevation)
-        self.longnames  = ["longitude", "latitude", "elevation"]
-        self.shortnames = ["theta", "phi", "z"]
+        if longitude is None: longitude = oops.Longitude()
+        if latitude  is None: latitude  = oops.Latitude()
+        if radius    is None: radius    = oops.Radius()
 
-    def as_vector3(self, theta, phi, z=Scalar(0.)):
+        self.coords     = (longitude, latitude, radius)
+        self.longnames  = ["longitude", "latitude", "radius"]
+        self.shortnames = ["theta", "phi", "r"]
+
+    def as_vector3(self, theta, phi, r):
         """Converts the given coordinates to a 3-vector."""
 
         # Normalize all coordinates
-        theta = self.models[0].normal_value(theta)
-        phi   = self.models[1].normal_value(phi)
-        z     = self.models[2].normal_value(z)
+        theta = self.coords[0].to_standard(theta)
+        phi   = self.coords[1].to_standard(phi)
+        r     = self.coords[2].to_standard(r)
 
         # Convert to vectors
         shape = Array.broadcast_shape((theta, phi, z), [3])
@@ -50,7 +50,7 @@ class Spherical(oops.System):
 
         return Vector3(array)
 
-    def as_coordinates(self, vector3, axes=2):
+    def as_coords(self, vector3, axes=2, units=False):
         """Converts the specified Vector3 into a tuple of Scalar coordinates.
         """
 
@@ -60,11 +60,11 @@ class Spherical(oops.System):
         z = vector3.vals[...,2]
         r = np.sqrt(x**2 + y**2 + z**2)
 
-        theta = self.models[0].coord_value(np.arctan(y,x))
-        phi   = self.models[1].coord_value(np.arcsin(z/r))
+        theta = self.coords[0].to_coord(np.arctan(y,x), units)
+        phi   = self.coords[1].coord_value(np.arcsin(z/r), units)
 
         if axes > 2:
-            r = self.models[2].coord_value(r)
+            r = self.coords[2].coord_value(r, units)
             return (theta, phi, r)
         else:
             return (theta, phi)

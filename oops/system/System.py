@@ -4,6 +4,8 @@
 # 1/24/12 (MRS) - Drafted.
 ################################################################################
 
+import oops
+
 class System(object):
     """A System is an abstract class that describes method for using Scalars to
     specify a Vector3 object. Examples include cylindrical and spherical
@@ -13,7 +15,7 @@ class System(object):
 
     def __init__(self): pass
 
-    def as_vector3(self, coord1, coord2, coord3=Scalar(0.)):
+    def as_vector3(self, coord1, coord2, coord3=0.):
         """Converts the specified coordinates into a Vector3 object."""
 
         pass

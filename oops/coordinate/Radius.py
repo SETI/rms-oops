@@ -4,6 +4,7 @@
 # 1/24/12 (MRS) Added.
 ################################################################################
 
+import numpy as np
 import oops
 
 class Radius(oops.Coordinate):
@@ -11,8 +12,7 @@ class Radius(oops.Coordinate):
     typically in spherical or cylindrical coordinates.
     """
 
-    def __init__(self, unit=oops.Unit.KM, format=None, reference=0.,
-                                          inward=False):
+    def __init__(self, unit=None, format=None, reference=0., inward=False):
         """The constructor for a Radius Coordinate.
 
         Input:
@@ -25,14 +25,17 @@ class Radius(oops.Coordinate):
                         rather than outward.
         """
 
+        if unit is None: unit = oops.Unit.KM
+
         Coordinate.__init__(self, unit, format,
-                            minimum = None,
+                            minimum = 0.,
+                            maximum = np.inf,
                             modulus = None,
                             reference = reference,
                             negated = inward)
 
         if self.unit.exponents != (1,0,0):
             raise ValueError("illegal unit for a Radius coordinate: " +
-                             str(unit))
+                             unit.name)
 
 ################################################################################

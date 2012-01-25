@@ -11,28 +11,28 @@ class Latitude(oops.Coordinate):
     and +90 degrees.
     """
 
-    def __init__(self, unit=oops.Unit.DEG, format=None, reference=0.
-                                           southward=False):
+    def __init__(self, unit=None, format=None, southward=False):
         """The constructor for a Latitude Coordinate
 
         Input:
             unit        the Unit object used by the coordinate.
             format      the default Format object used by the coordinate.
-            reference   the reference location in standard coordinates
-                        corresponding to a value of zero in this defined
-                        coordinate system. Default is 0.
             southward   if True, latitudes are measured in the reverse
                         direction; default is False
         """
 
-        Coordinate.__init__(self, unit, format,
-                            minimum = oops.UnitScalar(-90., oops.Unit.DEG),
-                        modulus   = None,
-                        reference = reference,
-                        negated   = southward)
+        if unit is None: unit = oops.Unit.DEG
 
-        if self.exponents != (0,0,1):
+        minimum = oops.UnitScalar(-90., oops.Unit.DEG).convert(unit).vals
+        maximum = oops.UnitScalar( 90., oops.Unit.DEG).convert(unit).vals
+
+        Coordinate.__init__(self, unit, format, minimum, maximum,
+                            modulus   = None,
+                            reference = 0.,
+                            negated   = southward)
+
+        if self.unit.exponents != (0,0,1):
             raise ValueError("illegal unit for a Latitude coordinate: " +
-                             str(unit))
+                             unit.name)
 
 ################################################################################

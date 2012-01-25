@@ -11,8 +11,8 @@ class Longitude(oops.Coordinate):
     through 360 degrees.
     """
 
-    def __init__(self, unit=oops.Unit.DEG, format=None, minimum=0., 
-                                           reference=0., retrograde=False):
+    def __init__(self, unit=None, format=None, minimum=0., reference=0.,
+                                               retrograde=False):
         """The constructor for a Longitude Coordinate
 
         Input:
@@ -27,15 +27,16 @@ class Longitude(oops.Coordinate):
                         direction; default is False
         """
 
-        Coordinate.__init__(self, unit, format,
-                            minimum = minimum,
-                            modulus = oops.UnitScalar(360.,
-                                           oops.Unit.DEG).convert(unit).vals
-                            reference = reference,
+        if unit is None: unit = oops.Unit.DEG
+
+        modulus = oops.UnitScalar(360.,oops.Unit.DEG).convert(unit).vals
+
+        Coordinate.__init__(self, unit, format, minimum, minimum + modulus,
+                            modulus, reference,
                             negated = retrograde)
 
-        if self.exponents != (0,0,1):
+        if self.unit.exponents != (0,0,1):
             raise ValueError("illegal unit for a Longitude coordinate: " +
-                             str(unit))
+                             unit.name)
 
 ################################################################################

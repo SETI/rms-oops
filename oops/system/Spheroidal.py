@@ -1,72 +1,83 @@
+################################################################################
+# Spheroidal
+#
+# Added 1/24/12 (MRS)
+################################################################################
+
 import numpy as np
 import unittest
 
-from oops.Scalar  import Scalar
-from oops.Vector3 import Vector3
+import oops
 
-################################################################################
-# Spherical Coordinates
-################################################################################
+class Spheroidal(oops.System):
+    """A system that defines locations using (longitude, latitude, radius)
+     coordinates."""
 
-class Spherical(CoordinateSystem):
-    """A CoordinateSystem that defines locations using (longitude, latitude,
-    radius) coordinates."""
-
-    def __init__(self, radius    = CoordinateModel.Longitude(),
-                       longitude = CoordinateModel.Latitude(),
-                       elevation = CoordinateModel.Radius()):
-        """Constructor for a Spherical CoordinateSystem.
+    def __init__(self, radius, flattening,
+                       longitude=None, latitude=None, elevation=None):
+        """Constructor for a spherical coordinate system applied to the surface
+        of an oblate spheroid.
 
         Input:
-            longitude       a CoordinateModel.Longitude object.
-            latitude        a CoordinateModel.Latitude object.
-            elevation       a CoordinateModel.Radius object; default is
-                            CoordinateModel.Radius(offset=1.) to measure
-                            locations relative to the surface of a unit sphere.
+            radius          equatorial radius in km.
+            flattening      the flattening factor, (polar radius/equatorial
+                            radius).
+            longitude       a Longitude object.
+            latitude        a Latitude object.
+            elevation       a Distance object; distances are measured relative
+                            to the surface of the spheroid.
 
         The three models independently describe the properties of each
         coordinate."""
 
-        self.models = (longitude, latitude, elevation)
+        self.radius     = radius
+        self.flattening = flattening
+        self.coords     = (longitude, latitude, elevation)
         self.longnames  = ["longitude", "latitude", "elevation"]
         self.shortnames = ["theta", "phi", "z"]
 
-    def as_vector3(self, theta, phi, z=Scalar(0.)):
+    def as_vector3(self, theta, phi, z=0.):
         """Converts the given coordinates to a 3-vector."""
 
+        # TBD
+        pass
+
         # Normalize all coordinates
-        theta = self.models[0].normal_value(theta)
-        phi   = self.models[1].normal_value(phi)
-        z     = self.models[2].normal_value(z)
+#         theta = self.coords[0].to_standard(theta)
+#         phi   = self.coords[1].to_standard(phi)
+#         z     = self.coords[2].to_standard(z)
+# 
+#         # Convert to vectors
+#         shape = Array.broadcast_shape((theta, phi, z), [3])
+#         array = np.empty(shape)
+#         cos_phi = np.sin(phi.vals)
+#         array[...,0] = r.vals * np.cos(theta.vals) * cos_phi
+#         array[...,1] = r.vals * np.sin(theta.vals) * cos_phi
+#         array[...,2] = r.vals * np.sin(phi.vals)
+# 
+#         return Vector3(array)
 
-        # Convert to vectors
-        shape = Array.broadcast_shape((theta, phi, z), [3])
-        array = np.empty(shape)
-        cos_phi = np.sin(phi.vals)
-        array[...,0] = r.vals * np.cos(theta.vals) * cos_phi
-        array[...,1] = r.vals * np.sin(theta.vals) * cos_phi
-        array[...,2] = r.vals * np.sin(phi.vals)
-
-        return Vector3(array)
-
-    def as_coordinates(self, vector3, axes=2):
+    def as_coords(self, vector3, axes=2, units=False):
         """Converts the specified Vector3 into a tuple of Scalar coordinates.
         """
 
-        vector3 = Vector3(vector3)
-        x = vector3.vals[...,0]
-        y = vector3.vals[...,1]
-        z = vector3.vals[...,2]
-        r = np.sqrt(x**2 + y**2 + z**2)
+        # TBD
+        pass
 
-        theta = self.models[0].coord_value(np.arctan(y,x))
-        phi   = self.models[1].coord_value(np.arcsin(z/r))
-
-        if axes > 2:
-            r = self.models[2].coord_value(r)
-            return (theta, phi, r)
-        else:
-            return (theta, phi)
+#         vector3 = Vector3(vector3)
+#         x = vector3.vals[...,0]
+#         y = vector3.vals[...,1]
+#         z = vector3.vals[...,2]
+#         r = np.sqrt(x**2 + y**2 + z**2)
+# 
+#         theta = self.coords[0].to_coord(np.arctan(y,x), units)
+#         phi   = self.coords[1].coord_value(np.arcsin(z/r), units)
+# 
+#         if axes > 2:
+#             r = self.coords[2].coord_value(r, units)
+#             return (theta, phi, r)
+#         else:
+#             return (theta, phi)
 
 ########################################
 # UNIT TESTS

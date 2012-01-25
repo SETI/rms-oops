@@ -7,36 +7,37 @@
 import numpy as np
 import unittest
 
-import      oops
+import oops
 
 class Rectangular(oops.System):
-    """A CoordinateSystem that defines locations using linear (x,y,z)
-    coordinates."""
+    """A System that defines locations using linear (x,y,z) coordinates."""
 
-    def __init__(self, x = Coordinate.Distance(),
-                       y = Coordinate.Distance(),
-                       z = Coordinate.Distance()):
-        """Constructor for a Rectangular Coordinate System.
+    def __init__(self, x=None, y=None, z=None):
+        """Constructor for a Rectangular coordinate system.
 
         Input:
-            x           a Coordinate.Distance object.
-            y           a Coordinate.Distance object.
-            z           a Coordinate.Distance object.
+            x           a Distance object.
+            y           a Distance object.
+            z           a Distance object.
 
         The three models independently describe the properties of each
         coordinate."""
 
-        self.models = (x, y, z)
+        if x is None: x = oops.Distance()
+        if y is None: y = oops.Distance()
+        if z is None: z = oops.Distance()
+
+        self.coords     = (x, y, z)
         self.longnames  = ["x", "y", "z"]
         self.shortnames = ["x", "y", "z"]
 
-    def as_vector3(self, x, y, z=Scalar(0.)):
+    def as_vector3(self, x, y, z=0.):
         """Converts the given coordinates to a 3-vector."""
 
         # Normalize all coordinates
-        x = self.models[0].normal_value(x)
-        y = self.models[1].normal_value(y)
-        z = self.models[2].normal_value(z)
+        x = self.coords[0].to_standard(x)
+        y = self.coords[1].to_standard(y)
+        z = self.coords[2].to_standard(z)
 
         # Convert to vectors
         shape = Array.broadcast_shape((x, y, z), [3])
@@ -47,7 +48,7 @@ class Rectangular(oops.System):
 
         return Vector3(array)
 
-    def as_coordinates(self, vector3, axes=3):
+    def as_coords(self, vector3, axes=3, units=False):
         """Converts the specified Vector3 into a tuple of Scalar coordinates.
         """
 
@@ -57,11 +58,11 @@ class Rectangular(oops.System):
         z = vector3.vals[...,2]
         r = np.sqrt(x**2 + y**2 + z**2)
 
-        x = self.models[0].coord_value(x)
-        y = self.models[1].coord_value(y)
+        x = self.coords[0].to_coord(x, units)
+        y = self.coords[1].to_coord(y, units)
 
         if axes > 2:
-            z = self.models[2].coord_value(z)
+            z = self.coords[2].to_coord(z, units)
             return (x, y, z)
         else:
             return (x, y)

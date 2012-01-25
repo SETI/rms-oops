@@ -4,6 +4,7 @@
 # 1/24/12 (MRS) Added.
 ################################################################################
 
+import numpy as np
 import oops
 
 class Distance(oops.Coordinate):
@@ -11,8 +12,7 @@ class Distance(oops.Coordinate):
     position vector, typically in rectangular coordinates.
     """
 
-    def __init__(self, unit=oops.Unit.KM, format=None, reference=0.,
-                                          downward=False):
+    def __init__(self, unit=None, format=None, reference=0., downward=False):
         """The constructor for a Distance Coordinate.
 
         Input:
@@ -26,8 +26,11 @@ class Distance(oops.Coordinate):
                         of increase of the standard coordinate value.
         """
 
+        if unit is None: unit = oops.Unit.KM
+
         Coordinate.__init__(self, unit, format,
-                            minimum = None,
+                            minimum = -np.inf,
+                            maximum =  np.inf,
                             modulus = None,
                             reference = reference,
                             negated = downward)
