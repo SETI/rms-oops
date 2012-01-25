@@ -4,12 +4,14 @@ import cspice
 import oops
 
 from utils                  import Test_utils
+from Unit                   import Test_Unit
 
 from broadcastable.Scalar   import Test_Scalar
 from broadcastable.Pair     import Test_Pair
 from broadcastable.Vector3  import Test_Vector3
 from broadcastable.Matrix3  import Test_Matrix3
 from broadcastable.Tuple    import Test_Tuple
+from broadcastable.UnitScalar import Test_UnitScalar
 
 from Transform              import Test_Transform
 from Event                  import Test_Event

@@ -1,7 +1,7 @@
 ################################################################################
 # Scalar
 #
-# Modified 1/2/11 (MRS) -- Refactored Scalar.py to eliminate circular loading
+# Modified 1/2/12 (MRS) -- Refactored Scalar.py to eliminate circular loading
 #   dependencies with Array and Empty classes. Array.py, Scalar.py and Empty.py
 #   are now separate files.
 ################################################################################

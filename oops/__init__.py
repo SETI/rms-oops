@@ -5,7 +5,8 @@
 #   Removed define_saturn_cassni() because it is now part of instrument.cassini.
 ################################################################################
 
-__all__ = ["Array", "Scalar", "Pair", "Vector3", "Matrix3", "Tuple",
+__all__ = ["Array", "Empty", "Scalar", "Pair", "Vector3", "Matrix3", "Tuple",
+                "UnitScalar",
            "Body", "Event", "Transform",
            "Calibration", "AreaScaling", "Scaling",
            "FOV", "FlatFOV", "PolynomialFOV", "SubarrayFOV", "SubsampledFOV",
@@ -102,6 +103,7 @@ from broadcastable.Scalar   import Scalar
 from broadcastable.Pair     import Pair
 from broadcastable.Vector3  import Vector3
 from broadcastable.Matrix3  import Matrix3
+from broadcastable.UnitScalar import UnitScalar
 
 # Single-instance classes
 from Event                  import Event
