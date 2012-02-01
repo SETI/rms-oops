@@ -5,6 +5,7 @@
 ################################################################################
 
 import oops
+import unittest
 
 class HmsFormat(oops.Format):
     """An HmsFormat is a Format object that handles a numeric value in
@@ -33,7 +34,7 @@ class HmsFormat(oops.Format):
         self.digits = digits
         self.pos = pos
 
-    def str(value):
+    def str(self, value):
         """Returns a character string indicating the value of a numeric quantity
         such as a coordinate.
 
@@ -49,15 +50,80 @@ class HmsFormat(oops.Format):
             "-01:02:03.457"
         """
 
-        # TBD
-        pass
+        hours = int(value)
+        fminutes = (value - hours) * 60.
+        minutes = int(fminutes)
+        fseconds = (fminutes - minutes) * 60.
+        seconds_pad = ''
+        if fseconds < 10.:
+            seconds_pad = '0'
+        print fseconds
+        leading_s = self.pos
+        if value < 0.:
+            leading_s = '-'
+        f = "%s%2d%s%02d%s%s%f%s" % (leading_s, hours, self.hchar, minutes,
+                                     self.mchar, seconds_pad, fseconds,
+                                     self.schar)
+        return f
 
-    def parse(string):
+    def parse(self, string):
         """Returns a numeric value derived by parsing a character string."""
 
-        # TBD
-        pass
+        hs = string.split(self.hchar)
+        hours = int(hs[0])
+        #the hchar and mchar may or may not be the same, so check
+        if self.hchar == self.mchar:
+            minutes = int(hs[1])
+            if len(self.schar) > 0:
+                ss = hs[2].split(self.schar)[0]
+            else:
+                ss = hs[2]
+        else:
+            ms = string.split(self.mchar)
+            ms1 = ms[0].split(self.hchar)
+            minutes = int(ms1[1])
+            if len(self.schar) > 0:
+                ss = ms[1].split(self.schar)[0]
+            else:
+                ss = ms[1]
+
+        seconds = float(ss)
+        time = hours + minutes / 60. + seconds / 3600.
+        return time
+
+    def int_from_component(self, component):
+        """Returns an int for the string, dealing with leading zeroes that the
+            default python formatter does not handle"""
+        s = component
+        if len(component) > 1 and component[0] == '0':
+            s = component[1:]
+        return int(s)
+        
 
 # Random note: Be very careful about the leading sign. The most common error in
 # such a routine is to lose the sign if the hours value is zero.
 ################################################################################
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+ERROR_ALLOTMENT = 1e-6
+
+class Test_HmsFormat(unittest.TestCase):
+    
+    def runTest(self):
+        
+        t1 = 2.384141
+        fmt = oops.HmsFormat(':',':','')
+        s1 = fmt.str(2.384141)
+        t1a = fmt.parse(s1)
+        self.assertTrue(t1 == t1a)
+                        
+        fmt = oops.HmsFormat('h ','m ','s')
+        s2 = fmt.str(2.384141)
+        t2a = fmt.parse(s2)
+        self.assertTrue(t1 == t2a)
+
+if __name__ == '__main__':
+    unittest.main()

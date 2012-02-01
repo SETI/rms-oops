@@ -16,14 +16,14 @@ class Format(object):
 
         pass
 
-    def str(value):
+    def str(self, value):
         """Returns a character string indicating the value of a numeric quantity
         such as a coordinate.
         """
 
         pass
 
-    def parse(string):
+    def parse(self, string):
         """Returns a numeric value interpreted from a character string."""
 
         pass

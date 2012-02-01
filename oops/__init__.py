@@ -155,6 +155,7 @@ from path.SpicePath         import SpicePath
 
 from surface.Surface        import Surface
 from surface.RingPlane      import RingPlane
+from surface.Spheroid       import Spheroid
 
 from system.System          import System
 from system.Cylindrical     import Cylindrical

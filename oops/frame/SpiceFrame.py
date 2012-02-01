@@ -138,10 +138,14 @@ class SpiceFrame(oops.Frame):
 
         # Fill in the matrix and omega using CSPICE
         for i,t in np.ndenumerate(time.vals):
-            matrix6 = cspice.sxform(self.spice_reference_name,
-                                    self.spice_frame_name,
-                                    t)
-            (matrix[i], omega[i]) = cspice.xf2rav(matrix6)
+            if np.isnan(t):
+                matrix[i] = np.nan
+                omega[i] = np.nan
+            else:
+                matrix6 = cspice.sxform(self.spice_reference_name,
+                                        self.spice_frame_name,
+                                        t)
+                (matrix[i], omega[i]) = cspice.xf2rav(matrix6)
 
         return oops.Transform(matrix, omega, self.frame_id, self.reference_id)
 

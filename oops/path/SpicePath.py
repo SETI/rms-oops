@@ -152,12 +152,16 @@ class SpicePath(oops.Path):
 
         # Fill in the states and light travel times using CSPICE
         for i,t in np.ndenumerate(time.vals):
-            (state[i],
-             lighttime[i]) = cspice.spkez(self.spice_target_id,
-                                          t,
-                                          self.spice_frame_name,
-                                          "NONE", # no aberration or light time
-                                          self.spice_origin_id)
+            if np.isnan(t):
+                state[i] = np.nan
+                lighttime[i] = np.nan
+            else:
+                (state[i],
+                 lighttime[i]) = cspice.spkez(self.spice_target_id,
+                                              t,
+                                              self.spice_frame_name,
+                                              "NONE", # no aberration or light time
+                                              self.spice_origin_id)
 
         # Convert to an Event and return
         return oops.Event(time, state[...,0:3], state[...,3:6],

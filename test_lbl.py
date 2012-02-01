@@ -16,6 +16,8 @@ CASSINI_label = 'CASSINI'
 SATURN_label = 'SATURN'
 J2000_label = 'J2000'
 FILE_NAME_label = 'FILE_NAME'
+#DEFAULT_IMAGE_label = 'W1575634136_1.IMG'
+DEFAULT_IMAGE_label = 'W1573721822_1.IMG'
 
 root = Tk()
 
@@ -302,6 +304,9 @@ class MainFrame:
         filemenu.add_command(label="Info...", command=self.infoCallback)
         filemenu.add_separator()
         filemenu.add_command(label="Back-plane...", command=self.backplaneCallback)
+        filemenu.add_command(label="Spheroid Back-plane...", command=self.spheroidBackplaneCallback)
+        filemenu.add_command(label="Latitude Back-plane...", command=self.latitudeBackplaneCallback)
+        filemenu.add_command(label="Shadow Back-plane...", command=self.shadowBackplaneCallback)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.quitCallback)
                        
@@ -406,24 +411,73 @@ class MainFrame:
         bp_data = np.sqrt(bp_data)
         return bp_data
 
+    def displayBackplane(self, bp_data):
+        """display in pylab image the backplane data"""
+        bp_data = np.nan_to_num(bp_data)
+        d_max = bp_data.max()
+        print "d_max:"
+        print d_max
+        d_min = bp_data.min()
+        #d_min = 9999999999.
+        #for y in range(1024):
+            #for x in range(1024):
+                #if bp_data[y][x] > 0. and d_min > bp_data[y][x]:
+                    #d_min = bp_data[y][x]
+        print "d_min:"
+        print d_min
+        bp_data = bp_data / d_max
+        print "normalized bp_data:"
+        print bp_data
+        pylab.imshow(bp_data)
+
     def backplaneCallback(self):
         """will create backplane then show it with pylab. for the moment, just
             show random data in pylab."""
         print "snapshot t0 = %s" % self.snapshot.t0
         bp_data = None
         if self.snapshot != None:
-            print "creating back plane..."
+            print "creating radius back plane..."
             bp_data = self.snapshot.radius_back_plane(60298., 136775.)
         else:
             bp_data = self.create_sample_backplane_data()
-        d_max = bp_data.max()
-        print "d_max:"
-        print d_max
-        bp_data = bp_data / d_max
-        print "normalized bp_data:"
-        print bp_data
-        pylab.imshow(bp_data)
+        self.displayBackplane(bp_data)
         pylab.imsave("/Users/bwells/backplane.png", bp_data)
+
+    def spheroidBackplaneCallback(self):
+        """will create backplane then show it with pylab. for the moment, just
+        show random data in pylab."""
+        bp_data = None
+        if self.snapshot != None:
+            print "creating polar back plane..."
+            bp_data = self.snapshot.polar_back_plane()
+        else:
+            bp_data = self.create_sample_backplane_data()
+        self.displayBackplane(bp_data)
+        pylab.imsave("/Users/bwells/polarbackplane.png", bp_data)
+
+    def latitudeBackplaneCallback(self):
+        """will create backplane then show it with pylab. for the moment, just
+            show random data in pylab."""
+        bp_data = None
+        if self.snapshot != None:
+            print "creating latitude back plane..."
+            bp_data = self.snapshot.latitude_c_back_plane()
+        else:
+            bp_data = self.create_sample_backplane_data()
+        self.displayBackplane(bp_data)
+        pylab.imsave("/Users/bwells/latitudebackplane.png", bp_data)
+
+    def shadowBackplaneCallback(self):
+        """will create backplane then show it with pylab. for the moment, just
+            show random data in pylab."""
+        bp_data = None
+        if self.snapshot != None:
+            print "creating shadow back plane..."
+            bp_data = self.snapshot.ring_shadow_back_plane(60298., 136775)
+        else:
+            bp_data = self.create_sample_backplane_data()
+        self.displayBackplane(bp_data)
+        #pylab.imsave("/Users/bwells/latitudebackplane.png", bp_data)
 
 
     def open_file_callback(self):
@@ -462,7 +516,7 @@ class MainFrame:
         f_ndx = 0
         for line in self.ptable.column_dict[title]:
             self.image_data_list.insert(END, line)
-            if 'W1575634136_1.IMG' in line:
+            if DEFAULT_IMAGE_label in line:
                 self.file_ndx = f_ndx
             f_ndx += 1
         self.image_data_list.update_idletasks()
