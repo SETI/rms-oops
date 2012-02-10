@@ -50,8 +50,21 @@ class Snapshot(oops.Observation):
         surface = oops.RingPlane("SATURN", "IAU_SATURN_DESPUN")
         planet_surface = oops.Spheroid("SATURN", "IAU_SATURN")
 
+        #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
         (surface_event, rel_surf_evt,
          dist_from_instrument, obs_mask) = self.back_plane_setup(surface,
+                                                                 planet_surface)
+        
+        #determine what is visible
+        """dist_from_instrument = np.sqrt(rel_surf_evt.pos.vals[...,0]**2 +
+                                       rel_surf_evt.pos.vals[...,1]**2 +
+                                       rel_surf_evt.pos.vals[...,2]**2)
+        rel_blk_evt = planet_surface.photon_to_event(image_event, 1)[1]
+        block_dist = np.sqrt(rel_blk_evt.pos.vals[...,0]**2 +
+                             rel_blk_evt.pos.vals[...,1]**2 +
+                             rel_blk_evt.pos.vals[...,2]**2)
+        obs_mask = block_dist < (dist_from_instrument - dist_tolerance)"""
+
 
         dist_from_center = np.sqrt(surface_event.pos.vals[...,0]**2 +
                                    surface_event.pos.vals[...,1]**2)
@@ -218,6 +231,7 @@ class Snapshot(oops.Observation):
             mask = dist_from_instrument == np.nan
 
         return (surface_event, rel_surf_evt, dist_from_instrument, mask)
+        #return (surface_event, rel_surf_evt)
 
 
 

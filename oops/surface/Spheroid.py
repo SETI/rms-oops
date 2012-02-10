@@ -203,6 +203,19 @@ class Spheroid(oops.Surface):
         return n    # This does not inherit the given vector's
                     # shape, but should broadcast properly
 
+    def normal2(self, position):
+        x = position.vals[...,0]
+        y = position.vals[...,1]
+        z = position.vals[...,2]
+        a_sq = self.r0**2
+        c_sq = self.r2**2
+        nx = x / a_sq
+        ny = y / a_sq
+        nz = z / c_sq
+        nn = np.array([nx,ny,nz]).transpose()
+        n = oops.Vector3(nn).unit()
+        return n
+
     def gradient_at_position(self, position, axis=0, projected=True):
         """Returns the gradient vector at a specified position at or near the
             surface. The gradient is defined as the vector pointing in the direction
