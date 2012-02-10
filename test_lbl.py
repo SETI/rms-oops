@@ -11,6 +11,7 @@ import oops
 import pdstable
 import julian
 import math
+import datetime
 
 CASSINI_label = 'CASSINI'
 SATURN_label = 'SATURN'
@@ -300,6 +301,7 @@ class MainFrame:
         filemenu = Menu(menu)
         menu.add_cascade(label="File", menu=filemenu)
         filemenu.add_command(label="Open...", command=self.open_file_callback)
+        filemenu.add_command(label="Save as...", command=self.saveas_file_callback)
         filemenu.add_separator()
         filemenu.add_command(label="Info...", command=self.infoCallback)
         filemenu.add_separator()
@@ -429,6 +431,7 @@ class MainFrame:
         print "normalized bp_data:"
         print bp_data
         pylab.imshow(bp_data)
+        self.img_data = bp_data
 
     def backplaneCallback(self):
         """will create backplane then show it with pylab. for the moment, just
@@ -449,7 +452,7 @@ class MainFrame:
         bp_data = None
         if self.snapshot != None:
             print "creating polar back plane..."
-            bp_data = self.snapshot.polar_back_plane()
+            bp_data = self.snapshot.polar_back_plane("SATURN", "IAU_SATURN")
         else:
             bp_data = self.create_sample_backplane_data()
         self.displayBackplane(bp_data)
@@ -461,7 +464,8 @@ class MainFrame:
         bp_data = None
         if self.snapshot != None:
             print "creating latitude back plane..."
-            bp_data = self.snapshot.latitude_c_back_plane()
+            bp_data = self.snapshot.latitude_c_back_plane("SATURN",
+                                                          "IAU_SATURN")
         else:
             bp_data = self.create_sample_backplane_data()
         self.displayBackplane(bp_data)
@@ -471,12 +475,17 @@ class MainFrame:
         """will create backplane then show it with pylab. for the moment, just
             show random data in pylab."""
         bp_data = None
+        then = datetime.datetime.now()
         if self.snapshot != None:
             print "creating shadow back plane..."
             bp_data = self.snapshot.ring_shadow_back_plane(60298., 136775)
         else:
             bp_data = self.create_sample_backplane_data()
         self.displayBackplane(bp_data)
+        now = datetime.datetime.now()
+        total_time = now - then
+        print "ring shadow back plane took:"
+        print str(total_time)
         #pylab.imsave("/Users/bwells/latitudebackplane.png", bp_data)
 
 
@@ -493,6 +502,14 @@ class MainFrame:
             for key in sorted(self.ptable.column_dict.iterkeys()):
                 self.lbl_list.insert(END, key)
             self.lbl_list.update_idletasks()
+
+    def saveas_file_callback(self):
+        # get filename
+        path = tkFileDialog.asksaveasfilename()
+    
+        # save file of image data
+        if path:
+            pylab.imsave(path, pylab.gci().get_array())
 
     def default_process_callback(self, event):
         print 'in default process callback'

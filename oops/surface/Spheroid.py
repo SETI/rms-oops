@@ -156,6 +156,7 @@ class Spheroid(oops.Surface):
         # equals zero.
         obs = oops.Vector3.as_vector3(obs).vals
         los = oops.Vector3.as_vector3(los).vals
+        
 
         #flattening = self.r2 / self.r0
         one_over_r0 = 1. / self.r0
@@ -170,10 +171,12 @@ class Spheroid(oops.Surface):
         b = 2. * (fl_obs[...,0] * fl_los[...,0] + fl_obs[...,1] * fl_los[...,1] + fl_obs[...,2] * fl_los[...,2])
         c = (fl_obs[...,0] * fl_obs[...,0]) + (fl_obs[...,1] * fl_obs[...,1]) + (fl_obs[...,2] * fl_obs[...,2]) - 1.
         d = b * b - 4. * a * c
-    
-        mask = d < 0.
+        
         d_sqrt = np.sqrt(d)
+        mask = d < 0.
         d_sqrt[mask] = np.nan
+            #if mask:
+        #d_sqrt = b
     
         t = ((d_sqrt - b) / (2. * a))[..., np.newaxis]
         array = obs + t * los
@@ -192,9 +195,9 @@ class Spheroid(oops.Surface):
             arbitrary.
             """
         
-        flattening = self.r2 / self.r0
+        flattening = 1. / self.r0
         np_scale_array = np.array( [[flattening, 0, 0], [0, flattening, 0],
-                                    [0, 0, 1]])
+                                    [0, 0, 1. / self.r2]])
         flattening_matrix = oops.Matrix3(np_scale_array)
         n = (flattening_matrix * position.unit()).unit()
         return n    # This does not inherit the given vector's
@@ -271,15 +274,13 @@ class Spheroid(oops.Surface):
         pass
         
         # For a sphere, this is just the point at r * n, where r is the radius
-        # of the sphere.  For a spheroid, this is
-        # returns (0,0,0) as the location where every exactly perpendicular
-        # vector intercepts the plane. It returns 3-vectors of np.nan everywhere
-        # else.
-        buffer = np.zeros(normal.shape + [3])
-        buffer[normal.vals[...,0] != 0., 0:3] = np.nan
-        buffer[normal.vals[...,1] != 0., 0:3] = np.nan
+        # of the sphere.  For a spheroid, this is just the same point scaled up
+        np_scale_array = np.array( [[self.r0, 0, 0], [0, self.r0, 0],
+                                    [0, 0, self.r2]])
+        expand_matrix = oops.Matrix3(np_scale_array)
+        pos = expand_matrix * normal
         
-        return oops.Vector3(buffer)
+        return pos
     
     def intercept_normal_to(self, position):
         """Constructs the intercept point on the surface where a normal vector
@@ -306,32 +307,32 @@ class Test_Spheroid(unittest.TestCase):
     
     def runTest(self):
         
-        plane = Spheroid("SSB", "J2000")
+        planet = Spheroid("SSB", "J2000")
         
         # Coordinate/vector conversions
         obs = np.random.rand(2,4,3,3)
         
-        (r,theta,z) = plane.as_coords(obs,axes=3)
+        (r,theta,z) = planet.as_coords(obs,axes=3)
         self.assertTrue(theta >= 0.)
         self.assertTrue(theta < 2.*np.pi)
         self.assertTrue(r >= 0.)
         
-        test = plane.as_vector3(r,theta,z)
+        test = planet.as_vector3(r,theta,z)
         self.assertTrue(np.all(np.abs(test.vals - obs) < 1.e-15))
         
-        # Ring intercepts
+        # Spheroid intercepts
         los = np.random.rand(2,4,3,3)
         obs[...,2] =  np.abs(obs[...,2])
         los[...,2] = -np.abs(los[...,2])
         
-        (pts, factors) = plane.intercept(obs, los)
+        (pts, factors) = planet.intercept(obs, los)
         self.assertTrue(pts.as_scalar(2) == 0.)
         
         angles = pts - obs
         self.assertTrue(angles.sep(los) > -1.e-12)
         self.assertTrue(angles.sep(los) <  1.e-12)
         
-        # Intercepts that point away from the ring plane
+        # Intercepts that point away from the spheroid
         self.assertTrue(np.all(factors.vals > 0.))
 
 ################################################################################
