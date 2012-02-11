@@ -1,13 +1,13 @@
-import numpy as np
-import unittest
-
-import oops
-
 ################################################################################
-# Scaling object
+# oops/calib/scaling.py: Subclass Scaling of class Calib
+#
+# 2/11/12 Modified (MRS) - revised for style.
 ################################################################################
 
-class Scaling(oops.Calibration):
+from baseclass import Calibration
+from oops.xarray import *
+
+class Scaling(Calibration):
     """A Scaling is a Calibration object in which every pixel is multiplied by a
     constant scale factor.
     """
@@ -41,9 +41,11 @@ class Scaling(oops.Calibration):
 
         return Scalar.as_scalar(value) / self.factor
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
+
+import unittest
 
 class Test_Scaling(unittest.TestCase):
 
@@ -53,7 +55,7 @@ class Test_Scaling(unittest.TestCase):
 
         pass
 
-################################################################################
+#########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

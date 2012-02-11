@@ -1,14 +1,10 @@
 ################################################################################
-# Frame
-#
-# 1/2/12 MRS - Fixed minor bug in unregister(), where a NullFrame would be
-#   deleted twice.
+# oops/frame/frame.py: Abstract class Frame
 ################################################################################
 
-import numpy as np
-import unittest
-
-import oops
+import oops.frame.registry as registry
+from oops.xarray.all import *
+from oops.transform import Transform
 
 class Frame(object):
     """A Frame is an abstract class that returns a Transform (rotation matrix
@@ -38,8 +34,6 @@ class Frame(object):
                             ...
                             self.ancestry[-1] = J2000.
     """
-
-    OOPS_CLASS = "Frame"
 
 ########################################
 # Each subclass must override...
@@ -110,13 +104,12 @@ class Frame(object):
         function, but it can be used to reset the registry for purposes of
         debugging."""
 
-        if oops.J2000FRAME == None:
-            oops.J2000FRAME = J2000frame()
+        if registry.J2000 is None:
+            registry.J2000 = Null("J2000")
+            registry.J2000.ancestry = [registry.J2000]
 
-        oops.FRAME_REGISTRY = {"J2000": oops.J2000FRAME,
-                               ("J2000","J2000"): oops.J2000FRAME}
-
-    # This method is called below, as soon as class J2000frame() is defined.
+        registry.REGISTRY = {"J2000": registry.J2000,
+                             ("J2000","J2000"): registry.J2000}
 
     def register(self):
         """Registers a Frame definition. If the frame's ID is new, it is assumed
@@ -130,30 +123,30 @@ class Frame(object):
         """
 
         # Make sure the reference frame is registered; raise KeyError on failure
-        reference = oops.FRAME_REGISTRY[self.reference_id]
+        reference = registry.REGISTRY[self.reference_id]
 
         # If the ID is unregistered, insert this as a primary definition
         try:
-            test = oops.FRAME_REGISTRY[self.frame_id]
+            test = registry.REGISTRY[self.frame_id]
         except KeyError:
-            oops.FRAME_REGISTRY[self.frame_id] = self
+            registry.REGISTRY[self.frame_id] = self
+
             # Fill in the ancestry too
             self.ancestry = [self] + reference.ancestry
 
-            # Also save the NullFrame
-            oops.FRAME_REGISTRY[(self.frame_id,
-                                 self.frame_id)] = NullFrame(self.frame_id)
+            # Also save the Null Frame
+            registry.REGISTRY[(self.frame_id,
+                                     self.frame_id)] = Null(self.frame_id)
 
-        # If the tuple (self.frame_id, self.reference_id) is unregistered,
-        # insert this as a secondary definition
-        key = (self.frame_id, self.reference_id)
-        try:
-            test = oops.FRAME_REGISTRY[key]
-        except KeyError:
-            oops.FRAME_REGISTRY[key] = self
+        # Insert or replace the secondary definition for
+        # (self.frame_id, self.reference_id) as a secondary definition
+        registry.REGISTRY[(self.frame_id, self.reference_id)] = self
 
     def unregister(self):
         """Removes this frame from the registry."""
+
+        # Import only occurs when needed
+        import oops.path.registry as path_registry
 
         # Note that we only delete the primary entry and any frame in which this
         # is one of the end points. If the frame is used as an intermediate step
@@ -163,16 +156,16 @@ class Frame(object):
         # unregistered.
 
         frame_id = self.frame_id
-        for key in oops.FRAME_REGISTRY.keys():
-            if frame_id == key: del oops.FRAME_REGISTRY[key]
+        for key in registry.REGISTRY.keys():
+            if frame_id == key: del registry.REGISTRY[key]
 
             if type(key) == type(()):
                 if frame_id == key[0]:
-                    del oops.FRAME_REGISTRY[key]
+                    del registry.REGISTRY[key]
                 elif frame_id == key[1]: 
-                    del oops.FRAME_REGISTRY[key]
+                    del registry.REGISTRY[key]
 
-        oops.Path.unregister_frame(frame_id)
+        path_registry.unregister_frame(frame_id)
 
     def reregister(self):
         """Adds this frame to the registry, replacing any definition of the same
@@ -180,9 +173,6 @@ class Frame(object):
 
         self.unregister()
         self.register()
-
-    @staticmethod
-    def lookup(key): return oops.FRAME_REGISTRY[key]
 
 ################################################################################
 # Event operations
@@ -218,36 +208,35 @@ class Frame(object):
         return self.transform_at_time(event.time).unrotate_event(event)
 
 ################################################################################
-# Frame Generators
+# Frame Generator
 ################################################################################
 
     @staticmethod
     def connect(target, reference):
-        """Returns a Frame object that transforms from the given reference
-        Frame to the given target Frame.
+        """Returns a Frame object that transforms from the given reference Frame
+        to the given target Frame.
 
         Input:
             target      a Frame object or the registered ID of the destination
                         frame.
-            reference   a Frame object or the registered ID of the starting
-                        frame.
+            reference   a Frame object or the registered ID of the starting frame.
 
         The shape of the connected frame will will be the result of broadcasting
         the shapes of the target and reference.
         """
 
         # Convert to IDs
-        target_id    = oops.as_frame_id(target)
-        reference_id = oops.as_frame_id(reference)
+        target_id    = registry.as_id(target)
+        reference_id = registry.as_id(reference)
 
         # If the path already exists, just return it
         try:
-            return oops.FRAME_REGISTRY[(target_id, reference_id)]
+            return registry.REGISTRY[(target_id, reference_id)]
         except KeyError: pass
 
         # Otherwise, construct it from the common ancestor...
 
-        target_frame = oops.FRAME_REGISTRY[target_id]
+        target_frame = registry.REGISTRY[target_id]
         return target_frame.connect_to(reference_id)
 
     # Can be overridden by some classes such as SpiceFrame, where it is easier
@@ -261,8 +250,8 @@ class Frame(object):
         """
 
         # Find the fundamental frame definitions
-        target    = oops.as_primary_frame(self)
-        reference = oops.as_primary_frame(reference)
+        target    = registry.as_primary(self)
+        reference = registry.as_primary(reference)
 
         # Check for compatibility
         if target.origin_id is not None and reference.origin_id is not None:
@@ -283,10 +272,10 @@ class Frame(object):
             target_frame = target
         else:
             try:
-                target_frame = Frame.lookup((target.frame_id,
-                                             target_ancestry[-1].reference_id))
+                target_frame = registry.lookup((target.frame_id,
+                                              target_ancestry[-1].reference_id))
             except KeyError:
-                target_frame = LinkedFrame(target_ancestry)
+                target_frame = Linked(target_ancestry)
                 target_frame.register()
 
         # Look up or construct the common ancestor's frame from the reference
@@ -296,28 +285,29 @@ class Frame(object):
             reference_frame = reference
         else:
             try:
-                reference_frame = Frame.lookup(
+                reference_frame = registry.lookup(
                                         (reference.frame_id,
                                          reference_ancestry[-1].reference_id))
             except KeyError:
-                reference_frame = LinkedFrame(reference_ancestry)
+                reference_frame = Linked(reference_ancestry)
                 reference_frame.register()
 
         # Return the relative frame
         if reference_frame is None:
             if target_frame is None:
-                result = NullFrame(target.frame_id)
+                result = Null(target.frame_id)
             else:
                 result = target_frame
         else:
             if target_frame is None:
-                result = InverseFrame(reference_frame)
+                result = Inverse(reference_frame)
             else:
-                result = RelativeFrame(target_frame, reference_frame)
+                result = Relative(target_frame, reference_frame)
 
         result.register()
         return result
 
+    @staticmethod
     def common_ancestry(frame1, frame2):
         """Returns a pair of ancestry lists for the two given frames, where both
         lists end at Frames with the same name."""
@@ -356,46 +346,46 @@ class Frame(object):
 
     # unary "~" operator
     def __inverse__(self):
-        return InverseFrame(self)
+        return frame.Inverse(self)
 
     # binary "*" operator
     def __mul__(self, arg):
-
-        if oops.is_id(arg):
-            return ProductFrame(self, arg)
-
-        if arg.OOPS_CLASS == "Event":
-            return self.rotate_event(arg)
-
-        if arg.OOPS_CLASS == "Frame":
-            return ProductFrame(self, arg)
-
-        oops.raise_type_mismatch(self, "*", arg)
+        return frame.Product(self, arg)
 
     # binary "/" operator
     def __div__(self, arg):
-
-        if oops.is_id(arg):
-            return RelativeFrame(self, arg)
-
-        if arg.OOPS_CLASS == "Frame":
-            return RelativeFrame(self, arg)
-
-        oops.raise_type_mismatch(self, "/", arg)
+        return frame.Relative(self, arg)
 
     # string operations
     def __str__(self):
         return "Frame(" + self.frame_id + "/" + self.reference_id + ")"
 
 ################################################################################
-# Required Subclasses
+# Complete the initialization
 ################################################################################
 
-####################
-# LinkedFrame
-####################
+class Inverse(Frame):
+    """A Frame that generates the inverse Transform of a given Frame.
+    """
 
-class LinkedFrame(Frame):
+    def __init__(self, frame):
+
+        self.oldframe = registry.as_frame(frame)
+
+        # Required fields
+        self.frame_id     = self.oldframe.reference_id
+        self.reference_id = self.oldframe.frame_id
+        self.origin_id    = self.oldframe.origin_id
+
+        self.shape = self.oldframe.shape
+
+    def transform_at_time(self, time):
+
+        return self.oldframe.transform_at_time(time).invert()
+
+################################################################################
+
+class Linked(Frame):
     """A Frame that links together a list of Frame objects, so that the
     Transform converts from the reference frame of the last entry to the
     coordinate frame of the first entry. The reference_id of each list entry
@@ -425,7 +415,7 @@ class LinkedFrame(Frame):
                 else:
                     assert self.origin_id == frame.origin_id
 
-        self.shape = oops.Array.broadcast_shape(tuple(self.frames))
+        self.shape = Array.broadcast_shape(tuple(self.frames))
 
     def transform_at_time(self, time):
 
@@ -435,44 +425,29 @@ class LinkedFrame(Frame):
 
         return transform
 
-####################
-# ProductFrame
-####################
+################################################################################
 
-class ProductFrame(Frame):
-    """A Frame that returns the product of two frames, with the first
-    multiplying the second."""
+class Null(Frame):
+    """A Frame that always returns a null transform."""
 
-    def __init__(self, frame1, frame2):
-
-        assert self.frame1.reference_id == self.frame2.frame_id
-
-        self.frame1 = oops.as_primary_frame(frame1)
-        self.frame2 = oops.as_primary_frame(frame2)
+    def __init__(self, frame_id, origin_id=None):
 
         # Required fields
-        self.frame_id     = self.frame1.frame_id
-        self.reference_id = self.frame2.reference_id
+        self.frame_id     = frame_id
+        self.reference_id = frame_id
+        self.origin_id    = None
 
-        # Identify the origin; confirm compatibility
-        self.origin_id = frame1.origin_id
-        if self.origin_id is None:
-            self.origin_id = frame2.origin_id
-        elif frame2.origin_id is not None:
-            assert frame2.origin_id == self.origin_id
-
-        self.shape = oops.Array.broadcast_shape((self.frame1, self.frame2))
+        self.shape = []
 
     def transform_at_time(self, time):
 
-        return self.frame1.transform_at_time(time).rotate_transform(
-               self.frame2.transform_at_time(time))
+        return Transform.null_transform(self.frame_id)
 
-####################
-# RelativeFrame
-####################
+    def __str__(self): return "Frame(" + self.frame_id + ")"
 
-class RelativeFrame(Frame):
+################################################################################
+
+class Relative(Frame):
     """A Frame that returns the one frame times the inverse of another. The
     two frames must have a common reference. The combined frame converts
     coordinates from the second frame to the first."""
@@ -495,99 +470,35 @@ class RelativeFrame(Frame):
         elif frame2.origin_id is not None:
             assert frame2.origin_id == self.origin_id
 
-        self.shape = oops.Array.broadcast_shape((self.frame1, self.frame2))
+        self.shape = Array.broadcast_shape((self.frame1, self.frame2))
 
     def transform_at_time(self, time):
 
         return self.frame1.transform_at_time(time).rotate_transform(
                self.frame2.transform_at_time(time).invert())
 
-####################
-# InverseFrame
-####################
+################################################################################
+#Initialize the registry
+################################################################################
 
-class InverseFrame(Frame):
-    """A Frame that generates the inverse Transform of a given Frame.
-    """
-
-    def __init__(self, frame):
-
-        self.oldframe = oops.as_frame(frame)
-
-        # Required fields
-        self.frame_id     = self.oldframe.reference_id
-        self.reference_id = self.oldframe.frame_id
-        self.origin_id    = self.oldframe.origin_id
-
-        self.shape = self.oldframe.shape
-
-    def transform_at_time(self, time):
-
-        return self.oldframe.transform_at_time(time).invert()
-
-####################
-# NullFrame
-####################
-
-class NullFrame(Frame):
-    """A Frame that always returns a null transform."""
-
-    def __init__(self, frame_id, origin_id=None):
-
-        # Required fields
-        self.frame_id     = frame_id
-        self.reference_id = frame_id
-        self.origin_id    = None
-
-        self.shape = []
-
-    def transform_at_time(self, time):
-
-        return oops.Transform.null_transform(self.frame_id)
-
-    def __str__(self): return "Frame(" + self.frame_id + ")"
-
-####################
-# J2000frame
-####################
-
-class J2000frame(Frame):
-    """The default inertial reference frame."""
-
-    def __init__(self):
-
-        self.ancestry = [self]
-        self.frame_id = "J2000"
-        self.reference_id = "J2000"
-        self.origin_id = None
-
-        self.shape = []
-
-    def transform_at_time(self, time):
-
-        return oops.Transform.null_transform(self)
-
-    def __str__(self): return "Frame(" + self.frame_id + ")"
-
-# Inialize the registry...
+registry.FRAME_CLASS = Frame
 Frame.initialize_registry()
 
 ################################################################################
 # UNIT TESTS
 ################################################################################
 
+import unittest
+
 class Test_Frame(unittest.TestCase):
 
     def runTest(self):
 
-        # Registry tests
-        self.assertEquals(oops.FRAME_REGISTRY["J2000"], oops.J2000FRAME)
-
         # Extensive unit testing in SpiceFrame.py and SpicePath.py
 
-        Frame.initialize_registry()
+        pass
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

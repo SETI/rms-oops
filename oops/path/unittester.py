@@ -5,9 +5,9 @@
 import unittest
 import cspice
 
-from baseclass  import Test_Path
-from multipath  import Test_MultiPath
-from spicepath  import Test_SpicePath
+from oops.path.baseclass  import Test_Path
+from oops.path.multipath  import Test_MultiPath
+from oops.path.spicepath  import Test_SpicePath
 
 cspice.furnsh("test_data/spice/naif0009.tls")
 cspice.furnsh("test_data/spice/pck00010.tpc")

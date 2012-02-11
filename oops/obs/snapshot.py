@@ -1,3 +1,7 @@
+################################################################################
+# oops/obs/snapshot.py: Subclass Snapshot of class Observation
+################################################################################
+
 import numpy as np
 import numpy.ma as ma
 import pylab
@@ -9,13 +13,17 @@ import solar
 import sys
 import math
 
-################################################################################
-# Snapshot Class
-################################################################################
+from oops.obs.baseclass import Observation
+from oops.xarray.all import *
+from oops.event import Event
+
+import oops.frame.all 
+import oops.path.all 
+import oops.surface.all 
 
 dist_tolerance = 1000.
 
-class Snapshot(oops.Observation):
+class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
     all exposed at the same time."""
 
@@ -46,9 +54,9 @@ class Snapshot(oops.Observation):
                             shadow, and 2 for rings not in shadow
             """
 
-        ignore = oops.RingFrame("IAU_SATURN")
-        surface = oops.RingPlane("SATURN", "IAU_SATURN_DESPUN")
-        planet_surface = oops.Spheroid("SATURN", "IAU_SATURN")
+        ignore = oops.frame.RingFrame("IAU_SATURN")
+        surface = oops.surface.RingPlane("SATURN", "IAU_SATURN_DESPUN")
+        planet_surface = oops.surface.Spheroid("SATURN", "IAU_SATURN")
 
         #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
         (surface_event, rel_surf_evt,
@@ -102,7 +110,7 @@ class Snapshot(oops.Observation):
             """
         
         #get the observer path wrt the target we are checking is blocking los
-        light_wrt_target = oops.Path.connect(light_path_id, target_path_id)
+        light_wrt_target = oops.path.connect(light_path_id, target_path_id)
         
         # get the relative event of the photon leaving the light source
         light_dep_event = light_wrt_target.photon_to_event(obj_evt, 1)[1]
@@ -129,8 +137,8 @@ class Snapshot(oops.Observation):
             
             Return:     2D array of radius values
             """
-        ignore = oops.RingFrame("IAU_SATURN")
-        surface = oops.RingPlane("SATURN", "IAU_SATURN_DESPUN")
+        ignore = oops.frame.RingFrame("IAU_SATURN")
+        surface = oops.surface.RingPlane("SATURN", "IAU_SATURN_DESPUN")
 
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
 
@@ -152,8 +160,8 @@ class Snapshot(oops.Observation):
         
             Return:     2D array of radius values
             """
-        ignore = oops.RingFrame(frame_id)
-        surface = oops.Spheroid(path_id, frame_id)
+        ignore = oops.frame.RingFrame(frame_id)
+        surface = oops.surface.Spheroid(path_id, frame_id)
     
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
         
@@ -174,8 +182,8 @@ class Snapshot(oops.Observation):
         
             Return:     2D array of radius values
             """
-        ignore = oops.RingFrame(frame_id)
-        surface = oops.Spheroid(path_id, frame_id)
+        ignore = oops.frame.RingFrame(frame_id)
+        surface = oops.surface.Spheroid(path_id, frame_id)
     
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
     
@@ -205,15 +213,15 @@ class Snapshot(oops.Observation):
         buffer = np.empty((uv_shape[0], uv_shape[1], 2))
         buffer[:,:,1] = np.arange(uv_shape[1]).reshape(uv_shape[1],1)
         buffer[:,:,0] = np.arange(uv_shape[0])
-        indices = oops.Pair(buffer + 0.5)
+        indices = Pair(buffer + 0.5)
         
         rays = self.fov.los_from_uv(indices)
 
         #reverse so that they are arrival rays
         arrivals = -rays
         #arrivals = -rays[568][956]
-        image_event = oops.Event(tdb, (0,0,0), (0,0,0), "CASSINI",
-                                 self.frame_id, oops.Empty(), arrivals)
+        image_event = Event(tdb, (0,0,0), (0,0,0), "CASSINI",
+                                 self.frame_id, Empty(), arrivals)
         
         (surface_event, rel_surf_evt) = surface.photon_to_event(image_event, 1)
         

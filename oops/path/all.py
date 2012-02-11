@@ -4,10 +4,10 @@
 
 # Import the Path class and all its core components into a common name space
 
-from baseclass import Path
-from multipath import MultiPath
-from spicepath import SpicePath
+from oops.path.baseclass import Path
+from oops.path.multipath import MultiPath
+from oops.path.spicepath import SpicePath
 
-from registry import *
+from oops.path.registry import *
 
 ################################################################################

@@ -1,22 +1,24 @@
-# oops/Surface/__init__.py
+################################################################################
+# oops/surface/surface.py: Abstract class Surface
+#
+# 2/5/12 Modified (MRS) - Minor updates for style
+################################################################################
 
 import numpy as np
-import unittest
 
-import oops
-
-################################################################################
-# Abstract Surface class
-################################################################################
+from oops.event import Event
+from oops.xarray.all import *
+import oops.frame.registry as frame_registry
+import oops.path.registry as path_registry
 
 class Surface(object):
-    """An abstract object describing a 2-D object that moves and rotates in
-    space. A surface employs an internal coordinate system, not necessarily
-    rectangular, in which two primary coordinates define locations on the
-    surface, and an optional third coordinate can define points above or below
-    that surface. The shape is always fixed."""
+    """Surface is an abstract class describing a 2-D object that moves and
+    rotates in space. A surface employs an internal coordinate system, not
+    necessarily rectangular, in which two primary coordinates define locations
+    on the surface, and an optional third coordinate can define points above or
+    below that surface. The shape is always fixed."""
 
-    OOPS_CLASS = "Surface"
+    DEBUG = False
 
 ########################################
 # Each subclass must override...
@@ -35,35 +37,44 @@ class Surface(object):
 
         pass
 
-    def as_coords(self, position, axes=2):
+    def as_coords(self, position, axes=2, **keywords):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
-            axes            2 or 3, indicating whether to return a tuple of two
-                            or 3 Scalar objects.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
+            axes        2 or 3, indicating whether to return a tuple of two or
+                        three Scalar objects.
+            **keywords  any additional keyword=value pairs needed in order to
+                        perform the conversion from position to coordinates.
 
-        Return:             coordinate values packaged as a tuple containing
-                            two or three Scalars, one for each coordinate.
+        Return:         coordinate values packaged as a tuple containing two or
+                        three unitless Scalars, one for each coordinate. Values
+                        are always in standard units.
         """
 
         pass
 
-    def as_vector3(self, coord1, coord2, coord3=oops.Scalar(0.)):
+    def as_vector3(self, coord1, coord2, coord3=0., **keywords):
         """Converts coordinates in the surface's internal coordinate system into
         position vectors at or near the surface.
 
         Input:
-            coord1          a Scalar of values for the first coordinate.
-            coord2          a Scalar of values for the second coordinate.
-            coord3          a Scalar of values for the third coordinate; default
-                            is Scalar(0.).
+            coord1      a Scalar of values for the first coordinate, with
+                        optional units.
+            coord2      a Scalar of values for the second coordinate, with
+                        optional units.
+            coord3      a Scalar of values for the third coordinate, with
+                        optional units; default is Scalar(0.).
+            **keywords  any additional keyword=value pairs needed in order to
+                        perform the conversion from coordinates to position.
 
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
 
-        Return:             the corresponding Vector3 object of positions.
+        Return:         the corresponding unitless Vector3 object of positions,
+                        in km.
         """
 
         pass
@@ -73,13 +84,14 @@ class Surface(object):
         surface.
 
         Input:
-            obs             observer position as a Vector3.
-            los             line of sight as a Vector3.
+            obs         observer position as a Vector3, with optional units.
+            los         line of sight as a Vector3, with optional units.
 
-        Return:             a tuple (position, factor)
-            position        a Vector3 of intercept points on the surface.
-            factor          a Scalar of factors such that
-                                position = obs + factor * los
+        Return:         a tuple (position, factor)
+            position    a unitless Vector3 of intercept points on the surface,
+                        in km.
+            factor      a unitless Scalar of factors such that:
+                            position = obs + factor * los
         """
 
         pass
@@ -88,16 +100,17 @@ class Surface(object):
         """Returns the normal vector at a position at or near a surface.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
 
-        Return:             a Vector3 containing directions normal to the
-                            surface that pass through the position. Lengths are
-                            arbitrary.
+        Return:         a unitless Vector3 containing directions normal to the
+                        surface that pass through the position. Lengths are
+                        arbitrary.
         """
 
         pass
 
-    def gradient(self, position, axis=0, projected=True):
+    def gradient(self, position, axis=0, projected=True, **keywords):
         """Returns the gradient vector at a specified position at or near the
         surface. The gradient is defined as the vector pointing in the direction
         of most rapid change in the value of a particular surface coordinate.
@@ -107,13 +120,16 @@ class Surface(object):
         direction.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
+            axis        0, 1 or 2, identifying the coordinate axis for which the
+                        gradient is sought.
+            projected   True to project the gradient vector into the surface.
+            **keywords  any other keyword=value pairs needed to define the
+                        mapping between positions and coordinates.
 
-            axis            0, 1 or 2, identifying the coordinate axis for which
-                            the gradient is sought.
-
-            projected       True to project the gradient into the surface if
-                            necessary. This has no effect on a RingPlane.
+        Return:         a unitless Vector3 of the gradients sought. Values are
+                        always in standard units.
         """
 
         pass
@@ -124,21 +140,24 @@ class Surface(object):
         local wind speeds on a planet.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
+
+        Return:         a unitless Vector3 of velocities, in units of km/s.
         """
 
-        return oops.Vector3((0,0,0))
+        return Vector3((0,0,0))
 
     def intercept_with_normal(self, normal):
         """Constructs the intercept point on the surface where the normal vector
         is parallel to the given vector.
 
         Input:
-            normal          a Vector3 of normal vectors.
+            normal      a Vector3 of normal vectors, with optional units.
 
-        Return:             a Vector3 of surface intercept points. Where no
-                            solution exists, the components of the returned
-                            vector should be np.nan.
+        Return:         a unitless Vector3 of surface intercept points, in km.
+                        Where no solution exists, the components of the returned
+                        vector should be masked.
         """
 
         pass
@@ -148,11 +167,11 @@ class Surface(object):
         passes through a given position.
 
         Input:
-            position        a Vector3 of positions near the surface.
+            position    a Vector3 of positions near the surface, with optional
+                        units.
 
-        Return:             a Vector3 of surface intercept points. Where no
-                            solution exists, the components of the returned
-                            vector should be np.nan.
+        Return:         a unitless vector3 of surface intercept points. Where no
+                        solution exists, the returned vector should be masked.
         """
 
         pass
@@ -168,18 +187,16 @@ class Surface(object):
             time            a Scalar of event times.
             position        a Vector3 of positions near the surface.
 
-        Return:             an Event object. Not that the optional event
+        Return:             an Event object. Note that the optional event
                             attributes "perp" and "vflat" are filled in.
         """
 
         # Create the absolute and relative Event objects
-        return oops.Event(time,
-                          position,
-                          oops.Vector3((0.,0.,0.)),
-                          self.origin_id, self.frame_id,
-                          self.normal(position),
-                          oops.Empty(), oops.Empty(),
-                          self.velocity(position))
+        return Event(time, position, (0,0,0),
+                     self.origin_id, self.frame_id,
+                     self.normal(position),
+                     Empty(), Empty(),
+                     self.velocity(position))
 
     def coords_at_event(self, event, axes=3):
         """Returns three Scalars of coordinates describing the positions and
@@ -244,8 +261,8 @@ class Surface(object):
         # Define the path, frame and event relative to the SSB in J2000
         event_wrt_ssb = event.wrt_ssb()
 
-        origin_wrt_ssb  = oops.Path.connect(self.origin_id, "SSB", "J2000")
-        frame_in_j2000 = oops.Frame.connect(self.frame_id, "J2000")
+        origin_wrt_ssb = path_registry.connect(self.origin_id, "SSB", "J2000")
+        frame_in_j2000 = frame_registry.connect(self.frame_id, "J2000")
 
         # Define the origin and line of sight in the SSB frame
         obs_wrt_ssb = event_wrt_ssb.pos
@@ -273,7 +290,7 @@ class Surface(object):
             # Evaluate the current time
             surface_time = event.time + lt
 
-            # Locate the photons relative to the current origin in J2000
+            # Locate the photons relative to the current origin in SSB/J2000
             pos_in_j2000 = (obs_wrt_ssb + lt * vel_wrt_ssb
                             - origin_wrt_ssb.event_at_time(surface_time).pos)
 
@@ -284,9 +301,9 @@ class Surface(object):
 
             # Update the intercept times; save the intercept positions
             (intercept, dlt) = self.intercept(pos_in_frame, vel_in_frame)
-            lt += dlt
+            lt = lt + dlt
 
-            if oops.DEBUG:
+            if DEBUG:
                 print iter
                 print dlt
 
@@ -308,6 +325,8 @@ class Surface(object):
 # UNIT TESTS
 ################################################################################
 
+import unittest
+
 class Test_Surface(unittest.TestCase):
 
     def runTest(self):
@@ -316,7 +335,7 @@ class Test_Surface(unittest.TestCase):
 
         pass
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

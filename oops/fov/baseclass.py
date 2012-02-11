@@ -1,15 +1,16 @@
+################################################################################
+# oops/fov/fov.py: Abstract class FOV (Field-of-View)
+#
+# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+################################################################################
+
 import numpy as np
-import unittest
 
-import oops
-
-################################################################################
-# FOV objects
-################################################################################
+from oops.xarray.all import *
 
 class FOV(object):
-    """An FOV (Field of View) object provides a description of the geometry of a
-    field of view. 
+    """The FOV (Field of View) abstract class provides a description of the
+    geometry of a field of view. 
 
     The properties of an FOV are defined within a fixed coordinate frame, with
     the positive Z axis oriented near the center of the line of sight. The X and
@@ -53,8 +54,6 @@ class FOV(object):
         uv_area     the nominal area of a region defined by unit steps in (u,v),
                     e.g., the size of a pixel in steradians.
     """
-
-    OOPS_CLASS = "FOV"
 
 ########################################################
 # Methods to be defined for each FOV subclass
@@ -105,7 +104,7 @@ class FOV(object):
         dy_dv = dxy_duv.vals[...,1,1]
 
         # Construct the cross products
-        return oops.Scalar(np.abs(dx_du * dy_dv - dx_dv * dy_du) / self.uv_area)
+        return Scalar(np.abs(dx_du * dy_dv - dx_dv * dy_du) / self.uv_area)
 
     # This models the field of view as a pinhole camera
     def los_from_xy(self, xy_pair):
@@ -115,14 +114,14 @@ class FOV(object):
         """
 
         # Convert to Pair if necessary
-        xy_pair = oops.Pair.as_pair(xy_pair)
+        xy_pair = Pair.as_pair(xy_pair)
 
         # Fill in the numpy ndarray of vector components
         buffer = np.ones(xy_pair.shape + [3])
         buffer[...,0:2] = xy_pair.vals
 
         # Convert to Vector3 and return
-        return oops.Vector3(buffer)
+        return Vector3(buffer)
 
     def xy_from_los(self, los):
         """Returns the coordinate Pair (x,y) based on a Vector3 object pointing
@@ -131,8 +130,8 @@ class FOV(object):
         in which a photon is moving. The length of the vector is ignored."""
 
         # Scale to z=1 and then convert to Pair
-        los = oops.Vector3.as_vector3(los)
-        return oops.Pair(los.vals[...,0:2] / los.vals[...,2:3])
+        los = Vector3.as_vector3(los)
+        return Pair(los.vals[...,0:2] / los.vals[...,2:3])
 
     def los_from_uv(self, uv_pair):
         """Returns a Vector3 object pointing in the direction of the specified
@@ -154,11 +153,11 @@ class FOV(object):
         """Returns a boolean Scalar indicating True for (u,v) coordinates that
         fall inside the FOV, False otherwise."""
 
-        uv_pair = oops.Pair.as_pair(uv_pair)
-        return oops.Scalar((uv_pair.vals[...,0] >= 0.) &
-                           (uv_pair.vals[...,1] >= 0.) &
-                           (uv_pair.vals[...,0] <= self.uv_shape.vals[0]) &
-                           (uv_pair.vals[...,1] <= self.uv_shape.vals[1]))
+        uv_pair = Pair.as_pair(uv_pair)
+        return Scalar((uv_pair.vals[...,0] >= 0.) &
+                      (uv_pair.vals[...,1] >= 0.) &
+                      (uv_pair.vals[...,0] <= self.uv_shape.vals[0]) &
+                      (uv_pair.vals[...,1] <= self.uv_shape.vals[1]))
 
     def xy_is_inside(self, xy_pair):
         """Returns a boolean Scalar indicating True for (x,y) coordinates that
@@ -172,19 +171,21 @@ class FOV(object):
 
         return self.uv_is_inside(self.uv_from_los(los))
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
+
+import unittest
 
 class Test_FOV(unittest.TestCase):
 
     def runTest(self):
 
-        # Fully tested by FlatFOV.py
+        # Fully tested by Flat.py
 
         pass
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

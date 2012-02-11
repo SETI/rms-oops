@@ -1,13 +1,15 @@
-# oops/Path/__init__.py
+################################################################################
+# oops/path/__init__.py: Abstract Path class and its required subclasses
+################################################################################
 
 import numpy as np
-import unittest
 
-import oops
+import oops.path.registry as registry
+import oops.frame.registry as frame_registry
+import oops.constants as constants
 
-################################################################################
-# Path
-################################################################################
+from oops.event import Event
+from oops.xarray.all import *
 
 class Path(object):
     """A Path is an abstract class that returns an Event (time, position and
@@ -15,7 +17,7 @@ class Path(object):
     frame and relative to another path. All paths are ultimately references to
     the Solar System Barycenter ("SSB") and the J2000 coordinate frame."""
 
-    OOPS_CLASS = "Path"
+    DEBUG = False
 
 ########################################
 # Each subclass must override...
@@ -108,12 +110,15 @@ class Path(object):
         function, but it can be used to reset the registry for purposes of
         debugging."""
 
-        if oops.SSBPATH == None:
-            oops.SSBPATH = SSBpath()
+        global WAYPOINT_SUBCLASS
 
-        oops.PATH_REGISTRY = {"SSB": oops.SSBPATH,
-                              ("SSB","SSB"): oops.SSBPATH,
-                              ("SSB","SSB","J2000"): oops.SSBPATH}
+        if registry.SSB is None:
+            registry.SSB = Waypoint("SSB")
+            registry.SSB.ancestry = [registry.SSB]
+
+        registry.REGISTRY = {"SSB": registry.SSB,
+                             ("SSB","SSB"): registry.SSB,
+                             ("SSB","SSB","J2000"): registry.SSB}
 
     def register(self):
         """Registers a Path definition. If the path's ID is new, it is assumed
@@ -127,39 +132,42 @@ class Path(object):
         These keys also point to the same Path object.
         """
 
+        # Make sure the registry is initialized
+        if registry.REGISTRY == {}: Path.initialize_registry()
+
         # Make sure the origin is registered
-        origin = oops.PATH_REGISTRY[self.origin_id]
+        origin = registry.REGISTRY[self.origin_id]
 
         # If the ID is unregistered, insert this as a primary definition
         try:
-            test = oops.PATH_REGISTRY[self.path_id]
+            test = registry.REGISTRY[self.path_id]
         except KeyError:
-            oops.PATH_REGISTRY[self.path_id] = self
+            registry.REGISTRY[self.path_id] = self
             # Fill in the ancestry too
             self.ancestry = [self] + origin.ancestry
 
             # Also define the "Waypoint" versions
             waypoint = Waypoint(self.path_id, self.frame_id)
 
-            oops.PATH_REGISTRY[(self.path_id, self.path_id)] = waypoint
-            oops.PATH_REGISTRY[(self.path_id, self.path_id,
-                                              self.frame_id)] = waypoint
+            registry.REGISTRY[(self.path_id, self.path_id)] = waypoint
+            registry.REGISTRY[(self.path_id, self.path_id,
+                                             self.frame_id)] = waypoint
 
         # If the tuple (self.frame_id, self.origin_id) is unregistered, insert
         # this as a secondary definition
         key = (self.path_id, self.origin_id)
         try:
-            test = oops.PATH_REGISTRY[key]
+            test = registry.REGISTRY[key]
         except KeyError:
-            oops.PATH_REGISTRY[key] = self
+            registry.REGISTRY[key] = self
 
         # If the triple (self.frame_id, self.origin_id, self.frame_id) is
         # unregistered, insert this as a tertiary definition
         key = (self.path_id, self.origin_id, self.frame_id)
         try:
-            test = oops.PATH_REGISTRY[key]
+            test = registry.REGISTRY[key]
         except KeyError:
-            oops.PATH_REGISTRY[key] = self
+            registry.REGISTRY[key] = self
 
     def unregister(self):
         """Removes this path from the registry."""
@@ -170,12 +178,12 @@ class Path(object):
         # but paths that use it will continue to function unchange.
 
         path_id = self.path_id
-        for key in oops.PATH_REGISTRY.keys():
-            if path_id == key: del oops.PATH_REGISTRY[key]
+        for key in registry.REGISTRY.keys():
+            if path_id == key: del registry.REGISTRY[key]
 
             if type(key) == type(()):
-                if path_id == key[0]: del oops.PATH_REGISTRY[key]
-                if path_id == key[1]: del oops.PATH_REGISTRY[key]
+                if path_id == key[0]: del registry.REGISTRY[key]
+                if path_id == key[1]: del registry.REGISTRY[key]
 
     @staticmethod
     def unregister_frame(frame_id):
@@ -189,9 +197,9 @@ class Path(object):
         # is safest to remove all usage of a frame at the time it is
         # unregistered.
 
-        for key in oops.PATH_REGISTRY.keys():
+        for key in registry.REGISTRY.keys():
             if type(key) == type(()) and len(key) > 2:
-                if frame_id == key[2]: del oops.PATH_REGISTRY[key]
+                if frame_id == key[2]: del registry.REGISTRY[key]
 
     def reregister(self):
         """Adds this frame to the registry, replacing any definition of the same
@@ -201,7 +209,7 @@ class Path(object):
         self.register()
 
     @staticmethod
-    def lookup(key): return oops.PATH_REGISTRY[key]
+    def lookup(key): return registry.REGISTRY[key]
 
 ################################################################################
 # Event operations
@@ -227,14 +235,14 @@ class Path(object):
         # Create a new event by subtracting this path from the origin
         offset = self.event_at_time(event.time)
 
-        result = oops.Event(event.time.copy(),
-                            event.pos - offset.pos,
-                            event.vel - offset.vel,
-                            self.path_id, event.frame_id,
-                            event.perp.copy(),
-                            event.arr.copy(),
-                            event.dep.copy(),
-                            event.vflat.copy())
+        result = Event(event.time.copy(),
+                       event.pos - offset.pos,
+                       event.vel - offset.vel,
+                       self.path_id, event.frame_id,
+                       event.perp.copy(),
+                       event.arr.copy(),
+                       event.dep.copy(),
+                       event.vflat.copy())
 
         result.ssb = event.ssb
         return result.update_shape()
@@ -256,14 +264,14 @@ class Path(object):
         # Create a new event by subtracting this path from the origin
         offset = self.event_at_time(event.time)
 
-        return oops.Event(event.time,
-                          event.pos + offset.pos,
-                          event.vel + offset.vel,
-                          self.origin_id, event.frame_id,
-                          event.perp.copy(),
-                          event.arr.copy(),
-                          event.dep.copy(),
-                          event.vflat.copy())
+        return Event(event.time,
+                     event.pos + offset.pos,
+                     event.vel + offset.vel,
+                     self.origin_id, event.frame_id,
+                     event.perp.copy(),
+                     event.arr.copy(),
+                     event.dep.copy(),
+                     event.vflat.copy())
 
 ################################################################################
 # Photon Solver
@@ -389,7 +397,7 @@ class Path(object):
         # The function y is shown above. Its derivative is
         #   dy_dlt = outward_speed - sign * c
 
-        signed_c = sign * oops.C
+        signed_c = sign * constants.C
 
         # Define the path and event relative to the SSB in J2000
         path_wrt_ssb  = Path.connect(self, "SSB", "J2000")
@@ -417,10 +425,10 @@ class Path(object):
 
             path_time = event.time + lt
 
-            if oops.DEBUG:
+            if Path.DEBUG:
                 print iter
                 print ((delta_pos.norm() - lt * signed_c) /
-                   (delta_vel.proj(delta_pos).norm() - signed_c))
+                       (delta_vel.proj(delta_pos).norm() - signed_c))
 
         # Create the new event
         path_event_ssb = path_wrt_ssb.event_at_time(path_time)
@@ -472,30 +480,30 @@ class Path(object):
         """
 
         # Convert to IDs
-        target_id = oops.as_path_id(target)
-        origin_id = oops.as_path_id(origin)
+        target_id = registry.as_id(target)
+        origin_id = registry.as_id(origin)
 
         if frame is None:
-            frame_id = oops.as_path(origin).frame_id
+            frame_id = registry.as_path(origin).frame_id
         else:
-            frame_id = oops.as_frame_id(frame)
+            frame_id = frame_registry.as_id(frame)
 
         # If the path already exists, just return it
         try:
-            return oops.PATH_REGISTRY[(target_id, origin_id, frame_id)]
+            return registry.REGISTRY[(target_id, origin_id, frame_id)]
         except KeyError: pass
 
         # If the path exists but the frame is wrong, return a rotated version
         try:
-            newpath = oops.PATH_REGISTRY[(target_id, origin_id)]
-            result = RotatedPath(newpath, frame_id)
+            newpath = registry.REGISTRY[(target_id, origin_id)]
+            result = Rotated(newpath, frame_id)
             result.register()
             return result
         except KeyError: pass
 
         # Otherwise, construct it from the common ancestor...
 
-        target_path = oops.PATH_REGISTRY[target_id]
+        target_path = registry.REGISTRY[target_id]
         return target_path.connect_to(origin_id, frame_id)
 
     # Can be overridden by some classes such as SpicePath, where it is easier
@@ -511,13 +519,13 @@ class Path(object):
         """
 
         # Get the endpoint paths and the frame
-        target = oops.as_primary_path(self)
-        origin = oops.as_primary_path(origin)
+        target = registry.as_primary(self)
+        origin = registry.as_primary(origin)
 
         if frame is None:
             frame_id = origin.frame_id
         else:
-            frame_id = oops.as_frame_id(frame)
+            frame_id = frame_registry.as_id(frame)
 
         # Find the common ancestry
         (target_ancestry,
@@ -534,10 +542,10 @@ class Path(object):
             target_path = target
         else:
             try:
-                target_path = Path.lookup((target.path_id,
-                                           target_ancestry[-1].origin_id))
+                target_path = registry.lookup((target.path_id,
+                                               target_ancestry[-1].origin_id))
             except KeyError:
-                target_path = LinkedPath(target_ancestry)
+                target_path = Linked(target_ancestry)
                 target_path.register()
 
         # Look up or construct the origin's path from the common ancestor
@@ -547,10 +555,10 @@ class Path(object):
             origin_path = origin
         else:
             try:
-                origin_path = Path.lookup((origin.path_id,
-                                           origin_ancestry[-1].origin_id))
+                origin_path = registry.lookup((origin.path_id,
+                                               origin_ancestry[-1].origin_id))
             except KeyError:
-                origin_path = LinkedPath(origin_ancestry)
+                origin_path = Linked(origin_ancestry)
                 origin_path.register()
 
         # Construct the relative path, irrespective of frame
@@ -561,15 +569,15 @@ class Path(object):
                 result = target_path
         else:
             if target_path is None:
-                result = ReversedPath(origin_path)
+                result = Reversed(origin_path)
             else:
-                result = RelativePath(target_path, origin_path)
+                result = Relative(target_path, origin_path)
 
         result.register()
 
         # Rotate it into the proper frame if necessary
         if result.frame_id != frame_id:
-            result = RotatedPath(result, frame_id)
+            result = Rotated(result, frame_id)
             result.register()
 
         return result
@@ -612,23 +620,23 @@ class Path(object):
 
     # unary "-" operator
     def __neg__(self):
-        return ReversedPath(self)
+        return path.Reversed(self)
 
     # binary "+" operator
     def __add__(self, arg):
 
-        if oops.is_id(arg) or arg.OOPS_CLASS == "Path":
-            return ShiftedPath(self, arg)
+        if registry.is_id(arg) or isintance(arg, Path):
+            return path.Shifted(self, arg)
 
-        oops.raise_type_mismatch(self, "+", arg)
+        Array.raise_type_mismatch(self, "+", arg)
 
     # binary "-" operator
     def __sub__(self, arg):
 
-        if oops.is_id(arg) or arg.OOPS_CLASS == "Path":
-            return RelativePath(self, arg)
+        if registry.is_id(arg) or isintance(arg, Path):
+            return path.Relative(self, arg)
 
-        oops.raise_type_mismatch(self, "-", arg)
+        Array.raise_type_mismatch(self, "-", arg)
 
     # string operations
     def __str__(self):
@@ -639,22 +647,19 @@ class Path(object):
     def __repr__(self): return self.__str__()
 
 ################################################################################
-# Required Subclasses
+# Define the required subclasses
 ################################################################################
 
-####################
-# LinkedPath
-####################
-
-class LinkedPath(Path):
-    """A Path object that links together a list of Path objects, so that the
-    returned event points from the origin of the last frame to the endpoint of
-    the first frame, and is given in the coordinates of the last frame. The
-    origin_id of each list entry must be the path_id of the entry that follows.
+class Linked(Path):
+    """Linked is a Path subclass that links together a list of Path objects, so
+    that the returned event points from the origin of the last frame to the
+    endpoint of the first frame, and is given in the coordinates of the last
+    frame. The origin_id of each list entry must be the path_id of the entry
+    that follows.
     """
 
     def __init__(self, paths):
-        """Constructor for a LinkedPath.
+        """Constructor for a Linked Path.
 
         Input:
             paths       a list of connected paths. The origin_id of each path
@@ -664,14 +669,14 @@ class LinkedPath(Path):
         self.paths = paths
         self.frames = []
         for i in range(len(paths)-1):
-            self.frames += [oops.Frame.connect(self.paths[i].frame_id,
-                                               self.paths[i+1].frame_id)]
+            self.frames += [frame_registry.connect(self.paths[i].frame_id,
+                                                   self.paths[i+1].frame_id)]
 
         # Required fields
         self.path_id   = self.paths[0].path_id
         self.origin_id = self.paths[-1].origin_id
         self.frame_id  = self.paths[-1].frame_id
-        self.shape     = oops.Array.broadcast_shape(tuple(paths))
+        self.shape     = Array.broadcast_shape(tuple(paths))
 
     def event_at_time(self, time):
 
@@ -682,55 +687,12 @@ class LinkedPath(Path):
 
         return event
 
-####################
-# ShiftedPath
-####################
+################################################################################
 
-class ShiftedPath(Path):
-    """A Path object that attaches the origin of one path to the end of another
-    path. The returned path has the origin of the second path and is transformed
-    into the coordinate frame of that path."""
-
-    def __init__(self, path, origin):
-        """Constructor for a ShiftedPath.
-
-        Input:
-            path        a Path object to shift, or else the registered ID of
-                        this path.
-            origin      a Path to be added to the first path's origin, or else
-                        the registered ID of this path.
-        """
-
-        self.path   = oops.as_path(path)
-        self.origin = oops.as_path(origin)
-
-        assert self.path.origin_id == self.origin.path_id
-
-        self.path_frame = oops.Frame.connect(self.path.frame_id,
-                                             self.origin.frame_id)
-
-        # Required fields
-        self.path_id   = self.path.path_id
-        self.origin_id = self.origin.origin_id
-        self.frame_id  = self.origin.frame_id
-        self.shape     = oops.Array.broadcast_shape((self.path, self.origin))
-
-    def event_at_time(self, time):
-
-        event = self.path.event_at_time(time)
-        event = event.unrotate_by_frame(self.path_frame)
-        event = event.add_path(self.origin)
-
-        return event
-
-####################
-# RelativePath
-####################
-
-class RelativePath(Path):
-    """A Path object that returns the relative separation between two paths that
-    share a common origin. The new path uses the coordinate frame of the origin
-    path."""
+class Relative(Path):
+    """Relative is a Path subclass that returns the relative separation between
+    two paths that share a common origin. The new path uses the coordinate frame
+    of the origin path."""
 
     def __init__(self, path, origin):
         """Constructor for a RelativePath.
@@ -742,8 +704,8 @@ class RelativePath(Path):
                         path returned.
         """
 
-        self.path   = oops.as_path(path)
-        self.origin = oops.as_path(origin)
+        self.path   = registry.as_path(path)
+        self.origin = registry.as_path(origin)
 
         assert self.path.origin_id == self.origin.origin_id
 
@@ -751,10 +713,10 @@ class RelativePath(Path):
         self.path_id   = self.path.path_id
         self.origin_id = self.origin.path_id
         self.frame_id  = self.origin.frame_id
-        self.shape     = oops.Array.broadcast_shape((self.path, self.origin))
+        self.shape     = Array.broadcast_shape((self.path, self.origin))
 
-        self.path_frame = oops.Frame.connect(self.path.frame_id,
-                                             self.origin.frame_id)
+        self.path_frame = frame_registry.connect(self.path.frame_id,
+                                                 self.origin.frame_id)
 
     def event_at_time(self, time):
 
@@ -763,45 +725,11 @@ class RelativePath(Path):
         event = self.origin.subtract_from_event(event)
         return event
 
-####################
-# RotatedPath
-####################
+################################################################################
 
-class RotatedPath(Path):
-    """A Path that returns event objects rotated to another coordinate frame.
-    """
-
-    def __init__(self, path, frame):
-        """Constructor for a RotatedPath.
-
-        Input:
-            path        the Path object to rotate, or else its registered ID.
-            frame       the Frame object by which to rotate the path, or else
-                        its registered ID.
-        """
-
-        self.path = oops.as_path(path)
-        newframe_id = oops.as_frame_id(frame)
-
-        self.frame = oops.Frame.connect(newframe_id, self.path.frame_id)
-
-        # Required fields
-        self.path_id   = self.path.path_id
-        self.origin_id = self.path.origin_id
-        self.frame_id  = newframe_id
-        self.shape     = self.path.shape
-
-    def event_at_time(self, time):
-
-        return self.path.event_at_time(time).rotate_by_frame(self.frame)
-
-####################
-# ReversedPath
-####################
-
-class ReversedPath(Path):
-    """A Path that generates the reversed Events from that of a given Path.
-    """
+class Reversed(Path):
+    """Reversed is a subclass of Path that generates the reversed Events from
+    that of a given Path."""
 
     def __init__(self, path):
         """Constructor for a ReversedPath.
@@ -810,7 +738,7 @@ class ReversedPath(Path):
             path        the Path object to reverse, or its registered ID.
         """
 
-        self.path = oops.as_path(path)
+        self.path = registry.as_path(path)
 
         # Required fields
         self.path_id   = self.path.origin_id
@@ -824,19 +752,86 @@ class ReversedPath(Path):
         event.pos = -event.pos
         event.vel = -event.vel
 
-        event.perp  = oops.Empty()
-        event.arr   = oops.Empty()
-        event.dep   = oops.Empty()
-        event.vflat = oops.Vector3((0.,0.,0.))
+        event.perp  = Empty()
+        event.arr   = Empty()
+        event.dep   = Empty()
+        event.vflat = Vector3((0.,0.,0.))
 
         return event
 
-####################
-# Waypoint
-####################
+################################################################################
+
+class Rotated(Path):
+    """Rotated is a Path subclass that returns event objects rotated to another
+    coordinate frame."""
+
+    def __init__(self, path, frame):
+        """Constructor for a RotatedPath.
+
+        Input:
+            path        the Path object to rotate, or else its registered ID.
+            frame       the Frame object by which to rotate the path, or else
+                        its registered ID.
+        """
+
+        self.path = registry.as_path(path)
+        newframe_id = frame_registry.as_id(frame)
+
+        self.frame = frame_registry.connect(newframe_id, self.path.frame_id)
+
+        # Required fields
+        self.path_id   = self.path.path_id
+        self.origin_id = self.path.origin_id
+        self.frame_id  = newframe_id
+        self.shape     = self.path.shape
+
+    def event_at_time(self, time):
+
+        return self.path.event_at_time(time).rotate_by_frame(self.frame)
+
+################################################################################
+
+class Shifted(Path):
+    """Shifted is a Path subclass that attaches the origin of one path to the
+    end of another path. The returned path has the origin of the second path and
+    is transformed into the coordinate frame of that path."""
+
+    def __init__(self, path, origin):
+        """Constructor for a Shifte Path.
+
+        Input:
+            path        a Path object to shift, or else the registered ID of
+                        this path.
+            origin      a Path to be added to the first path's origin, or else
+                        the registered ID of this path.
+        """
+
+        self.path   = registry.as_path(path)
+        self.origin = registry.as_path(origin)
+
+        assert self.path.origin_id == self.origin.path_id
+
+        self.path_frame = frame_registry.connect(self.path.frame_id,
+                                                 self.origin.frame_id)
+
+        # Required fields
+        self.path_id   = self.path.path_id
+        self.origin_id = self.origin.origin_id
+        self.frame_id  = self.origin.frame_id
+        self.shape     = Array.broadcast_shape((self.path, self.origin))
+
+    def event_at_time(self, time):
+
+        event = self.path.event_at_time(time)
+        event = event.unrotate_by_frame(self.path_frame)
+        event = event.add_path(self.origin)
+
+        return event
+
+################################################################################
 
 class Waypoint(Path):
-    """A Path that always returns the origin."""
+    """Waypoint is a Path subclass that always returns the origin."""
 
     def __init__(self, path_id, frame_id="J2000"):
         """Constructor for a Waypoint.
@@ -854,50 +849,34 @@ class Waypoint(Path):
 
     def event_at_time(self, time):
 
-        return oops.Event.null_event(time, self.path_id, self.frame_id)
+        return Event.null_event(time, self.path_id, self.frame_id)
 
     def __str__(self):
         return "Waypoint(" + self.path_id + "/" + self.frame_id + ")"
 
-####################
-# SSBpath
-####################
+################################################################################
+# Initialize the registry
+################################################################################
 
-class SSBpath(Path):
-    """The default inertial path at the barycenter of the Solar System."""
-
-    def __init__(self):
-
-        # Required fields
-        self.ancestry  = [self]
-        self.path_id   = "SSB"
-        self.origin_id = "SSB"
-        self.frame_id  = "J2000"
-        self.shape     = []
-
-    def event_at_time(self, time):
-
-        return oops.Event.null_event(time, self.path_id, self.frame_id)
-
-    def __str__(self): return "Waypoint(SSB/J2000)"
-
-# Initialize the registry...
+registry.PATH_CLASS = Path
 Path.initialize_registry()
+
+from oops.event import Event
 
 ################################################################################
 # UNIT TESTS
 ################################################################################
+
+import unittest
 
 class Test_Path(unittest.TestCase):
 
     def runTest(self):
 
         # Registry tests
-        self.assertEquals(oops.PATH_REGISTRY["SSB"], oops.SSBPATH)
+        self.assertEquals(registry.REGISTRY["SSB"], registry.SSB)
 
         # Lots of unit testing in SpicePath.py
-
-        Path.initialize_registry()
 
 ################################################################################
 if __name__ == '__main__':

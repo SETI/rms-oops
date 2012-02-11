@@ -1,11 +1,13 @@
+################################################################################
+# oops/transform.py: Class Transform
+#
+# 2/5/12 Modified (MRS): Revised for consistent style.
+################################################################################
+
 import numpy as np
-import unittest
 
-import oops
-
-################################################################################
-# Transform
-################################################################################
+from oops.xarray.all import *
+import oops.frame.registry as registry
 
 class Transform(object):
     """An object describing a coordinate transformation, defined by a rotation
@@ -46,8 +48,6 @@ class Transform(object):
         shape           the intrinsic shape of the transform.
     """
 
-    OOPS_CLASS = "Transform"
-
     def __init__(self, matrix, omega, frame_id, reference_id, omega1=None):
         """Constructor for a Transform object.
 
@@ -56,14 +56,13 @@ class Transform(object):
                         from the reference frame into the new frame.
             omega       the spin vector for the coordinate frame, given in
                         coordinates of the reference frame.
-            frame       the Frame object from which this Transform was
-                        generated.
+            frame_id    the ID of the frame into which this Transform rotates.
+            reference_id the ID of the frame from which this Transform rotates.
             omega1      optional Vector3 containing matrix.rotate(omega).
         """
 
-        self.matrix = oops.Matrix3.as_matrix3(matrix)
-        self.omega  = oops.Vector3.as_vector3(omega)
-                                                # spin vector in old frame
+        self.matrix = Matrix3.as_matrix3(matrix)
+        self.omega  = Vector3.as_vector3(omega) # spin vector in old frame
 
         if omega1 is None:                      # spin vector in the new frame
             self.omega1 = self.matrix.rotate(omega)
@@ -73,9 +72,9 @@ class Transform(object):
         self.frame_id     = frame_id
         self.reference_id = reference_id
 
-        self.shape = oops.Array.broadcast_shape((self.matrix, self.omega,
-                                    oops.as_frame(self.frame_id),
-                                    oops.as_frame(self.reference_id)))
+        self.shape = Array.broadcast_shape((self.matrix, self.omega,
+                                        registry.as_frame(self.frame_id),
+                                        registry.as_frame(self.reference_id)))
 
 ############################################
 # Shape operations
@@ -107,7 +106,7 @@ class Transform(object):
         if self.dep is not None:
             result.dep = self.dep.prepend_rotate_strip(axes,rank)
 
-        if self.vlocal != oops.Vector3((0.,0.,0.)):
+        if self.vlocal != Vector3((0.,0.,0.)):
             result.vlocal = self.vlocal.prepend_rotate_strip(axes,rank)
 
         return Event
@@ -267,22 +266,11 @@ class Transform(object):
 
     # Binary multiply operator "*"
     def __mul__(self, arg):
-
-        if arg.OOPS_Class == "Transform":
-            return self.rotate_transform(arg)
-
-        elif arg.OOPS_Class == "Event":
-            return self.rotate_event(arg)
-
-        oops.raise_type_mismatch(self, "*", arg)
+        return self.rotate_transform(arg)
 
     # Binary divide operator "/"
     def __div__(self, arg):
-
-        if arg.OOPS_Class == "Transform":
-            return self.rotate_transform(arg.invert())
-
-        oops.raise_type_mismatch(self, "*", arg)
+        return self.rotate_transform(arg.invert())
 
     # string operations
     def __str__(self):
@@ -296,20 +284,24 @@ class Transform(object):
 # UNIT TESTS
 ################################################################################
 
+import unittest
+
 class Test_Transform(unittest.TestCase):
 
     def runTest(self):
 
+        # Additional imports needed for testing
+        from oops.frame.baseclass import Frame
+
         # Fake out the FRAME REGISTRY with something that has .shape = []
-        oops.FRAME_REGISTRY["TEST"] = oops.Scalar(0.)
-        oops.FRAME_REGISTRY["SPIN"] = oops.Scalar(0.)
+        registry.REGISTRY["TEST"] = Scalar(0.)
+        registry.REGISTRY["SPIN"] = Scalar(0.)
 
-        tr = Transform(oops.Matrix3(np.array([[1.,0.,0.],
-                                              [0.,1.,0.],[0.,0.,1.]])),
-                       oops.Vector3(np.array([0.,0.,0.])), "J2000", "J2000")
+        tr = Transform(Matrix3(np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])),
+                       Vector3(np.array([0.,0.,0.])), "J2000", "J2000")
 
-        p = oops.Vector3(np.random.rand(2,1,4,3))
-        v = oops.Vector3(np.random.rand(  3,4,3))
+        p = Vector3(np.random.rand(2,1,4,3))
+        v = Vector3(np.random.rand(  3,4,3))
 
         self.assertEqual(tr.rotate_pos(p),   p)
         self.assertEqual(tr.rotate_vel(v,p), v)
@@ -325,8 +317,8 @@ class Test_Transform(unittest.TestCase):
         self.assertEqual(tr.unrotate_pos(p),   p)
         self.assertEqual(tr.unrotate_vel(v,p), v)
 
-        tr = Transform(oops.Matrix3([[1,0,0],[0,1,0],[0,0,1]]),
-                       oops.Vector3([0,0,1]), "SPIN", "J2000")
+        tr = Transform(Matrix3([[1,0,0],[0,1,0],[0,0,1]]),
+                       Vector3([0,0,1]), "SPIN", "J2000")
 
         self.assertEqual(tr.rotate_pos(p), p)
         self.assertEqual(tr.rotate_vel(v,p).as_scalar(2), v.as_scalar(2))
@@ -344,10 +336,10 @@ class Test_Transform(unittest.TestCase):
         self.assertEqual(tr.rotate_vel(v,p).as_scalar(1), v.as_scalar(1) +
                                                           p.as_scalar(0))
 
-        a = oops.Vector3(np.random.rand(3,1,3))
-        b = oops.Vector3(np.random.rand(1,1,3))
-        m = oops.Matrix3.twovec(a,0,b,1)
-        omega = oops.Vector3(np.random.rand(3,1,3))
+        a = Vector3(np.random.rand(3,1,3))
+        b = Vector3(np.random.rand(1,1,3))
+        m = Matrix3.twovec(a,0,b,1)
+        omega = Vector3(np.random.rand(3,1,3))
 
         tr = Transform(m, omega, "TEST", "J2000")
 
@@ -369,7 +361,7 @@ class Test_Transform(unittest.TestCase):
         self.assertEqual(tr.unrotate_vel(v,p),
                          tr.unrotate_vel(v,p,tr.omega1.cross(p)))
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

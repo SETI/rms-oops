@@ -1,17 +1,20 @@
+################################################################################
+# oops/fov/polynomial.py: Polynomial subclass of FOV
+#
+# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
+# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+################################################################################
+
 import numpy as np
-import unittest
 
-import oops
+from baseclass import FOV
+from oops.xarray.all import *
 
-################################################################################
-# PolynomialFOV
-################################################################################
-
-class PolynomialFOV(oops.FOV):
-    """A PolynomialFOV describes a field of view in which the distortion is
-    described by a 2-D polynomial. This is the approached used by Space
-    Telescope Science Institute to describe the Hubble instrument fields of
-    view.
+class Polynomial(FOV):
+    """The Polynomial subclass of FOV describes a field of view in which the
+    distortion is described by a 2-D polynomial. This is the approached used by
+    Space Telescope Science Institute to describe the Hubble instrument fields
+    of view.
     """
 
     def __init__(self, uv_coefft, uv_shape, uv_los=None, uv_area=None):
@@ -40,15 +43,15 @@ class PolynomialFOV(oops.FOV):
         self.uv_coefft = np.asarray(uv_coefft)
         self.order     = self.uv_coefft.shape[0] - 1
 
-        self.uv_shape = oops.Pair.as_pair(uv_shape, duplicate=True)
+        self.uv_shape = Pair.as_pair(uv_shape).copy()
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = oops.Pair.as_float_pair(uv_los, duplicate=True)
+            self.uv_los = Pair.as_float_pair(uv_los).copy()
 
         # Required attribute
-        self.uv_scale = oops.Pair.as_pair((uv_coefft[1,0,0], uv_coefft[0,1,1]))
+        self.uv_scale = Pair.as_pair((uv_coefft[1,0,0], uv_coefft[0,1,1]))
 
         if uv_area is None:
             self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
@@ -56,7 +59,7 @@ class PolynomialFOV(oops.FOV):
             self.uv_area = uv_area
 
         # Required attribute
-        self.uv_scale = oops.Pair.as_pair((uv_coefft[1,0,0], uv_coefft[0,1,1]))
+        self.uv_scale = Pair.as_pair((uv_coefft[1,0,0], uv_coefft[0,1,1]))
 
     ########################################
 
@@ -89,7 +92,7 @@ class PolynomialFOV(oops.FOV):
             j = k - i
             xy_pair_vals += self.uv_coefft[i,j,:] * du_powers[i] * dv_powers[j]
 
-        return oops.Pair(xy_pair_vals)
+        return Pair(xy_pair_vals)
 
     ########################################
 
@@ -102,7 +105,7 @@ class PolynomialFOV(oops.FOV):
         """
 
         # Subtract off the center of the field of view
-        uv_pair = oops.Pair.as_pair(uv_pair) - self.uv_los
+        uv_pair = Pair.as_pair(uv_pair) - self.uv_los
         (du,dv)  = uv_pair.as_scalars()
         du = du.vals[..., np.newaxis]
         dv = dv.vals[..., np.newaxis]
@@ -141,7 +144,7 @@ class PolynomialFOV(oops.FOV):
         coordinates."""
 
         # Make a rough initial guess
-        xy_pair = oops.Pair.as_pair(xy_pair)
+        xy_pair = Pair.as_pair(xy_pair)
         uv_test = xy_pair / self.uv_scale + self.uv_los
 
         # Iterate a fixed number of times...
@@ -171,11 +174,13 @@ class PolynomialFOV(oops.FOV):
 
         return uv_test
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
 
-class Test_PolynomialFOV(unittest.TestCase):
+import unittest
+
+class Test_Polynomial(unittest.TestCase):
 
     def runTest(self):
 
@@ -183,7 +188,7 @@ class Test_PolynomialFOV(unittest.TestCase):
 
         pass
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

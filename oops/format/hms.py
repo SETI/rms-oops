@@ -1,13 +1,12 @@
 ################################################################################
-# HmsFormat
+# oops/format/hms.py: HMS subclass of class Format
 #
 # 1/24/12 (MRS) - Drafted.
 ################################################################################
 
-import oops
-import unittest
+from baseclass import Format
 
-class HmsFormat(oops.Format):
+class HMS(Format):
     """An HmsFormat is a Format object that handles a numeric value in
     hour-minute-second format.
     """
@@ -57,7 +56,7 @@ class HmsFormat(oops.Format):
         seconds_pad = ''
         if fseconds < 10.:
             seconds_pad = '0'
-        print fseconds
+        # print fseconds
         leading_s = self.pos
         if value < 0.:
             leading_s = '-'
@@ -98,11 +97,9 @@ class HmsFormat(oops.Format):
         if len(component) > 1 and component[0] == '0':
             s = component[1:]
         return int(s)
-        
 
 # Random note: Be very careful about the leading sign. The most common error in
 # such a routine is to lose the sign if the hours value is zero.
-################################################################################
 
 ################################################################################
 # UNIT TESTS
@@ -110,20 +107,24 @@ class HmsFormat(oops.Format):
 
 ERROR_ALLOTMENT = 1e-6
 
-class Test_HmsFormat(unittest.TestCase):
+import unittest
+
+class Test_HMS(unittest.TestCase):
     
     def runTest(self):
         
         t1 = 2.384141
-        fmt = oops.HmsFormat(':',':','')
+        fmt = HMS(':',':','')
         s1 = fmt.str(2.384141)
         t1a = fmt.parse(s1)
         self.assertTrue(t1 == t1a)
                         
-        fmt = oops.HmsFormat('h ','m ','s')
+        fmt = HMS('h ','m ','s')
         s2 = fmt.str(2.384141)
         t2a = fmt.parse(s2)
         self.assertTrue(t1 == t2a)
 
+########################################
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
+################################################################################

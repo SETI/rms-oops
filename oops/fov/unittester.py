@@ -4,7 +4,7 @@
 
 import unittest
 
-from fov        import Test_FOV
+from baseclass  import Test_FOV
 from flat       import Test_Flat
 from polynomial import Test_Polynomial
 from subarray   import Test_Subarray

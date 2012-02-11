@@ -5,12 +5,12 @@
 import unittest
 import cspice
 
-from baseclass  import Test_Frame
+from oops.frame.baseclass  import Test_Frame
 
-from cmatrix    import Test_Cmatrix
-from ringframe  import Test_RingFrame
-from spiceframe import Test_SpiceFrame
-from spinframe  import Test_SpinFrame
+from oops.frame.cmatrix    import Test_Cmatrix
+from oops.frame.ringframe  import Test_RingFrame
+from oops.frame.spiceframe import Test_SpiceFrame
+from oops.frame.spinframe  import Test_SpinFrame
 
 cspice.furnsh("test_data/spice/naif0009.tls")
 cspice.furnsh("test_data/spice/pck00010.tpc")

@@ -6,8 +6,8 @@
 #
 # Mark Showalter, PDS Rings Node, SETI Institute, October 2011
 ################################################################################
+
 import numpy as np
-import unittest
 
 def dot(a,b):
     """dot(a,b) = dot product of 2/3-vectors a and b."""
@@ -230,9 +230,11 @@ def twovec(a,i,b,j):
 
     return result
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
+
+import unittest
 
 class Test_utils(unittest.TestCase):
 
@@ -469,7 +471,7 @@ class Test_utils(unittest.TestCase):
                 self.assertTrue(np.all(test < np.matrix(atxv[i,j,k,:,
                                                         np.newaxis]) + eps))
 
-################################################################################
+########################################
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 ################################################################################

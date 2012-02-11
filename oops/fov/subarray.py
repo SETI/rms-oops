@@ -1,14 +1,16 @@
+################################################################################
+# oops/fov/subarray.py: Subarray subclass of FOV
+#
+# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
+# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+################################################################################
+
 import numpy as np
-import unittest
 
-import oops
-from oops.fov.FlatFOV import FlatFOV
+from baseclass import FOV
+from oops.xarray.all import *
 
-################################################################################
-# class SubarrayFOV
-################################################################################
-
-class SubarrayFOV(oops.FOV):
+class Subarray(FOV):
 
     def __init__(self, fov, new_los, uv_shape, uv_los=None):
         """Returns a new FOV object in which the ICS origin and/or the optic
@@ -30,15 +32,15 @@ class SubarrayFOV(oops.FOV):
         """
 
         self.fov = fov
-        self.new_los_in_old_uv  = oops.Pair.as_float_pair(new_los)
+        self.new_los_in_old_uv  = Pair.as_float_pair(new_los)
         self.new_los_wrt_old_xy = fov.xy_from_uv(self.new_los_in_old_uv)
 
-        self.uv_shape = oops.Pair.as_pair(uv_shape, duplicate=True)
+        self.uv_shape = Pair.as_pair(uv_shape).copy()
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = oops.Pair.as_float_pair(uv_los, duplicate=True)
+            self.uv_los = Pair.as_float_pair(uv_los).copy()
 
         self.new_origin_in_old_uv = self.new_los_in_old_uv - self.uv_los
 
@@ -72,21 +74,27 @@ class SubarrayFOV(oops.FOV):
                                                 uv_pair)
         return (tuple[0] - self.new_los_wrt_old_xy, tuple[1])
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
 
-class Test_SubarrayFOV(unittest.TestCase):
+import unittest
+
+class Test_Subarray(unittest.TestCase):
 
     def runTest(self):
 
-        flat = FlatFOV((1/2048.,-1/2048.), 101, (50,75))
+        # Imports just required for unit testing
+        from flat     import Flat
+        from subarray import Subarray
 
-        test = SubarrayFOV(flat, (50,75), 101, (50,75))
+        flat = Flat((1/2048.,-1/2048.), 101, (50,75))
+
+        test = Subarray(flat, (50,75), 101, (50,75))
         buffer = np.empty((101,101,2))
         buffer[:,:,0] = np.arange(101).reshape(101,1)
         buffer[:,:,1] = np.arange(101)
-        uv = oops.Pair(buffer)
+        uv = Pair(buffer)
 
         xy = test.xy_from_uv(buffer)
         self.assertEqual(xy, flat.xy_from_uv(uv))
@@ -98,11 +106,11 @@ class Test_SubarrayFOV(unittest.TestCase):
 
         ############################
 
-        test = SubarrayFOV(flat, (50,75), 51)
+        test = Subarray(flat, (50,75), 51)
         buffer = np.empty((51,51,2))
         buffer[:,:,0] = np.arange(51).reshape(51,1) + 0.5
         buffer[:,:,1] = np.arange(51) + 0.5
-        uv = oops.Pair(buffer)
+        uv = Pair(buffer)
 
         xy = test.xy_from_uv(buffer)
         self.assertEqual(xy, -test.xy_from_uv(buffer[-1::-1,-1::-1]))
@@ -112,7 +120,7 @@ class Test_SubarrayFOV(unittest.TestCase):
 
         self.assertEqual(test.area_factor(uv), 1.)
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

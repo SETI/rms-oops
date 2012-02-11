@@ -5,10 +5,10 @@
 # Import the CoordinateModel class and all its subclasses into a common name
 # space
 
-from baseclass  import CoordinateModel
-from distance   import Distance
-from latitude   import Latitude
-from longitude  import Longitude
-from radius     import Radius
+from oops.cmodel.baseclass  import CoordinateModel
+from oops.cmodel.distance   import Distance
+from oops.cmodel.latitude   import Latitude
+from oops.cmodel.longitude  import Longitude
+from oops.cmodel.radius     import Radius
 
 ################################################################################

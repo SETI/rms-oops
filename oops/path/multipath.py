@@ -1,19 +1,27 @@
+################################################################################
+# oops/path/multiple.py: Subclass MultiPath of class Path
+################################################################################
+
 import numpy as np
-import unittest
 import cspice
 
-import oops
+from oops.path.baseclass import Path
+from oops.xarray.all import *
+from oops.event import Event
+
+import oops.path.registry as registry
+import oops.frame.registry as frame_registry
 
 ############################################
 # MultiPath
 ############################################
 
-class MultiPath(oops.Path):
+class MultiPath(Path):
     """A MultiPath gathers a set of paths into a single N-dimensional Path
     object."""
 
     def __init__(self, paths, origin_id="SSB", frame_id="J2000", id=None):
-        """Constructor for a MultiPath.
+        """Constructor for a MultiPath Path.
 
         Input:
             paths           a tuple, list or ndarray of path IDs or objects.
@@ -24,17 +32,17 @@ class MultiPath(oops.Path):
                             with a "+" appended.
         """
 
-        self.origin_id = oops.as_path_id(origin_id)
-        self.frame_id  = oops.as_frame_id(frame_id)
+        self.origin_id = registry.as_id(origin_id)
+        self.frame_id  = frame_registry.as_id(frame_id)
 
         self.path_ids = np.array(paths, dtype="object")
         self.paths = np.empty(self.path_ids.shape, dtype="object")
 
         for index, path in np.ndenumerate(self.path_ids):
-            this_id = oops.as_path_id(path)
+            this_id = registry.as_id(path)
             self.path_ids[index] = this_id
-            self.paths[index] = oops.Path.connect(this_id, self.origin_id,
-                                                           self.frame_id)
+            self.paths[index] = registry.connect(this_id, self.origin_id,
+                                                               self.frame_id)
 
         self.shape = list(self.paths.shape)
 
@@ -67,7 +75,7 @@ class MultiPath(oops.Path):
         """
 
         # Broadcast to the same shape
-        time = oops.Scalar.as_scalar(time)
+        time = Scalar.as_scalar(time)
         (time, paths) = np.broadcast_arrays(time.vals, self.paths)
 
         # Create the event object
@@ -78,21 +86,26 @@ class MultiPath(oops.Path):
             pos[index] = event.pos.vals
             vel[index] = event.vel.vals
 
-        return oops.Event(time, pos, vel, self.origin_id, self.frame_id)
+        return Event(time, pos, vel, self.origin_id, self.frame_id)
 
 ########################################
 # UNIT TESTS
 ########################################
 
+import unittest
+
 class Test_MultiPath(unittest.TestCase):
 
     def runTest(self):
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
 
-        sun   = oops.SpicePath("SUN", "SSB")
-        earth = oops.SpicePath("EARTH", "SSB")
-        moon  = oops.SpicePath("MOON", "EARTH")
+        from oops.path.spicepath import SpicePath
+
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
+
+        sun   = SpicePath("SUN", "SSB")
+        earth = SpicePath("EARTH", "SSB")
+        moon  = SpicePath("MOON", "EARTH")
 
         test = MultiPath([sun,earth,moon], "SSB")
 
@@ -147,8 +160,8 @@ class Test_MultiPath(unittest.TestCase):
         self.assertTrue(event012a.pos[0:2] == event01x.pos)
         self.assertTrue(event012a.vel[0:2] == event01x.vel)
 
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
 ################################################################################
 if __name__ == '__main__':

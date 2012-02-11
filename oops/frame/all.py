@@ -4,12 +4,12 @@
 
 # Import the Frame class and its core components into a common name space
 
-from baseclass  import Frame
-from cmatrix    import Cmatrix
-from ringframe  import RingFrame
-from spiceframe import SpiceFrame
-from spinframe  import SpinFrame
+from oops.frame.baseclass  import Frame
+from oops.frame.cmatrix    import Cmatrix
+from oops.frame.ringframe  import RingFrame
+from oops.frame.spiceframe import SpiceFrame
+from oops.frame.spinframe  import SpinFrame
 
-from registry import *
+from oops.frame.registry import *
 
 ################################################################################

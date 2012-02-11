@@ -6,25 +6,43 @@
 #
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 # Modified 1/12/11 (MRS) -- Added method cross_scalars()
+# Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
 ################################################################################
 
 import numpy as np
-import unittest
+import numpy.ma as ma
 
-from oops.broadcastable.Array  import Array
-from oops.broadcastable.Scalar import Scalar
+from baseclass import Array
+from scalar    import Scalar
 
-from oops import utils
+import utils
 
 class Pair(Array):
     """An arbitrary Array of coordinate pairs or 2-vectors.
     """
 
-    OOPS_CLASS = "Pair"
+    def __init__(self, arg, mask=False, units=None):
 
-    def __init__(self, arg):
+        if mask is not False: mask = np.asarray(mask)
 
-        if isinstance(arg, Pair): return self.__init__(arg.vals)
+        if isinstance(arg, Array) and arg.item == [2]:
+            mask = mask | arg.mask
+            if units is None:
+                units = arg.units
+                arg = arg.vals
+            elif arg.units is not None:
+                arg = arg.units.convert(arg.vals, units)
+            else:
+                arg = arg.vals
+
+        elif isinstance(arg, Array):
+            raise ValueError("class " + type(arg).__name__ +
+                             " cannot be converted to class " +
+                             type(self).__name__)
+
+        elif isinstance(arg, ma.MaskedArray):
+            if arg.mask != ma.nomask: mask = mask | np.any(arg.mask, axis=-1)
+            arg = arg.data
 
         self.vals = np.asarray(arg)
         ashape = list(self.vals.shape)
@@ -32,25 +50,41 @@ class Pair(Array):
         self.rank  = 1
         self.item  = ashape[-1:]
         self.shape = ashape[:-1]
+        self.mask  = mask
 
         if self.item != [2]:
             raise ValueError("shape of a Pair array must be [...,2]")
 
+        if (self.mask is not False) and (list(self.mask.shape) != self.shape):
+            raise ValueError("mask array is incompatible with Pair shape")
+
+        self.units = units
+
         return
 
     @staticmethod
-    def as_pair(arg, duplicate=False):
+    def as_pair(arg):
         if isinstance(arg, Pair): return arg
 
-        if duplicate and np.shape(arg) == (): return Pair((arg,arg))
+        # If a single value is provided, duplicate it
+        try:
+            if np.shape(arg) == ():
+                return Pair((arg,arg))
+        except: pass
+
         return Pair(arg)
 
     @staticmethod
-    def as_float_pair(arg, duplicate=False):
+    def as_float_pair(arg):
         if isinstance(arg, Pair) and arg.vals.dtype == np.dtype("float"):
             return arg
 
-        return Pair.as_pair(arg, duplicate) * 1.
+        return Pair.as_pair(arg) * 1.
+
+    @staticmethod
+    def as_standard(arg):
+        if not isinstance(arg, Pair): arg = Pair(arg)
+        return arg.convert_units(None)
 
     def as_scalar(self, axis):
         """Returns one of the components of a Pair as a Scalar.
@@ -59,13 +93,14 @@ class Pair(Array):
             axis        0 for the x-axis; 1 for the y-axis.
         """
 
-        return Scalar(self.vals[...,axis])
+        return Scalar(self.vals[...,axis], self.mask)
 
     def as_scalars(self):
         """Returns the components of a Pair as a pair of Scalars.
         """
 
-        return (Scalar(self.vals[...,0]), Scalar(self.vals[...,1]))
+        return (Scalar(self.vals[...,0], self.mask),
+                Scalar(self.vals[...,1], self.mask))
 
     @staticmethod
     def from_scalars(x,y):
@@ -75,7 +110,7 @@ class Pair(Array):
 
         (x,y) = Array.broadcast_arrays((Scalar.as_scalar(x),
                                         Scalar.as_scalar(y)))
-        return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1))
+        return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1), x.mask | y.mask)
 
     @staticmethod
     def cross_scalars(x,y):
@@ -99,79 +134,74 @@ class Pair(Array):
         buffer[...,0] = x.vals
         buffer[...,1] = y.vals
 
-        return Pair(buffer)
+        return Pair(buffer, x.mask | y.mask)
 
     def swapxy(self):
         """Returns a pair object in which the first and second values are
             switched.
         """
 
-        return Pair(self.vals[..., -1::-1])
+        return Pair(self.vals[..., -1::-1], self.mask)
 
     def as_index(self):
         """Returns this object as a list of lists, which can be used to index a
         numpy ndarray, thereby returning an ndarray of the same shape as the
         Tuple object. Each value is rounded down to the nearest integer."""
 
+        if np.any(self.mask):
+            raise ValueError("an index array cannot be masked")
+
         return list(np.rollaxis(self.vals.astype("int"),-1,0))
 
     def int(self):
         """Returns the integer (floor) component of each index."""
 
-        return Pair(self.vals.astype("int"))
+        return Pair((self.vals // 1.).astype("int"), self.mask)
 
     def frac(self):
         """Returns the fractional component of each index."""
 
-        return Pair(self.vals - np.floor(self.vals))
+        return Pair(self.vals % 1., self.mask)
 
     def dot(self, arg):
         """Returns the dot products of two Pairs as a Scalar.
         """
 
-        if isinstance(arg, Pair): arg = arg.vals
-        return Scalar(utils.dot(self.vals, arg))
+        arg = Pair.as_pair(arg)
+        return Scalar(utils.dot(self.vals, arg.vals), self.mask | arg.mask)
 
     def norm(self):
         """Returns the length of the Pair as a Scalar.
         """
 
-        return Scalar(utils.norm(self.vals))
+        return Scalar(utils.norm(self.vals), self.mask)
 
     def unit(self):
         """Returns a the Pair converted to unit length as a new Pair.
         """
 
-        return Pair(utils.unit(self.vals))
+        return Pair(utils.unit(self.vals), self.mask)
 
     def cross(self, arg):
         """Returns the magnitude of the cross products of the Pairs as a new
         Scalar.
         """
 
-        if isinstance(arg, Pair):
-            arg = arg.vals
-        else:
-            if np.shape(arg)[-1] != 2:
-                raise ValueError("shape of a Pair array must be [...,2]")
-
-        return Scalar(utils.cross2d(self.vals,arg))
+        arg = Pair.as_pair(arg)
+        return Scalar(utils.cross2d(self.vals, arg.vals), self.mask | arg.mask)
 
     def sep(self, arg):
         """Returns returns angle between two Pairs as a Scalar.
         """
 
-        if isinstance(arg, Pair):
-            arg = arg.vals
-        else:
-            if np.shape(arg)[-1] != 2:
-                raise ValueError("shape of a Pair array must be [...,2]")
+        arg = Pair.as_pair(arg)
+        return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
 
-        return Scalar(utils.sep(self.vals,arg))
-
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
+
+import unittest
 
 class Test_Pair(unittest.TestCase):
 
@@ -256,8 +286,8 @@ class Test_Pair(unittest.TestCase):
 
         self.assertRaises(ValueError, pairs.__add__, 2)
         self.assertRaises(ValueError, pairs.__sub__, 2)
-        self.assertRaises(TypeError, pairs.__add__, Scalar(2))
-        self.assertRaises(TypeError, pairs.__sub__, Scalar(2))
+        self.assertRaises(ValueError, pairs.__add__, Scalar(2))
+        self.assertRaises(ValueError, pairs.__sub__, Scalar(2))
 
         # In-place operations
         test = pairs.copy()
@@ -354,7 +384,64 @@ class Test_Pair(unittest.TestCase):
         self.assertTrue(np.all(pair.vals[2,3,:,0] == 11))
         self.assertTrue(np.all(pair.vals[:,:,4,1] == 4))
 
-################################################################################
+        # New tests 2/1/12 (MRS)
+
+        test = Pair(np.arange(6).reshape(3,2))
+        self.assertEqual(str(test), "Pair[[0 1]\n [2 3]\n [4 5]]")
+
+        test.mask = np.array([False, False, True])
+        self.assertEqual(str(test),   "Pair[[0 1]\n [2 3]\n [-- --], mask]")
+        self.assertEqual(str(test*2), "Pair[[0 2]\n [4 6]\n [-- --], mask]")
+        self.assertEqual(str(test/2), "Pair[[0 0]\n [1 1]\n [-- --], mask]")
+        self.assertEqual(str(test%2), "Pair[[0 1]\n [0 1]\n [-- --], mask]")
+
+        self.assertEqual(str(test + (1,0)),
+                         "Pair[[1 1]\n [3 3]\n [-- --], mask]")
+        self.assertEqual(str(test - (0,1)),
+                         "Pair[[0 0]\n [2 2]\n [-- --], mask]")
+        self.assertEqual(str(test + test),
+                         "Pair[[0 2]\n [4 6]\n [-- --], mask]")
+        self.assertEqual(str(test + np.arange(6).reshape(3,2)),
+                         "Pair[[0 2]\n [4 6]\n [-- --], mask]")
+
+        temp = Pair(np.arange(6).reshape(3,2), [True, False, False])
+        self.assertEqual(str(test + temp),
+                         "Pair[[-- --]\n [4 6]\n [-- --], mask]")
+        self.assertEqual(str(test - 2*temp),
+                         "Pair[[-- --]\n [-2 -3]\n [-- --], mask]")
+        self.assertEqual(str(test * temp),
+                         "Pair[[-- --]\n [4 9]\n [-- --], mask]")
+        self.assertEqual(str(test / temp),
+                         "Pair[[-- --]\n [1 1]\n [-- --], mask]")
+        self.assertEqual(str(test % temp),
+                         "Pair[[-- --]\n [0 0]\n [-- --], mask]")
+        self.assertEqual(str(test / [[2,1],[1,0],[7,0]]),
+                         "Pair[[0 1]\n [-- --]\n [-- --], mask]")
+        self.assertEqual(str(test % [[2,1],[1,0],[7,0]]),
+                         "Pair[[0 0]\n [-- --]\n [-- --], mask]")
+
+        temp = Pair(np.arange(6).reshape(3,2), [True, False, False])
+        self.assertEqual(str(temp),      "Pair[[-- --]\n [2 3]\n [4 5], mask]")
+        self.assertEqual(str(temp[0]),   "Pair[-- --, mask]")
+        self.assertEqual(str(temp[1]),   "Pair[2 3]")
+        self.assertEqual(str(temp[0:2]), "Pair[[-- --]\n [2 3], mask]")
+        self.assertEqual(str(temp[0:1]), "Pair[[-- --], mask]")
+        self.assertEqual(str(temp[1:2]), "Pair[[2 3]]")
+
+        test = Pair(np.arange(6).reshape(3,2))
+        self.assertEqual(test, Pair(np.arange(6).reshape(3,2)))
+
+        mvals = test.mvals
+        self.assertEqual(mvals.mask, ma.nomask)
+        self.assertEqual(test, mvals)
+
+        test.mask = np.array([False, False, True])
+        mvals = test.mvals
+        self.assertEqual(str(mvals), "[[0 1]\n [2 3]\n [-- --]]")
+        self.assertEqual(test.mask.shape, (3,))
+        self.assertEqual(mvals.mask.shape, (3,2))
+
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

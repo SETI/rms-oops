@@ -1,12 +1,12 @@
 ################################################################################
-# PythonFormat
+# oops/format/pythonfmt.py: PythonFmt subclass of class Format
 #
 # 1/24/12 (MRS) - Drafted.
 ################################################################################
 
-import oops
+from baseclass import Format
 
-class PythonFormat(oops.Format):
+class PythonFmt(Format):
     """A PythonFormat is a format string defined using the default formatting
     mechanism in Python.
     """
@@ -28,4 +28,17 @@ class PythonFormat(oops.Format):
 
         return float(string)
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+
+class Test_PythonFmt(unittest.TestCase):
+
+    def runTest(self):
+        pass
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

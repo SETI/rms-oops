@@ -1,19 +1,26 @@
+################################################################################
+# oops/surface/ringplane.py: RingPlane subclass of class Surface
+#
+# 2/8/12 Modified (MRS) - Updated for style; added elevation parameter; added
+#   mask tracking.
+################################################################################
+
 import numpy as np
-import unittest
 import gravity
 
-import oops
+from baseclass import Surface
+from oops.xarray.all import *
+import oops.frame.registry as frame_registry
+import oops.path.registry as path_registry
 
-############################################
-# RingPlane
-############################################
+class RingPlane(Surface):
+    """RingPlane is a subclass of Surface describing a flat surface in the (x,y)
+    plane, in which the optional velocity field is defined by circular Keplerian
+    motion about the center point. Coordinate are cylindrical (radius,
+    longitude, elevation), with an optional offset in elevation from the
+    equatorial (z=0) plane."""
 
-class RingPlane(oops.Surface):
-    """A flat surface in the (x,y) plane, in which the points are optionally
-    undergoing circular Keplerian motion about the center point."""
-
-    def __init__(self, origin, frame, gravity=None):
-
+    def __init__(self, origin, frame, gravity=None, elevation=0.):
         """Constructor for a RingPlane object.
 
         Input:
@@ -25,26 +32,34 @@ class RingPlane(oops.Surface):
 
             gravity     an optional Gravity object, used to define the orbital
                         velocities within the plane.
+
+            elevation   an optional offset of the ring plane in the direction of
+                        positive rotation, in km.
             """
 
-        self.origin_id = oops.as_path_id(origin)
-        self.frame_id  = oops.as_frame_id(frame)
-        self.gravity = gravity
+        self.origin_id = path_registry.as_id(origin)
+        self.frame_id  = frame_registry.as_id(frame)
+        self.gravity   = gravity
+        self.elevation = elevation
 
     def as_coords(self, position, axes=2):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
-            axes            2 or 3, indicating whether to return a tuple of two
-                            or 3 Scalar objects.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
+            axes        2 or 3, indicating whether to return a tuple of two or
+                        three Scalar objects.
 
-        Return:             coordinate values packaged as a tuple containing
-                            two or three Scalars, one for each coordinate.
-         """
+        Return:         coordinate values packaged as a tuple containing two or
+                        three unitless Scalars, one for each coordinate.
+        """
 
-        position = oops.Vector3.as_vector3(position)
+        # Convert to a Vector3 and strip units, if any
+        position = Vector3.as_standard(position)
+        mask = position.mask
+
         x = position.vals[...,0]
         y = position.vals[...,1]
 
@@ -52,79 +67,90 @@ class RingPlane(oops.Surface):
         theta = np.arctan2(y,x) % (2.*np.pi)
 
         if axes > 2:
-            z = position.vals[...,2]
-            return (oops.Scalar(r), oops.Scalar(theta), oops.Scalar(z))
+            z = position.vals[...,2] - self.elevation
+            return (Scalar(r,mask), Scalar(theta,mask), Scalar(z,mask))
         else:
-            return (oops.Scalar(r), oops.Scalar(theta))
+            return (Scalar(r,mask), Scalar(theta,mask))
 
-    def as_vector3(self, r, theta, z=oops.Scalar(0.)):
+    def as_vector3(self, r, theta, z=0.):
         """Converts coordinates in the surface's internal coordinate system into
         position vectors at or near the surface.
 
         Input:
-            r               Scalar of radius values.
-            theta           Scalar of longitude values.
-            z               Optional Scalar of elevation values.
+            coord1      a Scalar of values for the first coordinate, with
+                        optional units.
+            coord2      a Scalar of values for the second coordinate, with
+                        optional units.
+            coord3      a Scalar of values for the third coordinate, with
+                        optional units; default is Scalar(0.).
 
-        Return:             the corresponding Vector3 of positions.
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
+
+        Return:         the corresponding unitless Vector3 object of positions,
+                        in km.
         """
 
-        # Convert to Scalars
-        r     = oops.Scalar(r)
-        theta = oops.Scalar(theta)
-        z     = oops.Scalar(z)
+        # Convert to Scalars and strip units, if any
+        r     = Scalar.as_standard(r)
+        theta = Scalar.as_standard(theta)
+        z     = Scalar.as_standard(z)
 
         # Convert to vectors
-        shape = oops.Array.broadcast_shape((r, theta, z), [3])
+        shape = Array.broadcast_shape((r, theta, z), [3])
         array = np.empty(shape)
         array[...,0] = np.cos(theta.vals) * r.vals
         array[...,1] = np.sin(theta.vals) * r.vals
-        array[...,2] = z.vals
+        array[...,2] = z.vals + self.elevation
 
-        return oops.Vector3(array)
+        return Vector3(array, r.mask | theta.mask | z.mask)
 
     def intercept(self, obs, los):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
         Input:
-            obs             observer position as a Vector3.
-            los             line of sight as a Vector3.
+            obs         observer position as a Vector3, with optional units.
+            los         line of sight as a Vector3, with optional units.
 
-        Return:             a tuple (position, factor)
-            position        a Vector3 of intercept points on the surface.
-            factor          a Scalar of factors such that
-                                position = obs + factor * los
+        Return:         a tuple (position, factor)
+            position    a unitless Vector3 of intercept points on the surface,
+                        in km.
+            factor      a unitless Scalar of factors such that:
+                            position = obs + factor * los
         """
 
         # Solve for obs + t * los for scalar t, such that the z-component
         # equals zero.
-        obs = oops.Vector3.as_vector3(obs).vals
-        los = oops.Vector3.as_vector3(los).vals
+        obs = Vector3.as_standard(obs)
+        los = Vector3.as_standard(los)
 
-        t = (obs[...,2]/los[...,2])[..., np.newaxis]
-        array = obs - t * los
+        t = ((self.elevation - obs.vals[...,2]) / los.vals[...,2])
+        array = obs.vals + t[..., np.newaxis] * los.vals
 
         # Make the z-component exact
-        array[...,2] = 0.
+        array[...,2] = self.elevation
 
-        return (oops.Vector3(array), oops.Scalar(-t[...,0]))
+        mask = obs.mask | los.mask | (los.vals[...,2] == 0) | (t < 0.)
+
+        return (Vector3(array,mask), Scalar(t,mask))
 
     def normal(self, position):
         """Returns the normal vector at a position at or near a surface.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
 
-        Return:             a Vector3 containing directions normal to the
-                            surface that pass through the position. Lengths are
-                            arbitrary.
+        Return:         a unitless Vector3 containing directions normal to the
+                        surface that pass through the position. Lengths are
+                        arbitrary.
         """
 
-        return oops.Vector3((0,0,1))# This does not inherit the given vector's
+        return Vector3((0,0,1))     # This does not inherit the given vector's
                                     # shape, but should broadcast properly
 
-    def gradient_at_position(self, position, axis=0, projected=True):
+    def gradient(self, position, axis=0, projected=True):
         """Returns the gradient vector at a specified position at or near the
         surface. The gradient is defined as the vector pointing in the direction
         of most rapid change in the value of a particular surface coordinate.
@@ -134,16 +160,21 @@ class RingPlane(oops.Surface):
         direction.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
 
-            axis            0, 1 or 2, identifying the coordinate axis for which
-                            the gradient is sought.
+            axis        0, 1 or 2, identifying the coordinate axis for which the
+                        gradient is sought.
 
-            projected       True to project the gradient into the surface if
-                            necessary. This has no effect on a RingPlane.
+            projected   True to project the gradient vector into the surface.
+
+        Return:         a unitless Vector3 of the gradients sought. Values are
+                        always in standard units.
         """
 
-        if axis == 3: return oops.Vector3([0,0,1])
+        if axis == 3: return Vector3([0,0,1])
+
+        position = Vector3.as_standard(position)
 
         radii = position.copy()
         radii.vals[...,2] = 0.
@@ -152,7 +183,8 @@ class RingPlane(oops.Surface):
             return radii.unit()
 
         if axis == 1:
-            vectors = oops.Vector3(np.zeros(position.vals.shape))
+            mask = position.mask
+            vectors = Vector3(np.zeros(position.vals.shape), mask)
             vectors.vals[...,0] =  position.vals[...,1]
             vectors.vals[...,1] = -position.vals[...,0]
 
@@ -166,64 +198,67 @@ class RingPlane(oops.Surface):
         local wind speeds on a planet.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
+
+        Return:         a unitless Vector3 of velocities, in units of km/s.
         """
 
-        if self.gravity == None: return oops.Vector3((0,0,0))
+        if self.gravity == None: return Vector3((0,0,0))
 
-        # TBD: We need a vector form of the gravity library!
+        position = Vector3.as_standard(position)
+        radius = position.norm()
+        n = self.gravity.n(radius.vals)
 
-        position = oops.Vector3.as_vector3(position)
-        radius = oops.Vector3(position).norm()
-        # n = gravity.n(radius.vals)        # !!! Not yet implemented
-        n = 0.
-
-        return oops.Vector3(position.cross((0,0,-1)) * n)
+        return Vector3(position.cross((0,0,-1)) * n)
 
     def intercept_with_normal(self, normal):
         """Constructs the intercept point on the surface where the normal vector
         is parallel to the given vector.
 
         Input:
-            normal          a Vector3 of normal vectors.
+            normal      a Vector3 of normal vectors, with optional units.
 
-        Return:             a Vector3 of surface intercept points. Where no
-                            solution exists, the components of the returned
-                            vector should be np.nan.
+        Return:         a unitless Vector3 of surface intercept points, in km.
+                        Where no solution exists, the components of the returned
+                        vector should be masked.
         """
-
-        pass
 
         # For a flat ring plane this is a degenerate problem. The function
         # returns (0,0,0) as the location where every exactly perpendicular
-        # vector intercepts the plane. It returns 3-vectors of np.nan everywhere
+        # vector intercepts the plane. It returns masked values everywhere
         # else.
-        buffer = np.zeros(normal.shape + [3])
-        buffer[normal.vals[...,0] != 0., 0:3] = np.nan
-        buffer[normal.vals[...,1] != 0., 0:3] = np.nan
 
-        return oops.Vector3(buffer)
+        normal = Vector3.as_standard(normal)
+
+        buffer = np.zeros(normal.shape + [3])
+        mask = (normal.mask | normal.vals[...,0] != 0.
+                            | normal.vals[...,1] != 0.)
+
+        return Vector3(buffer, mask)
 
     def intercept_normal_to(self, position):
         """Constructs the intercept point on the surface where a normal vector
         passes through a given position.
 
         Input:
-            position        a Vector3 of positions near the surface.
+            position    a Vector3 of positions near the surface, with optional
+                        units.
 
-        Return:             a Vector3 of surface intercept points. Where no
-                            solution exists, the components of the returned
-                            vector should be np.nan.
+        Return:         a unitless vector3 of surface intercept points. Where no
+                        solution exists, the returned vector should be masked.
         """
 
-        intercept = oops.Vector3.as_vector3(position).copy()
+        intercept = Vector3.as_standard(position).copy()
         intercept.vals[...,2] = 0.
 
         return intercept
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
+
+import unittest
 
 class Test_RingPlane(unittest.TestCase):
 
@@ -257,7 +292,7 @@ class Test_RingPlane(unittest.TestCase):
         # Intercepts that point away from the ring plane
         self.assertTrue(np.all(factors.vals > 0.))
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

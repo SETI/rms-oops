@@ -1,11 +1,16 @@
+################################################################################
+# Event
+#
+# 2/2/12 Modified (MRS) - import and class naming hierarchy revised.
+################################################################################
+
 import numpy as np
 import unittest
 
-import oops
-
-################################################################################
-# Event
-################################################################################
+from oops.xarray.all import *
+import oops.frame.registry as frame_registry
+import oops.path.registry as path_registry
+import oops.constants as constants
 
 class Event(object):
     """An Event object is defined by a time, position and velocity. Events can
@@ -21,11 +26,9 @@ class Event(object):
     the same shape; standard rules of broadcasting apply.
     """
 
-    OOPS_CLASS = "Event"
-
     def __init__(self, time, pos, vel, origin, frame=None,
-                       perp=oops.Empty(), arr=oops.Empty(), dep=oops.Empty(),
-                       vflat=oops.Vector3([0.,0.,0.])):
+                       perp=Empty(), arr=Empty(), dep=Empty(),
+                       vflat=Vector3([0.,0.,0.])):
         """Constructor for the Event class.
 
         Input:
@@ -63,15 +66,15 @@ class Event(object):
         all be broadcastable to the same shape.
         """
 
-        self.time = oops.Scalar.as_scalar(time)
-        self.pos  = oops.Vector3.as_vector3(pos)
-        self.vel  = oops.Vector3.as_vector3(vel)
+        self.time = Scalar.as_scalar(time)
+        self.pos  = Vector3.as_vector3(pos)
+        self.vel  = Vector3.as_vector3(vel)
 
         # Absolute event case
-        if oops.is_id(origin) or origin.OOPS_CLASS == "Path":
+        if path_registry.is_id(origin) or path_registry.is_path(origin):
             self.origin = None
-            self.origin_id = oops.as_path_id(origin)
-            self.frame_id = oops.as_path(origin).frame_id
+            self.origin_id = path_registry.as_id(origin)
+            self.frame_id = path_registry.as_path(origin).frame_id
 
         # Relative event case
         else:
@@ -80,7 +83,7 @@ class Event(object):
             self.frame_id = self.origin.frame_id
 
         if frame is not None:
-            self.frame_id = oops.as_frame_id(frame)
+            self.frame_id = frame_registry.as_id(frame)
 
         self.perp  = perp
         self.arr   = arr
@@ -102,14 +105,14 @@ class Event(object):
         oldshape = self.shape
 
         if arg == ():
-            self.shape = oops.Array.broadcast_shape(
+            self.shape = Array.broadcast_shape(
                             [self.time, self.pos, self.vel,
                              self.origin,
-                             oops.as_path(self.origin_id),
-                             oops.as_frame(self.frame_id),
+                             path_registry.as_path(self.origin_id),
+                             frame_registry.as_frame(self.frame_id),
                              self.perp, self.arr, self.vel, self.vflat])
         else:
-            self.shape = oops.Array.broadcast_shape((self,) + arg)
+            self.shape = Array.broadcast_shape((self,) + arg)
 
         if self.shape != oldshape:
             self.ssb = None
@@ -293,8 +296,8 @@ class Event(object):
 
         event = self.absolute()
 
-        if oops.is_id(path):
-            path = oops.Path.connect(path, event.origin_id, event.frame_id)
+        if path_registry.is_id(path):
+            path = path_registry.connect(path, event.origin_id, event.frame_id)
 
         return path.subtract_from_event(event)
 
@@ -320,8 +323,8 @@ class Event(object):
 
         if frame is None: return self
 
-        if oops.is_id(frame):
-            frame = oops.Frame.connect(frame, self.frame_id)
+        if frame_registry.is_id(frame):
+            frame = frame_registry.connect(frame, self.frame_id)
 
         if time is None:
             if self.is_relative():
@@ -391,21 +394,21 @@ class Event(object):
     # binary "-" operator
     def __sub__(self, arg):
 
-        if oops.is_id(arg) or arg.OOPS_CLASS == "Path":
+        if path_registry.is_id(arg) or path_registry.is_path(arg):
             return self.wrt_path(arg)
 
-        if arg.OOPS_CLASS == "Event":
+        if ininstance(arg, Event):
             return self.wrt_event(arg)
 
-        oops.raise_type_mismatch(self, "-", arg)
+        utils.raise_type_mismatch(self, "-", arg)
 
     # binary "/" operator
     def __div__(self, arg):
 
-        if oops.is_id(arg) or arg.OOPS_CLASS == "Frame":
+        if frame_registry.is_id(arg) or frame_registry.is_frame(arg):
             return self.wrt_frame(arg)
 
-        oops.raise_type_mismatch(self, "/", arg)
+        utils.raise_type_mismatch(self, "/", arg)
 
     # string operations
     def __str__(self):
@@ -425,7 +428,7 @@ class Event(object):
     # Probably not a good idea
 #     def __getitem__(self, i):
 #         (time, pos, vel,
-#          perp, arr, dep, vflat) = oops.Array.broadcast_arrays(
+#          perp, arr, dep, vflat) = Array.broadcast_arrays(
 #                                     (self.time, self.pos, self.vel,
 #                                      self.perp, self.arr, self.dep, self.vflat))
 # 
@@ -435,7 +438,7 @@ class Event(object):
 # 
 #     def __getslice__(self, i, j):
 #         (time, pos, vel,
-#          perp, arr, dep, vflat) = oops.Array.broadcast_arrays(
+#          perp, arr, dep, vflat) = Array.broadcast_arrays(
 #                                     (self.time, self.pos, self.vel,
 #                                      self.perp, self.arr, self.dep, self.vflat))
 # 
@@ -555,7 +558,7 @@ class Event(object):
         # of the observer from the ray, given the ray has length C.
 
         wrt_ssb = self.wrt_ssb()
-        return ray - (wrt_ssb.vel + wrt_ssb.vflat) * ray.norm()/oops.C
+        return ray - (wrt_ssb.vel + wrt_ssb.vflat) * ray.norm()/constants.C
 
     def aberrated_arr(self): return self.aberrated_ray(self.wrt_ssb().arr)
 
@@ -605,7 +608,7 @@ class Event(object):
                                    arr.vals[...,0]) % (2.*np.pi)
         buffer[...,1] = np.arcsin(arr.vals[...,2] / arr.norm().vals)
 
-        return oops.Pair(buffer)
+        return Pair(buffer)
 
 ################################################################################
 # UNIT TESTS
@@ -618,7 +621,7 @@ class Test_Event(unittest.TestCase):
         # Tested thoroughly in other modules
         pass
 
-################################################################################
+#########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

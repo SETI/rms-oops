@@ -1,20 +1,24 @@
+################################################################################
+# oops/frame/spiceframe.py: Subclass SpiceFrame of class Frame
+################################################################################
+
 import numpy as np
-import unittest
 import cspice
 
-import oops
+from oops.frame.baseclass import Frame
+from oops.xarray.all import *
+from oops.transform import Transform
 
-################################################################################
-# SpiceFrame
-################################################################################
+import oops.frame.registry as registry
 
-class SpiceFrame(oops.Frame):
+class SpiceFrame(Frame):
     """A SpiceFrame is a Frame object defined within the SPICE toolkit."""
 
     # Maintain a dictionary that translates names in SPICE toolkit with their
     # corresponding names in the Frame registry.
 
-    SPICE_TRANSLATION = {"J2000":"J2000", cspice.namfrm("J2000"):"J2000"}
+    TRANSLATION = {"J2000":"J2000", cspice.namfrm("J2000"):"J2000"}
+    SPICEPATH_CLASS = None
 
     def __init__(self, spice_frame, spice_reference="J2000", id=None):
         """Constructor for a SpiceFrame.
@@ -38,7 +42,7 @@ class SpiceFrame(oops.Frame):
 
         (self.spice_reference_id,
          self.spice_reference_name) = SpiceFrame.spice_id_and_name(
-                                                               spice_reference)
+                                                            spice_reference)
 
         # Fill in the OOPS frame_id and reference_id
         if id is not None:
@@ -46,19 +50,19 @@ class SpiceFrame(oops.Frame):
         else:
             self.frame_id = self.spice_frame_name
 
-        self.reference_id = SpiceFrame.SPICE_TRANSLATION[
-                                                        self.spice_reference_id]
+        self.reference_id = SpiceFrame.TRANSLATION[self.spice_reference_id]
 
         # Save it in the global dictionary of translations under alternative
         # names
-        SpiceFrame.SPICE_TRANSLATION[self.spice_frame_id]   = self.frame_id
-        SpiceFrame.SPICE_TRANSLATION[self.spice_frame_name] = self.frame_id
+        SpiceFrame.TRANSLATION[self.spice_frame_id]   = self.frame_id
+        SpiceFrame.TRANSLATION[self.spice_frame_name] = self.frame_id
 
         # Fill in the origin ID
         self.spice_origin_id   = cspice.frinfo(self.spice_frame_id)[0]
         self.spice_origin_name = cspice.bodc2n(self.spice_origin_id)
 
-        self.origin_id = oops.SpicePath.SPICE_TRANSLATION[self.spice_origin_id]
+        self.origin_id = SpiceFrame.SPICEPATH_CLASS.TRANSLATION[
+                                                        self.spice_origin_id]
         if self.origin_id == "SSB": self.origin_id = None
 
         # No shape
@@ -123,14 +127,13 @@ class SpiceFrame(oops.Frame):
         """
 
         # A single input time can be handled quickly
-        time = oops.Scalar.as_scalar(time)
+        time = Scalar.as_scalar(time)
         if time.shape == []:
             matrix6 = cspice.sxform(self.spice_reference_name,
                                     self.spice_frame_name,
                                     time.vals)
             (matrix, omega) = cspice.xf2rav(matrix6)
-            return oops.Transform(matrix, omega, self.frame_id,
-                                                 self.reference_id)
+            return Transform(matrix, omega, self.frame_id, self.reference_id)
 
         # Create the buffers
         matrix = np.empty(time.shape + [3,3])
@@ -138,16 +141,21 @@ class SpiceFrame(oops.Frame):
 
         # Fill in the matrix and omega using CSPICE
         for i,t in np.ndenumerate(time.vals):
-            if np.isnan(t):
-                matrix[i] = np.nan
-                omega[i] = np.nan
-            else:
-                matrix6 = cspice.sxform(self.spice_reference_name,
-                                        self.spice_frame_name,
-                                        t)
-                (matrix[i], omega[i]) = cspice.xf2rav(matrix6)
+            matrix6 = cspice.sxform(self.spice_reference_name,
+                                    self.spice_frame_name,
+                                    t)
+            (matrix[i], omega[i]) = cspice.xf2rav(matrix6)
 
-        return oops.Transform(matrix, omega, self.frame_id, self.reference_id)
+        return Transform(matrix, omega, self.frame_id, self.reference_id)
+
+################################################################################
+# Make sure that oops/path/spice.py is loaded as well
+################################################################################
+
+if SpiceFrame.SPICEPATH_CLASS is None:
+    from oops.path.spicepath import SpicePath
+    SpicePath.SPICEFRAME_CLASS = SpiceFrame
+    SpiceFrame.SPICEPATH_CLASS = SpicePath
 
 ################################################################################
 # UNIT TESTS
@@ -156,18 +164,26 @@ class SpiceFrame(oops.Frame):
 # Here we also test many of the overall Frame operations, because we can be
 # confident that cspice produces valid results.
 
+import unittest
+
 class Test_SpiceFrame(unittest.TestCase):
 
     def runTest(self):
-        oops.Frame.initialize_registry()
-        oops.Path.initialize_registry()
 
-        ignore = oops.SpicePath("EARTH", "SSB")
+        # Import is here to avoid conflicts
+        from oops.path.spicepath import SpicePath
+        import oops.path.registry as path_registry
+        from oops.event import Event
+
+        registry.initialize_registry()
+        path_registry.initialize_registry()
+
+        ignore = SpicePath("EARTH", "SSB")
 
         earth = SpiceFrame("IAU_EARTH", "J2000")
-        time  = oops.Scalar(np.random.rand(3,4,2) * 1.e8)
+        time  = Scalar(np.random.rand(3,4,2) * 1.e8)
         posvel = np.random.rand(3,4,2,6,1)
-        event = oops.Event(time, posvel[...,0:3,0], posvel[...,3:6,0],
+        event = Event(time, posvel[...,0:3,0], posvel[...,3:6,0],
                             "SSB", "J2000")
         rotated = event.wrt_frame("IAU_EARTH")
 
@@ -182,13 +198,13 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dvel) < 1.e-15))
 
         # Tests of combined frames
-        oops.Frame.initialize_registry()
-        oops.Path.initialize_registry()
+        registry.initialize_registry()
+        path_registry.initialize_registry()
 
-        ignore = oops.SpicePath("EARTH", "SSB")
-        ignore = oops.SpicePath("VENUS", "EARTH")
-        ignore = oops.SpicePath("MARS", "VENUS")
-        ignore = oops.SpicePath("MOON", "VENUS")
+        ignore = SpicePath("EARTH", "SSB")
+        ignore = SpicePath("VENUS", "EARTH")
+        ignore = SpicePath("MARS", "VENUS")
+        ignore = SpicePath("MOON", "VENUS")
 
         earth  = SpiceFrame("IAU_EARTH", "J2000")
         b1950  = SpiceFrame("B1950", "IAU_EARTH")
@@ -196,24 +212,24 @@ class Test_SpiceFrame(unittest.TestCase):
         mars   = SpiceFrame("IAU_MARS",  "J2000")
         mars   = SpiceFrame("IAU_MOON",  "B1950")
 
-        x2000  = oops.Frame.lookup("J2000")
-        xearth = oops.Frame.lookup("IAU_EARTH")
-        x1950  = oops.Frame.lookup("B1950")
-        xvenus = oops.Frame.lookup("IAU_VENUS")
-        xmars  = oops.Frame.lookup("IAU_MARS")
-        xmoon  = oops.Frame.lookup("IAU_MOON")
+        x2000  = registry.lookup("J2000")
+        xearth = registry.lookup("IAU_EARTH")
+        x1950  = registry.lookup("B1950")
+        xvenus = registry.lookup("IAU_VENUS")
+        xmars  = registry.lookup("IAU_MARS")
+        xmoon  = registry.lookup("IAU_MOON")
 
-        self.assertEqual(oops.Frame.common_ancestry(xmars, xvenus),
+        self.assertEqual(Frame.common_ancestry(xmars, xvenus),
                          ([xmars, x2000],
                           [xvenus, x1950, xearth, x2000]))
 
-        self.assertEqual(oops.Frame.common_ancestry(xmoon, xvenus),
+        self.assertEqual(Frame.common_ancestry(xmoon, xvenus),
                          ([xmoon, x1950],
                           [xvenus, x1950]))
 
-        times = oops.Scalar(np.arange(-3.e8, 3.01e8, 0.5e7))
+        times = Scalar(np.arange(-3.e8, 3.01e8, 0.5e7))
 
-        frame = oops.Frame.connect("IAU_EARTH","J2000")
+        frame = registry.connect("IAU_EARTH","J2000")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
             matrix6 = cspice.sxform("J2000", "IAU_EARTH", times[i])
@@ -225,7 +241,7 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dmatrix) < 1.e-14))
             self.assertTrue(np.all(np.abs(domega)  < 1.e-14))
 
-        frame = oops.Frame.connect("J2000","IAU_EARTH")
+        frame = registry.connect("J2000","IAU_EARTH")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
             matrix6 = cspice.sxform("IAU_EARTH", "J2000", times[i])
@@ -237,7 +253,7 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dmatrix) < 1.e-14))
             self.assertTrue(np.all(np.abs(domega)  < 1.e-14))
 
-        frame = oops.Frame.connect("B1950","J2000")
+        frame = registry.connect("B1950","J2000")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
             matrix6 = cspice.sxform("J2000", "B1950", times[i])
@@ -249,7 +265,7 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dmatrix) < 1.e-14))
             self.assertTrue(np.all(np.abs(domega)  < 1.e-14))
 
-        frame = oops.Frame.connect("J2000","B1950")
+        frame = registry.connect("J2000","B1950")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
             matrix6 = cspice.sxform("B1950", "J2000", times[i])
@@ -261,8 +277,8 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dmatrix) < 1.e-14))
             self.assertTrue(np.all(np.abs(domega)  < 1.e-14))
 
-        oops.Frame.initialize_registry()
-        oops.Path.initialize_registry()
+        registry.initialize_registry()
+        path_registry.initialize_registry()
 
         ########################################
         # Test for a Cassini C kernel
@@ -286,7 +302,7 @@ class Test_SpiceFrame(unittest.TestCase):
         cspice.furnsh(dir + "07312_07317ra.bc")
         cspice.furnsh(dir + "080123R_SCPSE_07309_07329.bsp")
 
-        ignore = oops.SpicePath("CASSINI", "SSB")
+        ignore = SpicePath("CASSINI", "SSB")
         ignore = SpiceFrame("CASSINI_ISS_NAC")
         ignore = SpiceFrame("CASSINI_ISS_WAC")
 
@@ -294,7 +310,7 @@ class Test_SpiceFrame(unittest.TestCase):
         timestring = "2007-312T03:34:16.391"
         tdb = cspice.str2et(timestring)
 
-        nacframe = oops.Frame.connect("J2000", "CASSINI_ISS_NAC")
+        nacframe = frame.connect("J2000", "CASSINI_ISS_NAC")
         matrix = nacframe.transform_at_time(tdb).matrix
         optic_axis = (matrix * (0,0,1)).vals
 
@@ -308,8 +324,8 @@ class Test_SpiceFrame(unittest.TestCase):
         self.assertTrue(np.abs(test_ra - right_ascension) < 0.5)
         self.assertTrue(np.abs(test_dec - declination) < 0.5)
 
-        oops.Frame.initialize_registry()
-        oops.Path.initialize_registry()
+        registry.initialize_registry()
+        path_registry.initialize_registry()
 
 ################################################################################
 if __name__ == '__main__':

@@ -1,26 +1,31 @@
+################################################################################
+# oops/path/spicepath.py: Subclass SpicePath of class Path
+################################################################################
+
 import numpy as np
-import unittest
 import cspice
 
-import oops
+from oops.path.baseclass import Path, Waypoint
+from oops.xarray.all import *
+from oops.event import Event
 
-################################################################################
-# SpicePath
-################################################################################
+import oops.path.registry as registry
+import oops.frame.registry as frame_registry
 
-class SpicePath(oops.Path):
-    """A SpicePath object returns a path based on an SP kernel in the SPICE
-    toolkit. It represents the geometric position of a single target body with
-    respect to a single origin."""
+class SpicePath(Path):
+    """Subclass SpicePath of class Path returns a path based on an SP kernel in
+    the SPICE toolkit. It represents the geometric position of a single target
+    body with respect to a single origin."""
 
     # Maintain a dictionary that translates names in SPICE toolkit with their
     # corresponding names in the Path registry.
 
-    SPICE_TRANSLATION = {"SSB":"SSB", 0:"SSB", "SOLAR SYSTEM BARYCENTER":"SSB"}
+    TRANSLATION = {"SSB":"SSB", 0:"SSB", "SOLAR SYSTEM BARYCENTER":"SSB"}
+    SPICEFRAME_CLASS = None
 
     def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
                        id=None):
-        """Constructor for a SpicePath.
+        """Constructor for a SpicePath object.
 
         Input:
             spice_id        the name or integer ID of the target body as used
@@ -47,16 +52,8 @@ class SpicePath(oops.Path):
         (self.spice_origin_name,
          self.spice_origin_id) = SpicePath.spice_name_and_id(spice_origin)
 
-        self.spice_frame_name = oops.SpiceFrame.spice_id_and_name(
-                                                                spice_frame)[1]
-
-        # Test the SPICE toolkit. This raises a RuntimeError if it fails
-        # Removed because not every SpicePath is defined for time 0!
-        # test = cspice.spkez(self.spice_target_id,
-        #                     0.,        # time zero
-        #                     self.spice_frame_name,
-        #                     "NONE",    # no aberration or light time fix
-        #                     self.spice_origin_id)
+        self.spice_frame_name = SpicePath.SPICEFRAME_CLASS.spice_id_and_name(
+                                                                 spice_frame)[1]
 
         # Fill in the path_id
         if id is None:
@@ -68,20 +65,20 @@ class SpicePath(oops.Path):
             self.path_id = id
 
         # Fill in the origin_id, which should already be in the dictionary
-        self.origin_id = SpicePath.SPICE_TRANSLATION[spice_origin]
+        self.origin_id = SpicePath.TRANSLATION[spice_origin]
 
-        # Fill in the frame_id, which should already be in the SpiceFrame
+        # Fill in the frame_id, which should already be in the SpicePath
         # dictionary
-        self.frame_id = oops.SpiceFrame.SPICE_TRANSLATION[spice_frame]
+        self.frame_id = SpicePath.SPICEFRAME_CLASS.TRANSLATION[spice_frame]
 
         self.shape = []
 
         # Save it in the global dictionary of translations under alternative
         # names
-        SpicePath.SPICE_TRANSLATION[self.spice_target_name] = self.path_id
-        SpicePath.SPICE_TRANSLATION[self.spice_target_id]   = self.path_id
-        SpicePath.SPICE_TRANSLATION[spice_id]               = self.path_id
-        SpicePath.SPICE_TRANSLATION[id]                     = self.path_id
+        SpicePath.TRANSLATION[self.spice_target_name] = self.path_id
+        SpicePath.TRANSLATION[self.spice_target_id]   = self.path_id
+        SpicePath.TRANSLATION[spice_id]               = self.path_id
+        SpicePath.TRANSLATION[id]                     = self.path_id
 
         # Always register a SpicePath
         self.register()
@@ -95,7 +92,7 @@ class SpicePath(oops.Path):
 
         # First see if the path is already registered
         try:
-            path = oops.as_path(SpicePath.SPICE_TRANSLATION[arg])
+            path = registry.as_path(SpicePath.TRANSLATION[arg])
             if path.path_id == "SSB": return ("SSB", 0)
 
             if not isinstance(path, SpicePath):
@@ -134,7 +131,7 @@ class SpicePath(oops.Path):
         """
 
         # A single input time can be handled quickly
-        time = oops.Scalar.as_scalar(time)
+        time = Scalar.as_scalar(time)
         if time.shape == []:
             (state,
              lighttime) = cspice.spkez(self.spice_target_id,
@@ -143,8 +140,8 @@ class SpicePath(oops.Path):
                                        "NONE", # no aberration or light time fix
                                        self.spice_origin_id)
 
-            return oops.Event(time, state[0:3], state[3:6],
-                                    self.origin_id, self.frame_id)
+            return Event(time, state[0:3], state[3:6], self.origin_id,
+                                                       self.frame_id)
 
         # Create the buffers
         state     = np.empty(time.shape + [6])
@@ -152,20 +149,25 @@ class SpicePath(oops.Path):
 
         # Fill in the states and light travel times using CSPICE
         for i,t in np.ndenumerate(time.vals):
-            if np.isnan(t):
-                state[i] = np.nan
-                lighttime[i] = np.nan
-            else:
-                (state[i],
-                 lighttime[i]) = cspice.spkez(self.spice_target_id,
-                                              t,
-                                              self.spice_frame_name,
-                                              "NONE", # no aberration or light time
-                                              self.spice_origin_id)
+            (state[i],
+             lighttime[i]) = cspice.spkez(self.spice_target_id,
+                                          t,
+                                          self.spice_frame_name,
+                                          "NONE", # no aberration or light time
+                                          self.spice_origin_id)
 
         # Convert to an Event and return
-        return oops.Event(time, state[...,0:3], state[...,3:6],
-                                self.origin_id, self.frame_id)
+        return Event(time, state[...,0:3], state[...,3:6], self.origin_id,
+                                                           self.frame_id)
+
+################################################################################
+# Make sure that oops/frame/spice.py is loaded as well
+################################################################################
+
+if SpicePath.SPICEFRAME_CLASS is None:
+    from oops.frame.spiceframe import SpiceFrame
+    SpiceFrame.SPICEPATH_CLASS = SpicePath
+    SpicePath.SPICEFRAME_CLASS = SpiceFrame
 
 ################################################################################
 # UNIT TESTS
@@ -174,18 +176,25 @@ class SpicePath(oops.Path):
 # This is the opportunity to show that all Path and Frame operations produce
 # results that are consistent with the well-tested SPICE toolkit.
 
+import unittest
+
 class Test_SpicePath(unittest.TestCase):
 
     def runTest(self):
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+
+        # Imports are here to avoid conflicts
+        from oops.frame.spiceframe import SpiceFrame
+        import oops.constants as constants
+
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
         sun   = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SSB")
         moon  = SpicePath("MOON", "EARTH")
 
-        self.assertEqual(moon, oops.Path.lookup("MOON"))
-        self.assertEqual(sun, oops.Path.lookup("SUN"))
+        self.assertEqual(moon, registry.lookup("MOON"))
+        self.assertEqual(sun, registry.lookup("SUN"))
 
         # Validate state vectors using event_at_time()
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
@@ -199,7 +208,7 @@ class Test_SpicePath(unittest.TestCase):
         # Check light travel time corrections to/from SSB
         saturn = SpicePath(6, "SSB", id="SATURN")
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
-        ssb_events = oops.as_path("SSB").event_at_time(times)
+        ssb_events = registry.as_path("SSB").event_at_time(times)
 
         (saturn_events, saturn_rel) = saturn.photon_to_event(ssb_events)
         for i in range(len(times)):
@@ -262,7 +271,7 @@ class Test_SpicePath(unittest.TestCase):
 
         ####################################
         # Tests of combined paths but no frame rotation
-        oops.Path.initialize_registry()
+        registry.initialize_registry()
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
 
         sun    = SpicePath("SUN", "SSB")
@@ -270,29 +279,30 @@ class Test_SpicePath(unittest.TestCase):
         moon   = SpicePath("MOON", "EARTH")
         mars   = SpicePath("MARS", "MOON")
         saturn = SpicePath(6, "MOON", id="SATURN")
-        self.assertEqual(oops.Path.lookup("SATURN"), saturn)
+        self.assertEqual(registry.lookup("SATURN"), saturn)
 
-        xsun   = oops.Path.lookup("SUN")
-        xssb   = oops.Path.lookup("SSB")
-        xearth = oops.Path.lookup("EARTH")
-        xmoon  = oops.Path.lookup("MOON")
-        xmars  = oops.Path.lookup("MARS")
-        xsat   = oops.Path.lookup(saturn.path_id)
+        xsun   = registry.lookup("SUN")
+        xssb   = registry.lookup("SSB")
+        xearth = registry.lookup("EARTH")
+        xmoon  = registry.lookup("MOON")
+        xmars  = registry.lookup("MARS")
+        xsat   = registry.lookup(saturn.path_id)
 
-        self.assertEqual(oops.Path.common_ancestry(xsun, xssb),
+        self.assertEqual(Path.common_ancestry(xsun, xssb),
                          ([xsun, xssb], [xssb]))
-        self.assertEqual(oops.Path.common_ancestry(xssb, xsun),
+        self.assertEqual(Path.common_ancestry(xssb, xsun),
                          ([xssb], [xsun, xssb]))
-        self.assertEqual(oops.Path.common_ancestry(xmars, xearth),
+        self.assertEqual(Path.common_ancestry(xmars, xearth),
                          ([xmars, xmoon, xearth], [xearth]))
-        self.assertEqual(oops.Path.common_ancestry(xmars, xsun),
+        self.assertEqual(Path.common_ancestry(xmars, xsun),
                          ([xmars, xmoon, xearth, xssb], [xsun, xssb]))
 
-        path = oops.Path.connect("MARS","SUN")
-        # print oops.Path.str_ancestry(oops.Path.common_ancestry(xmars,xsun))
+        path = registry.connect("MARS","SUN")
+        # print Path.str_ancestry(Path.common_ancestry(xmars,xsun))
         # ([MARS", "MOON", "EARTH", "SSB"], ["SUN", "SSB"])
 
-        events = oops.as_path("MARS").event_at_time(times).wrt_path("SUN")
+        events = registry.as_path("MARS").event_at_time(times).wrt_path(
+                                                                          "SUN")
         self.assertEqual(events.frame_id, "J2000")
         self.assertEqual(events.origin_id, "SUN")
 
@@ -306,13 +316,13 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-14))
 
         # Tests using different frames
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
-        ignore = oops.SpiceFrame("IAU_EARTH", "J2000")
+        ignore = SpiceFrame("IAU_EARTH", "J2000")
         earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
 
-        path = oops.Path.connect("EARTH","SSB", "J2000")
+        path = registry.connect("EARTH","SSB", "J2000")
         events = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(399, times[i], "J2000", "NONE", 0)
@@ -324,20 +334,20 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
         ####################################
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
-        ignore = oops.SpiceFrame("IAU_EARTH", "J2000")
-        ignore = oops.SpiceFrame("IAU_MARS", "IAU_EARTH")
-        ignore = oops.SpiceFrame("IAU_MOON", "IAU_EARTH")
-        ignore = oops.SpiceFrame("B1950", "J2000")
+        ignore = SpiceFrame("IAU_EARTH", "J2000")
+        ignore = SpiceFrame("IAU_MARS", "IAU_EARTH")
+        ignore = SpiceFrame("IAU_MOON", "IAU_EARTH")
+        ignore = SpiceFrame("B1950", "J2000")
 
         earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
         moon   = SpicePath("MOON", "EARTH", "IAU_MOON")
         sun    = SpicePath("SUN", "SSB", "J2000")
         mars   = SpicePath("MARS", "SUN", "J2000")
 
-        path = oops.Path.connect("EARTH", "SSB", "J2000")
+        path = registry.connect("EARTH", "SSB", "J2000")
         events = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(399, times[i], "J2000", "NONE", 0)
@@ -348,7 +358,7 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
-        path = oops.Path.connect("SSB", "EARTH", "IAU_MARS")
+        path = registry.connect("SSB", "EARTH", "IAU_MARS")
         events = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(0, times[i], "IAU_MARS", "NONE", 399)
@@ -359,7 +369,7 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
-        path = oops.Path.connect("EARTH", "SUN", "IAU_EARTH")
+        path = registry.connect("EARTH", "SUN", "IAU_EARTH")
         events = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(399, times[i], "IAU_EARTH", "NONE", 10)
@@ -370,7 +380,7 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
-        path = oops.Path.connect("MOON", "MARS", "IAU_EARTH")
+        path = registry.connect("MOON", "MARS", "IAU_EARTH")
         events = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(301, times[i], "IAU_EARTH", "NONE", 499)
@@ -382,13 +392,13 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
         ####################################
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
-        ignore = oops.SpiceFrame("IAU_MARS", "J2000")
-        ignore = oops.SpiceFrame("IAU_EARTH", "J2000")
-        ignore = oops.SpiceFrame("B1950", "IAU_EARTH")
-        ignore = oops.SpiceFrame("IAU_MOON", "B1950")
+        ignore = SpiceFrame("IAU_MARS", "J2000")
+        ignore = SpiceFrame("IAU_EARTH", "J2000")
+        ignore = SpiceFrame("B1950", "IAU_EARTH")
+        ignore = SpiceFrame("IAU_MOON", "B1950")
 
         sun    = SpicePath("SUN", "SSB", "J2000")
         earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
@@ -396,7 +406,7 @@ class Test_SpicePath(unittest.TestCase):
         mars   = SpicePath("MARS", "MOON", "B1950")
 
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
-        path = oops.Path.connect("MARS","MOON", "IAU_MOON")
+        path = registry.connect("MARS","MOON", "IAU_MOON")
         events = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(499, times[i], "IAU_MOON", "NONE", 301)
@@ -408,14 +418,14 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
         ####################################
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
         sun    = SpicePath("SUN", "SSB")
         earth  = SpicePath("EARTH", "SSB")
         moon   = SpicePath("MOON", "EARTH")
         saturn = SpicePath(6, "SSB", id="SATURN")
-        ssb    = oops.as_path("SSB")
+        ssb    = registry.as_path("SSB")
 
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
 
@@ -462,11 +472,11 @@ class Test_SpicePath(unittest.TestCase):
                                           - saturn_rel.vel[i].vals) < 1.e-3))
 
         # Check light travel time corrections, Saturn wrt Earth, Earth-centered
-        earth_event = oops.Waypoint("EARTH").event_at_time(times)
+        earth_event = Waypoint("EARTH").event_at_time(times)
         self.assertEqual(earth_event.pos, (0.,0.,0.))
         self.assertEqual(earth_event.vel, (0.,0.,0.))
 
-        saturn = oops.Path.connect("SATURN", "EARTH", "J2000")
+        saturn = registry.connect("SATURN", "EARTH", "J2000")
         (saturn_event, saturn_rel) = saturn.photon_to_event(earth_event)
         self.assertEqual(saturn_event.origin_id, "SATURN")
         self.assertEqual(saturn_event.pos, (0.,0.,0.))
@@ -486,7 +496,7 @@ class Test_SpicePath(unittest.TestCase):
 
             self.assertTrue(np.all(np.abs(state[0:3]
                                         - saturn_rel.pos[i].vals) < 1.e-6))
-            self.assertTrue(np.abs(saturn_rel.pos[i].norm()/oops.C +
+            self.assertTrue(np.abs(saturn_rel.pos[i].norm()/constants.C +
                                         + saturn_rel.time[i]) < 1.e-12)
 
             self.assertTrue(np.all(np.abs(state[3:6]
@@ -494,17 +504,17 @@ class Test_SpicePath(unittest.TestCase):
 
         ####################################
         # Rotating frame...
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
         times = np.arange(0., 86401., 8640.)
 
-        ignore = oops.SpiceFrame("IAU_EARTH", "J2000")
+        ignore = SpiceFrame("IAU_EARTH", "J2000")
         earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
         pluto  = SpicePath(9, "SSB", "IAU_EARTH", id="PLUTO")
 
-        pluto = oops.Waypoint("PLUTO","IAU_EARTH")
-        earth_event = oops.Waypoint("EARTH","IAU_EARTH").event_at_time(times)
+        pluto = Waypoint("PLUTO","IAU_EARTH")
+        earth_event = Waypoint("EARTH", "IAU_EARTH").event_at_time(times)
         (pluto_event, pluto_rel) = pluto.photon_to_event(earth_event)
 
         for i in range(len(times)):
@@ -521,20 +531,20 @@ class Test_SpicePath(unittest.TestCase):
 
         ####################################
         # More linked frames...
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
         times = np.arange(0., 864001., 8640.)
 
-        ignore = oops.SpiceFrame("IAU_MARS", "J2000")
-        ignore = oops.SpiceFrame("B1950", "J2000")
-        ignore = oops.SpiceFrame("IAU_EARTH", "B1950")
+        ignore = SpiceFrame("IAU_MARS", "J2000")
+        ignore = SpiceFrame("B1950", "J2000")
+        ignore = SpiceFrame("IAU_EARTH", "B1950")
 
         ignore = SpicePath("MARS", "SSB")
         ignore = SpicePath("EARTH", "MARS", "IAU_MARS")
 
-        mars = oops.Waypoint("MARS", "J2000")
-        earth_event = oops.Waypoint("EARTH","B1950").event_at_time(times)
+        mars = Waypoint("MARS", "J2000")
+        earth_event = Waypoint("EARTH","B1950").event_at_time(times)
         (mars_event, mars_rel) = mars.photon_to_event(earth_event)
 
         for i in range(len(times)):
@@ -555,18 +565,18 @@ class Test_SpicePath(unittest.TestCase):
         ####################################
         # The IAU_EARTH frame works fine on Earth
 
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
         times = np.arange(0., 864001., 86400.)
 
-        ignore = oops.SpiceFrame("IAU_EARTH", "J2000")
+        ignore = SpiceFrame("IAU_EARTH", "J2000")
 
         ignore = SpicePath("EARTH", "SSB", "J2000")
         ignore = SpicePath(9, "SSB", "J2000", id="PLUTO")
 
-        pluto = oops.Waypoint("PLUTO","J2000")
-        earth_event = oops.Waypoint("EARTH","IAU_EARTH").event_at_time(times)
+        pluto = Waypoint("PLUTO","J2000")
+        earth_event = Waypoint("EARTH","IAU_EARTH").event_at_time(times)
         (pluto_event, pluto_rel) = pluto.photon_to_event(earth_event)
 
         for i in range(len(times)):
@@ -587,19 +597,19 @@ class Test_SpicePath(unittest.TestCase):
         ####################################
         # IAU_MARS on Mars
 
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
         times = np.arange(0., 864001., 86400.)
 
-        ignore = oops.SpiceFrame("IAU_MARS", "J2000")
+        ignore = SpiceFrame("IAU_MARS", "J2000")
 
         ignore = SpicePath("EARTH", "SSB", "J2000")
         ignore = SpicePath(4, "SSB", "J2000", id="MARS")
         ignore = SpicePath(9, "SSB", "J2000", id="PLUTO")
 
-        pluto = oops.Waypoint("PLUTO","J2000")
-        earth_event = oops.Waypoint("MARS","IAU_MARS").event_at_time(times)
+        pluto = Waypoint("PLUTO","J2000")
+        earth_event = Waypoint("MARS","IAU_MARS").event_at_time(times)
         (pluto_event, pluto_rel) = pluto.photon_to_event(earth_event)
 
         for i in range(len(times)):
@@ -620,17 +630,17 @@ class Test_SpicePath(unittest.TestCase):
         ####################################
         # Check stellar aberration calculation
 
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
         times = np.arange(0., 365*86400., 86400.)
 
-        ignore = oops.SpiceFrame("IAU_EARTH", "J2000")
+        ignore = SpiceFrame("IAU_EARTH", "J2000")
         earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
         pluto  = SpicePath(9, "SSB", "IAU_EARTH", id="PLUTO")
 
-        pluto = oops.Waypoint("PLUTO","IAU_EARTH")
-        earth_event = oops.Waypoint("EARTH","J2000").event_at_time(times)
+        pluto = Waypoint("PLUTO","IAU_EARTH")
+        earth_event = Waypoint("EARTH","J2000").event_at_time(times)
         (pluto_event, pluto_rel) = pluto.photon_to_event(earth_event)
 
         (ra,dec) = earth_event.ra_and_dec(True).as_scalars()
@@ -643,10 +653,10 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.abs(ra.vals[i] - ra_test) < 1.e-8)
             self.assertTrue(np.abs(dec.vals[i] - dec_test) < 1.e-8)
 
-        oops.Path.initialize_registry()
-        oops.Frame.initialize_registry()
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

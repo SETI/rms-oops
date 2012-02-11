@@ -6,7 +6,7 @@ import unittest
 
 from baseclass  import Test_Format
 from hms        import Test_HMS
-from standard   import Test_Standard
+from pythonfmt  import Test_PythonFmt
 
 ########################################
 if __name__ == '__main__':

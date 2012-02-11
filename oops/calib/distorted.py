@@ -1,16 +1,17 @@
-import numpy as np
-import unittest
-
-import oops
-
 ################################################################################
-# AreaScaling object
+# oops/calib/distorted.py: Subclass Distorted of class Calib
+#
+# 2/8/12 Modified (MRS) - Changed name from AreaScaling; revised for new class
+#   heirarchy.
 ################################################################################
 
-class AreaScaling(oops.Calibration):
-    """An AreaScaling is a Calibration object in which every pixel is multiplied
-    by a constant scale factor, but is also scaled by the distorted area of each
-    pixel in the field of view, to compensate for the fact that larger pixels
+from baseclass import Calibration
+from oops.xarray.all import *
+
+class Distorted(Calibration):
+    """Distorted is a Calibration subclass in which every pixel is multiplied by
+    a constant scale factor, but is also scaled by the distorted area of each
+    pixel in the field of view. This compensates for the fact that larger pixels
     collect more photons.
     """
 
@@ -19,7 +20,7 @@ class AreaScaling(oops.Calibration):
 ########################################################
 
     def __init__(self, name, factor, fov):
-        """Constructor for an AreaScaling.
+        """Constructor for an Distorted Calibration.
 
         Input:
             name        the name of the value returned by the calibration, e.g.,
@@ -51,11 +52,13 @@ class AreaScaling(oops.Calibration):
         return Scalar.as_scalar(value) * (self.fov.area_factor(uv_pair) /
                                           self.factor)
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
 
-class Test_Scaling(unittest.TestCase):
+import unittest
+
+class Test_Distorted(unittest.TestCase):
 
     def runTest(self):
 
@@ -63,7 +66,7 @@ class Test_Scaling(unittest.TestCase):
 
         pass
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

@@ -1,17 +1,18 @@
 ################################################################################
 # Tuple
 #
-# Created 1/12/11 (MRS)
+# Created 1/12/12 (MRS)
+# Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
 ################################################################################
 
 import numpy as np
-import unittest
+import numpy.ma as ma
 
-from oops.broadcastable.Array  import Array
-from oops.broadcastable.Scalar import Scalar
-from oops.broadcastable.Pair   import Pair
+from baseclass import Array
+from scalar    import Scalar
+from pair      import Pair
 
-from oops import utils
+import utils as utils
 
 ################################################################################
 # Tuple
@@ -20,20 +21,36 @@ from oops import utils
 class Tuple(Array):
     """An arbitrary Array of tuples, all of the same length."""
 
-    OOPS_CLASS = "TUPLE"
+    def __init__(self, arg, mask=False, units=None):
 
-    def __init__(self, arg):
+        if mask is not False: mask = np.asarray(mask)
 
-        if isinstance(arg, Array):
-            self.vals = arg.vals
-        else:
-            self.vals = np.asarray(arg)
+        if isinstance(arg, Array) and arg.rank == 1:
+            mask = mask | arg.mask
+            if units is None:
+                units = arg.units
+                arg = arg.vals
+            elif arg.units is not None:
+                arg = arg.units.convert(arg.vals, units)
+            else:
+                arg = arg.vals
 
+        elif isinstance(arg, ma.MaskedArray):
+            if arg.mask != ma.nomask: mask = mask | np.any(arg.mask, axis=-1)
+            arg = arg.data
+
+        self.vals = np.asarray(arg)
         ashape = list(self.vals.shape)
 
         self.rank  = 1
         self.item  = ashape[-1:]
         self.shape = ashape[:-1]
+        self.mask  = mask
+
+        if (self.mask is not False) and (list(self.mask.shape) != self.shape):
+            raise ValueError("mask array is incompatible with Tuple shape")
+
+        self.units = units
 
         return
 
@@ -42,17 +59,22 @@ class Tuple(Array):
         if isinstance(arg, Tuple): return arg
         return Tuple(arg)
 
+    @staticmethod
+    def as_standard(arg):
+        if not isinstance(arg, Tuple): arg = Tuple(arg)
+        return arg.convert_units(None)
+
     def as_scalar(self, axis):
         """Returns a Scalar containing one selected item from each tuple."""
 
-        return Scalar(self.vals[...,axis])
+        return Scalar(self.vals[...,axis], self.mask)
 
     def as_scalars(self):
         """Returns this object as a list of Scalars."""
 
         list = []
         for i in range(self.item[0]):
-            list.append(Scalar(self.vals[...,i]))
+            list.append(Scalar(self.vals[...,i]), self.mask)
 
         return list
 
@@ -60,7 +82,7 @@ class Tuple(Array):
         """Returns a Pair containing two selected items from each Tuple,
         beginning with the selected axis."""
 
-        return Pair(self.vals[...,axis:axis+2])
+        return Pair(self.vals[...,axis:axis+2], self.mask)
 
     @staticmethod
     def from_scalars(*args):
@@ -68,7 +90,14 @@ class Tuple(Array):
         given as arguments.
         """
 
-        return Tuple(np.rollaxis(np.array(args), 0, len(args)))
+        mask = False
+        for arg in args:
+            if isinstance(arg, Scalar):
+                mask = mask | arg.mask
+            if isinstance(arg, ma.MaskedArray) and arg.mask != ma.nomask:
+                mask = mask | arg.mask
+
+        return Tuple(np.rollaxis(np.array(args), 0, len(args)), mask)
 
     @staticmethod
     def cross_scalars(*args):
@@ -131,9 +160,11 @@ class Tuple(Array):
 
         return Tuple(self.vals % 1)
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
+
+import unittest
 
 class Test_Tuple(unittest.TestCase):
 
@@ -172,7 +203,51 @@ class Test_Tuple(unittest.TestCase):
         self.assertTrue(np.all(t.vals[:,3,2,:,1] == 11))
         self.assertTrue(np.all(t.vals[:,:,:,1,2] ==  1))
 
-################################################################################
+        # New tests 2/1/12 (MRS)
+
+        test = Tuple(np.arange(6).reshape(3,2))
+        self.assertEqual(str(test), "Tuple[[0 1]\n [2 3]\n [4 5]]")
+
+        test.mask = np.array([False, False, True])
+        self.assertEqual(str(test),   "Tuple[[0 1]\n [2 3]\n [-- --], mask]")
+        self.assertEqual(str(test*2), "Tuple[[0 2]\n [4 6]\n [-- --], mask]")
+        self.assertEqual(str(test/2), "Tuple[[0 0]\n [1 1]\n [-- --], mask]")
+        self.assertEqual(str(test%2), "Tuple[[0 1]\n [0 1]\n [-- --], mask]")
+
+        self.assertEqual(str(test + (1,0)),
+                         "Tuple[[1 1]\n [3 3]\n [-- --], mask]")
+        self.assertEqual(str(test - (0,1)),
+                         "Tuple[[0 0]\n [2 2]\n [-- --], mask]")
+        self.assertEqual(str(test + test),
+                         "Tuple[[0 2]\n [4 6]\n [-- --], mask]")
+        self.assertEqual(str(test + np.arange(6).reshape(3,2)),
+                         "Tuple[[0 2]\n [4 6]\n [-- --], mask]")
+
+        temp = Tuple(np.arange(6).reshape(3,2), [True, False, False])
+        self.assertEqual(str(test + temp),
+                         "Tuple[[-- --]\n [4 6]\n [-- --], mask]")
+        self.assertEqual(str(test - 2*temp),
+                         "Tuple[[-- --]\n [-2 -3]\n [-- --], mask]")
+        self.assertEqual(str(test * temp),
+                         "Tuple[[-- --]\n [4 9]\n [-- --], mask]")
+        self.assertEqual(str(test / temp),
+                         "Tuple[[-- --]\n [1 1]\n [-- --], mask]")
+        self.assertEqual(str(test % temp),
+                         "Tuple[[-- --]\n [0 0]\n [-- --], mask]")
+        self.assertEqual(str(test / [[2,1],[1,0],[7,0]]),
+                         "Tuple[[0 1]\n [-- --]\n [-- --], mask]")
+        self.assertEqual(str(test % [[2,1],[1,0],[7,0]]),
+                         "Tuple[[0 0]\n [-- --]\n [-- --], mask]")
+
+        temp = Tuple(np.arange(6).reshape(3,2), [True, False, False])
+        self.assertEqual(str(temp),      "Tuple[[-- --]\n [2 3]\n [4 5], mask]")
+        self.assertEqual(str(temp[0]),   "Tuple[-- --, mask]")
+        self.assertEqual(str(temp[1]),   "Tuple[2 3]")
+        self.assertEqual(str(temp[0:2]), "Tuple[[-- --]\n [2 3], mask]")
+        self.assertEqual(str(temp[0:1]), "Tuple[[-- --], mask]")
+        self.assertEqual(str(temp[1:2]), "Tuple[[2 3]]")
+
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

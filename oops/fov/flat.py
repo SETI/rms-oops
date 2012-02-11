@@ -1,16 +1,18 @@
-#!/usr/bin/python
+################################################################################
+# Flat FOV
+#
+# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
+# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+################################################################################
+
 import numpy as np
-import unittest
 
-import oops
+from baseclass import FOV
+from oops.xarray.all import *
 
-################################################################################
-# FlatFOV
-################################################################################
-
-class FlatFOV(oops.FOV):
-    """A FlatFOV object describes a field of view that is free of distortion,
-    implementing an exact pinhole camera model.
+class Flat(FOV):
+    """Flat is a subclass of FOV that describes a field of view that is free of
+    distortion, implementing an exact pinhole camera model.
     """
 
     def __init__(self, uv_scale, uv_shape, uv_los=None):
@@ -19,8 +21,8 @@ class FlatFOV(oops.FOV):
 
         Input:
             uv_scale    a single value, tuple or Pair defining the ratios dx/du
-	                    and dy/dv. For example, if (u,v) are in units of
-	                    arcseconds, then
+                        and dy/dv. For example, if (u,v) are in units of
+                        arcseconds, then
                             uv_scale = Pair((pi/180/3600.,pi/180/3600.))
                         Use the sign of the second element to define the
                         direction of increasing V: negative for up, positive for
@@ -36,31 +38,30 @@ class FlatFOV(oops.FOV):
                         this is the midpoint of the rectangle, i.e, uv_shape/2.
         """
 
-        self.uv_scale = oops.Pair.as_float_pair(uv_scale, duplicate=True)
-        self.uv_shape = oops.Pair.as_pair(uv_shape, duplicate=True)
+        self.uv_scale = Pair.as_float_pair(uv_scale).copy()
+        self.uv_shape = Pair.as_pair(uv_shape).copy()
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = oops.Pair.as_float_pair(uv_los, duplicate=True)
+            self.uv_los = Pair.as_float_pair(uv_los).copy()
 
         self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
 
         scale = self.uv_scale.as_scalars()
-        self.dxy_duv = oops.Pair([[scale[0], 0.],
-                                  [0., scale[1]]])
+        self.dxy_duv = Pair([[scale[0], 0.], [0., scale[1]]])
 
     def xy_from_uv(self, uv_pair):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
         given a Pair of coordinates (u,v)."""
 
-        return (oops.Pair.as_pair(uv_pair) - self.uv_los) * self.uv_scale
+        return (Pair.as_pair(uv_pair) - self.uv_los) * self.uv_scale
 
     def uv_from_xy(self, xy_pair):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
         coordinates in radians."""
 
-        return oops.Pair.as_pair(xy_pair) / self.uv_scale + self.uv_los
+        return Pair.as_pair(xy_pair) / self.uv_scale + self.uv_los
 
     def xy_and_dxy_duv_from_uv(self, uv_pair):
         """Returns a tuple ((x,y), dxy_duv), where the latter is the set of
@@ -72,15 +73,17 @@ class FlatFOV(oops.FOV):
 
         return (self.xy_from_uv(uv_pair), self.dxy_duv)
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
 
-class Test_FlatFOV(unittest.TestCase):
+import unittest
+
+class Test_Flat(unittest.TestCase):
 
     def runTest(self):
 
-        test = FlatFOV((1/2048.,-1/2048.), 101, (50,75))
+        test = Flat((1/2048.,-1/2048.), 101, (50,75))
 
         buffer = np.empty((101,101,2))
         buffer[:,:,0] = np.arange(101).reshape(101,1)
@@ -95,11 +98,11 @@ class Test_FlatFOV(unittest.TestCase):
         self.assertEqual(xy[100,100], ( 50./2048.,-25./2048.))
 
         uv_test = test.uv_from_xy(xy)
-        self.assertEqual(uv_test, oops.Pair(buffer))
+        self.assertEqual(uv_test, Pair(buffer))
 
         self.assertEqual(test.area_factor(buffer), 1.)
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

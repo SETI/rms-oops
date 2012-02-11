@@ -1,14 +1,16 @@
+################################################################################
+# oops/fov/subsampled.py: Subsampled subclass of FOV
+#
+# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
+# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+################################################################################
+
 import numpy as np
-import unittest
 
-import oops
-from oops.fov.FlatFOV import FlatFOV
+from baseclass import FOV
+from oops.xarray.all import *
 
-################################################################################
-# class SubsampledFOV
-################################################################################
-
-class SubsampledFOV(oops.FOV):
+class Subsampled(FOV):
 
     def __init__(self, fov, rescale):
         """Returns a new FOV object in which the pixel size has been modified.
@@ -22,7 +24,7 @@ class SubsampledFOV(oops.FOV):
         """
 
         self.fov = fov
-        self.rescale  = oops.Pair.as_pair(rescale, duplicate=True)
+        self.rescale  = Pair.as_pair(rescale).copy()
         self.rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
 
         # Required fields
@@ -55,21 +57,27 @@ class SubsampledFOV(oops.FOV):
         tuple = self.fov.xy_and_dxy_duv_from_uv(self.rescale * uv_pair)
         return (tuple[0], tuple[1] * self.rescale)
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
 
-class Test_SubsampledFOV(unittest.TestCase):
+import unittest
+
+class Test_Subsampled(unittest.TestCase):
 
     def runTest(self):
+
+        # Imports just required for unit testing
+        from flat       import Flat
+        from subsampled import Subsampled
 
         buffer = np.empty((51,51,2))
         buffer[:,:,0] = np.arange(0,51).reshape(51,1)
         buffer[:,:,1] = np.arange(0,51)
-        uv = oops.Pair(buffer)
+        uv = Pair(buffer)
 
-        flat = FlatFOV((1/2048.,-1/2048.), (0,25))
-        test = SubsampledFOV(flat, 2)
+        flat = Flat((1/2048.,-1/2048.), (0,25))
+        test = Subsampled(flat, 2)
 
         xy = test.xy_from_uv(buffer)
         self.assertEqual(xy[ 0, 0], flat.xy_from_uv((  0,  0)))
@@ -87,7 +95,7 @@ class Test_SubsampledFOV(unittest.TestCase):
 
         self.assertEqual(test.uv_area, 4*flat.uv_area)
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

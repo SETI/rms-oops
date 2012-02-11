@@ -1,12 +1,10 @@
+################################################################################
+# oops/obs/baseclass.py: Abstract class Observation
+#
+# 2/11/12 Modified (MRS) - updated for style
+################################################################################
+
 import numpy as np
-import pylab
-import unittest
-
-import oops
-
-################################################################################
-# Observation Class
-################################################################################
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
@@ -62,8 +60,6 @@ class Observation(object):
                         pointing downward.
     """
 
-    OOPS_CLASS = "Observation"
-
     def __init__(self):
 
         pass
@@ -71,6 +67,8 @@ class Observation(object):
 ########################################
 # UNIT TESTS
 ########################################
+
+import unittest
 
 class Test_Observation(unittest.TestCase):
 

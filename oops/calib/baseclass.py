@@ -1,18 +1,13 @@
-import numpy as np
-import unittest
-
-import oops
-
 ################################################################################
-# Calibration objects
+# oops/calib/baseclass.py: Abstract class Calibration
+#
+# 2/11/12 Modified (MRS) - revised for style
 ################################################################################
 
 class Calibration(object):
-    """A Calibration object defines a relationship between the numeric values in
-    in image array and physical quantities.
+    """Calibration is an abstract class that defines a relationship between the
+    numeric values in in image array and physical quantities.
     """
-
-    OOPS_CLASS = "Calibration"
 
 ########################################################
 # Methods to be defined for each Calibration subclass
@@ -44,9 +39,11 @@ class Calibration(object):
 
         pass
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
+
+import unittest
 
 class Test_Calibration(unittest.TestCase):
 
@@ -56,7 +53,7 @@ class Test_Calibration(unittest.TestCase):
 
         pass
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
