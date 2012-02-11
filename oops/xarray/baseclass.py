@@ -7,12 +7,14 @@
 # Modified 1/2/11 (MRS) -- Refactored Scalar.py to eliminate circular loading
 #   dependencies with Array and Empty classes. Array.py, Scalar.py and Empty.py
 #   are now separate files.
+# Modified 2/8/12 (MRS) -- Supports array masks and units; uses a cleaner set of
+#   definitions for math operators.
 ################################################################################
 
 import numpy as np
-import unittest
+import numpy.ma as ma
 
-import oops.broadcastable
+from oops.units import Units
 
 class Array(object):
     """A class defining an arbitrary Array of possibly multidimensional items.
@@ -23,10 +25,11 @@ class Array(object):
     according to numpy but has shape (2,2) according to Array.
 
     The Array object is designed as a lightweight "wrapper" on the numpy
-    ndarray. All standard mathematical operators and indexing/slicing options
-    are defined. One can mix Array arithmetic with scalars, numpy arrays, or
-    anything array-like. The standard numpy rules of broadcasting apply to
-    operations performed on Arrays of different shapes.
+    ndarray and numpy.ma.MaskedArray. All standard mathematical operators and
+    indexing/slicing options are defined. One can mix Array arithmetic with
+    scalars, numpy arrays, masked arrays, or anything array-like. The standard
+    numpy rules of broadcasting apply to operations performed on Arrays of
+    different shapes.
 
     Array objects have the following attributes:
         shape       a list (not tuple) representing the leading dimensions.
@@ -34,12 +37,55 @@ class Array(object):
                     individual items.
         item        a list (not tuple) representing the shape of the
                     individual items.
-        vals        the array's actual data as a numpy array. The shape of this
-                    array is object.shape + object.item.
+        vals        the array's data as a numpy array. The shape of this array
+                    is object.shape + object.item. It the object has units,
+                    these values are in the specified units.
+        mask        the array's mask as a numpy boolean array. The array value
+                    is True if the Array value at the same location is masked.
+                    A single value of False indicates that the array is not
+                    masked.
+        units       the units of the array, if any. None indicates no units.
+
+        mvals       a read-only property that presents tha vals and the mask as
+                    a masked array.
     """
 
     # A constant, defined for all Array subclasses, overridden by subclass Empty
     IS_EMPTY = False
+
+    SCALAR_CLASS = None         # A reference to the Scalar subclass, filled in
+                                # when that subclass is finished loading
+
+    @property
+    def mvals(self):
+        # Construct something that behaves as a suitable mask
+        if self.mask is False:
+            newmask = ma.nomask
+        elif self.mask is True:
+            newmask = np.ones((len(self.shape) + self.rank) * [1], dtype="bool")
+            (newmask, newvals) = np.broadcast_arrays(newmask, self.vals)
+        elif self.rank > 0:
+            newmask = self.mask.reshape(self.shape + self.rank * [1])
+            (newmask, newvals) = np.broadcast_arrays(newmask, self.vals)
+        else:
+            newmask = self.mask
+
+        # Return the masked array
+        return ma.MaskedArray(self.vals, newmask)
+
+    @staticmethod
+    def is_empty(arg):
+        """Returns True if the arg is of the Empty class. Carefully written to
+        avoid the need to import the Empty subclass."""
+
+        return isinstance(arg, Array) and arg.IS_EMPTY
+
+    @staticmethod
+    def as_scalar(arg):
+        """Calls the function Scalar.as_scalar() using the given argument.
+        Carefully written to avoid a circularity in the load order."""
+
+        return Array.SCALAR_CLASS.as_scalar(arg)
 
     def __new__(subtype, *arguments, **keywords):
         obj = object.__new__(subtype)
@@ -49,21 +95,49 @@ class Array(object):
         """show values of Array or subtype. repr() call returns array at start
             of string, replace with object type, else just prefix entire string
             with object type."""
-        string = repr(self.vals)
-        if string[:5] == "array":
-            return type(self).__name__ + string[5:]
-        else:
-            return type(self).__name__ + "(" + string + ")"
+
+        return self.__str__()
 
     def __str__(self):
         """show values of Array or subtype. repr() call returns array at start
             of string, replace with object type, else just prefix entire string
             with object type."""
-        string = str(self.vals)
-        if string[:5] == "array":
-            return type(self).__name__ + string[5:]
+
+        suffix = ""
+
+        is_masked = np.any(self.mask)
+        if is_masked:
+            suffix += ", mask"
+
+        if self.units is not None:
+            suffix += ", " + str(self.units)
+
+        if np.shape(self.vals) == ():
+            if is_masked:
+                string = "--"
+            else:
+                string = str(self.vals)
+
+        elif is_masked:
+            masked_array = self.vals.view(ma.MaskedArray)
+
+            if self.rank == 0:
+                masked_array.mask = np.asarray(self.mask)
+            else:
+                temp_mask = np.asarray(self.mask)
+                temp_mask = temp_mask.reshape(temp_mask.shape +
+                                              self.rank * (1,))
+                masked_array.mask = np.empty(self.vals.shape, dtype="bool")
+                masked_array.mask[...] = temp_mask
+
+            string = str(masked_array)
         else:
-            return type(self).__name__ + "(" + string + ")"
+            string = str(self.vals)
+
+        if string[0] == "[":
+            return type(self).__name__ + string[:-1] + suffix + "]"
+        else:
+            return type(self).__name__ + "(" + string + suffix + ")"
 
     ####################################
     # Indexing operators
@@ -73,550 +147,514 @@ class Array(object):
         """returns the item value at a specific index. copies data to new
             location in memory. if self has no items, i.e. - no shape in the
             object-sense, then raise IndexError. called from x = obj[i]"""
-        if self.shape == []: raise IndexError("too many indices")
 
-        if np.size(self.vals[i]) == 1: return self.vals[i]
+        # Get the value and mask
+        vals = self.vals[i]
 
+        if np.shape(self.mask) == ():
+            mask = self.mask
+        else:
+            mask = self.mask[i]
+
+        # Make sure we have not penetrated the components of a 1-D or 2-D item
+        icount = 1
+        if type(i) == type(()): icount = len(i)
+        if icount > len(self.shape): raise IndexError("too many indices")
+
+        # If the result is a single, unmasked, unitless value, return it as a
+        # number
+        if np.shape(vals) == () and not np.any(mask) and self.units is None:
+            return vals
+
+        # Construct the object and return it
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals[i])
+        obj.__init__(vals, mask, self.units)
+        return obj
+
+    def __getslice__(self, i, j):
+        """returns slice of items. copies data to new location in memory. if
+            self has no items, i.e. - no shape in the object-sense, then raise
+            IndexError. called from x = obj[i:j]."""
+
+        # Get the values and mask
+        vals = self.vals[i:j]
+
+        if np.shape(self.mask) == ():
+            mask = self.mask
+        else:
+            mask = self.mask[i:j]
+
+        # Make sure we have not penetrated the components of a 1-D or 2-D item
+        icount = 1
+        if type(i) == type(()): icount = len(i)
+        if icount > len(self.shape): raise IndexError("too many indices")
+
+        # If the result is a single, unmasked, unitless value, return it as a
+        # number
+        if np.shape(vals) == () and not np.any(mask) and self.units is None:
+            return vals
+
+        # Construct the object and return it
+        obj = Array.__new__(type(self))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def __setitem__(self, i, arg):
         """sets the item value at a specific index. if self has no items,
             i.e. - no shape in the object-sense, then raise IndexError. called
             from obj[i] = arg."""
-        if self.shape == []: raise IndexError("too many indices")
 
-        if isinstance(arg, Array): arg = arg.vals
-        self.vals[i] = arg
+        # Get the values and mask after converting arg to the same subclass
+        (vals, mask, new_units) = self.get_array_mask_unit("[]", arg)
+
+        # Replace the value(s)
+        self.vals[i] = vals
+
+        # If the mask is already an array, replace the mask value
+        if np.shape(self.mask) != ():
+            self.mask[i] = mask
+
+        # Otherwise, if the mask values disagree...
+        elif np.any(self.mask != mask):
+
+            # Replace the mask with a boolean array, then fill in the new mask
+            newmask = np.empty(self.shape, dtype="bool")
+            newmask[...] = self.mask
+            newmask[i] = mask
+            self.mask = newmask
+
         return self
-
-    def __getslice__(self, i, j):
-        """returns slice of items. copies data to new location in memory. if
-            self has no items, i.e. - no shape in the object-sense, then raise
-            IndexError. called from x = obj[i:j]."""
-        if self.shape == []: raise IndexError("too many indices")
-
-        obj = Array.__new__(type(self))
-        obj.__init__(self.vals[i:j])
-        return obj
 
     def __setslice__(self, i, j, arg):
         """sets slice of items' values to values of arg. if self has no items,
             i.e. - no shape in the object-sense, then raise IndexError. called
             from obj[i:j] = arg."""
-        if self.shape == []: raise IndexError("too many indices")
 
-        if isinstance(arg, Array): arg = arg.vals
-        self.vals[i:j] = arg
+        # Get the values and mask after converting arg to the same subclass
+        (vals, mask, new_units) = self.get_array_mask_unit("[]", arg)
+
+        # Replace the value(s)
+        self.vals[i:j] = vals
+
+        # If the mask is already an array, replace the mask value
+        if np.shape(self.mask) != ():
+            self.mask[i:j] = mask
+
+        # Otherwise, if the mask values disagree...
+        elif np.any(self.mask != mask):
+
+            # Replace the mask with a boolean array, then fill in the new mask
+            newmask = np.empty(self.shape, dtype="bool")
+            newmask[...] = self.mask
+            newmask[i:j] = mask
+            self.mask = newmask
+
         return self
 
-    ####################################
-    # Unary arithmetic operators
-    ####################################
+    ####################################################
+    # Default unary arithmetic operators
+    ####################################################
 
-    def __pos__(self): return self
+    def __pos__(self):
+        return self
 
     def __neg__(self):
-        """returns newly created instance of object with values equal to self
-            except the negative. called from x = -obj."""
         obj = Array.__new__(type(self))
-        obj.__init__(-self.vals)
+        obj.__init__(-self.vals, self.mask, self.units)
         return obj
 
-    def __nonzero__(self):
-        """returns true if all values of each item are non-zero, else false.
-            called from if(obj != 0) of if(boj)."""
-        return bool(np.all(self.vals))
+    def __abs__(self):
+        obj = Array.__new__(type(self))
+        obj.__init__(np.abs(self.vals), self.mask, self.units)
+        return obj
 
-    ####################################
+    ####################################################
+    # Arithmetic support methods
+    ####################################################
+
+    def get_array_mask_unit(self, op, arg):
+        """This method converts the right operand to the same Array subclass
+        as self, and then returns the array, mask, and new units, if any."""
+
+        abbrev = op[0]
+
+        # Addition, subtraction and replacement
+        if abbrev in ("+", "-", "["):
+
+            # Convert to the same subclass if necessary
+            if not isinstance(arg, type(self)):
+                obj = Array.__new__(type(self))
+                obj.__init__(arg)
+                arg = obj
+
+            arg_vals = arg.vals
+
+            # Find the common units
+            if self.units is None:
+                new_units = arg.units
+            elif arg.units is None:
+                new_units = self.units
+            elif arg.units.exponents == self.units.exponents:
+                new_units = self.units
+                arg_vals = arg.units.convert(arg_vals, self.units)
+            else:
+                # If the units are incompatible, raise an error
+                raise raise_unit_mismatch(self, op, arg_units)
+
+            return (arg_vals, arg.mask, new_units)
+
+        # Multiplication, division and modulus
+
+        # If the second operand is a unit...
+        if isinstance(arg, Units):
+            arg_vals = 1
+            arg_mask = False
+            arg_units = arg
+            
+        # If it's the same subclass...
+        elif isinstance(arg, type(self)):
+            arg_vals = arg.vals
+            arg_mask = arg.mask
+            arg_units = arg.units
+
+        else:
+            # Try casting to the same subclass...
+            try:
+                obj = Array.__new__(type(self))
+                obj.__init__(arg)
+                arg_vals = obj.vals
+                arg_mask = obj.mask
+                arg_units = obj.units
+            except:
+                # On failure, try casting to a Scalar
+                try:
+                    arg = Array.as_scalar(arg)
+                except:
+                    # On failure, raise the previous error
+                    obj = Array.__new__(type(self))
+                    obj.__init__(arg)
+
+                # Reshape the scalar for compatibility with self.vals
+                arg_vals = np.reshape(arg.vals, np.shape(arg.vals) +
+                                                self.rank * (1,))
+                arg_mask = arg.mask
+                arg_units = arg.units
+
+        # Find the resulting units
+        if self.units is None:
+            if arg_units is None:
+                new_units = None
+            elif abbrev == "*":
+                new_units = arg_units
+            else:
+                new_units = arg_unit**(-1)
+        else:
+            if arg_units is None:
+                new_units = self.units
+            elif abbrev == "*":
+                new_units = self.units * arg_units
+            else:
+                new_units = self.units / arg_units
+
+        return (arg_vals, arg_mask, new_units)
+
+    def raise_type_mismatch(self, op, arg):
+        """Raises a ValueError with text indicating that the operand types are
+        unsupported."""
+
+        raise ValueError("unsupported operand types for '" + op +
+                         "': '"    + type(self).__name__ +
+                         "' and '" + type(arg).__name__  + "'")
+
+    def raise_shape_mismatch(self, op, vals):
+        """Raises a ValueError with text indicating that the operand shapes are
+        incompatible."""
+
+        raise ValueError("incompatible operand shapes for '" + op +
+                         "': "   + str(tuple(self.shape)) +
+                         " and " + str(np.shape(vals)))
+
+    def raise_unit_mismatch(self, op, units):
+        """Raises a ValueError with text indicating that the operand units are
+        incompatible."""
+
+        self_units = self.units
+        if self_units is None: self_units = Units.UNITLESS
+
+        if units is None: units = Units.UNITLESS
+
+        raise ValueError("incompatible units for '" + op +
+                         "': "   + str(self_units) +
+                         " and " + str(units))
+
+    ####################################################
     # Default binary arithmetic operators
-    ####################################
+    ####################################################
 
     def __add__(self, arg):
-        """returns newly created instance of same type as self, adding self and
-            arg together. returns object of class Empty if either object is of
-            class Empty. raises type mismatch error if objects are of different
-            types, and item mismatch if objects have different shape. for
-            optimal performance, immediately add object elements together and
-            return if of same type, else convert second operand to np array and
-            then add elements. called from x = obj + arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   Array with elements of self + arg elements.
-            """
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
+        if Array.is_empty(arg): return arg
+
+        (vals, mask, new_units) = self.get_array_mask_unit("+", arg)
+
+        try:
             obj = Array.__new__(type(self))
-            obj.__init__(self.vals + arg.vals)
+            obj.__init__(self.vals + vals, self.mask | mask, new_units)
             return obj
-
-        # If the operands are of different Array subclasses...
-        if isinstance(arg, Array):
-
-            # Any operation with Empty returns Empty
-            if self.IS_EMPTY: return self
-            if arg.IS_EMPTY: return arg
-
-            # Otherwise, raise a TypeError
-            self.raise_type_mismatch("+", arg)
-
-        # Convert the second operand to numpy ndarray if necessary
-        arg = np.asarray(arg)
-
-        # If the item shapes do not match, raise a ValueError
-        if self.rank > 0:
-            if (len(arg.shape) < self.rank or
-                arg.shape[-self.rank:] != tuple(self.item)):
-                    self.raise_item_mismatch("+", arg)
-
-        # Operate element-by-element
-        obj = Array.__new__(type(self))
-        obj.__init__(self.vals + arg)
-        return obj
+        except:
+            self.raise_shape_mismatch("+", obj.vals)
 
     def __sub__(self, arg):
-        """returns newly created instance of same type as self, subtracting arg
-            (second operand) from self (first operand). returns object of class
-            Empty if either object is ofclass Empty. raises type mismatch error
-            if objects are of different types, and item mismatch if objects have
-            different shape. for optimal performance, immediately subtract arg
-            elements from self elements and return if of same type, else convert
-            second operand to np array and then subtract arg elements from self
-            elements. called from x = obj - arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   Array with elements of self - arg elements.
-            """
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
+        if Array.is_empty(arg): return arg
+
+        (vals, mask, new_units) = self.get_array_mask_unit("-", arg)
+
+        try:
             obj = Array.__new__(type(self))
-            obj.__init__(self.vals - arg.vals)
+            obj.__init__(self.vals - vals, self.mask | mask, new_units)
             return obj
-
-        # If the operands are of different Array subclasses...
-        if isinstance(arg, Array):
-
-            # Any operation with Empty returns Empty
-            if self.IS_EMPTY: return self
-            if arg.IS_EMPTY: return arg
-
-            # Otherwise, raise a TypeError
-            self.raise_type_mismatch("-", arg)
-
-        # Convert the second operand to numpy ndarray if necessary
-        arg = np.asarray(arg)
-
-        # If the item shapes do not match, raise a ValueError
-        if self.rank > 0:
-            if (len(arg.shape) < self.rank or
-                arg.shape[-self.rank:] != tuple(self.item)):
-                    self.raise_item_mismatch("-", arg)
-
-        # Operate element-by-element
-        obj = Array.__new__(type(self))
-        obj.__init__(self.vals - arg)
-        return obj
+        except:
+            self.raise_shape_mismatch("-", obj.vals)
 
     def __mul__(self, arg):
-        """returns newly created instance of same type as self, multiplying
-            elements of self (first operand) with elements of arg (second
-            operand). called from x = obj * arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   Array with elements of self * arg elements.
-            """
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
+        if Array.is_empty(arg): return arg
+
+        (vals, mask, new_units) = self.get_array_mask_unit("*", arg)
+
+        try:
             obj = Array.__new__(type(self))
-            obj.__init__(self.vals * arg.vals)
+            obj.__init__(self.vals * vals, self.mask | mask, new_units)
             return obj
+        except:
+            self.raise_shape_mismatch("*", obj.vals)
 
-        # If the operands are of different Array subclasses...
-        if isinstance(arg, Array):
-
-            # Any operation with Empty returns Empty
-            if self.IS_EMPTY: return self
-            if arg.IS_EMPTY: return arg
-
-            # For the special case of (1-D * 0-D), scale the first operand
-            if self.rank == 1 and arg.rank == 0:
-                obj = Array.__new__(type(self))
-                obj.__init__(self.vals * np.asarray(arg.vals)[..., np.newaxis])
-                return obj
-
-            # For the special case of (0-D * 1-D), scale the second operand
-            if self.rank == 0 and arg.rank == 1:
-                obj = Array.__new__(type(arg))
-                obj.__init__(arg.vals * np.asarray(self.vals)[..., np.newaxis])
-                return obj
-
-            # Otherwise, raise a TypeError
-            self.raise_type_mismatch("*", arg)
-
-        # If the second operand is array-like, handle 0-D and 1-D operations...
-        if self.rank <= 1:
-
-            # Convert it to a numpy ndarray if necessary
-            arg = np.asarray(arg)
-
-            # If the arg does not match the shape of a 1-D item, add an axis.
-            # This causes an item-by-item operation to occur for matching items,
-            # but an overall scale factor to be applied otherwise.
-            if (self.rank == 1 and arg.shape != ()
-                               and self.item[0] != arg.shape[-1]):
-                arg = arg[..., np.newaxis]
-
-            obj = Array.__new__(type(self))
-            obj.__init__(self.vals * arg)
-            return obj
-
-        # No other operations are supported by default, so raise a ValueError
-        self.raise_type_mismatch("*", arg)
+    # Scalar * Array is the same as Array * Scalar; Python will select
+    # whichever one works
+    def __rmul__(self, arg):
+        return self.__mul__(arg)
 
     def __div__(self, arg):
-        """returns newly created instance of same type as self, dividing
-            elements of self (first operand) by elements of arg (second
-            operand). called from x = obj / arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   Array with elements of self / arg elements.
-            """
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
+        if Array.is_empty(arg): return arg
+
+        (vals, mask, new_units) = self.get_array_mask_unit("/", arg)
+
+        # Mask any items divided by zero
+        div_by_zero = (vals == 0)
+        if np.any(div_by_zero):
+
+            # Prevent any warning
+            vals[div_by_zero] = 1
+
+            # Collapse rightmost mask axes based on rank of object
+            for i in range(self.rank):
+                div_by_zero = np.any(div_by_zero, axis=-1)
+
+        else:
+            # Avoid converting a scalar mask to an array unless necessary
+            div_by_zero = False
+
+        try:
             obj = Array.__new__(type(self))
-            obj.__init__(self.vals / arg.vals)
+            obj.__init__(self.vals / vals,
+                         self.mask | mask | div_by_zero, new_units)
             return obj
+        except:
+            self.raise_shape_mismatch("/", obj.vals)
 
-        # If the operands are of different Array subclasses...
-        if isinstance(arg, Array):
+    def __mod__(self, arg):
+        if Array.is_empty(arg): return arg
 
-            # Any operation with Empty returns Empty
-            if self.IS_EMPTY: return self
-            if arg.IS_EMPTY: return arg
+        (vals, mask, new_units) = self.get_array_mask_unit("%", arg)
 
-            # For the special case of (1-D / 0-D), scale the first operand
-            if self.rank == 1 and arg.rank == 0:
-                obj = Array.__new__(type(self))
-                obj.__init__(self.vals / np.asarray(arg.vals)[..., np.newaxis])
-                return obj
+        # Mask any items divided by zero
+        div_by_zero = (vals == 0)
+        if np.any(div_by_zero):
 
-            # Otherwise, raise a TypeError
-            self.raise_type_mismatch("/", arg)
+            # Prevent any warning
+            vals[div_by_zero] = 1
 
-        # If the second operand is array-like, handle 0-D and 1-D operations...
-        if self.rank <= 1:
+            # Collapse rightmost mask axes based on rank of object
+            for i in range(self.rank):
+                div_by_zero = np.any(div_by_zero, axis=-1)
 
-            # Convert it to a numpy ndarray if necessary
-            arg = np.asarray(arg)
+        else:
+            # Avoid converting a scalar mask to an array unless necessary
+            div_by_zero = False
 
-            # If the arg does not match the shape of a 1-D item, add an axis.
-            # This causes an item-by-item operation to occur for matching items,
-            # but an overall scale factor to be applied otherwise.
-            if (self.rank == 1 and arg.shape != ()
-                               and self.item[0] != arg.shape[-1]):
-                arg = arg[..., np.newaxis]
-
+        try:
             obj = Array.__new__(type(self))
-            obj.__init__(self.vals / arg)
+            obj.__init__(self.vals % vals,
+                         self.mask | mask | div_by_zero, new_units)
             return obj
+        except:
+            self.raise_shape_mismatch("%", obj.vals)
 
-        # No other operations are supported by default, so raise a ValueError
-        self.raise_type_mismatch("/", arg)
-
-    ####################################
-    # Default arithmetic-in-place operators
-    ####################################
+    ####################################################
+    # Default in-place binary arithmetic operators
+    ####################################################
 
     def __iadd__(self, arg):
-        """add arg to self and return self. raises type mismatch error if
-            objects are of different types, and item mismatch if objects have
-            different shape. for optimal performance, immediately add object
-            elements of arg to those of self and return if of same type, else
-            convert second operand to np array and then add elements. called
-            from self += arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   self.  Operates on left operand.
-            """
 
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
-            self.vals += arg.vals
+        (vals, mask, new_units) = self.get_array_mask_unit("+=", arg)
+
+        try:
+            self.vals += vals
+            self.mask |= mask
+            self.units = new_units
             return self
-
-        # If the operands are of different Array subclasses, raise a TypeError
-        if isinstance(arg, Array): self.raise_type_mismatch("+=", arg)
-
-        # Convert the second operand to numpy ndarray if necessary
-        arg = np.asarray(arg)
-
-        # If the item shapes do not match, raise a ValueError
-        if self.rank > 0:
-            if (len(arg.shape) < self.rank or
-                arg.shape[-self.rank:] != tuple(self.item)):
-                    self.raise_item_mismatch("+=", arg)
-
-        # Operate element-by-element
-        self.vals += arg
-        return self
+        except:
+            self.raise_shape_mismatch("+=", vals)
 
     def __isub__(self, arg):
-        """subtract arg from self and return self. raises type mismatch error if
-            objects are of different types, and item mismatch if objects have
-            different shape. for optimal performance, immediately subtract
-            object elements of arg from that of self and return if of same type,
-            else convert second operand to np array and then subtract elements.
-            called from self -= arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   self.  Operates on left operand.
-            """
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
-            self.vals -= arg.vals
+
+        (vals, mask, new_units) = self.get_array_mask_unit("-=", arg)
+
+        try:
+            self.vals -= vals
+            self.mask |= mask
+            self.units = new_units
             return self
-
-        # If the operands are of different Array subclasses, raise a TypeError
-        if isinstance(arg, Array): self.raise_type_mismatch("-=", arg)
-
-        # Convert the second operand to numpy ndarray if necessary
-        arg = np.asarray(arg)
-
-        # If the item shapes do not match, raise a ValueError
-        if self.rank > 0:
-            if (len(arg.shape) < self.rank or
-                arg.shape[-self.rank:] != tuple(self.item)):
-                    self.raise_item_mismatch("-=", arg)
-
-        # Operate element-by-element
-        self.vals -= arg
-        return self
+        except:
+            self.raise_shape_mismatch("-=", vals)
 
     def __imul__(self, arg):
-        """multiply arg with self and return self. raises type mismatch error if
-            objects are of different types, and item mismatch if objects have
-            different shape. for optimal performance, immediately multiply
-            object elements of arg to those of self and return if of same type,
-            else convert second operand to np array and then multiply elements.
-            called from self *= arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   self.  Operates on left operand.
-            """
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
-            self.vals *= arg.vals
+
+        (vals, mask, new_units) = self.get_array_mask_unit("*=", arg)
+
+        try:
+            self.vals *= vals
+            self.mask |= mask
+            self.units = new_units
             return self
-
-        # If the operands are of different Array subclasses...
-        if isinstance(arg, Array):
-
-            # For the special case of (1-D * 0-D), scale the first operand
-            if self.rank == 1 and arg.rank == 0:
-                self.vals *= np.asarray(arg.vals)[..., np.newaxis]
-                return self
-
-            # Otherwise, raise a ValueError
-            self.raise_type_mismatch("*=", arg)
-
-        # If the second operand is array-like, scale a 0-D or 1-D subclass
-        if self.rank == 0:
-            self.vals *= np.asarray(arg)
-            return self
-
-        if self.rank == 1:
-            arg = np.asarray(arg)
-            if arg.shape != () and self.item[0] != arg.shape[-1]:
-                arg = arg[..., np.newaxis]
-
-            self.vals *= arg
-            return self
-
-        # No other operations are supported by default, so raise a ValueError
-        self.raise_type_mismatch("*=", arg)
+        except:
+            self.raise_shape_mismatch("*=", vals)
 
     def __idiv__(self, arg):
-        """divide self by arg and return self. raises type mismatch error if
-            objects are of different types, and item mismatch if objects have
-            different shape. for optimal performance, immediately divide
-            object elements of arg by those of self and return if of same type,
-            else convert second operand to np array and then divide elements.
-            called from self /= arg.
-            
-            Input:
-            self      left operand.
-            arg       right operand.
-            
-            Return:   self.  Operates on left operand.
-            """
-        # If the operands are of the same subclass, operate element-by-element
-        if isinstance(arg, type(self)):
-            self.vals /= arg.vals
+
+        (vals, mask, new_units) = self.get_array_mask_unit("/=", arg)
+
+        div_by_zero = np.any(vals == 0, axis=-1)
+        if not np.any(div_by_zero):
+            div_by_zero = False
+
+        try:
+            self.vals /= vals
+            self.mask |= (mask | div_by_zero)
+            self.units = new_units
             return self
+        except:
+            self.raise_shape_mismatch("/=", vals)
 
-        # If the operands are of different Array subclasses...
-        if isinstance(arg, Array):
+    def __imod__(self, arg):
 
-            # For the special case of (1-D / 0-D), scale the first operand
-            if self.rank == 1 and arg.rank == 0:
-                self.vals /= np.asarray(arg.vals)[..., np.newaxis]
-                return self
+        (vals, mask, new_units) = self.get_array_mask_unit("%=", arg)
 
-            # Otherwise, raise a ValueError
-            self.raise_type_mismatch("*=", arg)
+        div_by_zero = np.any(vals == 0, axis=-1)
+        if not np.any(div_by_zero):
+            div_by_zero = False
 
-        # If the second operand is array-like, scale a 0-D or 1-D subclass
-        if self.rank == 0:
-            self.vals /= np.asarray(arg)
+        try:
+            self.vals %= vals
+            self.mask |= (mask | div_by_zero)
+            self.units = new_units
             return self
-
-        if self.rank == 1:
-            arg = np.asarray(arg)
-            if arg.shape != () and self.item[0] != arg.shape[-1]:
-                arg = arg[..., np.newaxis]
-
-            self.vals /= arg
-            return self
-
-        # No other operations are supported by default, so raise a ValueError
-        self.raise_type_mismatch("/=", arg)
+        except:
+            self.raise_shape_mismatch("%=", vals)
 
     ####################################
     # Default comparison operators
     ####################################
 
     def __eq__(self, arg):
-        """return list of bools describing whether each item within list has all
-            equal elements. if arguments are not of same instance, convert to
-            nparray and test each element. if we do not have sufficient size in
-            arg to test all elements of at least one item of self, or shape of
-            elemnts in trailing dimensions of arg do not have identical shape to
-            that of items in self, then return false. called by (self == arg).
-            
-            Input:
-            self        left operand
-            arg         right operand
-            
-            Return:     list of bools indicating equivalence of items.
-            """
 
-        # If self is a subclass of arg, reverse
-        if issubclass(type(self), type(arg)) and type(self) != type(arg):
-            return arg.__eq__(self)
+        # If the subclasses cannot be unified, the objects are unequal
+        if not isinstance(arg, type(self)):
+            try:
+                obj = Array.__new__(type(self))
+                obj.__init__(arg)
+                arg = obj
+            except:
+                return False
 
-        # If second operand has the same subclass, operate item-by-item
-        if isinstance(arg, type(self)):
+        # If the units are incompatible, the objects are unequal
+        # If units are compatible, convert to the same units
+        if self.units is not None and arg.units is not None:
+            if self.units.exponents != arg.units.exponents: return False
+            arg = arg.convert_units(self.units)
+        else:
+            if self.units != arg.units: return False
 
-            # First operate element-by-element
-            bools = (self.vals == arg.vals)
+        # The comparison is easy if the shape is []
+        if np.shape(self.vals) == () and np.shape(arg.vals) == ():
+            if self.mask and arg.mask: return True
+            if self.mask != arg.mask: return False
+            return self.vals == arg.vals
 
-            # Collapse rightmost axes depending on rank
-            for iter in range(self.rank):
-                bools = np.all(bools, axis=-1)      # equal if all are equal
+        # Compare the values
+        compare = (self.vals == arg.vals)
 
-            # Return as scalar
-            return oops.broadcastable.Scalar.Scalar(bools)
+        # Collapse the rightmost axes based on rank
+        for i in range(self.rank):
+            compare = np.all(compare, axis=-1)
 
-        # If second operand is a different Array subclass, objects are not equal
-        if isinstance(arg, Array): return False
+        # Quick test: If both masks are empty, just return the comparison
+        if (not np.any(self.mask) and not np.any(arg.mask)):
+            return Array.as_scalar(compare)
 
-        # Convert to numpy ndarray if necessary
-        arg = np.asarray(arg)
-
-        # Make sure item shapes match; unequal on mismatch
-        if self.rank > 0:
-            if (len(arg.shape) < self.rank or
-                arg.shape[-self.rank:] != tuple(self.item)):
-                    return False
-
-        # Operate item-by-item
-        bools = (self.vals == arg)
-
-        # Collapse rightmost axes depending on rank
-        for iter in range(self.rank):
-            bools = np.all(bools, axis=-1)
-
-        # Return as scalar
-        return oops.broadcastable.Scalar.Scalar(bools)
+        # Otherwise, perform the detailed comparison
+        compare[self.mask & arg.mask] = True
+        compare[self.mask ^ arg.mask] = False
+        return Array.as_scalar(compare)
 
     def __ne__(self, arg):
-        """return list of bools describing whether each item within list has any
-            unequal elements. if arguments are not of same instance, convert to
-            nparray and test each element. if we do not have sufficient size in
-            arg to test all elements of at least one item of self, or shape of
-            elemnts in trailing dimensions of arg do not have identical shape to
-            that of items in self, then return true. called by (self != arg).
-            
-            Input:
-            self        left operand
-            arg         right operand
-            
-            Return:     list of bools indicating unequivalence of items.
-            """
 
-        # If self is a subclass of arg, reverse
-        if issubclass(type(self), type(arg)) and type(self) != type(arg):
-            return arg.__eq__(self)
+        # If the subclasses cannot be unified, the objects are unequal
+        if not isinstance(arg, type(self)):
+            try:
+                obj = Array.__new__(type(self))
+                obj.__init__(arg)
+                arg = obj
+            except:
+                return True
 
-        # If second operand has the same subclass, operate item-by-item
-        if isinstance(arg, type(self)):
+        # If the units are incompatible, the objects are unequal
+        # If units are compatible, convert to the same units
+        if self.units is not None and arg.units is not None:
+            if self.units.exponents != arg.units.exponents: return True
+            arg = arg.convert_units(self.units)
+        else:
+            if self.units != arg.units: return False
 
-            # First operate element-by-element
-            bools = (self.vals != arg.vals)
+        # The comparison is easy if the shape is []
+        if np.shape(self.vals) == () and np.shape(arg.vals) == ():
+            if self.mask and arg.mask: return False
+            if self.mask != arg.mask: return True
+            return self.vals != arg.vals
 
-            # Collapse rightmost axes depending on rank
-            for iter in range(self.rank):
-                bools = np.any(bools, axis=-1)  # unequal if any are unequal
+        # Compare the values
+        compare = (self.vals != arg.vals)
 
-            # Return as scalar
-            return oops.broadcastable.Scalar.Scalar(bools)
+        # Collapse the rightmost axes based on rank
+        for i in range(self.rank):
+            compare = np.any(compare, axis=-1)
 
-        # If second operand is a different Array subclass, objects are not equal
-        if isinstance(arg, Array): return True
+        # Quick test: If both masks are empty, just return the comparison
+        if (not np.any(self.mask) and not np.any(arg.mask)):
+            return Array.as_scalar(compare)
 
-        # Convert to numpy ndarray if necessary
-        arg = np.asarray(arg)
+        # Otherwise, perform the detailed comparison
+        compare[self.mask & arg.mask] = False
+        compare[self.mask ^ arg.mask] = True
+        return Array.as_scalar(compare)
 
-        # Make sure item shapes match; unequal on mismatch
-        if self.rank > 0:
-            if (len(arg.shape) < self.rank or
-                arg.shape[-self.rank:] != tuple(self.item)):
-                    return True
+    def __nonzero__(self):
+        """This is the test performed by an if clause."""
 
-        # Operate item-by-item
-        bools = (self.vals != arg)
-
-        # Collapse rightmost axes depending on rank
-        for iter in range(self.rank):
-            bools = np.any(bools, axis=-1)  # unequal if any are unequal
-
-        # Return as scalar
-        return oops.broadcastable.Scalar.Scalar(bools)
+        if self.mask is False:
+            return bool(np.all(self.vals))
+        return bool(np.all(self.vals[~self.mask]))
 
     ####################################
-    # Miscellaneous functions
+    # Value Transformations
     ####################################
 
     def __copy__(self):
@@ -627,12 +665,18 @@ class Array(object):
             
             Return:     a new instance of type Array.
             """
-        obj = Array.__new__(type(self))
         if isinstance(self.vals, np.ndarray):
-            obj.__init__(self.vals.copy())
+            vals = self.vals.copy()
         else:
-            obj.__init__(self.vals)
+            vals = self.vals
 
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.copy()
+        else:
+            mask = self.mask
+
+        obj = Array.__new__(type(self))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def copy(self): return self.__copy__()
@@ -646,16 +690,76 @@ class Array(object):
             
             Return:     new instance of Array with converted elements.
             """
-        obj = Array.__new__(type(self))
 
         if isinstance(self.vals, np.ndarray):
             if self.vals.dtype == dtype: return self
-            obj.__init__(self.vals.astype(dtype))
+            vals = self.vals.astype(dtype)
         else:
-            value = np.array([self.vals], dtype=dtype)
-            obj.__init__(value[0])
+            vals = np.array([self.vals], dtype=dtype)[0]
+
+        obj = Array.__new__(type(self))
+        obj.__init__(vals, self.mask, self.units)
+        return obj
+
+    ####################################
+    # Unit conversions
+    ####################################
+    # Note that these three methods have slightly different methods for how to
+    # handle units of None.
+
+    def convert_units(self, units):
+        """Returns the same Array but with the given target units. If the Array
+        does not have any units, its units are assumed to be standard units
+        of km, seconds and radians, which are converted to the target units."""
+
+        if self.units == units: return self
+
+        obj = Array.__new__(type(self))
+
+        if units is None:
+            obj.__init__(self.units.to_standard(self.vals), self.mask, None)
+        elif self.units is None:
+            obj.__init__(units.to_units(self.vals), self.mask, units)
+        else:
+            obj.__init__(self.units.convert(self.vals, units), self.mask, units)
 
         return obj
+
+    def attach_units(self, units):
+        """Returns the same Array but with the given target units. If the Array
+        does not have any units, the units are assumed to be itarget units
+        already and the values are returned unchanged. Arrays with different
+        units are converted to the target units."""
+
+        if self.units == units: return self
+
+        obj = Array.__new__(type(self))
+
+        if self.units is None or units is None:
+            obj.__init__(self.vals, self.mask, units)
+        else:
+            obj.__init__(self.units.convert(self.vals, units), self.mask, units)
+
+        return obj
+
+    def confirm_units(self, units):
+        """Returns the same Array but with the given target units. If the Array
+        does not have any units, the values are assumed to be unitless. Arrays
+        with different units are converted to the target units."""
+
+        if self.units == units: return self
+
+        obj = Array.__new__(type(self))
+
+        self_units = self.units
+        if self_units is None: self_units = Units.UNITLESS
+
+        obj.__init__(self_units.convert(self.vals, units), self.mask, units)
+        return obj
+
+    ####################################
+    # Shaping functions
+    ####################################
 
     def swapaxes(self, axis1, axis2):
         """returns a new instance of Array with the elements in axis1 and axis2
@@ -671,13 +775,21 @@ class Array(object):
             
             Return:     new instance of Array with axes swapped.
             """
+
         if axis1 >= len(self.shape):
             raise ValueError("bad axis1 argument to swapaxes")
         if axis2 >= len(self.shape):
             raise ValueError("bad axis2 argument to swapaxes")
 
+        vals = self.vals.swapaxes(axis1, axis2)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.swapaxes(axis1, axis2)
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.swapaxes(axis1,axis2))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def reshape(self, shape):
@@ -693,8 +805,16 @@ class Array(object):
             
             Return:     new instance of Array with new shape.
             """
+
+        vals = self.vals.reshape(list(shape) + self.item)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.reshape(shape)
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.reshape(list(shape) + self.item))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def flatten(self):
@@ -706,11 +826,19 @@ class Array(object):
             
             Return:     new instance of Array with 1D shape.
             """
+
         if len(self.shape) < 2: return self
 
         count = np.product(self.shape)
+        vals = self.vals.reshape([count] + self.item)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.reshape((count))
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.reshape([count] + self.item))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def ravel(self): return self.flatten()
@@ -721,8 +849,15 @@ class Array(object):
 
         allaxes = axes + range(len(self.shape), len(self.vals.shape))
 
+        vals = self.vals.transpose(allaxes)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.transpose(allaxes[:len(self.shape)])
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.transpose(allaxes))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def append_axes(self, axes):
@@ -730,8 +865,15 @@ class Array(object):
 
         if axes == 0: return self
 
+        vals = self.vals.reshape(self.shape + axes*[1] + self.item)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.reshape(self.shape + axes*[1])
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.reshape(list(shape) + axes*[1]))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def prepend_axes(self, axes):
@@ -740,8 +882,15 @@ class Array(object):
 
         if axes == 0: return self
 
+        vals = self.vals.reshape(axes*[1] + self.shape + self.item)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.reshape(axes*[1] + self.shape)
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.reshape(axes*[1] + list(shape)))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def strip_axes(self, axes):
@@ -750,8 +899,15 @@ class Array(object):
         newshape = self.shape
         while len(newshape) > 0 and newshape[0] == 1: newshape = newshape[1:]
 
+        vals = self.vals.reshape(newshape + self.item)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.reshape(newshape)
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.reshape(newshape + self.item))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def rotate_axes(self, axis):
@@ -762,8 +918,15 @@ class Array(object):
                    range(axis) +
                    range(len(self.shape), len(self.vals.shape)))
 
+        vals = self.vals.transpose(allaxes)
+
+        if isinstance(self.mask, np.ndarray):
+            mask = self.mask.transpose(allaxes[:len(self.shape)])
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(self.vals.transpose(allaxes))
+        obj.__init__(vals, mask, self.units)
         return obj
 
     def prepend_rotate_strip(self, axes, rank):
@@ -788,8 +951,14 @@ class Array(object):
         temp = np.empty(newshape + self.item, dtype="byte")
         vals = np.broadcast_arrays(self.vals, temp)[0]
 
+        if isinstance(self.mask, np.ndarray):
+            temp = np.empty(newshape, dtype="byte")
+            mask = np.broadcast_arrays(self.mask, temp)[0]
+        else:
+            mask = self.mask
+
         obj = Array.__new__(type(self))
-        obj.__init__(vals)
+        obj.__init__(vals, mask, self.units)
         return obj
 
     @staticmethod
@@ -885,7 +1054,6 @@ class Array(object):
         class, as a list."""
 
         if isinstance(arg, Array): return arg.shape
-        if isinstance(arg, Group): return arg.shape
         return list(np.shape(arg))
 
     @staticmethod
@@ -913,22 +1081,20 @@ class Array(object):
         if isinstance(Array): arg = arg.vals
         return np.asarray(arg)
 
-    # Support methods for raising errors...
+################################################################################
+# UNIT TESTS
+################################################################################
 
-    def raise_type_mismatch(self, op, arg):
-        """Raises a TypeError with text indicating that the operand types are
-        unsupported."""
+import unittest
 
-        raise TypeError("unsupported operand types for " + op +
-                        ": '"     + type(self).__name__ +
-                        "' and '" + type(arg).__name__  + "'")
+class Test_Array(unittest.TestCase):
 
-    def raise_item_mismatch(self, op, arg):
-        """Raises a ValueError with text indicating that the operand shapes are
-        incompatible."""
+    # No tests here. Everything is tested by subclasses
 
-        raise ValueError("incompatible operand types for " + op +
-                         ": '"  + type(self).__name__ +
-                         "' and 'ndarray' of shape " + str(np.shape(arg)))
+    def runTest(self):
+        pass
 
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################
