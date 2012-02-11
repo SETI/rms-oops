@@ -61,10 +61,10 @@ class Spherical(oops.System):
         r = np.sqrt(x**2 + y**2 + z**2)
 
         theta = self.coords[0].to_coord(np.arctan(y,x), units)
-        phi   = self.coords[1].coord_value(np.arcsin(z/r), units)
+        phi   = self.coords[1].to_coord(np.arcsin(z/r), units)
 
         if axes > 2:
-            r = self.coords[2].coord_value(r, units)
+            r = self.coords[2].to_coord(r, units)
             return (theta, phi, r)
         else:
             return (theta, phi)
@@ -78,6 +78,7 @@ class Test_Spherical(unittest.TestCase):
     def runTest(self):
 
 #        print "System.Spherical does not yet have unit tests\n"
+        pass
 
 ################################################################################
 if __name__ == '__main__':
