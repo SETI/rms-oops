@@ -56,6 +56,9 @@ class Array(object):
     SCALAR_CLASS = None         # A reference to the Scalar subclass, filled in
                                 # when that subclass is finished loading
 
+    DUMMY = None                # A place-holder for indexing an Array with a
+                                # boolean array that is entirely False.
+
     @property
     def mvals(self):
         # Construct something that behaves as a suitable mask
@@ -148,6 +151,16 @@ class Array(object):
             location in memory. if self has no items, i.e. - no shape in the
             object-sense, then raise IndexError. called from x = obj[i]"""
 
+        # Handle a shapeless Array
+        if self.shape == []:
+            if i is True: return self
+            if i is False: return Array.DUMMY
+            raise IndexError("too many indices")
+
+        # Handle an index as a boolean
+        if i is True: return self
+        if i is False: return Array.DUMMY
+
         # Get the value and mask
         vals = self.vals[i]
 
@@ -203,6 +216,26 @@ class Array(object):
         """sets the item value at a specific index. if self has no items,
             i.e. - no shape in the object-sense, then raise IndexError. called
             from obj[i] = arg."""
+
+        # Handle a single boolean index
+        if i is False:
+            return self
+        if i is True:
+            obj = Array.__new__(type(self))
+            obj.__init__(arg)
+
+            if np.shape(self.vals) == ():
+                self.vals = obj.vals
+                self.mask = obj.mask
+            else:
+                self.vals[...] = obj.vals
+                if np.shape(self.mask) == ():
+                    self.mask = obj.mask
+                else:
+                    self.mask[...] = obj.mask
+
+            self.units = obj.units
+            return self
 
         # Get the values and mask after converting arg to the same subclass
         (vals, mask, new_units) = self.get_array_mask_unit("[]", arg)
