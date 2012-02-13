@@ -204,7 +204,7 @@ class RingPlane(Surface):
         Return:         a unitless Vector3 of velocities, in units of km/s.
         """
 
-        if self.gravity == None: return Vector3((0,0,0))
+        if self.gravity is None: return Vector3((0,0,0))
 
         position = Vector3.as_standard(position)
         radius = position.norm()

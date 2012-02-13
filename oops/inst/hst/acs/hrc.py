@@ -72,7 +72,7 @@ class HRC(oops.instrument.hst.acs.ACS):
         global IDC_DICT
 
         # Load the dictionary of IDC parameters if necessary
-        if IDC_DICT == None:
+        if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("FILTER1", "FILTER2"))
 
         # Define the key into the dictionary

@@ -97,7 +97,6 @@ def connect(target, origin, frame="J2000"):
     """
 
     global PATH_CLASS
-
     return PATH_CLASS.connect(target, origin, frame)
 
 ################################################################################

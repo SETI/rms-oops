@@ -109,7 +109,7 @@ class NICMOS(oops.instrument.hst.HST):
         det = self.detector_name(hst_file)
 
         # Load the dictionary of IDC parameters if necessary
-        if IDC_DICT[det] == None:
+        if IDC_DICT[det] is None:
             IDC_DICT[det] = self.load_idc_dict(hst_file, ("FILTER",))
 
         # Define the key into the dictionary

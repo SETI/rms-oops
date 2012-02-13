@@ -29,6 +29,11 @@ class Matrix3(Array):
             mask = arg.mask | mask
             arg = arg.vals
 
+        elif isinstance(arg, Array):
+            raise ValueError("class " + type(arg).__name__ +
+                             " cannot be converted to class " +
+                             type(self).__name__)
+
         elif isinstance(arg, ma.MaskedArray):
             if arg.mask != ma.nomask:
                 mask = mask | np.any(np.any(arg.mask, axis=-1), axis=-1)

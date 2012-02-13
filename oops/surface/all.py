@@ -4,7 +4,7 @@
 
 # Import the Surface class and all its subclasses into a common name space
 
-from oops.surface.baseclass import Surface
-from oops.surface.ringplane import RingPlane
+from baseclass import Surface
+from ringplane import RingPlane
 
 ################################################################################

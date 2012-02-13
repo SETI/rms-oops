@@ -165,7 +165,7 @@ class WFPC2(oops.instrument.hst.HST):
         global IDC_DICT
 
         # Load the dictionary of IDC parameters if necessary
-        if IDC_DICT == None:
+        if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("FILTNAM1",
                                                      "FILTNAM2", "DETCHIP"))
 

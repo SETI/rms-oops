@@ -1,11 +1,11 @@
 ################################################################################
-# oops/surface/unittester.py
+# oops/inst/__init__.py
 ################################################################################
 
 import unittest
 
-from baseclass import Test_Surface
-from ringplane import Test_RingPlane
+from cassini.iss    import Test_Cassini_ISS
+# from hst.hst        import Test_Instrument_HST
 
 ########################################
 if __name__ == '__main__':

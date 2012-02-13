@@ -9,6 +9,10 @@ import os
 import spicedb
 import julian
 
+from oops.path.spicepath import SpicePath
+from oops.path.multipath import MultiPath
+from oops.frame.spiceframe import SpiceFrame
+
 ################################################################################
 # Useful class methods to define SPICE-related quantities
 ################################################################################
@@ -72,7 +76,7 @@ def define_solar_system(start_time, stop_time, asof=None):
     spicedb.close_db()
 
     # Sun...
-    ignore = oops.SpicePath("SUN","SSB")
+    ignore = SpicePath("SUN","SSB")
 
     # Mercury...
     define_planet("MERCURY", [], [])
@@ -108,46 +112,42 @@ def define_solar_system(start_time, stop_time, asof=None):
 def define_planet(planet, regular_ids, irregular_ids):
 
     # Define the planet's path and frame
-    ignore = oops.SpicePath(planet, "SSB")
-    ignore = oops.SpiceFrame(planet)
+    ignore = SpicePath(planet, "SSB")
+    ignore = SpiceFrame(planet)
 
     # Define the SpicePaths of individual regular moons
     regulars = []
     for id in regular_ids:
-        regulars += [oops.SpicePath(id, planet)]
+        regulars += [SpicePath(id, planet)]
         try:        # Some frames for small moons are not defined
-            ignore = oops.SpiceFrame(id)
+            ignore = SpiceFrame(id)
         except RuntimeError: pass
         except LookupError: pass
 
     # Define the Multipath of the regular moons, with and without the planet
-    ignore = oops.MultiPath(regulars, planet,
-                            id=(planet + "_REGULARS"))
-    ignore = oops.MultiPath([planet] + regulars, "SSB",
-                            id=(planet + "+REGULARS"))
+    ignore = MultiPath(regulars, planet, id=(planet + "_REGULARS"))
+    ignore = MultiPath([planet] + regulars, "SSB", id=(planet + "+REGULARS"))
 
     # Without irregulars, we're just about done
     if irregular_ids == []:
-        ignore = oops.MultiPath([planet] + regulars, "SSB",
-                                 id=(planet + "+MOONS"))
+        ignore = MultiPath([planet] + regulars, "SSB", id=(planet + "+MOONS"))
         return
 
     # Define the SpicePaths of individual irregular moons
     irregulars = []
     for id in irregular_ids:
-        irregulars += [oops.SpicePath(id, planet)]
+        irregulars += [SpicePath(id, planet)]
         try:        # Some frames for small moons are not defined
-            ignore = oops.SpiceFrame(id)
+            ignore = SpiceFrame(id)
         except RuntimeError: pass
         except LookupError: pass
 
     # Define the Multipath of all the irregular moons
-    ignore = oops.MultiPath(regulars, planet, id=(planet + "_IRREGULARS"))
+    ignore = MultiPath(regulars, planet, id=(planet + "_IRREGULARS"))
 
     # Define the Multipath of all the moons, with and without the planet
-    ignore = oops.MultiPath(regulars + irregulars, planet,
-                            id=(planet + "_MOONS"))
-    ignore = oops.MultiPath([planet] + regulars + irregulars, "SSB",
-                            id=(planet + "+MOONS"))
+    ignore = MultiPath(regulars + irregulars, planet, id=(planet + "_MOONS"))
+    ignore = MultiPath([planet] + regulars + irregulars, "SSB",
+                                                      id=(planet + "+MOONS"))
 
 ################################################################################

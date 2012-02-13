@@ -299,7 +299,7 @@ class Array(object):
                 arg_vals = arg.units.convert(arg_vals, self.units)
             else:
                 # If the units are incompatible, raise an error
-                raise raise_unit_mismatch(self, op, arg_units)
+                raise self.raise_unit_mismatch(op, arg.units)
 
             return (arg_vals, arg.mask, new_units)
 
@@ -310,7 +310,7 @@ class Array(object):
             arg_vals = 1
             arg_mask = False
             arg_units = arg
-            
+
         # If it's the same subclass...
         elif isinstance(arg, type(self)):
             arg_vals = arg.vals
@@ -384,8 +384,8 @@ class Array(object):
         if units is None: units = Units.UNITLESS
 
         raise ValueError("incompatible units for '" + op +
-                         "': "   + str(self_units) +
-                         " and " + str(units))
+                         "': '"   + self_units.name +
+                         "' and '" + units.name + "'")
 
     ####################################################
     # Default binary arithmetic operators
@@ -401,7 +401,9 @@ class Array(object):
             obj.__init__(self.vals + vals, self.mask | mask, new_units)
             return obj
         except:
-            self.raise_shape_mismatch("+", obj.vals)
+            self.raise_shape_mismatch("+", vals)
+
+    def __radd__(self, arg): return self.__add__(arg)
 
     def __sub__(self, arg):
         if Array.is_empty(arg): return arg
@@ -413,24 +415,38 @@ class Array(object):
             obj.__init__(self.vals - vals, self.mask | mask, new_units)
             return obj
         except:
-            self.raise_shape_mismatch("-", obj.vals)
+            self.raise_shape_mismatch("-", vals)
+
+    def __rsub__(self, arg): return self.__sub__(arg).__neg__()
 
     def __mul__(self, arg):
         if Array.is_empty(arg): return arg
 
-        (vals, mask, new_units) = self.get_array_mask_unit("*", arg)
+        try:
+            (vals, mask, new_units) = self.get_array_mask_unit("*", arg)
+        except:
+            if isinstance(arg, Array) and self.rank == 0:
+                return arg.__mul__(self)
+            raise
 
         try:
-            obj = Array.__new__(type(self))
-            obj.__init__(self.vals * vals, self.mask | mask, new_units)
-            return obj
+            new_vals = self.vals * vals
         except:
-            self.raise_shape_mismatch("*", obj.vals)
+            self.raise_shape_mismatch("*", vals)
 
-    # Scalar * Array is the same as Array * Scalar; Python will select
-    # whichever one works
+        obj = Array.__new__(type(self))
+        obj.__init__(new_vals, self.mask | mask, new_units)
+        return obj
+
+    # Reverse-multiply if forward multiply fails
     def __rmul__(self, arg):
-        return self.__mul__(arg)
+        result = self.__mul__(arg)
+        if result is not NotImplemented: return result
+
+        # On failure, raise the original exception
+        (vals, mask, new_units) = self.get_array_mask_unit("*", arg)
+        obj = Array.__new__(type(self))
+        obj.__init__(new_vals, self.mask | mask, new_units)
 
     def __div__(self, arg):
         if Array.is_empty(arg): return arg
@@ -458,7 +474,7 @@ class Array(object):
                          self.mask | mask | div_by_zero, new_units)
             return obj
         except:
-            self.raise_shape_mismatch("/", obj.vals)
+            self.raise_shape_mismatch("/", vals)
 
     def __mod__(self, arg):
         if Array.is_empty(arg): return arg
@@ -652,6 +668,42 @@ class Array(object):
         if self.mask is False:
             return bool(np.all(self.vals))
         return bool(np.all(self.vals[~self.mask]))
+
+    ####################################
+    # Default binary logical operators
+    ####################################
+
+    # (<) operator
+    def __lt__(self, arg):
+        return self.raise_type_mismatch("<", arg)
+
+    # (>) operator
+    def __gt__(self, arg):
+        return self.raise_type_mismatch(">", arg)
+
+    # (<=) operator
+    def __le__(self, arg):
+        return self.raise_type_mismatch("<=", arg)
+
+    # (>=) operator
+    def __ge__(self, arg):
+        return self.raise_type_mismatch(">=", arg)
+
+    # (~) operator
+    def __invert__(self):
+        return self.raise_type_mismatch("~", arg)
+
+    # (&) operator
+    def __and__(self, arg):
+        return self.raise_type_mismatch("&", arg)
+
+    # (|) operator
+    def __or__(self, arg):
+        return self.raise_type_mismatch("|", arg)
+
+    # (^) operator
+    def __xor__(self, arg):
+        return self.raise_type_mismatch("^", arg)
 
     ####################################
     # Value Transformations
@@ -989,7 +1041,7 @@ class Array(object):
 
         # Loop through the arrays...
         for array in arrays:
-            if array == None: continue
+            if array is None: continue
 
             # Get the next shape
             try:

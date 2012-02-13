@@ -12,8 +12,9 @@
 import numpy as np
 import numpy.ma as ma
 
-from baseclass import Array
-from scalar    import Scalar
+from baseclass  import Array
+from scalar     import Scalar
+from oops.units import Units
 
 import utils
 
@@ -58,7 +59,7 @@ class Pair(Array):
         if (self.mask is not False) and (list(self.mask.shape) != self.shape):
             raise ValueError("mask array is incompatible with Pair shape")
 
-        self.units = units
+        self.units = Units.as_units(units)
 
         return
 
@@ -175,6 +176,8 @@ class Pair(Array):
         """
 
         return Scalar(utils.norm(self.vals), self.mask)
+
+    def __abs__(self): return self.norm()
 
     def unit(self):
         """Returns a the Pair converted to unit length as a new Pair.

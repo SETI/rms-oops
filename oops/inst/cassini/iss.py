@@ -3,21 +3,23 @@
 ################################################################################
 
 import numpy as np
-import unittest
-
 import julian
 import vicar
 import pdstable
 import cspice
 
-import oops
-import oops.instrument
+import oops.inst
+import oops.inst.cassini.utils as cassini
+
+import oops.fov.all as fov
+import oops.frame.all as frame
+import oops.calib.all as calib
+import oops.obs.all as obs
+from oops.xarray.all import *
 
 INSTRUMENT_KERNEL = None
 FOVS = {}
 DN_SCALING = None
-
-import oops.instrument.cassini.utils as utils
 
 ################################################################################
 # Standard class methods
@@ -50,19 +52,19 @@ def from_file(filespec, parameters={}):
         camera = "NAC"
 
     # Make sure the SPICE kernels are loaded
-    utils.load_cks( tdb0, tdb1)
-    utils.load_spks(tdb0, tdb1)
+    cassini.load_cks( tdb0, tdb1)
+    cassini.load_spks(tdb0, tdb1)
 
         
     # Create a Snapshot
-    result = oops.Snapshot(vic.get_2d_array(),      # data
-                           None,                    # mask
-                           ["v","u"],               # axes
-                           (tdb0, tdb1),            # time
-                           FOVS[camera,mode],       # fov
-                           "CASSINI",               # path_id
-                           "CASSINI_ISS_" + camera, # frame_id
-                           DN_SCALING)              # calibration
+    result = obs.Snapshot(vic.get_2d_array(),       # data
+                          None,                     # mask
+                          ["v","u"],                # axes
+                          (tdb0, tdb1),             # time
+                          FOVS[camera,mode],        # fov
+                          "CASSINI",                # path_id
+                          "CASSINI_ISS_" + camera,  # frame_id
+                          DN_SCALING)               # calibration
 
     # Tack on the Vicar object in case more info is needed
     # This object behaves like a dictionary for most practical purposes
@@ -98,14 +100,14 @@ def from_index(filespec, parameters={}):
         else:
             camera = "NAC"
 
-        item = oops.Snapshot(None,                      # data
-                             None,                      # mask
-                             ["v","u"],                 # axes
-                             (tdb0, tdb1),              # time
-                             FOVS[camera,mode],         # fov
-                             "CASSINI",                 # path_id
-                             "CASSINI_ISS_" + camera,   # frame_id
-                             DN_SCALING)                # calibration
+        item = obs.Snapshot(None,                       # data
+                            None,                       # mask
+                            ["v","u"],                  # axes
+                            (tdb0, tdb1),               # time
+                            FOVS[camera,mode],          # fov
+                            "CASSINI",                  # path_id
+                            "CASSINI_ISS_" + camera,    # frame_id
+                            DN_SCALING)                 # calibration
 
         # Tack on the dictionary in case more info is needed
         item.dict = dict
@@ -116,8 +118,8 @@ def from_index(filespec, parameters={}):
     tdb0 = row_dicts[0]["START_TIME"]
     tdb1 = row_dicts[-1]["STOP_TIME"]
 
-    utils.load_cks( tdb0, tdb1)
-    utils.load_spks(tdb0, tdb1)
+    cassini.load_cks( tdb0, tdb1)
+    cassini.load_spks(tdb0, tdb1)
 
 
     return snapshots
@@ -129,15 +131,15 @@ def initialize():
 
     global INSTRUMENT_KERNEL, FOVS, DN_SCALING
 
-    utils.load_instruments()
+    cassini.load_instruments()
 
     # Quick exit after first call
     if INSTRUMENT_KERNEL is not None: return
 
     # Load the instrument kernel
-    INSTRUMENT_KERNEL = utils.spice_instrument_kernel("ISS")[0]
+    INSTRUMENT_KERNEL = cassini.spice_instrument_kernel("ISS")[0]
 
-    # Construct a FlatFOV for each camera
+    # Construct a flat FOV for each camera
     for detector in ["NAC", "WAC"]:
         info = INSTRUMENT_KERNEL["INS"]["CASSINI_ISS_" + detector]
 
@@ -153,33 +155,33 @@ def initialize():
         vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
 
         # Display directions: [u,v] = [right,down]
-        full_fov = oops.FlatFOV((uscale,vscale), (samples,lines))
+        full_fov = fov.Flat((uscale,vscale), (samples,lines))
 
         # Load the dictionary, include the subsampling modes
         FOVS[detector, "FULL"] = full_fov
-        FOVS[detector, "SUM2"] = oops.SubsampledFOV(full_fov, 2)
-        FOVS[detector, "SUM4"] = oops.SubsampledFOV(full_fov, 4)
+        FOVS[detector, "SUM2"] = fov.Subsampled(full_fov, 2)
+        FOVS[detector, "SUM4"] = fov.Subsampled(full_fov, 4)
 
     # Construct a SpiceFrame for each camera
     # Deal with the fact that the instrument's internal coordinate system is
     # rotated 180 degrees
-    ignore = oops.SpiceFrame("CASSINI_ISS_NAC", id="CASSINI_ISS_NAC_FLIPPED")
-    ignore = oops.SpiceFrame("CASSINI_ISS_WAC", id="CASSINI_ISS_WAC_FLIPPED")
+    ignore = frame.SpiceFrame("CASSINI_ISS_NAC", id="CASSINI_ISS_NAC_FLIPPED")
+    ignore = frame.SpiceFrame("CASSINI_ISS_WAC", id="CASSINI_ISS_WAC_FLIPPED")
 
-    rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-    ignore = oops.MatrixFrame(rot180, "CASSINI_ISS_NAC_FLIPPED",
-                                      "CASSINI_ISS_NAC")
-    ignore = oops.MatrixFrame(rot180, "CASSINI_ISS_WAC_FLIPPED",
-                                      "CASSINI_ISS_WAC")
+    rot180 = Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
+    ignore = frame.Cmatrix(rot180, "CASSINI_ISS_NAC", "CASSINI_ISS_NAC_FLIPPED")
+    ignore = frame.Cmatrix(rot180, "CASSINI_ISS_WAC", "CASSINI_ISS_WAC_FLIPPED")
 
     # Default scaling for raw images
-    DN_SCALING = oops.Scaling("DN", 1.)
+    DN_SCALING = calib.Scaling("DN", 1.)
 
 ################################################################################
 # UNIT TESTS
 ################################################################################
 
 ERROR_ALLOTMENT = 1e-3
+
+import unittest
 
 class Test_Cassini_ISS(unittest.TestCase):
 

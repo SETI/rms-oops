@@ -66,7 +66,7 @@ class WFC(oops.instrument.hst.acs.ACS):
         global IDC_DICT
 
         # Load the dictionary of IDC parameters if necessary
-        if IDC_DICT == None:
+        if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("DETCHIP", "FILTER1",
                                                                 "FILTER2"))
 

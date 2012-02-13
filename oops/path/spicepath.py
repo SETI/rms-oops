@@ -5,7 +5,7 @@
 import numpy as np
 import cspice
 
-from oops.path.baseclass import Path, Waypoint
+from oops.path.baseclass import Path, Waypoint, Rotated
 from oops.xarray.all import *
 from oops.event import Event
 
@@ -23,8 +23,16 @@ class SpicePath(Path):
     TRANSLATION = {"SSB":"SSB", 0:"SSB", "SOLAR SYSTEM BARYCENTER":"SSB"}
     SPICEFRAME_CLASS = None
 
+    # Set False to confirm that SpicePaths return the same results without
+    # shortcuts and with shortcuts
+    USE_SPICEPATH_SHORTCUTS = True
+
+    # Set False to call cspice library sequentially rather than with array
+    # inputs
+    VECTORIZE_CSPICE = True
+
     def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
-                       id=None):
+                       id=None, shortcut=None):
         """Constructor for a SpicePath object.
 
         Input:
@@ -41,9 +49,9 @@ class SpicePath(Path):
                             registered. By default, this will be the value of
                             spice_id if that is given as a string; otherwise
                             it will be the name as used by the SPICE toolkit.
-
-        Return:             an Event object. The SpicePath adds an attribute
-                            "lt" containing the light travel time in seconds.
+            shortcut        If a shortcut is specified, then this is registered
+                            as a shortcut definition; the other registered path
+                            definitions are unchanged.
         """
 
         (self.spice_target_name,
@@ -72,16 +80,18 @@ class SpicePath(Path):
         self.frame_id = SpicePath.SPICEFRAME_CLASS.TRANSLATION[spice_frame]
 
         self.shape = []
+        self.shortcut = shortcut
 
-        # Save it in the global dictionary of translations under alternative
-        # names
-        SpicePath.TRANSLATION[self.spice_target_name] = self.path_id
-        SpicePath.TRANSLATION[self.spice_target_id]   = self.path_id
-        SpicePath.TRANSLATION[spice_id]               = self.path_id
-        SpicePath.TRANSLATION[id]                     = self.path_id
+        if shortcut is None:
+            # Save it in the global dictionary of Spice translations under
+            # alternative names
+            SpicePath.TRANSLATION[self.spice_target_name] = self.path_id
+            SpicePath.TRANSLATION[self.spice_target_id]   = self.path_id
+            SpicePath.TRANSLATION[spice_id]               = self.path_id
+            SpicePath.TRANSLATION[id]                     = self.path_id
 
-        # Always register a SpicePath
-        self.register()
+        # Register the SpicePath
+        self.register(shortcut)
 
 ########################################
 
@@ -105,7 +115,7 @@ class SpicePath(Path):
         # Interpret the argument given as a string
         if type(arg) == type(""):
             id = cspice.bodn2c(arg)     # raises LookupError if not found
-            name = cspice.bodc2n(id)   
+            name = cspice.bodc2n(id)
             return (name, id)
 
         # Otherwise, interpret the argument given as an integer
@@ -143,22 +153,94 @@ class SpicePath(Path):
             return Event(time, state[0:3], state[3:6], self.origin_id,
                                                        self.frame_id)
 
-        # Create the buffers
-        state     = np.empty(time.shape + [6])
-        lighttime = np.empty(time.shape)
-
         # Fill in the states and light travel times using CSPICE
-        for i,t in np.ndenumerate(time.vals):
-            (state[i],
-             lighttime[i]) = cspice.spkez(self.spice_target_id,
-                                          t,
-                                          self.spice_frame_name,
-                                          "NONE", # no aberration or light time
-                                          self.spice_origin_id)
+        if SpicePath.VECTORIZE_CSPICE:
+            (state,
+             lighttime) = cspice.spkez_vector(self.spice_target_id,
+                                              time.vals.ravel(),
+                                              self.spice_frame_name,
+                                              "NONE", # no aberration/light time
+                                              self.spice_origin_id)
+            pos = state[:,0:3].reshape(time.shape + [3])
+            vel = state[:,3:6].reshape(time.shape + [3])
 
-        # Convert to an Event and return
-        return Event(time, state[...,0:3], state[...,3:6], self.origin_id,
-                                                           self.frame_id)
+            # Convert to an Event and return
+            return Event(time, pos, vel, self.origin_id, self.frame_id)
+
+        else:
+            # Create the buffers
+            state     = np.empty(time.shape + [6])
+            lighttime = np.empty(time.shape)
+
+            # Iterate through the array
+            for i,t in np.ndenumerate(time.vals):
+                (state[i],
+                 lighttime[i]) = cspice.spkez(self.spice_target_id,
+                                              t,
+                                              self.spice_frame_name,
+                                              "NONE",
+                                              self.spice_origin_id)
+
+            # Convert to an Event and return
+            return Event(time, state[...,0:3], state[...,3:6],
+                               self.origin_id, self.frame_id)
+
+########################################
+
+    def connect_to(self, origin, frame=None):
+        """Returns a Path object in which events point from an arbitrary origin
+        path to this path. SpicePath overrides the default method to create
+        quicker "shortcuts" between SpicePaths.
+
+        Input:
+            origin          an origin Path object or its registered name.
+            frame           a frame object or its registered ID. Default is
+                            to use the frame of the origin's path.
+        """
+
+        # Use the slow method if necessary, for debugging
+        if not SpicePath.USE_SPICEPATH_SHORTCUTS:
+            return Path.connect_to(self, origin, frame)
+
+        # Derive the origin info and make sure it is SPICE-related
+        origin = registry.as_path(origin)
+        origin_id = origin.path_id
+        if type(origin) is SpicePath:
+            spice_origin_id = origin.spice_target_id
+        elif origin.path_id == "SSB":
+            spice_origin_id = "SSB"
+        else:
+            # If the origin frame is not a SpiceFrame, use the default procedure
+            return Path.connect_to(self, origin, frame)
+
+        # Derive the frame info and see if it is SPICE-related
+        frame = frame_registry.as_frame(frame)
+        if frame is None: frame = origin.frame
+
+        frame_id = frame.frame_id
+        if type(frame) is SpicePath.SPICEFRAME_CLASS:
+            spice_frame_name = frame.spice_frame_name
+        else:
+            spice_frame_name = "J2000"
+
+        # Construct the shortcut frame and register it, using J2000 if necessary
+        spiceframe_as_registered = (
+                SpicePath.SPICEFRAME_CLASS.TRANSLATION[spice_frame_name])
+        shortcut = ("SHORTCUT_" + str(self.path_id) + "_" +
+                                  str(origin_id)    + "_" +
+                                  str(spiceframe_as_registered))
+        result = SpicePath(self.spice_target_id, spice_origin_id,
+                           spice_frame_name, self.path_id, shortcut)
+
+        # If the path uses a non-spice frame, add a rotated version
+        if spiceframe_as_registered != frame_id:
+            shortcut = ("SHORTCUT_" + str(self.path_id) + "_" +
+                                      str(origin_id)    + "_" +
+                                      str(frame_id))
+            result = Rotated(result, frame_id)
+            result.register(shortcut)
+
+        return result
 
 ################################################################################
 # Make sure that oops/frame/spice.py is loaded as well
@@ -168,6 +250,9 @@ if SpicePath.SPICEFRAME_CLASS is None:
     from oops.frame.spiceframe import SpiceFrame
     SpiceFrame.SPICEPATH_CLASS = SpicePath
     SpicePath.SPICEFRAME_CLASS = SpiceFrame
+
+# Register this class with the abstract Path class
+Path.SPICEPATH_CLASS = SpicePath
 
 ################################################################################
 # UNIT TESTS
@@ -182,9 +267,12 @@ class Test_SpicePath(unittest.TestCase):
 
     def runTest(self):
 
-        # Imports are here to avoid conflicts
-        from oops.frame.spiceframe import SpiceFrame
-        import oops.constants as constants
+      # Imports are here to avoid conflicts
+      from oops.frame.spiceframe import SpiceFrame
+      import oops.constants as constants
+
+      # Repeat the tests without and then with shortcuts
+      for SpicePath.USE_SPICEPATH_SHORTCUTS in (False, True):
 
         registry.initialize_registry()
         frame_registry.initialize_registry()
@@ -301,8 +389,7 @@ class Test_SpicePath(unittest.TestCase):
         # print Path.str_ancestry(Path.common_ancestry(xmars,xsun))
         # ([MARS", "MOON", "EARTH", "SSB"], ["SUN", "SSB"])
 
-        events = registry.as_path("MARS").event_at_time(times).wrt_path(
-                                                                          "SUN")
+        events = registry.as_path("MARS").event_at_time(times).wrt_path("SUN")
         self.assertEqual(events.frame_id, "J2000")
         self.assertEqual(events.origin_id, "SUN")
 

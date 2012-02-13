@@ -295,9 +295,7 @@ class Event(object):
         if path is None: return self
 
         event = self.absolute()
-
-        if path_registry.is_id(path):
-            path = path_registry.connect(path, event.origin_id, event.frame_id)
+        path = path_registry.connect(path, event.origin_id, event.frame_id)
 
         return path.subtract_from_event(event)
 
@@ -349,7 +347,7 @@ class Event(object):
 
         assert self.frame_id == frame.reference_id
 
-        if time == None: time = self.time
+        if time is None: time = self.time
 
         transform = frame.transform_at_time(time)
         return Event(time,
@@ -378,7 +376,7 @@ class Event(object):
 
         assert self.frame_id == frame.frame_id
 
-        if time == None: time = self.time
+        if time is None: time = self.time
 
         transform = frame.transform_at_time(time)
         return Event(time,
@@ -394,13 +392,13 @@ class Event(object):
     # binary "-" operator
     def __sub__(self, arg):
 
+        if isinstance(arg, Event):
+            return self.wrt_event(arg)
+
         if path_registry.is_id(arg) or path_registry.is_path(arg):
             return self.wrt_path(arg)
 
-        if ininstance(arg, Event):
-            return self.wrt_event(arg)
-
-        utils.raise_type_mismatch(self, "-", arg)
+        Array.raise_type_mismatch(self, "-", arg)
 
     # binary "/" operator
     def __div__(self, arg):
@@ -408,7 +406,7 @@ class Event(object):
         if frame_registry.is_id(arg) or frame_registry.is_frame(arg):
             return self.wrt_frame(arg)
 
-        utils.raise_type_mismatch(self, "/", arg)
+        Array.raise_type_mismatch(self, "/", arg)
 
     # string operations
     def __str__(self):

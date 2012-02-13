@@ -17,9 +17,9 @@ from oops.obs.baseclass import Observation
 from oops.xarray.all import *
 from oops.event import Event
 
-import oops.frame.all 
-import oops.path.all 
-import oops.surface.all 
+import oops.frame.all as frame_
+import oops.path.all  as path_
+import oops.surface.all as surface_
 
 dist_tolerance = 1000.
 
@@ -54,9 +54,9 @@ class Snapshot(Observation):
                             shadow, and 2 for rings not in shadow
             """
 
-        ignore = oops.frame.RingFrame("IAU_SATURN")
-        surface = oops.surface.RingPlane("SATURN", "IAU_SATURN_DESPUN")
-        planet_surface = oops.surface.Spheroid("SATURN", "IAU_SATURN")
+        ignore = frame_.RingFrame("IAU_SATURN")
+        surface = surface_.RingPlane("SATURN", "IAU_SATURN_DESPUN")
+        planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN")
 
         #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
         (surface_event, rel_surf_evt,
@@ -110,7 +110,7 @@ class Snapshot(Observation):
             """
         
         #get the observer path wrt the target we are checking is blocking los
-        light_wrt_target = oops.path.connect(light_path_id, target_path_id)
+        light_wrt_target = path_.connect(light_path_id, target_path_id)
         
         # get the relative event of the photon leaving the light source
         light_dep_event = light_wrt_target.photon_to_event(obj_evt, 1)[1]
@@ -137,8 +137,8 @@ class Snapshot(Observation):
             
             Return:     2D array of radius values
             """
-        ignore = oops.frame.RingFrame("IAU_SATURN")
-        surface = oops.surface.RingPlane("SATURN", "IAU_SATURN_DESPUN")
+        ignore = frame_.RingFrame("IAU_SATURN")
+        surface = surface_.RingPlane("SATURN", "IAU_SATURN_DESPUN")
 
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
 
@@ -160,8 +160,8 @@ class Snapshot(Observation):
         
             Return:     2D array of radius values
             """
-        ignore = oops.frame.RingFrame(frame_id)
-        surface = oops.surface.Spheroid(path_id, frame_id)
+        ignore = frame_.RingFrame(frame_id)
+        surface = surface_.Spheroid(path_id, frame_id)
     
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
         
@@ -182,8 +182,8 @@ class Snapshot(Observation):
         
             Return:     2D array of radius values
             """
-        ignore = oops.frame.RingFrame(frame_id)
-        surface = oops.surface.Spheroid(path_id, frame_id)
+        ignore = frame_.RingFrame(frame_id)
+        surface = surface_.Spheroid(path_id, frame_id)
     
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
     
@@ -229,7 +229,7 @@ class Snapshot(Observation):
                                        rel_surf_evt.pos.vals[...,1]**2 +
                                        rel_surf_evt.pos.vals[...,2]**2)
         
-        if blocking_surface != None:
+        if blocking_surface is not None:
             rel_blk_evt = blocking_surface.photon_to_event(image_event, 1)[1]
             block_dist = np.sqrt(rel_blk_evt.pos.vals[...,0]**2 +
                                  rel_blk_evt.pos.vals[...,1]**2 +

@@ -111,7 +111,7 @@ class Frame(object):
         registry.REGISTRY = {"J2000": registry.J2000,
                              ("J2000","J2000"): registry.J2000}
 
-    def register(self):
+    def register(self, shortcut=None):
         """Registers a Frame definition. If the frame's ID is new, it is assumed
         to be the primary definition and is keyed by the ID alone. However, a
         primary definition must use a reference ID that is already registered.
@@ -120,10 +120,21 @@ class Frame(object):
         is not already present:
             (frame_id, reference_id)
         This key also points to the same Frame object.
+
+        If a shortcut name is given, then self is treated as a shortcut
+        definition. The frame is registered under the shortcut name and also
+        under the tuple (frame_id, reference_id), but other registered
+        definitions of the path are not modified.
         """
 
         # Make sure the reference frame is registered; raise KeyError on failure
         reference = registry.REGISTRY[self.reference_id]
+
+        # Handle a shortcut
+        if shortcut is not None:
+            registry.REGISTRY[shortcut] = self
+            registry.REGISTRY[(self.frame_id, self.reference_id)] = self
+            return
 
         # If the ID is unregistered, insert this as a primary definition
         try:
@@ -136,7 +147,14 @@ class Frame(object):
 
             # Also save the Null Frame
             registry.REGISTRY[(self.frame_id,
-                                     self.frame_id)] = Null(self.frame_id)
+                               self.frame_id)] = Null(self.frame_id)
+
+            # Also define the path with respect to J2000 if possible
+            if self.reference_id != "J2000":
+              try:
+                wrt_j2000 = self.connect_to("J2000")
+                registry.REGISTRY[(wrt_j2000.frame_id, "J2000")] = wrt_j2000
+              except: pass
 
         # Insert or replace the secondary definition for
         # (self.frame_id, self.reference_id) as a secondary definition
@@ -253,7 +271,7 @@ class Frame(object):
         target    = registry.as_primary(self)
         reference = registry.as_primary(reference)
 
-        # Check for compatibility
+        # Check for compatibility of rotating frames. The origins must match.
         if target.origin_id is not None and reference.origin_id is not None:
             assert target.origin_id == reference.origin_id
 

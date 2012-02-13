@@ -120,20 +120,32 @@ class Path(object):
                              ("SSB","SSB"): registry.SSB,
                              ("SSB","SSB","J2000"): registry.SSB}
 
-    def register(self):
+    def register(self, shortcut=None):
         """Registers a Path definition. If the path's ID is new, it is assumed
         to be the primary definition and is keyed by the ID alone. However, a
         primary definition must use an origin ID that is already registered.
 
         Otherwise or in addition, two secondary keys are added to the registry
         if they are not already present:
-            (frame_id, reference_id)
-            (frame_id, reference_id, frame_id)
+            (path_id, reference_id)
+            (path_id, reference_id, frame_id)
         These keys also point to the same Path object.
+
+        If a shortcut name is given, then self is treated as a shortcut
+        definition. The path is registered under the shortcut name and also
+        under the triplet (path_id, reference_id, frame_id), but other
+        registered definitions of the path are not modified.
         """
 
         # Make sure the registry is initialized
         if registry.REGISTRY == {}: Path.initialize_registry()
+
+        # Handle a shortcut
+        if shortcut is not None:
+            registry.REGISTRY[shortcut] = self
+            registry.REGISTRY[(self.path_id, self.origin_id,
+                                             self.frame_id)] = self
+            return
 
         # Make sure the origin is registered
         origin = registry.REGISTRY[self.origin_id]
@@ -143,6 +155,7 @@ class Path(object):
             test = registry.REGISTRY[self.path_id]
         except KeyError:
             registry.REGISTRY[self.path_id] = self
+
             # Fill in the ancestry too
             self.ancestry = [self] + origin.ancestry
 
@@ -152,6 +165,15 @@ class Path(object):
             registry.REGISTRY[(self.path_id, self.path_id)] = waypoint
             registry.REGISTRY[(self.path_id, self.path_id,
                                              self.frame_id)] = waypoint
+
+            # Also define the path with respect to the SSB if possible
+            if self.origin_id != "SSB" or self.frame_id != "J2000":
+              try:
+                wrt_ssb = self.connect_to("SSB", "J2000")
+                registry.REGISTRY[(wrt_ssb.path_id, "SSB", "J2000")] = wrt_ssb
+                if (wrt_ssb.path_id, "SSB") not in registry.REGISTRY:
+                    registry.REGISTRY[(wrt_ssb.path_id, "SSB")] = wrt_ssb
+              except: pass
 
         # If the tuple (self.frame_id, self.origin_id) is unregistered, insert
         # this as a secondary definition
@@ -530,6 +552,7 @@ class Path(object):
         # Find the common ancestry
         (target_ancestry,
          origin_ancestry) = Path.common_ancestry(target, origin)
+        # print Path.str_ancestry((target_ancestry, origin_ancestry))
 
         # We can ignore the final (matching) entry in each list
         target_ancestry = target_ancestry[:-1]
@@ -598,21 +621,24 @@ class Path(object):
 
         return (path1.ancestry, path2.ancestry)     # should never happen
 
-#     @staticmethod
-#     def str_ancestry(tuple):        # For debugging
-#         list = ["(["]
-# 
-#         for item in tuple:
-#             for path in item:
-#                 list += [path.path_id,"\", \""]
-# 
-#             list.pop()
-#             list += ["\"], [\""]
-# 
-#         list.pop()
-#         list += ["\"])"]
-# 
-#         return "".join(list)
+    @staticmethod
+    def str_ancestry(tuple):
+        """Creates a string presenting the contents of the tuple containing the
+        common ancestry between two paths. For debugging only."""
+
+        list = ["(["]
+
+        for item in tuple:
+            for path in item:
+                list += [path.path_id,"\", \""]
+
+            list.pop()
+            list += ["\"], [\""]
+
+        list.pop()
+        list += ["\"])"]
+
+        return "".join(list)
 
 ########################################
 # Arithmetic operators
@@ -622,19 +648,11 @@ class Path(object):
     def __neg__(self):
         return path.Reversed(self)
 
-    # binary "+" operator
-    def __add__(self, arg):
-
-        if registry.is_id(arg) or isintance(arg, Path):
-            return path.Shifted(self, arg)
-
-        Array.raise_type_mismatch(self, "+", arg)
-
     # binary "-" operator
     def __sub__(self, arg):
 
-        if registry.is_id(arg) or isintance(arg, Path):
-            return path.Relative(self, arg)
+        if registry.is_id(arg) or isinstance(arg, Path):
+            return Relative(self, arg)
 
         Array.raise_type_mismatch(self, "-", arg)
 
@@ -791,45 +809,6 @@ class Rotated(Path):
 
 ################################################################################
 
-class Shifted(Path):
-    """Shifted is a Path subclass that attaches the origin of one path to the
-    end of another path. The returned path has the origin of the second path and
-    is transformed into the coordinate frame of that path."""
-
-    def __init__(self, path, origin):
-        """Constructor for a Shifte Path.
-
-        Input:
-            path        a Path object to shift, or else the registered ID of
-                        this path.
-            origin      a Path to be added to the first path's origin, or else
-                        the registered ID of this path.
-        """
-
-        self.path   = registry.as_path(path)
-        self.origin = registry.as_path(origin)
-
-        assert self.path.origin_id == self.origin.path_id
-
-        self.path_frame = frame_registry.connect(self.path.frame_id,
-                                                 self.origin.frame_id)
-
-        # Required fields
-        self.path_id   = self.path.path_id
-        self.origin_id = self.origin.origin_id
-        self.frame_id  = self.origin.frame_id
-        self.shape     = Array.broadcast_shape((self.path, self.origin))
-
-    def event_at_time(self, time):
-
-        event = self.path.event_at_time(time)
-        event = event.unrotate_by_frame(self.path_frame)
-        event = event.add_path(self.origin)
-
-        return event
-
-################################################################################
-
 class Waypoint(Path):
     """Waypoint is a Path subclass that always returns the origin."""
 
@@ -861,9 +840,7 @@ class Waypoint(Path):
 registry.PATH_CLASS = Path
 Path.initialize_registry()
 
-from oops.event import Event
-
-################################################################################
+###############################################################################
 # UNIT TESTS
 ################################################################################
 
@@ -873,10 +850,73 @@ class Test_Path(unittest.TestCase):
 
     def runTest(self):
 
+        # Imports are here to avoid conflicts
+        from oops.frame.spiceframe import SpiceFrame
+        from oops.path.spicepath import SpicePath
+
         # Registry tests
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
+
         self.assertEquals(registry.REGISTRY["SSB"], registry.SSB)
 
-        # Lots of unit testing in SpicePath.py
+        # Linked tests
+        sun = SpicePath("SUN", "SSB")
+        earth = SpicePath("EARTH", "SUN")
+        moon = SpicePath("MOON", "EARTH")
+        linked = Linked((moon, earth, sun))
+
+        direct = SpicePath("MOON", "SSB")
+
+        times = np.arange(-3.e8, 3.01e8, 0.5e7)
+
+        direct_event = direct.event_at_time(times)
+        linked_event = linked.event_at_time(times)
+
+        eps = 1.e-6
+        self.assertTrue(abs(linked_event.pos - direct_event.pos) <= eps)
+        self.assertTrue(abs(linked_event.vel - direct_event.vel) <= eps)
+
+        # Relative
+        relative = Relative(linked, SpicePath("MARS", "SSB"))
+        direct = SpicePath("MOON", "MARS")
+
+        direct_event = direct.event_at_time(times)
+        relative_event = relative.event_at_time(times)
+
+        eps = 1.e-6
+        self.assertTrue(abs(relative_event.pos - direct_event.pos) <= eps)
+        self.assertTrue(abs(relative_event.vel - direct_event.vel) <= eps)
+
+        # Reversed
+        reversed = Reversed(relative)
+        direct = SpicePath("MARS", "MOON")
+
+        direct_event = direct.event_at_time(times)
+        reversed_event = reversed.event_at_time(times)
+
+        eps = 1.e-6
+        self.assertTrue(abs(reversed_event.pos - direct_event.pos) <= eps)
+        self.assertTrue(abs(reversed_event.vel - direct_event.vel) <= eps)
+
+        # Rotated
+        rotated = Rotated(reversed, SpiceFrame("B1950"))
+        direct = SpicePath("MARS", "MOON", "B1950")
+
+        direct_event = direct.event_at_time(times)
+        rotated_event = rotated.event_at_time(times)
+
+        eps = 1.e-6
+        self.assertTrue(abs(rotated_event.pos - direct_event.pos) <= eps)
+        self.assertTrue(abs(rotated_event.vel - direct_event.vel) <= eps)
+
+        registry.initialize_registry()
+        frame_registry.initialize_registry()
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
+################################################################################
 
 ################################################################################
 if __name__ == '__main__':

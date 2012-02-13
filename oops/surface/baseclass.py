@@ -10,6 +10,7 @@ from oops.event import Event
 from oops.xarray.all import *
 import oops.frame.registry as frame_registry
 import oops.path.registry as path_registry
+import oops.constants as constants
 
 class Surface(object):
     """Surface is an abstract class describing a 2-D object that moves and
@@ -256,7 +257,7 @@ class Surface(object):
         Return:         the Events on the surface of the body.
         """
 
-        signed_c = sign * oops.C
+        signed_c = sign * constants.C
 
         # Define the path, frame and event relative to the SSB in J2000
         event_wrt_ssb = event.wrt_ssb()
@@ -267,9 +268,9 @@ class Surface(object):
         # Define the origin and line of sight in the SSB frame
         obs_wrt_ssb = event_wrt_ssb.pos
         if sign < 0.:
-            vel_wrt_ssb = event_wrt_ssb.arr.unit() * oops.C
+            vel_wrt_ssb = event_wrt_ssb.arr.unit() * constants.C
         else:
-            vel_wrt_ssb = event_wrt_ssb.dep.unit() * oops.C
+            vel_wrt_ssb = event_wrt_ssb.dep.unit() * constants.C
 
         # Make an initial guess at the light travel time using the range to the
         # surface's origin
@@ -303,7 +304,7 @@ class Surface(object):
             (intercept, dlt) = self.intercept(pos_in_frame, vel_in_frame)
             lt = lt + dlt
 
-            if DEBUG:
+            if Surface.DEBUG:
                 print iter
                 print dlt
 

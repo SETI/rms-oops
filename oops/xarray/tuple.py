@@ -8,9 +8,10 @@
 import numpy as np
 import numpy.ma as ma
 
-from baseclass import Array
-from scalar    import Scalar
-from pair      import Pair
+from baseclass  import Array
+from scalar     import Scalar
+from pair       import Pair
+from oops.units import Units
 
 import utils as utils
 
@@ -35,6 +36,11 @@ class Tuple(Array):
             else:
                 arg = arg.vals
 
+        elif isinstance(arg, Array):
+            raise ValueError("class " + type(arg).__name__ +
+                             " cannot be converted to class " +
+                             type(self).__name__)
+
         elif isinstance(arg, ma.MaskedArray):
             if arg.mask != ma.nomask: mask = mask | np.any(arg.mask, axis=-1)
             arg = arg.data
@@ -50,7 +56,7 @@ class Tuple(Array):
         if (self.mask is not False) and (list(self.mask.shape) != self.shape):
             raise ValueError("mask array is incompatible with Tuple shape")
 
-        self.units = units
+        self.units = Units.as_units(units)
 
         return
 

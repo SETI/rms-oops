@@ -10,8 +10,6 @@ import numpy as np
 import fractions
 import numbers
 
-import unittest
-
 class Units(object):
     """Units is a class defining units names and the methods for converting
     between values that include units."""
@@ -71,6 +69,21 @@ class Units(object):
             return Units.TUPLES_TO_UNIT[(self.exponents, self.triple)].name
         except KeyError:
             return Units.UNNAMED
+
+    @staticmethod
+    def as_units(arg):
+        """Converts the given argument to a string. It can be an object of class
+        Unit or one of the standard unit names. An argument of None returns
+        None."""
+
+        if arg is None:
+            return None
+        elif type(arg) == type(""):
+            return Units.NAME_TO_UNIT[arg]
+        elif type(arg) == Units:
+            return arg
+        else:
+            raise ValueError("object is not a recognized unit: " + str(arg))
 
     @staticmethod
     def can_match(first, second):
@@ -191,7 +204,7 @@ class Units(object):
     def __mul__(self, arg):
         if isinstance(arg, Units): return self.mul_unit(arg)
 
-        if isinstance(arg, numbers.Number):
+        if isinstance(arg, numbers.Real):
             return self.mul_unit(Units((0,0,0),(arg,1,0)))
 
         return  NotImplemented
@@ -318,6 +331,8 @@ for units in Units.STANDARD_LIST:
 ########################################
 # UNIT TESTS
 ########################################
+
+import unittest
 
 class Test_Units(unittest.TestCase):
 

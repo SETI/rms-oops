@@ -261,7 +261,7 @@ class Spheroid(oops.Surface):
             position        a Vector3 of positions at or near the surface.
             """
         
-        if self.gravity == None: return oops.Vector3((0,0,0))
+        if self.gravity is None: return oops.Vector3((0,0,0))
         
         # TBD: We need a vector form of the gravity library!
         

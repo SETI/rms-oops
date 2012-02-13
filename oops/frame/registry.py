@@ -94,7 +94,6 @@ def connect(target, reference):
     """
 
     global FRAME_CLASS
-
     return FRAME_CLASS.connect(target, reference)
 
 ################################################################################

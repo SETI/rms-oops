@@ -5,7 +5,7 @@
 # Initialize a python session using:
 #   import oops.all as oops
 
-from oops.xarray import *
+from oops.xarray.all import *
 
 import oops.calib.all    as calib
 import oops.cmodel.all   as cmodel

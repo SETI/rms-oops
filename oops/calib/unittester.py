@@ -4,9 +4,9 @@
 
 import unittest
 
-from oops.calib.baseclass  import Test_Calibration
-from oops.calib.distorted  import Test_Distorted
-from oops.calib.scaling    import Test_Scaling
+from baseclass  import Test_Calibration
+from distorted  import Test_Distorted
+from scaling    import Test_Scaling
 
 ########################################
 if __name__ == '__main__':

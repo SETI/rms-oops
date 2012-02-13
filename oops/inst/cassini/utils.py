@@ -14,14 +14,16 @@ import textkernel
 import spicedb
 import cspice
 
-import oops
+import oops.tools as tools
+from oops.path.spicepath import SpicePath
+from oops.frame.spiceframe import SpiceFrame
 
 ################################################################################
 # Routines for managing the loading of C and SP kernels
 ################################################################################
 
 # Make sure the leap seconds have been loaded
-oops.load_leap_seconds()
+tools.load_leap_seconds()
 
 # We load CK and SPK files on a very rough month-by-month basis. This is simpler
 # than a more granular approach involving detailed calendar calculations. We
@@ -128,9 +130,9 @@ initialize_kernels(kernels, SPK_LIST, SPK_DICT)
 spicedb.close_db()
 
 # Define some important paths and frames
-oops.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
-ignore = oops.SpicePath("CASSINI", "SATURN")
-#ignore = oops.SpiceFrame("CASSINI_SC_COORD", "J2000")
+tools.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
+ignore = SpicePath("CASSINI", "SATURN")
+#ignore = SpiceFrame("CASSINI_SC_COORD", "J2000")
 
 ################################################################################
 # Routines for managing the loading other kernels
@@ -163,7 +165,7 @@ def load_instruments(instruments=[], asof=None):
     if instruments == []: return
 
     # Check the formatting of the "as of" date
-    if asof != None:
+    if asof is not None:
         (day, sec) = julian.day_sec_from_iso(AS_OF)
         asof = julian.ymdhms_format_from_day_sec(day, sec)
 
@@ -190,7 +192,7 @@ def load_instruments(instruments=[], asof=None):
                                                  path="Cassini/SPK-predicted/")
 
         # Also make sure leap seconds have been loaded
-        oops.load_leap_seconds()
+        tools.load_leap_seconds()
 
     # Furnish everything
     ignore = spicedb.furnish_kernels(kernels)
