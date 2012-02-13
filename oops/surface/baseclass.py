@@ -292,7 +292,7 @@ class Surface(object):
             surface_time = event.time + lt
 
             # Locate the photons relative to the current origin in SSB/J2000
-            pos_in_j2000 = (obs_wrt_ssb + lt * vel_wrt_ssb
+\            pos_in_j2000 = (obs_wrt_ssb + lt * vel_wrt_ssb
                             - origin_wrt_ssb.event_at_time(surface_time).pos)
 
             # Rotate into the surface-fixed frame
