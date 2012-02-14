@@ -1,8 +1,11 @@
 ################################################################################
-# oops/path/__init__.py: Abstract Path class and its required subclasses
+# oops/path/baseclass.py: Abstract class Path and its required subclasses
+#
+# 2/13/12 Modified (MRS) - implemented and tested QuickPath.
 ################################################################################
 
 import numpy as np
+import scipy.interpolate as interp
 
 import oops.path.registry as registry
 import oops.frame.registry as frame_registry
@@ -18,6 +21,10 @@ class Path(object):
     the Solar System Barycenter ("SSB") and the J2000 coordinate frame."""
 
     DEBUG = False
+
+    # Change to False for better accuracy but slower performance, possibly
+    # MUCH slower performance
+    USE_QUICKPATHS = True
 
 ########################################
 # Each subclass must override...
@@ -63,29 +70,6 @@ class Path(object):
         """
 
         pass
-
-########################################
-# Override for enhanced performance
-########################################
-
-    def quick_path(self, epoch, span, precision=None, check=True):
-        """Returns a new Path object that provides accurate approximations to
-        the position and velocity vectors returned by this path. It is provided
-        as a "hook" that can be used to speed up performance when the same path
-        must be evaluated repeatedly but within a very narrow range of times.
-
-        Input:
-            epoch       the single time value about which this path will be
-                        approximated.
-            span        the range of times in seconds for which the approximated
-                        Path object will operate: [epoch - span, epoch + span].
-            precision   if provided, an upper limit on the positional precision
-                        of the new Path object.
-            check       if True, then an attempt to evaluate the path at a time
-                        outside the allowed limits will raise a ValueError.
-        """
-
-        return self
 
 ################################################################################
 # Registry Management
@@ -299,7 +283,7 @@ class Path(object):
 # Photon Solver
 ################################################################################
 
-    def photon_from_event(self, event, iters=3, quick_info=None):
+    def photon_from_event(self, event, iters=3, quick_info={}):
         """Returns a new event object corresponding to the arrival of a photon
         at this path, given that the same photon departed from the specified
         event at an earlier time.
@@ -332,7 +316,7 @@ class Path(object):
 
         return self._solve_photon(event, +1, iters, quick_info)
 
-    def photon_to_event(self, event, iters=3, quick_info=None):
+    def photon_to_event(self, event, iters=3, quick_info={}):
         """Returns a new event object corresponding to the departure of a photon
         from this path, given that the same photon arrived from the specified
         event at a later time. It also fills in the photon arrival direction
@@ -366,7 +350,7 @@ class Path(object):
 
         return self._solve_photon(event, -1, iters, quick_info)
 
-    def _solve_photon(self, event, sign=-1, iters=3, quick_info=None):
+    def _solve_photon(self, event, sign=-1, iters=3, quick_info={}):
         """Solve for a photon event on this path, given that the other end of
         the photon's path is at another specified event (time and position).
 
@@ -439,6 +423,7 @@ class Path(object):
         # convergence is quick
         for iter in range(iters):
             path_event = path_wrt_ssb.event_at_time(path_time)
+
             delta_pos = path_event.pos - event_wrt_ssb.pos
             delta_vel = path_event.vel - event_wrt_ssb.vel
 
@@ -664,6 +649,35 @@ class Path(object):
 
     def __repr__(self): return self.__str__()
 
+########################################
+
+    def quick_path(self, epoch, quick_info=None):
+        """Returns a new QuickPath object that provides accurate approximations
+        to the position and velocity vectors returned by this path. It can speed
+        up performance substantially when the same path must be evaluated
+        repeatedly but within a very narrow range of times.
+
+        Input:
+            epoch           the mid-time in TDB of the interpolation.
+            quick_info      a dictionary containing the additional optional
+                            parameters:
+              ["WINDOW"]    the full duration of the window within which path
+                            information should be available, in seconds. Default
+                            is 20.
+              ["SAMPLING"]  the sampling interval of the spline, in seconds.
+                            Default is 0.01.
+              ["PRECISION"] the fractional precision required of the returned
+                            interpolated values; this is tested when the
+                            QuickPath is created, and a ValueError is raised
+                            if the requirement is not met. Default is None,
+                            in which case the precision is not tested.
+        """
+
+        if quick_info is None: return self
+        if not Path.USE_QUICKPATHS: return self
+
+        return QuickPath(self, epoch, quick_info)
+
 ################################################################################
 # Define the required subclasses
 ################################################################################
@@ -834,6 +848,137 @@ class Waypoint(Path):
         return "Waypoint(" + self.path_id + "/" + self.frame_id + ")"
 
 ################################################################################
+
+class QuickPath(Path):
+    """QuickPath is a Path subclass that returns positions and velocities based
+    on interpolation of another path within a specified time window."""
+
+    def __init__(self, path, epoch, quick_info={}):
+        """Constructor for a QuickPath.
+
+        Input:
+            path            the Path object that this Path will emulate.
+            epoch           the mid-time in TDB of the interpolation.
+            quick_info      a dictionary containing the additional optional
+                            parameters:
+              ["WINDOW"]    the full duration of the window within which path
+                            information should be available, in seconds. Default
+                            is 20.
+              ["SAMPLING"]  the sampling interval of the spline, in seconds.
+                            Default is 0.01.
+              ["PRECISION"] the fractional precision required of the returned
+                            interpolated values; this is tested when the
+                            QuickPath is created, and a ValueError is raised
+                            if the requirement is not met. Default is None,
+                            in which case the precision is not tested.
+        """
+
+        self.path = path
+        self.path_id   = path.path_id
+        self.origin_id = path.origin_id
+        self.frame_id  = path.frame_id
+
+        assert path.shape == []
+        self.shape = []
+
+        if quick_info is None: quick_info == {}
+        self.info = quick_info
+
+        self.epoch = epoch
+        self.window = 20.
+        self.dt = 0.01
+        self.precision = None
+
+        try:
+            self.window = self.info["WINDOW"]
+        except KeyError: pass
+
+        try:
+            self.dt = self.info["SAMPLING"]
+        except KeyError: pass
+
+        try:
+            self.precision = self.info["PRECISION"]
+        except KeyError: pass
+
+        self.t0 = self.epoch - self.window/2.
+        self.t1 = self.epoch + self.window/2.
+
+        EXPAND = 4
+        self.times = np.arange(self.t0 - EXPAND * self.dt,
+                               self.t1 + EXPAND * self.dt + self.dt, self.dt)
+        self.t0 = self.times[0]
+        self.t1 = self.times[-1]
+
+        self.events = self.path.event_at_time(self.times)
+
+        KIND = 3
+        self.pos_x = interp.UnivariateSpline(self.times,
+                                             self.events.pos.vals[:,0], k=KIND)
+        self.pos_y = interp.UnivariateSpline(self.times,
+                                             self.events.pos.vals[:,1], k=KIND)
+        self.pos_z = interp.UnivariateSpline(self.times,
+                                             self.events.pos.vals[:,2], k=KIND)
+
+        self.vel_x = interp.UnivariateSpline(self.times,
+                                             self.events.vel.vals[:,0], k=KIND)
+        self.vel_y = interp.UnivariateSpline(self.times,
+                                             self.events.vel.vals[:,1], k=KIND)
+        self.vel_z = interp.UnivariateSpline(self.times,
+                                             self.events.vel.vals[:,2], k=KIND)
+
+        # Test the precision
+        if self.precision is not None:
+            t = self.times[:-1] + self.dt/2.        # Halfway points
+
+            true_event = self.path.event_at_time(t)
+
+            pos = np.empty(t.shape + (3,))
+            vel = np.empty(t.shape + (3,))
+
+            # Evaluate the positions and velocities
+            pos[...,0] = self.pos_x(t)
+            pos[...,1] = self.pos_y(t)
+            pos[...,2] = self.pos_z(t)
+
+            vel[...,0] = self.vel_x(t)
+            vel[...,1] = self.vel_y(t)
+            vel[...,2] = self.vel_z(t)
+
+            dpos = abs(true_event.pos - pos) / abs(true_event.pos)
+            dvel = abs(true_event.vel - vel) / abs(true_event.vel)
+
+            error = max(np.max(dpos.vals), np.max(dvel.vals))
+            if error > self.precision:
+                raise ValueError("precision tolerance not achieved: " +
+                                  str(error) + " > " + str(self.precision))
+
+    def event_at_time(self, time):
+
+        # time can only be a 1-D array
+        time = Scalar.as_scalar(time)
+        pos = np.empty((time.vals.size, 3))
+        vel = np.empty((time.vals.size, 3))
+
+        # Evaluate the positions and velocities
+        t = time.vals.ravel()
+        pos[...,0] = self.pos_x(t)
+        pos[...,1] = self.pos_y(t)
+        pos[...,2] = self.pos_z(t)
+
+        vel[...,0] = self.vel_x(t)
+        vel[...,1] = self.vel_y(t)
+        vel[...,2] = self.vel_z(t)
+
+        # Return the Event
+        return Event(time, pos.reshape(time.vals.shape + (3,)),
+                           vel.reshape(time.vals.shape + (3,)),
+                           self.origin_id, self.frame_id)
+
+    def __str__(self):
+        return "QuickPath(" + self.path_id + "/" + self.frame_id + ")"
+
+################################################################################
 # Initialize the registry
 ################################################################################
 
@@ -910,15 +1055,25 @@ class Test_Path(unittest.TestCase):
         self.assertTrue(abs(rotated_event.pos - direct_event.pos) <= eps)
         self.assertTrue(abs(rotated_event.vel - direct_event.vel) <= eps)
 
+        # QuickPath tests
+        moon = SpicePath("MOON", "EARTH")
+        quick = QuickPath(moon, 0., {"PRECISION": 3.e-13})   # confirms precision
+
+        # Perfect precision is impossible
+        try:
+            quick = QuickPath(moon, 0., {"PRECISION": 0.})
+            self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
+        except ValueError: pass
+
+        # Timing tests...
+        # test = np.zeros(3000000)
+        # ignore = moon.event_at_time(test)  # takes about 15 sec
+        # ignore = quick.event_at_time(test) # takes way less than 1 sec
+
         registry.initialize_registry()
         frame_registry.initialize_registry()
 
 ########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################
-
-################################################################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

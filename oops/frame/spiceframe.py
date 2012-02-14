@@ -171,9 +171,13 @@ class Test_SpiceFrame(unittest.TestCase):
     def runTest(self):
 
         # Import is here to avoid conflicts
+        from oops.path.baseclass import Path
         from oops.path.spicepath import SpicePath
         import oops.path.registry as path_registry
         from oops.event import Event
+
+        Path.USE_QUICKPATHS = False
+        Frame.USE_QUICKFRAMES = False
 
         registry.initialize_registry()
         path_registry.initialize_registry()
@@ -326,6 +330,9 @@ class Test_SpiceFrame(unittest.TestCase):
 
         registry.initialize_registry()
         path_registry.initialize_registry()
+
+        Path.USE_QUICKPATHS = True
+        Frame.USE_QUICKFRAMES = True
 
 ################################################################################
 if __name__ == '__main__':

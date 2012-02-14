@@ -268,8 +268,12 @@ class Test_SpicePath(unittest.TestCase):
     def runTest(self):
 
       # Imports are here to avoid conflicts
+      from oops.frame.baseclass import Frame
       from oops.frame.spiceframe import SpiceFrame
       import oops.constants as constants
+
+      Path.USE_QUICKPATHS = False
+      Frame.USE_QUICKFRAMES = False
 
       # Repeat the tests without and then with shortcuts
       for SpicePath.USE_SPICEPATH_SHORTCUTS in (False, True):
@@ -742,6 +746,9 @@ class Test_SpicePath(unittest.TestCase):
 
         registry.initialize_registry()
         frame_registry.initialize_registry()
+
+      Path.USE_QUICKPATHS = True
+      Frame.USE_QUICKFRAMES = True
 
 ########################################
 if __name__ == '__main__':

@@ -165,13 +165,18 @@ class Matrix3(Array):
         self.mask = result.mask
         return self
 
-    def __add__(self, arg): Array.raise_type_mismatch(self, "+", arg)
-    def __sub__(self, arg): Array.raise_type_mismatch(self, "-", arg)
+    # Add and subtract are useful for testing so they are not overridden
+    # def __add__(self, arg): Array.raise_type_mismatch(self, "+", arg)
+    # def __sub__(self, arg): Array.raise_type_mismatch(self, "-", arg)
     def __mod__(self, arg): Array.raise_type_mismatch(self, "%", arg)
 
     def __iadd__(self, arg): Array.raise_type_mismatch(self, "+=", arg)
     def __isub__(self, arg): Array.raise_type_mismatch(self, "-=", arg)
     def __imod__(self, arg): Array.raise_type_mismatch(self, "%=", arg)
+
+    # abs is useful to compare the difference of two matrices
+    def __abs__(self):
+        return Scalar(np.sqrt(np.sum(np.sum(self.vals**2, axis=-1), axis=-1)))
 
 ################################################################################
 # UNIT TESTS

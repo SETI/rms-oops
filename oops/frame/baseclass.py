@@ -1,6 +1,11 @@
 ################################################################################
-# oops/frame/frame.py: Abstract class Frame
+# oops/frame/baseclass.py: Abstract class Frame and its required subclasses
+#
+# 2/13/12 Modified (MRS) - implemented and tested QuickFrame.
 ################################################################################
+
+import numpy as np
+import scipy.interpolate as interp
 
 import oops.frame.registry as registry
 from oops.xarray.all import *
@@ -35,6 +40,10 @@ class Frame(object):
                             self.ancestry[-1] = J2000.
     """
 
+    # Change to False for better accuracy but slower performance, possibly
+    # MUCH slower performance
+    USE_QUICKFRAMES = True
+
 ########################################
 # Each subclass must override...
 ########################################
@@ -60,29 +69,6 @@ class Frame(object):
         """
 
         pass
-
-########################################
-# Override for enhanced performance
-########################################
-
-    def quick_frame(self, epoch, span, precision=None, check=True):
-        """Returns a new Frame object that provides accurate approximations to
-        the transform returned by this frame. It is provided as a "hook" that
-        can be invoked to speed up performance when the same frame must be
-        evaluated repeatedly but within a very narrow range of times.
-
-        Input:
-            epoch       the single time value about which this frame will be
-                        approximated.
-            span        the range of times in seconds for which the approximated
-                        frame will apply: [epoch - span, epoch + span].
-            precision   if provided, a specific upper limit on the angular
-                        precision of the new Frame.
-            check       if True, then an attempt to evaluate the frame at a time
-                        outside the allowed limits will raise a ValueError.
-        """
-
-        return self
 
 ################################################################################
 # Registry Management
@@ -278,6 +264,7 @@ class Frame(object):
         # Find the common ancestry
         (target_ancestry,
          reference_ancestry) = Frame.common_ancestry(target, reference)
+        # print Frame.str_ancestry((target_ancestry, origin_ancestry))
 
         # We can ignore the final (matching) entry in each list
         target_ancestry = target_ancestry[:-1]
@@ -342,21 +329,21 @@ class Frame(object):
 
         return (frame1.ancestry, frame2.ancestry)       # should never happen
 
-#     @staticmethod
-#     def str_ancestry(tuple):        # For debugging
-#         list = ["(["]
-# 
-#         for item in tuple:
-#             for frame in item:
-#                 list += [frame.frame_id,"\", \""]
-# 
-#             list.pop()
-#             list += ["\"], [\""]
-# 
-#         list.pop()
-#         list += ["\"])"]
-# 
-#         return "".join(list)
+    @staticmethod
+    def str_ancestry(tuple):        # For debugging
+        list = ["(["]
+
+        for item in tuple:
+            for frame in item:
+                list += [frame.frame_id,"\", \""]
+
+            list.pop()
+            list += ["\"], [\""]
+
+        list.pop()
+        list += ["\"])"]
+
+        return "".join(list)
 
 ########################################
 # Arithmetic operators
@@ -378,8 +365,37 @@ class Frame(object):
     def __str__(self):
         return "Frame(" + self.frame_id + "/" + self.reference_id + ")"
 
+########################################
+
+    def quick_frame(self, epoch, quick_info=None):
+        """Returns a new QuickFrame object that provides accurate approximations
+        to the transform returned by this frame. It can speed up performance
+        substantially when the same frame must be evaluated repeatedly but
+        within a very narrow range of times.
+
+        Input:
+            epoch           the mid-time in TDB of the interpolation.
+            quick_info      a dictionary containing the additional optional
+                            parameters:
+              ["WINDOW"]    the full duration of the window within which path
+                            information should be available, in seconds. Default
+                            is 20.
+              ["SAMPLING"]  the sampling interval of the spline, in seconds.
+                            Default is 0.01.
+              ["PRECISION"] the fractional precision required of the returned
+                            interpolated values; this is tested when the
+                            QuickFrame is created, and a ValueError is raised
+                            if the requirement is not met. Default is None,
+                            in which case the precision is not tested.
+        """
+
+        if quick_info is None: return self
+        if not Frame.USE_QUICKFRAMES: return self
+
+        return QuickFrame(self, epoch, quick_info)
+
 ################################################################################
-# Complete the initialization
+# Required Subclasses
 ################################################################################
 
 class Inverse(Frame):
@@ -496,7 +512,164 @@ class Relative(Frame):
                self.frame2.transform_at_time(time).invert())
 
 ################################################################################
-#Initialize the registry
+
+class QuickFrame(Frame):
+    """QuickFrame is a Frame subclass that returns Transform objects based on
+    interpolation of another Frame within a specified time window."""
+
+    def __init__(self, frame, epoch, quick_info={}):
+        """Constructor for a QuickFrame.
+
+        Input:
+            frame           the Frame object that this Frame will emulate.
+            epoch           the mid-time in TDB of the interpolation.
+            quick_info      a dictionary containing the additional optional
+                            parameters:
+              ["WINDOW"]    the full duration of the window within which path
+                            information should be available, in seconds. Default
+                            is 20.
+              ["SAMPLING"]  the sampling interval of the spline, in seconds.
+                            Default is 0.01.
+              ["PRECISION"] the fractional precision required of the returned
+                            interpolated values; this is tested when the
+                            QuickFrame is created, and a ValueError is raised
+                            if the requirement is not met. Default is None,
+                            in which case the precision is not tested.
+        """
+
+        self.frame = frame
+        self.frame_id     = frame.frame_id
+        self.reference_id = frame.reference_id
+        self.origin_id    = frame.origin_id
+
+        assert frame.shape == []
+        self.shape = []
+
+        if quick_info is None: quick_info == {}
+        self.info = quick_info
+
+        self.epoch = epoch
+        self.window = 20.
+        self.dt = 0.01
+        self.precision = None
+
+        try:
+            self.window = self.info["WINDOW"]
+        except KeyError: pass
+
+        try:
+            self.dt = self.info["SAMPLING"]
+        except KeyError: pass
+
+        try:
+            self.precision = self.info["PRECISION"]
+        except KeyError: pass
+
+        self.t0 = self.epoch - self.window/2.
+        self.t1 = self.epoch + self.window/2.
+
+        EXPAND = 4
+        self.times = np.arange(self.t0 - EXPAND * self.dt,
+                               self.t1 + EXPAND * self.dt + self.dt, self.dt)
+        self.t0 = self.times[0]
+        self.t1 = self.times[-1]
+
+        self.transforms = self.frame.transform_at_time(self.times)
+
+        # This would be faster with quaternions but I'm lazy
+        KIND = 3
+        self.matrix = np.empty((3,3), dtype="object")
+        for i in range(3):
+          for j in range(3):
+            self.matrix[i,j] = interp.UnivariateSpline(self.times,
+                                    self.transforms.matrix.vals[...,i,j],
+                                    k=KIND)
+
+        self.omega = np.empty((3,), dtype="object")
+        for i in range(3):
+            self.omega[i] = interp.UnivariateSpline(self.times,
+                                    self.transforms.omega.vals[...,i],
+                                    k=KIND)
+
+        # Test the precision
+        if self.precision is not None:
+            t = self.times[:-1] + self.dt/2.        # Halfway points
+
+            true_transform = self.frame.transform_at_time(t)
+
+            matrix = np.empty(t.shape + (3,3))
+            omega  = np.empty(t.shape + (3,))
+
+            # Evaluate the matrix and rotation vector
+            matrix[...,0,0] = self.matrix[0,0](t)
+            matrix[...,0,1] = self.matrix[0,1](t)
+            matrix[...,0,2] = self.matrix[0,2](t)
+            matrix[...,1,0] = self.matrix[1,0](t)
+            matrix[...,1,1] = self.matrix[1,1](t)
+            matrix[...,1,2] = self.matrix[1,2](t)
+            matrix[...,2,0] = self.matrix[2,0](t)
+            matrix[...,2,1] = self.matrix[2,1](t)
+            matrix[...,2,2] = self.matrix[2,2](t)
+
+            omega[...,0] = self.omega[0](t)
+            omega[...,1] = self.omega[1](t)
+            omega[...,2] = self.omega[2](t)
+
+            # Normalize the matrix
+            matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
+            matrix[...,1,:] = utils.ucross3d(matrix[...,2,:], matrix[...,0,:])
+            matrix[...,2,:] = utils.unit(matrix[...,2,:])
+
+            dmatrix = abs(true_transform.matrix - matrix)
+
+            domega = abs(true_transform.omega - omega)
+            if abs(true_transform.omega) != 0.:
+                domega /= abs(true_transform.omega)
+
+            error = max(np.max(dmatrix.vals), np.max(domega.vals))
+            if error > self.precision:
+                raise ValueError("precision tolerance not achieved: " +
+                                  str(error) + " > " + str(self.precision))
+
+    def transform_at_time(self, time):
+
+        # time can only be a 1-D array
+        time   = Scalar.as_scalar(time)
+        matrix = np.empty((time.vals.size, 3, 3))
+        omega  = np.empty((time.vals.size, 3))
+
+        # Evaluate the matrix and rotation vector
+        t = time.vals.ravel()
+
+        matrix[...,0,0] = self.matrix[0,0](t)
+        matrix[...,0,1] = self.matrix[0,1](t)
+        matrix[...,0,2] = self.matrix[0,2](t)
+        matrix[...,1,0] = self.matrix[1,0](t)
+        matrix[...,1,1] = self.matrix[1,1](t)
+        matrix[...,1,2] = self.matrix[1,2](t)
+        matrix[...,2,0] = self.matrix[2,0](t)
+        matrix[...,2,1] = self.matrix[2,1](t)
+        matrix[...,2,2] = self.matrix[2,2](t)
+
+        omega[...,0] = self.omega[0](t)
+        omega[...,1] = self.omega[1](t)
+        omega[...,2] = self.omega[2](t)
+
+        # Normalize the matrix
+        matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
+        matrix[...,1,:] = utils.ucross3d(matrix[...,2,:], matrix[...,0,:])
+        matrix[...,2,:] = utils.unit(matrix[...,2,:])
+
+        # Return the Event
+        return Transform(matrix.reshape(time.vals.shape + (3,)),
+                         omega.reshape(time.vals.shape + (3,)),
+                         self.frame_id, self.reference_id, self.origin_id)
+
+    def __str__(self):
+        return "QuickFrame(" + self.frame_id + "/" + self.reference_id + ")"
+
+################################################################################
+# Initialize the registry
 ################################################################################
 
 registry.FRAME_CLASS = Frame
@@ -512,9 +685,34 @@ class Test_Frame(unittest.TestCase):
 
     def runTest(self):
 
-        # Extensive unit testing in SpiceFrame.py and SpicePath.py
+        # Imports are here to avoid conflicts
+        from oops.frame.spiceframe import SpiceFrame
+        from oops.path.spicepath   import SpicePath
+        import oops.path.registry  as path_registry
 
-        pass
+        registry.initialize_registry()
+        path_registry.initialize_registry()
+
+        # QuickFrame tests
+        ignore = SpicePath("EARTH", "SSB")
+        ignore = SpicePath("MOON", "SSB")
+        ignore = SpiceFrame("IAU_EARTH", "J2000")
+        moon  = SpiceFrame("IAU_MOON", "IAU_EARTH")
+        quick = QuickFrame(moon, 0., {"PRECISION": 3.e-14}) # confirms precision
+
+        # Perfect precision is impossible
+        try:
+            quick = QuickFrame(moon, 0., {"PRECISION": 0.})
+            self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
+        except ValueError: pass
+
+        # Timing tests...
+        # test = np.zeros(1000000)
+        # ignore = moon.transform_at_time(test)  # takes about 50 sec
+        # ignore = quick.transform_at_time(test) # takes way less than 1 sec
+
+        registry.initialize_registry()
+        path_registry.initialize_registry()
 
 ########################################
 if __name__ == '__main__':
