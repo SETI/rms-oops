@@ -6,5 +6,6 @@
 
 from baseclass import Surface
 from ringplane import RingPlane
+from spheroid import Spheroid
 
 ################################################################################

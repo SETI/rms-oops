@@ -56,12 +56,13 @@ class Snapshot(Observation):
 
         ignore = frame_.RingFrame("IAU_SATURN")
         surface = surface_.RingPlane("SATURN", "IAU_SATURN_DESPUN")
-        planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN")
+        planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268.,
+                                           54364.)
 
         #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
         (surface_event, rel_surf_evt,
-         dist_from_instrument, obs_mask) = self.back_plane_setup(surface,
-                                                                 planet_surface)
+         dist_from_instrument, obs_mask,
+         blk_evt) = self.back_plane_setup(surface, planet_surface)
         
         #determine what is visible
         """dist_from_instrument = np.sqrt(rel_surf_evt.pos.vals[...,0]**2 +
@@ -82,12 +83,16 @@ class Snapshot(Observation):
         dist_from_center[dist_from_center > max_range] = 0.
         
         #now, for each point on surface that is in rings, check if in shadow
-        shadow_mask = self.get_shadow_mask("SUN", "SATURN", planet_surface,
-                                           surface_event)
+        (shadow_mask, light_evt) = self.get_shadow_mask("SUN", "SATURN",
+                                                        planet_surface,
+                                                        surface_event)
+        
 
         ring_mask = dist_from_center == 0.
         bp_masked = ma.array(dist_from_center,
                              mask=(obs_mask | ring_mask | shadow_mask))
+            #bp_masked = ma.array(dist_from_center,
+        #                mask=(obs_mask | ring_mask))
         
         return bp_masked
     
@@ -114,6 +119,12 @@ class Snapshot(Observation):
         
         # get the relative event of the photon leaving the light source
         light_dep_event = light_wrt_target.photon_to_event(obj_evt, 1)[1]
+        print "light_dep_event.perp:"
+        print light_dep_event.perp
+        print "light_dep_event.arr:"
+        print light_dep_event.arr
+        print "light_dep_event.dep:"
+        print light_dep_event.dep
         #light from target is light from obj plus obj from target
         origin = obj_evt.pos + light_dep_event.pos
         dir = -light_dep_event.pos   #ray to check from observer to pixel
@@ -127,7 +138,7 @@ class Snapshot(Observation):
         obj_dist = np.sqrt(opos[...,0]**2 + opos[...,1]**2 + opos[...,2]**2)
 
         farther_mask = dist < (obj_dist + dist_tolerance)
-        return farther_mask
+        return (farther_mask, light_dep_event)
 
 
     def radius_back_plane(self, min_range=0., max_range=sys.float_info.max):
@@ -161,7 +172,7 @@ class Snapshot(Observation):
             Return:     2D array of radius values
             """
         ignore = frame_.RingFrame(frame_id)
-        surface = surface_.Spheroid(path_id, frame_id)
+        surface = surface_.Spheroid(path_id, frame_id, 60268., 54364.)
     
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
         
@@ -183,7 +194,7 @@ class Snapshot(Observation):
             Return:     2D array of radius values
             """
         ignore = frame_.RingFrame(frame_id)
-        surface = surface_.Spheroid(path_id, frame_id)
+        surface = surface_.Spheroid(path_id, frame_id, 60268., 54364.)
     
         (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
     
@@ -231,14 +242,39 @@ class Snapshot(Observation):
         
         if blocking_surface is not None:
             rel_blk_evt = blocking_surface.photon_to_event(image_event, 1)[1]
+            """print "rel_blk_evt.perp:"
+            print rel_blk_evt.perp
+            print "rel_blk_evt.arr:"
+            print rel_blk_evt.arr
+            print "rel_blk_evt.dep:"
+            print rel_blk_evt.dep
+            rel_blk_evt.pos[rel_blk_evt.pos.mask] = rel_blk_evt.pos[0][0]
+            rel_blk_evt.dep[rel_blk_evt.dep.mask] = rel_blk_evt.dep[0][0]
+            rel_blk_evt.time[rel_blk_evt.time.mask] = rel_blk_evt.time[0][0]
+            saturn_light_evt = rel_blk_evt.wrt_path("SUN")
+            print "after wrt_path() called:"
+            print "rel_blk_evt.perp:"
+            print rel_blk_evt.perp
+            print "rel_blk_evt.arr:"
+            print rel_blk_evt.arr
+            print "rel_blk_evt.dep:"
+            print rel_blk_evt.dep
+            print "saturn_light_evt.perp:"
+            print saturn_light_evt.perp
+            print "saturn_light_evt.arr:"
+            print saturn_light_evt.arr
+            print "saturn_light_evt.dep:"
+            print saturn_light_evt.dep"""
             block_dist = np.sqrt(rel_blk_evt.pos.vals[...,0]**2 +
                                  rel_blk_evt.pos.vals[...,1]**2 +
                                  rel_blk_evt.pos.vals[...,2]**2)
+            #make sure we don't compare values that did not intercept blocker
+            block_dist[rel_blk_evt.pos.mask] = sys.float_info.max
             mask = block_dist < (dist_from_instrument - dist_tolerance)
         else:
             mask = dist_from_instrument == np.nan
 
-        return (surface_event, rel_surf_evt, dist_from_instrument, mask)
+        return (surface_event, rel_surf_evt, dist_from_instrument, mask, rel_blk_evt)
         #return (surface_event, rel_surf_evt)
 
 

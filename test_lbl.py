@@ -7,11 +7,18 @@ import vicar
 import os
 import pylab
 import numpy as np
-import oops
+import oops.tools as tools
+from oops.event import Event
+from oops.path.baseclass import Path
+from oops.fov.flat import Flat
+from oops.obs.snapshot import Snapshot
+from oops.calib.scaling import Scaling
+import oops.inst.cassini.iss
 import pdstable
 import julian
 import math
 import datetime
+import cProfile
 
 CASSINI_label = 'CASSINI'
 SATURN_label = 'SATURN'
@@ -23,8 +30,11 @@ DEFAULT_IMAGE_label = 'W1573721822_1.IMG'
 root = Tk()
 
 #first set up gui to just load file & get info from each category of meta data
-oops.define_solar_system("2007-312T03:31:13.300", "2007-355T11:22:40.999")
-#oops.define_cassini_saturn("2007-312T03:31:13.300", "2007-355T11:22:40.999")
+tools.define_solar_system("2007-312T03:31:13.300", "2007-355T11:22:40.999")
+
+    
+def shadowProfileWrapper(obj, b):
+    b.append(obj.snapshot.ring_shadow_back_plane(60298., 136775))
 
 class TimeDialog(simple_dialog.Dialog):
     
@@ -204,8 +214,8 @@ class ColumnInfoWindow:
         tai = time_col[ndx]
         tdb = julian.tdb_from_tai(tai)
 
-        event_at_cassini = oops.Event(tdb, (0,0,0), (0,0,0), CASSINI_label)
-        saturn_wrt_cassini = oops.Path.connect(SATURN_label, CASSINI_label, J2000_label)
+        event_at_cassini = Event(tdb, (0,0,0), (0,0,0), CASSINI_label)
+        saturn_wrt_cassini = Path.connect(SATURN_label, CASSINI_label, J2000_label)
         (abs_event, rel_event) = saturn_wrt_cassini.photon_to_event(event_at_cassini)
         rel_pos_label = "Relative pos: %s" % rel_event.pos
         rel_vel_label = "Relative vel: %s" % rel_event.vel
@@ -221,7 +231,7 @@ class ColumnInfoWindow:
         print abs_event.dep
         
 
-        sun_wrt_saturn = oops.Path.connect("SUN",SATURN_label)
+        sun_wrt_saturn = Path.connect("SUN",SATURN_label)
         sun_dep_event = sun_wrt_saturn.photon_to_event(abs_event)
         print abs_event.arr
         print abs_event.phase_angle()
@@ -230,9 +240,8 @@ class ColumnInfoWindow:
         Label(self.top, text=abs_arr_label).pack()
         Label(self.top, text=phase_label).pack()
         
-        #path = oops.SpicePath(SATURN_label, CASSINI_label, J2000_label)
         #better to use following
-        path = oops.Path.connect(SATURN_label, CASSINI_label, J2000_label)
+        path = Path.connect(SATURN_label, CASSINI_label, J2000_label)
         event_at_cassini = path.event_at_time(tdb)
         (event_left_saturn, rel_event_left_saturn) = path.photon_to_event(event_at_cassini)
         print 'saturn pos:'
@@ -242,12 +251,6 @@ class ColumnInfoWindow:
         calc_pos_label = "Calculated position: %s" % rel_event_left_saturn.pos
         Label(self.top, text=calc_pos_label).pack()
         
-        #do the ring plane
-        #rings = oops.Frame.lookup("IAU_SATURN_DESPUN")
-            #zaxis = oops.Event(tai, oops.Vector3([0,0,1]), oops.Vector3([0,0,0]),
-        #CASSINI_label, rings)
-        #zaxis_label = "Ring zaxis: %s" % zaxis
-        #Label(self.top, text=zaxis_label).pack()
         
         b1 = Button(self.top, text="  OK  ", command=self.ok)
         b1.pack()
@@ -370,16 +373,13 @@ class MainFrame:
         t1_col = self.ptable.column_dict['STOP_TIME']
         t0 = t0_col[self.file_ndx]
         t1 = t1_col[self.file_ndx]
-        saturn_wrt_cassini_path = oops.Path.connect(SATURN_label, CASSINI_label, J2000_label)
+        saturn_wrt_cassini_path = Path.connect(SATURN_label, CASSINI_label, J2000_label)
         #uv_shape = self.shape_for_instrument_mode(self.ptable.column_dict['INSTRUMENT_MODE_ID'])
-        fov = oops.FlatFOV(oops.Pair((math.pi/180/3600.,math.pi/180/3600.)),
+        fov = Flat(oops.Pair((math.pi/180/3600.,math.pi/180/3600.)),
                            (1024,1024))
-        calibration = oops.Scaling("DN", 1.)
+        calibration = Scaling("DN", 1.)
         
-        #self.snapshot = oops.Snapshot(self.image_data, None, ["v","u"], (t0, t1),
-        #                        fov, saturn_wrt_cassini_path, J2000_label,
-        #                        calibration)
-        self.snapshot = oops.Snapshot(self.image_data, None, ["v","u"], (t0, t1),
+        self.snapshot = Snapshot(self.image_data, None, ["v","u"], (t0, t1),
                                       fov, saturn_wrt_cassini_path, "SATURN_DESPUN",
                                       calibration)
         print "returning snapshot with t0 = %s" % self.snapshot.t0
@@ -478,6 +478,9 @@ class MainFrame:
         then = datetime.datetime.now()
         if self.snapshot != None:
             print "creating shadow back plane..."
+            #b = []
+            #cProfile.run('shadowProfileWrapper(self, b)')
+            #bp_data = b[0]
             bp_data = self.snapshot.ring_shadow_back_plane(60298., 136775)
         else:
             bp_data = self.create_sample_backplane_data()
@@ -588,7 +591,7 @@ class MainFrame:
         for title in sorted(self.ptable.column_dict.iterkeys()):
             col = self.ptable.column_dict[title]
             print "%s: %s" % (title, col[self.file_ndx])
-        self.snapshot = oops.instrument.cassini.iss.from_file(path)
+        self.snapshot = oops.inst.cassini.iss.from_file(path)
 
     def object_chosen_callback(self, event):
         sel = self.image_data_list.curselection()
@@ -608,5 +611,5 @@ class MainFrame:
 
 main_frame = MainFrame(root)
 
-
+#cProfile.run('root.mainloop()')
 root.mainloop()
