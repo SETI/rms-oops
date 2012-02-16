@@ -95,6 +95,81 @@ class Snapshot(Observation):
         #                mask=(obs_mask | ring_mask))
         
         return bp_masked
+
+    def incidence_angle_back_plane(self, min_range=0., max_range=sys.float_info.max):
+        """gets the ring's backplane and returns whether in shadow or not.
+        
+            Input:
+            min_range       minimum range for rings from planet's center
+            max_range       maximum range for rings from planet's center
+        
+            Return:         2D array of 0 for not in rings, 1 for rings in
+            shadow, and 2 for rings not in shadow
+            """
+    
+        ignore = frame_.RingFrame("IAU_SATURN")
+        surface = surface_.RingPlane("SATURN", "IAU_SATURN_DESPUN")
+        planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268.,
+                                       54364.)
+    
+        #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
+        (surface_event, rel_surf_evt,
+         dist_from_instrument, obs_mask,
+         blk_evt) = self.back_plane_setup(planet_surface)
+        
+        print "surface_event.perp:"
+        print surface_event.perp
+    
+        #now get the sun
+        sun_wrt_target = path_.connect("SUN", "SATURN")
+    
+        # get the relative event of the photon leaving the light source
+        sun_dep_event = sun_wrt_target.photon_to_event(surface_event, 1)[0]
+    
+        surface_event.arr = surface_event.pos - sun_dep_event.pos
+        print "surface_event.arr:"
+        print surface_event.arr
+    
+        incidence_angle = surface_event.incidence_angle()
+        print "incidence_angle:"
+        print incidence_angle
+    
+        return incidence_angle
+
+    def phase_angle_back_plane(self, min_range=0., max_range=sys.float_info.max):
+        """gets the ring's backplane and returns whether in shadow or not.
+        
+            Input:
+            min_range       minimum range for rings from planet's center
+            max_range       maximum range for rings from planet's center
+        
+            Return:         2D array of 0 for not in rings, 1 for rings in
+            shadow, and 2 for rings not in shadow
+        """
+    
+        ignore = frame_.RingFrame("IAU_SATURN")
+        surface = surface_.RingPlane("SATURN", "IAU_SATURN_DESPUN")
+        planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268.,
+                                           54364.)
+    
+        #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
+        (surface_event, rel_surf_evt,
+         dist_from_instrument, obs_mask,
+         blk_evt) = self.back_plane_setup(planet_surface)    
+    
+        #now get the sun
+        sun_wrt_target = path_.connect("SUN", "SATURN")
+        
+        # get the relative event of the photon leaving the light source
+        sun_dep_event = sun_wrt_target.photon_to_event(surface_event, 1)[0]
+    
+        surface_event.arr = surface_event.pos - sun_dep_event.pos
+        
+        phase_angle = surface_event.phase_angle()
+        print "phase_angle:"
+        print phase_angle
+        
+        return phase_angle
     
     def get_shadow_mask(self, light_path_id, target_path_id, target_surface,
                         obj_evt):
@@ -272,6 +347,7 @@ class Snapshot(Observation):
             block_dist[rel_blk_evt.pos.mask] = sys.float_info.max
             mask = block_dist < (dist_from_instrument - dist_tolerance)
         else:
+            rel_blk_evt = None
             mask = dist_from_instrument == np.nan
 
         return (surface_event, rel_surf_evt, dist_from_instrument, mask, rel_blk_evt)

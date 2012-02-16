@@ -7,12 +7,14 @@ import vicar
 import os
 import pylab
 import numpy as np
+import numpy.ma as ma
 import oops.tools as tools
 from oops.event import Event
 from oops.path.baseclass import Path
 from oops.fov.flat import Flat
 from oops.obs.snapshot import Snapshot
 from oops.calib.scaling import Scaling
+from oops.xarray.all import *
 import oops.inst.cassini.iss
 import pdstable
 import julian
@@ -311,7 +313,12 @@ class MainFrame:
         filemenu.add_command(label="Back-plane...", command=self.backplaneCallback)
         filemenu.add_command(label="Spheroid Back-plane...", command=self.spheroidBackplaneCallback)
         filemenu.add_command(label="Latitude Back-plane...", command=self.latitudeBackplaneCallback)
-        filemenu.add_command(label="Shadow Back-plane...", command=self.shadowBackplaneCallback)
+        filemenu.add_command(label="Shadow Back-plane...",
+                             command=self.shadowBackplaneCallback)
+        filemenu.add_command(label="Phase Angle Back-plane...",
+                             command=self.phaseAngleBackplaneCallback)
+        filemenu.add_command(label="Incidence Angle Back-plane...",
+                             command=self.incidenceAngleBackplaneCallback)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.quitCallback)
                        
@@ -478,9 +485,6 @@ class MainFrame:
         then = datetime.datetime.now()
         if self.snapshot != None:
             print "creating shadow back plane..."
-            #b = []
-            #cProfile.run('shadowProfileWrapper(self, b)')
-            #bp_data = b[0]
             bp_data = self.snapshot.ring_shadow_back_plane(60298., 136775)
         else:
             bp_data = self.create_sample_backplane_data()
@@ -490,6 +494,44 @@ class MainFrame:
         print "ring shadow back plane took:"
         print str(total_time)
         #pylab.imsave("/Users/bwells/latitudebackplane.png", bp_data)
+
+    def phaseAngleBackplaneCallback(self):
+        """will create backplane then show it with pylab. for the moment, just
+            show random data in pylab."""
+        bp_data = None
+        then = datetime.datetime.now()
+        if self.snapshot != None:
+            print "creating phase angle back plane..."
+            pa = self.snapshot.phase_angle_back_plane(60298., 136775)
+            bp_data = pa.mvals
+        else:
+            bp_data = self.create_sample_backplane_data()
+        self.displayBackplane(bp_data)
+        now = datetime.datetime.now()
+        total_time = now - then
+        print "phase angle back plane took:"
+        print str(total_time)
+        #pylab.imsave("/Users/bwells/latitudebackplane.png", bp_data)
+
+    def incidenceAngleBackplaneCallback(self):
+        """will create backplane then show it with pylab. for the moment, just
+            show random data in pylab."""
+        bp_data = None
+        then = datetime.datetime.now()
+        if self.snapshot != None:
+            print "creating incidence angle back plane..."
+            pa = self.snapshot.incidence_angle_back_plane(60298., 136775)
+            #now change the data to more accurately look like diffuse shading
+            x = np.cos(pa.vals)
+            x[x<0.] = 0.
+            bp_data = ma.array(x, mask=pa.mask)
+        else:
+            bp_data = self.create_sample_backplane_data()
+        self.displayBackplane(bp_data)
+        now = datetime.datetime.now()
+        total_time = now - then
+        print "incidence angle back plane took:"
+        print str(total_time)
 
 
     def open_file_callback(self):

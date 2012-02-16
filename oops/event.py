@@ -566,7 +566,7 @@ class Event(object):
         """Returns the incidence angle, measured between the surface normal and
         the reversed direction of the arriving photon."""
 
-        return self.wrt_ssb().perp.sep(self.aberrated_arr(), reverse=True)
+        return self.wrt_ssb().perp.sep(self.aberrated_arr(), reversed=True)
 
     def emission_angle(self):
         """Returns the emission angle, measured between the surface normal and
