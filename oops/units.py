@@ -134,7 +134,7 @@ class Units(object):
                 float(self.denom * units.numer) *
                 np.pi**(self.pi_expo - units.pi_expo))
 
-    def mul_unit(self, arg, name=None):
+    def mul_by(self, arg, name=None):
         """Returns a Units object constructed as the product of two other Units.
         """
 
@@ -151,7 +151,7 @@ class Units(object):
 
         return result
 
-    def div_unit(self, arg, name=None):
+    def div_by(self, arg, name=None):
         """Returns a Units object constructed as the ratio of two other Units.
         """
 
@@ -201,11 +201,52 @@ class Units(object):
 
         return result
 
+    @staticmethod
+    def mul_units(arg1, arg2, name=None):
+        """Returns a Units object constructed as the product of two other
+        Units. Either or both arguments can be None."""
+
+        if arg2 is None: return arg1
+        if arg1 is None: return arg2
+        return arg1 * arg2
+
+    @staticmethod
+    def div_units(arg1, arg2, name=None):
+        """Returns a Units object constructed as the ratio of two other
+        Units. Either or both arguments can be None."""
+
+        if arg2 is None: return arg1
+        if arg1 is None: return arg2.to_power(-1)
+        return arg1 / arg2
+
+    def sqrt(self, name=None):
+        """Returns the square root of a unit if this is possible."""
+
+        if (self.exponents[0]%2 != 0 or
+            self.exponents[1]%2 != 0 or
+            self.exponents[2]%2 != 0):
+                raise ValueError("illegal units for sgrt(): " + self.name)
+
+        exponents = (self.exponents[0]/2, self.exponents[1]/2,
+                                          self.exponents[2]/2)
+
+        numer = np.sqrt(self.numer)
+        denom = np.sqrt(self.denom)
+        if numer == int(numer): numer = int(numer)
+        if denom == int(denom): denom = int(denom)
+
+        pi_expo = self.pi_expo // 2
+        if self.pi_expo != 2*pi_expo:
+            numer *= np.pi**(self.pi_expo / 2.)
+            pi_expo = 0
+
+        return Units(exponents, (numer, denom, pi_expo), name)
+
     def __mul__(self, arg):
-        if isinstance(arg, Units): return self.mul_unit(arg)
+        if isinstance(arg, Units): return self.mul_by(arg)
 
         if isinstance(arg, numbers.Real):
-            return self.mul_unit(Units((0,0,0),(arg,1,0)))
+            return self.mul_by(Units((0,0,0),(arg,1,0)))
 
         return  NotImplemented
 
@@ -213,10 +254,10 @@ class Units(object):
         return self.__mul__(arg)
 
     def __div__(self, arg):
-        if isinstance(arg, Units): return self.div_unit(arg)
+        if isinstance(arg, Units): return self.div_by(arg)
 
         if isinstance(arg, numbers.Number):
-            return self.mul_unit(Units((0,0,0),(1,arg,0)))
+            return self.mul_by(Units((0,0,0),(1,arg,0)))
 
         return NotImplemented
 
@@ -416,6 +457,9 @@ class Test_Units(unittest.TestCase):
         self.assertTrue( Units.do_match(Units.CM, Units.KM))
         self.assertFalse(Units.do_match(Units.S, Units.KM))
         self.assertFalse(Units.do_match(Units.S, Units.UNITLESS))
+
+        self.assertEqual(Units.KM, (Units.KM**2).sqrt())
+        self.assertEqual(Units.M,  (Units.KM * Units.MM).sqrt())
 
 ################################################################################
 if __name__ == '__main__':

@@ -490,8 +490,16 @@ class Array(object):
         div_by_zero = (vals == 0)
         if np.any(div_by_zero):
 
+            # Handle scalar case
+            if np.shape(vals) == ():
+                obj = Array.__new__(type(self))
+                obj.__init__(self.vals, True, new_units)
+                return obj
+
             # Prevent any warning
-            vals[div_by_zero] = 1
+            if np.shape(vals) != ():
+                vals = vals.copy()
+                vals[div_by_zero] = 1
 
             # Collapse rightmost mask axes based on rank of object
             for i in range(self.rank):

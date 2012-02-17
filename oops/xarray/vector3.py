@@ -80,15 +80,15 @@ class Vector3(Array):
             axis        axis index.
         """
 
-        return Scalar(self.vals[...,axis], self.mask)
+        return Scalar(self.vals[...,axis], self.mask, self.units)
 
     def as_scalars(self):
         """Returns the components of a Vector3 as a triplet of Scalars.
         """
 
-        return (Scalar(self.vals[...,0], self.mask),
-                Scalar(self.vals[...,1], self.mask),
-                Scalar(self.vals[...,2], self.mask))
+        return (Scalar(self.vals[...,0], self.mask, self.units),
+                Scalar(self.vals[...,1], self.mask, self.units),
+                Scalar(self.vals[...,2], self.mask, self.units))
 
     @staticmethod
     def from_scalars(x,y,z):
@@ -96,22 +96,24 @@ class Vector3(Array):
         components provided as scalars.
         """
 
-        (x,y,z) = Array.broadcast_arrays((Scalar.as_scalar(x),
-                                          Scalar.as_scalar(y),
-                                          Scalar.as_scalar(z)))
+        x = Scalar.as_scalar(x)
+        y = Scalar.as_scalar(y).confirm_units(x.units)
+        z = Scalar.as_scalar(z).confirm_units(x.units)
+        (x,y,z) = Array.broadcast_arrays((x,y,z))
         return Vector3(np.vstack((x.vals,y.vals,z.vals)).swapaxes(0,-1),
-                       x.mask | y.mask | z.mask)
+                       x.mask | y.mask | z.mask, x.units)
 
     def dot(self, arg):
         """Returns the dot products of the vectors as a Scalar."""
 
         arg = Vector3.as_vector3(arg)
-        return Scalar(utils.dot(self.vals, arg.vals), self.mask | arg.mask)
+        return Scalar(utils.dot(self.vals, arg.vals), self.mask | arg.mask,
+                                Units.mul_units(self.units, arg.units))
 
     def norm(self):
         """Returns the length of the Vector3 as a Scalar."""
 
-        return Scalar(utils.norm(self.vals), self.mask)
+        return Scalar(utils.norm(self.vals), self.mask, self.units)
 
     def __abs__(self): return self.norm()
 
@@ -125,7 +127,8 @@ class Vector3(Array):
 
         arg = Vector3.as_vector3(arg)
         return Vector3(utils.cross3d(self.vals, arg.vals),
-                       self.mask | arg.mask)
+                       self.mask | arg.mask,
+                       Units.mul_units(self.units, arg.units))
 
     def ucross(self, arg):
         """Returns the unit vector in the direction of the cross products of the
@@ -140,13 +143,15 @@ class Vector3(Array):
         """
 
         arg = Vector3.as_vector3(arg)
-        return Vector3(utils.perp(self.vals, arg.vals), self.mask | arg.mask)
+        return Vector3(utils.perp(self.vals, arg.vals), self.mask | arg.mask,
+                                                        self.units)
 
     def proj(self, arg):
         """Returns the component of a Vector3 projected into another Vector3."""
 
         arg = Vector3.as_vector3(arg)
-        return Vector3(utils.proj(self.vals, arg.vals), self.mask | arg.mask)
+        return Vector3(utils.proj(self.vals, arg.vals), self.mask | arg.mask,
+                                                        self.units)
 
     def sep(self, arg, reversed=False):
         """Returns returns angle between two Vector3 objects as a Scalar."""
@@ -166,7 +171,7 @@ class Vector3(Array):
         # Vector3 * Matrix3 rotates the coordinate frame
         if arg.__class__.__name__ == "Matrix3":
             return Vector3(utils.mxv(arg.vals, self.vals),
-                           arg.mask | self.mask)
+                           arg.mask | self.mask, self.units)
 
         return Array.__mul__(self, arg)
 
@@ -176,7 +181,7 @@ class Vector3(Array):
         # Vector3 / Matrix3 un-rotates the coordinate frame
         if arg.__class__.__name__ == "Matrix3":
             return Vector3(utils.mtxv(arg.vals, self.vals),
-                           arg.mask | self.mask)
+                           arg.mask | self.mask, self.units)
 
         return Array.__div__(self, arg)
 

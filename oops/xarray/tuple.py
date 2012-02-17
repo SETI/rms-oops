@@ -88,7 +88,7 @@ class Tuple(Array):
         """Returns a Pair containing two selected items from each Tuple,
         beginning with the selected axis."""
 
-        return Pair(self.vals[...,axis:axis+2], self.mask)
+        return Pair(self.vals[...,axis:axis+2], self.mask, self.units)
 
     @staticmethod
     def from_scalars(*args):
@@ -96,14 +96,19 @@ class Tuple(Array):
         given as arguments.
         """
 
-        mask = False
+        scalars = []
         for arg in args:
-            if isinstance(arg, Scalar):
-                mask = mask | arg.mask
-            if isinstance(arg, ma.MaskedArray) and arg.mask != ma.nomask:
-                mask = mask | arg.mask
+            scalars.append(arg.as_scalar(arg))
 
-        return Tuple(np.rollaxis(np.array(args), 0, len(args)), mask)
+        units = scalars[0].units
+        mask  = scalars[0].mask
+
+        arrays = [scalars[0].vals]
+        for scalar in scalars[1:]:
+            arrays.append(scalar.confirm_units(units).vals)
+            mask = mask | scalar.mask
+
+        return Tuple(np.rollaxis(np.array(arrays), 0, len(arrays)), mask, units)
 
     @staticmethod
     def cross_scalars(*args):

@@ -72,6 +72,7 @@ class Scalar(Array):
 
     @staticmethod
     def as_standard(arg):
+
         if not isinstance(arg, Scalar): arg = Scalar(arg)
         return arg.convert_units(None)
 
@@ -84,6 +85,96 @@ class Scalar(Array):
         """Returns the fractional component of each value."""
 
         return Scalar(self.vals % 1., self.mask)
+
+    def sin(self):
+        """Returns the sine of each value. Works for units other than radians.
+        """
+
+        if (self.units is not None and self.units.triple != [0,0,1] and
+                                       self.units.triple != [0,0,0]):
+            raise ValueError("illegal units for sin(): " + units.name)
+
+        return Scalar(np.sin(self.as_standard().vals), self.mask)
+
+    def cos(self):
+        """Returns the cosine of each value. Works for units other than radians.
+        """
+
+        if (self.units is not None and self.units.triple != [0,0,1] and
+                                       self.units.triple != [0,0,0]):
+            raise ValueError("illegal units for cos(): " + units.name)
+
+        return Scalar(np.cos(self.as_standard().vals), self.mask)
+
+    def tan(self):
+        """Returns the tangent of each value. Works for units other than
+        radians."""
+
+        if (self.units is not None and self.units.triple != [0,0,1] and
+                                       self.units.triple != [0,0,0]):
+            raise ValueError("illegal units for tan(): " + units.name)
+
+        return Scalar(np.tan(self.as_standard().vals), self.mask)
+
+    def arcsin(self):
+        """Returns the arcsine of each value."""
+
+        if self.units is not None and self.units.triple != [0,0,0]:
+            raise ValueError("illegal units for arcsin(): " + units.name)
+
+        return Scalar(np.arcsin(self.vals), self.mask)
+
+    def arccos(self):
+        """Returns the arccosine of each value."""
+
+        if self.units is not None and self.units.triple != [0,0,0]:
+            raise ValueError("illegal units for arccos(): " + units.name)
+
+        return Scalar(np.arccos(self.vals), self.mask)
+
+    def arctan(self):
+        """Returns the arctangent of each value."""
+
+        if self.units is not None and self.units.triple != [0,0,0]:
+            raise ValueError("illegal units for arctan(): " + units.name)
+
+        return Scalar(np.arctan(self.vals), self.mask)
+
+    def arctan2(self, arg):
+        """Returns the four-quadrant value of arctan2(y,x)."""
+
+        if self.units is not None and self.units.triple != [0,0,0]:
+            raise ValueError("illegal units for arctan2(): " + units.name)
+
+        arg = Scalar.as_scalar(arg)
+        if arg.units is not None and arg.units.triple != [0,0,0]:
+            raise ValueError("illegal units for arctan2(): " + units.name)
+
+        return Scalar(np.arctan2(self.vals, arg.vals), self.mask)
+
+    def sqrt(self):
+        """Returns the square root, masking imaginary values."""
+
+        if self.units is not None:
+            new_units = self.units.sqrt()
+        else:
+            new_units = None
+
+        if self.shape == []:
+            if self.vals < 0.:
+                return Scalar(0., True, new_units)
+            else:
+                return Scalar(np.sqrt(self.vals), self.mask, new_units)
+
+        else:
+            new_mask = (self.vals < 0.)
+            if np.any(new_mask):
+                new_vals = self.vals.copy()
+                new_vals[new_mask] = 0.
+                new_vals = np.sqrt(new_vals)
+                return Scalar(new_vals, new_mask | self.mask, new_units)
+            else:
+                return Scalar(np.sqrt(self.vals), self.mask, new_units)
 
     ####################################
     # Binary logical operators

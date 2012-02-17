@@ -94,14 +94,14 @@ class Pair(Array):
             axis        0 for the x-axis; 1 for the y-axis.
         """
 
-        return Scalar(self.vals[...,axis], self.mask)
+        return Scalar(self.vals[...,axis], self.mask, self.units)
 
     def as_scalars(self):
         """Returns the components of a Pair as a pair of Scalars.
         """
 
-        return (Scalar(self.vals[...,0], self.mask),
-                Scalar(self.vals[...,1], self.mask))
+        return (Scalar(self.vals[...,0], self.mask, self.units),
+                Scalar(self.vals[...,1], self.mask, self.units))
 
     @staticmethod
     def from_scalars(x,y):
@@ -109,9 +109,11 @@ class Pair(Array):
         components provided as scalars.
         """
 
-        (x,y) = Array.broadcast_arrays((Scalar.as_scalar(x),
-                                        Scalar.as_scalar(y)))
-        return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1), x.mask | y.mask)
+        x = Scalar.as_scalar(x)
+        y = Scalar.as_scalar(y).confirm_units(x.units)
+        (x,y) = Array.broadcast_arrays((x,y))
+        return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1), x.mask | y.mask,
+                                                               x.units)
 
     @staticmethod
     def cross_scalars(x,y):
@@ -121,7 +123,7 @@ class Pair(Array):
         """
 
         x = Scalar.as_scalar(x)
-        y = Scalar.as_scalar(y)
+        y = Scalar.as_scalar(y).confirm_units(x.units)
 
         newshape = x.shape + y.shape
         if x.vals.dtype.kind != "f" and y.vals.dtype.kind != "f":
@@ -142,7 +144,7 @@ class Pair(Array):
             switched.
         """
 
-        return Pair(self.vals[..., -1::-1], self.mask)
+        return Pair(self.vals[..., -1::-1], self.mask, self.units)
 
     def as_index(self):
         """Returns this object as a list of lists, which can be used to index a
@@ -169,13 +171,15 @@ class Pair(Array):
         """
 
         arg = Pair.as_pair(arg)
-        return Scalar(utils.dot(self.vals, arg.vals), self.mask | arg.mask)
+        return Scalar(utils.dot(self.vals, arg.vals),
+                      self.mask | arg.mask,
+                      Units.mul_units(self.units, arg.units))
 
     def norm(self):
         """Returns the length of the Pair as a Scalar.
         """
 
-        return Scalar(utils.norm(self.vals), self.mask)
+        return Scalar(utils.norm(self.vals), self.mask, self.units)
 
     def __abs__(self): return self.norm()
 
@@ -191,7 +195,10 @@ class Pair(Array):
         """
 
         arg = Pair.as_pair(arg)
-        return Scalar(utils.cross2d(self.vals, arg.vals), self.mask | arg.mask)
+        return Scalar(utils.cross2d(self.vals, arg.vals),
+                      self.mask | arg.mask,
+                      Units.mul_units(self.units, arg.units))
+
 
     def sep(self, arg):
         """Returns returns angle between two Pairs as a Scalar.
