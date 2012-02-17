@@ -10,8 +10,8 @@ import numpy as np
 
 from baseclass import Surface
 from oops.xarray.all import *
-import oops.frame.registry as frame_registry
-import oops.path.registry as path_registry
+from oops.frame.all  import *
+from oops.path.all   import *
 
 class Spheroid(Surface):
     """Spheroid defines a spheroidal surface centered on the given path and
@@ -34,8 +34,8 @@ class Spheroid(Surface):
                         planetographic latitudes.
         """
 
-        self.origin_id = path_registry.as_id(origin)
-        self.frame_id  = frame_registry.as_id(frame)
+        self.origin_id = path.as_id(origin)
+        self.frame_id  = frame.as_id(frame)
 
         self.equatorial = radii[0]
         self.polar      = radii[1]
@@ -70,8 +70,8 @@ class Spheroid(Surface):
 
         unsquashed = Vector3.as_standard(position) * self.v_unsquash
 
-        r = unflat.norm()
-        (x,y,z) = unflat.as_scalars()
+        r = unsquashed.norm()
+        (x,y,z) = unsquashed.as_scalars()
         lat = (z/r).arcsin()
         lon = y.arctan2(x)
 
@@ -97,7 +97,7 @@ class Spheroid(Surface):
         r_coslat = r * lat.cos()
         x = r_coslat * lon.cos()
         y = r_coslat * lon.sin()
-        z = r * lat.sin() * self.flat[2]
+        z = r * lat.sin() * self.squash
 
         return Vector3.from_scalars((x,y,z))
 
