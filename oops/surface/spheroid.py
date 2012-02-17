@@ -10,8 +10,8 @@ import numpy as np
 
 from baseclass import Surface
 from oops.xarray.all import *
-from oops.frame.all  import *
-from oops.path.all   import *
+import oops.frame.all as frame_
+import oops.path.all  as path_
 
 class Spheroid(Surface):
     """Spheroid defines a spheroidal surface centered on the given path and
@@ -34,8 +34,8 @@ class Spheroid(Surface):
                         planetographic latitudes.
         """
 
-        self.origin_id = path.as_id(origin)
-        self.frame_id  = frame.as_id(frame)
+        self.origin_id = path_.as_id(origin)
+        self.frame_id  = frame_.as_id(frame)
 
         self.equatorial = radii[0]
         self.polar      = radii[1]
@@ -345,7 +345,6 @@ class Spheroid(Surface):
 ########################################
 
 import unittest
-import oops.frame.all as frame_
 import oops.tools as tools
 
 class Test_Spheroid(unittest.TestCase):
