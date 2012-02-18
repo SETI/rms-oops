@@ -16,6 +16,11 @@ from oops.obs.snapshot import Snapshot
 from oops.calib.scaling import Scaling
 from oops.xarray.all import *
 import oops.inst.cassini.iss
+import oops.frame.all as frame_
+import oops.path.all  as path_
+import oops.surface.all as surface_
+import oops.frame.registry as frame_registry
+import oops.path.registry as path_registry
 import pdstable
 import julian
 import math
@@ -37,6 +42,21 @@ tools.define_solar_system("2007-312T03:31:13.300", "2007-355T11:22:40.999")
     
 def shadowProfileWrapper(obj, b):
     b.append(obj.snapshot.ring_shadow_back_plane(60298., 136775))
+
+class AutoScrollbar(Scrollbar):
+    # a scrollbar that hides itself if it's not needed.  only
+    # works if you use the grid geometry manager.
+    def set(self, lo, hi):
+        if float(lo) <= 0.0 and float(hi) >= 1.0:
+            # grid_remove is currently missing from Tkinter!
+            self.tk.call("grid", "remove", self)
+        else:
+            self.grid()
+        Scrollbar.set(self, lo, hi)
+    def pack(self, **kw):
+        raise TclError, "cannot use pack with this widget"
+    def place(self, **kw):
+        raise TclError, "cannot use place with this widget"
 
 class TimeDialog(simple_dialog.Dialog):
     
@@ -187,6 +207,79 @@ class ImageWindow:
             pylab.vlines(y, 0., 1024., colors='r')
             self.grid_on = True
 
+class ChooseFrameAndPath:
+    def __init__(self, master):
+        self.parent = master
+
+    def show(self, frames, paths):
+        self.top = Toplevel(master=self.parent)
+
+        vscrollbar = Scrollbar(self.top, orient=VERTICAL)
+        vscrollbar.pack(side=RIGHT, fill=Y)
+
+        canvas = Canvas(self.top)
+        canvas.pack()
+        #canvas.grid(row=0, column=0, sticky=N+S+E+W)
+        
+        #
+        # create canvas contents
+        frame = Frame(canvas)
+        frame.rowconfigure(1, weight=1)
+        frame.columnconfigure(1, weight=1)
+        
+        Label(frame, text="Frames").pack()
+        for str in sorted(frames.iterkeys()):
+            frames[str] = IntVar()
+            frames[str].set(0)
+            c = Checkbutton(frame, text=str, variable=frames[str], justify=LEFT)
+            c.pack()
+        Label(frame, text="Paths:").pack()
+        for str in sorted(paths.iterkeys()):
+            paths[str] = IntVar()
+            paths[str].set(0)
+            c = Checkbutton(frame, text=str, variable=paths[str], justify=LEFT)
+            c.pack()
+        b1 = Button(frame, text="  OK  ", command=self.ok)
+        b1.pack()
+        b1.focus_set()
+
+        canvas.create_window(0, 0, anchor=NW, window=frame)
+        canvas.config(yscrollcommand=vscrollbar.set)
+        vscrollbar.config(command=canvas.yview)
+        frame.update_idletasks()
+        canvas.config(scrollregion=canvas.bbox("all"))
+
+        """
+        r = 1
+        label = Label(self.parent, padx=7, pady=7, text="Frames:")
+        label.grid(row=r, column=0, sticky='news')
+        r += 1
+        var = IntVar()
+        for str in frames:
+            c = Checkbutton(self.parent, text=str, variable=var, justify=LEFT)
+            c.grid(row=r, column=0, sticky='news')
+            r += 1
+
+        label = Label(self.parent, padx=7, pady=7, text="Paths:")
+        label.grid(row=r, column=0, sticky='news')
+        r += 1
+        for str in paths:
+            c = Checkbutton(self.parent, text=str, variable=var, justify=LEFT)
+            c.grid(row=r, column=0, sticky='news')
+            r += 1
+
+        b1 = Button(self.parent, text="  OK  ", command=self.ok)
+        b1.grid(row=r, column=0, sticky='news')
+        b1.focus_set()
+            
+        self.canvas.create_window(0, 0, anchor=NW, window=self.parent)
+        self.parent.update_idletasks()
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+    """
+        
+    def ok(self):
+        self.top.destroy()
+
 class ColumnInfoWindow:
     def __init__(self, master):
         self.parent = master
@@ -297,6 +390,22 @@ class MainFrame:
         image_window = ImageWindow()
         self.create_menu(master, image_window)
         master.protocol("WM_DELETE_WINDOW", self.quitCallback)
+            
+        ignore = frame_.RingFrame("IAU_SATURN")
+        self.frames = {}
+        for key in frame_registry.REGISTRY:
+            if 'SATURN' in key:
+                if isinstance(key,str):
+                    self.frames[key] = 0
+                else:
+                    self.frames[key[0]] = 0
+        self.paths = {}
+        for key in path_registry.REGISTRY:
+            if 'SATURN' in key:
+                if isinstance(key, str):
+                    self.paths[key] = 0
+                else:
+                    self.paths[key[0]] = 0
 
     
     def create_menu(self, master, image_window):
@@ -305,7 +414,8 @@ class MainFrame:
                        
         filemenu = Menu(menu)
         menu.add_cascade(label="File", menu=filemenu)
-        filemenu.add_command(label="Open...", command=self.open_file_callback)
+        filemenu.add_command(label="Open Index...", command=self.open_file_callback)
+        filemenu.add_command(label="Open Image...", command=self.open_image_file_callback)
         filemenu.add_command(label="Save as...", command=self.saveas_file_callback)
         filemenu.add_separator()
         filemenu.add_command(label="Info...", command=self.infoCallback)
@@ -319,12 +429,24 @@ class MainFrame:
                              command=self.phaseAngleBackplaneCallback)
         filemenu.add_command(label="Incidence Angle Back-plane...",
                              command=self.incidenceAngleBackplaneCallback)
+        filemenu.add_command(label="Emission Angle Back-plane...",
+                             command=self.emissionAngleBackplaneCallback)
+        filemenu.add_separator()
+        filemenu.add_command(label="Is Saturn in view?",
+                             command=self.checkSaturnInViewCallback)
+        filemenu.add_command(label="Center of Saturn in view?",
+                             command=self.checkCenterSaturnInViewCallback)
+        filemenu.add_command(label="Center of Objects in view?",
+                             command=self.checkCenterOfObjectsInViewCallback)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.quitCallback)
                        
         editmenu = Menu(menu)
         menu.add_cascade(label="Edit", menu=editmenu)
         editmenu.add_command(label="Search...", command=self.search_callback)
+        editmenu.add_separator()
+        editmenu.add_command(label="Choose Frames and Paths...",
+                             command=self.chooseFrameAndPathsCallback)
         editmenu.add_separator()
         
         cmapmenu = Menu(editmenu)
@@ -358,6 +480,10 @@ class MainFrame:
     def infoCallback(self):
         self.col_info_window = ColumnInfoWindow(self.parent)
         self.col_info_window.show(self.ptable, self.file_ndx)
+
+    def chooseFrameAndPathsCallback(self):
+        cfp = ChooseFrameAndPath(self.parent)
+        cfp.show(self.frames, self.paths)
 
     def quitCallback(self):
         self.status.set( "%s", "Asking to exit");
@@ -533,6 +659,70 @@ class MainFrame:
         print "incidence angle back plane took:"
         print str(total_time)
 
+    def emissionAngleBackplaneCallback(self):
+        """will create backplane then show it with pylab. for the moment, just
+            show random data in pylab."""
+        bp_data = None
+        then = datetime.datetime.now()
+        if self.snapshot != None:
+            print "creating emission angle back plane..."
+            pa = self.snapshot.emission_angle_back_plane(60298., 136775)
+            #now change the data to more accurately look like diffuse shading
+            x = np.cos(pa.vals)
+            x[x<0.] = 0.
+            bp_data = ma.array(x, mask=pa.mask)
+        else:
+            bp_data = self.create_sample_backplane_data()
+        self.displayBackplane(bp_data)
+        now = datetime.datetime.now()
+        total_time = now - then
+        print "emission angle back plane took:"
+        print str(total_time)
+
+    def checkSaturnInViewCallback(self):
+        ignore = frame_.RingFrame("IAU_SATURN")
+        surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268., 54364.)
+        in_view = self.snapshot.surface_in_view(surface)
+        print "Center of Saturn in view:"
+        print in_view
+
+    def checkCenterOfObjectsInViewCallback(self):
+        #cheating b/c don't know how to get sizes of bodies
+        #cheat_a = 62.8
+        #cheat_c = 39.7
+        #objects_in_view = []
+        #objects_not_in_view = []
+        for fkey in self.frames:
+            if self.frames[fkey].get():
+                for pkey in self.paths:
+                    if self.paths[pkey].get():
+                        print "%s, %s" % (fkey, pkey)
+                        #surface = surface_.Spheroid(pkey, fkey, cheat_a, cheat_c)
+                        in_view = self.snapshot.surface_center_within_view_bounds(pkey)
+                        print "%s in view:" % pkey
+                        print in_view
+        """fkey = "IAU_SATURN"
+        for pkey in self.paths:
+            print "%s, %s" % (fkey, pkey)
+            surface = surface_.Spheroid(pkey, fkey, cheat_a, cheat_c)
+            in_view = self.snapshot.surface_center_within_view_bounds(surface)
+            if in_view:
+                objects_in_view.append(pkey)
+            else:
+                objects_not_in_view.append(pkey)
+        print "objects in view:\n------------"
+        print objects_in_view
+        print "objects NOT in view:\n------------"
+        print objects_not_in_view"""
+
+    def checkCenterSaturnInViewCallback(self):
+        #ignore = frame_.RingFrame("IAU_SATURN")
+        #surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268., 54364.)
+        in_view = self.snapshot.surface_center_within_view_bounds("SATURN")
+        print "Center of Saturn in view:"
+        print in_view
+        print "Any part of Saturn in view:"
+        print self.snapshot.any_part_object_in_view("SATURN")
 
     def open_file_callback(self):
         # get filename
@@ -610,6 +800,23 @@ class MainFrame:
                 self.image_data_list.insert(END, line)
             self.image_data_list.update_idletasks()
             self.current_metadata_category = title
+
+    def open_image_file_callback(self):
+        path = tkFileDialog.askopenfilename()
+        try:
+            vimg = vicar.VicarImage.from_file(path)
+        except IOError as e:
+            print 'Image file does not exist on this system'
+            return
+        self.snapshot = oops.inst.cassini.iss.from_file(path)
+        for item in vimg.table:
+            print item
+        #print vimg.table
+        self.image_data = vimg.data[0]
+        pylab.gray()
+        pylab.imshow(self.image_data)
+        pylab.imsave("/Users/bwells/saturnImage.png", self.image_data)
+        ignore = frame_.RingFrame("IAU_SATURN")
 
     def open_image(self):
         title = ""
