@@ -3,6 +3,8 @@
 #
 # 2/8/12 Modified (MRS) - Updated for style; added elevation parameter; added
 #   mask tracking.
+# 2/17/12 Modified (MRS) - Added optional radial limits to the definition of a
+#   RingPlane.
 ################################################################################
 
 import numpy as np
@@ -10,8 +12,8 @@ import gravity
 
 from baseclass import Surface
 from oops.xarray.all import *
-import oops.frame.registry as frame_registry
-import oops.path.registry as path_registry
+import oops.frame.all as frame_
+import oops.path.all  as path_
 
 class RingPlane(Surface):
     """RingPlane is a subclass of Surface describing a flat surface in the (x,y)
@@ -20,7 +22,8 @@ class RingPlane(Surface):
     longitude, elevation), with an optional offset in elevation from the
     equatorial (z=0) plane."""
 
-    def __init__(self, origin, frame, gravity=None, elevation=0.):
+    def __init__(self, origin, frame, radii=None, gravity=None,
+                       elevation=0.):
         """Constructor for a RingPlane object.
 
         Input:
@@ -30,6 +33,9 @@ class RingPlane(Surface):
             frame       a Frame object or ID in which the ring plane is the
                         (x,y) plane (where z = 0).
 
+            radii       the nominal inner and outer radii of the ring, in km.
+                        None for a ring with no radial limits.
+
             gravity     an optional Gravity object, used to define the orbital
                         velocities within the plane.
 
@@ -37,10 +43,16 @@ class RingPlane(Surface):
                         positive rotation, in km.
             """
 
-        self.origin_id = path_registry.as_id(origin)
-        self.frame_id  = frame_registry.as_id(frame)
+        self.origin_id = path_.as_id(origin)
+        self.frame_id  = frame_.as_id(frame)
         self.gravity   = gravity
         self.elevation = elevation
+
+        if radii is None:
+            self.radii = None
+        else:
+            self.radii    = np.asfarray(radii)
+            self.radii_sq = self.radii**2
 
     def as_coords(self, position, axes=2):
         """Converts from position vectors in the internal frame into the surface
@@ -126,14 +138,19 @@ class RingPlane(Surface):
         los = Vector3.as_standard(los)
 
         t = ((self.elevation - obs.vals[...,2]) / los.vals[...,2])
-        array = obs.vals + t[..., np.newaxis] * los.vals
+        vals = obs.vals + t[..., np.newaxis] * los.vals
 
         # Make the z-component exact
-        array[...,2] = self.elevation
+        vals[...,2] = self.elevation
 
+        # Update the mask
         mask = obs.mask | los.mask | (los.vals[...,2] == 0) | (t < 0.)
 
-        return (Vector3(array,mask), Scalar(t,mask))
+        if self.radii is not None:
+            r_sq = vals[...,0]**2 + vals[...,1]**2
+            mask = mask | (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
+
+        return (Vector3(vals,mask), Scalar(t,mask))
 
     def normal(self, position):
         """Returns the normal vector at a position at or near a surface.
@@ -147,10 +164,18 @@ class RingPlane(Surface):
                         arbitrary.
         """
 
-        return Vector3((0,0,1))     # This does not inherit the given vector's
-                                    # shape, but should broadcast properly
+        # The normal is undefined outside the ring's radial limits
+        if self.radii is not None:
+            r_sq = position.vals[...,0]**2 + position.vals[...,1]**2
+            mask = (self.mask | (r_sq < self.radii_sq[0]) |
+                                (r_sq > self.radii_sq[1]))
 
-    def gradient(self, position, axis=0, projected=True):
+        vals = np.zeros(position.vals.shape)
+        vals[...,2] = 1.
+
+        return Vector3(vals, mask)
+
+    def gradient(self, position, axis=0):
         """Returns the gradient vector at a specified position at or near the
         surface. The gradient is defined as the vector pointing in the direction
         of most rapid change in the value of a particular surface coordinate.
@@ -166,18 +191,22 @@ class RingPlane(Surface):
             axis        0, 1 or 2, identifying the coordinate axis for which the
                         gradient is sought.
 
-            projected   True to project the gradient vector into the surface.
-
         Return:         a unitless Vector3 of the gradients sought. Values are
                         always in standard units.
         """
 
-        if axis == 3: return Vector3([0,0,1])
+        if axis == 2: return self.normal()
 
         position = Vector3.as_standard(position)
 
         radii = position.copy()
         radii.vals[...,2] = 0.
+
+        # The gradient is undefined outside the ring's radial limits
+        if self.radii is not None:
+            r_sq = position.vals[...,0]**2 + position.vals[...,1]**2
+            radii.mask = (position.mask | (r_sq < self.radii_sq[0]) |
+                                          (r_sq > self.radii_sq[1]))
 
         if axis == 0:
             return radii.unit()
@@ -204,13 +233,25 @@ class RingPlane(Surface):
         Return:         a unitless Vector3 of velocities, in units of km/s.
         """
 
-        if self.gravity is None: return Vector3((0,0,0))
-
         position = Vector3.as_standard(position)
+
+        # The velocity is undefined outside the ring's radial limits
+        if self.radii is not None:
+            r_sq = position.vals[...,0]**2 + position.vals[...,1]**2
+            mask = (position.mask | (r_sq < self.radii_sq[0]) |
+                                    (r_sq > self.radii_sq[1]))
+        else:
+            mask = position.mask
+
+        # Calculate the velocity field
+        if self.gravity is None:
+            return Vector3(np.zeros(position.shape), mask)
+
         radius = position.norm()
         n = self.gravity.n(radius.vals)
 
-        return Vector3(position.cross((0,0,-1)) * n)
+        vals = position.cross((0,0,-1)) * n
+        return Vector3(vals, mask)
 
     def intercept_with_normal(self, normal):
         """Constructs the intercept point on the surface where the normal vector
@@ -231,11 +272,11 @@ class RingPlane(Surface):
 
         normal = Vector3.as_standard(normal)
 
-        buffer = np.zeros(normal.shape + [3])
-        mask = (normal.mask | normal.vals[...,0] != 0.
-                            | normal.vals[...,1] != 0.)
+        vals = np.zeros(normal.shape + [3])
+        mask = (normal.mask | (normal.vals[...,0] != 0.)
+                            | (normal.vals[...,1] != 0.))
 
-        return Vector3(buffer, mask)
+        return Vector3(vals, mask)
 
     def intercept_normal_to(self, position):
         """Constructs the intercept point on the surface where a normal vector
@@ -251,6 +292,12 @@ class RingPlane(Surface):
 
         intercept = Vector3.as_standard(position).copy()
         intercept.vals[...,2] = 0.
+
+        # The intercept is undefined outside the ring's radial limits
+        if self.radii is not None:
+            r_sq = intercept.vals[...,0]**2 + intercept.vals[...,1]**2
+            intercept.mask = (intercept.mask | (r_sq < self.radii_sq[0]) |
+                                               (r_sq > self.radii_sq[1]))
 
         return intercept
 

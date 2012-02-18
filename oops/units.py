@@ -172,6 +172,13 @@ class Units(object):
         """Returns a Units object constructed as a power of another Units
         object."""
 
+        if power != int(power):
+            if 2*power == int(2*power):
+                return units.sqrt().to_power(int(2*power), name)
+            else:
+                raise ValueError("units can only be raised to integer or " +
+                                 "half-integer powers: " + str(power))
+
         if power > 0:
             result = Units((power * self.exponents[0],
                             power * self.exponents[1],
@@ -200,24 +207,6 @@ class Units(object):
                     result.name = self.name + "**(" + str(power) + ")"
 
         return result
-
-    @staticmethod
-    def mul_units(arg1, arg2, name=None):
-        """Returns a Units object constructed as the product of two other
-        Units. Either or both arguments can be None."""
-
-        if arg2 is None: return arg1
-        if arg1 is None: return arg2
-        return arg1 * arg2
-
-    @staticmethod
-    def div_units(arg1, arg2, name=None):
-        """Returns a Units object constructed as the ratio of two other
-        Units. Either or both arguments can be None."""
-
-        if arg2 is None: return arg1
-        if arg1 is None: return arg2.to_power(-1)
-        return arg1 / arg2
 
     def sqrt(self, name=None):
         """Returns the square root of a unit if this is possible."""
@@ -281,6 +270,32 @@ class Units(object):
 
     def __repr__(self):
         return str(self)
+
+    @staticmethod
+    def mul_units(arg1, arg2, name=None):
+        """Returns a Units object constructed as the product of two other
+        Units. Either or both arguments can be None."""
+
+        if arg2 is None: return arg1
+        if arg1 is None: return arg2
+        return arg1 * arg2
+
+    @staticmethod
+    def div_units(arg1, arg2, name=None):
+        """Returns a Units object constructed as the ratio of two other
+        Units. Either or both arguments can be None."""
+
+        if arg2 is None: return arg1
+        if arg1 is None: return arg2.to_power(-1)
+        return arg1 / arg2
+
+    @staticmethod
+    def units_power(units, power, name=None):
+        """Returns a Units object constructed as the given units raised to a
+        power. The given units can be None."""
+
+        if units is None: return None
+        return units.to_power(power, name)
 
 ########################################
 # Define the most common units

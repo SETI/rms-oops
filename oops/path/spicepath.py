@@ -54,11 +54,11 @@ class SpicePath(Path):
                             definitions are unchanged.
         """
 
-        (self.spice_target_name,
-         self.spice_target_id) = SpicePath.spice_name_and_id(spice_id)
+        (self.spice_target_id,
+         self.spice_target_name) = SpicePath.spice_id_and_name(spice_id)
 
-        (self.spice_origin_name,
-         self.spice_origin_id) = SpicePath.spice_name_and_id(spice_origin)
+        (self.spice_origin_id,
+         self.spice_origin_name) = SpicePath.spice_id_and_name(spice_origin)
 
         self.spice_frame_name = SpicePath.SPICEFRAME_CLASS.spice_id_and_name(
                                                                  spice_frame)[1]
@@ -96,27 +96,27 @@ class SpicePath(Path):
 ########################################
 
     @staticmethod
-    def spice_name_and_id(arg):
+    def spice_id_and_name(arg):
         """Inteprets the argument as the name or ID of a SPICE body or SPICE
         body."""
 
         # First see if the path is already registered
         try:
             path = registry.as_path(SpicePath.TRANSLATION[arg])
-            if path.path_id == "SSB": return ("SSB", 0)
+            if path.path_id == "SSB": return (0, "SSB")
 
             if not isinstance(path, SpicePath):
                 raise TypeError("a SpicePath cannot originate from a " +
                                 type(path).__name__)
 
-            return (path.spice_target_name, path.spice_target_id)
+            return (path.spice_target_id, path.spice_target_name)
         except KeyError: pass
 
         # Interpret the argument given as a string
         if type(arg) == type(""):
             id = cspice.bodn2c(arg)     # raises LookupError if not found
             name = cspice.bodc2n(id)
-            return (name, id)
+            return (id, name)
 
         # Otherwise, interpret the argument given as an integer
         try:
@@ -125,7 +125,7 @@ class SpicePath(Path):
             # In rare cases, a body has no name; use the ID instead
             name = str(arg)
 
-        return (name, arg)
+        return (arg, name)
 
 ########################################
 

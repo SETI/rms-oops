@@ -8,8 +8,8 @@ import numpy as np
 
 from oops.event import Event
 from oops.xarray.all import *
-import oops.frame.registry as frame_registry
-import oops.path.registry as path_registry
+import oops.frame.all as frame_
+import oops.path.all  as path_
 import oops.constants as constants
 
 class Surface(object):
@@ -262,8 +262,8 @@ class Surface(object):
         # Define the path, frame and event relative to the SSB in J2000
         event_wrt_ssb = event.wrt_ssb()
 
-        origin_wrt_ssb = path_registry.connect(self.origin_id, "SSB", "J2000")
-        frame_in_j2000 = frame_registry.connect(self.frame_id, "J2000")
+        origin_wrt_ssb = path_.connect(self.origin_id, "SSB", "J2000")
+        frame_in_j2000 = frame_.connect(self.frame_id, "J2000")
 
         # Define the origin and line of sight in the SSB frame
         obs_wrt_ssb = event_wrt_ssb.pos

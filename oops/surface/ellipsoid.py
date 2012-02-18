@@ -1,10 +1,7 @@
 ################################################################################
-# oops/surface/spheroid.py: Spheroid subclass of class Surface
+# oops/surface/ellipsoid.py: Ellipsoid subclass of class Surface
 #
-# 2/15/12 Checked in (BSW)
-# 2/17/12 Modified (MRS) - Inserted coordinate definitions; added use of trig
-#   functions and sqrt() defined in Scalar class to enable cleaner algorithms.
-#   Unit tests added.
+# 2/17/12 Created (MRS)
 ################################################################################
 
 import numpy as np
@@ -14,26 +11,27 @@ from oops.xarray.all import *
 import oops.frame.all as frame_
 import oops.path.all  as path_
 
-class Spheroid(Surface):
-    """Spheroid defines a spheroidal surface centered on the given path and
-    fixed with respect to the given frame. The short radius of the spheroid is
-    oriented along the Z-axis of the frame.
+class Ellipsoid(Surface):
+    """Ellipsoid defines a ellipsoidal surface centered on the given path and
+    fixed with respect to the given frame. The short radius of the ellipsoid is
+    oriented along the Z-axis of the frame and the long radius is along the
+    X-axis.
 
     The coordinates defining the surface grid are (longitude, latitude), based
-    on the assumption that a spherical body has been "squashed" along the
-    Z-axis. The latitude defined in this manner is neither planetocentric nor
-    planetographic; functions are provided to perform the conversion to either
-    choice. Longitudes are measured in a right-handed manner, increasing toward
-    the east. Values range from -pi to pi.
+    on the assumption that a spherical body has been "squashed" along the Y- and
+    Z-axes. The latitudes and longitudes defined in this manner are neither
+    planetocentric nor planetographic; functions are provided to perform the
+    conversion to either choice. Longitudes are measured in a right-handed
+    manner, increasing toward the east. Values range from -pi to pi.
 
     Elevations are defined by "unsquashing" the radial vectors and then
     subtracting off the equatorial radius of the body. Thus, the surface is
     defined as the locus of points where elevation equals zero. However, the
     direction of increasing elevation is not exactly normal to the surface.
     """
-    
+
     def __init__(self, origin, frame, radii):
-        """Constructor for a Spheroid object.
+        """Constructor for an Ellipsoid object.
             
         Input:
             origin      a Path object or ID defining the motion of the center
@@ -42,21 +40,25 @@ class Spheroid(Surface):
             frame       a Frame object or ID in which the ring plane is the
                         (x,y) plane (where z = 0).
 
-            radii       a tuple (equatorial_radius, polar_radius) in km.
+            radii       a tuple (a,b,c) containing the radii from longest to
+                        shortest, in km.
         """
 
         self.origin_id = path_.as_id(origin)
         self.frame_id  = frame_.as_id(frame)
 
-        self.radii  = np.array((radii[0], radii[0], radii[1]))
+        self.radii  = np.asfarray(radii)
         self.req    = radii[0]
         self.req_sq = self.req**2
 
-        self.squash_z   = radii[1] / radii[0]
-        self.unsquash_z = radii[0] / radii[1]
+        self.squash_y   = radii[1] / radii[0]
+        self.unsquash_y = radii[0] / radii[1]
 
-        self.squash   = Vector3((1., 1., self.squash_z))
-        self.unsquash = Vector3((1., 1., self.unsquash_z))
+        self.squash_z   = radii[2] / radii[0]
+        self.unsquash_z = radii[0] / radii[2]
+
+        self.squash   = Vector3((1., self.squash_y,   self.squash_z))
+        self.unsquash = Vector3((1., self.unsquash_y, self.unsquash_z))
         self.unsquash_sq = self.unsquash**2
 
     def as_coords(self, position, axes=2):
@@ -107,7 +109,7 @@ class Spheroid(Surface):
 
         r_coslat = r * lat.cos()
         x = r_coslat * lon.cos()
-        y = r_coslat * lon.sin()
+        y = r_coslat * lon.sin() * self.squash_y
         z = r * lat.sin() * self.squash_z
 
         return Vector3.from_scalars(x,y,z)
@@ -178,8 +180,6 @@ class Spheroid(Surface):
                             necessary.
         """
 
-        #gradient for a spheroid is simply <2x/a, 2y/a, 2z/c>
-
         # TBD
         pass
     
@@ -210,15 +210,6 @@ class Spheroid(Surface):
         # TBD
         pass
 
-        # For a sphere, this is just the point at r * n, where r is the radius
-        # of the sphere.  For a spheroid, this is just the same point scaled up
-#         np_scale_array = np.array( [[self.r0, 0, 0], [0, self.r0, 0],
-#                                     [0, 0, self.r2]])
-#         expand_matrix = Matrix3(np_scale_array)
-#         pos = expand_matrix * normal
-
-        return pos
-
     def intercept_normal_to(self, position):
         """Constructs the intercept point on the surface where a normal vector
         passes through a given position.
@@ -234,80 +225,21 @@ class Spheroid(Surface):
         # TBD
         pass
 
-    def lat_to_centric(lat):
-        """Converts a latitude value given in internal spheroid coordinates to
-        its planetocentric equivalent.
-        """
-
-        return (lat.tan() * self.squash_z).arctan()
-
-    def lat_to_graphic(lat):
-        """Converts a latitude value given in internal spheroid coordinates to
-        its planetographic equivalent.
-        """
-
-        return (lat.tan() * self.unsquash_z).arctan()
-
-    def lat_from_centric(lat):
-        """Converts a latitude value given in planetocentric coordinates to its
-        equivalent value in internal spheroid coordinates.
-        """
-
-        return (lat.tan() * self.unsquash_z).arctan()
-
-    def lat_from_graphic(lat):
-        """Converts a latitude value given in planetographic coordinates to its
-        equivalent value in internal spheroid coordinates.
-        """
-
-        return (lat.tan() * self.squash_z).arctan()
-
-################################################################################
+########################################
 # UNIT TESTS
-################################################################################
+########################################
 
 import unittest
 import oops.tools as tools
 
-class Test_Spheroid(unittest.TestCase):
-
+class Test_Ellipsoid(unittest.TestCase):
+    
     def runTest(self):
 
-        REQ  = 60268.
-        RPOL = 54364.
-        planet = Spheroid("SSB", "J2000", (REQ, RPOL))
+        # TBD
+        pass
 
-        # Coordinate/vector conversions
-        NPTS = 10000
-        obs = (2 * np.random.rand(NPTS,3) - 1.) * REQ
-
-        (lon,lat,elev) = planet.as_coords(obs,axes=3)
-        test = planet.as_vector3(lon,lat,elev)
-        self.assertTrue(abs(test - obs) < 1.e-9)
-
-        # Spheroid intercepts & normals
-        obs[...,0] = np.abs(obs[...,0])
-        obs[...,0] += REQ
-
-        los = (2 * np.random.rand(NPTS,3) - 1.)
-        los[...,0] = -np.abs(los[...,0])
-
-        (pts, t) = planet.intercept(obs, los)
-        test = t * Vector3(los) + Vector3(obs)
-        self.assertTrue(abs(test - pts) < 1.e-9)
-
-        self.assertTrue(np.all(t.mask == pts.mask))
-        self.assertTrue(np.all(pts.mask[t.vals < 0.]))
-
-        normals = planet.normal(pts)
-
-        pts.vals[...,2] *= REQ/RPOL
-        self.assertTrue(abs(pts.norm()[~pts.mask] - REQ) < 1.e-8)
-
-        normals.vals[...,2] *= RPOL/REQ
-        self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
-
-########################################
+################################################################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

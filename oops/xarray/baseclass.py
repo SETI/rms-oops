@@ -545,6 +545,29 @@ class Array(object):
         except:
             self.raise_shape_mismatch("%", obj.vals)
 
+    def __pow__(self, arg):
+        if Array.is_empty(arg): return arg
+
+        new_mask = False
+        if arg <= 0:
+            new_mask = new_mask | (self.vals == 0.)
+        if type(arg) != type(0):
+            new_mask = new_mask | (self.vals < 0.)
+
+        if np.any(new_mask):
+            if np.shape(self.vals) == ():
+                vals = 1.
+            else:
+                vals = self.vals.copy()
+                vals[new_mask] = 1.
+        else:
+            vals = self.vals
+
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals**arg, self.mask | new_mask,
+                                     Units.units_power(self.units, arg))
+        return obj
+
     ####################################################
     # Default in-place binary arithmetic operators
     ####################################################

@@ -94,7 +94,7 @@ class Scalar(Array):
                                        self.units.triple != [0,0,0]):
             raise ValueError("illegal units for sin(): " + units.name)
 
-        return Scalar(np.sin(self.as_standard().vals), self.mask)
+        return Scalar(np.sin(Scalar.as_standard(self).vals), self.mask)
 
     def cos(self):
         """Returns the cosine of each value. Works for units other than radians.
@@ -104,7 +104,7 @@ class Scalar(Array):
                                        self.units.triple != [0,0,0]):
             raise ValueError("illegal units for cos(): " + units.name)
 
-        return Scalar(np.cos(self.as_standard().vals), self.mask)
+        return Scalar(np.cos(Scalar.as_standard(self).vals), self.mask)
 
     def tan(self):
         """Returns the tangent of each value. Works for units other than
@@ -114,7 +114,7 @@ class Scalar(Array):
                                        self.units.triple != [0,0,0]):
             raise ValueError("illegal units for tan(): " + units.name)
 
-        return Scalar(np.tan(self.as_standard().vals), self.mask)
+        return Scalar(np.tan(Scalar.as_standard(self).vals), self.mask)
 
     def arcsin(self):
         """Returns the arcsine of each value."""
@@ -723,6 +723,19 @@ class Test_Scalar(unittest.TestCase):
         self.assertTrue(Scalar.as_standard(cm) < Scalar(range(6)) + eps)
         self.assertTrue(Scalar.as_standard(cm) > Scalar(range(6)) - eps)
         self.assertEqual(Scalar.as_standard(cm).units, None)
+
+        # sqrt tests 2/17/12 (MRS)
+        a = Scalar(np.arange(10)**2)
+        b = a.sqrt()
+        self.assertEqual(b, np.arange(10))
+
+        self.assertEqual(Scalar(4.).sqrt(), 2)
+
+        self.assertTrue(Scalar(-1.).sqrt().mask)
+
+        self.assertTrue(Scalar((-1,1,2)).sqrt().mask[0])
+        self.assertFalse(Scalar((-1,1,2)).sqrt().mask[1])
+        self.assertFalse(Scalar((-1,1,2)).sqrt().mask[2])
 
 ########################################
 if __name__ == '__main__':

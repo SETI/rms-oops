@@ -99,9 +99,13 @@ class Vector3(Array):
         x = Scalar.as_scalar(x)
         y = Scalar.as_scalar(y).confirm_units(x.units)
         z = Scalar.as_scalar(z).confirm_units(x.units)
-        (x,y,z) = Array.broadcast_arrays((x,y,z))
-        return Vector3(np.vstack((x.vals,y.vals,z.vals)).swapaxes(0,-1),
-                       x.mask | y.mask | z.mask, x.units)
+        (xvals, yvals, zvals) = np.broadcast_arrays(x.vals, y.vals, z.vals)
+
+        vals = np.empty(xvals.shape + (3,), dtype=xvals.dtype)
+        vals[...,0] = xvals
+        vals[...,1] = yvals
+        vals[...,2] = zvals
+        return Vector3(vals, x.mask | y.mask | z.mask, x.units)
 
     def dot(self, arg):
         """Returns the dot products of the vectors as a Scalar."""
