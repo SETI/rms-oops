@@ -1,15 +1,15 @@
 import numpy as np
 import pylab
-import oops.all as oops
-import inst.cassini.iss
+import oops_.all as oops
+import oops_.inst.cassini.iss as cassini_iss
 
 # Try:
-# >>> execfile("testcode.py")
+# >>> execfile("test_code.py")
 # to run everything at once. Handy for timing tests
 
 # Create the snapshot object
 filespec = "test_data/cassini/ISS/W1573721822_1.IMG"
-snapshot = inst.cassini.iss.from_file(filespec)
+snapshot = cassini_iss.from_file(filespec)
 
 # Create the snapshot event
 # ... with a grid point at the middle of each pixel
@@ -54,7 +54,7 @@ ring_mask = ~ring_event_abs.pos.mask
 
 pylab.imshow(ring_mask)
 
-# Get the radius and intertial longitude
+# Get the radius and inertial longitude
 (ring_radius,
  ring_longitude) = ring_surface.as_coords(ring_event_abs.pos, axes=2)
 
