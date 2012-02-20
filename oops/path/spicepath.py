@@ -129,7 +129,7 @@ class SpicePath(Path):
 
 ########################################
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
         """Returns an Event object corresponding to a specified Scalar time on
         this path.
 
@@ -152,6 +152,10 @@ class SpicePath(Path):
 
             return Event(time, state[0:3], state[3:6], self.origin_id,
                                                        self.frame_id)
+
+        # Use a QuickPath if warranted, possibly making a recursive call
+        if quick:
+            return self.quick_path(time, quick).event_at_time(time, False)
 
         # Fill in the states and light travel times using CSPICE
         if SpicePath.VECTORIZE_CSPICE:
@@ -613,7 +617,7 @@ class Test_SpicePath(unittest.TestCase):
 
             self.assertTrue(np.abs((lt + pluto_rel.time.vals[i])/lt) < 1.e-15)
             self.assertTrue(np.abs(pluto_event.time.vals[i] + lt
-                                        - earth_event.time.vals[i]) < 1.e-11)
+                                         - earth_event.time.vals[i]) < 1.e-11)
 
             self.assertTrue(np.all(np.abs(state[0:3]
                                         - pluto_rel.pos[i].vals) < 1.e-5))

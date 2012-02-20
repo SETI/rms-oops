@@ -95,6 +95,12 @@ class Event(object):
         self.shape = []
         self.update_shape()
 
+        # Key components should share the same mask
+        mask = self.time.mask | self.pos.mask | self.vel.mask
+        self.time.mask = mask
+        self.pos.mask  = mask
+        self.vel.mask  = mask
+
     def update_shape(self, *arg):
         """Used to update the shape of this object when any attributes are
         modified. The argument can be any number of arguments as long as each
@@ -146,12 +152,12 @@ class Event(object):
         # Recursive call...
         return self.time + self.origin.absolute_time()
 
-    def wrt_ssb(self):
+    def wrt_ssb(self, quick=False):
         """Returns the event relative to SSB coordinates in the J2000 frame
         while also filling in the internal value if necessary."""
 
         if self.ssb is None:
-            self.ssb = self.wrt("SSB", "J2000")
+            self.ssb = self.wrt("SSB", "J2000", quick)
 
         return self.ssb
 
@@ -177,7 +183,7 @@ class Event(object):
 # Event arithmetic
 ############################################
 
-    def absolute(self):
+    def absolute(self, quick=False):
         """Returns an absolute version of this Event object, with the new origin
         and frame defined by the first absolute event encountered."""
 
@@ -185,12 +191,12 @@ class Event(object):
             return self
 
         # Recursive call...
-        origin = self.origin.absolute()
-        origin_ssb = origin.wrt_ssb()
+        origin = self.origin.absolute(quick)
+        origin_ssb = origin.wrt_ssb(quick)
 
         # Get the offset in J2000 coordinates, with the transform evaluated at
         # the time of the origin event
-        event_ssb = self.wrt_frame("J2000")
+        event_ssb = self.wrt_frame("J2000", None, quick)
 
         # Offset the event
         result_ssb = Event(event_ssb.time + origin_ssb.time,
@@ -203,19 +209,19 @@ class Event(object):
                            event_ssb.vflat.copy())
 
         # Rotate back to the default path and frame
-        result = result_ssb.wrt(origin.origin_id, origin.frame_id)
+        result = result_ssb.wrt(origin.origin_id, origin.frame_id, quick)
         result.ssb = result_ssb
 
         return result.update_shape()
 
-    def wrt_event(self, arg):
+    def wrt_event(self, arg, quick=False):
         """Returns a revised version of this Event object, with times and
         positions specified relative to another event and using that event's
         frame."""
 
         # Move into standard coordinates
-        origin_ssb = arg.absolute().wrt_ssb()
-        event_ssb  = self.absolute().wrt_ssb()
+        origin_ssb = arg.absolute(quick).wrt_ssb(quick)
+        event_ssb  = self.absolute(quick).wrt_ssb(quick)
 
         # Apply the offset
         result_ssb = Event(event_ssb.time - origin_ssb.time,
@@ -231,8 +237,8 @@ class Event(object):
         if arg.frame_id == "J2000":
             result = result_ssb.copy()
         else:
-            result = result_ssb.wrt_frame(arg.frame_id, origin_ssb.time)
-
+            result = result_ssb.wrt_frame(arg.frame_id, origin_ssb.time,
+                                          quick)
         result.ssb = result_ssb
 
         # Now redefine the origin
@@ -256,7 +262,7 @@ class Event(object):
 
         return surface.coords_at_event(self, axes)
 
-    def wrt(self, path=None, frame=None):
+    def wrt(self, path=None, frame=None, quick=None):
         """Returns a new event specified relative to a new path and/or a
         new coordinate frame.
 
@@ -268,14 +274,14 @@ class Event(object):
         """
 
         # Convert to the new path if necessary
-        event = self.wrt_path(path)
+        event = self.wrt_path(path, quick)
 
         # Convert to the new frame if necessary
-        event = event.wrt_frame(frame)
+        event = event.wrt_frame(frame, None, quick)
 
         return event
 
-    def wrt_path(self, path):
+    def wrt_path(self, path, quick=False):
         """Returns the same event, but defined relative to a new origin. The
         frame will be unchanged. Relative events are converted to absolute
         first.
@@ -294,12 +300,13 @@ class Event(object):
 
         if path is None: return self
 
-        event = self.absolute()
+        event = self.absolute(quick)
         path = path_registry.connect(path, event.origin_id, event.frame_id)
+        path = path.quick_path(event.time, quick)
 
         return path.subtract_from_event(event)
 
-    def wrt_frame(self, frame, time=None):
+    def wrt_frame(self, frame, time=None, quick=False):
         """Returns the same event after coordinates have been transformed to
         the specified frame. The origin is unchanged. For relative events, the
         frame is evaluated at the time of the origin event.
@@ -330,9 +337,10 @@ class Event(object):
             else:
                 time = self.time
 
+        frame = frame.quick_frame(time, quick)
         return self.rotate_by_frame(frame, time)
 
-    def rotate_by_frame(self, frame, time=None):
+    def rotate_by_frame(self, frame, time=None, quick=False):
         """Returns the same event after all coordinates have been transformed
         forward into a new frame. The origin is unchanged.
 
@@ -349,7 +357,7 @@ class Event(object):
 
         if time is None: time = self.time
 
-        transform = frame.transform_at_time(time)
+        transform = frame.transform_at_time(time, quick)
         return Event(time,
                      transform.rotate_pos(self.pos),
                      transform.rotate_vel(self.vel, self.pos),
@@ -360,7 +368,7 @@ class Event(object):
                      transform.rotate(self.dep),
                      transform.rotate(self.vflat))
 
-    def unrotate_by_frame(self, frame, time=None):
+    def unrotate_by_frame(self, frame, time=None, quick=False):
         """Returns the same event after all coordinates have been transformed
         backward to the parent frame. The origin is unchanged.
 
@@ -378,7 +386,7 @@ class Event(object):
 
         if time is None: time = self.time
 
-        transform = frame.transform_at_time(time)
+        transform = frame.transform_at_time(time, quick)
         return Event(time,
                      transform.unrotate_pos(self.pos),
                      transform.unrotate_vel(self.vel, self.pos),
@@ -448,11 +456,11 @@ class Event(object):
 # Photon event calculations
 ################################################################################
 
-    def photon_to_path(self, path, relative=False, iters=3, quick_info=None):
+    def photon_to_path(self, path, iters=3, quick=True):
         """Connects a photon departing from this event to its later arrival on a
         specified path. It updates the photon departure attribute of this event
-        and returns a new event describing the photon's arrival on the specified
-        path.
+        and returns a new atuple of new events describing the photon's arrival
+        on the specified path.
 
         Note that the event and the Path objects need not have the same shape,
         but they must be broadcastable to the same shape.
@@ -460,34 +468,27 @@ class Event(object):
         Input:
             path        the path to which the photon is departing.
 
-            relative    True to return an event relative to the this event;
-                        False to return an absolute event defined with respect
-                        to the path.
-
             iters       number of iterations of Newton's method to perform. For
                         iters == 0, the time of the returned event will only be
                         corrected for the light travel time to the path's
                         origin. Full precision is generally achieved in 2-3
                         iterations.
 
-            quick_info  parameters to be passed to quick_path() and
-                        quick_frame(), if these mechanisms are to be used to
-                        speed up the calculations. None to do things the slow
-                        way.
+            quick       True to use QuickPaths and QuickFrames, where warranted,
+                        to speed up the calculation.
 
-        Return:         a tuple containing(path_event, lt)
-
-            path_event  the associated photon arrival event on the given path.
-
-            lt          the light travel time between the two events.
+        Return:         a tuple containing the absolute and relative events. The
+                        absolute event is relative to the origin of the path;
+                        the relative event originates with the event at the
+                        other end of the photon's path.
 
         Side-Effects:   the photon departure attribute is filled in for this
                         event.
         """
 
-        return path.photon_from_event(self, relative, iters, quick_info)
+        return path.photon_from_event(self, iters, quick)
 
-    def photon_from_path(self, path, relative=False, iters=3, quick_info=None):
+    def photon_from_path(self, path, iters=3, quick=True):
         """Connects a photon arriving at this event to its earlier departure
         from a specified path. It updates the photon arrival attribute of this
         event and returns a new event describing the photon's departure on the
@@ -499,50 +500,43 @@ class Event(object):
         Input:
             path        the path from which the photon is arriving.
 
-            relative    True to return an event relative to the this event;
-                        False to return an absolute event defined with respect
-                        to the path.
-
             iters       number of iterations of Newton's method to perform. For
                         iters == 0, the time of the returned event will only be
                         corrected for the light travel time to the path's
                         origin. Full precision is generally achieved in 2-3
                         iterations.
 
-            quick_info  parameters to be passed to quick_path() and
-                        quick_frame(), if these mechanisms are to be used to
-                        speed up the calculations. None to do things the slow
-                        way.
+            quick       True to use QuickPaths and QuickFrames, where warranted,
+                        to speed up the calculation.
 
-        Return:         a tuple containing(path_event, lt)
-
-            path_event  the associated photon departure event on the given path.
-
-            lt          the light travel time between the two events.
+        Return:         a tuple containing the absolute and relative events. The
+                        absolute event is relative to the origin of the path;
+                        the relative event originates with the event at the
+                        other end of the photon's path.
 
         Side-Effects:   the photon arrival attribute is filled in for this
                         event.
         """
 
-        return path.photon_to_event(self, relative, iters, quick_info)
+        return path.photon_to_event(self, iters, quick)
 
 ########################################
 
-    def photon_to_surface(self, body, iters=3, quick_info=None):
+    def photon_to_surface(self, body, iters=3, quick=True):
         """Connects the photon departing from this event to its later arrival at
         the surface of a specified body. It returns a new event describing the
         arrivals.
         """
 
-        return body.photon_from_event(self, iters, quick_info)
+        return body.photon_from_event(self, iters, quick)
 
-    def photon_from_surface(self, body, iters=3, quick_info=None):
+    def photon_from_surface(self, body, iters=3, quick=True):
         """Connects the photon arriving at this event to its earlier departure
         from the surface of a specified body. It returns a new event describing
         the departures.
         """
 
-        return body.photon_to_event(self, iters, quick_info)
+        return body.photon_to_event(self, iters, quick)
 
 ################################################################################
 # Geometry procedures

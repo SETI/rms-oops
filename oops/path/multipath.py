@@ -63,7 +63,7 @@ class MultiPath(Path):
 
 ########################################
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
         """Returns an Event object corresponding to a specified Scalar time on
         this path. The times are broadcasted across the shape of the MultiPath.
 
@@ -82,7 +82,7 @@ class MultiPath(Path):
         pos = np.empty(time.shape + (3,))
         vel = np.empty(time.shape + (3,))
         for index, path in np.ndenumerate(paths):
-            event = path.event_at_time(time[index])
+            event = path.event_at_time(time[index], quick)
             pos[index] = event.pos.vals
             vel[index] = event.vel.vals
 

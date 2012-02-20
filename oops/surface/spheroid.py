@@ -141,9 +141,6 @@ class Spheroid(Surface):
 
         t = (d.sqrt() - b) / (2. * a)
 
-        # Ignore points behind you
-        t.mask = t.mask | (t.vals < 0.)
-
         return (obs + t*los, t)
 
     def normal(self, position):
@@ -234,28 +231,28 @@ class Spheroid(Surface):
         # TBD
         pass
 
-    def lat_to_centric(lat):
+    def lat_to_centric(self, lat):
         """Converts a latitude value given in internal spheroid coordinates to
         its planetocentric equivalent.
         """
 
         return (lat.tan() * self.squash_z).arctan()
 
-    def lat_to_graphic(lat):
+    def lat_to_graphic(self, lat):
         """Converts a latitude value given in internal spheroid coordinates to
         its planetographic equivalent.
         """
 
         return (lat.tan() * self.unsquash_z).arctan()
 
-    def lat_from_centric(lat):
+    def lat_from_centric(self, lat):
         """Converts a latitude value given in planetocentric coordinates to its
         equivalent value in internal spheroid coordinates.
         """
 
         return (lat.tan() * self.unsquash_z).arctan()
 
-    def lat_from_graphic(lat):
+    def lat_from_graphic(self, lat):
         """Converts a latitude value given in planetographic coordinates to its
         equivalent value in internal spheroid coordinates.
         """

@@ -134,8 +134,8 @@ class FOV(object):
         return Pair(los.vals[...,0:2] / los.vals[...,2:3])
 
     def los_from_uv(self, uv_pair):
-        """Returns a Vector3 object pointing in the direction of the specified
-        by coordinate Pair (u,v). Note that this is the direction _opposite_ to
+        """Returns a Vector3 object pointing in the direction specified by
+        coordinate Pair (u,v). Note that this is the direction _opposite_ to
         that in which the photon is moving.
         """
 

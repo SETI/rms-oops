@@ -2,19 +2,15 @@
 # oops/tools.py
 #
 # 2/6/12 Created (MRS) - Based on parts of oops.py.
+# 2/18/12 Modified (MRS) - Moved define_solar_system to body.py.
 ################################################################################
 
-import numpy as np
-import os
 import spicedb
 import julian
-
-from oops.path.spicepath import SpicePath
-from oops.path.multipath import MultiPath
-from oops.frame.spiceframe import SpiceFrame
+import os
 
 ################################################################################
-# Useful class methods to define SPICE-related quantities
+# Useful utilities
 ################################################################################
 
 LSK_LOADED = False
@@ -41,113 +37,20 @@ def load_leap_seconds():
 
     LSK_LOADED = True
 
-def define_solar_system(start_time, stop_time, asof=None):
-    """Constructs SpicePaths for all the planets and moons in the solar system
-    (including Pluto). Each planet is defined relative to the SSB. Each moon
-    is defined relative to its planet. Names are as defined within the SPICE
-    toolkit.
+################################################################################
+# UNIT TESTS
+################################################################################
 
-    Input:
-        start_time      start_time of the period to be convered, in ISO date or
-                        date-time format.
-        stop_time       stop_time of the period to be covered, in ISO date or
-                        date-time format.
-        asof            a UTC date such that only kernels released earlier than
-                        that date will be included, in ISO format.
-    """
+import unittest
 
-    # Always load the most recent Leap Seconds kernel, but only once
-    load_leap_seconds()
+class Test_tools(unittest.TestCase):
 
-    # Convert the formats to times as recognized by spicedb.
-    (day, sec) = julian.day_sec_from_iso(start_time)
-    start_time = julian.ymdhms_format_from_day_sec(day, sec)
+    def runTest(self):
 
-    (day, sec) = julian.day_sec_from_iso(stop_time)
-    stop_time = julian.ymdhms_format_from_day_sec(day, sec)
+        # TBD
+        pass
 
-    if asof is not None:
-        (day, sec) = julian.day_sec_from_iso(stop_time)
-        asof = julian.ymdhms_format_from_day_sec(day, sec)
-
-    # Load the necessary SPICE kernels
-    spicedb.open_db()
-    spicedb.furnish_solar_system(start_time, stop_time, asof)
-    spicedb.close_db()
-
-    # Sun...
-    ignore = SpicePath("SUN","SSB")
-
-    # Mercury...
-    define_planet("MERCURY", [], [])
-
-    # Venus...
-    define_planet("VENUS", [], [])
-
-    # Earth...
-    define_planet("EARTH", ["MOON"], [])
-
-    # Mars...
-    define_planet("MARS", spicedb.MARS_ALL_MOONS, [])
-
-    # Jupiter...
-    define_planet("JUPITER", spicedb.JUPITER_REGULAR,
-                             spicedb.JUPITER_IRREGULAR)
-
-    # Saturn...
-    define_planet("SATURN", spicedb.SATURN_REGULAR,
-                            spicedb.SATURN_IRREGULAR)
-
-    # Uranus...
-    define_planet("URANUS", spicedb.URANUS_REGULAR,
-                            spicedb.URANUS_IRREGULAR)
-
-    # Neptune...
-    define_planet("NEPTUNE", spicedb.NEPTUNE_REGULAR,
-                             spicedb.NEPTUNE_IRREGULAR)
-
-    # Pluto...
-    define_planet("PLUTO", spicedb.PLUTO_ALL_MOONS, [])
-
-def define_planet(planet, regular_ids, irregular_ids):
-
-    # Define the planet's path and frame
-    ignore = SpicePath(planet, "SSB")
-    ignore = SpiceFrame(planet)
-
-    # Define the SpicePaths of individual regular moons
-    regulars = []
-    for id in regular_ids:
-        regulars += [SpicePath(id, planet)]
-        try:        # Some frames for small moons are not defined
-            ignore = SpiceFrame(id)
-        except RuntimeError: pass
-        except LookupError: pass
-
-    # Define the Multipath of the regular moons, with and without the planet
-    ignore = MultiPath(regulars, planet, id=(planet + "_REGULARS"))
-    ignore = MultiPath([planet] + regulars, "SSB", id=(planet + "+REGULARS"))
-
-    # Without irregulars, we're just about done
-    if irregular_ids == []:
-        ignore = MultiPath([planet] + regulars, "SSB", id=(planet + "+MOONS"))
-        return
-
-    # Define the SpicePaths of individual irregular moons
-    irregulars = []
-    for id in irregular_ids:
-        irregulars += [SpicePath(id, planet)]
-        try:        # Some frames for small moons are not defined
-            ignore = SpiceFrame(id)
-        except RuntimeError: pass
-        except LookupError: pass
-
-    # Define the Multipath of all the irregular moons
-    ignore = MultiPath(regulars, planet, id=(planet + "_IRREGULARS"))
-
-    # Define the Multipath of all the moons, with and without the planet
-    ignore = MultiPath(regulars + irregulars, planet, id=(planet + "_MOONS"))
-    ignore = MultiPath([planet] + regulars + irregulars, "SSB",
-                                                      id=(planet + "+MOONS"))
-
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

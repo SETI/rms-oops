@@ -115,7 +115,7 @@ class SpiceFrame(Frame):
 
 ########################################
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
         """Returns a Transform object that rotates coordinates in a reference
         frame into the new frame.
 
@@ -134,6 +134,10 @@ class SpiceFrame(Frame):
                                     time.vals)
             (matrix, omega) = cspice.xf2rav(matrix6)
             return Transform(matrix, omega, self.frame_id, self.reference_id)
+
+        # Apply the quick_frame if requested, possibly making a recursive call
+        if quick:
+            return self.quick_frame(time, quick).transform_at_time(time, False)
 
         # Create the buffers
         matrix = np.empty(time.shape + [3,3])

@@ -14,6 +14,7 @@ from frame.unittester   import *
 from path.unittester    import *
 from surface.unittester import *
 
+from oops.body          import Test_Body
 from oops.event         import Test_Event
 from oops.transform     import Test_Transform
 from oops.units         import Test_Units

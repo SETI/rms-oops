@@ -55,12 +55,14 @@ class Path(object):
 
         pass
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
         """Returns an Event object corresponding to a specified Scalar time on
         this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
+            quick       True to consider using a QuickPath, where warranted, to
+                        improve computation speed.
 
         Return:         an event object containing (at least) the time, position
                         and velocity of the path.
@@ -224,7 +226,7 @@ class Path(object):
 # These must be defined here and not in Event.py, because that would create a
 # circular dependency in the order that modules are loaded.
 
-    def subtract_from_event(self, event):
+    def subtract_from_event(self, event, quick=False):
         """Returns the same event, but with this path redefining its origin.
 
         Input:
@@ -239,7 +241,7 @@ class Path(object):
         assert self.frame_id  == event.frame_id
 
         # Create a new event by subtracting this path from the origin
-        offset = self.event_at_time(event.time)
+        offset = self.event_at_time(event.time, quick)
 
         result = Event(event.time.copy(),
                        event.pos - offset.pos,
@@ -253,7 +255,7 @@ class Path(object):
         result.ssb = event.ssb
         return result.update_shape()
 
-    def add_to_event(self, event):
+    def add_to_event(self, event, quick=False):
         """Returns the same event, but with the origin of this path redefining
         its origin.
 
@@ -268,7 +270,7 @@ class Path(object):
         assert self.frame_id == event.frame_id
 
         # Create a new event by subtracting this path from the origin
-        offset = self.event_at_time(event.time)
+        offset = self.event_at_time(event.time, quick)
 
         return Event(event.time,
                      event.pos + offset.pos,
@@ -283,40 +285,33 @@ class Path(object):
 # Photon Solver
 ################################################################################
 
-    def photon_from_event(self, event, iters=3, quick_info={}):
+    def photon_from_event(self, event, iters=3, quick=True):
         """Returns a new event object corresponding to the arrival of a photon
         at this path, given that the same photon departed from the specified
         event at an earlier time.
 
         Input:
             event       the event of a photon's departure.
-
             iters       number of iterations of Newton's method to perform. For
                         iters == 0, the time of the returned event will only be
                         corrected for the light travel time to the path's
                         origin. Full precision is generally achieved in 2-3
                         iterations.
+            quick       True to use QuickPaths and QuickFrames, where warranted,
+                        to speed up the calculation.
 
-            quick_info  parameters to be passed to quick_path() and
-                        quick_frame(), if these mechanisms are to be used to
-                        speed up the calculations. None to do things the slow
-                        way.
-
-        Return:         a tuple containing(path_event, lt)
-
-            path_event  the associated photon arrival or departure event on this
-                        path. The shape comes from broadcasting the shapes of
-                        the event and the path.
-
-            lt          the light travel time between the two events.
+        Return:         a tuple containing the absolute and relative events. The
+                        absolute event is relative to the origin of the path;
+                        the relative event originates with the event at the
+                        other end of the photon's path.
 
         Side-Effects:   the photon departure attribute is filled in for the
                         event given.
         """
 
-        return self._solve_photon(event, +1, iters, quick_info)
+        return self._solve_photon(event, +1, iters, quick)
 
-    def photon_to_event(self, event, iters=3, quick_info={}):
+    def photon_to_event(self, event, iters=3, quick=True):
         """Returns a new event object corresponding to the departure of a photon
         from this path, given that the same photon arrived from the specified
         event at a later time. It also fills in the photon arrival direction
@@ -324,33 +319,26 @@ class Path(object):
 
         Input:
             event       the event of a photon's arrival.
-
             iters       number of iterations of Newton's method to perform. For
                         iters == 0, the time of the returned event will only be
                         corrected for the light travel time to the path's
                         origin. Full precision is generally achieved in 2-3
                         iterations.
+            quick       True to use QuickPaths and QuickFrames, where warranted,
+                        to speed up the calculation.
 
-            quick_info  parameters to be passed to quick_path() and
-                        quick_frame(), if these mechanisms are to be used to
-                        speed up the calculations. None to do things the slow
-                        way.
-
-        Return:         a tuple containing(path_event, lt)
-
-            path_event  the associated photon arrival or departure event on this
-                        path. The shape comes from broadcasting the shapes of
-                        the event and the path.
-
-            lt          the light travel time between the two events.
+        Return:         a tuple containing the absolute and relative events. The
+                        absolute event is relative to the origin of the path;
+                        the relative event originates with the event at the
+                        other end of the photon's path.
 
         Side-Effects:   the photon arrival attribute is filled in for the event
                         given.
         """
 
-        return self._solve_photon(event, -1, iters, quick_info)
+        return self._solve_photon(event, -1, iters, quick)
 
-    def _solve_photon(self, event, sign=-1, iters=3, quick_info={}):
+    def _solve_photon(self, event, sign=-1, iters=3, quick=True):
         """Solve for a photon event on this path, given that the other end of
         the photon's path is at another specified event (time and position).
 
@@ -369,18 +357,13 @@ class Path(object):
                         origin. Full precision is generally achieved in 2-3
                         iterations.
 
-            quick_info  parameters to be passed to quick_path() and
-                        quick_frame(), if these mechanisms are to be used to
-                        speed up the calculations. None to do things the slow
-                        way.
+            quick       True to use QuickPaths and QuickFrames, where warranted,
+                        to speed up the calculation.
 
-        Return:         a tuple containing(path_event, lt)
-
-            path_event  the associated photon arrival or departure event on this
-                        path. The shape comes from broadcasting the shapes of
-                        the event and the path.
-
-            lt          the light travel time between the two events.
+        Return:         a tuple containing the absolute and relative events. The
+                        absolute event is relative to the origin of the path;
+                        the relative event originates with the event at the
+                        other end of the photon's path.
 
         Side-Effects:   the photon's arrival or departure attribute is filled in
                         for the event.
@@ -410,14 +393,12 @@ class Path(object):
         event_wrt_ssb = event.wrt_ssb()
 
         # Make an initial guess at the light travel time
-        lt = (path_wrt_ssb.event_at_time(event.time).pos
+        lt = (path_wrt_ssb.event_at_time(event.time, quick).pos
               - event_wrt_ssb.pos).norm() / signed_c
         path_time = event.time + lt
 
         # Speed up the path and frame evaluations if requested
-        if quick_info is not None:
-            epoch = np.mean(path_time.vals)
-            path_wrt_ssb = path_wrt_ssb.quick_path(epoch, quick_info)
+        path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick)
 
         # Iterate a fixed number of times. Newton's method ensures that
         # convergence is quick
@@ -448,7 +429,7 @@ class Path(object):
             event_wrt_ssb.arr = path_event_ssb.dep
 
             event.ssb.arr = event_wrt_ssb.arr
-            event.arr = event_wrt_ssb.wrt_frame(event.frame_id).arr
+            event.arr = event_wrt_ssb.wrt_frame(event.frame_id, None, quick).arr
 
         # From event, to path
         else:
@@ -456,14 +437,14 @@ class Path(object):
             event_wrt_ssb.dep = path_event_ssb.arr
 
             event.ssb.dep = event_wrt_ssb.dep
-            event.dep = event_wrt_ssb.wrt_frame(event.frame_id).dep
+            event.dep = event_wrt_ssb.wrt_frame(event.frame_id, None, quick).dep
 
         # Transform the absolute and relative events
-        absolute_event = path_event_ssb.wrt(self.path_id, self.frame_id)
+        absolute_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick)
         absolute_event.ssb = path_event_ssb
 
-        relative_event = path_event_ssb.wrt_event(event)
-        relative_event = relative_event.wrt_frame(event.frame_id)
+        relative_event = path_event_ssb.wrt_event(event, quick)
+        relative_event = relative_event.wrt_frame(event.frame_id, None, quick)
         relative_event.time = lt
         relative_event.ssb = path_event_ssb
 
@@ -651,32 +632,53 @@ class Path(object):
 
 ########################################
 
-    def quick_path(self, epoch, quick_info=None):
+    def quick_path(self, time, quick, duration=20., step=0.01, precision=None,
+                                      savings=2.):
         """Returns a new QuickPath object that provides accurate approximations
         to the position and velocity vectors returned by this path. It can speed
         up performance substantially when the same path must be evaluated
-        repeatedly but within a very narrow range of times.
+        repeatedly but within a narrow range of times.
 
         Input:
-            epoch           the mid-time in TDB of the interpolation.
-            quick_info      a dictionary containing the additional optional
-                            parameters:
-              ["WINDOW"]    the full duration of the window within which path
-                            information should be available, in seconds. Default
-                            is 20.
-              ["SAMPLING"]  the sampling interval of the spline, in seconds.
-                            Default is 0.01.
-              ["PRECISION"] the fractional precision required of the returned
-                            interpolated values; this is tested when the
-                            QuickPath is created, and a ValueError is raised
-                            if the requirement is not met. Default is None,
-                            in which case the precision is not tested.
+            time        a parameter to define the time limits of the
+                        interpolation.
+                            - A single value is interpreted as a mid-time of the
+                              interpolation.
+                            - if time is array-like or Scalar, the minimum and
+                              maximum values found define the interval.
+            quick       if False, no QuickPath is created and self is returned.
+            duration    the minimum duration of an interpolation, in seconds.
+            step        the time step between sample times for interpolation.
+            precision   the fractional precision required in the interpolation;
+                        if None, then no self-check for precision is performed.
+            savings     the minimum savings in number of evaluations before a
+                        QuickPath is warranted.
         """
 
-        if quick_info is None: return self
+        # Make sure a QuickPath is requested
+        if not quick: return self
         if not Path.USE_QUICKPATHS: return self
 
-        return QuickPath(self, epoch, quick_info)
+        # A Waypoint is too easy
+        if type(self) == Waypoint: return self
+
+        # Determine the time interval
+        if type(time) == Scalar: time = time.vals
+        time = np.asfarray(time)
+        count = np.size(time)
+
+        max_time = np.max(time)
+        min_time = np.min(time)
+        mid_time = (min_time + max_time) / 2.
+        dt = max_time - min_time
+        if dt < duration: dt = duration
+        steps = dt/step
+
+        # Return self if a QuickPath would not save us much time
+        if count > 2 and count < steps * savings: return self
+
+        return QuickPath(self, (mid_time-duration/2., mid_time+duration/2.),
+                               step=step, precision=precision)
 
 ################################################################################
 # Define the required subclasses
@@ -710,7 +712,7 @@ class Linked(Path):
         self.frame_id  = self.paths[-1].frame_id
         self.shape     = Array.broadcast_shape(tuple(paths))
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
 
         event = self.paths[0].event_at_time(time)
         for i in range(len(self.paths)-1):
@@ -750,7 +752,7 @@ class Relative(Path):
         self.path_frame = frame_registry.connect(self.path.frame_id,
                                                  self.origin.frame_id)
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
 
         event = self.path.event_at_time(time).unrotate_by_frame(self.path_frame)
 
@@ -778,7 +780,7 @@ class Reversed(Path):
         self.frame_id  = self.path.frame_id
         self.shape     = self.path.shape
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
 
         event = self.path.event_at_time(time)
         event.pos = -event.pos
@@ -817,7 +819,7 @@ class Rotated(Path):
         self.frame_id  = newframe_id
         self.shape     = self.path.shape
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
 
         return self.path.event_at_time(time).rotate_by_frame(self.frame)
 
@@ -840,7 +842,7 @@ class Waypoint(Path):
         self.frame_id  = frame_id
         self.shape     = []
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
 
         return Event.null_event(time, self.path_id, self.frame_id)
 
@@ -853,24 +855,20 @@ class QuickPath(Path):
     """QuickPath is a Path subclass that returns positions and velocities based
     on interpolation of another path within a specified time window."""
 
-    def __init__(self, path, epoch, quick_info={}):
+    def __init__(self, path, interval, step=0.01, precision=None, expand=4):
         """Constructor for a QuickPath.
 
         Input:
             path            the Path object that this Path will emulate.
-            epoch           the mid-time in TDB of the interpolation.
-            quick_info      a dictionary containing the additional optional
-                            parameters:
-              ["WINDOW"]    the full duration of the window within which path
-                            information should be available, in seconds. Default
-                            is 20.
-              ["SAMPLING"]  the sampling interval of the spline, in seconds.
-                            Default is 0.01.
-              ["PRECISION"] the fractional precision required of the returned
-                            interpolated values; this is tested when the
-                            QuickPath is created, and a ValueError is raised
-                            if the requirement is not met. Default is None,
-                            in which case the precision is not tested.
+            interval        a tuple containing the start time and end time of
+                            the interpolation, in TDB.
+            step            the time step between samples in the interpolation.
+            precision       the required precision of the interpolation; None to
+                            skip the self-check for precision.
+            expand          the number of additional time steps to add to each
+                            end of the interpolation; default is 4. A nonzero
+                            value improves the precision of the interpolation
+                            near the endpoints.
         """
 
         self.path = path
@@ -881,32 +879,17 @@ class QuickPath(Path):
         assert path.shape == []
         self.shape = []
 
-        if quick_info is None: quick_info == {}
-        self.info = quick_info
+        self.t0 = interval[0]
+        self.t1 = interval[1]
+        self.dt = step
 
-        self.epoch = epoch
-        self.window = 20.
-        self.dt = 0.01
-        self.precision = None
+        self.precision = precision
 
-        try:
-            self.window = self.info["WINDOW"]
-        except KeyError: pass
+        self.expand = expand
 
-        try:
-            self.dt = self.info["SAMPLING"]
-        except KeyError: pass
-
-        try:
-            self.precision = self.info["PRECISION"]
-        except KeyError: pass
-
-        self.t0 = self.epoch - self.window/2.
-        self.t1 = self.epoch + self.window/2.
-
-        EXPAND = 4
-        self.times = np.arange(self.t0 - EXPAND * self.dt,
-                               self.t1 + EXPAND * self.dt + self.dt, self.dt)
+        self.times = np.arange(self.t0 - self.expand * self.dt,
+                               self.t1 + self.expand * self.dt + self.dt,
+                               self.dt)
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
 
@@ -953,15 +936,15 @@ class QuickPath(Path):
                 raise ValueError("precision tolerance not achieved: " +
                                   str(error) + " > " + str(self.precision))
 
-    def event_at_time(self, time):
+    def event_at_time(self, time, quick=False):
 
         # time can only be a 1-D array
         time = Scalar.as_scalar(time)
-        pos = np.empty((time.vals.size, 3))
-        vel = np.empty((time.vals.size, 3))
+        pos = np.empty((np.size(time.vals), 3))
+        vel = np.empty((np.size(time.vals), 3))
 
         # Evaluate the positions and velocities
-        t = time.vals.ravel()
+        t = np.ravel(time.vals)
         pos[...,0] = self.pos_x(t)
         pos[...,1] = self.pos_y(t)
         pos[...,2] = self.pos_z(t)
@@ -971,8 +954,8 @@ class QuickPath(Path):
         vel[...,2] = self.vel_z(t)
 
         # Return the Event
-        return Event(time, pos.reshape(time.vals.shape + (3,)),
-                           vel.reshape(time.vals.shape + (3,)),
+        return Event(time, pos.reshape(np.shape(time.vals) + (3,)),
+                           vel.reshape(np.shape(time.vals) + (3,)),
                            self.origin_id, self.frame_id)
 
     def __str__(self):
@@ -994,6 +977,8 @@ import unittest
 class Test_Path(unittest.TestCase):
 
     def runTest(self):
+
+        Path.USE_QUICKPATHS = False
 
         # Imports are here to avoid conflicts
         from oops.frame.spiceframe import SpiceFrame
@@ -1057,11 +1042,11 @@ class Test_Path(unittest.TestCase):
 
         # QuickPath tests
         moon = SpicePath("MOON", "EARTH")
-        quick = QuickPath(moon, 0., {"PRECISION": 3.e-13})   # confirms precision
+        quick = QuickPath(moon, (-5.,5.), precision=3.e-13)
 
         # Perfect precision is impossible
         try:
-            quick = QuickPath(moon, 0., {"PRECISION": 0.})
+            quick = QuickPath(moon, (-5.,5.), precision=0.)
             self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
         except ValueError: pass
 

@@ -16,6 +16,7 @@ import oops.obs.all      as obs
 import oops.path.all     as path
 import oops.surface.all  as surface
 
+from oops.body       import *
 from oops.event      import Event
 from oops.transform  import Transform
 from oops.units      import Units

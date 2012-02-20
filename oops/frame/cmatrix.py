@@ -110,7 +110,7 @@ class Cmatrix(Frame):
 
 ########################################
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
         """Returns the Transform to the given Frame at a specified Scalar of
         times."""
 

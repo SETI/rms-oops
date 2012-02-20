@@ -144,7 +144,7 @@ class RingPlane(Surface):
         vals[...,2] = self.elevation
 
         # Update the mask
-        mask = obs.mask | los.mask | (los.vals[...,2] == 0) | (t < 0.)
+        mask = obs.mask | los.mask | (los.vals[...,2] == 0)
 
         if self.radii is not None:
             r_sq = vals[...,0]**2 + vals[...,1]**2
@@ -164,11 +164,14 @@ class RingPlane(Surface):
                         arbitrary.
         """
 
+        position = Vector3.as_standard(position)
+        mask = position.mask
+
         # The normal is undefined outside the ring's radial limits
         if self.radii is not None:
             r_sq = position.vals[...,0]**2 + position.vals[...,1]**2
-            mask = (self.mask | (r_sq < self.radii_sq[0]) |
-                                (r_sq > self.radii_sq[1]))
+            mask = (mask | (r_sq < self.radii_sq[0]) |
+                           (r_sq > self.radii_sq[1]))
 
         vals = np.zeros(position.vals.shape)
         vals[...,2] = 1.
@@ -245,13 +248,16 @@ class RingPlane(Surface):
 
         # Calculate the velocity field
         if self.gravity is None:
-            return Vector3(np.zeros(position.shape), mask)
+            return Vector3(np.zeros(position.vals.shape), mask)
 
-        radius = position.norm()
-        n = self.gravity.n(radius.vals)
+        # Feature currently disabled
+        return Vector3(np.zeros(position.vals.shape), mask)
 
-        vals = position.cross((0,0,-1)) * n
-        return Vector3(vals, mask)
+#         radius = position.norm()
+#         n = self.gravity.n(radius.vals)
+# 
+#         vflat = position.cross((0,0,-1)) * n
+#         return Vector3(vflat.vals, mask)
 
     def intercept_with_normal(self, normal):
         """Constructs the intercept point on the surface where the normal vector

@@ -9,4 +9,6 @@ from ringplane import RingPlane
 from spheroid  import Spheroid
 from ellipsoid import Ellipsoid
 
+from spicebody import *
+
 ################################################################################

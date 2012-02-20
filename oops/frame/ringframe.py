@@ -67,7 +67,7 @@ class RingFrame(Frame):
 
 ########################################
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
         """Returns the Transform to the given Frame at a specified Scalar of
         times."""
 
@@ -76,7 +76,7 @@ class RingFrame(Frame):
             return self.transform
 
         # Otherwise, calculate it for the current time
-        matrix = self.planet_frame.transform_at_time(time).matrix.vals
+        matrix = self.planet_frame.transform_at_time(time, quick).matrix.vals
 
         # Note matrix[...,2,:] is already the desired Z-axis of the frame
         z_axis = matrix[...,2,:]

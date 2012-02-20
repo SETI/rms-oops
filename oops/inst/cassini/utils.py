@@ -14,6 +14,7 @@ import textkernel
 import spicedb
 import cspice
 
+import oops.body as body
 import oops.tools as tools
 from oops.path.spicepath import SpicePath
 from oops.frame.spiceframe import SpiceFrame
@@ -130,7 +131,7 @@ initialize_kernels(kernels, SPK_LIST, SPK_DICT)
 spicedb.close_db()
 
 # Define some important paths and frames
-tools.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
+body.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
 ignore = SpicePath("CASSINI", "SATURN")
 #ignore = SpiceFrame("CASSINI_SC_COORD", "J2000")
 

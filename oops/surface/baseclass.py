@@ -219,21 +219,21 @@ class Surface(object):
 # Photon Solver
 ################################################################################
 
-    def photon_from_event(self, event, iters=3, quick_info=None):
+    def photon_from_event(self, event, iters=2, quick=True):
         """Returns the photon arrival event at the body's surface, for photons
         departing earlier from the specified event.
         """
 
-        return self._solve_photon(event, +1, iters, quick_info)
+        return self._solve_photon(event, +1, iters, quick)
 
-    def photon_to_event(self, event, iters=3, quick_info=None):
+    def photon_to_event(self, event, iters=2, quick=True):
         """Returns the photon departure event at the body's surface, for photons
         arriving later at the specified event.
         """
 
-        return self._solve_photon(event, -1, iters, quick_info)
+        return self._solve_photon(event, -1, iters, quick)
 
-    def _solve_photon(self, event, sign, iters=3, quick_info=None):
+    def _solve_photon(self, event, sign, iters=2, quick=True):
         """Solve for the Event object located on the body's surface that falls
         at the other end of the photon's path to or from another Event.
 
@@ -249,21 +249,22 @@ class Surface(object):
 
             iters       number of iterations to perform.
 
-            quick_info  parameters to be passed to quick_path() and
-                        quick_frame(), if these mechanisms are to be used to
-                        speed up the calculations. None to do things the slow
-                        way.
+            quick       True to use QuickPaths and QuickFrames, where warranted,
+                        to speed up the calculation.
 
-        Return:         the Events on the surface of the body.
+        Return:         a tuple containing the absolute and relative events at
+                        the surface. The absolute event is relative to the
+                        origin of the surface; the relative event originates
+                        with the event at the other end of the photon's path.
         """
 
         signed_c = sign * constants.C
 
         # Define the path, frame and event relative to the SSB in J2000
-        event_wrt_ssb = event.wrt_ssb()
+        event_wrt_ssb = event.wrt_ssb(quick)
 
         origin_wrt_ssb = path_.connect(self.origin_id, "SSB", "J2000")
-        frame_in_j2000 = frame_.connect(self.frame_id, "J2000")
+        frame_wrt_j2000 = frame_.connect(self.frame_id, "J2000")
 
         # Define the origin and line of sight in the SSB frame
         obs_wrt_ssb = event_wrt_ssb.pos
@@ -278,15 +279,20 @@ class Surface(object):
               origin_wrt_ssb.event_at_time(event.time).pos).norm() / signed_c
         surface_time = event.time + lt
 
-        # Quickend the path and frame evaluations if requested
-        if iters > 1 and quick_info is not None:
-            epoch = np.mean(surface_time.vals)
-            origin_wrt_ssb = origin_wrt_ssb.quick_path(epoch, quick_info)
-            frame_wrt_j2000 = frame_wrt_j2000.quick_frame(epoch, quick_info)
+        # Quicken the path and frame evaluations if requested
+        origin_wrt_ssb = origin_wrt_ssb.quick_path(surface_time, quick)
+        frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time, quick)
 
         # Iterate a fixed number of times. Convergence is rapid because all
         # speeds are non-relativistic.
         for iter in range(iters):
+
+            # Un-mask the time, position and velocity for each iteration. This
+            # is necessary because a line of sight could miss the surface on one
+            # iteration but hit it on the next
+            obs_wrt_ssb.mask = False
+            vel_wrt_ssb.mask = False
+            lt.mask = False
 
             # Evaluate the current time
             surface_time = event.time + lt
@@ -296,7 +302,7 @@ class Surface(object):
                             - origin_wrt_ssb.event_at_time(surface_time).pos)
 
             # Rotate into the surface-fixed frame
-            transform = frame_in_j2000.transform_at_time(surface_time)
+            transform = frame_wrt_j2000.transform_at_time(surface_time)
             pos_in_frame = transform.rotate(pos_in_j2000)
             vel_in_frame = transform.rotate(vel_wrt_ssb)
 
@@ -308,6 +314,10 @@ class Surface(object):
                 print iter
                 print dlt
 
+        # Update the mask on light time to hide intercepts behind the observer
+        lt.mask = lt.mask | (lt.vals * sign < 0.)
+        if not np.any(lt.mask): lt.mask = False
+
         # Create the absolute and relative Event objects
         absolute_event = self.event_at(event.time + lt, intercept)
 
@@ -316,7 +326,7 @@ class Surface(object):
         else:
             absolute_event.arr = vel_in_frame
 
-        relative_event = absolute_event.wrt_event(event)
+        relative_event = absolute_event.wrt_event(event, quick)
         relative_event.time = lt    # slighty finer precision
 
         # Return the intercept event in two frames

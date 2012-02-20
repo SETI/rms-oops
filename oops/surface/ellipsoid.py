@@ -143,9 +143,6 @@ class Ellipsoid(Surface):
 
         t = (d.sqrt() - b) / (2. * a)
 
-        # Ignore points behind you
-        t.mask = t.mask | (t.vals < 0.)
-
         return (obs + t*los, t)
 
     def normal(self, position):
@@ -225,9 +222,9 @@ class Ellipsoid(Surface):
         # TBD
         pass
 
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
 
 import unittest
 import oops.tools as tools
@@ -239,7 +236,7 @@ class Test_Ellipsoid(unittest.TestCase):
         # TBD
         pass
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

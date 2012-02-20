@@ -8,7 +8,6 @@ import vicar
 import pdstable
 import cspice
 
-import oops.inst
 import oops.inst.cassini.utils as cassini
 
 import oops.fov.all as fov

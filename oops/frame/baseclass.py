@@ -53,12 +53,14 @@ class Frame(object):
 
         pass
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
         """Returns a Transform object that rotates coordinates from the
         reference frame into this frame as a function of time.
 
         Input:
             time    a Scalar time.
+            quick   True to consider using a QuickFrame, where warranted, to
+                    improve computation speed.
 
         Return:     the corresponding Tranform applicable at the specified
                     time(s). The transform rotates vectors from the reference
@@ -185,7 +187,7 @@ class Frame(object):
 # These must be defined in Event.py and not here, because that would create a
 # circular dependency in the order that modules are loaded.
 
-    def rotate_event(self, event):
+    def rotate_event(self, event, quick=False):
         """Returns the same event at the same origin, but rotated forward into a
         new coordinate frame.
 
@@ -196,9 +198,9 @@ class Frame(object):
         assert self.reference_id == event.frame_id
         assert self.origin_id == event.origin_id
 
-        return self.transform_at_time(event.time).rotate_event(event)
+        return self.transform_at_time(event.time, quick).rotate_event(event)
 
-    def unrotate_event(self, event):
+    def unrotate_event(self, event, quick=False):
         """Returns the same event at the same origin, but unrotated backward
         into the reference coordinate frame.
 
@@ -209,7 +211,7 @@ class Frame(object):
         assert self.frame_id == event.frame_id
         assert self.origin_id == event.origin_id
 
-        return self.transform_at_time(event.time).unrotate_event(event)
+        return self.transform_at_time(event.time, quick).unrotate_event(event)
 
 ################################################################################
 # Frame Generator
@@ -223,7 +225,8 @@ class Frame(object):
         Input:
             target      a Frame object or the registered ID of the destination
                         frame.
-            reference   a Frame object or the registered ID of the starting frame.
+            reference   a Frame object or the registered ID of the starting
+                        frame.
 
         The shape of the connected frame will will be the result of broadcasting
         the shapes of the target and reference.
@@ -367,32 +370,53 @@ class Frame(object):
 
 ########################################
 
-    def quick_frame(self, epoch, quick_info=None):
+    def quick_frame(self, time, quick, duration=20., step=0.01, precision=None,
+                                      savings=2.):
         """Returns a new QuickFrame object that provides accurate approximations
         to the transform returned by this frame. It can speed up performance
         substantially when the same frame must be evaluated repeatedly but
-        within a very narrow range of times.
+        within a narrow range of times.
 
         Input:
-            epoch           the mid-time in TDB of the interpolation.
-            quick_info      a dictionary containing the additional optional
-                            parameters:
-              ["WINDOW"]    the full duration of the window within which path
-                            information should be available, in seconds. Default
-                            is 20.
-              ["SAMPLING"]  the sampling interval of the spline, in seconds.
-                            Default is 0.01.
-              ["PRECISION"] the fractional precision required of the returned
-                            interpolated values; this is tested when the
-                            QuickFrame is created, and a ValueError is raised
-                            if the requirement is not met. Default is None,
-                            in which case the precision is not tested.
+            time        a parameter to define the time limits of the
+                        interpolation.
+                            - A single value is interpreted as a mid-time of the
+                              interpolation.
+                            - if time is array-like or Scalar, the minimum and
+                              maximum values found define the interval.
+            quick       if False, no QuickPath is created and self is returned.
+            duration    the minimum duration of an interpolation, in seconds.
+            step        the time step between sample times for interpolation.
+            precision   the fractional precision required in the interpolation;
+                        if None, then no self-check for precision is performed.
+            savings     the minimum savings in number of evaluations before a
+                        QuickPath is warranted.
         """
 
-        if quick_info is None: return self
+        # Make sure a QuickFrame has been requested
+        if not quick: return self
         if not Frame.USE_QUICKFRAMES: return self
 
-        return QuickFrame(self, epoch, quick_info)
+        # A Null frame is too easy
+        if type(self) == Null: return self
+
+        # Determine the time interval
+        if type(time) == Scalar: time = time.vals
+        time = np.asfarray(time)
+        count = np.size(time)
+
+        max_time = np.max(time)
+        min_time = np.min(time)
+        mid_time = (min_time + max_time) / 2.
+        dt = max_time - min_time
+        if dt < duration: dt = duration
+        steps = dt/step
+
+        # Return self if a QuickFrame would not save us much time
+        if count > 2 and count < steps * savings: return self
+
+        return QuickFrame(self, (mid_time-duration/2., mid_time+duration/2.),
+                                step=step, precision=precision)
 
 ################################################################################
 # Required Subclasses
@@ -413,7 +437,7 @@ class Inverse(Frame):
 
         self.shape = self.oldframe.shape
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
 
         return self.oldframe.transform_at_time(time).invert()
 
@@ -451,7 +475,7 @@ class Linked(Frame):
 
         self.shape = Array.broadcast_shape(tuple(self.frames))
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
 
         transform = self.frames[-1].transform_at_time(time)
         for frame in self.frames[-2::-1]:
@@ -473,7 +497,7 @@ class Null(Frame):
 
         self.shape = []
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
 
         return Transform.null_transform(self.frame_id)
 
@@ -506,7 +530,7 @@ class Relative(Frame):
 
         self.shape = Array.broadcast_shape((self.frame1, self.frame2))
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
 
         return self.frame1.transform_at_time(time).rotate_transform(
                self.frame2.transform_at_time(time).invert())
@@ -517,24 +541,20 @@ class QuickFrame(Frame):
     """QuickFrame is a Frame subclass that returns Transform objects based on
     interpolation of another Frame within a specified time window."""
 
-    def __init__(self, frame, epoch, quick_info={}):
+    def __init__(self, frame, interval, step=0.01, precision=None, expand=4):
         """Constructor for a QuickFrame.
 
         Input:
             frame           the Frame object that this Frame will emulate.
-            epoch           the mid-time in TDB of the interpolation.
-            quick_info      a dictionary containing the additional optional
-                            parameters:
-              ["WINDOW"]    the full duration of the window within which path
-                            information should be available, in seconds. Default
-                            is 20.
-              ["SAMPLING"]  the sampling interval of the spline, in seconds.
-                            Default is 0.01.
-              ["PRECISION"] the fractional precision required of the returned
-                            interpolated values; this is tested when the
-                            QuickFrame is created, and a ValueError is raised
-                            if the requirement is not met. Default is None,
-                            in which case the precision is not tested.
+            interval        a tuple containing the start time and end time of
+                            the interpolation, in TDB.
+            step            the time step between samples in the interpolation.
+            precision       the required precision of the interpolation; None to
+                            skip the self-check for precision.
+            expand          the number of additional time steps to add to each
+                            end of the interpolation; default is 4. A nonzero
+                            value improves the precision of the interpolation
+                            near the endpoints.
         """
 
         self.frame = frame
@@ -545,32 +565,17 @@ class QuickFrame(Frame):
         assert frame.shape == []
         self.shape = []
 
-        if quick_info is None: quick_info == {}
-        self.info = quick_info
+        self.t0 = interval[0]
+        self.t1 = interval[1]
+        self.dt = step
 
-        self.epoch = epoch
-        self.window = 20.
-        self.dt = 0.01
-        self.precision = None
+        self.precision = precision
 
-        try:
-            self.window = self.info["WINDOW"]
-        except KeyError: pass
+        self.expand = expand
 
-        try:
-            self.dt = self.info["SAMPLING"]
-        except KeyError: pass
-
-        try:
-            self.precision = self.info["PRECISION"]
-        except KeyError: pass
-
-        self.t0 = self.epoch - self.window/2.
-        self.t1 = self.epoch + self.window/2.
-
-        EXPAND = 4
-        self.times = np.arange(self.t0 - EXPAND * self.dt,
-                               self.t1 + EXPAND * self.dt + self.dt, self.dt)
+        self.times = np.arange(self.t0 - self.expand * self.dt,
+                               self.t1 + self.expand * self.dt + self.dt,
+                               self.dt)
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
 
@@ -585,11 +590,15 @@ class QuickFrame(Frame):
                                     self.transforms.matrix.vals[...,i,j],
                                     k=KIND)
 
-        self.omega = np.empty((3,), dtype="object")
-        for i in range(3):
-            self.omega[i] = interp.UnivariateSpline(self.times,
-                                    self.transforms.omega.vals[...,i],
-                                    k=KIND)
+        # Don't interpolate omega if frame is inertial
+        if self.transforms.omega == Vector3((0.,0.,0.)):
+            self.omega = None
+        else:
+            self.omega = np.empty((3,), dtype="object")
+            for i in range(3):
+                self.omega[i] = interp.UnivariateSpline(self.times,
+                                        self.transforms.omega.vals[...,i],
+                                        k=KIND)
 
         # Test the precision
         if self.precision is not None:
@@ -598,7 +607,7 @@ class QuickFrame(Frame):
             true_transform = self.frame.transform_at_time(t)
 
             matrix = np.empty(t.shape + (3,3))
-            omega  = np.empty(t.shape + (3,))
+            omega  = np.zeros(t.shape + (3,))
 
             # Evaluate the matrix and rotation vector
             matrix[...,0,0] = self.matrix[0,0](t)
@@ -611,9 +620,10 @@ class QuickFrame(Frame):
             matrix[...,2,1] = self.matrix[2,1](t)
             matrix[...,2,2] = self.matrix[2,2](t)
 
-            omega[...,0] = self.omega[0](t)
-            omega[...,1] = self.omega[1](t)
-            omega[...,2] = self.omega[2](t)
+            if self.omega is not None:
+                omega[...,0] = self.omega[0](t)
+                omega[...,1] = self.omega[1](t)
+                omega[...,2] = self.omega[2](t)
 
             # Normalize the matrix
             matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
@@ -631,15 +641,15 @@ class QuickFrame(Frame):
                 raise ValueError("precision tolerance not achieved: " +
                                   str(error) + " > " + str(self.precision))
 
-    def transform_at_time(self, time):
+    def transform_at_time(self, time, quick=False):
 
         # time can only be a 1-D array
         time   = Scalar.as_scalar(time)
-        matrix = np.empty((time.vals.size, 3, 3))
-        omega  = np.empty((time.vals.size, 3))
+        matrix = np.empty((np.size(time.vals), 3, 3))
+        omega  = np.zeros((np.size(time.vals), 3))
 
         # Evaluate the matrix and rotation vector
-        t = time.vals.ravel()
+        t = np.ravel(time.vals)
 
         matrix[...,0,0] = self.matrix[0,0](t)
         matrix[...,0,1] = self.matrix[0,1](t)
@@ -651,9 +661,10 @@ class QuickFrame(Frame):
         matrix[...,2,1] = self.matrix[2,1](t)
         matrix[...,2,2] = self.matrix[2,2](t)
 
-        omega[...,0] = self.omega[0](t)
-        omega[...,1] = self.omega[1](t)
-        omega[...,2] = self.omega[2](t)
+        if self.omega is not None:
+            omega[...,0] = self.omega[0](t)
+            omega[...,1] = self.omega[1](t)
+            omega[...,2] = self.omega[2](t)
 
         # Normalize the matrix
         matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
@@ -661,8 +672,8 @@ class QuickFrame(Frame):
         matrix[...,2,:] = utils.unit(matrix[...,2,:])
 
         # Return the Event
-        return Transform(matrix.reshape(time.vals.shape + (3,)),
-                         omega.reshape(time.vals.shape + (3,)),
+        return Transform(matrix.reshape(np.shape(time.vals) + (3,3)),
+                         omega.reshape(np.shape(time.vals) + (3,)),
                          self.frame_id, self.reference_id, self.origin_id)
 
     def __str__(self):
@@ -698,11 +709,11 @@ class Test_Frame(unittest.TestCase):
         ignore = SpicePath("MOON", "SSB")
         ignore = SpiceFrame("IAU_EARTH", "J2000")
         moon  = SpiceFrame("IAU_MOON", "IAU_EARTH")
-        quick = QuickFrame(moon, 0., {"PRECISION": 3.e-14}) # confirms precision
+        quick = QuickFrame(moon, (-5.,5.), precision=3.e-14)
 
         # Perfect precision is impossible
         try:
-            quick = QuickFrame(moon, 0., {"PRECISION": 0.})
+            quick = QuickFrame(moon, (-5.,5.), precision=0.)
             self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
         except ValueError: pass
 
