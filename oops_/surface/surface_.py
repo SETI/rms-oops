@@ -57,7 +57,7 @@ class Surface(object):
 
         pass
 
-    def as_vector3(self, coord1, coord2, coord3=0., **keywords):
+    def as_vector3(self, coord1, coord2, coord3=0.):
         """Converts coordinates in the surface's internal coordinate system into
         position vectors at or near the surface.
 
@@ -90,58 +90,85 @@ class Surface(object):
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
 
-        Return:         a tuple (position, factor) if derivs is False; a tuple
-                        (position, factor, dpos_dobs, dpos_dlos) if derivs is
-                        True.
-            position    a unitless Vector3 of intercept points on the surface,
+        Return:         a tuple (pos, t) where
+            pos         a unitless Vector3 of intercept points on the surface,
                         in km.
-            factor      a unitless Scalar of factors such that:
-                            position = obs + factor * los
-            dpos_dobs   the partial derivatives of the position vector with
-                        respect to the observer position, as a Matrix3.
-            dpos_dlos   the partial derivatives of the position vector with
-                        respect to the line of sight, as a Matrix3.
+            t           a unitless Scalar such that:
+                            position = obs + t * los
+
+                        If derivs is True, then pos and t are returned with
+                        subfields "d_dobs" and "d_dlos", where the former
+                        contains the MatrixN of partial derivatives with respect
+                        to obs and the latter is the MatrixN of partial
+                        derivatives with respect to los. The MatrixN item shapes
+                        are [3,3] for the derivatives of pos, and [1,3] for the
+                        derivatives of t.
         """
 
         pass
 
-    def normal(self, position):
+    def normal(self, pos, derivs=False):
         """Returns the normal vector at a position at or near a surface.
 
         Input:
-            position    a Vector3 of positions at or near the surface, with
+            pos         a Vector3 of positions at or near the surface, with
                         optional units.
+            derivs      True to include a matrix of partial derivatives.
 
         Return:         a unitless Vector3 containing directions normal to the
                         surface that pass through the position. Lengths are
                         arbitrary.
+
+                        If derivs is True, then the normal vectors returned have
+                        a subfield "d_dpos", which contains the partial
+                        derivatives with respect to components of the given
+                        position vector, as a MatrixN object with item shape
+                        [3,3].
         """
 
         pass
 
-    def gradient(self, position, axis=0, **keywords):
-        """Returns the gradient vector at a specified position at or near the
-        surface. The gradient of surface coordinate c is defined as a vector
-            (dc/dx,dc/dy,dc/dz)
-        It has the property that it points in the direction of the most rapid
-        change in value of the coordinate, and its magnitude is the rate of
-        change in that direction.
+    def intercept_with_normal(self, normal, derivs=False):
+        """Constructs the intercept point on the surface where the normal vector
+        is parallel to the given vector.
 
         Input:
-            position    a Vector3 of positions at or near the surface, with
-                        optional units.
-            axis        0, 1 or 2, identifying the coordinate axis for which the
-                        gradient is sought.
-            **keywords  any other keyword=value pairs needed to define the
-                        mapping between positions and coordinates.
+            normal      a Vector3 of normal vectors, with optional units.
+            derivs      true to return a matrix of partial derivatives.
 
-        Return:         a unitless Vector3 of the gradients sought. Values are
-                        always in standard units.
+        Return:         a unitless Vector3 of surface intercept points, in km.
+                        Where no solution exists, the components of the returned
+                        vector should be masked.
+
+                        If derivs is True, then the returned intercept points
+                        have a subfield "d_dperp", which contains the partial
+                        derivatives with respect to components of the normal
+                        vector, as a MatrixN object with item shape [3,3].
         """
 
         pass
 
-    def velocity(self, position):
+    def intercept_normal_to(self, pos, derivs=False):
+        """Constructs the intercept point on the surface where a normal vector
+        passes through a given position.
+
+        Input:
+            pos         a Vector3 of positions near the surface, with optional
+                        units.
+
+        Return:         a unitless vector3 of surface intercept points. Where no
+                        solution exists, the returned vector should be masked.
+
+                        If derivs is True, then the returned intercept points
+                        have a subfield "d_dpos", which contains the partial
+                        derivatives with respect to components of the given
+                        position vector, as a MatrixN object with item shape
+                        [3,3].
+        """
+
+        pass
+
+    def velocity(self, pos):
         """Returns the local velocity vector at a point within the surface.
         This can be used to describe the orbital motion of ring particles or
         local wind speeds on a planet.
@@ -154,34 +181,6 @@ class Surface(object):
         """
 
         return Vector3((0,0,0))
-
-    def intercept_with_normal(self, normal):
-        """Constructs the intercept point on the surface where the normal vector
-        is parallel to the given vector.
-
-        Input:
-            normal      a Vector3 of normal vectors, with optional units.
-
-        Return:         a unitless Vector3 of surface intercept points, in km.
-                        Where no solution exists, the components of the returned
-                        vector should be masked.
-        """
-
-        pass
-
-    def intercept_normal_to(self, position):
-        """Constructs the intercept point on the surface where a normal vector
-        passes through a given position.
-
-        Input:
-            position    a Vector3 of positions near the surface, with optional
-                        units.
-
-        Return:         a unitless vector3 of surface intercept points. Where no
-                        solution exists, the returned vector should be masked.
-        """
-
-        pass
 
 ################################################################################
 # Photon Solver
