@@ -5,7 +5,7 @@
 import unittest
 import cspice
 
-from baseclass  import Test_Path
+from path_      import Test_Path
 from multipath  import Test_MultiPath
 from spicepath  import Test_SpicePath
 

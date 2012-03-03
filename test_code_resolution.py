@@ -6,7 +6,7 @@ import oops_.inst.cassini.iss as cassini_iss
 oops.config.LOGGING.on()
 
 # Try:
-# >>> execfile("test_code.py")
+# >>> execfile("test_code_resolution.py")
 # to run everything at once. Handy for timing tests
 
 # Create the snapshot object
@@ -24,10 +24,13 @@ uv_pair = oops.Pair.cross_scalars(
 
 midtime = (snapshot.t0 + snapshot.t1)/2.
 
-arrivals = -snapshot.fov.los_from_uv(uv_pair)
+los = snapshot.fov.los_from_uv(uv_pair, derivs=True)
+# los.d_duv is now the [3,2] MatrixN of derivatives dlos/d(u,v), where los is
+# in the frame of the Cassini camera.
 
-# This line swaps the image for proper display using pylab.imshow()
-arrivals = oops.Vector3(arrivals.swapaxes(0,1))
+# This line swaps the image for proper display using pylab.imshow().
+# Also change sign for incoming photons, and for subfield "d_duv".
+arrivals = -los.swapaxes(0,1)
 
 snapshot_event = oops.Event(
     midtime, (0.,0.,0.), (0.,0.,0.),
@@ -47,7 +50,7 @@ print (np.min(declination.vals) * oops.DPR,
 # Find the ring intercept points
 ring_surface = oops.SOLAR_SYSTEM["SATURN_MAIN_RINGS"].surface
 
-ring_event = ring_surface.photon_to_event(snapshot_event)
+ring_event = ring_surface.photon_to_event(snapshot_event, derivs=True)
 
 # This mask is True inside the rings, False outside
 ring_mask = ~ring_event.pos.mask
@@ -55,7 +58,8 @@ pylab.imshow(ring_mask)
 
 # Get the radius and inertial longitude
 (ring_radius,
- ring_longitude) = ring_surface.as_coords(ring_event.pos, axes=2)
+ ring_longitude) = ring_surface.as_coords(ring_event.pos, axes=2,
+                                          derivs=(True,False))
 
 pylab.imshow(ring_radius.vals)
 print np.min(ring_radius.vals), np.max(ring_radius.vals)
@@ -64,6 +68,13 @@ pylab.imshow(ring_longitude.vals)
 print (np.min(ring_longitude.vals) * oops.DPR,
        np.max(ring_longitude.vals) * oops.DPR)
 # Note that 2pi-to-zero discontinuity in longitude passes through the middle
+
+# Get the ring plane radial resolution
+gradient = ring_radius.d_dpos * ring_event.pos.d_dlos * los.d_duv
+ring_radial_resolution = gradient.as_pair().norm()
+
+pylab.imshow(ring_radial_resolution.vals)
+print (np.min(ring_radial_resolution.vals), np.max(ring_radial_resolution.vals))
 
 # Get the range from the observer to the rings
 ring_range = ring_event.dep.norm()
@@ -177,7 +188,7 @@ print (np.min(saturn_incidence.vals) * oops.DPR,
 saturn_sun_range = sun_saturn_event.dep.norm()
 
 pylab.imshow(saturn_sun_range.vals)
-print (np.min(saturn_sun_range.vals), np.max(saturn_sun_range.vals))
+print np.min(saturn_sun_range.vals), np.max(saturn_sun_range.vals)
 
 # Identify the points where Saturn is lit
 saturn_sunlit_mask = saturn_mask & (saturn_incidence.vals <= np.pi/2)
@@ -209,5 +220,6 @@ pylab.imshow(saturn_in_shadow_mask)
 
 saturn_visible_sunlit_mask = saturn_sunlit_mask & ~saturn_in_shadow_mask
 pylab.imshow(saturn_visible_sunlit_mask)
+
 
 

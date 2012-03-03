@@ -5,7 +5,7 @@
 # Initialize a python session using:
 #   import oops_.all as oops
 
-from array_.all import *
+from array.all import *
 
 import calib.all    as calib
 import cmodel.all   as cmodel
@@ -16,14 +16,15 @@ import obs.all      as obs
 import path.all     as path
 import surface.all  as surface
 
-from registry   import *
 from body       import *
-from event      import Event
-from transform  import Transform
-from units      import Units
-
-from oops_.constants  import *
+from constants  import *
+from edelta     import *
+from event      import *
+from registry   import *
+from transform  import *
+from units      import *
 
 import oops_.spice_support as spice
+import config
 
 ################################################################################

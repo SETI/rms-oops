@@ -4,8 +4,8 @@
 # 2/11/12 Modified (MRS) - revised for style.
 ################################################################################
 
-from baseclass import Calibration
-from oops_.array_.all import *
+from calibration_ import Calibration
+from oops_.array.all import *
 
 class Scaling(Calibration):
     """A Scaling is a Calibration object in which every pixel is multiplied by a

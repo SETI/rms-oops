@@ -12,8 +12,8 @@ import solar
 import sys
 import math
 
-from baseclass import Observation
-from oops_.array_.all import *
+from observation_ import Observation
+from oops_.array.all import *
 from oops_.event import Event
 
 import oops_.frame.all as frame_

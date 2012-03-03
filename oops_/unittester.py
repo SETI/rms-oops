@@ -2,7 +2,7 @@
 # oops_/unittester.py: Global unit-tester
 ################################################################################
 
-from array_.unittester  import *
+from array.unittester   import *
 from calib.unittester   import *
 from cmodel.unittester  import *
 from format.unittester  import *

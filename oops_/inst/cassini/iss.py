@@ -14,7 +14,7 @@ import oops_.fov.all as fov
 import oops_.frame.all as frame
 import oops_.calib.all as calib
 import oops_.obs.all as obs
-from oops_.array_.all import *
+from oops_.array.all import *
 
 INSTRUMENT_KERNEL = None
 FOVS = {}

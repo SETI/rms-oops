@@ -5,8 +5,8 @@
 #   heirarchy.
 ################################################################################
 
-from baseclass import Calibration
-from oops_.array_.all import *
+from calibration_ import Calibration
+from oops_.array.all import *
 
 class Distorted(Calibration):
     """Distorted is a Calibration subclass in which every pixel is multiplied by

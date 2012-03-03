@@ -1,13 +1,14 @@
 ################################################################################
-# oops_/frame/ring.py: Subclass RingFrame of class Frame
+# oops_/frame/ringframe.py: Subclass RingFrame of class Frame
 #
 # 2/8/12 Modified (MRS) - Update for consistent style.
 ################################################################################
 
 import numpy as np
 
-from baseclass import Frame
-from oops_.array_.all import *
+from frame_ import Frame
+from oops_.array.all import *
+from oops_.config import QUICK
 from oops_.transform import Transform
 
 import oops_.registry as registry
@@ -42,8 +43,11 @@ class RingFrame(Frame):
 
         self.frame_id = frame.frame_id
         self.reference_id = frame.reference_id
-        #self.origin_id = frame.origin_id
-        self.origin_id = None           # It's close to inertial, if not exactly
+
+        # The frame might not be exactly inertial due to polar precession, but
+        # it is good enough
+        self.origin_id = None
+
         self.shape = frame.shape
 
         self.planet_frame = frame
@@ -67,7 +71,7 @@ class RingFrame(Frame):
 
 ########################################
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick=QUICK):
         """Returns the Transform to the given Frame at a specified Scalar of
         times."""
 
@@ -76,9 +80,10 @@ class RingFrame(Frame):
             return self.transform
 
         # Otherwise, calculate it for the current time
-        matrix = self.planet_frame.transform_at_time(time, quick).matrix.vals
+        frame = self.planet_frame.transform_at_time(time, quick)
+        matrix = frame.matrix.vals
 
-        # Note matrix[...,2,:] is already the desired Z-axis of the frame
+        # The bottom row of the matrix is the z-axis of the frame
         z_axis = matrix[...,2,:]
 
         # Replace the X-axis of the matrix using (0,0,1) cross Z-axis
@@ -93,7 +98,8 @@ class RingFrame(Frame):
         # Replace the Y-axis of the matrix using Y = Z cross X
         matrix[...,1,:] = utils.cross3d(z_axis, matrix[...,0,:])
 
-        return Transform(matrix, (0,0,0), self.frame_id, self.reference_id)
+        return Transform(Matrix3(matrix, frame.matrix.mask), Vector3([0,0,0]),
+                         self.frame_id, self.reference_id, None)
 
 ################################################################################
 # UNIT TESTS
@@ -107,8 +113,8 @@ class Test_RingFrame(unittest.TestCase):
 
         # Imports are here to reduce conflicts
         from spiceframe import SpiceFrame
-        from path.spicepath import SpicePath
-        from event import Event
+        from oops_.path.spicepath import SpicePath
+        from oops_.event import Event
 
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
@@ -125,7 +131,7 @@ class Test_RingFrame(unittest.TestCase):
         rotated = event.wrt_frame("IAU_MARS")
         fixed   = event.wrt_frame("IAU_MARS_DESPUN")
 
-        # Confirm Z axis is tied to Saturn's pole
+        # Confirm Z axis is tied to planet's pole
         diff = rotated.pos.as_scalar(2) - fixed.pos.as_scalar(2)
         self.assertTrue(np.all(np.abs(diff.vals < 1.e-14)))
 

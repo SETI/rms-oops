@@ -15,5 +15,7 @@ SPR = 3600. * 180. / np.pi      # arcseconds per radian
 RPS = np.pi / (3600. * 180.)    # radians per arcsecond
 SPD = 86400.                    # seconds per day
 
+AU = 149597870.7                # Astronomical Unit in km
+
 ################################################################################
 

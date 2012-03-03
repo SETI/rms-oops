@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from baseclass import CoordinateModel
+from cmodel_ import CoordinateModel
 from oops_.units import Units
 
 class Radius(CoordinateModel):

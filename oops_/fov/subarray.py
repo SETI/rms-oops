@@ -3,12 +3,13 @@
 #
 # 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
 # 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+# 2/23/12 MRS - Gave each method the option to return partial derivatives.
 ################################################################################
 
 import numpy as np
 
-from baseclass import FOV
-from oops_.array_.all import *
+from fov_ import FOV
+from oops_.array.all import *
 
 class Subarray(FOV):
 
@@ -48,31 +49,40 @@ class Subarray(FOV):
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
 
-    def xy_from_uv(self, uv_pair):
-        """Returns a Pair of (x,y) spatial coordinates given a Pair of ICS (u,v)
-        coordinates."""
+    def xy_from_uv(self, uv_pair, derivs=False):
+        """Returns a Pair of (x,y) spatial coordinates in units of radians,
+        given a Pair of coordinates (u,v).
 
-        return (self.fov.xy_from_uv(self.new_origin_in_old_uv + uv_pair)
-                - self.new_los_wrt_old_xy)
-
-    def uv_from_xy(self, xy_pair):
-        """Returns a Pair of ICS (u,v) coordinates given a Pair of (x,y) apatial
-        coordinates."""
-
-        return (self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair)
-                - self.new_origin_in_old_uv)
-
-    def xy_and_dxy_duv_from_uv(self, uv_pair):
-        """Returns a tuple ((x,y), dxy_duv), where the latter is the set of
-        partial derivatives of (x,y) with respect to (u,v). These are returned
-        as a Pair object of shape [...,2]:
-            dxy_duv[...,0] = Pair((dx/du, dx/dv))
-            dxy_duv[...,1] = Pair((dy/du, dy/dv))
+        If derivs is True, then the returned Pair has a subarrray "d_duv", which
+        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
+        shape [2,2].
         """
 
-        tuple = self.fov.xy_and_dxy_duv_from_uv(self.new_origin_in_old_uv +
-                                                uv_pair)
-        return (tuple[0] - self.new_los_wrt_old_xy, tuple[1])
+        old_xy = self.fov.xy_from_uv(self.new_origin_in_old_uv + uv_pair,
+                                     derivs)
+        new_xy = old_xy - self.new_los_wrt_old_xy
+
+        if derivs:
+            new_xy.insert_subfield("d_uv", old_xy.d_duv)
+
+        return new_xy
+
+    def uv_from_xy(self, xy_pair, derivs=False):
+        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
+        coordinates in radians.
+
+        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
+        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
+        shape [2,2].
+        """
+
+        old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair, derivs)
+        new_uv = old_uv - self.new_origin_in_old_uv
+
+        if derivs:
+            new_uv.insert_subfield("d_dxy", old_uv.d_duv)
+
+        return new_uv
 
 ################################################################################
 # UNIT TESTS

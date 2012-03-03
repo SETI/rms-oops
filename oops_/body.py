@@ -520,7 +520,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         try:
             frame = frame_.SpiceFrame(spice_id)
         except LookupError:
-            frame = frame_.Null("J2000", path.path_id)
+            frame = frame_.NullFrame("J2000", path.path_id)
 
         # The name of the path is the name of the body
         name = path.path_id

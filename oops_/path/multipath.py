@@ -5,8 +5,9 @@
 import numpy as np
 import cspice
 
-from baseclass import Path
-from oops_.array_.all import *
+from path_ import Path
+from oops_.array.all import *
+from oops_.config import QUICK
 from oops_.event import Event
 
 import oops_.registry as registry
@@ -15,20 +16,20 @@ class MultiPath(Path):
     """A MultiPath gathers a set of paths into a single N-dimensional Path
     object."""
 
-    def __init__(self, paths, origin_id="SSB", frame_id="J2000", id=None):
+    def __init__(self, paths, origin="SSB", frame="J2000", id=None):
         """Constructor for a MultiPath Path.
 
         Input:
             paths           a tuple, list or ndarray of path IDs or objects.
-            origin_id       the name or integer ID of the origin body's path.
-            frame_id        the name or integer ID of the reference frame.
+            origin          the name or integer ID of the origin body's path.
+            frame           the name or integer ID of the reference frame.
             id              the name or ID under which this MultiPath will be
                             registered. Default is the ID of the first path
                             with a "+" appended.
         """
 
-        self.origin_id = registry.as_path_id(origin_id)
-        self.frame_id  = registry.as_frame_id(frame_id)
+        self.origin_id = registry.as_path_id(origin)
+        self.frame_id  = registry.as_frame_id(frame)
 
         self.path_ids = np.array(paths, dtype="object")
         self.paths = np.empty(self.path_ids.shape, dtype="object")
@@ -58,12 +59,14 @@ class MultiPath(Path):
 
 ########################################
 
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, quick=QUICK):
         """Returns an Event object corresponding to a specified Scalar time on
         this path. The times are broadcasted across the shape of the MultiPath.
 
         Input:
             time        a time Scalar at which to evaluate the path.
+            quick       False to disable QuickPaths; True for the default
+                        options; a dictionary to override specific options.
 
         Return:         an Event object containing the time, position and
                         velocity of the paths.
@@ -76,6 +79,7 @@ class MultiPath(Path):
         # Create the event object
         pos = np.empty(time.shape + (3,))
         vel = np.empty(time.shape + (3,))
+
         for index, path in np.ndenumerate(paths):
             event = path.event_at_time(time[index], quick)
             pos[index] = event.pos.vals
@@ -94,6 +98,7 @@ class Test_MultiPath(unittest.TestCase):
     def runTest(self):
 
         from spicepath import SpicePath
+        from oops_.frame.frame_ import *
 
         registry.initialize_path_registry()
         registry.initialize_frame_registry()

@@ -9,8 +9,8 @@
 
 import numpy as np
 
-from baseclass import Surface
-from oops_.array_.all import *
+from surface_ import Surface
+from oops_.array.all import *
 import oops_.registry as registry
 
 class Spheroid(Surface):
@@ -111,18 +111,27 @@ class Spheroid(Surface):
 
         return Vector3.from_scalars(x,y,z)
 
-    def intercept(self, obs, los):
+    def intercept(self, obs, los, derivs=False):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
         Input:
-            obs             observer position as a Vector3.
-            los             line of sight as a Vector3.
+            obs         observer position as a Vector3, with optional units.
+            los         line of sight as a Vector3, with optional units.
+            derivs      True to include the partial derivatives of the intercept
+                        point with respect to obs and los.
 
-        Return:             a tuple (position, factor)
-            position        a Vector3 of intercept points on the surface.
-            factor          a Scalar of factors such that
-                                position = obs + factor * los
+        Return:         a tuple (position, factor) if derivs is False; a tuple
+                        (position, factor, dpos_dobs, dpos_dlos) if derivs is
+                        True.
+            position    a unitless Vector3 of intercept points on the surface,
+                        in km.
+            factor      a unitless Scalar of factors such that:
+                            position = obs + factor * los
+            dpos_dobs   the partial derivatives of the position vector with
+                        respect to the observer position, as a Matrix3.
+            dpos_dlos   the partial derivatives of the position vector with
+                        respect to the line of sight, as a Matrix3.
         """
 
         # Convert to standard units and un-squash
@@ -155,24 +164,25 @@ class Spheroid(Surface):
 
         return Vector3.as_standard(position) * self.unsquash_sq
 
-    def gradient_at_position(self, position, axis=0, projected=True):
+    def gradient(self, position, axis=0):
         """Returns the gradient vector at a specified position at or near the
-        surface. The gradient is defined as the vector pointing in the direction
-        of most rapid change in the value of a particular surface coordinate.
-
-        The magnitude of the gradient vector is the rate of change of the
-        coordinate value when starting from this point and moving in this
-        direction.
+        surface. The gradient of surface coordinate c is defined as a vector
+            (dc/dx,dc/dy,dc/dz)
+        It has the property that it points in the direction of the most rapid
+        change in value of the coordinate, and its magnitude is the rate of
+        change in that direction.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            position    a Vector3 of positions at or near the surface, with
+                        optional units.
+            axis        0, 1 or 2, identifying the coordinate axis for which the
+                        gradient is sought.
 
-            axis            0, 1 or 2, identifying the coordinate axis for which
-                            the gradient is sought.
-
-            projected       True to project the gradient into the surface if
-                            necessary.
+        Return:         a unitless Vector3 of the gradients sought. Values are
+                        always in standard units.
         """
+
+        pass
 
         #gradient for a spheroid is simply <2x/a, 2y/a, 2z/c>
 

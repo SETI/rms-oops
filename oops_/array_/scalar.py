@@ -18,45 +18,8 @@ class Scalar(Array):
 
     def __init__(self, arg, mask=False, units=None):
 
-        if mask is not False: mask = np.asarray(mask)
-
-        if isinstance(arg, Scalar):
-            mask = mask | arg.mask
-            if units is None:
-                units = arg.units
-                arg = arg.vals
-            elif arg.units is not None:
-                arg = arg.units.convert(arg.vals, units)
-            else:
-                arg = arg.vals
-
-        elif isinstance(arg, Array):
-            raise ValueError("class " + type(arg).__name__ +
-                             " cannot be converted to class " +
-                             type(self).__name__)
-
-        elif isinstance(arg, ma.MaskedArray):
-            if arg.mask != ma.nomask: mask = mask | arg.mask
-            arg = arg.data
-
-        if np.shape(arg) == ():
-            self.vals  = arg
-            self.rank  = 0
-            self.item  = []
-            self.shape = []
-        else:
-            self.vals  = np.asarray(arg)
-            self.rank  = 0
-            self.item  = []
-            self.shape = list(self.vals.shape)
-
-        self.mask = mask
-        if (self.mask is not False) and (list(self.mask.shape) != self.shape):
-            raise ValueError("mask array is incompatible with Scalar shape")
-
-        self.units = Units.as_units(units)
-
-        return
+        return Array.__init__(self, arg, mask, units, 0, item=None,
+                                    float=False, dimensionless=False)
 
     @staticmethod
     def as_scalar(arg):
@@ -279,6 +242,36 @@ class Scalar(Array):
             return self
         except:
             self.raise_shape_mismatch("^=", arg.vals)
+
+    ####################################################
+    # Scalar overrides of default binary operators
+    ####################################################
+
+    # Scalar multiply returns the type of the second operand if it is an Array;
+    # otherwise, it returns a Scalar.
+    def __mul__(self, arg):
+
+        if isinstance(arg, Array):
+            obj = Array.__new__(type(arg))
+
+            my_vals = self.vals
+            if arg.rank == 1:
+                my_vals = my_vals.reshape(self.shape + [1])
+            if arg.rank == 2:
+                my_vals = my_vals.reshape(self.shape + [1,1])
+
+            obj.__init__(my_vals * arg.vals, self.mask | arg.mask,
+                         Units.mul_units(self.units, arg.units))
+
+            if not Array.IGNORE_SUBARRAYS:
+                obj.mul_subarrays(self, arg)
+
+            return obj
+
+        return Scalar(self.vals * arg, self.mask, self.units)
+
+    def __rmul__(self, arg):
+        return self.__mul__(arg)
 
 ################################################################################
 # Once the load is complete, we can fill in a reference to the Scalar class

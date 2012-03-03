@@ -11,55 +11,22 @@ import numpy.ma as ma
 from baseclass  import Array
 from scalar     import Scalar
 from pair       import Pair
+from vector3    import Vector3
 
 from oops_.units import Units
 
 import utils
 
-################################################################################
-# Tuple
-################################################################################
-
 class Tuple(Array):
-    """An arbitrary Array of tuples, all of the same length."""
+    """An arbitrary Array of tuples, all of the same length. Tuples and VectorN
+    objects differ in the methods available and the way they perform certain
+    arithmetic operations. Tuples are generally intended for indexing arrays,
+    whereas VectorN objects are typically coupled with MatrixN operations."""
 
     def __init__(self, arg, mask=False, units=None):
 
-        if mask is not False: mask = np.asarray(mask)
-
-        if isinstance(arg, Array) and arg.rank == 1:
-            mask = mask | arg.mask
-            if units is None:
-                units = arg.units
-                arg = arg.vals
-            elif arg.units is not None:
-                arg = arg.units.convert(arg.vals, units)
-            else:
-                arg = arg.vals
-
-        elif isinstance(arg, Array):
-            raise ValueError("class " + type(arg).__name__ +
-                             " cannot be converted to class " +
-                             type(self).__name__)
-
-        elif isinstance(arg, ma.MaskedArray):
-            if arg.mask != ma.nomask: mask = mask | np.any(arg.mask, axis=-1)
-            arg = arg.data
-
-        self.vals = np.asarray(arg)
-        ashape = list(self.vals.shape)
-
-        self.rank  = 1
-        self.item  = ashape[-1:]
-        self.shape = ashape[:-1]
-        self.mask  = mask
-
-        if (self.mask is not False) and (list(self.mask.shape) != self.shape):
-            raise ValueError("mask array is incompatible with Tuple shape")
-
-        self.units = Units.as_units(units)
-
-        return
+        return Array.__init__(self, arg, mask, units, 1, item=None,
+                                    float=False, dimensionless=True)
 
     @staticmethod
     def as_tuple(arg):
@@ -90,6 +57,12 @@ class Tuple(Array):
         beginning with the selected axis."""
 
         return Pair(self.vals[...,axis:axis+2], self.mask, self.units)
+
+    def as_vector3(self, axis=0):
+        """Returns a Vector3 containing three selected items from each Tuple,
+        beginning with the selected axis."""
+
+        return Vector3(self.vals[...,axis:axis+3], self.mask, self.units)
 
     @staticmethod
     def from_scalars(*args):
@@ -171,6 +144,12 @@ class Tuple(Array):
         """Returns the fractional component of each index."""
 
         return Tuple(self.vals % 1)
+
+################################################################################
+# Once defined, register with Array class
+################################################################################
+
+Array.TUPLE_CLASS = Tuple
 
 ################################################################################
 # UNIT TESTS

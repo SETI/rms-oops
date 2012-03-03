@@ -10,8 +10,9 @@
 
 import numpy as np
 
-from baseclass import Frame
-from oops_.array_.all import *
+from frame_ import Frame
+from oops_.array.all import *
+from oops_.config import QUICK
 from oops_.transform import Transform
 
 import oops_.registry as registry
@@ -110,7 +111,7 @@ class Cmatrix(Frame):
 
 ########################################
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick=QUICK):
         """Returns the Transform to the given Frame at a specified Scalar of
         times."""
 
@@ -128,8 +129,8 @@ class Test_Cmatrix(unittest.TestCase):
 
         # Imports are here to avoid conflicts
         from spiceframe import SpiceFrame
-        from path.spicepath import SpicePath
-        from event import Event
+        from oops_.path.spicepath import SpicePath
+        from oops_.event import Event
 
         registry.initialize_frame_registry()
         registry.initialize_path_registry()

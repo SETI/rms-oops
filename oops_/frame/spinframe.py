@@ -6,8 +6,8 @@
 
 import numpy as np
 
-from baseclass import Frame
-from oops_.array_.all import *
+from frame_ import Frame
+from oops_.array.all import *
 from oops_.transform import Transform
 
 import oops_.registry as registry

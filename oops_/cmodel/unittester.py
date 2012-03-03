@@ -4,7 +4,7 @@
 
 import unittest
 
-from baseclass  import Test_CoordinateModel
+from cmodel_    import Test_CoordinateModel
 from distance   import Test_Distance
 from latitude   import Test_Latitude
 from longitude  import Test_Longitude

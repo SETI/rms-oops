@@ -3,12 +3,13 @@
 #
 # 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
 # 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+# 2/23/12 MRS - Gave each method the option to return partial derivatives.
 ################################################################################
 
 import numpy as np
 
-from baseclass import FOV
-from oops_.array_.all import *
+from fov_ import FOV
+from oops_.array.all import *
 
 class Subsampled(FOV):
 
@@ -17,7 +18,8 @@ class Subsampled(FOV):
         The origin and the optic axis are unchanged.
 
         Inputs:
-            fov         the FOV object within which this subarray is defined.
+            fov         the FOV object within which this subsampled FOV is
+                        defined.
 
             rescale     a single value, tuple or Pair defining the sizes of the
                         new pixels relative to the sizes of the originals.
@@ -34,28 +36,40 @@ class Subsampled(FOV):
 
         self.uv_shape = (self.fov.uv_shape / self.rescale).int()
 
-    def xy_from_uv(self, uv_pair):
-        """Returns a Pair of (x,y) spatial coordinates given a Pair of (u,v)
-        coordinates."""
+    def xy_from_uv(self, uv_pair, derivs=False):
+        """Returns a Pair of (x,y) spatial coordinates in units of radians,
+        given a Pair of coordinates (u,v).
 
-        return self.fov.xy_from_uv(self.rescale * uv_pair)
-
-    def uv_from_xy(self, xy_pair):
-        """Returns a Pair of ICS (u,v) coordinates given a Pair of (x,y) apatial
-        coordinates."""
-
-        return self.fov.uv_from_xy(xy_pair) / self.rescale
-
-    def xy_and_dxy_duv_from_uv(self, uv_pair):
-        """Returns a tuple ((x,y), dxy_duv), where the latter is the set of
-        partial derivatives of (x,y) with respect to (u,v). These are returned
-        as a Pair object of shape [...,2]:
-            dxy_duv[...,0] = Pair((dx/du, dx/dv))
-            dxy_duv[...,1] = Pair((dy/du, dy/dv))
+        If derivs is True, then the returned Pair has a subarrray "d_duv", which
+        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
+        shape [2,2].
         """
 
-        tuple = self.fov.xy_and_dxy_duv_from_uv(self.rescale * uv_pair)
-        return (tuple[0], tuple[1] * self.rescale)
+        xy = self.fov.xy_from_uv(self.rescale * uv_pair, derivs)
+
+        if derivs:
+            xy.insert_subfield("d_uv", xy.d_duv.copy())
+            xy.d_duv.vals *= self.rescale.vals
+
+        return xy
+
+    def uv_from_xy(self, xy_pair, derivs=False):
+        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
+        coordinates in radians.
+
+        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
+        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
+        shape [2,2].
+        """
+
+        uv_old = self.fov.uv_from_xy(xy_pair, derivs)
+        uv_new = uv_old / self.rescale
+
+        if derivs is True:
+            uv_new.insert_subfield("d_dxy", uv_old.d_dxy.copy())
+            uv_new.d_dxy.vals /= self.rescale.vals
+
+        return uv_new
 
 ################################################################################
 # UNIT TESTS
@@ -68,8 +82,7 @@ class Test_Subsampled(unittest.TestCase):
     def runTest(self):
 
         # Imports just required for unit testing
-        from flat       import Flat
-        from subsampled import Subsampled
+        from flat import Flat
 
         buffer = np.empty((51,51,2))
         buffer[:,:,0] = np.arange(0,51).reshape(51,1)

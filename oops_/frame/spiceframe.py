@@ -5,8 +5,9 @@
 import numpy as np
 import cspice
 
-from baseclass import Frame
-from oops_.array_.all import *
+from frame_ import Frame
+from oops_.array.all import *
+from oops_.config import QUICK
 from oops_.transform import Transform
 
 import oops_.registry as registry
@@ -66,7 +67,7 @@ class SpiceFrame(Frame):
 
 ########################################
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick=QUICK):
         """Returns a Transform object that rotates coordinates in a reference
         frame into the new frame.
 
@@ -117,7 +118,7 @@ class Test_SpiceFrame(unittest.TestCase):
     def runTest(self):
 
         # Import is here to avoid conflicts
-        from oops_.path.baseclass import Path
+        from oops_.path.path_ import Path
         from oops_.path.spicepath import SpicePath
         from oops_.event import Event
 

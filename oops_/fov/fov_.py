@@ -2,11 +2,12 @@
 # oops_/fov/fov.py: Abstract class FOV (Field-of-View)
 #
 # 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+# 2/22/12 MRS - Revised the handling of derivatives.
 ################################################################################
 
 import numpy as np
 
-from oops_.array_.all import *
+from oops_.array.all import *
 
 class FOV(object):
     """The FOV (Field of View) abstract class provides a description of the
@@ -64,24 +65,24 @@ class FOV(object):
 
         pass
 
-    def xy_from_uv(self, uv_pair):
+    def xy_from_uv(self, uv_pair, derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
-        given a Pair of coordinates (u,v)."""
+        given a Pair of coordinates (u,v).
+
+        If derivs is True, then the returned Pair has a subarrray "d_duv", which
+        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
+        shape [2,2].
+        """
 
         pass
 
-    def uv_from_xy(self, xy_pair):
+    def uv_from_xy(self, xy_pair, derivs=False):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
-        coordinates in radians."""
+        coordinates in radians.
 
-        pass
-
-    def xy_and_dxy_duv_from_uv(self, uv_pair):
-        """Returns a tuple ((x,y), dxy_duv), where the latter is the set of
-        partial derivatives of (x,y) with respect to (u,v). These are returned
-        as a Pair object of shape [...,2]:
-            dxy_duv[...,0] = Pair((dx/du, dx/dv))
-            dxy_duv[...,1] = Pair((dy/du, dy/dv))
+        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
+        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
+        shape [2,2].
         """
 
         pass
@@ -96,58 +97,139 @@ class FOV(object):
         """
 
         # Get the partial derivatives
-        (xy_pair, dxy_duv) = self.xy_and_dxy_duv_from_uv(uv_pair)
+        xy = self.xy_from_uv(uv_pair, derivs=True)
 
-        dx_du = dxy_duv.vals[...,0,0]
-        dx_dv = dxy_duv.vals[...,0,1]
-        dy_du = dxy_duv.vals[...,1,0]
-        dy_dv = dxy_duv.vals[...,1,1]
+        dx_du = xy.d_duv.vals[...,0,0]
+        dx_dv = xy.d_duv.vals[...,0,1]
+        dy_du = xy.d_duv.vals[...,1,0]
+        dy_dv = xy.d_duv.vals[...,1,1]
 
         # Construct the cross products
-        return Scalar(np.abs(dx_du * dy_dv - dx_dv * dy_du) / self.uv_area)
+        return Scalar(np.abs(dx_du * dy_dv - dx_dv * dy_du) / self.uv_area,
+                      xy.mask)
 
     # This models the field of view as a pinhole camera
-    def los_from_xy(self, xy_pair):
-        """Returns a unit Vector3 object pointing in the direction of the
-        specified spatial coordinate Pair (x,y). Note that this is the direction
-        _opposite_ to that in which the photon is moving.
+    def los_from_xy(self, xy_pair, derivs=False):
+        """Returns a unit Vector3 object pointing in the direction of the line
+        of sight of the specified coordinate Pair (x,y). Note that this is the
+        direction _opposite_ to that in which the photon is moving.
+
+        If derivs is True, then the returned Vector3 has a subfield "d_dxy",
+        which contains the derivatives as a MatrixN with item shape [3,2].
         """
 
         # Convert to Pair if necessary
         xy_pair = Pair.as_pair(xy_pair)
 
         # Fill in the numpy ndarray of vector components
-        buffer = np.ones(xy_pair.shape + [3])
-        buffer[...,0:2] = xy_pair.vals
+        vals = np.ones(xy_pair.shape + [3])
+        vals[...,0:2] = xy_pair.vals
 
-        # Convert to Vector3 and return
-        return Vector3(buffer)
+        # Convert to a unit Vector3
+        los = Vector3(vals, xy_pair.mask).unit()
 
-    def xy_from_los(self, los):
+        # Attach the derivatives if necessary
+        if derivs:
+            # los_x = x / sqrt(1 + x**2 + y**2)
+            # los_y = y / sqrt(1 + x**2 + y**2)
+            # los_z = 1 / sqrt(1 + x**2 + y**2)
+            #
+            # dlos/d(x,y) = ([ 1+y**2,    -xy],
+            #                [    -xy, 1+x**2],
+            #                [     -x,     -y]) * (1 + x**2 + y**2)**(-3/2)
+
+            x = xy_pair.vals[...,0]
+            y = xy_pair.vals[...,1]
+
+            dlos_dxy_vals = np.empty(los.shape + [3,2])
+            dlos_dxy_vals[...,0,0] = 1 + y**2
+            dlos_dxy_vals[...,0,1] = -x * y
+            dlos_dxy_vals[...,1,0] = dlos_dxy_vals[...,0,1]
+            dlos_dxy_vals[...,1,1] = 1 + x**2
+            dlos_dxy_vals[...,2,:] = -xy_pair.vals[...,:]
+
+            normalize = ((dlos_dxy_vals[...,0,0] +
+                          dlos_dxy_vals[...,1,1] - 1)**(-1.5))
+            dlos_dxy_vals *= normalize[..., np.newaxis, np.newaxis]
+
+            los.insert_subfield("d_dxy", MatrixN(dlos_dxy_vals, xy_pair.mask))
+
+        return los
+
+    def xy_from_los(self, los, derivs=False):
         """Returns the coordinate Pair (x,y) based on a Vector3 object pointing
         in the direction of a line of sight. Lines of sight point outward from
         the camera, near the Z-axis, and are therefore opposite to the direction
-        in which a photon is moving. The length of the vector is ignored."""
+        in which a photon is moving. The length of the vector is ignored.
+
+        If derivs is True, then the Pair returned has a subfield "d_dlos", which
+        contains the derivatives d(x,y)/d(los) as a MatrixN with item shape
+        [2,3]."""
 
         # Scale to z=1 and then convert to Pair
         los = Vector3.as_vector3(los)
-        return Pair(los.vals[...,0:2] / los.vals[...,2:3])
+        xy = Pair(los.vals[...,0:2] / los.vals[...,2:3], los.mask)
 
-    def los_from_uv(self, uv_pair):
-        """Returns a Vector3 object pointing in the direction specified by
-        coordinate Pair (u,v). Note that this is the direction _opposite_ to
-        that in which the photon is moving.
+        # Construct the derivatives if necessary
+        if derivs:
+            # x = los_x / los_z
+            # y = los_y / los_z
+            #
+            # dx/dlos_x = 1 / los_z
+            # dx/dlos_y = 0
+            # dx/dlos_z = -los_x / (los_z**2)
+            # dy/dlos_x = 0
+            # dy/dlos_y = 1 / los_z
+            # dy/dlos_z = -los_y / (los_z**2)
+    
+            dxy_dlos_vals = np.zeros(los.shape + [2,3])
+            dxy_dlos_vals[...,0,0] =  los_vals[...,2]
+            dxy_dlos_vals[...,0,2] = -los_vals[...,0]
+            dxy_dlos_vals[...,1,1] =  los_vals[...,2]
+            dxy_dlos_vals[...,1,2] = -los_vals[...,0]
+            dxy_dlos_vals /= los_vals[...,2]
+
+            xy.insert_subfield("d_dlos", MatrixN(dxy_dlos_vals, los.mask))
+
+        return xy
+
+    def los_from_uv(self, uv_pair, derivs=False):
+        """Returns the line of sight (los) as a Vector3 object. The los points
+        in the direction specified by coordinate Pair (u,v). Note that this is
+        the direction _opposite_ to that in which the photon is moving.
+
+        If derivs is True, then the Vector3 returned has a subfield "d_duv",
+        which contains the partial derivatives d(los)/d(u,v) as a MatrixN with
+        item shape [3,2]. 
         """
 
-        return self.los_from_xy(self.xy_from_uv(uv_pair))
+        xy_pair = self.xy_from_uv(uv_pair, derivs)
+        los = self.los_from_xy(xy_pair, derivs)
 
-    def uv_from_los(self, los):
+        if derivs:
+            los.insert_subfield("d_duv", los.d_dxy * xy_pair.d_duv)
+            los.delete_subfield("d_dxy")
+
+        return los
+
+    def uv_from_los(self, los, derivs=False):
         """Returns the coordinate Pair (u,v) based on a line of sight Vector3
-        object pointing in the direction of a line of sight, i.e., _opposite_ to
+        pointing in the direction of a line of sight, i.e., _opposite_ to
         the direction in which the photon is moving. The length of the vector is
-        ignored."""
+        ignored.
 
-        return self.uv_from_xy(self.xy_from_los(los))
+        If derivs is True, then Pair return has a subarrray "d_dlos", which
+        contains the partial derivatives d(u,v)/d(los) as a MatrixN with item
+        shape [2,3]. 
+        """
+
+        xy = self.xy_from_los(los, derivs)
+        uv = self.uv_from_xy(xy, derivs)
+
+        if derivs:
+            uv.insert_subfield("d_dlos", uv.d_dxy * xy.d_dlos)
+
+        return uv
 
     def uv_is_inside(self, uv_pair):
         """Returns a boolean Scalar indicating True for (u,v) coordinates that

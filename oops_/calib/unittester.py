@@ -4,9 +4,9 @@
 
 import unittest
 
-from baseclass  import Test_Calibration
-from distorted  import Test_Distorted
-from scaling    import Test_Scaling
+from calibration_ import Test_Calibration
+from distorted    import Test_Distorted
+from scaling      import Test_Scaling
 
 ########################################
 if __name__ == '__main__':

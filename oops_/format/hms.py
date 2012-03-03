@@ -4,7 +4,7 @@
 # 1/24/12 (MRS) - Drafted.
 ################################################################################
 
-from baseclass import Format
+from format_ import Format
 
 class HMS(Format):
     """An HmsFormat is a Format object that handles a numeric value in

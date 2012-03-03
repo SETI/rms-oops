@@ -1,14 +1,17 @@
 ################################################################################
-# oops_/frame/baseclass.py: Abstract class Frame and its required subclasses
+# oops_/frame/frame_.py: Abstract class Frame and its required subclasses
 #
 # 2/13/12 Modified (MRS) - implemented and tested QuickFrame.
+# 3/1/12 Modified (MRS) - revised and implified connect() and connect_to();
+#   added quick parameter dictionary and config file.
 ################################################################################
 
 import numpy as np
 import scipy.interpolate as interp
 
 import oops_.registry as registry
-from oops_.array_.all import *
+from oops_.array.all import *
+from oops_.config import QUICK, QUICK_DICTIONARY, LOGGING
 from oops_.transform import Transform
 
 class Frame(object):
@@ -23,7 +26,7 @@ class Frame(object):
                         integer. A frame rotates coordinates from the reference
                         frame into the given frame.
         origin_id       the ID of the origin relative to which the frame is
-                        defined; None if it is inertial.
+                        defined; None if the frame is inertial.
         shape           the shape of the Frame object, as a list of dimensions.
                         This is the shape of the Transform object returned by
                         frame.transform_at_time() for a single value of time.
@@ -38,11 +41,12 @@ class Frame(object):
                             self.ancestry[1] = reference frame of self.
                             ...
                             self.ancestry[-1] = J2000.
-    """
+                        Note that an immediate ancestor must either be an
+                        inertial frame, or else use the same origin.
 
-    # Change to False for better accuracy but slower performance, possibly
-    # MUCH slower performance
-    USE_QUICKFRAMES = True
+    wrt_j2000           a definition of the same frame relative to the J2000
+                        coordinate frame.
+    """
 
 ########################################
 # Each subclass must override...
@@ -53,9 +57,11 @@ class Frame(object):
 
         pass
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick=QUICK):
         """Returns a Transform object that rotates coordinates from the
-        reference frame into this frame as a function of time.
+        reference frame into this frame as a function of time. If the frame is
+        rotating, then the coordinates must be given relative to the center of
+        rotation.
 
         Input:
             time    a Scalar time.
@@ -71,6 +77,12 @@ class Frame(object):
         """
 
         pass
+
+    # string operations
+    def __str__(self):
+        return "Frame(" + self.frame_id + "/" + self.reference_id + ")"
+
+    def __repr__(self): return self.__str__()
 
 ################################################################################
 # Registry Management
@@ -93,7 +105,7 @@ class Frame(object):
         debugging."""
 
         if registry.J2000 is None:
-            registry.J2000 = Null("J2000")
+            registry.J2000 = NullFrame("J2000")
             registry.J2000.ancestry = [registry.J2000]
 
         registry.FRAME_REGISTRY = {"J2000": registry.J2000,
@@ -118,36 +130,47 @@ class Frame(object):
         # Make sure the reference frame is registered; raise KeyError on failure
         reference = registry.FRAME_REGISTRY[self.reference_id]
 
+        # Make sure the origins are compatible
+#         if (reference.origin_id is not None and
+#             reference.origin_id != self.origin_id):
+#                 raise ValueError("cannot define frame " +
+#                                  self.frame_id +
+#                                  " relative to non-inertial frame " +
+#                                  reference.frame_id)
+
         # Handle a shortcut
         if shortcut is not None:
             registry.FRAME_REGISTRY[shortcut] = self
-            registry.FRAME_REGISTRY[(self.frame_id, self.reference_id)] = self
+
+            key = (self.frame_id, self.reference_id)
+            registry.FRAME_REGISTRY[key] = self
             return
 
-        # If the ID is unregistered, insert this as a primary definition
-        try:
-            test = registry.FRAME_REGISTRY[self.frame_id]
-        except KeyError:
-            registry.FRAME_REGISTRY[self.frame_id] = self
+        # If the ID is unregistered, insert this as the primary definition
+        key = self.frame_id
+        if key not in registry.FRAME_REGISTRY.keys():
+            registry.FRAME_REGISTRY[key] = self
 
             # Fill in the ancestry too
             self.ancestry = [self] + reference.ancestry
 
-            # Also save the Null Frame
-            registry.FRAME_REGISTRY[(self.frame_id,
-                                     self.frame_id)] = Null(self.frame_id)
+            # Also save the NullFrame Frame
+            key = (self.frame_id, self.frame_id)
+            registry.FRAME_REGISTRY[key] = NullFrame(self.frame_id)
 
             # Also define the path with respect to J2000 if possible
             if self.reference_id != "J2000":
               try:
-                wrt_j2000 = self.connect_to("J2000")
-                registry.FRAME_REGISTRY[(wrt_j2000.frame_id,
-                                                   "J2000")] = wrt_j2000
+                self.wrt_j2000 = self.connect_to("J2000")
+
+                key = (wrt_j2000.frame_id, "J2000")
+                registry.FRAME_REGISTRY[key] = self.wrt_j2000
               except: pass
 
         # Insert or replace the secondary definition for
         # (self.frame_id, self.reference_id) as a secondary definition
-        registry.FRAME_REGISTRY[(self.frame_id, self.reference_id)] = self
+        key = (self.frame_id, self.reference_id)
+        registry.FRAME_REGISTRY[key] = self
 
     def unregister(self):
         """Removes this frame from the registry."""
@@ -164,10 +187,8 @@ class Frame(object):
             if frame_id == key: del registry.FRAME_REGISTRY[key]
 
             if type(key) == type(()):
-                if frame_id == key[0]:
-                    del registry.FRAME_REGISTRY[key]
-                elif frame_id == key[1]: 
-                    del registry.FRAME_REGISTRY[key]
+                if   frame_id == key[0]: del registry.FRAME_REGISTRY[key]
+                elif frame_id == key[1]: del registry.FRAME_REGISTRY[key]
 
         # Also delete references in the Path registry...
         # Note that we only delete the primary entry and any path in which this
@@ -188,39 +209,6 @@ class Frame(object):
 
         self.unregister()
         self.register()
-
-################################################################################
-# Event operations
-################################################################################
-
-# These must be defined in Event.py and not here, because that would create a
-# circular dependency in the order that modules are loaded.
-
-    def rotate_event(self, event, quick=False):
-        """Returns the same event at the same origin, but rotated forward into a
-        new coordinate frame.
-
-        Input:
-            event       Event object to rotate.
-        """
-
-        assert self.reference_id == event.frame_id
-        assert self.origin_id == event.origin_id
-
-        return self.transform_at_time(event.time, quick).rotate_event(event)
-
-    def unrotate_event(self, event, quick=False):
-        """Returns the same event at the same origin, but unrotated backward
-        into the reference coordinate frame.
-
-        Input:
-            event       Event object to un-rotate.
-        """
-
-        assert self.frame_id == event.frame_id
-        assert self.origin_id == event.origin_id
-
-        return self.transform_at_time(event.time, quick).unrotate_event(event)
 
 ################################################################################
 # Frame Generator
@@ -245,21 +233,23 @@ class Frame(object):
         target_id    = registry.as_frame_id(target)
         reference_id = registry.as_frame_id(reference)
 
-        # If the path already exists, just return it
+        # If the frame already exists, just return it
         try:
-            return registry.FRAME_REGISTRY[(target_id, reference_id)]
+            key = (target_id, reference_id)
+            return registry.FRAME_REGISTRY[key]
         except KeyError: pass
 
-        # Otherwise, construct it from the common ancestor...
-
+        # Otherwise, construct it by other means
         target_frame = registry.FRAME_REGISTRY[target_id]
         return target_frame.connect_to(reference_id)
 
     # Can be overridden by some classes such as SpiceFrame, where it is easier
-    # to make connections.
+    # to make connections between frames.
     def connect_to(self, reference):
         """Returns a Frame object that transforms from an arbitrary reference
-        frame to this frame.
+        frame to this frame. It is assumed that the desired frame does not
+        already exist in the registry. This is not checked, and need not be
+        checked by any methods that override this one.
 
         Input:
             reference       a reference Frame object or its registered name.
@@ -270,59 +260,23 @@ class Frame(object):
         reference = registry.as_primary_frame(reference)
 
         # Check for compatibility of rotating frames. The origins must match.
-        if target.origin_id is not None and reference.origin_id is not None:
-            assert target.origin_id == reference.origin_id
+#         if target.origin_id is not None and reference.origin_id is not None:
+#             assert target.origin_id == reference.origin_id:
 
-        # Find the common ancestry
-        (target_ancestry,
-         reference_ancestry) = Frame.common_ancestry(target, reference)
-        # print Frame.str_ancestry((target_ancestry, origin_ancestry))
+        # If the target is an ancestor of the reference, reverse the direction
+        # and try again
+        if target in reference.ancestry:
+            frame = Frame.connect(reference, target)
+            return ReversedFrame(frame)
 
-        # We can ignore the final (matching) entry in each list
-        target_ancestry = target_ancestry[:-1]
-        reference_ancestry = reference_ancestry[:-1]
+        # Otherwise, search from the parent frame and then link
+        frame = Frame.connect(target.ancestry[1], reference)
+        return LinkedFrame(target, frame)
 
-        # Look up or construct the target's frame from the common ancestor
-        if target_ancestry == []:
-            target_frame = None
-        elif len(target_ancestry) == 1:
-            target_frame = target
-        else:
-            try:
-                target_frame = registry.frame_lookup((target.frame_id,
-                                              target_ancestry[-1].reference_id))
-            except KeyError:
-                target_frame = Linked(target_ancestry)
-                target_frame.register()
-
-        # Look up or construct the common ancestor's frame from the reference
-        if reference_ancestry == []:
-            reference_frame = None
-        elif len(reference_ancestry) == 1:
-            reference_frame = reference
-        else:
-            try:
-                reference_frame = registry.frame_lookup(
-                                        (reference.frame_id,
-                                         reference_ancestry[-1].reference_id))
-            except KeyError:
-                reference_frame = Linked(reference_ancestry)
-                reference_frame.register()
-
-        # Return the relative frame
-        if reference_frame is None:
-            if target_frame is None:
-                result = Null(target.frame_id)
-            else:
-                result = target_frame
-        else:
-            if target_frame is None:
-                result = Inverse(reference_frame)
-            else:
-                result = Relative(target_frame, reference_frame)
-
-        result.register()
-        return result
+    ############################################################################
+    # 2/29/12: No longer needed but might still come in handy some day.
+    # Associated unit tests have not been deleted from SpiceFrame.
+    ############################################################################
 
     @staticmethod
     def common_ancestry(frame1, frame2):
@@ -358,80 +312,74 @@ class Frame(object):
         return "".join(list)
 
 ########################################
-# Arithmetic operators
-########################################
 
-    # unary "~" operator
-    def __inverse__(self):
-        return frame.Inverse(self)
-
-    # binary "*" operator
-    def __mul__(self, arg):
-        return frame.Product(self, arg)
-
-    # binary "/" operator
-    def __div__(self, arg):
-        return frame.Relative(self, arg)
-
-    # string operations
-    def __str__(self):
-        return "Frame(" + self.frame_id + "/" + self.reference_id + ")"
-
-########################################
-
-    def quick_frame(self, time, quick, duration=20., step=0.01, precision=None,
-                                      savings=2.):
+    def quick_frame(self, time, quick=QUICK):
         """Returns a new QuickFrame object that provides accurate approximations
         to the transform returned by this frame. It can speed up performance
         substantially when the same frame must be evaluated repeatedly but
         within a narrow range of times.
 
         Input:
-            time        a parameter to define the time limits of the
-                        interpolation.
-                            - A single value is interpreted as a mid-time of the
-                              interpolation.
-                            - if time is array-like or Scalar, the minimum and
-                              maximum values found define the interval.
-            quick       if False, no QuickPath is created and self is returned.
-            duration    the minimum duration of an interpolation, in seconds.
-            step        the time step between sample times for interpolation.
-            precision   the fractional precision required in the interpolation;
-                        if None, then no self-check for precision is performed.
-            savings     the minimum savings in number of evaluations before a
-                        QuickPath is warranted.
+            time        a Scalar defining the set of times at which the frame is
+                        to be evaluated.
+            quick       if False, no QuickFrame is created and self is returned;
+                        if True, the default dictionary QUICK_DICTIONARY is
+                        used; if another dictionary, then the values provided
+                        override the defaults and the merged dictionary is used.
         """
 
+        OVERHEAD = 500      # Assume it takes the equivalent time of this many
+                            # evaluations just to set up the QuickFrame.
+        SPEEDUP = 5.        # Assume that evaluations are this much faster once
+                            # the QuickFrame is set up.
+        SAVINGS = 0.2       # Require at least a 20% savings in evaluation time.
+
         # Make sure a QuickFrame has been requested
-        if not quick: return self
-        if not Frame.USE_QUICKFRAMES: return self
+        if quick is False: return self
 
-        # A Null frame is too easy
-        if type(self) == Null: return self
+        # A NullFrame frame is too easy
+        if type(self) == NullFrame: return self
 
-        # Determine the time interval
-        if type(time) == Scalar: time = time.vals
-        time = np.asfarray(time)
-        count = np.size(time)
+        # A QuickFrame would be redundant
+        if type(self) == QuickFrame: return self
 
-        max_time = np.max(time)
-        min_time = np.min(time)
-        mid_time = (min_time + max_time) / 2.
-        dt = max_time - min_time
-        if dt < duration: dt = duration
-        steps = dt/step
+        # Obtain the local QuickFrame dictionary
+        quickdict = QUICK_DICTIONARY
+        if type(quick) == type({}):
+            quickdict = dict(quickdict, **quick)
 
-        # Return self if a QuickFrame would not save us much time
-        if count > 2 and count < steps * savings: return self
+        if not quickdict["use_quickframes"]: return self
 
-        return QuickFrame(self, (mid_time-duration/2., mid_time+duration/2.),
-                                step=step, precision=precision)
+        # Determine the time interval and steps
+        time = Scalar.as_scalar(time)
+        vals = time.vals
+
+        count = np.size(vals)
+        if count < OVERHEAD: return self
+
+        extension = quickdict["frame_time_extension"]
+        dt = quickdict["frame_time_step"]
+        extras = quickdict["frame_extra_steps"]
+
+        tmin = np.min(vals) - extension
+        tmax = np.max(vals) + extension
+        steps = (tmax - tmin)/dt + 2*extras
+
+        # Evaluate the effort using a QuickFrame compared to the effort without
+        effort_using_quickframe = OVERHEAD + steps + count/SPEEDUP
+        if count < (1. + SAVINGS) * effort_using_quickframe:
+            return self
+
+        if LOGGING.quickframe_creation:
+            print "New QuickFrame: " + str(self), (tmin, tmax)
+
+        return QuickFrame(self, (tmin, tmax), quickdict)
 
 ################################################################################
 # Required Subclasses
 ################################################################################
 
-class Inverse(Frame):
+class ReversedFrame(Frame):
     """A Frame that generates the inverse Transform of a given Frame.
     """
 
@@ -446,55 +394,56 @@ class Inverse(Frame):
 
         self.shape = self.oldframe.shape
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick=QUICK):
 
         return self.oldframe.transform_at_time(time).invert()
 
 ################################################################################
 
-class Linked(Frame):
-    """A Frame that links together a list of Frame objects, so that the
-    Transform converts from the reference frame of the last entry to the
-    coordinate frame of the first entry. The reference_id of each list entry
-    must be the frame_id of the entry that follows.
+class LinkedFrame(Frame):
+    """LinkedFrame is a Frame subclass that returns the result of applying one
+    frame's transform to another. The new frame describes coordinates in one
+    frame relative to the reference of the second frame.
     """
 
-    def __init__(self, frames):
+    def __init__(self, frame, parent):
         """Constructor for a LinkedFrame.
 
         Input:
-            frames      a list of connected frames. The reference_id of each
-                        frame must be the frame_id of the one that follows.
+            frame       a frame, which must be define relative to the given
+                        parent.
+            parent      a frame to which the above will be linked.
         """
 
-        self.frames = frames
+        self.frame  = registry.as_frame(frame)
+        self.parent = registry.as_frame(parent)
+
+        assert self.frame.reference_id == self.parent.frame_id
 
         # Required fields
-        self.frame_id     = frames[0].frame_id
-        self.reference_id = frames[-1].reference_id
+        self.frame_id     = self.frame.frame_id
+        self.reference_id = self.parent.reference_id
+        self.shape = Array.broadcast_shape((self.frame, self.parent))
 
-        # Identify the origin; confirm compatibility
-        self.origin_id = None
-        for frame in frames:
-            if frame.origin_id is not None:
-                if self.origin_id is None:
-                    self.origin_id = frame.origin_id
-                else:
-                    assert self.origin_id == frame.origin_id
+        if self.frame.origin_id is None:
+            self.origin_id = self.parent.origin_id
+        elif self.parent.origin_id is None:
+            self.origin_id = self.frame.origin_id
+        else:
+            self.origin_id = self.parent.origin_id
+            # assert self.frame.origin_id == self.parent.origin_id
 
-        self.shape = Array.broadcast_shape(tuple(self.frames))
+    def transform_at_time(self, time, quick=QUICK):
 
-    def transform_at_time(self, time, quick=False):
-
-        transform = self.frames[-1].transform_at_time(time)
-        for frame in self.frames[-2::-1]:
-           transform = frame.transform_at_time(time).rotate_transform(transform)
+        parent = self.parent.transform_at_time(time)
+        transform = self.frame.transform_at_time(time)
+        return transform.rotate_transform(parent)
 
         return transform
 
 ################################################################################
 
-class Null(Frame):
+class NullFrame(Frame):
     """A Frame that always returns a null transform."""
 
     def __init__(self, frame_id, origin_id=None):
@@ -502,19 +451,24 @@ class Null(Frame):
         # Required fields
         self.frame_id     = frame_id
         self.reference_id = frame_id
-        self.origin_id    = None
+
+        if self.reference_id == "J2000":
+            self.origin_id = None
+        else:
+            reference = registry.FRAME_REGISTRY[self.reference_id]
+            self.origin_id = reference.origin_id
 
         self.shape = []
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick=QUICK):
 
-        return Transform.null_transform(self.frame_id)
+        return Transform.null_transform(self.frame_id, self.origin_id)
 
     def __str__(self): return "Frame(" + self.frame_id + ")"
 
 ################################################################################
 
-class Relative(Frame):
+class RelativeFrame(Frame):
     """A Frame that returns the one frame times the inverse of another. The
     two frames must have a common reference. The combined frame converts
     coordinates from the second frame to the first."""
@@ -535,11 +489,12 @@ class Relative(Frame):
         if self.origin_id is None:
             self.origin_id = frame2.origin_id
         elif frame2.origin_id is not None:
-            assert frame2.origin_id == self.origin_id
+            self.origin_id = frame2.origin_id
+            # assert frame2.origin_id == self.origin_id
 
         self.shape = Array.broadcast_shape((self.frame1, self.frame2))
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick={}):
 
         return self.frame1.transform_at_time(time).rotate_transform(
                self.frame2.transform_at_time(time).invert())
@@ -550,20 +505,15 @@ class QuickFrame(Frame):
     """QuickFrame is a Frame subclass that returns Transform objects based on
     interpolation of another Frame within a specified time window."""
 
-    def __init__(self, frame, interval, step=0.01, precision=None, expand=4):
+    def __init__(self, frame, interval, quickdict):
         """Constructor for a QuickFrame.
 
         Input:
             frame           the Frame object that this Frame will emulate.
-            interval        a tuple containing the start time and end time of
-                            the interpolation, in TDB.
-            step            the time step between samples in the interpolation.
-            precision       the required precision of the interpolation; None to
-                            skip the self-check for precision.
-            expand          the number of additional time steps to add to each
-                            end of the interpolation; default is 4. A nonzero
-                            value improves the precision of the interpolation
-                            near the endpoints.
+            interval        a tuple containing the start and stop times to use,
+                            in TDB seconds.
+            quickdict       a dictionary containing all the QuickFrame
+                            parameters.
         """
 
         self.frame = frame
@@ -576,14 +526,11 @@ class QuickFrame(Frame):
 
         self.t0 = interval[0]
         self.t1 = interval[1]
-        self.dt = step
+        self.dt = quickdict["frame_time_step"]
 
-        self.precision = precision
-
-        self.expand = expand
-
-        self.times = np.arange(self.t0 - self.expand * self.dt,
-                               self.t1 + self.expand * self.dt + self.dt,
+        extras = quickdict["frame_extra_steps"]
+        self.times = np.arange(self.t0 - extras * self.dt,
+                               self.t1 + extras * self.dt + self.dt,
                                self.dt)
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
@@ -610,7 +557,8 @@ class QuickFrame(Frame):
                                         k=KIND)
 
         # Test the precision
-        if self.precision is not None:
+        precision_self_check = quickdict["frame_self_check"]
+        if precision_self_check is not None:
             t = self.times[:-1] + self.dt/2.        # Halfway points
 
             true_transform = self.frame.transform_at_time(t)
@@ -646,11 +594,12 @@ class QuickFrame(Frame):
                 domega /= abs(true_transform.omega)
 
             error = max(np.max(dmatrix.vals), np.max(domega.vals))
-            if error > self.precision:
+            if error > precision_self_check:
                 raise ValueError("precision tolerance not achieved: " +
-                                  str(error) + " > " + str(self.precision))
+                                  str(error) + " > " +
+                                  str(precision_self_check))
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick=QUICK):
 
         # time can only be a 1-D array
         time   = Scalar.as_scalar(time)
@@ -717,18 +666,20 @@ class Test_Frame(unittest.TestCase):
         ignore = SpicePath("MOON", "SSB")
         ignore = SpiceFrame("IAU_EARTH", "J2000")
         moon  = SpiceFrame("IAU_MOON", "IAU_EARTH")
-        quick = QuickFrame(moon, (-5.,5.), precision=3.e-14)
+        quick = QuickFrame(moon, (-5.,5.),
+                        dict(QUICK_DICTIONARY, **{"frame_self_check":3.e-14}))
 
         # Perfect precision is impossible
         try:
-            quick = QuickFrame(moon, (-5.,5.), precision=0.)
+            quick = QuickFrame(moon, (-5.,5.),
+                        dict(QUICK_DICTIONARY, **{"frame_self_check":0.}))
             self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
         except ValueError: pass
 
         # Timing tests...
-        # test = np.zeros(1000000)
-        # ignore = moon.transform_at_time(test)  # takes about 50 sec
-        # ignore = quick.transform_at_time(test) # takes way less than 1 sec
+        test = np.zeros(200000)
+        # ignore = moon.transform_at_time(test, quick=False)  # takes about 10 sec
+        ignore = quick.transform_at_time(test) # takes way less than 1 sec
 
         registry.initialize_frame_registry()
         registry.initialize_path_registry()

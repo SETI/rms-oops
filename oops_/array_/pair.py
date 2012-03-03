@@ -25,44 +25,8 @@ class Pair(Array):
 
     def __init__(self, arg, mask=False, units=None):
 
-        if mask is not False: mask = np.asarray(mask)
-
-        if isinstance(arg, Array) and arg.item == [2]:
-            mask = mask | arg.mask
-            if units is None:
-                units = arg.units
-                arg = arg.vals
-            elif arg.units is not None:
-                arg = arg.units.convert(arg.vals, units)
-            else:
-                arg = arg.vals
-
-        elif isinstance(arg, Array):
-            raise ValueError("class " + type(arg).__name__ +
-                             " cannot be converted to class " +
-                             type(self).__name__)
-
-        elif isinstance(arg, ma.MaskedArray):
-            if arg.mask != ma.nomask: mask = mask | np.any(arg.mask, axis=-1)
-            arg = arg.data
-
-        self.vals = np.asarray(arg)
-        ashape = list(self.vals.shape)
-
-        self.rank  = 1
-        self.item  = ashape[-1:]
-        self.shape = ashape[:-1]
-        self.mask  = mask
-
-        if self.item != [2]:
-            raise ValueError("shape of a Pair array must be [...,2]")
-
-        if (self.mask is not False) and (list(self.mask.shape) != self.shape):
-            raise ValueError("mask array is incompatible with Pair shape")
-
-        self.units = Units.as_units(units)
-
-        return
+        return Array.__init__(self, arg, mask, units, 1, item=[2],
+                                    float=False, dimensionless=False)
 
     @staticmethod
     def as_pair(arg):
@@ -207,6 +171,12 @@ class Pair(Array):
 
         arg = Pair.as_pair(arg)
         return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
+
+################################################################################
+# Once defined, register with Array class
+################################################################################
+
+Array.PAIR_CLASS = Pair
 
 ################################################################################
 # UNIT TESTS

@@ -10,8 +10,8 @@
 import numpy as np
 import gravity
 
-from baseclass import Surface
-from oops_.array_.all import *
+from surface_ import Surface
+from oops_.array.all import *
 import oops_.registry as registry
 
 class RingPlane(Surface):
@@ -53,53 +53,101 @@ class RingPlane(Surface):
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
 
-    def as_coords(self, position, axes=2):
+        self.z_unit = Vector3((0,0,1))
+
+    def as_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
         Input:
-            position    a Vector3 of positions at or near the surface, with
+            pos         a Vector3 of positions at or near the surface, with
                         optional units.
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer. In the case of a RingPlane, this argument is
+                        ignored and can be omitted.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
+            derivs      a boolean or tuple of booleans. If True, then the
+                        partial derivatives of each coordinate with respect to
+                        surface position and observer position are returned as
+                        well. Using a tuple, you can indicate whether to return
+                        partial derivatives on an coordinate-by-coordinate
+                        basis.
 
         Return:         coordinate values packaged as a tuple containing two or
                         three unitless Scalars, one for each coordinate.
+
+                        If derivs is True, then the coordinate has extra
+                        attributes "d_dpos" and "d_dobs", which contain the
+                        partial derivatives with respect to the surface position
+                        and the observer position, represented as a MatrixN
+                        objects with item shape [1,3].
         """
 
         # Convert to a Vector3 and strip units, if any
-        position = Vector3.as_standard(position)
-        mask = position.mask
+        pos = Vector3.as_standard(pos)
+        mask = pos.mask
 
-        x = position.vals[...,0]
-        y = position.vals[...,1]
+        # Generate cylindrical coordinates
+        x = pos.vals[...,0]
+        y = pos.vals[...,1]
 
-        r     = np.sqrt(x**2 + y**2)
-        theta = np.arctan2(y,x) % (2.*np.pi)
+        r     = Scalar(np.sqrt(x**2 + y**2), mask)
+        theta = Scalar(np.arctan2(y,x) % (2.*np.pi), mask)
 
         if axes > 2:
-            z = position.vals[...,2] - self.elevation
-            return (Scalar(r,mask), Scalar(theta,mask), Scalar(z,mask))
-        else:
-            return (Scalar(r,mask), Scalar(theta,mask))
+            z = Scalar(pos.vals[...,2] - self.elevation, mask)
 
-    def as_vector3(self, r, theta, z=0.):
+        # Generate derivatives if necessary
+        if derivs:
+            if np.shape(derivs) == (): derivs = (derivs, derivs, derivs)
+
+            zero = VectorN([0,0,0]).as_row()
+
+            if derivs[0]:
+                dr_dpos = VectorN(pos.vals[...]*(1,1,0), pos.mask).unit()
+                r.insert_subfield("d_dpos", dr_dpos.as_row())
+                r.insert_subfield("d_dobs", zero)
+
+            if derivs[1]:
+                dtheta_dpos = self.z_unit.cross(pos)
+                theta.insert_subfield("d_dpos", dtheta_dpos.as_row())
+                theta.insert_subfield("d_dobs", zero)
+
+            if axes > 2 and derivs[2]:
+                z.insert_subfield("d_dpos", z_unit.as_row())
+
+        if axes > 2:
+            return (r, theta, z)
+        else:
+            return (r, theta)
+
+    def as_vector3(self, r, theta, z=Scalar(0.), obs=None, derivs=False):
         """Converts coordinates in the surface's internal coordinate system into
         position vectors at or near the surface.
 
         Input:
-            coord1      a Scalar of values for the first coordinate, with
-                        optional units.
-            coord2      a Scalar of values for the second coordinate, with
-                        optional units.
-            coord3      a Scalar of values for the third coordinate, with
-                        optional units; default is Scalar(0.).
+            r           a Scalar of radius values, with optional units.
+            theta       a Scalar of longitude values, with optional units.
+            z           an optional Scalar of elevation values, with optional
+                        units; default is Scalar(0.).
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer. In the case of a RingPlane, this argument is
+                        ignored and can be omitted.
+            derivs      if True, the partial derivatives of the returned vector
+                        with respect to the coordinates are returned as well.
 
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
 
-        Return:         the corresponding unitless Vector3 object of positions,
-                        in km.
+        Return:         a unitless Vector3 object of positions, in km.
+
+                        If derivs is True, then the returned Vector3 object has
+                        a subfield "d_dcoord", which contains the partial
+                        derivatives d(x,y,z)/d(r,theta,z), as a MatrixN with
+                        item shape [3,3].
         """
 
         # Convert to Scalars and strip units, if any
@@ -109,53 +157,139 @@ class RingPlane(Surface):
 
         # Convert to vectors
         shape = Array.broadcast_shape((r, theta, z), [3])
-        array = np.empty(shape)
-        array[...,0] = np.cos(theta.vals) * r.vals
-        array[...,1] = np.sin(theta.vals) * r.vals
-        array[...,2] = z.vals + self.elevation
+        vals = np.empty(shape)
 
-        return Vector3(array, r.mask | theta.mask | z.mask)
+        cos_theta = np.cos(theta.vals)
+        sin_theta = np.sin(theta.vals)
+        vals[...,0] = cos_theta * r.vals
+        vals[...,1] = sin_theta * r.vals
+        vals[...,2] = z.vals + self.elevation
 
-    def intercept(self, obs, los):
+        pos = Vector3(vals, r.mask | theta.mask | z.mask)
+
+        # Generate derivatives if necessary
+        if derivs:
+            dpos_dcoord_vals = np.zeros(shape + [3,3])
+            dpos_dcoord_vals[...,0,0] =  cos_theta
+            dpos_dcoord_vals[...,1,0] =  sin_theta
+            dpos_dcoord_vals[...,0,1] = -sin_theta * r.vals
+            dpos_dcoord_vals[...,1,1] =  cos_theta * r.vals
+            dpos_dcoord_vals[...,2,2] = 1.
+
+            pos.insert_subfield("d_dcoord", MatrixN(dpos_dcoord_vals, pos.mask))
+
+        return pos
+
+    def intercept(self, obs, los, derivs=False):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
         Input:
             obs         observer position as a Vector3, with optional units.
             los         line of sight as a Vector3, with optional units.
+            derivs      True to include the partial derivatives of the intercept
+                        point with respect to obs and los.
 
-        Return:         a tuple (position, factor)
-            position    a unitless Vector3 of intercept points on the surface,
+        Return:         (position, factor)
+            pos         a unitless Vector3 of intercept points on the surface,
                         in km.
-            factor      a unitless Scalar of factors such that:
-                            position = obs + factor * los
+            t           a unitless Scalar of scale factors t such that:
+                            position = obs + t * los
+
+        If derivs is True, then (pos,t) are returned with these added
+        subfields:
+            pos.d_dobs  the partial derivatives of the intercept position with
+                        respect to the observer position, as a MatrixN object
+                        with item shape [3,3].
+            pos.d_dlos  the partial derivatives of the intercept position with
+                        respect to the line of sight, as a MatrixN object with
+                        item shape [3,3].
+            t.d_dobs    the partial derivatives of the scale factor t with
+                        respect to the observer position, as a MatrixN object
+                        with item shape [1,3].
+            t.d_los     the partial derivatives of the scale factor t with
+                        respect to the line of sight, as a MatrixN object with
+                        with item shape [1,3].
         """
 
-        # Solve for obs + t * los for scalar t, such that the z-component
+        # Solve for obs + factor * los for scalar t, such that the z-component
         # equals zero.
         obs = Vector3.as_standard(obs)
         los = Vector3.as_standard(los)
 
-        t = ((self.elevation - obs.vals[...,2]) / los.vals[...,2])
-        vals = obs.vals + t[..., np.newaxis] * los.vals
+        obs_z = obs.as_scalar(axis=2)
+        los_z = los.as_scalar(axis=2)
+
+        t = (self.elevation - obs_z)/los_z
+        pos = obs + t * los
 
         # Make the z-component exact
-        vals[...,2] = self.elevation
+        pos.vals[...,2] = self.elevation
 
-        # Update the mask
-        mask = obs.mask | los.mask | (los.vals[...,2] == 0)
-
+        # Mask based on radial limits if necessary
         if self.radii is not None:
-            r_sq = vals[...,0]**2 + vals[...,1]**2
-            mask = mask | (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
+            r_sq = pos.vals[...,0]**2 + pos.vals[...,1]**2
+            pos.mask |= (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
+            t.mask = pos.mask
 
-        return (Vector3(vals,mask), Scalar(t,mask))
+        # Calculate derivatives if necessary
+        if derivs:
 
-    def normal(self, position):
+            # Our equations to differentiate are...
+            #
+            #   t = (self.elevation - obs[z]) / los[z]
+            #   pos = obs + t(obs[z],los[z]) * los
+            #
+            # Taking derivatives...
+            #   dt/dobs[x] = 0
+            #   dt/dobs[y] = 0
+            #   dt/dobs[z] = -1 / los[z]
+            #
+            #   dt/dlos[x] = 0
+            #   dt/dlos[y] = 0
+            #   dt/dlos[z] = (self.elevation - obs[z]) * (-1) / los[z]**2
+            #              = -t / los[z]
+            #
+            #   dpos[x]/dobs[x] = 1
+            #   dpos[x]/dobs[z] = los[x] * dt/dobs[z]
+            #   dpos[y]/dobs[y] = 1
+            #   dpos[z]/dobs[z] = 1 + dt/dobs[z] * los[z]
+            #                   = 1 + (-1 / los[z]) * los[z]
+            #                   = 0 (which should have been obvious)
+            #
+            #   dpos[x]/dlos[x] = t
+            #   dpos[x]/dlos[z] = los[x] * dt/dlos[z]
+            #   dpos[y]/dlos[y] = t
+            #   dpos[y]/dlos[z] = los[y] * dt/dlos[z]
+            #   dpos[z]/dlos[z] = t + dt/dlos[z] * los[z]
+            #                   = t + (-t / los[z]) * los[z]
+            #                   = 0 (which also should have been obvious)
+
+            dt_dobs_z = -1. / los_z
+            los_norm = los.norm()
+
+            vals = np.zeros(t.shape + [1,3])
+            vals[...,0,2] = dt_dobs_z.vals
+
+            t.insert_subfield("d_dobs", MatrixN(vals, t.mask))
+            t.insert_subfield("d_dlos", t * los_norm * t.d_dobs)
+
+            vals = np.zeros(t.shape + [3,3])
+            vals[...,0,0] = 1.
+            vals[...,0,2] = dt_dobs_z.vals * los.vals[...,0]
+            vals[...,1,1] = 1.
+            vals[...,1,2] = dt_dobs_z.vals * los.vals[...,1]
+
+            pos.insert_subfield("d_dobs", MatrixN(vals, t.mask))
+            pos.insert_subfield("d_dlos", t * los_norm * pos.d_dobs)
+
+        return (pos, t)
+
+    def normal(self, pos):
         """Returns the normal vector at a position at or near a surface.
 
         Input:
-            position    a Vector3 of positions at or near the surface, with
+            pos         a Vector3 of positions at or near the surface, with
                         optional units.
 
         Return:         a unitless Vector3 containing directions normal to the
@@ -163,65 +297,19 @@ class RingPlane(Surface):
                         arbitrary.
         """
 
-        position = Vector3.as_standard(position)
-        mask = position.mask
+        pos = Vector3.as_standard(pos)
+        mask = pos.mask
 
         # The normal is undefined outside the ring's radial limits
         if self.radii is not None:
-            r_sq = position.vals[...,0]**2 + position.vals[...,1]**2
+            r_sq = pos.vals[...,0]**2 + pos.vals[...,1]**2
             mask = (mask | (r_sq < self.radii_sq[0]) |
                            (r_sq > self.radii_sq[1]))
 
-        vals = np.zeros(position.vals.shape)
+        vals = np.zeros(pos.vals.shape)
         vals[...,2] = 1.
 
         return Vector3(vals, mask)
-
-    def gradient(self, position, axis=0):
-        """Returns the gradient vector at a specified position at or near the
-        surface. The gradient is defined as the vector pointing in the direction
-        of most rapid change in the value of a particular surface coordinate.
-
-        The magnitude of the gradient vector is the rate of change of the
-        coordinate value when starting from this point and moving in this
-        direction.
-
-        Input:
-            position    a Vector3 of positions at or near the surface, with
-                        optional units.
-
-            axis        0, 1 or 2, identifying the coordinate axis for which the
-                        gradient is sought.
-
-        Return:         a unitless Vector3 of the gradients sought. Values are
-                        always in standard units.
-        """
-
-        if axis == 2: return self.normal()
-
-        position = Vector3.as_standard(position)
-
-        radii = position.copy()
-        radii.vals[...,2] = 0.
-
-        # The gradient is undefined outside the ring's radial limits
-        if self.radii is not None:
-            r_sq = position.vals[...,0]**2 + position.vals[...,1]**2
-            radii.mask = (position.mask | (r_sq < self.radii_sq[0]) |
-                                          (r_sq > self.radii_sq[1]))
-
-        if axis == 0:
-            return radii.unit()
-
-        if axis == 1:
-            mask = position.mask
-            vectors = Vector3(np.zeros(position.vals.shape), mask)
-            vectors.vals[...,0] =  position.vals[...,1]
-            vectors.vals[...,1] = -position.vals[...,0]
-
-            return vectors / radii.norm()**2
-
-        raise ValueError("illegal axis value")
 
     def velocity(self, position):
         """Returns the local velocity vector at a point within the surface.
@@ -249,14 +337,11 @@ class RingPlane(Surface):
         if self.gravity is None:
             return Vector3(np.zeros(position.vals.shape), mask)
 
-        # Feature currently disabled
-        return Vector3(np.zeros(position.vals.shape), mask)
+        radius = position.norm()
+        n = self.gravity.n(radius.vals)
 
-#         radius = position.norm()
-#         n = self.gravity.n(radius.vals)
-# 
-#         vflat = position.cross((0,0,-1)) * n
-#         return Vector3(vflat.vals, mask)
+        vflat = position.cross((0,0,-1)) * n
+        return Vector3(vflat.vals, mask)
 
     def intercept_with_normal(self, normal):
         """Constructs the intercept point on the surface where the normal vector

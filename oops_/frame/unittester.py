@@ -5,7 +5,7 @@
 import unittest
 import cspice
 
-from baseclass  import Test_Frame
+from frame_     import Test_Frame
 
 from cmatrix    import Test_Cmatrix
 from ringframe  import Test_RingFrame

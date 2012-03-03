@@ -4,8 +4,8 @@
 
 import unittest
 
-from oops.obs.baseclass import Test_Observation
-from oops.obs.snapshot  import Test_Snapshot
+from observation_ import Test_Observation
+from snapshot     import Test_Snapshot
 
 ########################################
 if __name__ == '__main__':

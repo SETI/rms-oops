@@ -11,56 +11,23 @@ import numpy.ma as ma
 from baseclass  import Array
 from scalar     import Scalar
 from pair       import Pair
+from vectorn    import VectorN
 
 from oops_.units import Units
 
 import utils
 
-class Vector3(Array):
+class Vector3(VectorN):
     """An arbitrary Array of 3-vectors."""
 
     def __init__(self, arg, mask=False, units=None):
 
-        if mask is not False: mask = np.asarray(mask)
+        Array.__init__(self, arg, mask, units, 1, item=[3],
+                                  float=True, dimensionless=False)
 
-        if isinstance(arg, Array) and arg.item == [3]:
-            mask = mask | arg.mask
-            if units is None:
-                units = arg.units
-                arg = arg.vals
-            elif arg.units is not None:
-                arg = arg.units.convert(arg.vals, units)
-            else:
-                arg = arg.vals
-
-        elif isinstance(arg, Array):
-            raise ValueError("class " + type(arg).__name__ +
-                             " cannot be converted to class " +
-                             type(self).__name__)
-
-        elif isinstance(arg, ma.MaskedArray):
-            if arg.mask != ma.nomask: mask = mask | np.any(arg.mask, axis=-1)
-            arg = arg.data
-
-        self.vals = np.asfarray(arg)
-        ashape = list(self.vals.shape)
-
-        self.rank  = 1
-        self.item  = ashape[-1:]
-        self.shape = ashape[:-1]
-        self.mask  = mask
-
-        if self.item != [3]:
-            raise ValueError("shape of a Vector3 array must be [...,3]")
-
-        if (self.mask is not False) and (list(self.mask.shape) != self.shape):
-            raise ValueError("mask array is incompatible with Vector3 shape")
-
-        self.units = Units.as_units(units)
-
-        self.x = self.vals[..., 0]
-        self.y = self.vals[..., 1]
-        self.z = self.vals[..., 2]
+        self.x = self.vals[...,0]
+        self.y = self.vals[...,1]
+        self.z = self.vals[...,2]
 
         return
 
@@ -166,51 +133,35 @@ class Vector3(Array):
 
         return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
 
-    ####################################################
-    # Overrides of binary arithmetic operators
-    ####################################################
+    def cross_product_as_matrix(self):
+        """Returns a Matrix3 object for which matrix multiply produces the same
+        result as taking a cross product with this vector."""
 
-    # Vector3 (*) operator
-    def __mul__(self, arg):
+        vals = np.zeros(self.shape + [3,3])
+        vals[...,0,1] = -self.vals[...,2]
+        vals[...,0,2] =  self.vals[...,1]
+        vals[...,1,2] = -self.vals[...,0]
+        vals[...,1,0] =  self.vals[...,2]
+        vals[...,2,0] = -self.vals[...,1]
+        vals[...,2,1] =  self.vals[...,0]
 
-        # Vector3 * Matrix3 rotates the coordinate frame
-        if arg.__class__.__name__ == "Matrix3":
-            return Vector3(utils.mxv(arg.vals, self.vals),
-                           arg.mask | self.mask, self.units)
+        return Array.MATRIX3_CLASS(vals, self.mask)
 
-        return Array.__mul__(self, arg)
+    def as_column(self):
+        """Converts the vector to an Nx1 column matrix."""
 
-    # Vector3 (/) operator
-    def __div__(self, arg):
+        return VectorN(self).as_column()
 
-        # Vector3 / Matrix3 un-rotates the coordinate frame
-        if arg.__class__.__name__ == "Matrix3":
-            return Vector3(utils.mtxv(arg.vals, self.vals),
-                           arg.mask | self.mask, self.units)
+    def as_row(self):
+        """Converts the vector to a 1xN row matrix."""
 
-        return Array.__div__(self, arg)
+        return VectorN(self).as_row()
 
-    # Vector3 (*=) operator
-    def __imul__(self, arg):
+################################################################################
+# Once defined, register with Array class
+################################################################################
 
-        # Vector3 *= Matrix3 rotates the coordinate frame
-        if arg.__class__.__name__ == "Matrix3":
-            self.vals[...] = utils.mxv(arg.vals, self.vals)
-            self.mask |= arg.mask
-            return self
-
-        return Array.__imul__(self, arg)
-
-    # Vector3 (/=) operator
-    def __idiv__(self, arg):
-
-        # Vector3 /= Matrix3 un-rotates the coordinate frame
-        if arg.__class__.__name__ == "Matrix3":
-            self.vals[...] = utils.mtxv(arg.vals, self.vals)
-            self.mask |= arg.mask
-            return self
-
-        return Array.__idiv__(self, arg)
+Array.VECTOR3_CLASS = Vector3
 
 ################################################################################
 # UNIT TESTS
@@ -327,6 +278,7 @@ class Test_Vector3(unittest.TestCase):
         self.assertEqual(test, [[2,4,6],[6,8,10],[10,12,14]])
         test /= Scalar(2)
         self.assertEqual(test, vecs)
+
         test *= Scalar((1,2,3))
         self.assertEqual(test, [[1,2,3],[6,8,10],[15,18,21]])
         test /= Scalar((1,2,3))

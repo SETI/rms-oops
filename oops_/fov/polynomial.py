@@ -3,12 +3,13 @@
 #
 # 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
 # 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
+# 2/23/12 MRS - Gave each method the option to return partial derivatives.
 ################################################################################
 
 import numpy as np
 
-from baseclass import FOV
-from oops_.array_.all import *
+from fov_ import FOV
+from oops_.array.all import *
 
 class Polynomial(FOV):
     """The Polynomial subclass of FOV describes a field of view in which the
@@ -63,12 +64,17 @@ class Polynomial(FOV):
 
     ########################################
 
-    def xy_from_uv(self, uv_pair):
-        """Returns a Pair of (x,y) spatial coordinates given a Pair of (u,v)
-        coordinates."""
+    def xy_from_uv(self, uv_pair, derivs=False):
+        """Returns a Pair of (x,y) spatial coordinates in units of radians,
+        given a Pair of coordinates (u,v).
+
+        If derivs is True, then the returned Pair has a subarrray "d_duv", which
+        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
+        shape [2,2].
+        """
 
         # Subtract off the center of the field of view
-        uv_pair = oops.Pair.as_pair(uv_pair) - self.uv_los
+        uv_pair = Pair.as_pair(uv_pair) - self.uv_los
         (du,dv) = uv_pair.as_scalars()
         du = du.vals[..., np.newaxis]
         dv = dv.vals[..., np.newaxis]
@@ -92,56 +98,34 @@ class Polynomial(FOV):
             j = k - i
             xy_pair_vals += self.uv_coefft[i,j,:] * du_powers[i] * dv_powers[j]
 
-        return Pair(xy_pair_vals)
+        xy = Pair(xy_pair_vals, uv_pair.mask)
+
+        # Calculate and return derivatives if necessary
+        if derivs:
+            dxy_duv_vals = np.zeros(uv_pair.shape + [2,2])
+
+            for k in range(self.order, 0, -1):
+              for i in range(k+1):
+                j = k - i
+                dxy_duv_vals[...,:,0] += (self.uv_coefft[i,j,:] *
+                                          i*du_powers[i-1] * dv_powers[j])
+                dxy_duv_vals[...,:,1] += (self.uv_coefft[i,j,:] *
+                                          du_powers[i] * j*dv_powers[j-1])
+
+            xy.insert_subfield("d_duv", MatrixN(dxy_duv_vals, xy.mask))
+
+        return xy
 
     ########################################
 
-    def xy_and_dxy_duv_from_uv(self, uv_pair):
-        """Returns a tuple ((x,y), dxy_duv), where the latter is the set of
-        partial derivatives of (x,y) with respect to (u,v). These are returned
-        as a Pair object of shape [...,2]:
-            dxy_duv[...,0] = Pair((dx/du, dx/dv))
-            dxy_duv[...,1] = Pair((dy/du, dy/dv))
+    def uv_from_xy(self, xy_pair, derivs=False, iters=2):
+        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
+        coordinates in radians.
+
+        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
+        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
+        shape [2,2].
         """
-
-        # Subtract off the center of the field of view
-        uv_pair = Pair.as_pair(uv_pair) - self.uv_los
-        (du,dv)  = uv_pair.as_scalars()
-        du = du.vals[..., np.newaxis]
-        dv = dv.vals[..., np.newaxis]
-
-        # Construct the powers of line and sample
-        du_powers = [1.]
-        dv_powers = [1.]
-        for k in range(1, self.order + 1):
-            du_powers.append(du_powers[-1] * du)
-            dv_powers.append(dv_powers[-1] * dv)
-
-        # Initialize the output
-        xy_pair_vals = np.zeros(uv_pair.shape + [2])
-        dxy_duv_vals = np.zeros(uv_pair.shape + [2,2])
-
-        # Evaluate the polynomials
-        #
-        # Start with the high-order terms and work downward, because this
-        # improves accuracy. Stop at one because there are no zero-order terms.
-        for k in range(self.order, 0, -1):
-          for i in range(k+1):
-            j = k - i
-            xy_pair_vals += self.uv_coefft[i,j,:] * du_powers[i] * dv_powers[j]
-
-            dxy_duv_vals[...,:,0] += (self.uv_coefft[i,j,:] *
-                                      i*du_powers[i-1] * dv_powers[j])
-            dxy_duv_vals[...,:,1] += (self.uv_coefft[i,j,:] *
-                                      du_powers[i] * j*dv_powers[j-1])
-
-        return (oops.Pair(xy_pair_vals), oops.Pair(dxy_duv_vals))
-
-    ########################################
-
-    def uv_from_xy(self, xy_pair, iters=3):
-        """Returns a Pair of (u,v) coordinates given a Pair of (x,y) spatial
-        coordinates."""
 
         # Make a rough initial guess
         xy_pair = Pair.as_pair(xy_pair)
@@ -151,26 +135,19 @@ class Polynomial(FOV):
         for iter in range(iters):
 
             # Evaluate the transform and its partial derivatives
-            (xy_test, dxy_duv) = self.xy_and_dxy_duv_from_uv(uv_test)
+            xy_test = self.xy_from_uv(uv_test, derivs=True)
+            dxy_duv = xy_test.d_duv
 
             # Apply one step of Newton's method in 2-D
-            dxy = xy_pair.vals - xy_test.vals
-            dx = dxy[...,0]
-            dy = dxy[...,1]
+            dxy = xy_pair - xy_test
 
-            dx_du = dxy_duv.vals[...,0,0]
-            dx_dv = dxy_duv.vals[...,0,1]
-            dy_du = dxy_duv.vals[...,1,0]
-            dy_dv = dxy_duv.vals[...,1,1]
-
-            discr = dx_du * dy_dv - dy_du * dx_dv
-            du = (dx * dy_dv - dy * dx_dv) / discr
-            dv = (dy * dx_du - dx * dy_du) / discr
-
-            uv_test.vals[...,0] += du
-            uv_test.vals[...,1] += dv
+            duv_dxy = ~dxy_duv
+            uv_test += duv_dxy * (xy_pair - xy_test)
 
             # print iter, max(np.max(np.abs(du)),np.max(np.abs(dv)))
+
+        if derivs:
+            uv_test.insert_subfield("d_xy", duv_dxy)
 
         return uv_test
 

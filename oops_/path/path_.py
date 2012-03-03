@@ -1,29 +1,26 @@
 ################################################################################
-# oops_/path/baseclass.py: Abstract class Path and its required subclasses
+# oops_/path/path_.py: Abstract class Path and its required subclasses
 #
 # 2/13/12 Modified (MRS) - implemented and tested QuickPath.
+# 3/1/12 Modified (MRS) - revised and implified connect() and connect_to();
+#   added convergence testing to _solve_photon; added quick parameter dictionary
+#   and config file.
 ################################################################################
 
 import numpy as np
 import scipy.interpolate as interp
 
-import oops_.registry as registry
 import oops_.constants as constants
-
+import oops_.registry as registry
+from oops_.array.all import *
+from oops_.config import QUICK, QUICK_DICTIONARY, PATH_PHOTONS, LOGGING
 from oops_.event import Event
-from oops_.array_.all import *
 
 class Path(object):
     """A Path is an abstract class that returns an Event (time, position and
     velocity) given a Scalar time. The coordinates are specified in a particular
     frame and relative to another path. All paths are ultimately references to
     the Solar System Barycenter ("SSB") and the J2000 coordinate frame."""
-
-    DEBUG = False
-
-    # Change to False for better accuracy but slower performance, possibly
-    # MUCH slower performance
-    USE_QUICKPATHS = True
 
 ########################################
 # Each subclass must override...
@@ -40,8 +37,8 @@ class Path(object):
                         returned when a single value of time is passed to
                         event_at_time().
 
-        The primary definition of a path will be assigned this attribute by the
-        registry:
+        The primary definition of a path will be assigned these attributes by
+        the registry:
 
         ancestry        a list of Path objects beginning with this one and
                         ending with with the Solar System Barycenter, where each
@@ -50,18 +47,21 @@ class Path(object):
                             self.ancestry[1] = origin path of self.
                             ...
                             self.ancestry[-1] = SSB in J2000.
+
+        wrt_ssb         a definition of the same path relative to the Solar
+                        System Barycenter, in the J2000 coordinate frame.
         """
 
         pass
 
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, quick=QUICK):
         """Returns an Event object corresponding to a specified Scalar time on
         this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
-            quick       True to consider using a QuickPath, where warranted, to
-                        improve computation speed.
+            quick       False to disable QuickPaths; True for the default
+                        options; a dictionary to override specific options.
 
         Return:         an event object containing (at least) the time, position
                         and velocity of the path.
@@ -71,6 +71,14 @@ class Path(object):
         """
 
         pass
+
+    # string operations
+    def __str__(self):
+        return ("Path([" + self.path_id   + " - " +
+                           self.origin_id + "]*" +
+                           self.frame_id + ")")
+
+    def __repr__(self): return self.__str__()
 
 ################################################################################
 # Registry Management
@@ -128,17 +136,16 @@ class Path(object):
         # Handle a shortcut
         if shortcut is not None:
             registry.PATH_REGISTRY[shortcut] = self
-            registry.PATH_REGISTRY[(self.path_id, self.origin_id,
-                                             self.frame_id)] = self
+
+            key = (self.path_id, self.origin_id, self.frame_id)
+            registry.PATH_REGISTRY[key] = self
             return
 
         # Make sure the origin is registered
         origin = registry.PATH_REGISTRY[self.origin_id]
 
         # If the ID is unregistered, insert this as a primary definition
-        try:
-            test = registry.PATH_REGISTRY[self.path_id]
-        except KeyError:
+        if self.path_id not in registry.PATH_REGISTRY.keys():
             registry.PATH_REGISTRY[self.path_id] = self
 
             # Fill in the ancestry too
@@ -147,34 +154,35 @@ class Path(object):
             # Also define the "Waypoint" versions
             waypoint = Waypoint(self.path_id, self.frame_id)
 
-            registry.PATH_REGISTRY[(self.path_id, self.path_id)] = waypoint
-            registry.PATH_REGISTRY[(self.path_id, self.path_id,
-                                             self.frame_id)] = waypoint
+            key = (self.path_id, self.path_id)
+            registry.PATH_REGISTRY[key] = waypoint
 
-            # Also define the path with respect to the SSB if possible
-            if self.origin_id != "SSB" or self.frame_id != "J2000":
-              try:
-                wrt_ssb = self.connect_to("SSB", "J2000")
-                registry.PATH_REGISTRY[(wrt_ssb.path_id,
-                                        "SSB", "J2000")] = wrt_ssb
-                if (wrt_ssb.path_id, "SSB") not in registry.PATH_REGISTRY:
-                    registry.PATH_REGISTRY[(wrt_ssb.path_id, "SSB")] = wrt_ssb
-              except: pass
+            key = (self.path_id, self.path_id, self.frame_id)
+            registry.PATH_REGISTRY[key] = waypoint
+
+            # Also define the path with respect to the SSB
+            if self.origin_id == "SSB" and self.frame_id == "J2000":
+                self.wrt_ssb = self
+            else:
+                self.wrt_ssb = self.connect_to("SSB", "J2000")
+
+                key = (self.path_id, "SSB", "J2000")
+                registry.PATH_REGISTRY[key] = self.wrt_ssb
+
+                key = (self.path_id, "SSB")
+                if key not in registry.PATH_REGISTRY.keys():
+                    registry.PATH_REGISTRY[key] = self.wrt_ssb
 
         # If the tuple (self.frame_id, self.origin_id) is unregistered, insert
         # this as a secondary definition
         key = (self.path_id, self.origin_id)
-        try:
-            test = registry.PATH_REGISTRY[key]
-        except KeyError:
+        if key not in registry.PATH_REGISTRY.keys():
             registry.PATH_REGISTRY[key] = self
 
         # If the triple (self.frame_id, self.origin_id, self.frame_id) is
         # unregistered, insert this as a tertiary definition
         key = (self.path_id, self.origin_id, self.frame_id)
-        try:
-            test = registry.PATH_REGISTRY[key]
-        except KeyError:
+        if key not in registry.PATH_REGISTRY.keys():
             registry.PATH_REGISTRY[key] = self
 
     def unregister(self):
@@ -190,8 +198,8 @@ class Path(object):
             if path_id == key: del registry.PATH_REGISTRY[key]
 
             if type(key) == type(()):
-                if path_id == key[0]: del registry.PATH_REGISTRY[key]
-                if path_id == key[1]: del registry.PATH_REGISTRY[key]
+                if   path_id == key[0]: del registry.PATH_REGISTRY[key]
+                elif path_id == key[1]: del registry.PATH_REGISTRY[key]
 
     def reregister(self):
         """Adds this frame to the registry, replacing any definition of the same
@@ -201,7 +209,8 @@ class Path(object):
         self.register()
 
     @staticmethod
-    def lookup(key): return registry.PATH_REGISTRY[key]
+    def lookup(key):
+        return registry.PATH_REGISTRY[key]
 
 ################################################################################
 # Event operations
@@ -210,14 +219,17 @@ class Path(object):
 # These must be defined here and not in Event.py, because that would create a
 # circular dependency in the order that modules are loaded.
 
-    def subtract_from_event(self, event, quick=False):
-        """Returns the same event, but with this path redefining its origin.
+    def subtract_from_event(self, event, quick=QUICK):
+        """Returns an equivalent event, but with this path redefining its
+        origin.
 
         Input:
             event       the event object from which this path is to be
                         subtracted. The path's origin must coincide with the
                         event's origin, and the two objects must use the same
                         frame.
+            quick       False to disable QuickPaths; True for the default
+                        options; a dictionary to override specific options.
         """
 
         # Check for compatibility
@@ -230,18 +242,17 @@ class Path(object):
         result = Event(event.time.copy(),
                        event.pos - offset.pos,
                        event.vel - offset.vel,
-                       self.path_id, event.frame_id,
-                       event.perp.copy(),
-                       event.arr.copy(),
-                       event.dep.copy(),
-                       event.vflat.copy())
+                       self.path_id, event.frame_id)
 
-        result.ssb = event.ssb
-        return result.update_shape()
+        for key in event.subfields.keys():
+            result.insert_subfield(key, event.subfields[key].copy())
 
-    def add_to_event(self, event, quick=False):
-        """Returns the same event, but with the origin of this path redefining
-        its origin.
+        result.filled_ssb = event.filled_ssb
+        return result
+
+    def add_to_event(self, event, quick=QUICK):
+        """Returns an equivalent event, but with the origin of this path
+        redefining its origin.
 
         Input:
             event       the event object to which this path is to be added.
@@ -256,101 +267,95 @@ class Path(object):
         # Create a new event by subtracting this path from the origin
         offset = self.event_at_time(event.time, quick)
 
-        return Event(event.time,
-                     event.pos + offset.pos,
-                     event.vel + offset.vel,
-                     self.origin_id, event.frame_id,
-                     event.perp.copy(),
-                     event.arr.copy(),
-                     event.dep.copy(),
-                     event.vflat.copy())
+        result = Event(event.time,
+                       event.pos + offset.pos,
+                       event.vel + offset.vel,
+                       self.origin_id, event.frame_id)
+
+        for key in event.subfields.keys():
+            result.insert_subfield(key, event.subfields[key].copy())
+
+        result.filled_ssb = event.filled_ssb
+        return result
 
 ################################################################################
 # Photon Solver
 ################################################################################
 
-    def photon_from_event(self, event, iters=3, quick=True):
-        """Returns a new event object corresponding to the arrival of a photon
-        at this path, given that the same photon departed from the specified
-        event at an earlier time.
-
-        Input:
-            event       the event of a photon's departure.
-            iters       number of iterations of Newton's method to perform. For
-                        iters == 0, the time of the returned event will only be
-                        corrected for the light travel time to the path's
-                        origin. Full precision is generally achieved in 2-3
-                        iterations.
-            quick       True to use QuickPaths and QuickFrames, where warranted,
-                        to speed up the calculation.
-
-        Return:         a tuple containing the absolute and relative events. The
-                        absolute event is relative to the origin of the path;
-                        the relative event originates with the event at the
-                        other end of the photon's path.
-
-        Side-Effects:   the photon departure attribute is filled in for the
-                        event given.
+    def photon_to_event(self, event, quick=QUICK, derivs=False,
+                              iters     = PATH_PHOTONS.max_iterations,
+                              precision = PATH_PHOTONS.dlt_precision,
+                              limit     = PATH_PHOTONS.dlt_limit):
+        """Returns the departure event at the given path for a photon, given the
+        event of the photon's arrival. See _solve_photon() for details.
         """
 
-        return self._solve_photon(event, +1, iters, quick)
+        return self._solve_photon(event, -1, quick, derivs,
+                                         iters, precision, limit)
 
-    def photon_to_event(self, event, iters=3, quick=True):
-        """Returns a new event object corresponding to the departure of a photon
-        from this path, given that the same photon arrived from the specified
-        event at a later time. It also fills in the photon arrival direction
-        attribute of the given event.
-
-        Input:
-            event       the event of a photon's arrival.
-            iters       number of iterations of Newton's method to perform. For
-                        iters == 0, the time of the returned event will only be
-                        corrected for the light travel time to the path's
-                        origin. Full precision is generally achieved in 2-3
-                        iterations.
-            quick       True to use QuickPaths and QuickFrames, where warranted,
-                        to speed up the calculation.
-
-        Return:         a tuple containing the absolute and relative events. The
-                        absolute event is relative to the origin of the path;
-                        the relative event originates with the event at the
-                        other end of the photon's path.
-
-        Side-Effects:   the photon arrival attribute is filled in for the event
-                        given.
+    def photon_from_event(self, event, quick=QUICK, derivs=False,
+                                iters     = PATH_PHOTONS.max_iterations,
+                                precision = PATH_PHOTONS.dlt_precision,
+                                limit     = PATH_PHOTONS.dlt_limit):
+        """Returns the arrival event at the given path for a photon, given the
+        event of the photon's departure. See _solve_photon() for details.
         """
 
-        return self._solve_photon(event, -1, iters, quick)
+        return self._solve_photon(event, +1, quick, derivs,
+                                         iters, precision, limit)
 
-    def _solve_photon(self, event, sign=-1, iters=3, quick=True):
+    def _solve_photon(self, event, sign=-1, quick=QUICK, derivs=False,
+                            iters     = PATH_PHOTONS.max_iterations,
+                            precision = PATH_PHOTONS.dlt_precision,
+                            limit     = PATH_PHOTONS.dlt_limit):
+
         """Solve for a photon event on this path, given that the other end of
         the photon's path is at another specified event (time and position).
 
         Input:
 
-            event       the Event of a photon's arrival or departure.
+            event       the event of a photon's arrival or departure.
 
             sign        -1 to return earlier events, corresponding to photons
                            departing from the path and arriving at the event.
                         +1 to return later events, corresponding to photons
                            arriving at the path after departing from the event.
 
-            iters       number of iterations of Newton's method to perform. For
-                        iters == 0, the time of the returned event will only be
-                        corrected for the light travel time to the path's
-                        origin. Full precision is generally achieved in 2-3
-                        iterations.
+            quick       False to disable QuickPaths and QuickFrames; True for
+                        the default options; a dictionary to override specific
+                        options.
 
-            quick       True to use QuickPaths and QuickFrames, where warranted,
-                        to speed up the calculation.
+            derivs      True to include subarrays containing the partial
+                        derivatives of the returned path event with respect to
+                        the time and position of the associated event.
 
-        Return:         a tuple containing the absolute and relative events. The
-                        absolute event is relative to the origin of the path;
-                        the relative event originates with the event at the
-                        other end of the photon's path.
+            The following input parameters have default defined in file
+            oops_.config.PATH_PHOTONS:
 
-        Side-Effects:   the photon's arrival or departure attribute is filled in
-                        for the event.
+            iters       the maximum number of iterations of Newton's method to
+                        perform. It should almost never need to be > 5.
+            precision   iteration stops when the largest change in light travel
+                        time between one iteration and the next falls below this
+                        threshold (in seconds).
+            limit       the maximum allowed absolute value of the change in
+                        light travel time from the nominal range calculated
+                        initially. Changes in light travel with absolute values
+                        larger than this limit are clipped. Can be used to
+                        limit divergence of the solution in some rare cases.
+
+        Return:         the photon arrival event at the path, always given at
+                        position (0,0,0) and velocity (0,0,0) relative to the
+                        path. These subfields are also filled in for both the
+                        given event and the returned event:
+
+                            arr/dep     the vector from the departing photon
+                                        event to the arriving photon event, in
+                                        the frame of the path.
+
+                            arr_lt/dep_lt
+                                        the light travel time separating the
+                                        events. arr_lt is negative; dep_lt is
+                                        positive.
         """
 
         # Iterate to a solution for the light travel time "lt". Define
@@ -370,77 +375,101 @@ class Path(object):
         # The function y is shown above. Its derivative is
         #   dy_dlt = outward_speed - sign * c
 
+        # Interpret the sign
         signed_c = sign * constants.C
+        if sign < 0.:
+            path_key = "dep"
+            event_key = "arr"
+        else:
+            event_key = "dep"
+            path_key = "arr" 
 
         # Define the path and event relative to the SSB in J2000
-        path_wrt_ssb  = Path.connect(self, "SSB", "J2000")
-        event_wrt_ssb = event.wrt_ssb()
+        event_wrt_ssb = event.wrt_ssb(quick)
 
-        # Make an initial guess at the light travel time
+        # Make initial guesses at the light travel time
+        path_wrt_ssb = Path.connect(self, "SSB", "J2000")
         lt = (path_wrt_ssb.event_at_time(event.time, quick).pos
-              - event_wrt_ssb.pos).norm() / signed_c
+                                        - event_wrt_ssb.pos).norm() / signed_c
         path_time = event.time + lt
 
+        path_time_min = path_time.min() - limit
+        path_time_max = path_time.max() + limit
+
+        lt_min = (path_time_min - event.time).min()
+        lt_max = (path_time_max - event.time).max()
+
         # Speed up the path and frame evaluations if requested
-        path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick)
+        # Interpret the quick parameters
+        if quick is not False:
+            loop_quick = {"path_extension": limit,
+                          "frame_extension": limit}
+            if type(quick) == type({}):
+                loop_quick = dict(quick, **loop_quick)
+
+        path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=loop_quick)
 
         # Iterate a fixed number of times. Newton's method ensures that
-        # convergence is quick
+        # convergence takes just a few iterations.
+        max_dlt = np.inf
         for iter in range(iters):
+
+            # Evaluate the position photon's curren SSB position based on time
             path_event = path_wrt_ssb.event_at_time(path_time)
 
             delta_pos = path_event.pos - event_wrt_ssb.pos
             delta_vel = path_event.vel - event_wrt_ssb.vel
 
-            lt -= ((delta_pos.norm() - lt * signed_c) /
+            dlt = ((delta_pos.norm() - lt * signed_c) /
                    (delta_vel.proj(delta_pos).norm() - signed_c))
+            new_lt = (lt - dlt).clip(lt_min, lt_max)
+            dlt = lt - new_lt 
+            lt = new_lt
 
-            path_time = event.time + lt
+            path_time = (event.time + lt).clip(path_time_min, path_time_max)
 
-            if Path.DEBUG:
-                print iter
-                print ((delta_pos.norm() - lt * signed_c) /
-                       (delta_vel.proj(delta_pos).norm() - signed_c))
+            # Test for convergence
+            prev_max_dlt = max_dlt
+            max_dlt = abs(dlt).max()
+
+            if LOGGING.path_iterations: print iter, max_dlt
+
+            if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 
         # Create the new event
         path_event_ssb = path_wrt_ssb.event_at_time(path_time)
 
         # Fill in the photon paths...
 
-        # From path, to event
-        if sign < 0:
-            path_event_ssb.dep = event_wrt_ssb.pos - path_event_ssb.pos
-            event_wrt_ssb.arr = path_event_ssb.dep
+        # Photon path in SSB/J2000 frame
+        delta_pos_ssb = sign * (path_event_ssb.pos - event_wrt_ssb.pos)
 
-            event.ssb.arr = event_wrt_ssb.arr
-            event.arr = event_wrt_ssb.wrt_frame(event.frame_id, None, quick).arr
+        path_event_ssb.insert_subfield(path_key, delta_pos_ssb)
+        path_event_ssb.insert_subfield(path_key + "_lt", lt)
 
-        # From event, to path
-        else:
-            path_event_ssb.arr = path_event_ssb.pos - event_wrt_ssb.pos
-            event_wrt_ssb.dep = path_event_ssb.arr
+        event_wrt_ssb.insert_subfield(event_key, delta_pos_ssb)
+        event_wrt_ssb.insert_subfield(event_key + "_lt", lt)
 
-            event.ssb.dep = event_wrt_ssb.dep
-            event.dep = event_wrt_ssb.wrt_frame(event.frame_id, None, quick).dep
+        # Update the original event
+        event_frame = registry.connect_frames(self.frame_id, "J2000")
+        transform = event_frame.transform_at_time(event.time, quick)
 
-        # Transform the absolute and relative events
-        absolute_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick)
-        absolute_event.ssb = path_event_ssb
+        event.insert_subfield(event_key, transform.rotate(delta_pos_ssb))
+        event.insert_subfield(event_key + "_lt", lt)
 
-        relative_event = path_event_ssb.wrt_event(event, quick)
-        relative_event = relative_event.wrt_frame(event.frame_id, None, quick)
-        relative_event.time = lt
-        relative_event.ssb = path_event_ssb
+        # Transform the path event
+        path_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick)
+        path_event.filled_ssb = path_event_ssb
 
         # Return the new event in two forms
-        return (absolute_event, relative_event)
+        return path_event
 
 ################################################################################
 # Path Generators
 ################################################################################
 
     @staticmethod
-    def connect(target, origin, frame="J2000"):
+    def connect(target, origin, frame=None):
         """Returns a path that creates event objects in which vectors point
         from any origin path to any target path, using any coordinate frame.
 
@@ -462,27 +491,30 @@ class Path(object):
 
         # If the path already exists, just return it
         try:
-            return registry.PATH_REGISTRY[(target_id, origin_id, frame_id)]
+            key = (target_id, origin_id, frame_id)
+            return Path.lookup(key)
         except KeyError: pass
 
         # If the path exists but the frame is wrong, return a rotated version
         try:
-            newpath = registry.PATH_REGISTRY[(target_id, origin_id)]
-            result = Rotated(newpath, frame_id)
+            key = (target_id, origin_id)
+            newpath = Path.lookup(key)
+            result = RotatedPath(newpath, frame_id)
             result.register()
             return result
         except KeyError: pass
 
-        # Otherwise, construct it from the common ancestor...
-
-        target_path = registry.PATH_REGISTRY[target_id]
+        # Otherwise, construct it by other means...
+        target_path = Path.lookup(target_id)
         return target_path.connect_to(origin_id, frame_id)
 
     # Can be overridden by some classes such as SpicePath, where it is easier
     # to make connections.
     def connect_to(self, origin, frame=None):
         """Returns a Path object in which events point from an arbitrary origin
-        path to this path.
+        to this path, in an arbitrary frame. It is assumed that the desired path
+        does not already exist in the registry. This is not checked, and need
+        not be checked by any methods that override this one.
 
         Input:
             origin          an origin Path object or its registered name.
@@ -490,71 +522,36 @@ class Path(object):
                             to use the frame of the origin's path.
         """
 
-        # Get the endpoint paths and the frame
+        # Get the endpoint paths
         target = registry.as_primary_path(self)
         origin = registry.as_primary_path(origin)
 
+        # Fill in the frame
         if frame is None:
             frame_id = origin.frame_id
         else:
-            frame_id = registry.as_frame_id(frame)
+            frame = registry.as_frame(frame)
+            frame_id = frame.frame_id
 
-        # Find the common ancestry
-        (target_ancestry,
-         origin_ancestry) = Path.common_ancestry(target, origin)
-        # print Path.str_ancestry((target_ancestry, origin_ancestry))
+        # If everything matches but the frame, return a RotatedPath
+        if self.origin_id == origin.path_id:
+            return RotatedPath(self, frame_id)
 
-        # We can ignore the final (matching) entry in each list
-        target_ancestry = target_ancestry[:-1]
-        origin_ancestry = origin_ancestry[:-1]
+        # If the target is an ancestor of the origin, reverse the direction and
+        # try again
+        if target in origin.ancestry:
+            path = Path.connect(origin, target, frame)
+            return ReversedPath(path)
 
-        # Look up or construct the target's path from the common origin
-        if target_ancestry == []:
-            target_path = None
-        elif len(target_ancestry) == 1:
-            target_path = target
-        else:
-            try:
-                target_path = registry.path_lookup((target.path_id,
-                                                 target_ancestry[-1].origin_id))
-            except KeyError:
-                target_path = Linked(target_ancestry)
-                target_path.register()
+        # Otherwise, search from the parent path and then link
+        path = Path.connect(target.ancestry[1], origin, frame)
+        return LinkedPath(target, path)
 
-        # Look up or construct the origin's path from the common ancestor
-        if origin_ancestry == []:
-            origin_path = None
-        elif len(origin_ancestry) == 1:
-            origin_path = origin
-        else:
-            try:
-                origin_path = registry.path_lookup((origin.path_id,
-                                               origin_ancestry[-1].origin_id))
-            except KeyError:
-                origin_path = Linked(origin_ancestry)
-                origin_path.register()
+    ############################################################################
+    # 2/29/12: No longer needed but might still come in handy some day.
+    ############################################################################
 
-        # Construct the relative path, irrespective of frame
-        if origin_path is None:
-            if target_path is None:
-                result = Waypoint(self.path_id, frame_id)
-            else:
-                result = target_path
-        else:
-            if target_path is None:
-                result = Reversed(origin_path)
-            else:
-                result = Relative(target_path, origin_path)
-
-        result.register()
-
-        # Rotate it into the proper frame if necessary
-        if result.frame_id != frame_id:
-            result = Rotated(result, frame_id)
-            result.register()
-
-        return result
-
+    @staticmethod
     def common_ancestry(path1, path2):
         """Returns a pair of ancestry lists for the two given paths, where both
         lists end at Paths with the same name."""
@@ -591,126 +588,122 @@ class Path(object):
         return "".join(list)
 
 ########################################
-# Arithmetic operators
-########################################
 
-    # unary "-" operator
-    def __neg__(self):
-        return path.Reversed(self)
-
-    # binary "-" operator
-    def __sub__(self, arg):
-
-        if registry.is_id(arg) or isinstance(arg, Path):
-            return Relative(self, arg)
-
-        Array.raise_type_mismatch(self, "-", arg)
-
-    # string operations
-    def __str__(self):
-        return ("Path([" + self.path_id   + " - " +
-                           self.origin_id + "]/" +
-                           self.frame_id + ")")
-
-    def __repr__(self): return self.__str__()
-
-########################################
-
-    def quick_path(self, time, quick, duration=20., step=0.01, precision=None,
-                                      savings=2.):
+    def quick_path(self, time, quick):
         """Returns a new QuickPath object that provides accurate approximations
         to the position and velocity vectors returned by this path. It can speed
         up performance substantially when the same path must be evaluated
         repeatedly but within a narrow range of times.
 
         Input:
-            time        a parameter to define the time limits of the
-                        interpolation.
-                            - A single value is interpreted as a mid-time of the
-                              interpolation.
-                            - if time is array-like or Scalar, the minimum and
-                              maximum values found define the interval.
-            quick       if False, no QuickPath is created and self is returned.
-            duration    the minimum duration of an interpolation, in seconds.
-            step        the time step between sample times for interpolation.
-            precision   the fractional precision required in the interpolation;
-                        if None, then no self-check for precision is performed.
-            savings     the minimum savings in number of evaluations before a
-                        QuickPath is warranted.
+            time        a Scalar defining the set of times at which the frame is
+                        to be evaluated.
+            quick       if False, no QuickPath is created and self is returned;
+                        if True, the default dictionary QUICK_DICTIONARY is
+                        used; if another dictionary, then the values provided
+                        override the defaults and the merged dictionary is used.
         """
+
+        OVERHEAD = 500      # Assume it takes the equivalent time of this many
+                            # evaluations just to set up the QuickFrame.
+        SPEEDUP = 5.        # Assume that evaluations are this much faster once
+                            # the QuickFrame is set up.
+        SAVINGS = 0.2       # Require at least a 20% savings in evaluation time.
 
         # Make sure a QuickPath is requested
         if not quick: return self
-        if not Path.USE_QUICKPATHS: return self
 
         # A Waypoint is too easy
         if type(self) == Waypoint: return self
 
-        # Determine the time interval
-        if type(time) == Scalar: time = time.vals
-        time = np.asfarray(time)
-        count = np.size(time)
+        # A QuickPath would be redundant
+        if type(self) == QuickPath: return self
 
-        max_time = np.max(time)
-        min_time = np.min(time)
-        mid_time = (min_time + max_time) / 2.
-        dt = max_time - min_time
-        if dt < duration: dt = duration
-        steps = dt/step
+        # Obtain the local QuickPath dictionary
+        quickdict = QUICK_DICTIONARY
+        if type(quick) == type({}):
+            quickdict = dict(quickdict, **quick)
 
-        # Return self if a QuickPath would not save us much time
-        if count > 2 and count < steps * savings: return self
+        if not quickdict["use_quickpaths"]: return self
 
-        return QuickPath(self, (mid_time-duration/2., mid_time+duration/2.),
-                               step=step, precision=precision)
+        # Determine the time interval and steps
+        time = Scalar.as_scalar(time)
+        vals = time.vals
+
+        count = np.size(vals)
+        if count < OVERHEAD: return self
+
+        dt = quickdict["path_time_step"]
+        extension = quickdict["path_time_extension"]
+        extras = quickdict["path_extra_steps"]
+
+        tmin = np.min(vals) - extension
+        tmax = np.max(vals) + extension
+        steps = (tmax - tmin)/dt + 2*extras
+
+        # Evaluate the effort using a QuickPath compared to the effort without
+        effort_using_quickpath = OVERHEAD + steps + count/SPEEDUP
+        if count < (1. + SAVINGS) * effort_using_quickpath: 
+            return self
+
+        if LOGGING.quickpath_creation:
+            print "New QuickPath: " + str(self), (tmin, tmax)
+
+        return QuickPath(self, (tmin, tmax), quickdict)
 
 ################################################################################
 # Define the required subclasses
 ################################################################################
 
-class Linked(Path):
-    """Linked is a Path subclass that links together a list of Path objects, so
-    that the returned event points from the origin of the last frame to the
-    endpoint of the first frame, and is given in the coordinates of the last
-    frame. The origin_id of each list entry must be the path_id of the entry
-    that follows.
+class LinkedPath(Path):
+    """LinkedPath is a Path subclass that returns the result of adding one path
+    path to its immediate ancestor. The new path returns positions and
+    velocities as offsets from the origin of the parent and in that parent's
+    frame.
     """
 
-    def __init__(self, paths):
+    def __init__(self, path, parent):
         """Constructor for a Linked Path.
 
         Input:
-            paths       a list of connected paths. The origin_id of each path
-                        must be the path_id of the one that follows.
+            path        a path, which must be defined relative to the given
+                        parent.
+            parent      a path to which the above will be linked.
         """
 
-        self.paths = paths
-        self.frames = []
-        for i in range(len(paths)-1):
-            self.frames += [registry.connect_frames(self.paths[i].frame_id,
-                                                    self.paths[i+1].frame_id)]
+        self.path = registry.as_path(path)
+        self.parent = registry.as_path(parent)
+
+        assert self.path.origin_id == self.parent.path_id
+
+        if self.path.frame_id == self.parent.frame_id:
+            self.frame = None
+        else:
+            self.frame = registry.connect_frames(self.path.frame_id,
+                                                 self.parent.frame_id)
 
         # Required fields
-        self.path_id   = self.paths[0].path_id
-        self.origin_id = self.paths[-1].origin_id
-        self.frame_id  = self.paths[-1].frame_id
-        self.shape     = Array.broadcast_shape(tuple(paths))
+        self.path_id   = self.path.path_id
+        self.origin_id = self.parent.origin_id
+        self.frame_id  = self.parent.frame_id
+        self.shape     = Array.broadcast_shape((self.path, self.parent))
 
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, quick=QUICK):
+        event = self.path.event_at_time(time, quick)
 
-        event = self.paths[0].event_at_time(time)
-        for i in range(len(self.paths)-1):
-            event = event.unrotate_by_frame(self.frames[i])
-            event = self.paths[i+1].add_to_event(event)
+        if self.frame is not None:
+            event = event.unrotate_by_frame(self.frame, quick)
 
+        event = self.parent.add_to_event(event, quick)
         return event
 
 ################################################################################
 
-class Relative(Path):
-    """Relative is a Path subclass that returns the relative separation between
-    two paths that share a common origin. The new path uses the coordinate frame
-    of the origin path."""
+class RelativePath(Path):
+    """RelativePath is a Path subclass that returns the relative separation
+    between two paths that share a common origin. The new path uses the
+    coordinate frame of the origin path.
+    """
 
     def __init__(self, path, origin):
         """Constructor for a RelativePath.
@@ -733,20 +726,26 @@ class Relative(Path):
         self.frame_id  = self.origin.frame_id
         self.shape     = Array.broadcast_shape((self.path, self.origin))
 
-        self.path_frame = registry.connect_frames(self.path.frame_id,
-                                                  self.origin.frame_id)
+        if self.path.frame_id == self.origin.frame_id:
+            self.frame = None
+        else:
+            self.path_frame = registry.connect_frames(self.path.frame_id,
+                                                      self.origin.frame_id)
 
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, quick=QUICK):
+        event = self.path.event_at_time(time, quick)
 
-        event = self.path.event_at_time(time).unrotate_by_frame(self.path_frame)
+        if self.frame is not None:
+            event = event.unrotate_by_frame(self.frame, quick)
 
-        event = self.origin.subtract_from_event(event)
+        event = self.origin.subtract_from_event(event, quick)
+
         return event
 
 ################################################################################
 
-class Reversed(Path):
-    """Reversed is a subclass of Path that generates the reversed Events from
+class ReversedPath(Path):
+    """ReversedPath is Path subclass that generates the reversed Events from
     that of a given Path."""
 
     def __init__(self, path):
@@ -764,24 +763,18 @@ class Reversed(Path):
         self.frame_id  = self.path.frame_id
         self.shape     = self.path.shape
 
-    def event_at_time(self, time, quick=False):
-
-        event = self.path.event_at_time(time)
+    def event_at_time(self, time, quick=QUICK):
+        event = self.path.event_at_time(time, quick)
         event.pos = -event.pos
         event.vel = -event.vel
-
-        event.perp  = Empty()
-        event.arr   = Empty()
-        event.dep   = Empty()
-        event.vflat = Vector3((0.,0.,0.))
 
         return event
 
 ################################################################################
 
-class Rotated(Path):
-    """Rotated is a Path subclass that returns event objects rotated to another
-    coordinate frame."""
+class RotatedPath(Path):
+    """RotatedPath is a Path subclass that returns event objects rotated to
+    another coordinate frame."""
 
     def __init__(self, path, frame):
         """Constructor for a RotatedPath.
@@ -793,19 +786,19 @@ class Rotated(Path):
         """
 
         self.path = registry.as_path(path)
-        newframe_id = registry.as_frame_id(frame)
-
-        self.frame = registry.connect_frames(newframe_id, self.path.frame_id)
+        self.frame_id = registry.as_frame_id(frame)
+        self.frame = registry.connect_frames(self.frame_id, self.path.frame_id)
 
         # Required fields
         self.path_id   = self.path.path_id
         self.origin_id = self.path.origin_id
-        self.frame_id  = newframe_id
         self.shape     = self.path.shape
 
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, quick=QUICK):
+        event = self.path.event_at_time(time)
+        event = event.rotate_by_frame(self.frame)
 
-        return self.path.event_at_time(time).rotate_by_frame(self.frame)
+        return event
 
 ################################################################################
 
@@ -826,12 +819,11 @@ class Waypoint(Path):
         self.frame_id  = frame_id
         self.shape     = []
 
-    def event_at_time(self, time, quick=False):
-
+    def event_at_time(self, time, quick=QUICK):
         return Event.null_event(time, self.path_id, self.frame_id)
 
     def __str__(self):
-        return "Waypoint(" + self.path_id + "/" + self.frame_id + ")"
+        return "Waypoint(" + self.path_id + "*" + self.frame_id + ")"
 
 ################################################################################
 
@@ -839,20 +831,15 @@ class QuickPath(Path):
     """QuickPath is a Path subclass that returns positions and velocities based
     on interpolation of another path within a specified time window."""
 
-    def __init__(self, path, interval, step=0.01, precision=None, expand=4):
+    def __init__(self, path, interval, quickdict):
         """Constructor for a QuickPath.
 
         Input:
             path            the Path object that this Path will emulate.
             interval        a tuple containing the start time and end time of
-                            the interpolation, in TDB.
-            step            the time step between samples in the interpolation.
-            precision       the required precision of the interpolation; None to
-                            skip the self-check for precision.
-            expand          the number of additional time steps to add to each
-                            end of the interpolation; default is 4. A nonzero
-                            value improves the precision of the interpolation
-                            near the endpoints.
+                            the interpolation, in TDB seconds.
+            quickdict       a dictionary containing all the QuickPath
+                            parameters.
         """
 
         self.path = path
@@ -865,14 +852,11 @@ class QuickPath(Path):
 
         self.t0 = interval[0]
         self.t1 = interval[1]
-        self.dt = step
+        self.dt = quickdict["path_time_step"]
 
-        self.precision = precision
-
-        self.expand = expand
-
-        self.times = np.arange(self.t0 - self.expand * self.dt,
-                               self.t1 + self.expand * self.dt + self.dt,
+        extras = quickdict["path_extra_steps"]
+        self.times = np.arange(self.t0 - extras * self.dt,
+                               self.t1 + extras * self.dt + self.dt,
                                self.dt)
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
@@ -895,7 +879,8 @@ class QuickPath(Path):
                                              self.events.vel.vals[:,2], k=KIND)
 
         # Test the precision
-        if self.precision is not None:
+        precision_self_check = quickdict["path_self_check"]
+        if precision_self_check is not None:
             t = self.times[:-1] + self.dt/2.        # Halfway points
 
             true_event = self.path.event_at_time(t)
@@ -916,11 +901,12 @@ class QuickPath(Path):
             dvel = abs(true_event.vel - vel) / abs(true_event.vel)
 
             error = max(np.max(dpos.vals), np.max(dvel.vals))
-            if error > self.precision:
+            if error > precision_self_check:
                 raise ValueError("precision tolerance not achieved: " +
-                                  str(error) + " > " + str(self.precision))
+                                  str(error) + " > " +
+                                  str(precision_self_check))
 
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, quick=QUICK):
 
         # time can only be a 1-D array
         time = Scalar.as_scalar(time)
@@ -943,7 +929,7 @@ class QuickPath(Path):
                            self.origin_id, self.frame_id)
 
     def __str__(self):
-        return "QuickPath(" + self.path_id + "/" + self.frame_id + ")"
+        return "QuickPath(" + self.path_id + "*" + self.frame_id + ")"
 
 ################################################################################
 # Initialize the registry
@@ -974,13 +960,13 @@ class Test_Path(unittest.TestCase):
 
         self.assertEquals(registry.PATH_REGISTRY["SSB"], registry.SSB)
 
-        # Linked tests
+        # LinkedPath tests
         sun = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SUN")
         moon = SpicePath("MOON", "EARTH")
-        linked = Linked((moon, earth, sun))
+        linked = LinkedPath(moon, earth)
 
-        direct = SpicePath("MOON", "SSB")
+        direct = SpicePath("MOON", "SUN")
 
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
 
@@ -991,8 +977,8 @@ class Test_Path(unittest.TestCase):
         self.assertTrue(abs(linked_event.pos - direct_event.pos) <= eps)
         self.assertTrue(abs(linked_event.vel - direct_event.vel) <= eps)
 
-        # Relative
-        relative = Relative(linked, SpicePath("MARS", "SSB"))
+        # RelativePath
+        relative = RelativePath(linked, SpicePath("MARS", "SUN"))
         direct = SpicePath("MOON", "MARS")
 
         direct_event = direct.event_at_time(times)
@@ -1002,8 +988,8 @@ class Test_Path(unittest.TestCase):
         self.assertTrue(abs(relative_event.pos - direct_event.pos) <= eps)
         self.assertTrue(abs(relative_event.vel - direct_event.vel) <= eps)
 
-        # Reversed
-        reversed = Reversed(relative)
+        # ReversedPath
+        reversed = ReversedPath(relative)
         direct = SpicePath("MARS", "MOON")
 
         direct_event = direct.event_at_time(times)
@@ -1013,8 +999,8 @@ class Test_Path(unittest.TestCase):
         self.assertTrue(abs(reversed_event.pos - direct_event.pos) <= eps)
         self.assertTrue(abs(reversed_event.vel - direct_event.vel) <= eps)
 
-        # Rotated
-        rotated = Rotated(reversed, SpiceFrame("B1950"))
+        # RotatedPath
+        rotated = RotatedPath(reversed, SpiceFrame("B1950"))
         direct = SpicePath("MARS", "MOON", "B1950")
 
         direct_event = direct.event_at_time(times)
@@ -1026,18 +1012,19 @@ class Test_Path(unittest.TestCase):
 
         # QuickPath tests
         moon = SpicePath("MOON", "EARTH")
-        quick = QuickPath(moon, (-5.,5.), precision=3.e-13)
+        quick = QuickPath(moon, (-5.,5.), QUICK_DICTIONARY)
 
         # Perfect precision is impossible
         try:
-            quick = QuickPath(moon, (-5.,5.), precision=0.)
+            quick = QuickPath(moon, np.arange(0.,100.,0.0001),
+                              dict(QUICK_DICTIONARY, **{"path_self_check":0.}))
             self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
         except ValueError: pass
 
         # Timing tests...
-        # test = np.zeros(3000000)
-        # ignore = moon.event_at_time(test)  # takes about 15 sec
-        # ignore = quick.event_at_time(test) # takes way less than 1 sec
+        test = np.zeros(3000000)
+        # ignore = moon.event_at_time(test, quick=False)  # takes about 15 sec
+        ignore = quick.event_at_time(test) # takes maybe 2 sec
 
         registry.initialize_path_registry()
         registry.initialize_frame_registry()
