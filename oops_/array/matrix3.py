@@ -4,19 +4,21 @@
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 # Modified 2/8/12 (MRS) -- Supports array masks; no unit tests added.
 # Modified 2/25/12 (MRS) -- Made into a subclass of MatrixN.
+# 3/2/12 MRS: Better integrated with VectorN and MatrixN.
 ################################################################################
 
 import numpy as np
 import numpy.ma as ma
 
-from baseclass import Array
-from empty     import Empty
-from scalar    import Scalar
-from vector3   import Vector3
+from array_  import Array
+from empty   import Empty
+from scalar  import Scalar
+from vector3 import Vector3
+from matrixn import MatrixN
 
 import utils
 
-class Matrix3(MatrixN):
+class Matrix3(Array):
     """An arbitrary Array of 3x3 rotation matrices."""
 
     def __init__(self, arg, mask=False, units=None):
@@ -50,7 +52,7 @@ class Matrix3(MatrixN):
         else:
             return MatrixN.multiply_vector(self, arg)
 
-    def inverse(self):
+    def invert(self):
         """A general definition of matrix inverse."""
 
         return self.transpose()
@@ -67,12 +69,13 @@ class Matrix3(MatrixN):
 
     ############################
 
-    def axis(self, axis):
-        """Returns one of the destination coordinate frame's axes in the frame
-        of the origin. These are equivalent to matrix_T*(1,0,0) for axis == 0;
-        matrix_T*(0,1,0) for axis == 1; matrix_T*(0,0,1) for axis == 2."""
-
+    def column(self, axis):
+        """Returns one column of the matrix as a Vector3."""
         return Vector3(self.vals[..., axis], self.mask)
+
+    def row(self, axis):
+        """Returns one row of the matrix as a Vector3."""
+        return Vector3(self.vals[..., axis, :], self.mask)
 
     @staticmethod
     def twovec(v1, axis1, v2, axis2):
@@ -93,34 +96,25 @@ class Matrix3(MatrixN):
         the same scalar."""
 
         if isinstance(arg, Array):
-            if rank == 0:
+
+            # Rotation of a scalar leaves it unchanged
+            if arg.rank == 0:
                 return arg
 
-            if rank == 1:
-                vals1 = self.vals
-                vals2 = arg.vals[..., np.newaxis, :]
-                return Vector3(np.sum(vals1*vals2, axis=-1),
-                               self.mask | arg.mask)
+            # Rotation of a vector
+            if arg.rank == 1:
+                return self.rotate_vector3(arg)
 
-            if rank == 2:
-                vals1 = self.vals[..., np.newaxis, :]
-                vals2 = arg.vals[..., np.newaxis, :, :].swapaxes(-1,-2)
-                return Matrix3(np.sum(vals1*vals2, axis=-1),
-                               self.mask | arg.mask)
+            if arg.rank == 2:
+                return self.rotate_matrixn(arg)
 
-        if isinstance(arg, np.ndarray):
-            if len(arg.shape) >= 2 and arg.shape[-2:] = (3,3):
-                vals1 = self.vals[..., np.newaxis, :]
-                vals2 = arg[..., np.newaxis, :, :].swapaxes(-1,-2)
-                return Matrix3(np.sum(vals1*vals2, axis=-1), self.mask)
+        # Not recommended but can be handled
+        arg = np.array(arg)
+        if len(arg.shape) >= 2 and arg.shape[-2:] == (3,3):
+            return self.rotate_matrix3(arg)
 
-            elif len(arg.shape) >= 1 and arg.shape[-1:] = (3,):
-                vals1 = self.vals[..., np.newaxis, :]
-                vals2 = arg[..., np.newaxis, :]
-                return Vector3(np.sum(vals1*vals2, axis=-1), self.mask)
-
-            else:
-                return Scalar(arg)
+        elif len(arg.shape) >= 1 and arg.shape[-1:] == (3,):
+            return self.rotate_vector3(arg)
 
         else:
             return Scalar(arg)
@@ -128,41 +122,92 @@ class Matrix3(MatrixN):
     ############################
 
     def unrotate(self, arg):
-        """Matrix3 inverse rotation of anything.Note that rotation of a scalar
+        """Matrix3 inverse rotation of anything. Note that rotation of a scalar
         returns the same scalar."""
 
         if isinstance(arg, Array):
-            if rank == 0:
+            if arg.rank == 0:
                 return arg
 
-            if rank == 1:
-                vals1 = self.vals
-                vals2 = arg.vals[..., np.newaxis]
-                return Vector3(np.sum(vals1*vals2, axis=-2),
-                               self.mask | arg.mask)
+            if arg.rank == 1:
+                return self.unrotate_vector3(arg)
 
-            if rank == 2:
-                vals1 = self.vals[..., np.newaxis, :]
-                vals2 = arg.vals[..., np.newaxis, :, :]
-                return Matrix3(np.sum(vals1*vals2, axis=-2),
-                               self.mask | arg.mask)
+            if arg.rank == 2:
+                return self.rotate_matrixn(arg)
 
-        if isinstance(arg, np.ndarray):
-            if len(arg.shape) >= 2 and arg.shape[-2:] = (3,3):
-                vals1 = self.vals[..., np.newaxis, :]
-                vals2 = arg[..., np.newaxis, :, :]
-                return Matrix3(np.sum(vals1*vals2, axis=-2), self.mask)
+        arg = np.array(arg)
+        if len(arg.shape) >= 2 and arg.shape[-2:] == (3,3):
+            return self.rotate_matrix3(arg)
 
-            elif len(arg.shape) >= 1 and arg.shape[-1:] = (3,):
-                vals1 = self.vals
-                vals2 = arg[..., np.newaxis]
-                return Vector3(np.sum(vals1*vals2, axis=-2), self.mask)
-
-            else:
-                return Scalar(arg)
+        elif len(arg.shape) >= 1 and arg.shape[-1:] == (3,):
+            return self.unrotate_vector3(arg)
 
         else:
             return Scalar(arg)
+
+    ############################
+
+    def rotate_vector3(self, arg):
+        arg = Vector3.as_vector3(arg)
+        arg_vals = arg.vals[..., np.newaxis, :]
+        return Vector3(np.sum(self.vals * arg_vals, axis=-1),
+                              self.mask | arg.mask, arg.units)
+
+    def unrotate_vector3(self, arg):
+        arg = Vector3.as_vector3(arg)
+        arg_vals = arg.vals[..., np.newaxis]
+        return Vector3(np.sum(self.vals * arg_vals, axis=-2),
+                              self.mask | arg.mask, arg.units)
+
+    def rotate_matrix3(self, arg):
+        arg = Matrix3.as_matrix3(arg)
+        vals1 = self.vals[..., np.newaxis, :]
+        vals2 = arg.vals[..., np.newaxis, :, :].swapaxes(-1,-2)
+        return Matrix3(np.sum(vals1 * vals2, axis=-1), self.mask | arg.mask)
+
+    def unrotate_matrix3(self, arg):
+        arg = Matrix3.as_matrix3(arg)
+        vals1 = self.vals[..., np.newaxis]
+        vals2 = arg.vals[..., np.newaxis, :]
+        return Matrix3(np.sum(vals1 * vals2, axis=-3), self.mask | arg.mask)
+
+    def rotate_matrixn(self, arg):
+        """Matrix multiply in which it returns class Matrix3 if it can;
+        otherwise it returns MatrixN. Multiplication by a MatrixN with item
+        shape [1,N] is treated as scalar multiply."""
+
+        if isinstance(arg, Array):
+            if arg.item[0] == 1: return arg     # This is scalar multiply
+            use_matrix3 = arg.item[-1] == 3
+        else:
+            use_matrix3 = arg.shape[-1] == 3
+
+        vals1 = self.vals[..., np.newaxis, :]
+        vals2 = arg.vals[..., np.newaxis, :, :].swapaxes(-1,-2)
+
+        if use_matrix3:
+            return Matrix3(np.sum(vals1 * vals2, axis=-1), self.mask | arg.mask)
+        else:
+            return MatrixN(np.sum(vals1 * vals2, axis=-1), self.mask | arg.mask)
+
+    def unrotate_matrixn(self, arg):
+        """Matrix inverse multiply in which it returns class Matrix3 if it can;
+        otherwise it returns MatrixN. Multiplication by a MatrixN with item
+        shape [1,N] is treated as scalar multiply."""
+
+        if isinstance(arg, Array):
+            if arg.item[0] == 1: return arg     # This is scalar multiply
+            use_matrix3 = arg.item[-1] == 3
+        else:
+            use_matrix3 = arg.shape[-1] == 3
+
+        vals1 = self.vals[..., np.newaxis, :]
+        vals2 = arg.vals[..., np.newaxis, :, :]
+
+        if use_matrix3:
+            return Matrix3(np.sum(vals1 * vals2, axis=-2), self.mask | arg.mask)
+        else:
+            return MatrixN(np.sum(vals1 * vals2, axis=-2), self.mask | arg.mask)
 
     ####################################################
     # Overrides of multiplication operators
@@ -172,9 +217,9 @@ class Matrix3(MatrixN):
         result = self.rotate(arg)
         if result is arg: return result
 
-        # Multiply subarrays if necessary
-        if Array.SUBARRAY_ARITHMETIC:
-            result.mul_subarrays(self, arg)
+        # Multiply subfields if necessary
+        if not Array.IGNORE_SUBFIELDS:
+            result.mul_subfields(self, arg)
 
         return result
 
@@ -193,12 +238,12 @@ class Matrix3(MatrixN):
 
     def __imul__(self, arg):
 
-        result = self.rotate_matrix(arg)
+        result = self.rotate_matrix3(arg)
         self.vals[...] = result.vals[...]
         self.mask |= result.mask
 
-        if Array.SUBARRAY_ARITHMETIC:
-            self.imul_subarrays(arg)
+        if not Array.IGNORE_SUBFIELDS:
+            self.imul_subfields(arg)
 
         return self
 
@@ -257,8 +302,8 @@ class Test_Matrix3(unittest.TestCase):
         b = Matrix3(np.random.rand(  3,4,3,3))
         v = Vector3(np.random.rand(1,3,1,3))
 
-        axb  = a.rotate_matrix(b)
-        test = a.rotate_matrix(b.vals)
+        axb  = a.rotate_matrix3(b)
+        test = a.rotate_matrix3(b.vals)
         self.assertTrue(np.all(axb.vals - test.vals > -eps))
         self.assertTrue(np.all(axb.vals - test.vals <  eps))
 
@@ -266,15 +311,15 @@ class Test_Matrix3(unittest.TestCase):
         self.assertTrue(np.all(axb.vals - test.vals > -eps))
         self.assertTrue(np.all(axb.vals - test.vals <  eps))
 
-        atxb = a.unrotate_matrix(b)
+        atxb = a.unrotate_matrix3(b)
         test = Matrix3(utils.mtxm(a.vals, b.vals))
         self.assertTrue(np.all(atxb.vals - test.vals > -eps))
         self.assertTrue(np.all(atxb.vals - test.vals <  eps))
 
-        axbt = a.rotate_matrix(b.invert())
-        test = a / b
-        self.assertTrue(np.all(axbt.vals - test.vals > -eps))
-        self.assertTrue(np.all(axbt.vals - test.vals <  eps))
+        axbt = a.rotate_matrix3(b.invert())
+#         test = a / b
+#         self.assertTrue(np.all(axbt.vals - test.vals > -eps))
+#         self.assertTrue(np.all(axbt.vals - test.vals <  eps))
 
         for i in range(2):
           for j in range(3):
@@ -302,10 +347,10 @@ class Test_Matrix3(unittest.TestCase):
         self.assertTrue(np.all(test.vals - (a*b).vals > -eps))
         self.assertTrue(np.all(test.vals - (a*b).vals <  eps))
 
-        test = a.copy()
-        test /= b
-        self.assertTrue(np.all(test.vals - (a/b).vals > -eps))
-        self.assertTrue(np.all(test.vals - (a/b).vals <  eps))
+#         test = a.copy()
+#         test /= b
+#         self.assertTrue(np.all(test.vals - (a/b).vals > -eps))
+#         self.assertTrue(np.all(test.vals - (a/b).vals <  eps))
 
 ############################################
 if __name__ == '__main__':

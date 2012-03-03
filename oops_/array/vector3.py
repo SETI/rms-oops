@@ -3,21 +3,22 @@
 #
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 # Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
+# 3/2/12 MRS - Integrated with VectorN and MatrixN.
 ################################################################################
 
 import numpy as np
 import numpy.ma as ma
 
-from baseclass  import Array
-from scalar     import Scalar
-from pair       import Pair
-from vectorn    import VectorN
+from array_  import Array
+from scalar  import Scalar
+from pair    import Pair
+from vectorn import VectorN
 
 from oops_.units import Units
 
 import utils
 
-class Vector3(VectorN):
+class Vector3(Array):
     """An arbitrary Array of 3-vectors."""
 
     def __init__(self, arg, mask=False, units=None):
@@ -34,6 +35,11 @@ class Vector3(VectorN):
     @staticmethod
     def as_vector3(arg):
         if isinstance(arg, Vector3): return arg
+
+        # Collapse a 1x3 or 3x1 MatrixN down to a Vector3
+        if isinstance(arg, Array.MATRIXN_CLASS):
+            return Vector3(VectorN(arg).as_vectorn())
+
         return Vector3(arg)
 
     @staticmethod
@@ -148,12 +154,12 @@ class Vector3(VectorN):
         return Array.MATRIX3_CLASS(vals, self.mask)
 
     def as_column(self):
-        """Converts the vector to an Nx1 column matrix."""
+        """Converts the vector to an 3x1 column matrix."""
 
         return VectorN(self).as_column()
 
     def as_row(self):
-        """Converts the vector to a 1xN row matrix."""
+        """Converts the vector to a 1x3 row matrix."""
 
         return VectorN(self).as_row()
 

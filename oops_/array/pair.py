@@ -7,13 +7,15 @@
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 # Modified 1/12/11 (MRS) -- Added method cross_scalars()
 # Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
+# 3/2/12 MRS: Integrated with VectorN and MatrixN
 ################################################################################
 
 import numpy as np
 import numpy.ma as ma
 
-from baseclass  import Array
-from scalar     import Scalar
+from array_  import Array
+from scalar  import Scalar
+from vectorn import VectorN
 
 from oops_.units import Units
 
@@ -31,6 +33,10 @@ class Pair(Array):
     @staticmethod
     def as_pair(arg):
         if isinstance(arg, Pair): return arg
+
+        # Collapse a 1x2 or 2x1 MatrixN down to a Pair
+        if isinstance(arg, Array.MATRIXN_CLASS):
+            return Pair.as_pair(VectorN.as_vectorn(arg))
 
         # If a single value is provided, duplicate it
         try:
@@ -79,6 +85,16 @@ class Pair(Array):
         (x,y) = Array.broadcast_arrays((x,y))
         return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1), x.mask | y.mask,
                                                                x.units)
+
+    def as_column(self):
+        """Converts the vector to an 2x1 column matrix."""
+
+        return VectorN(self).as_column()
+
+    def as_row(self):
+        """Converts the vector to a 1x2 row matrix."""
+
+        return VectorN(self).as_row()
 
     @staticmethod
     def cross_scalars(x,y):

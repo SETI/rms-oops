@@ -6,7 +6,7 @@ import unittest
 
 from utils     import Test_utils
 
-from baseclass import Test_Array
+from array_    import Test_Array
 from empty     import Test_Empty
 from matrix3   import Test_Matrix3
 from matrixn   import Test_MatrixN

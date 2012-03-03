@@ -9,14 +9,11 @@
 
 import numpy as np
 
-from baseclass import Array
-from scalar    import Scalar
+from array_ import Array
 
 class Empty(Array):
     """An empty array, needed in some situations so the moral equivalent of a
     "None" can still respond to basic Array operations."""
-
-    IS_EMPTY = True
 
     def __init__(self, vals=None, mask=False, units=None):
 
@@ -26,6 +23,7 @@ class Empty(Array):
         self.vals  = np.array(0)
         self.mask  = False
         self.units = None
+        self.subfields = {}
 
     # Overrides of standard Array methods
     def __repr__(self): return "Empty()"
@@ -91,6 +89,8 @@ import unittest
 class Test_Empty(unittest.TestCase):
 
     def runTest(self):
+
+        from scalar import Scalar as Scalar
 
         empty = Empty()
         self.assertEqual(empty, Empty())

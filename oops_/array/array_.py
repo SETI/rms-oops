@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/Array.py: Abstract class Array
+# oops_/array/array_.py: Abstract class Array
 #
 # Superclass of Empty, Scalar, Pair, Vector3, Matrix3 and Tuple. All represent
 # N-dimensional arrays of intrinsically dimensional objects.
@@ -11,6 +11,7 @@
 #   are now separate files.
 # Modified 2/8/12 (MRS) -- Supports array masks and units; uses a cleaner set of
 #   definitions for math operators.
+# 3/2/12 MRS: Supports subfields; further cleanup of arithmetic operators.
 ################################################################################
 
 import numpy as np
@@ -48,20 +49,17 @@ class Array(object):
                     masked.
         units       the units of the array, if any. None indicates no units.
 
-        subarrays   a dictionary of the names and values of any subarrays.
-                    Subarrays contain additonal information about an array,
+        subfields   a dictionary of the names and values of any subfields.
+                    Subfields contain additonal information about an array,
                     typically its derivatives with respect to other quantities.
-                    Each subarray also becomes accessible as an attribute of the
+                    Each subfield also becomes accessible as an attribute of the
                     object, with the same name.
 
         mvals       a read-only property that presents tha vals and the mask as
                     a masked array.
     """
 
-    # A constant, defined for all Array subclasses, overridden by subclass Empty
-    IS_EMPTY = False
-
-    IGNORE_SUBARRAYS = False    # Set True if subarrays should be ignored in
+    IGNORE_SUBFIELDS = False    # Set True if subfields should be ignored in
                                 # arithmetic operations.
 
     def __new__(subtype, *arguments, **keywords):
@@ -73,21 +71,21 @@ class Array(object):
                             float=False, dimensionless=False):
         """Default constructor."""
 
-        self.subarrays = {}
+        self.subfields = {}
 
-        # Convert the mask to an array if necessary
+        # Convert the mask to boolean and to an array if necessary
         if np.shape(mask) == ():
             mask = bool(mask)
         else:
             mask = np.asarray(mask).astype("bool")
 
-        # Interpret the data as something already of class Array
+        # Interpret the data if it is something already of class Array
         if isinstance(arg, Array):
             if arg.rank == rank:
                 mask = arg.mask | mask
-                arg = arg.vals
                 if units is None: units = arg.units
-                self.subarrays = subarrays
+                self.subfields = arg.subfields
+                arg = arg.vals
             else:
                 raise ValueError("class " + type(arg).__name__ +
                                  " cannot be converted to class " +
@@ -173,33 +171,48 @@ class Array(object):
 
     @staticmethod
     def is_empty(arg):
-        """Returns True if the arg is of the Empty class. Carefully written to
-        avoid the need to import the Empty subclass."""
-
-        return isinstance(arg, Array) and arg.IS_EMPTY
+        return isinstance(arg, Array.EMPTY_CLASS)
 
     @staticmethod
-    def as_scalar(arg):
-        """Calls the function Scalar.as_scalar() using the given argument.
-        Carefully written to avoid a circularity in the load order."""
-
+    def into_scalar(arg):
         return Array.SCALAR_CLASS.as_scalar(arg)
 
-    @staticmethod
-    def masked_version(arg)
+    # Conversions to specific classes, which will only work if items match
+    def as_scalar(self):
+        return Array.SCALAR_CLASS.as_scalar(self)
+
+    def as_pair(self):
+        return Array.PAIR_CLASS.as_pair(self)
+
+    def as_tuple(self):
+        return Array.TUPLE_CLASS.as_pair(self)
+
+    def as_vector3(self):
+        return Array.VECTOR3_CLASS.as_vector3(self)
+
+    def as_vectorn(self):
+        return Array.VECTORN_CLASS.as_vectorn(self)
+
+    def as_matrix3(self):
+        return Array.MATRIX3_CLASS.as_matrix3(self)
+
+    def as_matrixn(self):
+        return Array.MATRIXN_CLASS.as_matrixn(self)
+
+    def masked_version(self):
         """Retuns on Array of the same subclass, containing a single masked
         value."""
 
-        obj = Array.__new__(type(arg))
+        obj = Array.__new__(type(self))
 
-        if type(arg.vals) == type(np.ndarray):
-            vals = np.zeros(arg.item, dtype=arg.vals.dtype)
-        elif type(arg.vals) == type(0):
+        if type(self.vals) == type(np.ndarray):
+            vals = np.zeros(self.item, dtype=self.vals.dtype)
+        elif type(self.vals) == type(0):
             vals = 0
         else:
             vals = 0.
 
-        obj.__init__(vals, True, arg.unit)
+        obj.__init__(vals, True, self.unit)
         return obj
 
     def __repr__(self):
@@ -271,8 +284,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].__copy__())
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].__copy__())
 
         return obj
 
@@ -282,146 +295,80 @@ class Array(object):
     # Subarray support methods
     ####################################################
 
-    def insert_subarray(self, key, value):
-        """Inserts or replaces a subarray."""
+    def insert_subfield(self, key, value):
+        """Inserts or replaces a subfield."""
 
-        self.subarrays[key] = value
+        self.subfields[key] = value
         self.__dict__[key] = value
 
-    def delete_subarray(self, key):
-        """Deletes a subarray."""
+    def delete_subfield(self, key):
+        """Deletes a subfield."""
 
-        if key in self.subarrays.keys():
-            del self.subarrays[key]
+        if key in self.subfields.keys():
+            del self.subfields[key]
             del self.__dict__[key]
 
-    def delete_subarrays(self):
-        """Deletes all subarrays."""
+    def delete_subfields(self):
+        """Deletes all subfields."""
 
-        for key in self.subarrays.key():
+        for key in self.subfields.key():
             del self.__dict__[key]
 
-        self.subarrays = {}
+        self.subfields = {}
 
-    def add_to_subarray(self, key, value):
-        """Adds to an existing subarray of the same name, or else inserts a new
-        subarray with this value."""
+    def add_to_subfield(self, key, value):
+        """Adds to an existing subfield of the same name, or else inserts a new
+        subfield with this value."""
 
-        if key in self.subarrays.keys():
-            self.subarrays[key] = self.subarrays[key] + value 
-            self.__dict__[key] = self.subarrays[key]
+        if key in self.subfields.keys():
+            self.subfields[key] = self.subfields[key] + value 
+            self.__dict__[key] = self.subfields[key]
             return
 
-        self.insert_subarray(key, value)
+        self.insert_subfield(key, value)
 
     ####################################################
     # Arithmetic support methods
     ####################################################
 
-    def get_array_mask_unit(self, op, arg):
-        """This method converts the right operand to the same Array subclass
-        as self, and then returns the array, mask, and new units, if any."""
+    def as_if_my_type(self, arg):
+        """This method converts an operand to the same class as self, and then
+        returns a tuple (values, mask, units)."""
 
-        abbrev = op[0]
+        if not isinstance(arg, type(self)):
+            obj = Array.__new__(type(self))
+            obj.__init__(arg)
+            arg = obj
 
-        # Addition, subtraction and replacement
-        if abbrev in ("+", "-", "["):
+        return (arg.vals, arg.mask, arg.units)
 
-            # Convert to the same subclass if necessary
-            if not isinstance(arg, type(self)):
-                obj = Array.__new__(type(self))
-                obj.__init__(arg)
-                arg = obj
+    def as_if_my_rank(self, arg):
+        """This method converts an operand to the same rank as self, making it
+        suitable for Numpy multiplication or division with self. It returns a
+        a tuple (values, mask, units)."""
 
-            arg_vals = arg.vals
+        arg = Array.into_scalar(arg)
 
-            # Find the common units
-            if self.units is None:
-                new_units = arg.units
-            elif arg.units is None:
-                new_units = self.units
-            elif arg.units.exponents == self.units.exponents:
-                new_units = self.units
-                arg_vals = arg.units.convert(arg_vals, self.units)
-            else:
-                # If the units are incompatible, raise an error
-                raise self.raise_unit_mismatch(op, arg.units)
-
-            return (arg_vals, arg.mask, new_units)
-
-        # Multiplication, division and modulus
-
-        # If the second operand is a unit...
-        if isinstance(arg, Units):
-            arg_vals = 1
-            arg_mask = False
-            arg_units = arg
-
-        # If it's the same subclass...
-        elif isinstance(arg, type(self)):
-            arg_vals = arg.vals
-            arg_mask = arg.mask
-            arg_units = arg.units
-
+        if self.rank > 0:
+            vals = np.reshape(arg.vals, arg.shape + self.rank * [1])
         else:
-            # Try casting to the same subclass...
-            try:
-                obj = Array.__new__(type(self))
-                obj.__init__(arg)
-                arg_vals = obj.vals
-                arg_mask = obj.mask
-                arg_units = obj.units
-            except:
-                # On failure, try casting to a Scalar
-                try:
-                    arg = Array.as_scalar(arg)
-                except:
-                    # On failure, raise the previous error
-                    obj = Array.__new__(type(self))
-                    obj.__init__(arg)
+            vals = arg.vals
 
-                # Reshape the scalar for compatibility with self.vals
-                arg_vals = np.reshape(arg.vals, np.shape(arg.vals) +
-                                                self.rank * (1,))
-                arg_mask = arg.mask
-                arg_units = arg.units
+        return (vals, arg.mask, arg.units)
 
-        # Find the resulting units
-        if abbrev == "*":
-            new_units = Units.mul_units(self.units, arg_units)
-        else:
-            new_units = Units.div_units(self.units, arg_units)
+    def as_if_my_units(self, vals, units):
+        """This method converts an operand to the same units as self, making it
+        suitable for Numpy addition or subtraction with self. It returns a
+        a tuple (values, mask, units)."""
 
-        return (arg_vals, arg_mask, new_units)
+        # Find the common units
+        if units is None:
+            return (vals, self.units)
 
-    def raise_type_mismatch(self, op, arg):
-        """Raises a ValueError with text indicating that the operand types are
-        unsupported."""
+        if self.units is None:
+            return (vals, units)
 
-        raise ValueError("unsupported operand types for '" + op +
-                         "': '"    + type(self).__name__ +
-                         "' and '" + type(arg).__name__  + "'")
-
-    def raise_shape_mismatch(self, op, vals):
-        """Raises a ValueError with text indicating that the operand shapes are
-        incompatible."""
-
-        raise ValueError("incompatible operand shapes for '" + op +
-                         "': "   + str(tuple(self.shape)) +
-                         " and " + str(np.shape(vals)))
-
-    def raise_unit_mismatch(self, op, units):
-        """Raises a ValueError with text indicating that the operand units are
-        incompatible."""
-
-        self_units = self.units
-        if self_units is None: self_units = Units.UNITLESS
-
-        if units is None: units = Units.UNITLESS
-
-        raise ValueError("incompatible units for '" + op +
-                         "': '"   + self_units.name +
-                         "' and '" + units.name + "'")
+        return (units.convert(vals, self.units), self.units)
 
     ####################################################
     # Unary operators
@@ -434,9 +381,9 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(-self.vals, self.mask, self.units)
 
-        if not Array.IGNORE_SUBARRAYS:
-            for key in self.subarrays.keys():
-                obj.insert_subarray(key, -self.subarrays[key])
+        if not Array.IGNORE_SUBFIELDS:
+            for key in self.subfields.keys():
+                obj.insert_subfield(key, -self.subfields[key])
 
         return obj
 
@@ -444,7 +391,7 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(np.abs(self.vals), self.mask, self.units)
 
-        # This operation does not preserve subarrays
+        # This operation does not preserve subfields
 
         return obj
 
@@ -455,66 +402,60 @@ class Array(object):
     def __add__(self, arg):
         if Array.is_empty(arg): return arg
 
-        (vals, mask, new_units) = self.get_array_mask_unit("+", arg)
+        (vals, mask, units) = self.as_if_my_type(arg)
+        (vals, units) = self.as_if_my_units(vals, units)
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals + vals, self.mask | mask, units)
+        obj.units = units
 
-        try:
-            obj = Array.__new__(type(self))
-            obj.__init__(self.vals + vals, self.mask | mask, new_units)
-        except:
-            self.raise_shape_mismatch("+", vals)
-
-        if not Array.IGNORE_SUBARRAYS:
-            obj.add_subarrays(self, arg)
+        if not Array.IGNORE_SUBFIELDS:
+            obj.add_subfields(self, arg)
 
         return obj
 
     def __radd__(self, arg): return self.__add__(arg)
 
     def __iadd__(self, arg):
-        (vals, mask, new_units) = self.get_array_mask_unit("+=", arg)
+        (vals, mask, units) = self.as_if_my_type(arg)
+        (vals, units) = self.as_if_my_units(vals, units)
+        self.vals += vals
+        self.mask |= mask
+        self.units = units
 
-        try:
-            self.vals += vals
-            self.mask |= mask
-        except:
-            self.raise_shape_mismatch("+=", vals)
-
-        self.units = new_units
-
-        if not Array.IGNORE_SUBARRAYS:
-            self.iadd_subarrays(self, arg)
+        if not Array.IGNORE_SUBFIELDS:
+            self.iadd_subfields(arg)
 
         return self
 
-    def add_subarrays(self, arg1, arg2):
+    def add_subfields(self, arg1, arg2):
         if isinstance(arg2, Array):
-            set1 = set(arg1.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set1 -= set12
             set2 -= set12
             for key in set12:
-                self.insert_subarray(key, arg1.subarrays[key] +
-                                          arg2.subarrays[key]))
+                self.insert_subfield(key, arg1.subfields[key] +
+                                          arg2.subfields[key])
             for key in set1:
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+                self.insert_subfield(key, arg1.subfields[key].copy())
             for key in set2:
-                self.insert_subarray(key, arg2.subarrays[key].copy())
+                self.insert_subfield(key, arg2.subfields[key].copy())
         else:
-            for key in arg1.subarrays.keys():
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+            for key in arg1.subfields.keys():
+                self.insert_subfield(key, arg1.subfields[key].copy())
 
-    def iadd_subarrays(self, arg2):
+    def iadd_subfields(self, arg2):
         if isinstance(arg2, Array):
-            set1 = set(self.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(self.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set2 -= set12
             for key in set12:
-                self.subarrays[key] += arg2.subarrays[key]
-                self.__dict__[key] = self.subarrays[key]
+                self.subfields[key] += arg2.subfields[key]
+                self.__dict__[key] = self.subfields[key]
             for key in set2:
-                self.insert_subarray(key, arg2.subarrays[key].copy())
+                self.insert_subfield(key, arg2.subfields[key].copy())
 
     ####################################################
     # Subtraction
@@ -523,68 +464,72 @@ class Array(object):
     def __sub__(self, arg):
         if Array.is_empty(arg): return arg
 
-        (vals, mask, new_units) = self.get_array_mask_unit("-", arg)
+        (vals, mask, units) = self.as_if_my_type(arg)
+        (vals, units) = self.as_if_my_units(vals, units)
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals - vals, self.mask | mask, units)
 
-        try:
-            obj = Array.__new__(type(self))
-            obj.__init__(self.vals - vals, self.mask | mask, new_units)
-        except:
-            self.raise_shape_mismatch("-", vals)
-
-        if not Array.IGNORE_SUBARRAYS:
-            obj.sub_subarrays(self, arg)
+        if not Array.IGNORE_SUBFIELDS:
+            obj.sub_subfields(self, arg)
 
         return obj
 
-    def __rsub__(self, arg): return self.__sub__(arg).__neg__()
+    def __rsub__(self, arg):
+        if Array.is_empty(arg): return arg
+
+        (vals, mask, units) = self.as_if_my_type(arg)
+        (vals, units) = self.as_if_my_units(vals, units)
+        obj = Array.__new__(type(self))
+        obj.__init__(vals - self.vals, self.mask | mask, units)
+
+        if not Array.IGNORE_SUBFIELDS:
+            obj.add_subfields(-self, arg)
+
+        return obj
 
     def __isub__(self, arg):
-        (vals, mask, new_units) = self.get_array_mask_unit("-=", arg)
+        (vals, mask, units) = self.as_if_my_type(arg)
+        (vals, units) = self.as_if_my_units(vals, units)
+        self.vals -= vals
+        self.mask |= mask
+        self.units = units
 
-        try:
-            self.vals -= vals
-            self.mask |= mask
-        except:
-            self.raise_shape_mismatch("-=", vals)
-
-        self.units = new_units
-
-        if not Array.IGNORE_SUBARRAYS:
-            self.isub_subarrays(self, arg)
+        if not Array.IGNORE_SUBFIELDS:
+            self.isub_subfields(arg)
 
         return self
 
-    def sub_subarrays(self, arg1, arg2):
+    def sub_subfields(self, arg1, arg2):
         if isinstance(arg2, Array):
-            set1 = set(arg1.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set1 -= set12
             set2 -= set12
 
             for key in set12:
-                self.insert_subarray(key, arg1.subarrays[key] -
-                                          arg2.subarrays[key]))
+                self.insert_subfield(key, arg1.subfields[key] -
+                                          arg2.subfields[key])
             for key in set1:
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+                self.insert_subfield(key, arg1.subfields[key].copy())
             for key in set2:
-                self.insert_subarray(key, -arg2.subarrays[key].copy())
+                self.insert_subfield(key, -arg2.subfields[key].copy())
         else:
-            for key in arg1.subarrays.keys():
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+            for key in arg1.subfields.keys():
+                self.insert_subfield(key, arg1.subfields[key].copy())
 
-    def isub_subarrays(self, arg2):
+    def isub_subfields(self, arg2):
         if isinstance(arg2, Array):
-            set1 = set(self.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(self.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set2 -= set12
 
             for key in set12:
-                self.subarrays[key] -= arg2.subarrays[key]
-                self.__dict__[key] = self.subarrays[key]
+                self.subfields[key] -= arg2.subfields[key]
+                self.__dict__[key] = self.subfields[key]
             for key in set2:
-                self.insert_subarray(key, -arg2.subarrays[key])
+                self.insert_subfield(key, -arg2.subfields[key])
 
     ####################################################
     # Multiplication
@@ -593,86 +538,78 @@ class Array(object):
     def __mul__(self, arg):
         if Array.is_empty(arg): return arg
 
-        if isinstance(arg, Units):
-            return self.__mul__(Array.as_scalar(1,units=arg))
-
         try:
-            (vals, mask, new_units) = self.get_array_mask_unit("*", arg)
-        except:
-            if isinstance(arg, Array) and self.rank == 0:
-                return arg.__mul__(self)
-            raise
-
-        try:
-            new_vals = self.vals * vals
-        except:
-            self.raise_shape_mismatch("*", vals)
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                return Array.into_scalar(arg).__mul__(self)
+            except:
+                raise e
 
         obj = Array.__new__(type(self))
-        obj.__init__(new_vals, self.mask | mask, new_units)
+        obj.__init__(self.vals * vals,
+                     self.mask | mask,
+                     Units.mul_units(self.units, units))
 
-        if not Array.IGNORE_SUBARRAYS:
-            obj.mul_subarrays(self, arg)
+        if not Array.IGNORE_SUBFIELDS:
+            obj.mul_subfields(self, arg)
 
         return obj
 
     # Reverse-multiply if forward multiply fails
+    # This takes care of 2 * Array, for example
     def __rmul__(self, arg):
-        result = self.__mul__(arg)
-        if result is not NotImplemented: return result
-
-        # On failure, raise the original exception
-        (vals, mask, new_units) = self.get_array_mask_unit("*", arg)
-        obj = Array.__new__(type(self))
-        obj.__init__(new_vals, self.mask | mask, new_units)
+        return self.__mul__(arg)
 
     def __imul__(self, arg):
-        (vals, mask, new_units) = self.get_array_mask_unit("*=", arg)
-
         try:
-            self.vals *= vals
-            self.mask |= mask
-        except:
-            self.raise_shape_mismatch("*=", vals)
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                (vals, mask, units) = self.as_if_my_rank(arg)
+            except:
+                raise e
 
-        self.units = new_units
+        self.vals *= vals
+        self.mask |= mask
+        self.units = Units.mul_units(self.units, units)
 
-        if not Array.IGNORE_SUBARRAYS:
-            self.imul_subarrays(arg)
+        if not Array.IGNORE_SUBFIELDS:
+            self.imul_subfields(arg)
 
         return self
 
-    def mul_subarrays(self, arg1, arg2):
+    def mul_subfields(self, arg1, arg2):
         if isinstance(arg2, Array):
-            set1 = set(arg1.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set1 -= set12
             set2 -= set12
 
             for key in set12:
-                self.insert_subarray(key, arg1.subarrays[key] *
-                                          arg2.subarrays[key]))
+                self.insert_subfield(key, arg1.subfields[key] *
+                                          arg2.subfields[key])
             for key in set1:
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+                self.insert_subfield(key, arg1.subfields[key].copy())
             for key in set2:
-                self.insert_subarray(key, arg2.subarrays[key].copy())
+                self.insert_subfield(key, arg2.subfields[key].copy())
         else:
-            for key in arg1.subarrays.keys():
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+            for key in arg1.subfields.keys():
+                self.insert_subfield(key, arg1.subfields[key].copy())
 
-    def imul_subarrays(self, arg2):
+    def imul_subfields(self, arg2):
         if isinstance(arg2, Array):
-            set1 = set(self.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(self.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set2 -= set12
 
             for key in set12:
-                self.subarrays[key] *= arg2.subarrays[key]
-                self.__dict__[key] = self.subarrays[key]
+                self.subfields[key] *= arg2.subfields[key]
+                self.__dict__[key] = self.subfields[key]
             for key in set2:
-                self.insert_subarray(key, arg2.subarrays[key])
+                self.insert_subfield(key, arg2.subfields[key])
 
     ####################################################
     # Division
@@ -681,145 +618,158 @@ class Array(object):
     def __div__(self, arg):
         if Array.is_empty(arg): return arg
 
-        (vals, mask, new_units) = self.get_array_mask_unit("/", arg)
+        try:
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                return Array.into_scalar(arg).__rdiv__(self)
+            except:
+                raise e
 
-        # Mask any items divided by zero
+        # Mask any items to be divided by zero
         div_by_zero = (vals == 0)
         if np.any(div_by_zero):
-
-            # Handle scalar case
-            if np.shape(vals) == ():
-                obj = Array.__new__(type(self))
-                obj.__init__(self.vals, True, new_units)
-                return obj
-
-            # Prevent any warning
-            if np.shape(vals) != ():
-                vals = vals.copy()
-                vals[div_by_zero] = 1
-
-            # Collapse rightmost mask axes based on rank of object
-            for i in range(self.rank):
+            vals = vals.copy()
+            vals[div_by_zero] = 1
+            # Collapse mask down to one element per item of Array
+            for iters in range(self.rank):
                 div_by_zero = np.any(div_by_zero, axis=-1)
-
         else:
-            # Avoid converting a scalar mask to an array unless necessary
             div_by_zero = False
 
-        try:
-            obj = Array.__new__(type(self))
-            obj.__init__(self.vals / vals,
-                         self.mask | mask | div_by_zero, new_units)
-        except:
-            self.raise_shape_mismatch("/", vals)
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals / vals,
+                     self.mask | mask | div_by_zero,
+                     Units.div_units(self.units, units))
 
-        if not Array.IGNORE_SUBARRAYS:
-            obj.div_subarrays(self, arg)
+        if not Array.IGNORE_SUBFIELDS:
+            obj.div_subfields(self, arg)
 
         return obj
 
     def __idiv__(self, arg):
+        try:
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                (vals, mask, units) = self.as_if_my_rank(arg)
+            except:
+                raise e
 
-        (vals, mask, new_units) = self.get_array_mask_unit("/=", arg)
-
-        div_by_zero = np.any(vals == 0, axis=-1)
-        if not np.any(div_by_zero):
+        # Mask any items to be divided by zero
+        div_by_zero = (vals == 0)
+        if np.any(div_by_zero):
+            vals = vals.copy()
+            vals[div_by_zero] = 1
+            # Collapse mask down to one element per item of Array
+            for iters in range(self.rank):
+                div_by_zero = np.any(div_by_zero, axis=-1)
+        else:
             div_by_zero = False
 
-        try:
-            self.vals /= vals
-            self.mask |= (mask | div_by_zero)
-        except:
-            self.raise_shape_mismatch("/=", vals)
+        self.vals /= vals
+        self.mask |= (mask | div_by_zero)
+        self.units = Units.div_units(self.units, units)
 
-        self.units = new_units
-
-        if not Array.IGNORE_SUBARRAYS:
-            self.idiv_subarrays(arg)
+        if not Array.IGNORE_SUBFIELDS:
+            self.idiv_subfields(arg)
 
         return self
 
-    def div_subarrays(self, arg1, arg2):
+    def div_subfields(self, arg1, arg2):
         if isinstance(arg2, Array):
-            set1 = set(arg1.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set1 -= set12
             set2 -= set12
 
             for key in set12:
-                self.insert_subarray(key, arg1.subarrays[key] /
-                                          arg2.subarrays[key]))
+                self.insert_subfield(key, arg1.subfields[key] /
+                                          arg2.subfields[key])
             for key in set1:
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+                self.insert_subfield(key, arg1.subfields[key].copy())
             for key in set2:
-                self.insert_subarray(key, 1./arg2.subarrays[key])
+                self.insert_subfield(key, 1./arg2.subfields[key])
         else:
-            for key in arg1.subarrays.keys():
-                self.insert_subarray(key, arg1.subarrays[key].copy())
+            for key in arg1.subfields.keys():
+                self.insert_subfield(key, arg1.subfields[key].copy())
 
-    def idiv_subarrays(self, arg2):
+    def idiv_subfields(self, arg2):
         if isinstance(arg2, Array):
-            set1 = set(self.subarrays)
-            set2 = set(arg2.subarrays)
+            set1 = set(self.subfields)
+            set2 = set(arg2.subfields)
             set12 = set1 & set2
             set2 -= set12
 
             for key in set12:
-                self.subarrays[key] /= arg2.subarrays[key]
-                self.__dict__[key] = self.subarrays[key]
+                self.subfields[key] /= arg2.subfields[key]
+                self.__dict__[key] = self.subfields[key]
             for key in set2:
-                self.insert_subarray(key,1./ arg2.subarrays[key])
+                self.insert_subfield(key,1./ arg2.subfields[key])
 
     ####################################################
     # Other operators
     #
-    # These operations never preserve subarrays
+    # These operations never preserve subfields
     ####################################################
 
     def __mod__(self, arg):
         if Array.is_empty(arg): return arg
 
-        (vals, mask, new_units) = self.get_array_mask_unit("%", arg)
+        try:
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                return Array.into_scalar(arg).__rmod__(self)
+            except:
+                raise e
 
-        # Mask any items divided by zero
+        # Mask any items to be divided by zero
         div_by_zero = (vals == 0)
         if np.any(div_by_zero):
-
-            # Prevent any warning
+            vals = vals.copy()
             vals[div_by_zero] = 1
-
-            # Collapse rightmost mask axes based on rank of object
-            for i in range(self.rank):
+            # Collapse mask down to one element per item of Array
+            for iters in range(self.rank):
                 div_by_zero = np.any(div_by_zero, axis=-1)
-
         else:
-            # Avoid converting a scalar mask to an array unless necessary
             div_by_zero = False
 
-        try:
-            obj = Array.__new__(type(self))
-            obj.__init__(self.vals % vals,
-                         self.mask | mask | div_by_zero, new_units)
-            return obj
-        except:
-            self.raise_shape_mismatch("%", obj.vals)
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals % vals,
+                     self.mask | mask | div_by_zero,
+                     Units.div_units(self.units, units))
+
+        if not Array.IGNORE_SUBFIELDS:
+            obj.div_subfields(self, arg)
+
+        return obj
 
     def __imod__(self, arg):
+        try:
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                (vals, mask, units) = self.as_if_my_rank(arg)
+            except:
+                raise e
 
-        (vals, mask, new_units) = self.get_array_mask_unit("%=", arg)
-
-        div_by_zero = np.any(vals == 0, axis=-1)
-        if not np.any(div_by_zero):
+        div_by_zero = (vals == 0)
+        if np.any(div_by_zero):
+            vals = vals.copy()
+            vals[div_by_zero] = 1
+        else:
             div_by_zero = False
 
-        try:
-            self.vals %= vals
-            self.mask |= (mask | div_by_zero)
-            self.units = new_units
-            return self
-        except:
-            self.raise_shape_mismatch("%=", vals)
+        self.vals %= vals
+        self.mask |= (mask | div_by_zero)
+        self.units = Units.div_units(self.units, units)
+
+        if not Array.IGNORE_SUBFIELDS:
+            self.idiv_subfields(arg)
+
+        return self
 
     def __pow__(self, arg):
         if Array.is_empty(arg): return arg
@@ -884,12 +834,12 @@ class Array(object):
 
         # Quick test: If both masks are empty, just return the comparison
         if (not np.any(self.mask) and not np.any(arg.mask)):
-            return Array.as_scalar(compare)
+            return Array.into_scalar(compare)
 
         # Otherwise, perform the detailed comparison
         compare[self.mask & arg.mask] = True
         compare[self.mask ^ arg.mask] = False
-        return Array.as_scalar(compare)
+        return Array.into_scalar(compare)
 
     def __ne__(self, arg):
 
@@ -925,12 +875,12 @@ class Array(object):
 
         # Quick test: If both masks are empty, just return the comparison
         if (not np.any(self.mask) and not np.any(arg.mask)):
-            return Array.as_scalar(compare)
+            return Array.into_scalar(compare)
 
         # Otherwise, perform the detailed comparison
         compare[self.mask & arg.mask] = False
         compare[self.mask ^ arg.mask] = True
-        return Array.as_scalar(compare)
+        return Array.into_scalar(compare)
 
     def __nonzero__(self):
         """This is the test performed by an if clause."""
@@ -938,42 +888,6 @@ class Array(object):
         if self.mask is False:
             return bool(np.all(self.vals))
         return bool(np.all(self.vals[~self.mask]))
-
-    ####################################
-    # Default binary logical operators
-    ####################################
-
-    # (<) operator
-    def __lt__(self, arg):
-        return self.raise_type_mismatch("<", arg)
-
-    # (>) operator
-    def __gt__(self, arg):
-        return self.raise_type_mismatch(">", arg)
-
-    # (<=) operator
-    def __le__(self, arg):
-        return self.raise_type_mismatch("<=", arg)
-
-    # (>=) operator
-    def __ge__(self, arg):
-        return self.raise_type_mismatch(">=", arg)
-
-    # (~) operator
-    def __invert__(self):
-        return self.raise_type_mismatch("~", arg)
-
-    # (&) operator
-    def __and__(self, arg):
-        return self.raise_type_mismatch("&", arg)
-
-    # (|) operator
-    def __or__(self, arg):
-        return self.raise_type_mismatch("|", arg)
-
-    # (^) operator
-    def __xor__(self, arg):
-        return self.raise_type_mismatch("^", arg)
 
     ####################################
     # Indexing operators
@@ -1039,74 +953,73 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
         return obj
 
-    def __setitem__(self, i, arg):
-
-        # Handle a single boolean index
-        if i is False:
-            return self
-        if i is True:
-            obj = Array.__new__(type(self))
-            obj.__init__(arg)
-
-            if np.shape(self.vals) == ():
-                self.vals = obj.vals
-                self.mask = obj.mask
-            else:
-                self.vals[...] = obj.vals
-                if np.shape(self.mask) == ():
-                    self.mask = obj.mask
-                else:
-                    self.mask[...] = obj.mask
-
-            self.units = obj.units
-            return self
-
-        # Get the values and mask after converting arg to the same subclass
-        (vals, mask, new_units) = self.get_array_mask_unit("[]", arg)
-
-        # Replace the value(s)
-        self.vals[i] = vals
-
-        # If the mask is already an array, replace the mask value
-        if np.shape(self.mask) != ():
-            self.mask[i] = mask
-
-        # Otherwise, if the mask values disagree...
-        elif np.any(self.mask != mask):
-
-            # Replace the mask with a boolean array, then fill in the new mask
-            newmask = np.empty(self.shape, dtype="bool")
-            newmask[...] = self.mask
-            newmask[i] = mask
-            self.mask = newmask
-
-        return self
-
-    def __setslice__(self, i, j, arg):
-        """sets slice of items' values to values of arg. if self has no items,
-            i.e. - no shape in the object-sense, then raise IndexError. called
-            from obj[i:j] = arg."""
-
-        # Get the values and mask after converting arg to the same subclass
-        (vals, mask, new_units) = self.get_array_mask_unit("[]", arg)
-
-        # Replace the value(s)
-        self.vals[i:j] = vals
-
-        # If the mask is already an array, replace the mask value
-        if np.shape(self.mask) != ():
-            self.mask[i:j] = mask
-
-        # Otherwise, if the mask values disagree...
-        elif np.any(self.mask != mask):
-
-            # Replace the mask with a boolean array, then fill in the new mask
-            newmask = np.empty(self.shape, dtype="bool")
-            newmask[...] = self.mask
-            newmask[i:j] = mask
-            self.mask = newmask
-
-        return self
+#     def __setitem__(self, i, arg):
+# 
+#         # Handle a single boolean index
+#         if i is False:
+#             return self
+#         if i is True:
+#             obj = Array.__new__(type(self))
+#             obj.__init__(arg)
+# 
+#             if np.shape(self.vals) == ():
+#                 self.vals = obj.vals
+#                 self.mask = obj.mask
+#             else:
+#                 self.vals[...] = obj.vals
+#                 if np.shape(self.mask) == ():
+#                     self.mask = obj.mask
+#                 else:
+#                     self.mask[...] = obj.mask
+# 
+#             self.units = obj.units
+#             return self
+# 
+#         # Get the values and mask after converting arg to the same subclass
+#         (vals, mask, units) = self.as_if_my_type(arg)
+#         (vals, units) = self.as_if_my_units(vals, units)
+# 
+#         # Replace the value(s)
+#         self.vals[i] = vals
+# 
+#         # If the mask is already an array, replace the mask value
+#         if np.shape(self.mask) != ():
+#             self.mask[i] = mask
+# 
+#         # Otherwise, if the mask values disagree...
+#         elif np.any(self.mask != mask):
+# 
+#             # Replace the mask with a boolean array, then fill in the new mask
+#             newmask = np.empty(self.shape, dtype="bool")
+#             newmask[...] = self.mask
+#             newmask[i] = mask
+#             self.mask = newmask
+# 
+#         return self
+# 
+#     def __setslice__(self, i, j, arg):
+# 
+#         # Get the values and mask after converting arg to the same subclass
+#         (vals, mask, units) = self.as_if_my_type(arg)
+#         (vals, units) = self.as_if_my_units(vals, units)
+# 
+#         # Replace the value(s)
+#         self.vals[i:j] = vals
+# 
+#         # If the mask is already an array, replace the mask value
+#         if np.shape(self.mask) != ():
+#             self.mask[i:j] = mask
+# 
+#         # Otherwise, if the mask values disagree...
+#         elif np.any(self.mask != mask):
+# 
+#             # Replace the mask with a boolean array, then fill in the new mask
+#             newmask = np.empty(self.shape, dtype="bool")
+#             newmask[...] = self.mask
+#             newmask[i:j] = mask
+#             self.mask = newmask
+# 
+#         return self
 
     ####################################
     # Value Transformations
@@ -1132,9 +1045,6 @@ class Array(object):
         obj.__init__(vals, self.mask, self.units)
         return obj
 
-    ####################################
-    # Unit conversions
-    ####################################
     # Note that these three methods have slightly different methods for how to
     # handle units of None.
 
@@ -1222,8 +1132,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].swapaxes(axis1,axis2))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].swapaxes(axis1,axis2))
 
         return obj
 
@@ -1251,8 +1161,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].reshape(shape))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].reshape(shape))
 
         return obj
 
@@ -1279,8 +1189,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].flatten())
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].flatten())
 
         return obj
 
@@ -1302,8 +1212,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].reorder_axes(axes))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].reorder_axes(axes))
 
         return obj
 
@@ -1322,8 +1232,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].append_axes(axes))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].append_axes(axes))
 
         return obj
 
@@ -1343,8 +1253,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].prepend_axes(axes))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].prepend_axes(axes))
 
         return obj
 
@@ -1364,8 +1274,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].strip_axes(axes))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].strip_axes(axes))
 
         return obj
 
@@ -1387,8 +1297,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].rotate_axes(axis))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].rotate_axes(axis))
 
         return obj
 
@@ -1412,8 +1322,8 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subarrays.keys():
-            obj.insert_subarray(key, self.subarrays[key].rebroadcast(newshape))
+        for key in self.subfields.keys():
+            obj.insert_subfield(key, self.subfields[key].rebroadcast(newshape))
 
         return obj
 

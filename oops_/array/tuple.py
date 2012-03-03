@@ -3,15 +3,15 @@
 #
 # Created 1/12/12 (MRS)
 # Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
+# 3/2/12 MRS: Integrated with VectorN and MatrixN.
 ################################################################################
 
 import numpy as np
 import numpy.ma as ma
 
-from baseclass  import Array
-from scalar     import Scalar
-from pair       import Pair
-from vector3    import Vector3
+from array_  import Array
+from scalar  import Scalar
+from pair    import Pair
 
 from oops_.units import Units
 

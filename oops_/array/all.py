@@ -1,10 +1,10 @@
 ################################################################################
-# oops_/array_/__init__.py
+# oops_/array/all.py
 ################################################################################
 
 # Import Array and all its subclasses into a common name space
 
-from baseclass import Array
+from array_    import Array
 from empty     import Empty
 from matrix3   import Matrix3
 from matrixn   import MatrixN

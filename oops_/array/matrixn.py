@@ -1,17 +1,17 @@
 ################################################################################
 # oops_/array_/matrixn.py: MatrixN subclass of class Array
 #
-# 2/25/11 Created (MRS)
+# 3/2/12 Created (MRS)
 ################################################################################
 
 import numpy as np
 import numpy.ma as ma
 
-from baseclass import Array
-from pair      import Pair
-from scalar    import Scalar
-from vector3   import Vector3
-from vectorn   import VectorN
+from array_  import Array
+from pair    import Pair
+from scalar  import Scalar
+from vector3 import Vector3
+from vectorn import VectorN
 
 class MatrixN(Array):
     """An Array of arbitrary matrices."""
@@ -121,26 +121,29 @@ class MatrixN(Array):
 
             # MatrixN * any matrix is standard matrix multiply
             if arg.rank == 2:
-                result = multiply_matrix(self, arg)
+                result = self.multiply_matrix(arg)
 
             # MatrixN * any vector is matrix multiply
             elif arg.rank == 1:
-                result = multiply_vector(self, arg)
+                result = self.multiply_vector(arg)
 
             # Anything else is treated as Scalar multiply
             else:
-                return Array.__mul__(self, arg)
+                return Array.__mul__(arg)
 
-            # Multiply subarrays if necessary
-            if Array.SUBARRAY_ARITHMETIC:
-                result.mul_subarrays(self, arg)
+            # Multiply subfields if necessary
+            if not Array.IGNORE_SUBFIELDS:
+                result.mul_subfields(self, arg)
 
             return result
+
+        # Otherwise, perform a standard multiply
+        return Array.__mul__(self, arg)
 
     def __rmul__(self, arg):
 
         # VectorN * MatrixN is matrix post-multiply
-        if isinstance(arg, Array) and arg.rank == 1
+        if isinstance(arg, Array) and arg.rank == 1:
             return VectorN(arg).as_row() * arg
 
         # Otherwise, only scalar multiply is allowed
@@ -159,8 +162,8 @@ class MatrixN(Array):
             self.vals[...] = result[...]
             self.mask |= arg.mask
 
-            if Array.SUBARRAY_ARITHMETIC:
-                self.imul_subarrays(arg)
+            if not Array.IGNORE_SUBFIELDS:
+                self.imul_subfields(arg)
 
             return self
 
@@ -172,7 +175,7 @@ class MatrixN(Array):
     ####################################################
 
     def __div__(self, arg):
-        raise ValueError("MatrixN division is not supported")
+        return Scalar.as_scalar(arg).__rdiv__(self)
 
     def __rdiv__(self, arg):
         raise ValueError("MatrixN division is not supported")
@@ -182,6 +185,25 @@ class MatrixN(Array):
 
     def __invert__(self):
         return self.inverse()
+
+    ####################################################
+    # Overrides of boolean operators
+    ####################################################
+
+    # A VectorN can be equal to either a row or column MatrixN
+    def __eq__(self, arg):
+        if isinstance(arg, (VectorN,Vector3)):
+            if self.item[0] == 1: return self == arg.as_row()
+            if self.item[1] == 1: return self == arg.as_column()
+
+        return Array.__eq__(self, arg)
+
+    def __ne__(self, arg):
+        if isinstance(arg, (VectorN,Vector3)):
+            if arg.item[0] == 1: return self != arg.as_row()
+            if arg.item[1] == 1: return self != arg.as_column()
+
+        return Array.__ne__(self, arg)
 
 ################################################################################
 # Once defined, register with VectorN class

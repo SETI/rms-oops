@@ -1,17 +1,14 @@
 ################################################################################
 # oops_/array_/vectorn.py: VectorN subclass of class Array
 #
-# Created 2/22/12 (MRS)
+# Created 3/2/12 (MRS)
 ################################################################################
 
 import numpy as np
 import numpy.ma as ma
 
-from baseclass  import Array
-from scalar     import Scalar
-from pair       import Pair
-from vector3    import Vector3
-from tuple      import Tuple
+from array_  import Array
+from scalar  import Scalar
 
 from oops_.units import Units
 
@@ -32,6 +29,18 @@ class VectorN(Array):
     @staticmethod
     def as_vectorn(arg):
         if isinstance(arg, VectorN): return arg
+
+        # Collapse a 1xN or Nx1 MatrixN down to a VectorN
+        if isinstance(arg, Array.MATRIXN_CLASS):
+
+            if arg.item[0] == 1:
+                return VectorN(arg.vals.reshape(arg.shape + [arg.item[1]]),
+                               arg.mask, arg.units)
+
+            if arg.item[1] == 1:
+                return VectorN(arg.vals.reshape(arg.shape + [arg.item[0]]),
+                               arg.mask, arg.units)
+
         return VectorN(arg)
 
     @staticmethod
@@ -58,24 +67,14 @@ class VectorN(Array):
     def as_column(self):
         """Converts the vector to an Nx1 column matrix."""
 
-        if np.shape(self.mask) == ():
-            mask = self.mask
-        else:
-            mask = self.mask[..., np.newaxis]
-
         return VectorN.MATRIXN_CLASS(self.vals[..., np.newaxis],
-                                     mask, self.units)
+                                     self.mask, self.units)
 
     def as_row(self):
         """Converts the vector to a 1xN row matrix."""
 
-        if np.shape(self.mask) == ():
-            mask = self.mask
-        else:
-            mask = self.mask[..., np.newaxis, :]
-
         return VectorN.MATRIXN_CLASS(self.vals[..., np.newaxis, :],
-                                     mask, self.units)
+                                     self.mask, self.units)
 
     def dot(self, arg):
         """Returns the dot products of the vectors as a Scalar."""
@@ -96,7 +95,8 @@ class VectorN(Array):
     def unit(self):
         """Returns a the vector converted to unit length as a VectorN."""
 
-        return VectorN(self.vals / np.sqrt(np.sum(self.vals**2, axis=-1)),
+        return VectorN(self.vals /
+                       np.sqrt(np.sum(self.vals**2, axis=-1))[..., np.newaxis],
                        self.mask)
 
     def cross(self, arg):
@@ -153,7 +153,7 @@ class VectorN(Array):
         return Array.MATRIXN_CLASS(vals, self.mask)
 
     ####################################################
-    # Overrides of binary arithmetic operators
+    # Overrides of arithmetic operators
     ####################################################
 
     def __mul__(self, arg):
@@ -161,8 +161,8 @@ class VectorN(Array):
         if isinstance(arg, Array):
 
             # Assume vector * matrix is pre-multiply
-            if arg.rank >= 2:
-                return self.as_column() * arg
+            if arg.rank == 2:
+                return VectorN.as_vectorn(self.as_row() * arg)
 
             # Assume vector * vector is outer multiply
             if arg.rank == 1:
@@ -174,6 +174,21 @@ class VectorN(Array):
     def __rmul__(self, arg):
 
         return self.__mul__(arg)
+
+    # A VectorN can be equal to either a row or column MatrixN
+    def __eq__(self, arg):
+        if isinstance(arg, Array.MATRIXN_CLASS):
+            if arg.item[0] == 1: return self.as_row() == arg
+            if arg.item[1] == 1: return self.as_column() == arg
+
+        return Array.__eq__(self, arg)
+
+    def __ne__(self, arg):
+        if isinstance(arg, Array.MATRIXN_CLASS):
+            if arg.item[0] == 1: return self.as_row() != arg
+            if arg.item[1] == 1: return self.as_column() != arg
+
+        return Array.__ne__(self, arg)
 
 ################################################################################
 # Once defined, register with Array class
@@ -193,7 +208,8 @@ class Test_VectorN(unittest.TestCase):
 
         omega = VectorN(np.random.rand(30,3))
         test = VectorN(np.random.rand(20,30,3))
-        self.assertEqual(omega.cross(test), omega.cross_as_matrix() * test)
+        self.assertEqual(omega.cross(test),
+                         omega.cross_product_as_matrix() * test)
 
 ########################################
 if __name__ == '__main__':
