@@ -432,7 +432,7 @@ class Path(object):
             prev_max_dlt = max_dlt
             max_dlt = abs(dlt).max()
 
-            if LOGGING.path_iterations: print iter, max_dlt
+            if LOGGING.path_iterations: print LOGGING.prefix, iter, max_dlt
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 
@@ -647,7 +647,7 @@ class Path(object):
             return self
 
         if LOGGING.quickpath_creation:
-            print "New QuickPath: " + str(self), (tmin, tmax)
+            print LOGGING.prefix, "New QuickPath: " + str(self), (tmin, tmax)
 
         return QuickPath(self, (tmin, tmax), quickdict)
 

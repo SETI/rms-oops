@@ -4,6 +4,9 @@
 # 2/5/12 Modified (MRS) - Minor updates for style
 # 3/1/12 MRS: Modified convergence criteria in _solve_photons(), added quick
 #   dictionary and config file.
+# 3/5/12 MRS: Added class function resolution(), which calculates spatial
+#   resolution on a surface based on derivatives with respect to pixel
+#   coordinates (u,v).
 ################################################################################
 
 import numpy as np
@@ -38,44 +41,65 @@ class Surface(object):
 
         pass
 
-    def as_coords(self, position, axes=2, **keywords):
+    def as_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
         Input:
-            position    a Vector3 of positions at or near the surface, with
+            pos         a Vector3 of positions at or near the surface, with
                         optional units.
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer. In the case of a RingPlane, this argument is
+                        ignored and can be omitted.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
-            **keywords  any additional keyword=value pairs needed in order to
-                        perform the conversion from position to coordinates.
+            derivs      a boolean or tuple of booleans. If True, then the
+                        partial derivatives of each coordinate with respect to
+                        surface position and observer position are returned as
+                        well. Using a tuple, you can indicate whether to return
+                        partial derivatives on an coordinate-by-coordinate
+                        basis.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate. Values
-                        are always in standard units.
+                        three unitless Scalars, one for each coordinate.
+
+                        If derivs is True, then the coordinate has extra
+                        attributes "d_dpos" and "d_dobs", which contain the
+                        partial derivatives with respect to the surface position
+                        and the observer position, represented as a MatrixN
+                        objects with item shape [1,3].
         """
 
         pass
 
-    def as_vector3(self, coord1, coord2, coord3=0.):
+    def as_vector3(self, coord1, coord2, coord3=Scalar(0.), obs=None,
+                                                            derivs=False):
         """Converts coordinates in the surface's internal coordinate system into
         position vectors at or near the surface.
 
         Input:
-            coord1      a Scalar of values for the first coordinate, with
-                        optional units.
-            coord2      a Scalar of values for the second coordinate, with
-                        optional units.
-            coord3      a Scalar of values for the third coordinate, with
-                        optional units; default is Scalar(0.).
-            **keywords  any additional keyword=value pairs needed in order to
-                        perform the conversion from coordinates to position.
+            coord1, coord2
+                        two Scalars that define the coordinate grid on the
+                        surface.
+            coord3      a third scalar that is equal to zero on the defined
+                        surface and that measures distance away from that
+                        surface.
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer.
+            derivs      if True, the partial derivatives of the returned vector
+                        with respect to the coordinates are returned as well.
 
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
 
-        Return:         the corresponding unitless Vector3 object of positions,
-                        in km.
+        Return:         a unitless Vector3 object of positions, in km.
+
+                        If derivs is True, then the returned Vector3 object has
+                        a subfield "d_dcoord", which contains the partial
+                        derivatives d(x,y,z)/d(coord1,coord2,coord3), as a
+                        MatrixN with item shape [3,3].
         """
 
         pass
@@ -181,6 +205,75 @@ class Surface(object):
         """
 
         return Vector3((0,0,0))
+
+################################################################################
+# No need to override
+################################################################################
+
+    @staticmethod
+    def resolution(dpos_duv):
+        """Determines the spatial resolution on a surface.
+
+        Input:
+            dpos_duv    A MatrixN with item shape [3,2], defining the partial
+                        derivatives d(x,y,z)/d(u,v), where (x,y,z) are the 3-D
+                        coordinates of a point on the surface, and (u,v) are
+                        pixel coordinates.
+
+        Return:         A tuple (res_min, res_max) where:
+            res_min     A Scalar containing resolution values (km/pixel) in the
+                        direction of finest spatial resolution.
+            res_max     A Scalar containing resolution values (km/pixel) in the
+                        direction of coarsest spatial resolution.
+        """
+
+        # Define vectors parallel to the surface, containing the derivatives
+        # with respect to each pixel coordinate.
+        dpos_du = Vector3(dpos_duv.vals[...,0], dpos_duv.mask)
+        dpos_dv = Vector3(dpos_duv.vals[...,1], dpos_duv.mask)
+
+        # The resolution should be independent of the rotation angle of the
+        # grid. We therefore need to solve for an angle theta such that
+        #   dpos_du' = cos(theta) dpos_du - sin(theta) dpos_dv
+        #   dpos_dv' = sin(theta) dpos_du + cos(theta) dpos_dv
+        # where
+        #   dpos_du' <dot> dpos_dv' = 0
+        #
+        # Then, the magnitudes of dpos_du' and dpos_dv' will be the local values
+        # of finest and coarsest spatial resolution.
+        #
+        # Laying aside the overall scaling for a moment, instead solve:
+        #   dpos_du' =   dpos_du - t dpos_dv
+        #   dpos_dv' = t dpos_du +   dpos_dv
+        # for which the dot product is zero.
+        #
+        # 0 =   t^2 (dpos_du <dot> dpos_dv)
+        #     + t   (|dpos_dv|^2 - |dpos_du|^2)
+        #     -     (dpos_du <dot> dpos_dv)
+        #
+        # Use the quadratic formula.
+
+        a = dpos_du.dot(dpos_dv)
+        b = dpos_dv.dot(dpos_dv) - dpos_du.dot(dpos_du)
+        # c = -a
+
+        # discr = b**2 - 4*a*c
+        discr = b**2 + 4*a**2
+        t = (discr.sqrt() - b)/ (2*a)
+
+        # Now normalize and construct the primed partials
+        cos_theta = 1. / (1 + t**2).sqrt()
+        sin_theta = t * cos_theta
+
+        dpos_du_prime_norm = (cos_theta * dpos_du - sin_theta * dpos_dv).norm()
+        dpos_dv_prime_norm = (sin_theta * dpos_du + cos_theta * dpos_dv).norm()
+
+        minres = Scalar(np.minimum(dpos_du_prime_norm.vals,
+                                   dpos_dv_prime_norm.vals), dpos_duv.mask)
+        maxres = Scalar(np.maximum(dpos_du_prime_norm.vals,
+                                   dpos_dv_prime_norm.vals), dpos_duv.mask)
+
+        return (minres, maxres)
 
 ################################################################################
 # Photon Solver
@@ -299,8 +392,7 @@ class Surface(object):
             if type(quick) == type({}):
                 loop_quick = dict(quick, **loop_quick)
 
-        # Iterate a fixed number of times. Convergence is rapid because all
-        # speeds are non-relativistic.
+        # Iterate. Convergence is rapid because all speeds are non-relativistic
         max_dlt = np.inf
         for iter in range(iters):
 
@@ -324,6 +416,7 @@ class Surface(object):
 
             # Update the intercept times; save the intercept positions
             (intercept, dlt) = self.intercept(pos_in_frame, los_in_frame)
+
             new_lt = (lt + dlt).clip(lt_min, lt_max)
             dlt = new_lt - lt
             lt = new_lt
@@ -332,13 +425,13 @@ class Surface(object):
             prev_max_dlt = max_dlt
             max_dlt = abs(dlt).max()
 
-            if LOGGING.surface_iterations: print iter, max_dlt
+            if LOGGING.surface_iterations: print LOGGING.prefix, iter, max_dlt
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 
         # Update the mask on light time to hide intercepts behind the observer
         # or outside the defined limit
-        lt.mask = (lt.mask | (lt.vals * sign < 0.) |
+        lt.mask = (event.mask | lt.mask | (lt.vals * sign < 0.) |
                    (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(lt.mask): lt.mask = False
 
@@ -349,21 +442,18 @@ class Surface(object):
         surface_event.insert_subfield("perp",  self.normal(intercept))
         surface_event.insert_subfield("vflat", self.velocity(intercept))
 
+        transform = frame_wrt_j2000.transform_at_time(surface_time)
+        los_in_frame = transform.rotate(los_wrt_ssb)
+
         surface_event.insert_subfield(surface_key, -lt * los_in_frame)
         surface_event.insert_subfield(surface_key + "_lt", -lt)
 
         # Insert the derivative aubarrays if necessary
         if derivs:
 
-            # Re-start geometry from the origin
-            pos_in_j2000 = (obs_wrt_ssb
-                            - origin_wrt_ssb.event_at_time(surface_time).pos)
-
-            transform = frame_wrt_j2000.transform_at_time(surface_time)
-            pos_in_frame = transform.rotate(pos_in_j2000)
-            los_in_frame = transform.rotate(los_wrt_ssb)
-
-            (intercept, dlt) = self.intercept(pos_in_frame, los_in_frame,
+            # Re-start geometry from the origin, but in the surface frame
+            obs_in_frame = intercept + surface_event.subfields[surface_key]
+            (intercept, dlt) = self.intercept(obs_in_frame, los_in_frame,
                                               derivs=True)
 
             # Rotate derivatives WRT origin
@@ -372,20 +462,18 @@ class Surface(object):
             dpos_dpos = intercept.d_dobs
             dpos_dlos = intercept.d_dlos
 
-            surface_wrt_j2000_mat = (
-                frame_wrt_j2000.transform_at_time(surface_time, quick).matrix)
+            j2000_wrt_surface_mat = transform.matrix.transpose()
+            event_frame = registry.connect_frames(event.frame_id, "J2000")
+            event_wrt_j2000_mat = (
+                event_frame.transform_at_time(event.time, quick).matrix)
 
-            event_inv_frame = registry.connect_frames("J2000", event.frame_id)
-            j2000_wrt_event_mat = (
-                event_inv_frame.transform_at_time(event.time, quick).matrix)
+            event_wrt_surface_mat = (
+                event_wrt_j2000_mat.rotate_matrix3(j2000_wrt_surface_mat))
 
-            surface_wrt_event_mat = (
-                surface_wrt_j2000_mat.rotate_matrix3(j2000_wrt_event_mat))
-
-            dtime_dpos = surface_wrt_event_mat.unrotate(dtime_dpos.T()).T()
-            dtime_dlos = surface_wrt_event_mat.unrotate(dtime_dlos.T()).T()
-            dpos_dpos  = surface_wrt_event_mat.unrotate(dpos_dpos.T()).T()
-            dpos_dlos  = surface_wrt_event_mat.unrotate(dpos_dlos.T()).T()
+            dtime_dpos = event_wrt_surface_mat.rotate(dtime_dpos.T()).T()
+            dtime_dlos = event_wrt_surface_mat.rotate(dtime_dlos.T()).T()
+            dpos_dpos  = event_wrt_surface_mat.rotate(dpos_dpos.T()).T()
+            dpos_dlos  = event_wrt_surface_mat.rotate(dpos_dlos.T()).T()
 
             # Save the derivatives as subfields
             surface_event.time.insert_subfield("d_dpos", dtime_dpos)

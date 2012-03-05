@@ -57,17 +57,15 @@ def from_file(filespec, parameters={}):
         
     # Create a Snapshot
     result = obs.Snapshot(vic.get_2d_array(),       # data
-                          None,                     # mask
                           ["v","u"],                # axes
                           (tdb0, tdb1),             # time
                           FOVS[camera,mode],        # fov
                           "CASSINI",                # path_id
-                          "CASSINI_ISS_" + camera,  # frame_id
-                          DN_SCALING)               # calibration
+                          "CASSINI_ISS_" + camera)  # frame_id
 
-    # Tack on the Vicar object in case more info is needed
-    # This object behaves like a dictionary for most practical purposes
-    result.dict = vic
+    # Insert the Vicar object as asubfield in case more info is needed.
+    # This object behaves like a dictionary for most practical purposes.
+    result.insert_subfield("vicar_dict", vic)
 
     return result
 
@@ -100,7 +98,6 @@ def from_index(filespec, parameters={}):
             camera = "NAC"
 
         item = obs.Snapshot(None,                       # data
-                            None,                       # mask
                             ["v","u"],                  # axes
                             (tdb0, tdb1),               # time
                             FOVS[camera,mode],          # fov
@@ -109,7 +106,7 @@ def from_index(filespec, parameters={}):
                             DN_SCALING)                 # calibration
 
         # Tack on the dictionary in case more info is needed
-        item.dict = dict
+        result.insert_subfield("index_dict", dict)
 
         snapshots.append(item)
 
@@ -119,7 +116,6 @@ def from_index(filespec, parameters={}):
 
     cassini.load_cks( tdb0, tdb1)
     cassini.load_spks(tdb0, tdb1)
-
 
     return snapshots
 
@@ -178,47 +174,19 @@ def initialize():
 # UNIT TESTS
 ################################################################################
 
-ERROR_ALLOTMENT = 1e-3
-
 import unittest
+
 
 class Test_Cassini_ISS(unittest.TestCase):
 
     def runTest(self):
 
         snapshots = from_index("test_data/cassini/ISS/index.lbl")
-
         snapshot = from_file("test_data/cassini/ISS/W1575634136_1.IMG")
-        
         snapshot3940 = snapshots[3940]  #should be same as snapshot
         
-        #self.assertTrue(snapshot.t0 == snapshot3940.t0)
-        #self.assertTrue(snapshot.t1 == snapshot3940.t1)
-
-        vimg = vicar.VicarImage.from_file("test_data/cassini/ISS/W1575634136_1.IMG")
-        self.assertTrue(np.all(snapshot.data == vimg.data[0]))
-        ptable = pdstable.PdsTable("test_data/cassini/ISS/index.lbl")
-
-        #test START_TIME for this file
-        t0_col = ptable.column_dict['START_TIME']
-        t0_str = t0_col[3940]
-        (day,sec) = julian.day_sec_from_iso(t0_str)
-        t0_tai = julian.tai_from_day(day) + sec
-        t0_tdb = julian.tdb_from_tai(t0_tai)
-
-        #test STOP_TIME for this file
-        t1_col = ptable.column_dict['STOP_TIME']
-        t1_str = t1_col[3940]
-        (day,sec) = julian.day_sec_from_iso(t1_str)
-        t1_tai = julian.tai_from_day(day) + sec
-        t1_tdb = julian.tdb_from_tai(t1_tai)
-        
-        diff0 = abs(snapshot.t0 - t0_tdb)
-        diff1 = abs(snapshot.t1 - t1_tdb)
-        self.assertTrue(diff0 < ERROR_ALLOTMENT)
-        self.assertTrue(diff1 < ERROR_ALLOTMENT)
-        
-        bp_data = snapshot.radius_back_plane()
+        self.assertTrue(snapshot.t0 == snapshot3940.t0)
+        self.assertTrue(snapshot.t1 == snapshot3940.t1)
 
 ############################################
 if __name__ == '__main__':

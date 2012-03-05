@@ -57,25 +57,26 @@ class SURFACE_PHOTONS(object):
 ################################################################################
 
 class LOGGING(object):
+    prefix = ""                 # Prefix characters in front of a log message
     quickpath_creation = False  # Log the creation of QuickPaths.
     quickframe_creation = False # Log the creation of QuickFrames.
     path_iterations = False     # Log iterations of Path._solve_photons().
     surface_iterations = False  # Log iterations of Surface._solve_photons()
 
     @staticmethod
-    def off():
-        
-        LOGGING.quickpath_creation = False
-        LOGGING.quickframe_creation = False
-        LOGGING.path_iterations = False
-        LOGGING.surface_iterations = False
+    def all(flag):
+        LOGGING.quickpath_creation = flag
+        LOGGING.quickframe_creation = flag
+        LOGGING.path_iterations = flag
+        LOGGING.surface_iterations = flag
 
     @staticmethod
-    def on():
-        LOGGING.quickpath_creation = True
-        LOGGING.quickframe_creation = True
-        LOGGING.path_iterations = True
-        LOGGING.surface_iterations = True
+    def off(): LOGGING.all(False)
+        
+    @staticmethod
+    def on(prefix=""):
+        LOGGING.all(True)
+        LOGGING.prefix = prefix
 
 ################################################################################
 

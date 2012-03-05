@@ -24,6 +24,7 @@ class Empty(Array):
         self.mask  = False
         self.units = None
         self.subfields = {}
+        self.subfield_math = False
 
     # Overrides of standard Array methods
     def __repr__(self): return "Empty()"

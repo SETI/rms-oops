@@ -58,11 +58,43 @@ class Observation(object):
                         Z-axis pointing outward near the center of the line of
                         sight, with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
+        subfields       a dictionary containing all of the optional attributes.
+                        Additional subfields may be included as needed.
+
     """
 
     def __init__(self):
 
         pass
+
+    ####################################################
+    # Subarray support methods
+    ####################################################
+
+    def insert_subfield(self, key, value):
+        """Adds a given subfield to the Event."""
+
+        self.subfields[key] = value
+        self.__dict__[key] = value      # This makes it an attribute as well
+
+    def delete_subfield(self, key):
+        """Deletes a subfield, but not arr or dep."""
+
+        if key in ("arr","dep"):
+            self.subfields[key] = Empty()
+            self.__dict__[key] = self.subfields[key]
+        elif key in self.subfields.keys():
+            del self.subfields[key]
+            del self.__dict__[key]
+
+    def delete_subfields(self):
+        """Deletes all subfields."""
+
+        for key in self.subfields.keys():
+            if key not in ("arr","dep"):
+                del self.subfields[key]
+                del self.__dict__[key]
 
 ################################################################################
 # UNIT TESTS

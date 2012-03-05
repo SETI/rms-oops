@@ -5,6 +5,8 @@
 # 2/17/12 Modified (MRS) - Inserted coordinate definitions; added use of trig
 #   functions and sqrt() defined in Scalar class to enable cleaner algorithms.
 #   Unit tests added.
+# 3/4/12 MRS: cleaned up comments, added NotImplementedErrors for features still
+#   TBD.
 ################################################################################
 
 import numpy as np
@@ -23,25 +25,27 @@ class Spheroid(Surface):
     Z-axis. The latitude defined in this manner is neither planetocentric nor
     planetographic; functions are provided to perform the conversion to either
     choice. Longitudes are measured in a right-handed manner, increasing toward
-    the east. Values range from -pi to pi.
+    the east. Values range from 0 to 2*pi.
 
     Elevations are defined by "unsquashing" the radial vectors and then
     subtracting off the equatorial radius of the body. Thus, the surface is
     defined as the locus of points where elevation equals zero. However, the
     direction of increasing elevation is not exactly normal to the surface.
     """
-    
+
+    UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
+
     def __init__(self, origin, frame, radii):
-        """Constructor for a Spheroid object.
-            
+        """Constructor for a Spheroid surface.
+
         Input:
-            origin      a Path object or ID defining the motion of the center
-                        of the ring plane.
-
-            frame       a Frame object or ID in which the ring plane is the
-                        (x,y) plane (where z = 0).
-
-            radii       a tuple (equatorial_radius, polar_radius) in km.
+            origin      the Path object or ID defining the center of the
+                        spheroid.
+            frame       the Frame object or ID defining the coordinate frame in
+                        which the spheroid is fixed, with the short axis along
+                        the Z-coordinate.
+            radii       a tuple (a,c), defining the long and short radii of the
+                        spheroid.
         """
 
         self.origin_id = registry.as_path_id(origin)
@@ -58,58 +62,96 @@ class Spheroid(Surface):
         self.unsquash = Vector3((1., 1., self.unsquash_z))
         self.unsquash_sq = self.unsquash**2
 
-    def as_coords(self, position, axes=2):
+    def as_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
-            axes            2 or 3, indicating whether to return a tuple of two
-                            or 3 Scalar objects.
+            pos         a Vector3 of positions at or near the surface, with
+                        optional units.
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer. In the case of a RingPlane, this argument is
+                        ignored and can be omitted.
+            axes        2 or 3, indicating whether to return a tuple of two or
+                        three Scalar objects.
+            derivs      a boolean or tuple of booleans. If True, then the
+                        partial derivatives of each coordinate with respect to
+                        surface position and observer position are returned as
+                        well. Using a tuple, you can indicate whether to return
+                        partial derivatives on an coordinate-by-coordinate
+                        basis.
 
-        Return:             coordinate values packaged as a tuple containing
-                            two or three Scalars, one for each coordinate. If
-                            axes=2, then the tuple is (longitude, latitude); if
-                            axes=3, the tuple is (longitude, latitude,
-                            elevation).
+        Return:         coordinate values packaged as a tuple containing two or
+                        three unitless Scalars, one for each coordinate.
+
+                        If derivs is True, then the coordinate has extra
+                        attributes "d_dpos" and "d_dobs", which contain the
+                        partial derivatives with respect to the surface position
+                        and the observer position, represented as a MatrixN
+                        objects with item shape [1,3].
         """
 
-        unsquashed = Vector3.as_standard(position) * self.unsquash
+        unsquashed = Vector3.as_standard(pos) * self.unsquash
 
         r = unsquashed.norm()
         (x,y,z) = unsquashed.as_scalars()
         lat = (z/r).arcsin()
         lon = y.arctan2(x)
 
+        if derivs:
+            raise NotImplementedError("spheroid coordinate derivatives are " +
+                                      "not yet supported")
+
         if axes == 2:
             return (lon, lat)
         else:
             return (lon, lat, r - self.req)
 
-    def as_vector3(self, lon, lat, elevation=0.):
+    def as_vector3(self, lon, lat, elev=Scalar(0.), obs=None, derivs=False):
         """Converts coordinates in the surface's internal coordinate system into
         position vectors at or near the surface.
 
         Input:
-            lon             longitude in radians.
-            lat             latitude in radians
-            elevation       a rough measure of distance from the surface, in km.
+            lon         longitude in radians.
+            lat         latitude in radians
+            elev        a rough measure of distance from the surface, in km;
+                        default is Scalar(0.).
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer. In the case of a Spheroid, this argument is
+                        ignored and can be omitted.
+            derivs      if True, the partial derivatives of the returned vector
+                        with respect to the coordinates are returned as well.
 
-        Return:             the corresponding Vector3 of (unsquashed) positions,
-                            in km.
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
+
+        Return:         a unitless Vector3 of (unsquashed) positions, in km.
+
+                        If derivs is True, then the returned Vector3 object has
+                        a subfield "d_dcoord", which contains the partial
+                        derivatives d(x,y,z)/d(lon,lat,z), as a MatrixN with
+                        item shape [3,3].
         """
 
         # Convert to Scalars in standard units
         lon = Scalar.as_standard(lon)
         lat = Scalar.as_standard(lat)
-        r = Scalar.as_standard(elevation) + self.req
+        r = Scalar.as_standard(elev) + self.req
 
         r_coslat = r * lat.cos()
         x = r_coslat * lon.cos()
         y = r_coslat * lon.sin()
         z = r * lat.sin() * self.squash_z
 
-        return Vector3.from_scalars(x,y,z)
+        pos = Vector3.from_scalars(x,y,z)
+
+        if derivs:
+            raise NotImplementedError("spheroid position derivatives are " +
+                                      "not yet supported")
+
+        return pos
 
     def intercept(self, obs, los, derivs=False):
         """Returns the position where a specified line of sight intercepts the
@@ -121,17 +163,20 @@ class Spheroid(Surface):
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
 
-        Return:         a tuple (position, factor) if derivs is False; a tuple
-                        (position, factor, dpos_dobs, dpos_dlos) if derivs is
-                        True.
-            position    a unitless Vector3 of intercept points on the surface,
+        Return:         a tuple (pos, t) where
+            pos         a unitless Vector3 of intercept points on the surface,
                         in km.
-            factor      a unitless Scalar of factors such that:
-                            position = obs + factor * los
-            dpos_dobs   the partial derivatives of the position vector with
-                        respect to the observer position, as a Matrix3.
-            dpos_dlos   the partial derivatives of the position vector with
-                        respect to the line of sight, as a Matrix3.
+            t           a unitless Scalar such that:
+                            position = obs + t * los
+
+                        If derivs is True, then pos and t are returned with
+                        subfields "d_dobs" and "d_dlos", where the former
+                        contains the MatrixN of partial derivatives with respect
+                        to obs and the latter is the MatrixN of partial
+                        derivatives with respect to los. The MatrixN item shapes
+                        are [3,3] for the derivatives of pos, and [1,3] for the
+                        derivatives of t. For purposes of differentiation, los
+                        is assumed to have unit length.
         """
 
         # Convert to standard units and un-squash
@@ -147,98 +192,131 @@ class Spheroid(Surface):
         c = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
         d = b**2 - 4. * a * c
 
-        t = (d.sqrt() - b) / (2. * a)
+        t = (d.sqrt() - b) / (2*a)
+        pos = obs + t*los
 
-        return (obs + t*los, t)
+        if derivs:
+            # Using step-by-step differentiation of the equations above
 
-    def normal(self, position):
+            da_dlos = 2 * los * self.unsquash_sq
+            db_dlos = 2 * obs * self.unsquash_sq
+            db_dobs = 2 * los * self.unsquash_sq
+            dc_dobs = 2 * obs * self.unsquash_sq
+
+            dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
+            dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
+
+            dsqrt = d.sqrt()
+            d_dsqrt_dd = 0.5 / dsqrt
+            d_dsqrt_dlos = d_dsqrt_dd * dd_dlos
+            d_dsqrt_dobs = d_dsqrt_dd * dd_dobs
+
+            inv2a = 0.5/a
+            d_inv2a_da = -2 * inv2a**2
+
+            dt_dlos = (inv2a * (d_dsqrt_dlos - db_dlos) +
+                       (dsqrt - b) * d_inv2a_da * da_dlos).as_vectorn()
+            dt_dobs = (inv2a * (d_dsqrt_dobs - db_dobs)).as_vectorn()
+
+            dpos_dobs = (los.as_column() * dt_dobs.as_row() +
+                         Spheroid.UNIT_MATRIX)
+            dpos_dlos = (los.as_column() * dt_dlos.as_row() +
+                         Spheroid.UNIT_MATRIX * t)
+
+            los_norm = los.norm()
+            pos.insert_subfield("d_dobs", dpos_dobs)
+            pos.insert_subfield("d_dlos", dpos_dlos * los_norm)
+            t.insert_subfield("d_dobs", dt_dobs.as_row())
+            t.insert_subfield("d_dlos", dt_dlos.as_row() * los_norm)
+
+        return (pos, t)
+
+    def normal(self, pos, derivs=False):
         """Returns the normal vector at a position at or near a surface.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            pos         a Vector3 of positions at or near the surface, with
+                        optional units.
+            derivs      True to include a matrix of partial derivatives.
 
-        Return:             a Vector3 containing directions normal to the
-                            surface that pass through the position. Lengths are
-                            arbitrary.
+        Return:         a unitless Vector3 containing directions normal to the
+                        surface that pass through the position. Lengths are
+                        arbitrary.
+
+                        If derivs is True, then the normal vectors returned have
+                        a subfield "d_dpos", which contains the partial
+                        derivatives with respect to components of the given
+                        position vector, as a MatrixN object with item shape
+                        [3,3].
         """
 
-        return Vector3.as_standard(position) * self.unsquash_sq
+        perp = Vector3.as_standard(pos) * self.unsquash_sq
 
-    def gradient(self, position, axis=0):
-        """Returns the gradient vector at a specified position at or near the
-        surface. The gradient of surface coordinate c is defined as a vector
-            (dc/dx,dc/dy,dc/dz)
-        It has the property that it points in the direction of the most rapid
-        change in value of the coordinate, and its magnitude is the rate of
-        change in that direction.
+        if derivs:
+            raise NotImplementedError("spheroid normal derivatives are " +
+                                      "not supported")
+
+        return perp
+
+    def intercept_with_normal(self, normal, derivs=False):
+        """Constructs the intercept point on the surface where the normal vector
+        is parallel to the given vector.
 
         Input:
-            position    a Vector3 of positions at or near the surface, with
-                        optional units.
-            axis        0, 1 or 2, identifying the coordinate axis for which the
-                        gradient is sought.
+            normal      a Vector3 of normal vectors, with optional units.
+            derivs      true to return a matrix of partial derivatives.
 
-        Return:         a unitless Vector3 of the gradients sought. Values are
-                        always in standard units.
+        Return:         a unitless Vector3 of surface intercept points, in km.
+                        Where no solution exists, the components of the returned
+                        vector should be masked.
+
+                        If derivs is True, then the returned intercept points
+                        have a subfield "d_dperp", which contains the partial
+                        derivatives with respect to components of the normal
+                        vector, as a MatrixN object with item shape [3,3].
         """
-
-        pass
-
-        #gradient for a spheroid is simply <2x/a, 2y/a, 2z/c>
 
         # TBD
         pass
-    
-    def velocity(self, position):
+
+    def intercept_normal_to(self, pos, derivs=False):
+        """Constructs the intercept point on the surface where a normal vector
+        passes through a given position.
+
+        Input:
+            pos         a Vector3 of positions near the surface, with optional
+                        units.
+
+        Return:         a unitless vector3 of surface intercept points. Where no
+                        solution exists, the returned vector should be masked.
+
+                        If derivs is True, then the returned intercept points
+                        have a subfield "d_dpos", which contains the partial
+                        derivatives with respect to components of the given
+                        position vector, as a MatrixN object with item shape
+                        [3,3].
+        """
+
+        # TBD
+        pass
+
+    def velocity(self, pos):
         """Returns the local velocity vector at a point within the surface.
         This can be used to describe the orbital motion of ring particles or
         local wind speeds on a planet.
 
         Input:
-            position        a Vector3 of positions at or near the surface.
+            pos         a Vector3 of positions at or near the surface, with
+                        optional units.
+
+        Return:         a unitless Vector3 of velocities, in units of km/s.
         """
 
-        # An internal wind field is not implemented
         return Vector3((0,0,0))
-    
-    def intercept_with_normal(self, normal):
-        """Constructs the intercept point on the surface where the normal vector
-            is parallel to the given vector.
-            
-            Input:
-            normal          a Vector3 of normal vectors.
-            
-            Return:             a Vector3 of surface intercept points. Where no
-            solution exists, the components of the returned
-            vector should be np.nan.
-            """
 
-        # TBD
-        pass
-
-        # For a sphere, this is just the point at r * n, where r is the radius
-        # of the sphere.  For a spheroid, this is just the same point scaled up
-#         np_scale_array = np.array( [[self.r0, 0, 0], [0, self.r0, 0],
-#                                     [0, 0, self.r2]])
-#         expand_matrix = Matrix3(np_scale_array)
-#         pos = expand_matrix * normal
-
-        return pos
-
-    def intercept_normal_to(self, position):
-        """Constructs the intercept point on the surface where a normal vector
-        passes through a given position.
-
-        Input:
-            position        a Vector3 of positions near the surface.
-
-        Return:             a Vector3 of surface intercept points. Where no
-                            solution exists, the components of the returned
-                            vector should be np.nan.
-        """
-
-        # TBD
-        pass
+    ############################################################################
+    # Latitude conversions
+    ############################################################################
 
     def lat_to_centric(self, lat):
         """Converts a latitude value given in internal spheroid coordinates to

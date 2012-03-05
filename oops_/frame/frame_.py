@@ -371,7 +371,7 @@ class Frame(object):
             return self
 
         if LOGGING.quickframe_creation:
-            print "New QuickFrame: " + str(self), (tmin, tmax)
+            print LOGGING.prefix, "New QuickFrame: " + str(self), (tmin, tmax)
 
         return QuickFrame(self, (tmin, tmax), quickdict)
 

@@ -26,22 +26,27 @@ class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
     all exposed at the same time."""
 
-    def __init__(self, data, mask, axes, time, fov, path_id, frame_id,
-                       calibration):
+    def __init__(self, data, axes, time, fov, path_id, frame_id, **subfields):
 
         self.data = data
-        self.mask = mask
         self.path_id = path_id
         self.frame_id = frame_id
         self.t0 = time[0]
         self.t1 = time[1]
         self.fov = fov
-        self.calibration = calibration
 
         self.u_axis = axes.index("u")
         self.v_axis = axes.index("v")
         self.t_axis = None
-    
+
+        self.subfields = {}
+        for key in subfields.keys():
+            self.insert_subfield(key, subfields[key])
+
+        # Attributes specific to a Snapshot
+        self.midtime = (self.t0 + self.t1) / 2.
+        self.texp = self.t1 - self.t0
+
     def ring_shadow_back_plane(self, min_range=0., max_range=sys.float_info.max):
         """gets the ring's backplane and returns whether in shadow or not.
             

@@ -290,8 +290,7 @@ class Scalar(Array):
                          self.mask | arg.mask,
                          Units.mul_units(self.units, arg.units))
 
-            if not Array.IGNORE_SUBFIELDS:
-                obj.mul_subfields(self, arg)
+            obj.mul_subfields(self, arg)
 
             return obj
 
@@ -307,8 +306,7 @@ class Scalar(Array):
         self.mask |= arg.mask
         self.units = Units.mul_units(self.units, arg.units)
 
-        if not Array.IGNORE_SUBFIELDS:
-            self.imul_subfields(arg)
+        self.imul_subfields(arg)
 
         return self
 
@@ -337,8 +335,7 @@ class Scalar(Array):
                          self.mask | arg.mask | div_by_zero,
                          Units.div_units(arg.units, self.units))
 
-            if not Array.IGNORE_SUBFIELDS:
-                obj.div_subfields(arg, self)
+            obj.div_subfields(arg, self)
 
             return obj
 

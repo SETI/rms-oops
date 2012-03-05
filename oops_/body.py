@@ -27,9 +27,12 @@ class Body(object):
     Each body has these attributes:
         name            the name of this body.
         path_id         the ID of the Path this body follows.
+        path            a Waypoint for the body's path
         frame_id        the ID of the coordinate frame describing this body.
+        frame           a NullFrame for the body's frame.
         ring_frame_id   the ID of a "despun" frame relevant to a ring that might
                         orbit this body. None if not (yet) defined.
+        ring_frame      a RingFrame for the body.
 
         parent          the physical body (not necessarily the barycenter) about
                         which this body orbits. If a string is given, the parent
@@ -70,6 +73,9 @@ class Body(object):
         self.frame_id = frame_id
         self.ring_frame_id = None
 
+        self.path = path_.Waypoint(self.path_id)
+        self.frame = frame_.NullFrame(self.frame_id)
+
         if type(parent) == type(""):
             self.parent = SOLAR_SYSTEM[parent]
         else:
@@ -109,7 +115,7 @@ class Body(object):
         assert self.surface.origin_id == self.path_id
 
     def apply_ring_frame(self, epoch=None):
-        """Adds the and surface attribute to a Body."""
+        """Adds the and ring_frame and ring_frame_id attributes to a Body."""
 
         # Make sure the epochs match
         if self.ring_frame_id is not None:
@@ -117,7 +123,8 @@ class Body(object):
             assert ringframe.epoch == epoch
             return
 
-        self.ring_frame_id = frame_.RingFrame(self.frame_id, epoch).frame_id
+        self.ring_frame = frame_.RingFrame(self.frame_id, epoch)
+        self.ring_frame_id = self.ring_frame.frame_id
 
     def apply_gravity(self, gravity):
         """Adds the gravity attribute to a Body."""

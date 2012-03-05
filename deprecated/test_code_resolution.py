@@ -70,6 +70,7 @@ print (np.min(ring_longitude.vals) * oops.DPR,
 # Note that 2pi-to-zero discontinuity in longitude passes through the middle
 
 # Get the ring plane radial resolution
+
 gradient = ring_radius.d_dpos * ring_event.pos.d_dlos * los.d_duv
 ring_radial_resolution = gradient.as_pair().norm()
 
@@ -108,10 +109,10 @@ print (np.min(ring_incidence.vals) * oops.DPR,
        np.max(ring_incidence.vals) * oops.DPR)
 
 # Range to the Sun
-ring_sun_range = sun_ring_event.pos.norm()
+sun_ring_range = sun_ring_event.dep.norm()
 
-pylab.imshow(ring_sun_range.vals)
-print np.min(ring_sun_range.vals), np.max(ring_sun_range.vals)
+pylab.imshow(sun_ring_range.vals)
+print (np.min(sun_ring_range.vals), np.max(sun_ring_range.vals))
 
 # Backtrack the photons from the Sun and see where they intercept Saturn
 saturn_surface = oops.SOLAR_SYSTEM["SATURN"].surface
@@ -136,7 +137,7 @@ pylab.imshow(saturn_mask)
 saturn_range = saturn_event.dep.norm()
 
 pylab.imshow(saturn_range.vals)
-print np.min(saturn_range.vals), np.max(saturn_range.vals)
+print (np.min(saturn_range.vals), np.max(saturn_range.vals))
 
 # Get the longitude and latitude
 (saturn_longitude,
@@ -188,7 +189,7 @@ print (np.min(saturn_incidence.vals) * oops.DPR,
 saturn_sun_range = sun_saturn_event.dep.norm()
 
 pylab.imshow(saturn_sun_range.vals)
-print np.min(saturn_sun_range.vals), np.max(saturn_sun_range.vals)
+print (np.min(saturn_sun_range.vals), np.max(saturn_sun_range.vals))
 
 # Identify the points where Saturn is lit
 saturn_sunlit_mask = saturn_mask & (saturn_incidence.vals <= np.pi/2)
@@ -215,11 +216,13 @@ pylab.imshow(saturn_visible_mask)
 # rings
 saturn_in_shadow_event = ring_surface.photon_to_event(saturn_event)
 
-saturn_in_shadow_mask = ~saturn_in_shadow_event.pos.mask
+saturn_in_shadow_mask = ~saturn_in_shadow_event.mask
 pylab.imshow(saturn_in_shadow_mask)
 
-saturn_visible_sunlit_mask = saturn_sunlit_mask & ~saturn_in_shadow_mask
+rings_in_front_mask = (ring_range.vals < saturn_range.vals) & ring_mask
+pylab.imshow(rings_in_front_mask)
+
+saturn_visible_sunlit_mask = (saturn_sunlit_mask & ~saturn_in_shadow_mask
+                                                 & ~rings_in_front_mask)
 pylab.imshow(saturn_visible_sunlit_mask)
-
-
 

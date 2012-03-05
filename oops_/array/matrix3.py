@@ -218,8 +218,7 @@ class Matrix3(Array):
         if result is arg: return result
 
         # Multiply subfields if necessary
-        if not Array.IGNORE_SUBFIELDS:
-            result.mul_subfields(self, arg)
+        result.mul_subfields(self, arg)
 
         return result
 
@@ -242,8 +241,7 @@ class Matrix3(Array):
         self.vals[...] = result.vals[...]
         self.mask |= result.mask
 
-        if not Array.IGNORE_SUBFIELDS:
-            self.imul_subfields(arg)
+        self.imul_subfields(arg)
 
         return self
 

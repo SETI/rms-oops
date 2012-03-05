@@ -129,11 +129,10 @@ class MatrixN(Array):
 
             # Anything else is treated as Scalar multiply
             else:
-                return Array.__mul__(arg)
+                return Array.__mul__(self, arg)
 
             # Multiply subfields if necessary
-            if not Array.IGNORE_SUBFIELDS:
-                result.mul_subfields(self, arg)
+            result.mul_subfields(self, arg)
 
             return result
 
@@ -162,8 +161,7 @@ class MatrixN(Array):
             self.vals[...] = result[...]
             self.mask |= arg.mask
 
-            if not Array.IGNORE_SUBFIELDS:
-                self.imul_subfields(arg)
+            self.imul_subfields(arg)
 
             return self
 

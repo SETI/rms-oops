@@ -182,6 +182,8 @@ class Edelta(object):
 
     @staticmethod
     def sub_events(event, origin, quick=QUICK):
+        """Returns the difference between two events as an Edelta object. The
+        difference is returned in the frame of the origin."""
 
         event_ssb = event.wrt_ssb(quick)
         origin_ssb = origin.wrt_ssb(quick)

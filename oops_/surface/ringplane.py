@@ -28,7 +28,7 @@ class RingPlane(Surface):
 
     def __init__(self, origin, frame, radii=None, gravity=None,
                        elevation=0.):
-        """Constructor for a RingPlane object.
+        """Constructor for a RingPlane surface.
 
         Input:
             origin      a Path object or ID defining the motion of the center
@@ -116,7 +116,7 @@ class RingPlane(Surface):
                 r.insert_subfield("d_dobs", zero)
 
             if derivs[1]:
-                dtheta_dpos = self.z_unit.cross(pos)
+                dtheta_dpos = self.z_unit.cross(pos) / pos.dot(pos)
                 theta.insert_subfield("d_dpos", dtheta_dpos.as_row())
                 theta.insert_subfield("d_dobs", zero)
 
@@ -207,7 +207,8 @@ class RingPlane(Surface):
                         to obs and the latter is the MatrixN of partial
                         derivatives with respect to los. The MatrixN item shapes
                         are [3,3] for the derivatives of pos, and [1,3] for the
-                        derivatives of t.
+                        derivatives of t. For purposes of differentiation, los
+                        is assumed to have unit length.
         """
 
         # Solve for obs + factor * los for scalar t, such that the z-component
@@ -264,13 +265,14 @@ class RingPlane(Surface):
             #                   = 0 (which also should have been obvious)
 
             dt_dobs_z = -1. / los_z
-            los_norm = los.norm()
+            t_los_norm = t * los.norm()
 
             vals = np.zeros(t.shape + [1,3])
             vals[...,0,2] = dt_dobs_z.vals
 
-            t.insert_subfield("d_dobs", MatrixN(vals, t.mask))
-            t.insert_subfield("d_dlos", t * los_norm * t.d_dobs)
+            dt_dobs = MatrixN(vals, t.mask)
+            t.insert_subfield("d_dobs", dt_dobs)
+            t.insert_subfield("d_dlos", dt_dobs * t_los_norm)
 
             vals = np.zeros(t.shape + [3,3])
             vals[...,0,0] = 1.
@@ -278,8 +280,9 @@ class RingPlane(Surface):
             vals[...,1,1] = 1.
             vals[...,1,2] = dt_dobs_z.vals * los.vals[...,1]
 
-            pos.insert_subfield("d_dobs", MatrixN(vals, t.mask))
-            pos.insert_subfield("d_dlos", t * los_norm * pos.d_dobs)
+            dpos_dobs = MatrixN(vals, t.mask)
+            pos.insert_subfield("d_dobs", dpos_dobs)
+            pos.insert_subfield("d_dlos", dpos_dobs * t_los_norm)
 
         return (pos, t)
 

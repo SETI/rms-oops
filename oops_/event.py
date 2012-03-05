@@ -83,12 +83,16 @@ class Event(object):
         self.filled_shape = None
         self.filled_mask  = None
         self.filled_ssb   = None
+        self.subfield_math_property = True
 
     @property
     def shape(self):
         if self.filled_shape is None:
             self.filled_shape = Array.broadcast_shape([self.time,
-                                                       self.pos, self.vel])
+                                            self.pos, self.vel,
+                                            registry.as_path(self.origin_id),
+                                            registry.as_frame(self.frame_id),
+                                            self.arr, self.dep])
         return self.filled_shape
 
     @property
@@ -98,6 +102,53 @@ class Event(object):
                                 self.arr.mask | self.dep.mask)
 
         return self.filled_mask
+
+    # subfield_math pseudo-attribute
+    def get_subfield_math(self):
+        return self.subfield_math_property
+
+    def set_subfield_math(self, value):
+        self.subfield_math_property = value
+
+        self.time.subfield_math = value
+        self.pos.subfield_math  = value
+        self.vel.subfield_math  = value
+
+        for key in self.subfields.keys():
+            self.subfields[key].subfield_math = value
+
+    subfield_math = property(get_subfield_math, set_subfield_math)
+
+    def expand_mask(self):
+        """Expands the mask to an array if it is currently just a boolean."""
+
+        if self.mask.shape == ():
+            if self.mask:
+                self.lt.mask  = np.ones(self.shape, dtype="bool")
+                self.pos.mask = np.ones(self.shape, dtype="bool")
+                self.vel.mask + np.ones(self.shape, dtype="bool")
+            else:
+                self.lt.mask  = np.zeros(self.shape, dtype="bool")
+                self.pos.mask = np.zeros(self.shape, dtype="bool")
+                self.vel.mask + np.zeros(self.shape, dtype="bool")
+
+            self.filled_mask = None
+            ignore = self.mask
+
+    def collapse_mask(self):
+        """Reduces the mask to a single boolean if possible."""
+
+        if not np.any(self.mask):
+            self.lt.mask  = False
+            self.pos.mask = False
+            self.vel.mask = False
+        elif np.all(self.mask):
+            self.lt.mask  = True
+            self.pos.mask = True
+            self.vel.mask = True
+
+        self.filled_mask = None
+        ignore = self.mask
 
     def wrt_ssb(self, quick=QUICK):
         """Returns the event relative to SSB coordinates in the J2000 frame
@@ -152,21 +203,22 @@ class Event(object):
     def delete_subfields(self):
         """Deletes all subfields."""
 
-        for key in self.subfields.key():
+        for key in self.subfields.keys():
             if key not in ("arr","dep"):
                 del self.subfields[key]
                 del self.__dict__[key]
 
-    def add_to_subfield(self, key, value):
-        """Adds to an existing subfield of the same name, or else inserts a new
-        subfield with this value."""
+    def delete_sub_subfields(self):
+        """Deletes all subfields of subfields and attributes."""
 
-        if key in self.subfields.keys():
-            self.subfields[key] = self.subfields[key] + value 
-            self.__dict__[key] = self.subfields[key]
-            return
+        for key in self.subfields.keys():
+            try:
+                self.subfields[key].delete_subfields()
+            except: pass
 
-        self.insert_subfield(key, value)
+        self.time.delete_subfields()
+        self.pos.delete_subfields()
+        self.vel.delete_subfields()
 
 ############################################
 # Event transformations

@@ -54,13 +54,13 @@ class Array(object):
                     typically its derivatives with respect to other quantities.
                     Each subfield also becomes accessible as an attribute of the
                     object, with the same name.
+        subfield_math
+                    True for subfields to be included in mathematical operations
+                    and copies; False to ignore them. Default is True.
 
         mvals       a read-only property that presents tha vals and the mask as
                     a masked array.
     """
-
-    IGNORE_SUBFIELDS = False    # Set True if subfields should be ignored in
-                                # arithmetic operations.
 
     def __new__(subtype, *arguments, **keywords):
         """Creates a pre-initialized object of the specified type."""
@@ -72,6 +72,7 @@ class Array(object):
         """Default constructor."""
 
         self.subfields = {}
+        self.subfield_math = True
 
         # Convert the mask to boolean and to an array if necessary
         if np.shape(mask) == ():
@@ -169,6 +170,23 @@ class Array(object):
         # Return the masked array
         return ma.MaskedArray(self.vals, newmask)
 
+    def expand_mask(self):
+        """Expands the mask to an array if it is currently just a boolean."""
+
+        if np.shape(self.mask) == ():
+            if self.mask:
+                self.mask = np.ones(self.shape, dtype="bool")
+            else:
+                self.mask = np.zeros(self.shape, dtype="bool")
+
+    def collapse_mask(self):
+        """Reduces the mask to a single boolean if possible."""
+
+        if not np.any(self.mask):
+            self.mask = False
+        elif np.all(self.mask):
+            self.mask = True
+
     @staticmethod
     def is_empty(arg):
         return isinstance(arg, Array.EMPTY_CLASS)
@@ -212,7 +230,7 @@ class Array(object):
         else:
             vals = 0.
 
-        obj.__init__(vals, True, self.unit)
+        obj.__init__(vals, True, self.units)
         return obj
 
     def __repr__(self):
@@ -284,8 +302,9 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(vals, mask, self.units)
 
-        for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].__copy__())
+        if self.subfield_math:
+            for key in self.subfields.keys():
+                obj.insert_subfield(key, self.subfields[key].__copy__())
 
         return obj
 
@@ -311,21 +330,10 @@ class Array(object):
     def delete_subfields(self):
         """Deletes all subfields."""
 
-        for key in self.subfields.key():
+        for key in self.subfields.keys():
             del self.__dict__[key]
 
         self.subfields = {}
-
-    def add_to_subfield(self, key, value):
-        """Adds to an existing subfield of the same name, or else inserts a new
-        subfield with this value."""
-
-        if key in self.subfields.keys():
-            self.subfields[key] = self.subfields[key] + value 
-            self.__dict__[key] = self.subfields[key]
-            return
-
-        self.insert_subfield(key, value)
 
     ####################################################
     # Arithmetic support methods
@@ -381,7 +389,7 @@ class Array(object):
         obj = Array.__new__(type(self))
         obj.__init__(-self.vals, self.mask, self.units)
 
-        if not Array.IGNORE_SUBFIELDS:
+        if self.subfield_math:
             for key in self.subfields.keys():
                 obj.insert_subfield(key, -self.subfields[key])
 
@@ -401,16 +409,12 @@ class Array(object):
 
     def __add__(self, arg):
         if Array.is_empty(arg): return arg
-
         (vals, mask, units) = self.as_if_my_type(arg)
         (vals, units) = self.as_if_my_units(vals, units)
         obj = Array.__new__(type(self))
         obj.__init__(self.vals + vals, self.mask | mask, units)
         obj.units = units
-
-        if not Array.IGNORE_SUBFIELDS:
-            obj.add_subfields(self, arg)
-
+        obj.add_subfields(self, arg)
         return obj
 
     def __radd__(self, arg): return self.__add__(arg)
@@ -421,32 +425,34 @@ class Array(object):
         self.vals += vals
         self.mask |= mask
         self.units = units
-
-        if not Array.IGNORE_SUBFIELDS:
-            self.iadd_subfields(arg)
-
+        self.iadd_subfields(arg)
         return self
 
     def add_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array):
-            set1 = set(arg1.subfields)
-            set2 = set(arg2.subfields)
-            set12 = set1 & set2
-            set1 -= set12
-            set2 -= set12
-            for key in set12:
-                self.insert_subfield(key, arg1.subfields[key] +
-                                          arg2.subfields[key])
-            for key in set1:
-                self.insert_subfield(key, arg1.subfields[key].copy())
-            for key in set2:
-                self.insert_subfield(key, arg2.subfields[key].copy())
-        else:
+        if isinstance(arg2, Array) and arg2.subfield_math:
+            if arg1.subfield_math:
+                set1 = set(arg1.subfields)
+                set2 = set(arg2.subfields)
+                set12 = set1 & set2
+                set1 -= set12
+                set2 -= set12
+                for key in set12:
+                    self.insert_subfield(key, arg1.subfields[key] +
+                                              arg2.subfields[key])
+                for key in set1:
+                    self.insert_subfield(key, arg1.subfields[key].copy())
+                for key in set2:
+                    self.insert_subfield(key, arg2.subfields[key].copy())
+            else:
+                for key in arg2.subfields.keys():
+                    self.insert_subfield(key, arg2.subfields[key].copy())
+        elif arg1.subfield_math:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def iadd_subfields(self, arg2):
-        if isinstance(arg2, Array):
+        if not self.subfield_math: return
+        if isinstance(arg2, Array) and arg2.subfield_math:
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2
@@ -463,28 +469,20 @@ class Array(object):
 
     def __sub__(self, arg):
         if Array.is_empty(arg): return arg
-
         (vals, mask, units) = self.as_if_my_type(arg)
         (vals, units) = self.as_if_my_units(vals, units)
         obj = Array.__new__(type(self))
         obj.__init__(self.vals - vals, self.mask | mask, units)
-
-        if not Array.IGNORE_SUBFIELDS:
-            obj.sub_subfields(self, arg)
-
+        obj.sub_subfields(self, arg)
         return obj
 
     def __rsub__(self, arg):
         if Array.is_empty(arg): return arg
-
         (vals, mask, units) = self.as_if_my_type(arg)
         (vals, units) = self.as_if_my_units(vals, units)
         obj = Array.__new__(type(self))
         obj.__init__(vals - self.vals, self.mask | mask, units)
-
-        if not Array.IGNORE_SUBFIELDS:
-            obj.add_subfields(-self, arg)
-
+        obj.add_subfields(-self, arg)
         return obj
 
     def __isub__(self, arg):
@@ -493,38 +491,38 @@ class Array(object):
         self.vals -= vals
         self.mask |= mask
         self.units = units
-
-        if not Array.IGNORE_SUBFIELDS:
-            self.isub_subfields(arg)
-
+        self.isub_subfields(arg)
         return self
 
     def sub_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array):
-            set1 = set(arg1.subfields)
-            set2 = set(arg2.subfields)
-            set12 = set1 & set2
-            set1 -= set12
-            set2 -= set12
-
-            for key in set12:
-                self.insert_subfield(key, arg1.subfields[key] -
-                                          arg2.subfields[key])
-            for key in set1:
-                self.insert_subfield(key, arg1.subfields[key].copy())
-            for key in set2:
-                self.insert_subfield(key, -arg2.subfields[key].copy())
-        else:
+        if isinstance(arg2, Array) and arg2.subfield_math:
+            if arg1.subfield_math:
+                set1 = set(arg1.subfields)
+                set2 = set(arg2.subfields)
+                set12 = set1 & set2
+                set1 -= set12
+                set2 -= set12
+                for key in set12:
+                    self.insert_subfield(key, arg1.subfields[key] -
+                                              arg2.subfields[key])
+                for key in set1:
+                    self.insert_subfield(key, arg1.subfields[key].copy())
+                for key in set2:
+                    self.insert_subfield(key, -arg2.subfields[key].copy())
+            else:
+                for key in arg2.subfields.keys():
+                    self.insert_subfield(key, -arg2.subfields[key].copy())
+        elif arg1.subfield_math:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def isub_subfields(self, arg2):
-        if isinstance(arg2, Array):
+        if not self.subfield_math: return
+        if isinstance(arg2, Array) and arg2.subfield_math:
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2
             set2 -= set12
-
             for key in set12:
                 self.subfields[key] -= arg2.subfields[key]
                 self.__dict__[key] = self.subfields[key]
@@ -551,8 +549,7 @@ class Array(object):
                      self.mask | mask,
                      Units.mul_units(self.units, units))
 
-        if not Array.IGNORE_SUBFIELDS:
-            obj.mul_subfields(self, arg)
+        obj.mul_subfields(self, arg)
 
         return obj
 
@@ -574,37 +571,39 @@ class Array(object):
         self.mask |= mask
         self.units = Units.mul_units(self.units, units)
 
-        if not Array.IGNORE_SUBFIELDS:
-            self.imul_subfields(arg)
+        self.imul_subfields(arg)
 
         return self
 
     def mul_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array):
-            set1 = set(arg1.subfields)
-            set2 = set(arg2.subfields)
-            set12 = set1 & set2
-            set1 -= set12
-            set2 -= set12
-
-            for key in set12:
-                self.insert_subfield(key, arg1.subfields[key] *
-                                          arg2.subfields[key])
-            for key in set1:
-                self.insert_subfield(key, arg1.subfields[key].copy())
-            for key in set2:
-                self.insert_subfield(key, arg2.subfields[key].copy())
-        else:
+        if isinstance(arg2, Array) and arg2.subfield_math:
+            if arg1.subfield_math:
+                set1 = set(arg1.subfields)
+                set2 = set(arg2.subfields)
+                set12 = set1 & set2
+                set1 -= set12
+                set2 -= set12
+                for key in set12:
+                    self.insert_subfield(key, arg1.subfields[key] *
+                                              arg2.subfields[key])
+                for key in set1:
+                    self.insert_subfield(key, arg1.subfields[key].copy())
+                for key in set2:
+                    self.insert_subfield(key, arg2.subfields[key].copy())
+            else:
+                for key in arg2.subfields.keys():
+                    self.insert_subfield(key, arg2.subfields[key].copy())
+        elif arg1.subfield_math:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def imul_subfields(self, arg2):
-        if isinstance(arg2, Array):
+        if not self.subfield_math: return
+        if isinstance(arg2, Array) and arg2.subfield_math:
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2
             set2 -= set12
-
             for key in set12:
                 self.subfields[key] *= arg2.subfields[key]
                 self.__dict__[key] = self.subfields[key]
@@ -642,8 +641,7 @@ class Array(object):
                      self.mask | mask | div_by_zero,
                      Units.div_units(self.units, units))
 
-        if not Array.IGNORE_SUBFIELDS:
-            obj.div_subfields(self, arg)
+        obj.div_subfields(self, arg)
 
         return obj
 
@@ -671,42 +669,44 @@ class Array(object):
         self.mask |= (mask | div_by_zero)
         self.units = Units.div_units(self.units, units)
 
-        if not Array.IGNORE_SUBFIELDS:
-            self.idiv_subfields(arg)
+        self.idiv_subfields(arg)
 
         return self
 
     def div_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array):
-            set1 = set(arg1.subfields)
-            set2 = set(arg2.subfields)
-            set12 = set1 & set2
-            set1 -= set12
-            set2 -= set12
-
-            for key in set12:
-                self.insert_subfield(key, arg1.subfields[key] /
-                                          arg2.subfields[key])
-            for key in set1:
-                self.insert_subfield(key, arg1.subfields[key].copy())
-            for key in set2:
-                self.insert_subfield(key, 1./arg2.subfields[key])
-        else:
+        if isinstance(arg2, Array) and arg2.subfield_math:
+            if arg1.subfield_math:
+                set1 = set(arg1.subfields)
+                set2 = set(arg2.subfields)
+                set12 = set1 & set2
+                set1 -= set12
+                set2 -= set12
+                for key in set12:
+                    self.insert_subfield(key, arg1.subfields[key] /
+                                              arg2.subfields[key])
+                for key in set1:
+                    self.insert_subfield(key, arg1.subfields[key].copy())
+                for key in set2:
+                    self.insert_subfield(key, 1./arg2.subfields[key])
+            else:
+                for key in arg2.subfields.keys():
+                    self.insert_subfield(key, 1./arg2.subfields[key])
+        elif arg1.subfield_math:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def idiv_subfields(self, arg2):
-        if isinstance(arg2, Array):
+        if not self.subfield_math: return
+        if isinstance(arg2, Array) and arg2.subfield_math:
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2
             set2 -= set12
-
             for key in set12:
                 self.subfields[key] /= arg2.subfields[key]
                 self.__dict__[key] = self.subfields[key]
             for key in set2:
-                self.insert_subfield(key,1./ arg2.subfields[key])
+                self.insert_subfield(key, 1./arg2.subfields[key])
 
     ####################################################
     # Other operators
@@ -741,8 +741,7 @@ class Array(object):
                      self.mask | mask | div_by_zero,
                      Units.div_units(self.units, units))
 
-        if not Array.IGNORE_SUBFIELDS:
-            obj.div_subfields(self, arg)
+        obj.div_subfields(self, arg)
 
         return obj
 
@@ -766,8 +765,7 @@ class Array(object):
         self.mask |= (mask | div_by_zero)
         self.units = Units.div_units(self.units, units)
 
-        if not Array.IGNORE_SUBFIELDS:
-            self.idiv_subfields(arg)
+        self.idiv_subfields(arg)
 
         return self
 
