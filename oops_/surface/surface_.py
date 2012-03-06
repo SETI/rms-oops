@@ -425,7 +425,8 @@ class Surface(object):
             prev_max_dlt = max_dlt
             max_dlt = abs(dlt).max()
 
-            if LOGGING.surface_iterations: print LOGGING.prefix, iter, max_dlt
+            if LOGGING.surface_iterations:
+                print LOGGING.prefix, "Surface._solve_photon", iter, max_dlt
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 

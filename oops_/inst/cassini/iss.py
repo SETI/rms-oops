@@ -102,11 +102,10 @@ def from_index(filespec, parameters={}):
                             (tdb0, tdb1),               # time
                             FOVS[camera,mode],          # fov
                             "CASSINI",                  # path_id
-                            "CASSINI_ISS_" + camera,    # frame_id
-                            DN_SCALING)                 # calibration
+                            "CASSINI_ISS_" + camera)    # frame_id
 
         # Tack on the dictionary in case more info is needed
-        result.insert_subfield("index_dict", dict)
+        item.insert_subfield("index_dict", dict)
 
         snapshots.append(item)
 
@@ -184,9 +183,9 @@ class Test_Cassini_ISS(unittest.TestCase):
         snapshots = from_index("test_data/cassini/ISS/index.lbl")
         snapshot = from_file("test_data/cassini/ISS/W1575634136_1.IMG")
         snapshot3940 = snapshots[3940]  #should be same as snapshot
-        
-        self.assertTrue(snapshot.t0 == snapshot3940.t0)
-        self.assertTrue(snapshot.t1 == snapshot3940.t1)
+    
+        self.assertTrue(abs(snapshot.t0 - snapshot3940.t0) < 1.e-3)
+        self.assertTrue(abs(snapshot.t1 - snapshot3940.t1) < 1.e-3)
 
 ############################################
 if __name__ == '__main__':

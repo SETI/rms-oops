@@ -14,7 +14,7 @@ from frame_ import Frame
 from oops_.array.all import *
 from oops_.config import QUICK
 from oops_.transform import Transform
-
+import oops_.constants as constants
 import oops_.registry as registry
 
 class Cmatrix(Frame):
@@ -50,7 +50,8 @@ class Cmatrix(Frame):
                                    self.frame_id,
                                    self.reference_id)
 
-    def from_ra_dec(self, ra, dec, clock, id, reference="J2000"):
+    @staticmethod
+    def from_ra_dec(ra, dec, clock, id, reference="J2000"):
         """Constructs a Cmatrix frame given the RA, dec and celestial north
         clock angles.
 
@@ -75,14 +76,14 @@ class Cmatrix(Frame):
         by broadcasting the shapes of the ra, dec and twist Scalars.
         """
 
-        self.ra    = Scalar.as_scalar(ra)
-        self.dec   = Scalar.as_scalar(dec)
-        self.clock = Scalar.as_scalar(clock)
+        ra    = Scalar.as_scalar(ra)
+        dec   = Scalar.as_scalar(dec)
+        clock = Scalar.as_scalar(clock)
 
         # The transform is fixed so save it now
-        r = Cmatrix.RPD * self.ra.vals
-        d = Cmatrix.RPD * self.dec.vals
-        t = Cmatrix.RPD * (180. - self.clock.vals)
+        r = constants.RPD * ra.vals
+        d = constants.RPD * dec.vals
+        t = constants.RPD * (180. - clock.vals)
 
         cosr = np.cos(r)
         sinr = np.sin(r)
@@ -99,15 +100,14 @@ class Cmatrix(Frame):
 
         # Extracted from the PDS Data Dictionary definition, which is appended
         # below
-        matrix_vals = np.array(
+        cmatrix = Matrix3(
             [[-sinr * cost - cosr * sind * sint,
                cosr * cost - sinr * sind * sint, cosd * sint],
              [ sinr * sint - cosr * sind * cost,
               -cosr * sint - sinr * sind * cost, cosd * cost],
              [ cosr * cosd,  sinr * cosd,        sind       ]])
 
-        self.transform = Transform(matrix_vals, (0.,0.,0.),
-                                   self.frame_id, self.reference_id)
+        return Cmatrix(cmatrix, id, reference)
 
 ########################################
 

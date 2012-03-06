@@ -86,7 +86,7 @@ class MatrixN(Array):
 
         # 2 x 2 case
         if self.item[0] == 2:
-            inverse_vals = np.empty(self.shape)
+            inverse_vals = np.empty(self.shape + [2,2])
 
             inverse_vals[...,0,0] =  self.vals[...,1,1]
             inverse_vals[...,0,1] = -self.vals[...,0,1]
