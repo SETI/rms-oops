@@ -339,8 +339,8 @@ class Spheroid(Surface):
                         [3,3].
         """
 
-        # TBD
-        pass
+        inorms = self.normal(pos)
+        return self.intercept(pos, inorms, derivs)[0]
 
     def velocity(self, pos):
         """Returns the local velocity vector at a point within the surface.
@@ -431,6 +431,17 @@ class Test_Spheroid(unittest.TestCase):
 
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
+
+        # test the specific lines of intercept_normal()
+        # we need to write it out b/c we need the normal that is found to test
+        pts = np.random.random((10,3)) * REQ + REQ
+        inorms = planet.normal(pts)
+        ipts = planet.intercept(pts, inorms)[0]
+        diff_pts = pts[...,0] - ipts.vals[...,0]
+        diff_t = Scalar.as_standard(diff_pts / inorms.vals[...,0])
+        new_pts = ipts + diff_t * inorms
+        vpts = Vector3(pts)
+        self.assertTrue(abs(vpts - new_pts) < 1.e-9)
 
 ########################################
 if __name__ == '__main__':

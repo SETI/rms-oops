@@ -115,7 +115,7 @@ class Ansa(Surface):
         r1_vals2 = r1_vals**2
         
         a = obs_x2 + obs_y2
-        b = -2. * r1_vals2 * obs_x
+        """b = -2. * r1_vals2 * obs_x
         c = r1_vals2 * (r1_vals2 - obs_y2)
         discr_sq = b**2 - 4.*a*c
         discr = np.sqrt(b**2 - 4*a*c)
@@ -124,18 +124,30 @@ class Ansa(Surface):
         x_surf2 = (-b - discr)/two_a
         x_surf = x_surf1
         x_surf[r1_vals<0.] = x_surf2
+        y_surf = (r1_vals2 - obs_x * x_surf) / obs_y"""
+        
+        r_obs_x = r1_vals * obs_x
+        discr = np.sqrt(r_obs_x**2 - a * (r1_vals2 - obs_y2))
+        r1_vals_over_a = r1_vals / a
+        x_surf1 = r1_vals_over_a * (r_obs_x + discr)
+        x_surf2 = r1_vals_over_a * (r_obs_x - discr)
+        x_surf = np.where(r1_vals>0.,
+                          np.maximum(x_surf1, x_surf2),
+                          np.minimum(x_surf1, x_surf2))
         y_surf = (r1_vals2 - obs_x * x_surf) / obs_y
         
         # if theta = 0. (pt on surface), we are done
         if theta == 0.:
-            return Vector3.from_scalars(x_surf, y_surf, z)
-        
-        # now find theta2 where theta = theta1 + theta2 and
-        # theta1 = arccos(x_surf/r)
-        theta1 = np.arccos(x_surf/r1_vals)
-        theta2 = theta.vals - theta1
-        x = rvals * np.cos(theta2)
-        y = rvals * np.sin(theta2)
+            x = x_surf
+            y = y_surf
+        else:
+            # now find theta2 where theta = theta1 + theta2 and
+            # theta1 = arccos(x_surf/r)
+            theta1 = np.arccos(x_surf/r1_vals)
+            theta2 = theta.vals - theta1
+            x = rvals * np.cos(theta2)
+            y = rvals * np.sin(theta2)
+
         return Vector3.from_scalars(x, y, z.vals)
 
     def intercept(self, obs, los, derivs=False):
