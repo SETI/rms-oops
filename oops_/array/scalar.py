@@ -141,6 +141,11 @@ class Scalar(Array):
             else:
                 return Scalar(np.sqrt(self.vals), self.mask, new_units)
 
+    def sign(self):
+        """Returns the sign of each value as +1, -1 or 0."""
+
+        return Scalar(np.sign(self.vals), self.mask)
+
     def max(self):
         """Returns the maximum of the unmasked values."""
 

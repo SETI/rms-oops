@@ -413,11 +413,12 @@ class Surface(object):
             transform = frame_wrt_j2000.transform_at_time(surface_time)
             pos_in_frame = transform.rotate(pos_in_j2000)
             los_in_frame = transform.rotate(los_wrt_ssb)
+            obs_in_frame = pos_in_frame - lt * los_in_frame
 
             # Update the intercept times; save the intercept positions
-            (intercept, dlt) = self.intercept(pos_in_frame, los_in_frame)
+            (intercept, new_lt) = self.intercept(obs_in_frame, los_in_frame)
 
-            new_lt = (lt + dlt).clip(lt_min, lt_max)
+            new_lt = new_lt.clip(lt_min, lt_max)
             dlt = new_lt - lt
             lt = new_lt
 

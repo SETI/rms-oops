@@ -3,8 +3,8 @@ import pylab
 import oops_.all as oops
 import oops_.inst.cassini.iss as cassini_iss
 
-PRINT = False
-DISPLAY = False
+PRINT = True
+DISPLAY = True
 
 def show_info(title, array):
     """Internal method to print summary information and display images as

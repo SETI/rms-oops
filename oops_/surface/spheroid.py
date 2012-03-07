@@ -60,7 +60,7 @@ class Spheroid(Surface):
 
         self.squash   = Vector3((1., 1., self.squash_z))
         self.unsquash = Vector3((1., 1., self.unsquash_z))
-        self.unsquash_sq = self.unsquash**2
+        self.unsquash_sq    = self.unsquash**2
 
     def as_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
@@ -187,36 +187,76 @@ class Spheroid(Surface):
         los_unsquashed = Vector3.as_standard(los) * self.unsquash
 
         # Solve for the intercept distance, masking lines of sight that miss
-        a = los_unsquashed.dot(los_unsquashed)
-        b = los_unsquashed.dot(obs_unsquashed) * 2.
-        c = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
-        d = b**2 - 4. * a * c
 
-        t = (d.sqrt() - b) / (2*a)
+        # Use the quadratic formula...
+        # The use of b.sign() below always selects the closer intercept point
+
+        # a = los_unsquashed.dot(los_unsquashed)
+        # b = los_unsquashed.dot(obs_unsquashed) * 2.
+        # c = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
+        # d = b**2 - 4. * a * c
+        #
+        # t = (-b + b.sign() * d.sqrt()) / (2*a)
+        # pos = obs + t*los
+
+        # This is the same algorithm as is commented out above, but avoids a
+        # few unnecessary math operations
+
+        a      = los_unsquashed.dot(los_unsquashed)
+        b_div2 = los_unsquashed.dot(obs_unsquashed)
+        c      = obs_unsquashed.dot(obs_unsquLashed) - self.req_sq
+        d_div4 = b_div2**2 - a * c
+
+        bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
+        t = (bsign_sqrtd_div2 - b_div2) / a
         pos = obs + t*los
 
         if derivs:
             # Using step-by-step differentiation of the equations above
 
-            da_dlos = 2 * los * self.unsquash_sq
-            db_dlos = 2 * obs * self.unsquash_sq
-            db_dobs = 2 * los * self.unsquash_sq
-            dc_dobs = 2 * obs * self.unsquash_sq
+            # da_dlos = 2 * los * self.unsquash_sq
+            # db_dlos = 2 * obs * self.unsquash_sq
+            # db_dobs = 2 * los * self.unsquash_sq
+            # dc_dobs = 2 * obs * self.unsquash_sq
 
-            dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
-            dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
+            da_dlos_div2 = los * self.unsquash_sq
+            db_dlos_div2 = obs * self.unsquash_sq
+            db_dobs_div2 = los * self.unsquash_sq
+            dc_dobs_div2 = obs * self.unsquash_sq
 
-            dsqrt = d.sqrt()
-            d_dsqrt_dd = 0.5 / dsqrt
-            d_dsqrt_dlos = d_dsqrt_dd * dd_dlos
-            d_dsqrt_dobs = d_dsqrt_dd * dd_dobs
+            # dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
+            # dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
 
-            inv2a = 0.5/a
-            d_inv2a_da = -2 * inv2a**2
+            dd_dlos_div8 = b_div2 * db_dlos_div2 - c * da_dlos_div2
+            dd_dobs_div8 = b_div2 * db_dobs_div2 - a * dc_dobs_div2
 
-            dt_dlos = (inv2a * (d_dsqrt_dlos - db_dlos) +
-                       (dsqrt - b) * d_inv2a_da * da_dlos).as_vectorn()
-            dt_dobs = (inv2a * (d_dsqrt_dobs - db_dobs)).as_vectorn()
+            # dsqrt = d.sqrt()
+            # d_dsqrt_dd = 0.5 / dsqrt
+            # d_dsqrt_dlos = d_dsqrt_dd * dd_dlos
+            # d_dsqrt_dobs = d_dsqrt_dd * dd_dobs
+
+            # d[bsign_sqrtd]/d[x] = 1/2 / bsign_sqrtd * d[d]/d[x]
+            #                     = 1/4 / bsign_sqrtd_div2 * d[d]/d[x]
+
+            d_bsign_sqrtd_dlos_div2 = dd_dlos_div8 / bsign_sqrtd_div2
+            d_bsign_sqrtd_dobs_div2 = dd_dobs_div8 / bsign_sqrtd_div2
+
+            # inv2a = 0.5/a
+            # d_inv2a_da = -2 * inv2a**2
+            # 
+            # dt_dlos = (inv2a * (b.sign()*d_dsqrt_dlos - db_dlos) +
+            #           (b.sign()*dsqrt - b)*d_inv2a_da * da_dlos).as_vectorn()
+            # dt_dobs = (inv2a * (b.sign()*d_dsqrt_dobs - db_dobs)).as_vectorn()
+            # 
+            # dpos_dobs = (los.as_column() * dt_dobs.as_row() +
+            #              Spheroid.UNIT_MATRIX)
+            # dpos_dlos = (los.as_column() * dt_dlos.as_row() +
+            #              Spheroid.UNIT_MATRIX * t)
+
+            dt_dlos = ((d_bsign_sqrtd_dlos_div2
+                        - db_dlos_div2 - 2 * t * da_dlos_div2) / a).as_vectorn()
+            dt_dobs = ((d_bsign_sqrtd_dobs_div2
+                        - db_dobs_div2) / a).as_vectorn()
 
             dpos_dobs = (los.as_column() * dt_dobs.as_row() +
                          Spheroid.UNIT_MATRIX)
