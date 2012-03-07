@@ -71,7 +71,7 @@ class Spheroid(Surface):
                         optional units.
             obs         a Vector3 of observer positions. In some cases, a
                         surface is defined in part by the position of the
-                        observer. In the case of a RingPlane, this argument is
+                        observer. In the case of a Spheroid, this argument is
                         ignored and can be omitted.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
@@ -83,7 +83,9 @@ class Spheroid(Surface):
                         basis.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
+                        three unitless Scalars, one for each coordinate. The
+                        coordinates are (longitude, latitude, elevation). Units
+                        are radians and km; longitude ranges from 0 to 2*pi.
 
                         If derivs is True, then the coordinate has extra
                         attributes "d_dpos" and "d_dobs", which contain the
@@ -97,7 +99,7 @@ class Spheroid(Surface):
         r = unsquashed.norm()
         (x,y,z) = unsquashed.as_scalars()
         lat = (z/r).arcsin()
-        lon = y.arctan2(x)
+        lon = y.arctan2(x) % (2.*np.pi)
 
         if derivs:
             raise NotImplementedError("spheroid coordinate derivatives are " +
@@ -204,7 +206,7 @@ class Spheroid(Surface):
 
         a      = los_unsquashed.dot(los_unsquashed)
         b_div2 = los_unsquashed.dot(obs_unsquashed)
-        c      = obs_unsquashed.dot(obs_unsquLashed) - self.req_sq
+        c      = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
         d_div4 = b_div2**2 - a * c
 
         bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()

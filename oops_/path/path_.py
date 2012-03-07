@@ -606,9 +606,9 @@ class Path(object):
         """
 
         OVERHEAD = 500      # Assume it takes the equivalent time of this many
-                            # evaluations just to set up the QuickFrame.
+                            # evaluations just to set up the QuickPath.
         SPEEDUP = 5.        # Assume that evaluations are this much faster once
-                            # the QuickFrame is set up.
+                            # the QuickPath is set up.
         SAVINGS = 0.2       # Require at least a 20% savings in evaluation time.
 
         # Make sure a QuickPath is requested
@@ -631,16 +631,49 @@ class Path(object):
         time = Scalar.as_scalar(time)
         vals = time.vals
 
-        count = np.size(vals)
-        if count < OVERHEAD: return self
-
         dt = quickdict["path_time_step"]
         extension = quickdict["path_time_extension"]
         extras = quickdict["path_extra_steps"]
 
         tmin = np.min(vals) - extension
         tmax = np.max(vals) + extension
-        steps = (tmax - tmin)/dt + 2*extras
+        steps = (tmax - tmin)//dt + 2*extras
+
+        # If QuickPaths already exists...
+        if "quickpaths" in self.__dict__.keys():
+            existing_quickpaths = self.quickpaths
+        else:
+            existing_quickpaths = []
+
+        # If the whole time range is already covered, just return this one
+        for quickpath in existing_quickpaths:
+            if tmin >= quickpath.t0 and tmax <= quickpath.t1:
+
+                if LOGGING.quickpath_creation:
+                    print LOGGING.prefix, "Re-using QuickPath: " + str(self),
+                    print (tmin, tmax)
+
+                return quickpath
+
+        # See if the overhead makes more work justified
+        count = np.size(vals)
+        if count < OVERHEAD: return self
+
+        # See if a QuickPath can be efficiently extended
+        for quickpath in existing_quickpaths:
+            duration = (max(tmax, quickpath.t1) - min(tmin, quickpath.t0))
+            steps = duration//dt - quickpath.times.size
+
+            # Compare the effort involved in extending to the effort without
+            effort_extending_quickpath = OVERHEAD + steps + count/SPEEDUP
+            if count >= effort_extending_quickpath: 
+
+                if LOGGING.quickpath_creation:
+                    print LOGGING.prefix, "Extending QuickPath: " + str(self),
+                    print (tmin, tmax)
+
+                quickpath.extend((tmin,tmax))
+                return quickpath
 
         # Evaluate the effort using a QuickPath compared to the effort without
         effort_using_quickpath = OVERHEAD + steps + count/SPEEDUP
@@ -650,7 +683,14 @@ class Path(object):
         if LOGGING.quickpath_creation:
             print LOGGING.prefix, "New QuickPath: " + str(self), (tmin, tmax)
 
-        return QuickPath(self, (tmin, tmax), quickdict)
+        result = QuickPath(self, (tmin, tmax), quickdict)
+
+        if len(existing_quickpaths) > quickdict["quickpath_cache"]:
+            self.quickpaths = [result] + existing_quickpaths[:-1]
+        else:
+            self.quickpaths = [result] + existing_quickpaths
+
+        return result
 
 ################################################################################
 # Define the required subclasses
@@ -855,15 +895,44 @@ class QuickPath(Path):
         self.t1 = interval[1]
         self.dt = quickdict["path_time_step"]
 
-        extras = quickdict["path_extra_steps"]
-        self.times = np.arange(self.t0 - extras * self.dt,
-                               self.t1 + extras * self.dt + self.dt,
+        self.extras = quickdict["path_extra_steps"]
+        self.times = np.arange(self.t0 - self.extras * self.dt,
+                               self.t1 + self.extras * self.dt + self.dt,
                                self.dt)
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
 
-        self.events = self.path.event_at_time(self.times)
+        self.events = self.path.event_at_time(self.times, quick=False)
+        self._spline_setup()
 
+        # Test the precision
+        precision_self_check = quickdict["path_self_check"]
+        if precision_self_check is not None:
+            t = self.times[:-1] + self.dt/2.        # Halfway points
+
+            true_event = self.path.event_at_time(t)
+            (pos, vel) = self._interpolate_pos_vel(t)
+
+            dpos = abs(true_event.pos - pos) / abs(true_event.pos)
+            dvel = abs(true_event.vel - vel) / abs(true_event.vel)
+            error = max(np.max(dpos.vals), np.max(dvel.vals))
+            if error > precision_self_check:
+                raise ValueError("precision tolerance not achieved: " +
+                                  str(error) + " > " +
+                                  str(precision_self_check))
+
+    ####################################
+
+    def event_at_time(self, time, quick=QUICK):
+        (pos, vel) = self._interpolate_pos_vel(time)
+        return Event(time, pos, vel, self.origin_id, self.frame_id)
+
+    def __str__(self):
+        return "QuickPath(" + self.path_id + "*" + self.frame_id + ")"
+
+    ####################################
+
+    def _spline_setup(self):
         KIND = 3
         self.pos_x = interp.UnivariateSpline(self.times,
                                              self.events.pos.vals[:,0], k=KIND)
@@ -879,58 +948,84 @@ class QuickPath(Path):
         self.vel_z = interp.UnivariateSpline(self.times,
                                              self.events.vel.vals[:,2], k=KIND)
 
-        # Test the precision
-        precision_self_check = quickdict["path_self_check"]
-        if precision_self_check is not None:
-            t = self.times[:-1] + self.dt/2.        # Halfway points
+    def _interpolate_pos_vel(self, time):
 
-            true_event = self.path.event_at_time(t)
-
-            pos = np.empty(t.shape + (3,))
-            vel = np.empty(t.shape + (3,))
-
-            # Evaluate the positions and velocities
-            pos[...,0] = self.pos_x(t)
-            pos[...,1] = self.pos_y(t)
-            pos[...,2] = self.pos_z(t)
-
-            vel[...,0] = self.vel_x(t)
-            vel[...,1] = self.vel_y(t)
-            vel[...,2] = self.vel_z(t)
-
-            dpos = abs(true_event.pos - pos) / abs(true_event.pos)
-            dvel = abs(true_event.vel - vel) / abs(true_event.vel)
-
-            error = max(np.max(dpos.vals), np.max(dvel.vals))
-            if error > precision_self_check:
-                raise ValueError("precision tolerance not achieved: " +
-                                  str(error) + " > " +
-                                  str(precision_self_check))
-
-    def event_at_time(self, time, quick=QUICK):
-
-        # time can only be a 1-D array
-        time = Scalar.as_scalar(time)
-        pos = np.empty((np.size(time.vals), 3))
-        vel = np.empty((np.size(time.vals), 3))
+        # time can only be a 1-D array in the splines
+        tflat = Scalar.as_scalar(time).flatten()
+        pos = np.empty(tflat.shape + [3])
+        vel = np.empty(tflat.shape + [3])
 
         # Evaluate the positions and velocities
-        t = np.ravel(time.vals)
-        pos[...,0] = self.pos_x(t)
-        pos[...,1] = self.pos_y(t)
-        pos[...,2] = self.pos_z(t)
+        pos[...,0] = self.pos_x(tflat.vals)
+        pos[...,1] = self.pos_y(tflat.vals)
+        pos[...,2] = self.pos_z(tflat.vals)
 
-        vel[...,0] = self.vel_x(t)
-        vel[...,1] = self.vel_y(t)
-        vel[...,2] = self.vel_z(t)
+        vel[...,0] = self.vel_x(tflat.vals)
+        vel[...,1] = self.vel_y(tflat.vals)
+        vel[...,2] = self.vel_z(tflat.vals)
 
-        # Return the Event
-        return Event(time, pos.reshape(np.shape(time.vals) + (3,)),
-                           vel.reshape(np.shape(time.vals) + (3,)),
-                           self.origin_id, self.frame_id)
+        # Return the positions and velocities
+        return (Vector3(pos, tflat.mask).reshape(time.shape),
+                Vector3(vel, tflat.mask).reshape(time.shape))
 
-    def __str__(self):
-        return "QuickPath(" + self.path_id + "*" + self.frame_id + ")"
+    ####################################
+
+    def extend(self, interval):
+        """Modifies the given QuickPath if necessary to accommodate the given
+        time interval."""
+
+        # If the interval fits inside already, we're done
+        if interval[0] >= self.t0 and interval[1] <= self.t1: return
+
+        # Extend the interval
+        if interval[0] < self.t0:
+            count0 = int((self.t0 - interval[0]) // self.dt) + 1 + self.extras
+            new_t0 = self.t0 - count0 * self.dt
+            times  = np.arange(count0) * self.dt + new_t0
+            event0 = self.path.event_at_time(times, quick=False)
+        else:
+            count0 = 0
+            new_t0 = self.t0
+
+        if interval[1] > self.t1:
+            count1 = int((interval[1] - self.t1) // self.dt) + 1 + self.extras
+            new_t1 = self.t1 + count1 * self.dt
+            times  = np.arange(count1) * self.dt + self.t1 + self.dt
+            event1 = self.path.event_at_time(times, quick=False)
+        else:
+            count1 = 0
+            new_t1 = self.t1
+
+        # Allocate the new arrays
+        old_size = self.times.size
+        new_size = old_size + count0 + count1
+        pos_vals = np.empty((new_size,3))
+        vel_vals = np.empty((new_size,3))
+
+        # Copy the new arrays
+        if count0 > 0:
+            pos_vals[0:count0,:] = event0.pos.vals
+            vel_vals[0:count0,:] = event0.vel.vals
+
+        pos_vals[count0:count0+old_size,:] = self.events.pos.vals
+        vel_vals[count0:count0+old_size,:] = self.events.vel.vals
+
+        if count1 > 0:
+            pos_vals[count0+old_size:,:] = event1.pos.vals
+            vel_vals[count0+old_size:,:] = event1.vel.vals
+
+        # Generate the new events
+        self.times = np.arange(new_t0, new_t1 + self.dt/2., self.dt)
+        self.t0 = self.times[0]
+        self.t1 = self.times[-1]
+
+        new_events = Event(Scalar(self.times),
+                           Vector3(pos_vals), Vector3(vel_vals),
+                           self.events.origin_id, self.events.frame_id)
+        self.events = new_events
+
+        # Update the splines
+        self._spline_setup()
 
 ################################################################################
 # Initialize the registry

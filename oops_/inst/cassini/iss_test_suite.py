@@ -146,6 +146,7 @@ def iss_test_suite(filespec, derivs, info, display):
 
     # Define the apparent location of the observer relative to Saturn ring frame
     ring_center_event = ring_body.path.photon_to_event(point_event)
+    ring_center_event = ring_center_event.wrt_frame(ring_body.frame_id)
 
     # Event separation in ring surface coordinates
     obs_wrt_ring_center = oops.Edelta.sub_events(point_event,
@@ -176,10 +177,11 @@ def iss_test_suite(filespec, derivs, info, display):
 
     # Define the apparent location of the Sun relative to the ring frame
     sun_center_event = sun_body.path.photon_from_event(ring_center_event)
+    sun_center_event = sun_center_event.wrt_frame(ring_body.frame_id)
 
     # Event separation in ring surface coordinates
-    sun_wrt_ring_center = oops.Edelta.sub_events(point_event,
-                                                 sun_center_event)
+    sun_wrt_ring_center = oops.Edelta.sub_events(sun_center_event,
+                                                 ring_center_event)
 
     sun_wrt_ring_range = sun_wrt_ring_center.pos.norm()
 
@@ -205,6 +207,7 @@ def iss_test_suite(filespec, derivs, info, display):
 
     # Define the apparent location of the observer relative to Saturn frame
     saturn_center_event = saturn_body.path.photon_to_event(point_event)
+    saturn_center_event = saturn_center_event.wrt_frame(saturn_body.frame_id)
 
     # Event separation in Saturn surface coordinates
     obs_wrt_saturn_center = oops.Edelta.sub_events(point_event,
@@ -238,10 +241,11 @@ def iss_test_suite(filespec, derivs, info, display):
 
     # Define the apparent location of the Sun relative to the Saturn frame
     sun_center_event = sun_body.path.photon_from_event(saturn_center_event)
+    sun_center_event = sun_center_event.wrt_frame(saturn_body.frame_id)
 
     # Event separation in Saturn surface coordinates
-    sun_wrt_saturn_center = oops.Edelta.sub_events(snapshot_event,
-                                                   sun_center_event)
+    sun_wrt_saturn_center = oops.Edelta.sub_events(sun_center_event,
+                                                   saturn_center_event)
 
     sun_wrt_saturn_range = sun_wrt_saturn_center.pos.norm()
 
@@ -496,9 +500,9 @@ def iss_test_suite(filespec, derivs, info, display):
 
 import unittest
 
-UNITTEST_PRINTING = False
-UNITTEST_LOGGING = False
-UNITTEST_DERIVS = False
+UNITTEST_PRINTING = True
+UNITTEST_LOGGING = True
+UNITTEST_DERIVS = True
 
 class Test_Cassini_ISS_Suite(unittest.TestCase):
 

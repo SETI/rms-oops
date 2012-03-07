@@ -31,7 +31,7 @@ class Cmatrix(Frame):
             cmatrix     a Matrix3 object.
             id          the ID under which the frame will be registered. It
                         replaces a pre-existing frame of the same name.
-            reference   the ID or frame relative to which this frame is defind.
+            reference   the ID or frame relative to which this frame is defined.
         """
 
         cmatrix = Matrix3.as_matrix3(cmatrix)

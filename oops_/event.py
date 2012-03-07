@@ -181,7 +181,39 @@ class Event(object):
         return Event(time, (0.,0.,0.), (0.,0.,0.), origin, frame)
 
     ####################################################
-    # Subarray support methods
+    # Indexing operators
+    ####################################################
+
+    def __getitem__(self, i):
+
+        time = self.time.rebroadcast(self.shape)[i]
+        pos  = self.pos.rebroadcast(self.shape)[i]
+        vel  = self.vel.rebroadcast(self.shape)[i]
+
+        result = Event(time, pos, vel, self.origin_id, self.frame_id)
+
+        for key in self.subfields.keys():
+            subfield = self.subfields[key].rebroadcast(self.shape)[i]
+            result.insert_subfield(key, subfield)
+
+        return result
+
+    def __getslice__(self, i, j):
+
+        time = self.time.rebroadcast(self.shape)[i:j]
+        pos  = self.pos.rebroadcast(self.shape)[i:j]
+        vel  = self.vel.rebroadcast(self.shape)[i:j]
+
+        result = Event(time, pos, vel, self.origin_id, self.frame_id)
+
+        for key in self.subfields.keys():
+            subfield = self.subfields[key].rebroadcast(self.shape)[i:j]
+            result.insert_subfield(key, subfield)
+
+        return result
+
+    ####################################################
+    # Subfield support methods
     ####################################################
 
     def insert_subfield(self, key, value):

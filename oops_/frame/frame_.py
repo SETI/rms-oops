@@ -354,9 +354,6 @@ class Frame(object):
         time = Scalar.as_scalar(time)
         vals = time.vals
 
-        count = np.size(vals)
-        if count < OVERHEAD: return self
-
         extension = quickdict["frame_time_extension"]
         dt = quickdict["frame_time_step"]
         extras = quickdict["frame_extra_steps"]
@@ -364,6 +361,41 @@ class Frame(object):
         tmin = np.min(vals) - extension
         tmax = np.max(vals) + extension
         steps = (tmax - tmin)/dt + 2*extras
+
+        # If QuickFrames already exists...
+        if "quickframes" in self.__dict__.keys():
+            existing_quickframes = self.quickframes
+        else:
+            existing_quickframes = []
+
+        # If the whole time range is already covered, just return this one
+        for quickframe in existing_quickframes:
+            if tmin >= quickframe.t0 and tmax <= quickframe.t1:
+
+                if LOGGING.quickframe_creation:
+                    print LOGGING.prefix, "Re-using QuickFrame: " + str(self),
+                    print (tmin, tmax)
+
+                return quickframe
+
+        # See if the overhead would make any work justified
+        count = np.size(vals)
+        if count < OVERHEAD: return self
+
+        # See if a QuickFrame can be efficiently extended
+        for quickframe in existing_quickframes:
+            duration = (max(tmax, quickframe.t1) - min(tmin, quickframe.t0))
+            steps = duration//dt - quickframe.times.size
+
+            effort_extending_quickframe = OVERHEAD + steps + count/SPEEDUP
+            if count >= effort_extending_quickframe: 
+
+                if LOGGING.quickframe_creation:
+                    print LOGGING.prefix, "Extending QuickFrame: " + str(self),
+                    print (tmin, tmax)
+
+                quickframe.extend((tmin,tmax))
+                return quickframe
 
         # Evaluate the effort using a QuickFrame compared to the effort without
         effort_using_quickframe = OVERHEAD + steps + count/SPEEDUP
@@ -373,7 +405,14 @@ class Frame(object):
         if LOGGING.quickframe_creation:
             print LOGGING.prefix, "New QuickFrame: " + str(self), (tmin, tmax)
 
-        return QuickFrame(self, (tmin, tmax), quickdict)
+        result = QuickFrame(self, (tmin, tmax), quickdict)
+
+        if len(existing_quickframes) > quickdict["quickframe_cache"]:
+            self.quickframes = [result] + existing_quickframes[:-1]
+        else:
+            self.quickframes = [result] + existing_quickframes
+
+        return result
 
 ################################################################################
 # Required Subclasses
@@ -528,14 +567,49 @@ class QuickFrame(Frame):
         self.t1 = interval[1]
         self.dt = quickdict["frame_time_step"]
 
-        extras = quickdict["frame_extra_steps"]
-        self.times = np.arange(self.t0 - extras * self.dt,
-                               self.t1 + extras * self.dt + self.dt,
+        self.extras = quickdict["frame_extra_steps"]
+        self.times = np.arange(self.t0 - self.extras * self.dt,
+                               self.t1 + self.extras * self.dt + self.dt,
                                self.dt)
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
 
         self.transforms = self.frame.transform_at_time(self.times)
+        self._spline_setup()
+
+        # Test the precision
+        precision_self_check = quickdict["frame_self_check"]
+        if precision_self_check is not None:
+            t = self.times[:-1] + self.dt/2.        # Halfway points
+
+            true_transform = self.frame.transform_at_time(t)
+            (matrix, omega) = self._interpolate_matrix_omega(t)
+
+            dmatrix = abs(true_transform.matrix - matrix)
+
+            domega = abs(true_transform.omega - omega)
+            if abs(true_transform.omega) != 0.:
+                domega /= abs(true_transform.omega)
+
+            error = max(np.max(dmatrix.vals), np.max(domega.vals))
+            if error > precision_self_check:
+                raise ValueError("precision tolerance not achieved: " +
+                                  str(error) + " > " +
+                                  str(precision_self_check))
+
+    ####################################
+
+    def transform_at_time(self, time, quick=QUICK):
+        (matrix, omega) = self._interpolate_matrix_omega(time)
+        return Transform(matrix, omega,
+                         self.frame_id, self.reference_id, self.origin_id)
+
+    def __str__(self):
+        return "QuickFrame(" + self.frame_id + "/" + self.reference_id + ")"
+
+    ####################################
+
+    def _spline_setup(self):
 
         # This would be faster with quaternions but I'm lazy
         KIND = 3
@@ -556,86 +630,97 @@ class QuickFrame(Frame):
                                         self.transforms.omega.vals[...,i],
                                         k=KIND)
 
-        # Test the precision
-        precision_self_check = quickdict["frame_self_check"]
-        if precision_self_check is not None:
-            t = self.times[:-1] + self.dt/2.        # Halfway points
+    def _interpolate_matrix_omega(self, time):
 
-            true_transform = self.frame.transform_at_time(t)
-
-            matrix = np.empty(t.shape + (3,3))
-            omega  = np.zeros(t.shape + (3,))
-
-            # Evaluate the matrix and rotation vector
-            matrix[...,0,0] = self.matrix[0,0](t)
-            matrix[...,0,1] = self.matrix[0,1](t)
-            matrix[...,0,2] = self.matrix[0,2](t)
-            matrix[...,1,0] = self.matrix[1,0](t)
-            matrix[...,1,1] = self.matrix[1,1](t)
-            matrix[...,1,2] = self.matrix[1,2](t)
-            matrix[...,2,0] = self.matrix[2,0](t)
-            matrix[...,2,1] = self.matrix[2,1](t)
-            matrix[...,2,2] = self.matrix[2,2](t)
-
-            if self.omega is not None:
-                omega[...,0] = self.omega[0](t)
-                omega[...,1] = self.omega[1](t)
-                omega[...,2] = self.omega[2](t)
-
-            # Normalize the matrix
-            matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
-            matrix[...,1,:] = utils.ucross3d(matrix[...,2,:], matrix[...,0,:])
-            matrix[...,2,:] = utils.unit(matrix[...,2,:])
-
-            dmatrix = abs(true_transform.matrix - matrix)
-
-            domega = abs(true_transform.omega - omega)
-            if abs(true_transform.omega) != 0.:
-                domega /= abs(true_transform.omega)
-
-            error = max(np.max(dmatrix.vals), np.max(domega.vals))
-            if error > precision_self_check:
-                raise ValueError("precision tolerance not achieved: " +
-                                  str(error) + " > " +
-                                  str(precision_self_check))
-
-    def transform_at_time(self, time, quick=QUICK):
-
-        # time can only be a 1-D array
-        time   = Scalar.as_scalar(time)
-        matrix = np.empty((np.size(time.vals), 3, 3))
-        omega  = np.zeros((np.size(time.vals), 3))
+        # time can only be a 1-D array in the splines
+        tflat = Scalar.as_scalar(time).flatten()
+        matrix = np.empty(tflat.shape + [3,3])
+        omega  = np.zeros(tflat.shape + [3])
 
         # Evaluate the matrix and rotation vector
-        t = np.ravel(time.vals)
-
-        matrix[...,0,0] = self.matrix[0,0](t)
-        matrix[...,0,1] = self.matrix[0,1](t)
-        matrix[...,0,2] = self.matrix[0,2](t)
-        matrix[...,1,0] = self.matrix[1,0](t)
-        matrix[...,1,1] = self.matrix[1,1](t)
-        matrix[...,1,2] = self.matrix[1,2](t)
-        matrix[...,2,0] = self.matrix[2,0](t)
-        matrix[...,2,1] = self.matrix[2,1](t)
-        matrix[...,2,2] = self.matrix[2,2](t)
+        matrix[...,0,0] = self.matrix[0,0](tflat.vals)
+        matrix[...,0,1] = self.matrix[0,1](tflat.vals)
+        matrix[...,0,2] = self.matrix[0,2](tflat.vals)
+        matrix[...,1,0] = self.matrix[1,0](tflat.vals)
+        matrix[...,1,1] = self.matrix[1,1](tflat.vals)
+        matrix[...,1,2] = self.matrix[1,2](tflat.vals)
+        matrix[...,2,0] = self.matrix[2,0](tflat.vals)
+        matrix[...,2,1] = self.matrix[2,1](tflat.vals)
+        matrix[...,2,2] = self.matrix[2,2](tflat.vals)
 
         if self.omega is not None:
-            omega[...,0] = self.omega[0](t)
-            omega[...,1] = self.omega[1](t)
-            omega[...,2] = self.omega[2](t)
+            omega[...,0] = self.omega[0](tflat.vals)
+            omega[...,1] = self.omega[1](tflat.vals)
+            omega[...,2] = self.omega[2](tflat.vals)
 
         # Normalize the matrix
         matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
         matrix[...,1,:] = utils.ucross3d(matrix[...,2,:], matrix[...,0,:])
         matrix[...,2,:] = utils.unit(matrix[...,2,:])
 
-        # Return the Event
-        return Transform(matrix.reshape(np.shape(time.vals) + (3,3)),
-                         omega.reshape(np.shape(time.vals) + (3,)),
-                         self.frame_id, self.reference_id, self.origin_id)
+        # Return the positions and velocities
+        return (Matrix3(matrix).reshape(time.shape),
+                Vector3(omega).reshape(time.shape))
 
-    def __str__(self):
-        return "QuickFrame(" + self.frame_id + "/" + self.reference_id + ")"
+    ####################################
+
+    def extend(self, interval):
+        """Modifies the given QuickFrame if necessary to accommodate the given
+        time interval."""
+
+        # If the interval fits inside already, we're done
+        if interval[0] >= self.t0 and interval[1] <= self.t1: return
+
+        # Extend the interval
+        if interval[0] < self.t0:
+            count0 = int((self.t0 - interval[0]) // self.dt) + 1 + self.extras
+            new_t0 = self.t0 - count0 * self.dt
+            times  = np.arange(count0) * self.dt + new_t0
+            transform0 = self.frame.transform_at_time(times, quick=False)
+        else:
+            count0 = 0
+            new_t0 = self.t0
+
+        if interval[1] > self.t1:
+            count1 = int((interval[1] - self.t1) // self.dt) + 1 + self.extras
+            new_t1 = self.t1 + count1 * self.dt
+            times  = np.arange(count1) * self.dt + self.t1 + self.dt
+            transform1 = self.frame.transform_at_time(times, quick=False)
+        else:
+            count1 = 0
+            new_t1 = self.t1
+
+        # Allocate the new arrays
+        old_size = self.times.size
+        new_size = old_size + count0 + count1
+        matrix_vals = np.empty((new_size,3,3))
+        omega_vals = np.empty((new_size,3))
+
+        # Copy the new arrays
+        if count0 > 0:
+            matrix_vals[0:count0,:,:] = transform0.matrix.vals
+            omega_vals[0:count0,:] = transform0.omega.vals
+
+        matrix_vals[count0:count0+old_size,:,:] = self.transforms.matrix.vals
+        omega_vals[count0:count0+old_size,:] = self.transforms.omega.vals
+
+        if count1 > 0:
+            matrix_vals[count0+old_size:,:,:] = transform1.matrix.vals
+            omega_vals[count0+old_size:,:] = transform1.omega.vals
+
+        # Generate the new transforms
+        self.times = np.arange(new_t0, new_t1 + self.dt/2., self.dt)
+        self.t0 = self.times[0]
+        self.t1 = self.times[-1]
+
+        new_transforms = Transform(Matrix3(matrix_vals),
+                                   Vector3(omega_vals),
+                                   self.transforms.frame_id,
+                                   self.transforms.reference_id)
+        self.transforms = new_transforms
+
+        # Update the splines
+        self._spline_setup()
 
 ################################################################################
 # Initialize the registry

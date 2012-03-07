@@ -14,16 +14,20 @@
 
 QUICK_DICTIONARY = {
     "use_quickpaths": True,
-    "path_time_step": 0.01,     # time step in seconds.
+    "path_time_step": 0.05,     # time step in seconds.
     "path_time_extension": 0.,  # secs by which to extend interval at each end.
     "path_self_check": None,    # fractional precision for self-testing.
     "path_extra_steps": 4,      # number of extra time steps at each end.
+    "quickpath_cache": 4,       # maximum number of non-overlapping quickpaths
+                                # to cache for any given path.
 
     "use_quickframes": True,
-    "frame_time_step": 0.05,    # time interval in seconds.
+    "frame_time_step": 0.5,     # time interval in seconds.
     "frame_time_extension": 0., # secs by which to extend interval at each end.
     "frame_self_check": None,   # fractional precision for self-testing.
-    "frame_extra_steps": 4      # number of extra time steps at each end.
+    "frame_extra_steps": 4,     # number of extra time steps at each end.
+    "quickframe_cache": 4       # maximum number of non-overlapping quickframes
+                                # to cache for any given frame.
 }
 
 QUICK = True                    # Defines the default input argument as
@@ -37,7 +41,7 @@ QUICK = True                    # Defines the default input argument as
 
 class PATH_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
-    dlt_precision = 1.e-8       # Iterations stops when every change in light
+    dlt_precision = 1.e-7       # Iterations stops when every change in light
                                 # travel time from one iteration to the next
                                 # drops below this threshold.
     dlt_limit = 10.             # The allowed range of variations in light
@@ -49,7 +53,7 @@ class PATH_PHOTONS(object):
 
 class SURFACE_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
-    dlt_precision = 1.e-8       # See PATH_PHOTONS for more info.
+    dlt_precision = 1.e-7       # See PATH_PHOTONS for more info.
     dlt_limit = 10              # See PATH_PHOTONS for more info.
 
 ################################################################################
