@@ -614,7 +614,8 @@ class QuickFrame(Frame):
         # This would be faster with quaternions but I'm lazy
         KIND = 3
         self.matrix = np.empty((3,3), dtype="object")
-        for i in range(3):
+        # for i in range(3):
+        for i in range(2):
           for j in range(3):
             self.matrix[i,j] = interp.UnivariateSpline(self.times,
                                     self.transforms.matrix.vals[...,i,j],
@@ -644,9 +645,9 @@ class QuickFrame(Frame):
         matrix[...,1,0] = self.matrix[1,0](tflat.vals)
         matrix[...,1,1] = self.matrix[1,1](tflat.vals)
         matrix[...,1,2] = self.matrix[1,2](tflat.vals)
-        matrix[...,2,0] = self.matrix[2,0](tflat.vals)
-        matrix[...,2,1] = self.matrix[2,1](tflat.vals)
-        matrix[...,2,2] = self.matrix[2,2](tflat.vals)
+        # matrix[...,2,0] = self.matrix[2,0](tflat.vals)
+        # matrix[...,2,1] = self.matrix[2,1](tflat.vals)
+        # matrix[...,2,2] = self.matrix[2,2](tflat.vals)
 
         if self.omega is not None:
             omega[...,0] = self.omega[0](tflat.vals)
@@ -654,9 +655,9 @@ class QuickFrame(Frame):
             omega[...,2] = self.omega[2](tflat.vals)
 
         # Normalize the matrix
+        matrix[...,2,:] = utils.ucross3d(matrix[...,0,:], matrix[...,1,:])
         matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
-        matrix[...,1,:] = utils.ucross3d(matrix[...,2,:], matrix[...,0,:])
-        matrix[...,2,:] = utils.unit(matrix[...,2,:])
+        matrix[...,1,:] = utils.unit(matrix[...,1,:])
 
         # Return the positions and velocities
         return (Matrix3(matrix).reshape(time.shape),
