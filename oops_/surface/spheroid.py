@@ -58,8 +58,9 @@ class Spheroid(Surface):
         self.squash_z   = radii[1] / radii[0]
         self.unsquash_z = radii[0] / radii[1]
 
-        self.squash   = Vector3((1., 1., self.squash_z))
-        self.unsquash = Vector3((1., 1., self.unsquash_z))
+        self.squash    = Vector3((1., 1., self.squash_z))
+        self.squash_sq = self.squash**2
+        self.unsquash  = Vector3((1., 1., self.unsquash_z))
         self.unsquash_sq    = self.unsquash**2
 
     def as_coords(self, pos, obs=None, axes=2, derivs=False):
@@ -295,7 +296,7 @@ class Spheroid(Surface):
         perp = Vector3.as_standard(pos) * self.unsquash_sq
 
         if derivs:
-            raise NotImplementedError("spheroid normal derivatives are " +
+            raise NotImplementedError("spheroid normal() derivatives are " +
                                       "not supported")
 
         return perp
@@ -318,8 +319,13 @@ class Spheroid(Surface):
                         vector, as a MatrixN object with item shape [3,3].
         """
 
-        # TBD
-        pass
+        result = Vector3.as_standard(normal) * self.squash_sq
+
+        if derivs:
+            raise NotImplementedError("spheroid intercept_with_normal() " +
+                                      "derivatives are not implemented")
+
+        return result
 
     def intercept_normal_to(self, pos, derivs=False):
         """Constructs the intercept point on the surface where a normal vector
@@ -442,6 +448,20 @@ class Test_Spheroid(unittest.TestCase):
         new_pts = ipts + diff_t * inorms
         vpts = Vector3(pts)
         self.assertTrue(abs(vpts - new_pts) < 1.e-9)
+
+        # Test intercept_with_normal()
+        vector = Vector3(np.random.random((100,3)))
+        intercept = planet.intercept_with_normal(vector)
+        sep = vector.sep(planet.normal(intercept))
+        print sep
+        self.assertTrue(sep < 1.e-14)
+
+        # Test intercept_normal_to()
+        obs = Vector3(np.random.random((100,3)) * 10.*REQ + REQ)
+        intercept = planet.intercept_normal_to(obs)
+        sep = (obs - intercept).sep(planet.normal(intercept))
+        # print sep
+        self.assertTrue(sep < 1.e-12)
 
 ########################################
 if __name__ == '__main__':
