@@ -1,5 +1,5 @@
 ################################################################################
-# oops/instrument/cassini/utils.py
+# oops_/inst/cassini/utils.py
 #
 # Utility functions for managing SPICE kernels while working with Cassini data
 # sets.
@@ -14,17 +14,14 @@ import textkernel
 import spicedb
 import cspice
 
-import oops_.body as body
-import oops_.spice_support as spice_support
-from oops_.path.spicepath import SpicePath
-from oops_.frame.spiceframe import SpiceFrame
+import oops
 
 ################################################################################
 # Routines for managing the loading of C and SP kernels
 ################################################################################
 
 # Make sure the leap seconds have been loaded
-spice_support.load_leap_seconds()
+oops.spice_support.load_leap_seconds()
 
 # We load CK and SPK files on a very rough month-by-month basis. This is simpler
 # than a more granular approach involving detailed calendar calculations. We
@@ -131,9 +128,9 @@ initialize_kernels(kernels, SPK_LIST, SPK_DICT)
 spicedb.close_db()
 
 # Define some important paths and frames
-body.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
-ignore = SpicePath("CASSINI", "SATURN")
-#ignore = SpiceFrame("CASSINI_SC_COORD", "J2000")
+oops.body.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
+ignore = oops.path.SpicePath("CASSINI", "SATURN")
+ignore = oops.frame.SpiceFrame("CASSINI_SC_COORD", "J2000")
 
 ################################################################################
 # Routines for managing the loading other kernels
@@ -193,7 +190,7 @@ def load_instruments(instruments=[], asof=None):
                                                  path="Cassini/SPK-predicted/")
 
         # Also make sure leap seconds have been loaded
-        spice_support.load_leap_seconds()
+        oops.spice_support.load_leap_seconds()
 
     # Furnish everything
     ignore = spicedb.furnish_kernels(kernels)

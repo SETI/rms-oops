@@ -1,6 +1,6 @@
 import numpy as np
 import pylab
-import oops_.all as oops
+import oops
 import oops_.inst.cassini.iss as cassini_iss
 
 PRINT = True
