@@ -57,6 +57,9 @@ HST_TARGET_DICT = {"MAR": "MARS",
                    "TIT": "SATURN",
                    "PHO": "PHOEBE"}
 
+# Define some important paths and frames
+oops.body.define_solar_system("1990-01-01", "2020-01-01")
+
 ################################################################################
 # Standard instrument methods
 ################################################################################

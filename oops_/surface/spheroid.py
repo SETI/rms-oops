@@ -453,7 +453,6 @@ class Test_Spheroid(unittest.TestCase):
         vector = Vector3(np.random.random((100,3)))
         intercept = planet.intercept_with_normal(vector)
         sep = vector.sep(planet.normal(intercept))
-        print sep
         self.assertTrue(sep < 1.e-14)
 
         # Test intercept_normal_to()
