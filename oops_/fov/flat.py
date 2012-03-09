@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from fov_ import FOV
+from oops_.fov.fov_ import FOV
 from oops_.array.all import *
 
 class Flat(FOV):

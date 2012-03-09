@@ -4,8 +4,8 @@
 
 # Import the Format class and all its subclasses into a common name space
 
-from format_    import Format
-from hms        import HMS
-from pythonfmt  import PythonFmt
+from oops_.format.format_    import Format
+from oops_.format.hms        import HMS
+from oops_.format.pythonfmt  import PythonFmt
 
 ################################################################################

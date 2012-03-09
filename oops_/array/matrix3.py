@@ -10,13 +10,12 @@
 import numpy as np
 import numpy.ma as ma
 
-from array_  import Array
-from empty   import Empty
-from scalar  import Scalar
-from vector3 import Vector3
-from matrixn import MatrixN
-
-import utils
+from oops_.array.array_  import Array
+from oops_.array.empty   import Empty
+from oops_.array.scalar  import Scalar
+from oops_.array.vector3 import Vector3
+from oops_.array.matrixn import MatrixN
+import oops_.array.utils as utils
 
 class Matrix3(Array):
     """An arbitrary Array of 3x3 rotation matrices."""

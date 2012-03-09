@@ -452,11 +452,12 @@ class Path(object):
         event_wrt_ssb.insert_subfield(event_key + "_lt", lt)
 
         # Update the original event
-        event_frame = registry.connect_frames(self.frame_id, "J2000")
+        event_frame = registry.connect_frames(event.frame_id, "J2000")
         transform = event_frame.transform_at_time(event.time, quick)
 
         event.insert_subfield(event_key, transform.rotate(delta_pos_ssb))
         event.insert_subfield(event_key + "_lt", lt)
+        event.filled_ssb = event_wrt_ssb
 
         # Transform the path event
         path_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick)
@@ -1047,7 +1048,7 @@ class Test_Path(unittest.TestCase):
         Path.USE_QUICKPATHS = False
 
         # Imports are here to avoid conflicts
-        from spicepath import SpicePath
+        from oops_.path.spicepath import SpicePath
         from oops_.frame.spiceframe import SpiceFrame
 
         # Registry tests

@@ -7,11 +7,11 @@
 import numpy as np
 import numpy.ma as ma
 
-from array_  import Array
-from pair    import Pair
-from scalar  import Scalar
-from vector3 import Vector3
-from vectorn import VectorN
+from oops_.array.array_  import Array
+from oops_.array.pair    import Pair
+from oops_.array.scalar  import Scalar
+from oops_.array.vector3 import Vector3
+from oops_.array.vectorn import VectorN
 
 class MatrixN(Array):
     """An Array of arbitrary matrices."""

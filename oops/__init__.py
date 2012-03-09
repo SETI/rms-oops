@@ -22,6 +22,6 @@ from oops_.transform  import *
 from oops_.units      import *
 
 import oops_.spice_support as spice
-import oops_.config
+import oops_.config as config
 
 ################################################################################

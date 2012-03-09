@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from cmodel_ import CoordinateModel
+from oops_.cmodel.cmodel_ import CoordinateModel
 from oops_.units import Units
 
 class Latitude(CoordinateModel):

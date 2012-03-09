@@ -6,7 +6,7 @@
 
 import numpy as np
 
-from frame_ import Frame
+from oops_.frame.frame_ import Frame
 from oops_.array.all import *
 from oops_.transform import Transform
 

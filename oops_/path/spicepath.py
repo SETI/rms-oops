@@ -5,7 +5,7 @@
 import numpy as np
 import cspice
 
-from path_ import Path, Waypoint, RotatedPath
+from oops_.path.path_ import Path, Waypoint, RotatedPath
 from oops_.array.all import *
 from oops_.config import QUICK
 from oops_.event import Event
@@ -244,7 +244,6 @@ class Test_SpicePath(unittest.TestCase):
         moon_event = moon.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",399)
-
             self.assertEqual(moon_event.pos[i], state[0:3])
             self.assertEqual(moon_event.vel[i], state[3:6])
 
@@ -256,11 +255,9 @@ class Test_SpicePath(unittest.TestCase):
         saturn_event = saturn.photon_to_event(ssb_event, iters=99)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(6,times[i],"J2000","CN",0)
-
             self.assertTrue(abs(lt + saturn_event.dep_lt[i]) < 1.e-11)
             self.assertTrue(abs(saturn_event.time[i] + lt - ssb_event.time[i])
                                                                        < 1.e-11)
-
             self.assertTrue(abs(ssb_event.arr[i] + state[0:3]) < 1.e-8)
             self.assertTrue(abs(saturn_event.dep[i] + state[0:3]) < 1.e-7)
             self.assertEqual(abs(saturn_event.pos[i]), (0.,0.,0.))
@@ -269,11 +266,9 @@ class Test_SpicePath(unittest.TestCase):
         saturn_event = saturn.photon_from_event(ssb_event, iters=99)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(6,times[i],"J2000","XCN",0)
-
             self.assertTrue(abs(lt - saturn_event.arr_lt[i]) < 1.e-11)
             self.assertTrue(abs(ssb_event.time[i] + lt - saturn_event.time[i])
                                                                        < 1.e-11)
-
             self.assertTrue(abs(ssb_event.dep[i] - state[0:3]) < 1.e-8)
             self.assertTrue(abs(Vector3(state[0:3]) - ssb_event.dep[i]) < 1.e-8)
 
@@ -284,7 +279,6 @@ class Test_SpicePath(unittest.TestCase):
         moon_event = moon.event_at_time(times).wrt_path("EARTH")
         for i in range(len(times)):
             (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",399)
-
             self.assertTrue(np.all(np.abs(state[0:3] -
                                           moon_event.pos.vals[i]) < 1.e-8))
             self.assertTrue(np.all(np.abs(state[3:6] -
@@ -294,7 +288,6 @@ class Test_SpicePath(unittest.TestCase):
         moon_event = moon.event_at_time(times).wrt_path("SSB")
         for i in range(len(times)):
             (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",0)
-
             self.assertTrue(np.all(np.abs(state[0:3] -
                                           moon_event.pos.vals[i]) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[3:6] -
@@ -304,7 +297,6 @@ class Test_SpicePath(unittest.TestCase):
         moon_event = moon.event_at_time(times).wrt_path("SATURN")
         for i in range(len(times)):
             (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",6)
-
             self.assertTrue(np.all(np.abs(state[0:3] -
                                           moon_event.pos.vals[i]) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[3:6] -
@@ -348,10 +340,8 @@ class Test_SpicePath(unittest.TestCase):
 
         for i in range(len(times)):
             (state, lt) = cspice.spkez(499, times[i], "J2000", "NONE", 10)
-
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
-
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-14))
 
@@ -366,10 +356,8 @@ class Test_SpicePath(unittest.TestCase):
         event = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(399, times[i], "J2000", "NONE", 0)
-
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
-
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
@@ -391,10 +379,8 @@ class Test_SpicePath(unittest.TestCase):
         event = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(399, times[i], "J2000", "NONE", 0)
-
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
-
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
@@ -402,10 +388,8 @@ class Test_SpicePath(unittest.TestCase):
         event = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(0, times[i], "IAU_MARS", "NONE", 399)
-
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
-
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
@@ -413,10 +397,8 @@ class Test_SpicePath(unittest.TestCase):
         event = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(399, times[i], "IAU_EARTH", "NONE", 10)
-
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
-
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
@@ -424,10 +406,8 @@ class Test_SpicePath(unittest.TestCase):
         event = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(301, times[i], "IAU_EARTH", "NONE", 499)
-
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
-
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
@@ -450,10 +430,8 @@ class Test_SpicePath(unittest.TestCase):
         event = path.event_at_time(times)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(499, times[i], "IAU_MOON", "NONE", 301)
-
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
-
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-9))
 
@@ -485,14 +463,12 @@ class Test_SpicePath(unittest.TestCase):
 
         for i in range(len(times)):
             (state, lt) = cspice.spkez(6,times[i],"J2000","CN",399)
-
             self.assertTrue(abs(lt + saturn_rel.time[i]) < 1.e-7)
             self.assertTrue(abs(saturn_event.time[i] + lt
                                 - earth_event.time[i]) < 1.e-11)
-
             self.assertTrue(abs(earth_event.arr[i] + state[0:3]) < 1.e-8)
             self.assertTrue(abs(saturn_rel.pos[i]  - state[0:3]) < 1.e-6)
-            self.assertTrue(abs(saturn_rel.vel[i]  - state[3:6])  < 1.e-3)
+            self.assertTrue(abs(saturn_rel.vel[i]  - state[3:6]) < 1.e-3)
 
         # Check light travel time corrections, Saturn from Earth wrt SSB
         earth_event = earth.event_at_time(times)
@@ -501,14 +477,11 @@ class Test_SpicePath(unittest.TestCase):
 
         for i in range(len(times)):
             (state, lt) = cspice.spkez(6,times[i],"J2000","XCN",399)
-
             self.assertTrue(np.abs(lt - saturn_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(earth_event.time.vals[i] + lt
                                    - saturn_event.time.vals[i]) < 1.e-11)
-
             self.assertTrue(np.all(np.abs(state[0:3] -
                                           earth_event.dep[i].vals) < 1.e-8))
-
             self.assertTrue(np.all(np.abs(state[0:3]
                                           - saturn_rel.pos[i].vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[3:6]
@@ -532,80 +505,104 @@ class Test_SpicePath(unittest.TestCase):
 
         for i in range(len(times)):
             (state, lt) = cspice.spkez(6,times[i],"J2000","CN",399)
-
             self.assertTrue(np.abs(lt + saturn_rel.time.vals[i] < 1.e-7))
             self.assertTrue(np.abs(saturn_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-11)
-
             self.assertTrue(np.all(np.abs(state[0:3]
                                         + earth_event.arr[i].vals) < 1.e-8))
-
             self.assertTrue(np.all(np.abs(state[0:3]
                                         - saturn_rel.pos[i].vals) < 1.e-6))
-
             self.assertTrue(np.abs(saturn_rel.pos[i].norm()/constants.C +
                                         + saturn_rel.time[i]) < 1.e-7)
-
             self.assertTrue(np.all(np.abs(state[3:6]
                                         - saturn_rel.vel[i].vals) < 1.e-3))
 
         ####################################
-        # Rotating frame...
-        registry.initialize_path_registry()
-        registry.initialize_frame_registry()
+        # Fixed and then rotating frames, forward calculation
 
         times = np.arange(0., 86401., 8640.)
 
-        ignore = SpiceFrame("IAU_EARTH", "J2000")
-        earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
-        pluto  = SpicePath(9, "SSB", "IAU_EARTH", id="PLUTO")
+        for frame in ["J2000", "IAU_EARTH"]:
+          registry.initialize_path_registry()
+          registry.initialize_frame_registry()
 
-        pluto = Waypoint("PLUTO","IAU_EARTH")
-        earth_event = Waypoint("EARTH", "IAU_EARTH").event_at_time(times)
-        pluto_event = pluto.photon_to_event(earth_event)
+          ignore = SpiceFrame("IAU_EARTH", "J2000")
+          earth  = SpicePath("EARTH", "SSB", frame)
+          pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
 
-        self.assertEqual(earth_event.arr_lt, pluto_event.dep_lt)
-        self.assertEqual(earth_event.wrt_ssb().arr, pluto_event.wrt_ssb().dep)
+          pluto = Waypoint("PLUTO", frame)
+          earth_event = Waypoint("EARTH", frame).event_at_time(times)
+          pluto_event = pluto.photon_to_event(earth_event)
 
-        # Erase the wrt_ssb() cache and check again
-        pluto_event.filled_ssb = None
-        self.assertTrue(abs(earth_event.wrt_ssb().arr -
-                            pluto_event.wrt_ssb().dep) < 1e-5)
+          self.assertTrue(abs(earth_event.arr_lt - pluto_event.dep_lt) < 1.e-12)
+          self.assertTrue(abs(earth_event.wrt_ssb().arr -
+                              pluto_event.wrt_ssb().dep) < 1.e-5)
 
-        pluto_rel = Edelta.sub_events(pluto_event, earth_event)
-        self.assertTrue(abs(pluto_rel.pos.norm() -
+          # Erase the wrt_ssb() cache and check again
+          pluto_event.filled_ssb = None
+          self.assertTrue(abs(earth_event.wrt_ssb().arr -
+                              pluto_event.wrt_ssb().dep) < 1e-5)
+
+          pluto_rel = Edelta.sub_events(pluto_event, earth_event)
+          self.assertTrue(abs(pluto_rel.pos.norm() -
                             pluto_event.dep.norm()) < 1.e-5)
-        self.assertTrue(abs(pluto_rel.pos + pluto_rel.dep) < 1.e-5)
+          self.assertTrue(abs(pluto_rel.pos + pluto_rel.dep) < 1.e-5)
 
-        pluto_rel_ssb = pluto_rel.wrt_ssb()
-        pluto_event_ssb = pluto_event.wrt_ssb()
-        self.assertTrue(abs(pluto_event_ssb.time - pluto_rel_ssb.time) < 1e-2)
-        self.assertTrue(abs(pluto_event_ssb.pos  - pluto_rel_ssb.pos)  < 1e-2)
-        self.assertTrue(abs(pluto_event_ssb.vel  - pluto_rel_ssb.vel)  < 1e-2)
-        self.assertTrue(abs(pluto_event_ssb.dep  - pluto_rel_ssb.dep)  < 1e-2)
+          pluto_rel_ssb = pluto_rel.wrt_ssb()
+          pluto_event_ssb = pluto_event.wrt_ssb()
+          self.assertTrue(abs(pluto_event_ssb.time - pluto_rel_ssb.time) < 1e-2)
+          self.assertTrue(abs(pluto_event_ssb.pos  - pluto_rel_ssb.pos)  < 1e-2)
+          self.assertTrue(abs(pluto_event_ssb.vel  - pluto_rel_ssb.vel)  < 1e-2)
+          self.assertTrue(abs(pluto_event_ssb.dep  - pluto_rel_ssb.dep)  < 1e-2)
 
-        for i in range(len(times)):
-            (state, lt) = cspice.spkez(9,times[i],"IAU_EARTH","CN",399)
-
-            #self.assertTrue(abs(pluto_rel.time[i] + lt) < 1.e-6)
+          for i in range(len(times)):
+            (state, lt) = cspice.spkez(9, times[i], frame, "CN", 399)
+            self.assertTrue(abs(pluto_rel.time[i] + lt) < 1.e-6)
             self.assertTrue(abs(pluto_event.time[i] + lt
-                                          - earth_event.time[i]) < 1.e-11)
-
+                                          - earth_event.time[i]) < 1.e-10)
             self.assertTrue(abs(earth_event.arr[i] + state[0:3]) < 1.e-5)
             self.assertTrue(abs(pluto_rel.pos[i]   - state[0:3]) < 1.e-5)
             self.assertTrue(abs(pluto_rel.vel[i]   - state[3:6]) < 1.e-3)
 
-            (state, lt) = cspice.spkez(399,times[i],"IAU_EARTH","XCN",9)
+        ####################################
+        # Fixed and then rotating frames, reverse calculation
 
-# 
-#             self.assertTrue(abs(pluto_rel.pos[i] - state[0:3]) < 1.e-5)
-#                                         - pluto_rel.pos[i].vals) < 1.e-5))
-#             self.assertTrue(np.all(np.abs(state[0:3]
-#                                         - pluto_rel.pos[i].vals) < 1.e-5))
-#             self.assertTrue(np.all(np.abs(state[3:6]
-#                                         - pluto_rel.vel[i].vals) < 1.e-3))
+        times = np.arange(0., 86401., 8640.)
 
-        return
+        for frame in ["J2000", "IAU_EARTH"]:
+          registry.initialize_path_registry()
+          registry.initialize_frame_registry()
+
+          ignore = SpiceFrame("IAU_EARTH", "J2000")
+          earth  = SpicePath("EARTH", "SSB", frame)
+          pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
+
+          pluto = Waypoint("PLUTO", frame)
+          earth_event = Waypoint("EARTH", frame).event_at_time(times)
+          pluto_event = pluto.photon_from_event(earth_event)
+
+          self.assertTrue(abs(earth_event.dep_lt - pluto_event.arr_lt) < 1.e-12)
+          self.assertTrue(abs(earth_event.wrt_ssb().dep -
+                              pluto_event.wrt_ssb().arr) < 1.e-5)
+
+          # Erase the wrt_ssb() cache and check again
+          pluto_event.filled_ssb = None
+          self.assertTrue(abs(earth_event.wrt_ssb().dep -
+                              pluto_event.wrt_ssb().arr) < 1e-5)
+
+          pluto_rel = Edelta.sub_events(pluto_event, earth_event)
+          self.assertTrue(abs(pluto_rel.pos.norm() -
+                              pluto_event.arr.norm()) < 1.e-5)
+          self.assertTrue(abs(pluto_rel.pos - pluto_rel.arr) < 1.e-5)
+
+          for i in range(len(times)):
+            (state, lt) = cspice.spkez(9, times[i], frame, "XCN", 399)
+            self.assertTrue(abs(pluto_rel.time[i] - lt) < 1.e-6)
+            self.assertTrue(abs(earth_event.time[i] + lt
+                                          - pluto_event.time[i]) < 1.e-10)
+            self.assertTrue(abs(earth_event.dep[i] - state[0:3]) < 1.e-5)
+            self.assertTrue(abs(pluto_rel.pos[i]   - state[0:3]) < 1.e-5)
+            self.assertTrue(abs(pluto_rel.vel[i]   - state[3:6]) < 1.e-3)
 
         ####################################
         # More linked frames...
@@ -628,15 +625,11 @@ class Test_SpicePath(unittest.TestCase):
 
         for i in range(len(times)):
             (state, lt) = cspice.spkez(499,times[i],"B1950","CN",399)
-
             self.assertTrue(np.abs(lt + mars_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(mars_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-9)
-
-#             self.assertTrue(np.all(np.abs(state[0:3]
-#                                         - mars_rel.pos[i].vals) < 1.e-5))
-#             self.assertTrue(np.all(np.abs(state[3:6]
-#                                         - mars_rel.vel[i].vals) < 1.e-3))
+            self.assertTrue(abs(mars_rel.pos[i] - state[0:3]) < 1.e-5)
+            self.assertTrue(abs(mars_rel.vel[i] - state[3:6]) < 1.e-3)
 
         ####################################
         # The IAU_EARTH frame works fine on Earth
@@ -658,15 +651,11 @@ class Test_SpicePath(unittest.TestCase):
 
         for i in range(len(times)):
             (state, lt) = cspice.spkez(9,times[i],"IAU_EARTH","CN",399)
-
             self.assertTrue(np.abs(lt + pluto_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(pluto_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-9)
-
-#             self.assertTrue(np.all(np.abs(state[0:3]
-#                                         - pluto_rel.pos[i].vals) < 1.e-5))
-#             self.assertTrue(np.all(np.abs(state[3:6]
-#                                         - pluto_rel.vel[i].vals) < 1.e-3))
+            self.assertTrue(abs(pluto_rel.pos[i] - state[0:3]) < 1.e-5)
+            self.assertTrue(abs(pluto_rel.vel[i] - state[3:6]) < 1.e-3)
 
         ####################################
         # IAU_MARS on Mars
@@ -689,18 +678,64 @@ class Test_SpicePath(unittest.TestCase):
 
         for i in range(len(times)):
             (state, lt) = cspice.spkez(9,times[i],"IAU_MARS","CN",4)
-
             self.assertTrue(np.abs(lt + pluto_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(pluto_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-9)
-
-#             self.assertTrue(np.all(np.abs(state[0:3]
-#                                         - pluto_rel.pos[i].vals) < 1.e-5))
-#             self.assertTrue(np.all(np.abs(state[3:6]
-#                                         - pluto_rel.vel[i].vals) < 1.e-3))
+            self.assertTrue(abs(pluto_rel.pos[i] - state[0:3]) < 1.e-5)
+            self.assertTrue(abs(pluto_rel.vel[i] - state[3:6]) < 1.e-3)
 
         ####################################
-        # Check stellar aberration calculation
+        # Check stellar aberration calculation in J2000
+
+        registry.initialize_path_registry()
+        registry.initialize_frame_registry()
+
+        times = np.arange(0., 365*86400., 86400.)
+
+        earth  = SpicePath("EARTH", "SSB", "J2000")
+        pluto  = SpicePath(9, "SSB", "J2000", id="PLUTO")
+
+        pluto = Waypoint("PLUTO","J2000")
+        earth_event = Waypoint("EARTH","J2000").event_at_time(times)
+        pluto_event = pluto.photon_to_event(earth_event)
+        pluto_rel = Edelta.sub_events(pluto_event, earth_event)
+
+        (ra,dec) = earth_event.ra_and_dec(aberration=False)
+        for i in range(len(times)):
+            (state, lt) = cspice.spkez(9,times[i],"J2000","CN",399)
+            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
+            self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
+
+        (ra,dec) = earth_event.ra_and_dec(aberration=True)
+        for i in range(len(times)):
+            (state, lt) = cspice.spkez(9,times[i],"J2000","CN+S",399)
+            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
+            self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
+
+        # Time-reversed
+        pluto = Waypoint("PLUTO","J2000")
+        earth_event = Waypoint("EARTH","J2000").event_at_time(times)
+        pluto_event = pluto.photon_from_event(earth_event)
+        pluto_rel = Edelta.sub_events(pluto_event, earth_event)
+
+        (ra,dec) = earth_event.ra_and_dec(aberration=False, subfield="dep")
+        for i in range(len(times)):
+            (state, lt) = cspice.spkez(9,times[i],"J2000","XCN",399)
+            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
+            self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
+
+        (ra,dec) = earth_event.ra_and_dec(aberration=True, subfield="dep")
+        for i in range(len(times)):
+            (state, lt) = cspice.spkez(9,times[i],"J2000","XCN+S",399)
+            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
+            self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
+
+        ####################################
+        # Check stellar aberration calculation in a rotating frame
 
         registry.initialize_path_registry()
         registry.initialize_frame_registry()
@@ -712,19 +747,23 @@ class Test_SpicePath(unittest.TestCase):
         pluto  = SpicePath(9, "SSB", "IAU_EARTH", id="PLUTO")
 
         pluto = Waypoint("PLUTO","IAU_EARTH")
-        earth_event = Waypoint("EARTH","J2000").event_at_time(times)
+        earth_event = Waypoint("EARTH","IAU_EARTH").event_at_time(times)
         pluto_event = pluto.photon_to_event(earth_event)
         pluto_rel = Edelta.sub_events(pluto_event, earth_event)
 
-        (ra,dec) = earth_event.ra_and_dec(True)
+        (ra,dec) = earth_event.ra_and_dec(aberration=False)
+        for i in range(len(times)):
+            (state, lt) = cspice.spkez(9,times[i],"J2000","CN",399)
+            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
+            self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
+        (ra,dec) = earth_event.ra_and_dec(aberration=True)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(9,times[i],"J2000","CN+S",399)
-
             (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
-
-            self.assertTrue(np.abs(ra.vals[i] - ra_test) < 1.e-8)
-            self.assertTrue(np.abs(dec.vals[i] - dec_test) < 1.e-8)
+            self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
+            self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
         registry.initialize_path_registry()
         registry.initialize_frame_registry()

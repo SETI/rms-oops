@@ -5,7 +5,7 @@
 #   heirarchy.
 ################################################################################
 
-from calibration_ import Calibration
+from oops_.calib.calibration_ import Calibration
 from oops_.array.all import *
 
 class Distorted(Calibration):

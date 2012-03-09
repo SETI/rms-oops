@@ -4,11 +4,11 @@
 
 import unittest
 
-from fov_       import Test_FOV
-from flat       import Test_Flat
-from polynomial import Test_Polynomial
-from subarray   import Test_Subarray
-from subsampled import Test_Subsampled
+from oops_.fov.fov_       import Test_FOV
+from oops_.fov.flat       import Test_Flat
+from oops_.fov.polynomial import Test_Polynomial
+from oops_.fov.subarray   import Test_Subarray
+from oops_.fov.subsampled import Test_Subsampled
 
 ########################################
 if __name__ == '__main__':

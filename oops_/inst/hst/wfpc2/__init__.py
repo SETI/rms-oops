@@ -3,7 +3,7 @@
 ################################################################################
 
 import pyfits
-import oops_.all as oops
+import oops
 from oops_.inst.hst import HST
 
 import os.path

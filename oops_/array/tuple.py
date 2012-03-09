@@ -9,13 +9,11 @@
 import numpy as np
 import numpy.ma as ma
 
-from array_  import Array
-from scalar  import Scalar
-from pair    import Pair
-
+from oops_.array.array_  import Array
+from oops_.array.scalar  import Scalar
+from oops_.array.pair    import Pair
 from oops_.units import Units
-
-import utils
+import oops_.array.utils
 
 class Tuple(Array):
     """An arbitrary Array of tuples, all of the same length. Tuples and VectorN

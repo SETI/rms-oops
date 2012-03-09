@@ -7,12 +7,10 @@
 import numpy as np
 import numpy.ma as ma
 
-from array_  import Array
-from scalar  import Scalar
-
+from oops_.array.array_  import Array
+from oops_.array.scalar  import Scalar
 from oops_.units import Units
-
-import utils
+import oops_.array.utils as utils
 
 class VectorN(Array):
     """An arbitrary Array of 1-D vectors, all of the same length. Tuples and

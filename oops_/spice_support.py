@@ -10,7 +10,7 @@
 import spicedb, cspice, julian
 import os
 
-import registry
+import oops_.registry as registry
 
 # Maintain dictionaries that translates names in SPICE toolkit into their
 # corresponding names in the Frame and Path registries.

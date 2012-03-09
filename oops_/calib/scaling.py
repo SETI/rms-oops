@@ -4,7 +4,7 @@
 # 2/11/12 Modified (MRS) - revised for style.
 ################################################################################
 
-from calibration_ import Calibration
+from oops_.calib.calibration_ import Calibration
 from oops_.array.all import *
 
 class Scaling(Calibration):

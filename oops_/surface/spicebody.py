@@ -10,8 +10,8 @@
 
 import cspice
 
-from spheroid  import Spheroid
-from ellipsoid import Ellipsoid
+from oops_.surface.spheroid import Spheroid
+from oops_.surface.ellipsoid import Ellipsoid
 from oops_.path.spicepath import SpicePath
 from oops_.frame.spiceframe import SpiceFrame
 import oops_.spice_support as spice

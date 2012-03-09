@@ -4,10 +4,10 @@
 
 # Import FOV and all its subclasses into a common name space
 
-from fov_       import FOV
-from flat       import Flat
-from polynomial import Polynomial
-from subarray   import Subarray
-from subsampled import Subsampled
+from oops_.fov.fov_       import FOV
+from oops_.fov.flat       import Flat
+from oops_.fov.polynomial import Polynomial
+from oops_.fov.subarray   import Subarray
+from oops_.fov.subsampled import Subsampled
 
 ################################################################################

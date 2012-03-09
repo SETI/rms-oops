@@ -11,7 +11,7 @@
 
 import numpy as np
 
-from surface_ import Surface
+from oops_.surface.surface_ import Surface
 from oops_.array.all import *
 import oops_.registry as registry
 

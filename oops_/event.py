@@ -222,6 +222,8 @@ class Event(object):
         self.subfields[key] = value
         self.__dict__[key] = value      # This makes it an attribute as well
 
+        self.filled_ssb = None          # SSB version is now out of date
+
     def delete_subfield(self, key):
         """Deletes a subfield, but not arr or dep."""
 
@@ -232,6 +234,12 @@ class Event(object):
             del self.subfields[key]
             del self.__dict__[key]
 
+        if self.filled_ssb is not None:
+            try:
+                del self.filled_ssb.subfields[key]
+                del self.filled_ssb.__dict__[key]
+            except KeyError: pass
+
     def delete_subfields(self):
         """Deletes all subfields."""
 
@@ -239,6 +247,12 @@ class Event(object):
             if key not in ("arr","dep"):
                 del self.subfields[key]
                 del self.__dict__[key]
+
+        if self.filled_ssb is not None:
+            try:
+                del self.filled_ssb.subfields[key]
+                del self.filled_ssb.__dict__[key]
+            except KeyError: pass
 
     def delete_sub_subfields(self):
         """Deletes all subfields of subfields and attributes."""
@@ -251,6 +265,9 @@ class Event(object):
         self.time.delete_subfields()
         self.pos.delete_subfields()
         self.vel.delete_subfields()
+
+        if self.filled_ssb is not None:
+            self.filled_ssb.delete_sub_subfields()
 
 ############################################
 # Event transformations
@@ -314,6 +331,19 @@ class Event(object):
         frame = frame.quick_frame(self.time, quick)
 
         return self.rotate_by_frame(frame)
+
+    def wrt_body(self, body, quick=QUICK):
+        """Returns an equivalent event, but defined relative to the frame and
+        path of the specified body.
+
+        Input:
+            body        a body object or its ID.
+            quick       False to disable QuickPaths; True for the default
+                        options; a dictionary to override specific options.
+        """
+
+        body = registry.as_body(body)
+        return self.wrt(body.path_id, body.frame_id, quick)
 
     def rotate_by_frame(self, frame, quick=QUICK):
         """Returns the same event after all coordinates have been transformed
@@ -411,7 +441,8 @@ class Event(object):
         return self.aberrated_arr(quick).sep(self.aberrated_dep(quick),
                                              reversed=True)
 
-    def ra_and_dec(self, aberration=False, frame="J2000", quick=QUICK):
+    def ra_and_dec(self, aberration=False, subfield="arr", frame="J2000",
+                         quick=QUICK):
         """Returns the J2000 right ascension amd declination in the path and
         frame of the event, as a tuple of two scalars.
 
@@ -420,6 +451,8 @@ class Event(object):
                         the apparent direction of the photon relative to the
                         background stars; False to return the purely geometric
                         values, neglecting the motion of the observer.
+            subfield    The subfield to use for the calculation, either "arr"
+                        or "dep". Note that an arriving direction is reversed.
             frame       The frame in which the values should be returned. The
                         default is J2000, but B1950 might be useful under some
                         circumstances.
@@ -428,15 +461,23 @@ class Event(object):
         """
 
         # Locate arrival ray in the SSB/J2000 frame
+        assert subfield in {"arr", "dep"}
+
         if aberration:
-            arr = -self.aberrated_arr(quick)
+            if subfield == "arr":
+                ray = -self.aberrated_arr(quick)
+            else:
+                ray = self.aberrated_dep(quick)
         else:
-            arr = -self.wrt_ssb(quick).arr
+            if subfield == "arr":
+                ray = -self.wrt_ssb(quick).arr
+            else:
+                ray = self.wrt_ssb(quick).dep
 
         # Convert to RA and dec
-        (x,y,z) = arr.as_scalars()
+        (x,y,z) = ray.as_scalars()
         ra = y.arctan2(x) % (2*np.pi)
-        dec = (z/arr.norm()).arcsin()
+        dec = (z/ray.norm()).arcsin()
 
         return (ra, dec)
 

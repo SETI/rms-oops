@@ -11,8 +11,8 @@
 import numpy as np
 import numpy.ma as ma
 
-from array_ import Array
-from empty  import Empty
+from oops_.array.array_ import Array
+from oops_.array.empty  import Empty
 from oops_.units import Units
 
 class Scalar(Array):

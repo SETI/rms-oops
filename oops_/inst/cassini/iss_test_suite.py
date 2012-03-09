@@ -94,9 +94,9 @@ def iss_test_suite(filespec, derivs, info, display):
     DISPLAY = display
 
     # Define the bodies we care about
-    ring_body = oops.SOLAR_SYSTEM["SATURN_MAIN_RINGS"]
-    saturn_body = oops.SOLAR_SYSTEM["SATURN"]
-    sun_body = oops.SOLAR_SYSTEM["SUN"]
+    ring_body = oops.registry.body_lookup("SATURN_MAIN_RINGS")
+    saturn_body = oops.registry.body_lookup("SATURN")
+    sun_body = oops.registry.body_lookup("SUN")
 
     # Create the snapshot object
     snapshot = cassini_iss.from_file(filespec)
@@ -176,7 +176,7 @@ def iss_test_suite(filespec, derivs, info, display):
     ############################################
 
     # Define the apparent location of the Sun relative to the ring frame
-    sun_center_event = sun_body.path.photon_from_event(ring_center_event)
+    sun_center_event = sun_body.path.photon_to_event(ring_center_event)
     sun_center_event = sun_center_event.wrt_frame(ring_body.frame_id)
 
     # Event separation in ring surface coordinates
@@ -240,7 +240,7 @@ def iss_test_suite(filespec, derivs, info, display):
     ############################################
 
     # Define the apparent location of the Sun relative to the Saturn frame
-    sun_center_event = sun_body.path.photon_from_event(saturn_center_event)
+    sun_center_event = sun_body.path.photon_to_event(saturn_center_event)
     sun_center_event = sun_center_event.wrt_frame(saturn_body.frame_id)
 
     # Event separation in Saturn surface coordinates

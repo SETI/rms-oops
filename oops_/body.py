@@ -16,10 +16,6 @@ import oops_.surface.all as surface
 import oops_.spice_support as spice
 import oops_.registry as registry
 
-# A dictionary associating the names of solar system bodies with their Body
-# objects.
-SOLAR_SYSTEM = {}
-
 class Body(object):
     """Body is a class that defines the properties of, and relationships
     between, solar system objects such as planets, satellites and rings.
@@ -36,12 +32,12 @@ class Body(object):
 
         parent          the physical body (not necessarily the barycenter) about
                         which this body orbits. If a string is given, the parent
-                        is found by looking it up in the SOLAR_SYSTEM
+                        is found by looking it up in the BODY_REGISTRY
                         dictionary.
         barycenter      the body defining the barycenter of motion and the
                         gravity field defining this body's motion. If a string
                         is given, the barycenter is found by looking it up in
-                        the SOLAR_SYSTEM dictionary.
+                        the BODY_REGISTRY dictionary.
 
         surface         the Surface object defining the body's surface. None if
                         the body is a point and has no surface.
@@ -66,8 +62,6 @@ class Body(object):
     def __init__(self, name, path_id, frame_id, parent, barycenter):
         """Constructor for a Body object."""
 
-        global SOLAR_SYSTEM
-
         self.name = name
         self.path_id = path_id
         self.frame_id = frame_id
@@ -77,12 +71,12 @@ class Body(object):
         self.frame = frame_.NullFrame(self.frame_id)
 
         if type(parent) == type(""):
-            self.parent = SOLAR_SYSTEM[parent]
+            self.parent = registry.body_lookup(parent)
         else:
             self.parent = parent
 
         if type(barycenter) == type(""):
-            self.barycenter = SOLAR_SYSTEM[barycenter]
+            self.barycenter = registry.body_lookup(barycenter)
         else:
             self.barycenter = barycenter
 
@@ -103,7 +97,7 @@ class Body(object):
                 self.barycenter.children.append(self)
 
         # Save it in the Solar System dictionary
-        SOLAR_SYSTEM[self.name] = self
+        registry.BODY_REGISTRY[self.name] = self
 
 ########################################
 
@@ -354,6 +348,24 @@ class Body(object):
 
         return list
 
+    ########################################
+
+    @staticmethod
+    def define_multipath(bodies, origin="SSB", frame="J2000", id=None):
+        """Constructs a multipath defining the centers of the given list of
+        bodies. The default ID is the name of the first body with a "+"
+        appended."""
+
+        paths = []
+        for body in bodies:
+            paths.append(body.path_id)
+
+        return path_.MultiPath(paths, origin, frame, id)
+
+    @staticmethod
+    def lookup(name):
+        return registry.body_lookup(name)
+
 ################################################################################
 # Definitions of satellite systems using SPICE body IDs
 ################################################################################
@@ -418,7 +430,7 @@ def define_solar_system(start_time, stop_time, asof=None):
     """
 
     # If the solar system was already loaded, just return
-    if SOLAR_SYSTEM != {}: return
+    if "SUN" in registry.BODY_REGISTRY.keys(): return
 
     # Always load the most recent Leap Seconds kernel, but only once
     spice.load_leap_seconds()
@@ -561,7 +573,7 @@ def define_ring(parent_name, ring_name, radii, keywords):
     limit of rings, but the ring plane itself has no boundaries.
     """
 
-    parent = SOLAR_SYSTEM[parent_name]
+    parent = registry.body_lookup(parent_name)
     parent.apply_ring_frame()
 
     # Interpret the radii
@@ -586,6 +598,12 @@ def define_ring(parent_name, ring_name, radii, keywords):
     body.add_keywords([parent, "RING", ring_name])
 
 ################################################################################
+# Initialize the registry
+################################################################################
+
+registry.BODY_CLASS = Body
+
+################################################################################
 # UNIT TESTS
 ################################################################################
 
@@ -595,8 +613,6 @@ class Test_Body(unittest.TestCase):
 
     def runTest(self):
 
-        global SOLAR_SYSTEM
-
         # Imports are here to avoid conflicts
         import oops_.registry as registry
 
@@ -605,15 +621,16 @@ class Test_Body(unittest.TestCase):
 
         define_solar_system("2000-01-01", "2010-01-01")
 
-        self.assertEqual(SOLAR_SYSTEM["DAPHNIS"].barycenter.name, "SATURN")
-        self.assertEqual(SOLAR_SYSTEM["PHOEBE"].barycenter.name,
-                                                            "SATURN BARYCENTER")
+        self.assertEqual(registry.body_lookup("DAPHNIS").barycenter.name,
+                         "SATURN")
+        self.assertEqual(registry.body_lookup("PHOEBE").barycenter.name,
+                         "SATURN BARYCENTER")
 
-        mars = SOLAR_SYSTEM["MARS"]
+        mars = registry.body_lookup("MARS")
         moons = mars.select_children(include_all=["SATELLITE"])
         self.assertEqual(len(moons), 2)     # Phobos, Deimos
 
-        saturn = SOLAR_SYSTEM["SATURN"]
+        saturn = registry.body_lookup("SATURN")
         moons = saturn.select_children(include_all=["CLASSICAL", "IRREGULAR"])
         self.assertEqual(len(moons), 1)     # Phoebe
 
@@ -627,20 +644,20 @@ class Test_Body(unittest.TestCase):
                                        exclude=("IRREGULAR"), radius=1000)
         self.assertEqual(len(moons), 1)     # Titan only
 
-        sun = SOLAR_SYSTEM["SUN"]
+        sun = registry.body_lookup("SUN")
         planets = sun.select_children(include_any=["PLANET"])
         self.assertEqual(len(planets), 9)
 
-        sun = SOLAR_SYSTEM["SUN"]
+        sun = registry.body_lookup("SUN")
         planets = sun.select_children(include_any=["PLANET", "EARTH"])
         self.assertEqual(len(planets), 9)
 
-        sun = SOLAR_SYSTEM["SUN"]
+        sun = registry.body_lookup("SUN")
         planets = sun.select_children(include_any=["PLANET", "EARTH"],
                                       recursive=True)
         self.assertEqual(len(planets), 10)  # 9 planets plus Earth's moon
 
-        sun = SOLAR_SYSTEM["SUN"]
+        sun = registry.body_lookup("SUN")
         planets = sun.select_children(include_any=["PLANET", "JUPITER"],
                                       exclude=["IRREGULAR", "BARYCENTER", "IO"],
                                       recursive=True)
@@ -649,7 +666,7 @@ class Test_Body(unittest.TestCase):
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
 
-        SOLAR_SYSTEM = {}
+        registry.BODY_REGISTRY = {}
 
 ########################################
 if __name__ == '__main__':

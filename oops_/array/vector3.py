@@ -9,14 +9,12 @@
 import numpy as np
 import numpy.ma as ma
 
-from array_  import Array
-from scalar  import Scalar
-from pair    import Pair
-from vectorn import VectorN
-
+from oops_.array.array_  import Array
+from oops_.array.scalar  import Scalar
+from oops_.array.pair    import Pair
+from oops_.array.vectorn import VectorN
 from oops_.units import Units
-
-import utils
+import oops_.array.utils as utils
 
 class Vector3(Array):
     """An arbitrary Array of 3-vectors."""

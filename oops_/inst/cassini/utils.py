@@ -21,7 +21,7 @@ import oops
 ################################################################################
 
 # Make sure the leap seconds have been loaded
-oops.spice_support.load_leap_seconds()
+oops.spice.load_leap_seconds()
 
 # We load CK and SPK files on a very rough month-by-month basis. This is simpler
 # than a more granular approach involving detailed calendar calculations. We
@@ -128,9 +128,9 @@ initialize_kernels(kernels, SPK_LIST, SPK_DICT)
 spicedb.close_db()
 
 # Define some important paths and frames
-oops.body.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
+oops.define_solar_system(CASSINI_START_TIME, CASSINI_STOP_TIME)
 ignore = oops.path.SpicePath("CASSINI", "SATURN")
-ignore = oops.frame.SpiceFrame("CASSINI_SC_COORD", "J2000")
+#ignore = oops.frame.SpiceFrame("CASSINI_SC_COORD", "J2000")
 
 ################################################################################
 # Routines for managing the loading other kernels
@@ -190,7 +190,7 @@ def load_instruments(instruments=[], asof=None):
                                                  path="Cassini/SPK-predicted/")
 
         # Also make sure leap seconds have been loaded
-        oops.spice_support.load_leap_seconds()
+        oops.spice.load_leap_seconds()
 
     # Furnish everything
     ignore = spicedb.furnish_kernels(kernels)

@@ -5,7 +5,7 @@
 import numpy as np
 import cspice
 
-from path_ import Path
+from oops_.path.path_ import Path
 from oops_.array.all import *
 from oops_.config import QUICK
 from oops_.event import Event
@@ -31,16 +31,19 @@ class MultiPath(Path):
         self.origin_id = registry.as_path_id(origin)
         self.frame_id  = registry.as_frame_id(frame)
 
-        self.path_ids = np.array(paths, dtype="object")
-        self.paths = np.empty(self.path_ids.shape, dtype="object")
+        self.shape = [np.size(paths)]
+        self.path_ids = np.empty(self.shape, dtype="object")
+        self.paths    = np.empty(self.shape, dtype="object")
+        self.dict = {}
 
-        for index, path in np.ndenumerate(self.path_ids):
+        for (index, path) in np.ndenumerate(np.array(paths, dtype="object")):
             this_id = registry.as_path_id(path)
+            this_path = registry.connect_paths(this_id, self.origin_id,
+                                                        self.frame_id)
             self.path_ids[index] = this_id
-            self.paths[index] = registry.connect_paths(this_id, self.origin_id,
-                                                                self.frame_id)
-
-        self.shape = list(self.paths.shape)
+            self.paths[index] = this_path
+            self.dict[this_id] = this_path
+            self.dict[index[0]] = this_path
 
         # Fill in the path_id
         if id is None:
@@ -51,6 +54,14 @@ class MultiPath(Path):
         self.register()
 
 ########################################
+
+    def __getitem__(self, i):
+        return self.dict[i]
+
+    def __getslice__(self, i, j):
+        return self.paths[i:j]
+
+    def __len__(self): return self.paths.size
 
     def __str__(self):
         return ("MultiPath([" + self.path_id   + " - " +
@@ -98,7 +109,6 @@ class Test_MultiPath(unittest.TestCase):
     def runTest(self):
 
         from spicepath import SpicePath
-        from oops_.frame.frame_ import *
 
         registry.initialize_path_registry()
         registry.initialize_frame_registry()

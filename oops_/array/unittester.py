@@ -4,17 +4,17 @@
 
 import unittest
 
-from utils     import Test_utils
+from oops_.array.utils     import Test_utils
 
-from array_    import Test_Array
-from empty     import Test_Empty
-from matrix3   import Test_Matrix3
-from matrixn   import Test_MatrixN
-from pair      import Test_Pair
-from scalar    import Test_Scalar
-from tuple     import Test_Tuple
-from vector3   import Test_Vector3
-from vectorn   import Test_VectorN
+from oops_.array.array_    import Test_Array
+from oops_.array.empty     import Test_Empty
+from oops_.array.matrix3   import Test_Matrix3
+from oops_.array.matrixn   import Test_MatrixN
+from oops_.array.pair      import Test_Pair
+from oops_.array.scalar    import Test_Scalar
+from oops_.array.tuple     import Test_Tuple
+from oops_.array.vector3   import Test_Vector3
+from oops_.array.vectorn   import Test_VectorN
 
 ########################################
 if __name__ == '__main__':

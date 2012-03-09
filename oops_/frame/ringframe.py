@@ -6,7 +6,7 @@
 
 import numpy as np
 
-from frame_ import Frame
+from oops_.frame.frame_ import Frame
 from oops_.array.all import *
 from oops_.config import QUICK
 from oops_.transform import Transform
@@ -112,7 +112,7 @@ class Test_RingFrame(unittest.TestCase):
     def runTest(self):
 
         # Imports are here to reduce conflicts
-        from spiceframe import SpiceFrame
+        from oops_.frame.spiceframe import SpiceFrame
         from oops_.path.spicepath import SpicePath
         from oops_.event import Event
 

@@ -12,7 +12,7 @@ import solar
 import sys
 import math
 
-from observation_ import Observation
+from oops_.obs.observation_ import Observation
 from oops_.array.all import *
 from oops_.event import Event
 

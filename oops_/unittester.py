@@ -2,21 +2,20 @@
 # oops_/unittester.py: Global unit-tester
 ################################################################################
 
-from array.unittester   import *
-from calib.unittester   import *
-from cmodel.unittester  import *
-from format.unittester  import *
-from fov.unittester     import *
-from frame.unittester   import *
-#from inst.unittester    import *
+from oops_.array.unittester   import *
+from oops_.calib.unittester   import *
+from oops_.cmodel.unittester  import *
+from oops_.format.unittester  import *
+from oops_.fov.unittester     import *
+from oops_.frame.unittester   import *
 #from obs.unittester     import *
-from path.unittester    import *
-from surface.unittester import *
+from oops_.path.unittester    import *
+from oops_.surface.unittester import *
 
-from body       import Test_Body
-from event      import Test_Event
-from transform  import Test_Transform
-from units      import Test_Units
+from oops_.body       import Test_Body
+from oops_.event      import Test_Event
+from oops_.transform  import Test_Transform
+from oops_.units      import Test_Units
 
 ################################################################################
 # To run all unittests...

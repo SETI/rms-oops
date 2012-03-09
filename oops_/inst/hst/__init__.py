@@ -12,8 +12,7 @@ import unittest
 import julian
 import solar
 import tabulation as tab
-
-import oops_.all as oops
+import oops
 
 ########################################
 # Global Variables
@@ -58,7 +57,7 @@ HST_TARGET_DICT = {"MAR": "MARS",
                    "PHO": "PHOEBE"}
 
 # Define some important paths and frames
-oops.body.define_solar_system("1990-01-01", "2020-01-01")
+oops.define_solar_system("1990-01-01", "2020-01-01")
 
 ################################################################################
 # Standard instrument methods

@@ -13,13 +13,11 @@
 import numpy as np
 import numpy.ma as ma
 
-from array_  import Array
-from scalar  import Scalar
-from vectorn import VectorN
-
+from oops_.array.array_  import Array
+from oops_.array.scalar  import Scalar
+from oops_.array.vectorn import VectorN
 from oops_.units import Units
-
-import utils
+import oops_.array.utils as utils
 
 class Pair(Array):
     """An arbitrary Array of coordinate pairs or 2-vectors.

@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from array_ import Array
+from oops_.array.array_ import Array
 
 class Empty(Array):
     """An empty array, needed in some situations so the moral equivalent of a
@@ -91,7 +91,7 @@ class Test_Empty(unittest.TestCase):
 
     def runTest(self):
 
-        from scalar import Scalar as Scalar
+        from oops_.array.scalar import Scalar
 
         empty = Empty()
         self.assertEqual(empty, Empty())

@@ -5,7 +5,7 @@
 import numpy as np
 import cspice
 
-from frame_ import Frame
+from oops_.frame.frame_ import Frame
 from oops_.array.all import *
 from oops_.config import QUICK
 from oops_.transform import Transform
