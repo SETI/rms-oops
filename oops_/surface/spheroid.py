@@ -52,6 +52,7 @@ class Spheroid(Surface):
         self.frame_id  = registry.as_frame_id(frame)
 
         self.radii  = np.array((radii[0], radii[0], radii[1]))
+        self.radii_sq = self.radii**2
         self.req    = radii[0]
         self.req_sq = self.req**2
 
@@ -324,8 +325,94 @@ class Spheroid(Surface):
         if derivs:
             raise NotImplementedError("spheroid intercept_with_normal() " +
                                       "derivatives are not implemented")
-
         return result
+
+    def guess_intercept_normal_to(self, pos):
+        sq_pos = pos * self.squash_sq
+        cept = sq_pos.unit() * self.radii * self.squash_sq
+        return cept
+
+    def f(self, t, pos):
+        """Compute F(t) = ( (x0 * a**2) / (t + a**2) )**2 +
+                          ( (y0 * a**2) / (t + a**2) )**2 +
+                          ( (z0 * c**2) / (t + c**2) )**2 - 1, where <x0,y0,z0>
+            represents pos, and self.radii is <a,a,c>.
+            
+        Input:
+            pos     a Vector3 of positions near the surface, with optional units
+            t       t in F(t).
+            
+        Return      Solution to F(t)
+        """
+        denom = np.array([t,]*3).transpose() + self.radii_sq
+        v1 = Vector3(self.radii_sq * pos.vals)
+        v = v1 / denom
+        w1 = v**2
+        w = w1.vals.sum(axis=1) - 1.
+        return w
+
+    def fprime(self, t, pos):
+        """Compute F'(t) = (-2 * x0**2 * a**4) / (t + a**2)**3 +
+                           (-2 * y0**2 * a**4) / (t + a**2)**3 +
+                           (-2 * z0**2 * c**4) / (t + c**2)**3, where <x0,y0,z0>
+            represents pos, and self.radii is <a,a,c>.
+            
+        Input:
+            pos     a Vector3 of positions near the surface, with optional units
+            t       t in F(t).
+            
+        Return      Solution to F'(t)
+        """
+        denom = (np.array([t,]*3).transpose() + self.radii_sq)**3
+        v = (-2. * pos**2 * self.radii**4) / denom
+        w = v.vals.sum(axis=1)
+        return w
+
+    def intercept_normal_close(self, pos, cept, norm, t):
+        """Check if angle between the surface normal and the vector from the
+            point on the surface to the point in question, pos, is very small.
+            For some reason sep() was not working without creating unit vectors.
+        
+        Input:
+            pos     a Vector3 of positions near the surface, with optional units
+            cept    intercept point on surface
+            norm    surface normal
+            t       multiple of unit surface normal to reach pos.
+            
+        Return:     Boolean whether close enough.
+        """
+            
+        cept = pos - norm * t
+        test_vector = (pos - cept).unit()
+        sep = test_vector.sep(norm.unit())
+        return sep < 1.e-9
+
+    def newton_intercept_normal_to(self, pos, t):
+        """Runs Newton numerical method until angle between normal vector and
+            vector from surface intercept point and pos is close to zero.
+        
+        Input:
+            pos     a Vector3 of positions near the surface, with optional units
+            t       t such that F(t) = ( (x0 * a**2) / (t + a**2) )**2 +
+                    ( (y0 * a**2) / (t + a**2) )**2 +
+                    ( (z0 * c**2) / (t + c**2) )**2 - 1, where <x0,y0,z0>
+                    represents pos, and self.radii is <a,a,c>.
+        
+        Return:     a unitless vector3 of surface intercept points. Where no
+                    solution exists, the returned vector should be masked.
+        """
+        denom = np.array([t,]*3).transpose() + self.radii_sq
+        numer = pos * self.radii_sq
+        cept = numer / denom
+        norm = self.normal(cept)
+        if self.intercept_normal_close(pos, cept, norm, t):
+            return cept
+        else:
+            f_of_t = self.f(t, pos)
+            fprime_of_t = self.fprime(t, pos)
+            t -= f_of_t / fprime_of_t
+            return self.newton_intercept_normal_to(pos, t)
+
 
     def intercept_normal_to(self, pos, derivs=False):
         """Constructs the intercept point on the surface where a normal vector
@@ -344,9 +431,14 @@ class Spheroid(Surface):
                         position vector, as a MatrixN object with item shape
                         [3,3].
         """
-
-        inorms = self.normal(pos)
-        return self.intercept(pos, inorms, derivs)[0]
+        cept = self.guess_intercept_normal_to(pos)
+        norm = self.normal(cept).unit()
+        pos_cept = pos - cept
+        t = pos_cept.vals[...,0] / norm.vals[...,0]
+        if derivs:
+            raise NotImplementedError("spheroid intercept_with_normal() " +
+                                      "derivatives are not implemented")
+        return self.newton_intercept_normal_to(pos, t)
 
     def velocity(self, pos):
         """Returns the local velocity vector at a point within the surface.
@@ -437,18 +529,7 @@ class Test_Spheroid(unittest.TestCase):
 
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
-
-        # test the specific lines of intercept_normal()
-        # we need to write it out b/c we need the normal that is found to test
-        pts = np.random.random((10,3)) * REQ + REQ
-        inorms = planet.normal(pts)
-        ipts = planet.intercept(pts, inorms)[0]
-        diff_pts = pts[...,0] - ipts.vals[...,0]
-        diff_t = Scalar.as_standard(diff_pts / inorms.vals[...,0])
-        new_pts = ipts + diff_t * inorms
-        vpts = Vector3(pts)
-        self.assertTrue(abs(vpts - new_pts) < 1.e-9)
-
+        
         # Test intercept_with_normal()
         vector = Vector3(np.random.random((100,3)))
         intercept = planet.intercept_with_normal(vector)
@@ -456,10 +537,10 @@ class Test_Spheroid(unittest.TestCase):
         self.assertTrue(sep < 1.e-14)
 
         # Test intercept_normal_to()
-        obs = Vector3(np.random.random((100,3)) * 10.*REQ + REQ)
+        obs = Vector3(np.random.random((10,3)) * 10.*REQ + REQ)
         intercept = planet.intercept_normal_to(obs)
         sep = (obs - intercept).sep(planet.normal(intercept))
-        # print sep
+        k = obs - intercept
         self.assertTrue(sep < 1.e-12)
 
 ########################################
