@@ -345,7 +345,6 @@ class Spheroid(Surface):
                         [3,3].
         """
 
-        # Internal functions
         def guess_intercept_normal_to(pos):
             sq_pos = pos * self.squash_sq
             cept = sq_pos.unit() * self.radii * self.squash_sq
@@ -368,7 +367,8 @@ class Spheroid(Surface):
             v1 = Vector3(self.radii_sq * pos.vals)
             v = v1 / denom
             w1 = v**2
-            w = w1.vals.sum(axis=1) - 1.
+            # w = w1.vals.sum(axis=1) - 1.
+            w = w1.vals.sum(axis=-1) - 1.
             return w
 
         def fprime(t, pos):
@@ -386,7 +386,8 @@ class Spheroid(Surface):
             """
             denom = (np.array([t,]*3).transpose() + self.radii_sq)**3
             v = (-2. * pos**2 * self.radii**4) / denom
-            w = v.vals.sum(axis=1)
+            # w = v.vals.sum(axis=1)
+            w = v.vals.sum(axis=-1)
             return w
 
         def intercept_normal_close(pos, cept, norm, t):
@@ -405,8 +406,9 @@ class Spheroid(Surface):
             """
                 
             cept = pos - norm * t
-            test_vector = (pos - cept).unit()
-            sep = test_vector.sep(norm.unit())
+            # test_vector = (pos - cept).unit()
+            # sep = test_vector.sep(norm.unit())
+            sep = (pos - cept).sep(norm)
             return sep < 1.e-9
 
         def newton_intercept_normal_to(pos, t):
@@ -440,6 +442,7 @@ class Spheroid(Surface):
         norm = self.normal(cept).unit()
         pos_cept = pos - cept
         t = pos_cept.vals[...,0] / norm.vals[...,0]
+
         if derivs:
             raise NotImplementedError("spheroid intercept_with_normal() " +
                                       "derivatives are not implemented")
