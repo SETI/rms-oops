@@ -63,21 +63,8 @@ class Snapshot(Observation):
         planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268.,
                                            54364.)
 
-        #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
-        (surface_event, rel_surf_evt,
-         dist_from_instrument, obs_mask,
-         blk_evt) = self.back_plane_setup(surface, planet_surface)
-        
-        #determine what is visible
-        """dist_from_instrument = np.sqrt(rel_surf_evt.pos.vals[...,0]**2 +
-                                       rel_surf_evt.pos.vals[...,1]**2 +
-                                       rel_surf_evt.pos.vals[...,2]**2)
-        rel_blk_evt = planet_surface.photon_to_event(image_event, 1)[1]
-        block_dist = np.sqrt(rel_blk_evt.pos.vals[...,0]**2 +
-                             rel_blk_evt.pos.vals[...,1]**2 +
-                             rel_blk_evt.pos.vals[...,2]**2)
-        obs_mask = block_dist < (dist_from_instrument - dist_tolerance)"""
-
+        (surface_event, obs_mask) = self.back_plane_setup(surface,
+                                                          planet_surface)
 
         dist_from_center = np.sqrt(surface_event.pos.vals[...,0]**2 +
                                    surface_event.pos.vals[...,1]**2)
@@ -95,8 +82,6 @@ class Snapshot(Observation):
         ring_mask = dist_from_center == 0.
         bp_masked = ma.array(dist_from_center,
                              mask=(obs_mask | ring_mask | shadow_mask))
-            #bp_masked = ma.array(dist_from_center,
-        #                mask=(obs_mask | ring_mask))
         
         return bp_masked
 
@@ -116,13 +101,7 @@ class Snapshot(Observation):
         planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268.,
                                        54364.)
     
-        #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
-        (surface_event, rel_surf_evt,
-         dist_from_instrument, obs_mask,
-         blk_evt) = self.back_plane_setup(planet_surface)
-        
-        print "surface_event.perp:"
-        print surface_event.perp
+        (surface_event, obs_mask) = self.back_plane_setup(planet_surface)
     
         #now get the sun
         sun_wrt_target = path_.connect("SUN", "SATURN")
@@ -131,14 +110,33 @@ class Snapshot(Observation):
         sun_dep_event = sun_wrt_target.photon_to_event(surface_event, 1)[0]
     
         surface_event.arr = surface_event.pos - sun_dep_event.pos
-        print "surface_event.arr:"
-        print surface_event.arr
     
         incidence_angle = surface_event.incidence_angle()
-        print "incidence_angle:"
-        print incidence_angle
     
         return incidence_angle
+
+    def emission_angle_back_plane(self, min_range=0., max_range=sys.float_info.max):
+        """gets the ring's emission angle backplane and returns whether in
+            shadow or not.
+            
+            Input:
+            min_range       minimum range for rings from planet's center
+            max_range       maximum range for rings from planet's center
+            
+            Return:         2D array of 0 for not in rings, 1 for rings in
+            shadow, and 2 for rings not in shadow
+            """
+        
+        ignore = frame_.RingFrame("IAU_SATURN")
+        surface = surface_.RingPlane("SATURN", "IAU_SATURN_DESPUN")
+        planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268.,
+                                           54364.)
+        
+        (surface_event, obs_mask) = self.back_plane_setup(planet_surface)
+        
+        emission_angle = surface_event.emission_angle()
+        
+        return emission_angle
 
     def phase_angle_back_plane(self, min_range=0., max_range=sys.float_info.max):
         """gets the ring's backplane and returns whether in shadow or not.
@@ -156,10 +154,7 @@ class Snapshot(Observation):
         planet_surface = surface_.Spheroid("SATURN", "IAU_SATURN", 60268.,
                                            54364.)
     
-        #(surface_event, rel_surf_evt) = self.back_plane_setup(surface)
-        (surface_event, rel_surf_evt,
-         dist_from_instrument, obs_mask,
-         blk_evt) = self.back_plane_setup(planet_surface)    
+        (surface_event, obs_mask) = self.back_plane_setup(planet_surface)    
     
         #now get the sun
         sun_wrt_target = path_.connect("SUN", "SATURN")
@@ -170,8 +165,6 @@ class Snapshot(Observation):
         surface_event.arr = surface_event.pos - sun_dep_event.pos
         
         phase_angle = surface_event.phase_angle()
-        print "phase_angle:"
-        print phase_angle
         
         return phase_angle
     
@@ -198,17 +191,10 @@ class Snapshot(Observation):
         
         # get the relative event of the photon leaving the light source
         light_dep_event = light_wrt_target.photon_to_event(obj_evt, 1)[1]
-        print "light_dep_event.perp:"
-        print light_dep_event.perp
-        print "light_dep_event.arr:"
-        print light_dep_event.arr
-        print "light_dep_event.dep:"
-        print light_dep_event.dep
         #light from target is light from obj plus obj from target
         origin = obj_evt.pos + light_dep_event.pos
         dir = -light_dep_event.pos   #ray to check from observer to pixel
 
-        #intercept = target_surface.intercept(obs_dep_event.pos, dir)[0]
         intercept = target_surface.intercept(origin, dir)[0]
         rel_pos = light_dep_event.pos + intercept
         pos = rel_pos.vals
@@ -230,7 +216,7 @@ class Snapshot(Observation):
         ignore = frame_.RingFrame("IAU_SATURN")
         surface = surface_.RingPlane("SATURN", "IAU_SATURN_DESPUN")
 
-        (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
+        (surface_event, obs_mask) = self.back_plane_setup(surface)
 
         bp_data = np.sqrt(surface_event.pos.vals[...,0]**2 +
                           surface_event.pos.vals[...,1]**2)
@@ -253,7 +239,7 @@ class Snapshot(Observation):
         ignore = frame_.RingFrame(frame_id)
         surface = surface_.Spheroid(path_id, frame_id, 60268., 54364.)
     
-        (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
+        (surface_event, obs_mask) = self.back_plane_setup(surface)
         
         x = surface_event.pos.vals[...,0]
         y = surface_event.pos.vals[...,1]
@@ -275,7 +261,7 @@ class Snapshot(Observation):
         ignore = frame_.RingFrame(frame_id)
         surface = surface_.Spheroid(path_id, frame_id, 60268., 54364.)
     
-        (surface_event, rel_surf_evt) = self.back_plane_setup(surface)
+        (surface_event, obs_mask) = self.back_plane_setup(surface)
     
         x = surface_event.pos.vals[...,0]
         y = surface_event.pos.vals[...,1]
@@ -286,6 +272,111 @@ class Snapshot(Observation):
         theta_mask = ma.array(theta, mask=mask)
         
         return theta_mask
+
+def surface_in_view(self, surface):
+    """Determine whether a surface exists in the snapshot.
+        
+        Input:
+        surface     A surface (RingPlane, Spheroid, etc) to be checked
+        
+        Return:     Boolean.  True if exists, else False.
+        """
+    return self.recursive_surface_in_view(surface, 16.)
+
+def recursive_surface_in_view(self, surface, resolution):
+    """Recursively check, with finer and finer resolution, whether surface
+        is intersected by ray at center of a pixel.
+        
+        Input:
+        surface     A surface (RingPlane, Spheroid, etc) to be checked.
+        resoltuion  must be power of 2.
+        
+        Return:     Boolean.  True if exists, else False.
+        """
+    tdb = (self.t0 + self.t1) * 0.5
+    
+    uv_shape = self.fov.uv_shape.vals / resolution
+    buffer = np.empty((uv_shape[0], uv_shape[1], 2))
+    buffer[:,:,1] = np.arange(uv_shape[1]).reshape(uv_shape[1],1)
+    buffer[:,:,0] = np.arange(uv_shape[0])
+    buffer *= resolution
+    indices = Pair(buffer + 0.5)
+    
+    rays = self.fov.los_from_uv(indices)
+    arrivals = -rays
+    image_event = Event(tdb, (0,0,0), (0,0,0), "CASSINI",
+                        self.frame_id, Empty(), arrivals)
+    
+    (surface_event, rel_surf_evt) = surface.photon_to_event(image_event, 1)
+    
+    if not surface_event.pos.mask.all():
+        return True
+    elif resolution == 1:
+        return False
+    return self.recursive_surface_in_view(surface, resolution / 2.)
+
+def surface_center_within_view_bounds(self, path_id):
+    """Determine whether teh center of a surface is somewhere within the
+        snapshot bounds, even if subpixel.
+        
+        Input:
+        surface     A surface (RingPlane, Spheroid, etc) to be checked
+        
+        Return:     Boolean.  True if exists, else False.
+        """
+    tdb = (self.t0 + self.t1) * 0.5
+    image_event = Event(tdb, (0,0,0), (0,0,0), "CASSINI", self.frame_id)
+    surface_path = path_.connect(path_id, "CASSINI", self.frame_id)
+    (abs_event, rel_event) = surface_path.photon_to_event(image_event)
+    xy_pair = self.fov.xy_from_los(rel_event.pos)
+    uv = self.fov.uv_from_xy(xy_pair)
+    u = uv.vals[...,0]
+    v = uv.vals[...,1]
+    uv_shape = self.fov.uv_shape.vals
+    return((u >= 0.) and (u <= uv_shape[0]) and (v >= 0.) and (v <= uv_shape[1]))
+
+    def any_part_object_in_view(self, origin_id, path_id):
+        """Determine if any part of object from path_id is w/in field-of-view.
+            NOTE: This code is for a sphere and should be put in Spheroid,
+            probably.
+            
+            Input:
+            path_id     id of object path
+            
+            Return:     Boolean.  True if any part w/in fov.
+            """
+        # get position of object relative to view point
+        tdb = (self.t0 + self.t1) * 0.5
+        image_event = Event(tdb, (0,0,0), (0,0,0), origin_id, self.frame_id)
+        surface_path = path_.connect(path_id, origin_id, self.frame_id)
+        rel_event = surface_path.photon_to_event(image_event)[1]
+        r = 60269.
+        neg_r = -r
+        
+        #now get planes of viewing frustrum
+        uv_shape = self.fov.uv_shape.vals
+        uv = np.array([(0,0),
+                       (uv_shape[0],0),
+                       (uv_shape[0],uv_shape[1]),
+                       (0,uv_shape[1])])
+        uv_pair = Pair(uv)
+        los = self.fov.los_from_uv(uv_pair)
+        # if the dot product of the normal of each plane and the center of
+        # object is less then negative the radius, we lie entirely outside that
+        # plane of the frustrum, and therefore no part is in fov.  If between
+        # -r and r, we have intersection, therefore part in fov. otherwise,
+        # entirely in fov.
+        frustrum_planes = []
+        for i in range(0,4):
+            normal = los[i].cross(los[(i+1)%4])
+            dist = normal.dot(rel_event.pos)
+            d = dist.vals
+            if d < neg_r:    # entirely outside of plane
+                return False
+            if (d < r) and (-d > neg_r):  # intersects plane
+                return True
+        # must be inside of all the planes
+        return True
 
     def back_plane_setup(self, surface, blocking_surface=None):
         """Currently this is set up purely for ring planes.  Must be generalized
@@ -321,29 +412,6 @@ class Snapshot(Observation):
         
         if blocking_surface is not None:
             rel_blk_evt = blocking_surface.photon_to_event(image_event, 1)[1]
-            """print "rel_blk_evt.perp:"
-            print rel_blk_evt.perp
-            print "rel_blk_evt.arr:"
-            print rel_blk_evt.arr
-            print "rel_blk_evt.dep:"
-            print rel_blk_evt.dep
-            rel_blk_evt.pos[rel_blk_evt.pos.mask] = rel_blk_evt.pos[0][0]
-            rel_blk_evt.dep[rel_blk_evt.dep.mask] = rel_blk_evt.dep[0][0]
-            rel_blk_evt.time[rel_blk_evt.time.mask] = rel_blk_evt.time[0][0]
-            saturn_light_evt = rel_blk_evt.wrt_path("SUN")
-            print "after wrt_path() called:"
-            print "rel_blk_evt.perp:"
-            print rel_blk_evt.perp
-            print "rel_blk_evt.arr:"
-            print rel_blk_evt.arr
-            print "rel_blk_evt.dep:"
-            print rel_blk_evt.dep
-            print "saturn_light_evt.perp:"
-            print saturn_light_evt.perp
-            print "saturn_light_evt.arr:"
-            print saturn_light_evt.arr
-            print "saturn_light_evt.dep:"
-            print saturn_light_evt.dep"""
             block_dist = np.sqrt(rel_blk_evt.pos.vals[...,0]**2 +
                                  rel_blk_evt.pos.vals[...,1]**2 +
                                  rel_blk_evt.pos.vals[...,2]**2)
@@ -354,8 +422,7 @@ class Snapshot(Observation):
             rel_blk_evt = None
             mask = dist_from_instrument == np.nan
 
-        return (surface_event, rel_surf_evt, dist_from_instrument, mask, rel_blk_evt)
-        #return (surface_event, rel_surf_evt)
+        return (surface_event, mask)
 
 
 

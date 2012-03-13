@@ -87,6 +87,11 @@ class Ansa(Surface):
             theta2 = np.arccos(x/rvals)
             
             theta = theta1 + theta2
+        
+        if derivs:
+            raise NotImplementedError("ansa as_coords() " +
+                                      "derivatives are not implemented")
+
         return Vector3.from_scalars(r,z,theta)
     
     def as_vector3(self, obs, r, z, theta=0., derivs=False):
@@ -147,7 +152,11 @@ class Ansa(Surface):
             theta2 = theta.vals - theta1
             x = rvals * np.cos(theta2)
             y = rvals * np.sin(theta2)
-
+        
+        if derivs:
+            raise NotImplementedError("ansa as_vector3() " +
+                                      "derivatives are not implemented")
+        
         return Vector3.from_scalars(x, y, z.vals)
 
     def intercept(self, obs, los, derivs=False):
@@ -171,8 +180,13 @@ class Ansa(Surface):
         obs_y = obs.vals[...,1]
         dx = los.vals[...,0]
         dy = los.vals[...,1]
-        u = -(obs_x + obs_y*dy) / (dy**2 + x)
+        u = -(obs_x + obs_y*dy) / (dy**2 + dx)
         pos = obs + u * los
+        
+        if derivs:
+            raise NotImplementedError("ansa intercept() " +
+                                      "derivatives are not implemented")
+        
         return pos
     
     def normal(self, position, obs, derivs=False):
@@ -187,6 +201,11 @@ class Ansa(Surface):
             """
         # normal is simply the position - obs
         n = position - obs
+        
+        if derivs:
+            raise NotImplementedError("ansa normal() " +
+                                      "derivatives are not implemented")
+        
         return n
     
     def gradient_at_position(self, position, axis=0, projected=True):
@@ -225,7 +244,7 @@ class Ansa(Surface):
         # An internal wind field is not implemented
         return Vector3((0,0,0))
     
-    def intercept_with_normal(self, normal):
+    def intercept_with_normal(self, normal, obs, derivs=False):
         """Constructs the intercept point on the surface where the normal vector
             is parallel to the given vector.
             
@@ -237,19 +256,20 @@ class Ansa(Surface):
             vector should be np.nan.
             """
         
-        # TBD
-        pass
+        obs_x = obs.vals[...,0]
+        obs_y = obs.vals[...,1]
+        dx = normal.vals[...,0]
+        dy = normal.vals[...,1]
+        u = (obs_x*dy - obs_y*dx) / (dx**2 + dy)
+        pos = obs + u * los
         
-        # For a sphere, this is just the point at r * n, where r is the radius
-        # of the sphere.  For a spheroid, this is just the same point scaled up
-        #         np_scale_array = np.array( [[self.r0, 0, 0], [0, self.r0, 0],
-        #                                     [0, 0, self.r2]])
-        #         expand_matrix = Matrix3(np_scale_array)
-        #         pos = expand_matrix * normal
+        if derivs:
+            raise NotImplementedError("ansa intercept_with_normal() " +
+                                      "derivatives are not implemented")
         
         return pos
     
-    def intercept_normal_to(self, position):
+    def intercept_normal_to(self, position, obs, derivs=False):
         """Constructs the intercept point on the surface where a normal vector
             passes through a given position.
             
@@ -260,9 +280,8 @@ class Ansa(Surface):
             solution exists, the components of the returned
             vector should be np.nan.
             """
-        
-        # TBD
-        pass
+        los = position - obs
+        return self.intercept(obs, los, derivs)
     
     def lat_to_centric(self, lat):
         """Converts a latitude value given in internal spheroid coordinates to

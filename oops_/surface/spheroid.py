@@ -444,7 +444,7 @@ class Spheroid(Surface):
         t = pos_cept.vals[...,0] / norm.vals[...,0]
 
         if derivs:
-            raise NotImplementedError("spheroid intercept_with_normal() " +
+            raise NotImplementedError("spheroid intercept_normal_to() " +
                                       "derivatives are not implemented")
         return newton_intercept_normal_to(pos, t)
 
