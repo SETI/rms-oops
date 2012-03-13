@@ -496,6 +496,9 @@ class Test_Spheroid(unittest.TestCase):
 
     def runTest(self):
 
+        from oops_.frame.frame_ import Frame
+        from oops_.path.path_ import Path
+
         REQ  = 60268.
         RPOL = 54364.
         planet = Spheroid("SSB", "J2000", (REQ, RPOL))
