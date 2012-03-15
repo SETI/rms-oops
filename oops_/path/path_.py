@@ -108,6 +108,7 @@ class Path(object):
         if registry.SSB is None:
             registry.SSB = Waypoint("SSB")
             registry.SSB.ancestry = [registry.SSB]
+            registry.PATH_CLASS = Path
 
         registry.PATH_REGISTRY = {"SSB": registry.SSB,
                                   ("SSB","SSB"): registry.SSB,
@@ -219,7 +220,7 @@ class Path(object):
 # These must be defined here and not in Event.py, because that would create a
 # circular dependency in the order that modules are loaded.
 
-    def subtract_from_event(self, event, quick=QUICK):
+    def subtract_from_event(self, event, quick=QUICK, derivs=False):
         """Returns an equivalent event, but with this path redefining its
         origin.
 
@@ -230,6 +231,8 @@ class Path(object):
                         frame.
             quick       False to disable QuickPaths; True for the default
                         options; a dictionary to override specific options.
+            derivs      True to retain derivatives during this calculation;
+                        false to remove them.
         """
 
         # Check for compatibility
@@ -239,18 +242,20 @@ class Path(object):
         # Create a new event by subtracting this path from the origin
         offset = self.event_at_time(event.time, quick)
 
-        result = Event(event.time.copy(),
+        offset.pos.subarray_math = derivs
+        offset.vel.subarray_math = derivs
+
+        result = Event(event.time.copy(derivs),
                        event.pos - offset.pos,
                        event.vel - offset.vel,
                        self.path_id, event.frame_id)
 
         for key in event.subfields.keys():
-            result.insert_subfield(key, event.subfields[key].copy())
+            result.insert_subfield(key, event.subfields[key].copy(derivs))
 
-        result.filled_ssb = event.filled_ssb
         return result
 
-    def add_to_event(self, event, quick=QUICK):
+    def add_to_event(self, event, quick=QUICK, derivs=False):
         """Returns an equivalent event, but with the origin of this path
         redefining its origin.
 
@@ -258,6 +263,8 @@ class Path(object):
             event       the event object to which this path is to be added.
                         The path's endpoint must coincide with the event's
                         origin, and the two objects must use the same frame.
+            derivs      True to retain derivatives during this calculation;
+                        false to remove them.
         """
 
         # Check for compatibility
@@ -267,44 +274,46 @@ class Path(object):
         # Create a new event by subtracting this path from the origin
         offset = self.event_at_time(event.time, quick)
 
-        result = Event(event.time,
+        offset.pos.subarray_math = derivs
+        offset.vel.subarray_math = derivs
+
+        result = Event(event.time.copy(derivs),
                        event.pos + offset.pos,
                        event.vel + offset.vel,
                        self.origin_id, event.frame_id)
 
         for key in event.subfields.keys():
-            result.insert_subfield(key, event.subfields[key].copy())
+            result.insert_subfield(key, event.subfields[key].copy(derivs))
 
-        result.filled_ssb = event.filled_ssb
         return result
 
 ################################################################################
 # Photon Solver
 ################################################################################
 
-    def photon_to_event(self, event, quick=QUICK, derivs=False,
+    def photon_to_event(self, link, quick=QUICK, derivs=False, guess=None,
                               iters     = PATH_PHOTONS.max_iterations,
                               precision = PATH_PHOTONS.dlt_precision,
                               limit     = PATH_PHOTONS.dlt_limit):
         """Returns the departure event at the given path for a photon, given the
-        event of the photon's arrival. See _solve_photon() for details.
+        linking event of the photon's arrival. See _solve_photon() for details.
         """
 
-        return self._solve_photon(event, -1, quick, derivs,
+        return self._solve_photon(link, -1, quick, derivs, guess,
                                          iters, precision, limit)
 
-    def photon_from_event(self, event, quick=QUICK, derivs=False,
+    def photon_from_event(self, link, quick=QUICK, derivs=False, guess=None,
                                 iters     = PATH_PHOTONS.max_iterations,
                                 precision = PATH_PHOTONS.dlt_precision,
                                 limit     = PATH_PHOTONS.dlt_limit):
         """Returns the arrival event at the given path for a photon, given the
-        event of the photon's departure. See _solve_photon() for details.
+        linking event of the photon's departure. See _solve_photon() for details.
         """
 
-        return self._solve_photon(event, +1, quick, derivs,
+        return self._solve_photon(link, +1, quick, derivs, guess,
                                          iters, precision, limit)
 
-    def _solve_photon(self, event, sign=-1, quick=QUICK, derivs=False,
+    def _solve_photon(self, link, sign, quick=QUICK, derivs=False, guess=None,
                             iters     = PATH_PHOTONS.max_iterations,
                             precision = PATH_PHOTONS.dlt_precision,
                             limit     = PATH_PHOTONS.dlt_limit):
@@ -314,7 +323,8 @@ class Path(object):
 
         Input:
 
-            event       the event of a photon's arrival or departure.
+            link        the event of a photon's arrival or departure. The
+                        returned event will be linked to this one.
 
             sign        -1 to return earlier events, corresponding to photons
                            departing from the path and arriving at the event.
@@ -325,9 +335,13 @@ class Path(object):
                         the default options; a dictionary to override specific
                         options.
 
-            derivs      True to include subarrays containing the partial
-                        derivatives of the returned path event with respect to
-                        the time and position of the associated event.
+            derivs      True to include subfields containing the partial
+                        derivatives with respect to the time of the linking
+                        event
+
+            guess       an initial guess to use as the event time along the
+                        path; otherwise None. Should only be used if the event
+                        time was already returned from a similar calculation.
 
             The following input parameters have default defined in file
             oops_.config.PATH_PHOTONS:
@@ -348,19 +362,22 @@ class Path(object):
                         path. These subfields are also filled in for both the
                         given event and the returned event:
 
-                            arr/dep     the vector from the departing photon
+                        arr/dep         the vector from the departing photon
                                         event to the arriving photon event, in
                                         the frame of the path.
 
-                            arr_lt/dep_lt
-                                        the light travel time separating the
+                        arr_lt/dep_lt   the light travel time separating the
                                         events. arr_lt is negative; dep_lt is
                                         positive.
+
+                        If derivs is True, then the path event has these
+                        subfields: time.d_dt, arr or los.d_dt.
         """
 
         # Iterate to a solution for the light travel time "lt". Define
         #   y = separation_distance(time + lt) - sign * c * lt
-        # where lt is negative for earlier events and positive for later events.
+        # where lt is negative for earlier linking events and positive for later
+        # linking events.
         #
         # Solve for the value of lt at which y = 0, using Newton's method.
         #
@@ -379,25 +396,30 @@ class Path(object):
         signed_c = sign * constants.C
         if sign < 0.:
             path_key = "dep"
-            event_key = "arr"
+            link_key = "arr"
         else:
-            event_key = "dep"
+            link_key = "dep"
             path_key = "arr" 
 
-        # Define the path and event relative to the SSB in J2000
-        event_wrt_ssb = event.wrt_ssb(quick)
-
-        # Make initial guesses at the light travel time
+        # Define the path and the linking event relative to the SSB in J2000
+        link_wrt_ssb = link.wrt_ssb(quick, derivs=derivs)
         path_wrt_ssb = Path.connect(self, "SSB", "J2000")
-        lt = (path_wrt_ssb.event_at_time(event.time, quick).pos
-                                        - event_wrt_ssb.pos).norm() / signed_c
-        path_time = event.time + lt
 
+        # Make initial guesses at the path event time
+        if guess is not None:
+            path_time = guess
+            lt = path_time - link.time
+        else:
+            lt = (path_wrt_ssb.event_at_time(link.time, quick).pos
+                                           - link_wrt_ssb.pos).norm() / signed_c
+            path_time = link.time + lt
+
+        # Set limits to avoid a diverging solution
         path_time_min = path_time.min() - limit
         path_time_max = path_time.max() + limit
 
-        lt_min = (path_time_min - event.time).min()
-        lt_max = (path_time_max - event.time).max()
+        lt_min = (path_time_min - link.time).min()
+        lt_max = (path_time_max - link.time).max()
 
         # Speed up the path and frame evaluations if requested
         # Interpret the quick parameters
@@ -409,24 +431,24 @@ class Path(object):
 
         path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=loop_quick)
 
-        # Iterate a fixed number of times. Newton's method ensures that
-        # convergence takes just a few iterations.
+        # Iterate a fixed number of times or until the threshold of error
+        # tolerance is reached. Convergence takes just a few iterations.
         max_dlt = np.inf
         for iter in range(iters):
 
             # Evaluate the position photon's curren SSB position based on time
-            path_event = path_wrt_ssb.event_at_time(path_time)
+            path_event_ssb = path_wrt_ssb.event_at_time(path_time)
 
-            delta_pos = path_event.pos - event_wrt_ssb.pos
-            delta_vel = path_event.vel - event_wrt_ssb.vel
+            delta_pos_ssb = path_event_ssb.pos - link_wrt_ssb.pos
+            delta_vel_ssb = path_event_ssb.vel - link_wrt_ssb.vel
 
-            dlt = ((delta_pos.norm() - lt * signed_c) /
-                   (delta_vel.proj(delta_pos).norm() - signed_c))
+            dlt = ((delta_pos_ssb.norm() - lt * signed_c) /
+                   (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
             new_lt = (lt - dlt).clip(lt_min, lt_max)
             dlt = lt - new_lt 
             lt = new_lt
 
-            path_time = (event.time + lt).clip(path_time_min, path_time_max)
+            path_time = (link.time + lt).clip(path_time_min, path_time_max)
 
             # Test for convergence
             prev_max_dlt = max_dlt
@@ -437,33 +459,54 @@ class Path(object):
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 
-        # Create the new event
+        # Update the path event one last time
         path_event_ssb = path_wrt_ssb.event_at_time(path_time)
 
         # Fill in the photon paths...
 
         # Photon path in SSB/J2000 frame
-        delta_pos_ssb = sign * (path_event_ssb.pos - event_wrt_ssb.pos)
+        delta_pos_ssb = path_event_ssb.pos - link_wrt_ssb.pos
 
-        path_event_ssb.insert_subfield(path_key, delta_pos_ssb)
+        # If derivatives are needed, insert dlos/dt
+        if derivs:
+
+            # Determine the derivative of path event time WRT the linking time.
+            delta_vel_ssb = path_event_ssb.vel - link_wrt_ssb.vel
+
+            # Derive the small relativistic fix to the relative velocity
+            dtime_dt = 1. + delta_vel_ssb.proj(delta_pos_ssb).norm() / signed_c
+            path_event_ssb.time.insert_subfield("d_dt", dtime_dt)
+
+            # Fill in the time derivative of los, here scaled to the full
+            # distance between the two events
+            dlos_dt = (path_event_ssb.vel * dtime_dt - link_wrt_ssb.vel)
+            delta_pos_ssb.insert_subfield("d_dt", dlos_dt)
+
+        # Update the photon info in the path event WRT SSB
+        signed_los_ssb = sign * delta_pos_ssb
+        path_event_ssb.insert_subfield(path_key, signed_los_ssb)
         path_event_ssb.insert_subfield(path_key + "_lt", lt)
 
-        event_wrt_ssb.insert_subfield(event_key, delta_pos_ssb)
-        event_wrt_ssb.insert_subfield(event_key + "_lt", lt)
+        # Update the linking event WRT SSB
+        link_wrt_ssb.insert_subfield(link_key, signed_los_ssb.plain())
+        link_wrt_ssb.insert_subfield(link_key + "_lt", lt)
 
-        # Update the original event
-        event_frame = registry.connect_frames(event.frame_id, "J2000")
-        transform = event_frame.transform_at_time(event.time, quick)
+        # Update the linking event in its native frame
+        link_frame = registry.connect_frames(link.frame_id, "J2000")
+        link_transform = link_frame.transform_at_time(link.time, quick)
 
-        event.insert_subfield(event_key, transform.rotate(delta_pos_ssb))
-        event.insert_subfield(event_key + "_lt", lt)
-        event.filled_ssb = event_wrt_ssb
+        signed_los_link = link_transform.rotate(signed_los_ssb, derivs=derivs)
+        # If derivs is True, then dlos/dt will be rotated and then combined with
+        # any time-derivative arising from the frame rotation.
 
-        # Transform the path event
-        path_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick)
+        link.insert_subfield(link_key, signed_los_link)
+        link.insert_subfield(link_key + "_lt", lt)
+        link.filled_ssb = link_wrt_ssb
+
+        # Transform the path event back to its origin and frame
+        path_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick,
+                                        derivs=derivs)
         path_event.filled_ssb = path_event_ssb
-
-        # Return the new event in two forms
         return path_event
 
 ################################################################################
@@ -845,7 +888,8 @@ class RotatedPath(Path):
 ################################################################################
 
 class Waypoint(Path):
-    """Waypoint is a Path subclass that always returns the origin."""
+    """Waypoint is a Path subclass that always returns the origin. It can be
+    useful merely for turning a path ID into a Path object."""
 
     def __init__(self, path_id, frame_id="J2000"):
         """Constructor for a Waypoint.
@@ -1032,7 +1076,6 @@ class QuickPath(Path):
 # Initialize the registry
 ################################################################################
 
-registry.PATH_CLASS = Path
 Path.initialize_registry()
 
 ###############################################################################

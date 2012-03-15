@@ -18,7 +18,8 @@ class Flat(FOV):
 
     def __init__(self, uv_scale, uv_shape, uv_los=None):
         """Constructor for a FlatFOV. The U-axis is assumed to align with X and
-        the V-axis aligns with Y.
+        the V-axis aligns with Y. A FlatFOV has no dependence on the optional
+        extra indices that can be associated with time, wavelength band, etc.
 
         Input:
             uv_scale    a single value, tuple or Pair defining the ratios dx/du
@@ -54,7 +55,7 @@ class Flat(FOV):
         self.dxy_duv = MatrixN([[  scale.vals[0], 0.], [0.,   scale.vals[1]]])
         self.duv_dxy = MatrixN([[1/scale.vals[0], 0.], [0., 1/scale.vals[1]]])
 
-    def uv_from_xy(self, xy_pair, derivs=False):
+    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
         coordinates in radians.
 
@@ -70,7 +71,7 @@ class Flat(FOV):
 
         return uv
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
         given a Pair of coordinates (u,v).
 

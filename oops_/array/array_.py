@@ -193,28 +193,36 @@ class Array(object):
 
     @staticmethod
     def into_scalar(arg):
+        """A static Array method to turn something into a Scalar."""
         return Array.SCALAR_CLASS.as_scalar(arg)
 
     # Conversions to specific classes, which will only work if items match
     def as_scalar(self):
+        """Casts any Array subclass to a Scalar if possible."""
         return Array.SCALAR_CLASS.as_scalar(self)
 
     def as_pair(self):
+        """Casts any Array subclass to a Pair if possible."""
         return Array.PAIR_CLASS.as_pair(self)
 
     def as_tuple(self):
+        """Casts any Array subclass to a Tuple if possible."""
         return Array.TUPLE_CLASS.as_pair(self)
 
     def as_vector3(self):
+        """Casts any Array subclass to a Vector3 if possible."""
         return Array.VECTOR3_CLASS.as_vector3(self)
 
     def as_vectorn(self):
+        """Casts any Array subclass to a VectorN if possible."""
         return Array.VECTORN_CLASS.as_vectorn(self)
 
     def as_matrix3(self):
+        """Casts any Array subclass to a Matrix3 if possible."""
         return Array.MATRIX3_CLASS.as_matrix3(self)
 
     def as_matrixn(self):
+        """Casts any Array subclass to a MatrixN if possible."""
         return Array.MATRIXN_CLASS.as_matrixn(self)
 
     def masked_version(self):
@@ -282,13 +290,7 @@ class Array(object):
             return type(self).__name__ + "(" + string + suffix + ")"
 
     def __copy__(self):
-        """describes how python should handle copying of Array types. if vals
-            are instance of type nparray then create new instance of Array with
-            a copy of the values, else just use the memory location of the
-            values.
-            
-            Return:     a new instance of type Array.
-            """
+
         if isinstance(self.vals, np.ndarray):
             vals = self.vals.copy()
         else:
@@ -308,7 +310,26 @@ class Array(object):
 
         return obj
 
-    def copy(self): return self.__copy__()
+    def copy(self, subfields=True):
+        """If optional argument subfields is False, subfields will not be
+        copied, overriding the internal subfield_math flag."""
+
+        if subfields or not self.subfield_math: return self.__copy__()
+
+        self.subfield_math = False
+        result = self.__copy__()
+        self.subfield_math = True
+
+        return result
+
+    def plain(self):
+        """Returns a shallow copy of the object without subfields."""
+
+        if len(self.subfields) == 0: return self
+
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals, self.mask, self.units)
+        return obj
 
     ####################################################
     # Subarray support methods
@@ -319,6 +340,24 @@ class Array(object):
 
         self.subfields[key] = value
         self.__dict__[key] = value
+
+    def add_to_subfield(self, key, value):
+        """Adds the given value to a subfield if it is already present;
+        otherwise, it creates a new subfield."""
+
+        if key in self.subfields.keys():
+            self.subfields[key] = self.subfields[key] + value
+        else:
+            self.subfields[key] = value
+
+        self.__dict__[key] = self.subfields[key]
+
+    def insert_subfield_if_new(self, key, value):
+        """Inserts the subfield if it does not already exist; otherwise, it
+        leaves the subfield alone."""
+
+        if key in self.subfields.keys(): return
+        self.insert_subfield(key, value)
 
     def delete_subfield(self, key):
         """Deletes a subfield."""
@@ -339,15 +378,22 @@ class Array(object):
     # Arithmetic support methods
     ####################################################
 
+    def as_my_type(self, arg, mask=False, units=None):
+        """This method converts an operand to the same class as self, and then
+        returns the operand."""
+
+        if not isinstance(arg, type(self)):
+            obj = Array.__new__(type(self))
+            obj.__init__(arg, mask, units)
+            arg = obj
+
+        return arg
+
     def as_if_my_type(self, arg):
         """This method converts an operand to the same class as self, and then
         returns a tuple (values, mask, units)."""
 
-        if not isinstance(arg, type(self)):
-            obj = Array.__new__(type(self))
-            obj.__init__(arg)
-            arg = obj
-
+        arg = self.as_my_type(arg)
         return (arg.vals, arg.mask, arg.units)
 
     def as_if_my_rank(self, arg):
@@ -429,30 +475,31 @@ class Array(object):
         return self
 
     def add_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array) and arg2.subfield_math:
-            if arg1.subfield_math:
-                set1 = set(arg1.subfields)
-                set2 = set(arg2.subfields)
-                set12 = set1 & set2
-                set1 -= set12
-                set2 -= set12
-                for key in set12:
-                    self.insert_subfield(key, arg1.subfields[key] +
-                                              arg2.subfields[key])
-                for key in set1:
-                    self.insert_subfield(key, arg1.subfields[key].copy())
-                for key in set2:
-                    self.insert_subfield(key, arg2.subfields[key].copy())
-            else:
-                for key in arg2.subfields.keys():
-                    self.insert_subfield(key, arg2.subfields[key].copy())
-        elif arg1.subfield_math:
+        if not arg1.subfield_math: return
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
+            set12 = set1 & set2
+            set1 -= set12
+            set2 -= set12
+            for key in set12:
+                self.insert_subfield(key, arg1.subfields[key] +
+                                          arg2.subfields[key])
+            for key in set1:
+                self.insert_subfield(key, arg1.subfields[key].copy())
+            for key in set2:
+                self.insert_subfield(key, arg2.subfields[key].copy())
+        else:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def iadd_subfields(self, arg2):
         if not self.subfield_math: return
-        if isinstance(arg2, Array) and arg2.subfield_math:
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2
@@ -461,7 +508,7 @@ class Array(object):
                 self.subfields[key] += arg2.subfields[key]
                 self.__dict__[key] = self.subfields[key]
             for key in set2:
-                self.insert_subfield(key, arg2.subfields[key].copy())
+                self.insert_subfield(key, arg2.subfields[key])
 
     ####################################################
     # Subtraction
@@ -495,30 +542,31 @@ class Array(object):
         return self
 
     def sub_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array) and arg2.subfield_math:
-            if arg1.subfield_math:
-                set1 = set(arg1.subfields)
-                set2 = set(arg2.subfields)
-                set12 = set1 & set2
-                set1 -= set12
-                set2 -= set12
-                for key in set12:
-                    self.insert_subfield(key, arg1.subfields[key] -
-                                              arg2.subfields[key])
-                for key in set1:
-                    self.insert_subfield(key, arg1.subfields[key].copy())
-                for key in set2:
-                    self.insert_subfield(key, -arg2.subfields[key].copy())
-            else:
-                for key in arg2.subfields.keys():
-                    self.insert_subfield(key, -arg2.subfields[key].copy())
-        elif arg1.subfield_math:
+        if not arg1.subfield_math: return
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
+            set12 = set1 & set2
+            set1 -= set12
+            set2 -= set12
+            for key in set12:
+                self.insert_subfield(key, arg1.subfields[key] -
+                                          arg2.subfields[key])
+            for key in set1:
+                self.insert_subfield(key, arg1.subfields[key].copy())
+            for key in set2:
+                self.insert_subfield(key, -arg2.subfields[key].copy())
+        else:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def isub_subfields(self, arg2):
         if not self.subfield_math: return
-        if isinstance(arg2, Array) and arg2.subfield_math:
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2
@@ -576,30 +624,31 @@ class Array(object):
         return self
 
     def mul_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array) and arg2.subfield_math:
-            if arg1.subfield_math:
-                set1 = set(arg1.subfields)
-                set2 = set(arg2.subfields)
-                set12 = set1 & set2
-                set1 -= set12
-                set2 -= set12
-                for key in set12:
-                    self.insert_subfield(key, arg1.subfields[key] *
-                                              arg2.subfields[key])
-                for key in set1:
-                    self.insert_subfield(key, arg1.subfields[key].copy())
-                for key in set2:
-                    self.insert_subfield(key, arg2.subfields[key].copy())
-            else:
-                for key in arg2.subfields.keys():
-                    self.insert_subfield(key, arg2.subfields[key].copy())
-        elif arg1.subfield_math:
+        if not arg1.subfield_math: return
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
+            set12 = set1 & set2
+            set1 -= set12
+            set2 -= set12
+            for key in set12:
+                self.insert_subfield(key, arg1.subfields[key] *
+                                          arg2.subfields[key])
+            for key in set1:
+                self.insert_subfield(key, arg1.subfields[key].copy())
+            for key in set2:
+                self.insert_subfield(key, arg2.subfields[key].copy())
+        else:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def imul_subfields(self, arg2):
         if not self.subfield_math: return
-        if isinstance(arg2, Array) and arg2.subfield_math:
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2
@@ -645,6 +694,20 @@ class Array(object):
 
         return obj
 
+    # Reverse-divide works element-by-element if rank is 0 or 1.
+    def __rdiv__(self, arg):
+        if self.rank == 2: return NotImplemented
+
+        try:
+            arg = self.as_my_type(arg)
+            return arg / self
+        except: pass
+
+        (vals, mask, units) = self.as_if_my_rank(arg)
+        vals = np.broadcast_arrays(vals, self.vals)[0]
+        arg = self.as_my_type(vals, mask, units)
+        return arg / self
+
     def __idiv__(self, arg):
         try:
             (vals, mask, units) = self.as_if_my_type(arg)
@@ -674,30 +737,31 @@ class Array(object):
         return self
 
     def div_subfields(self, arg1, arg2):
-        if isinstance(arg2, Array) and arg2.subfield_math:
-            if arg1.subfield_math:
-                set1 = set(arg1.subfields)
-                set2 = set(arg2.subfields)
-                set12 = set1 & set2
-                set1 -= set12
-                set2 -= set12
-                for key in set12:
-                    self.insert_subfield(key, arg1.subfields[key] /
-                                              arg2.subfields[key])
-                for key in set1:
-                    self.insert_subfield(key, arg1.subfields[key].copy())
-                for key in set2:
-                    self.insert_subfield(key, 1./arg2.subfields[key])
-            else:
-                for key in arg2.subfields.keys():
-                    self.insert_subfield(key, 1./arg2.subfields[key])
-        elif arg1.subfield_math:
+        if not arg1.subfield_math: return
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
+            set1 = set(arg1.subfields)
+            set2 = set(arg2.subfields)
+            set12 = set1 & set2
+            set1 -= set12
+            set2 -= set12
+            for key in set12:
+                self.insert_subfield(key, arg1.subfields[key] /
+                                          arg2.subfields[key])
+            for key in set1:
+                self.insert_subfield(key, arg1.subfields[key].copy())
+            for key in set2:
+                self.insert_subfield(key, 1./arg2.subfields[key].copy())
+        else:
             for key in arg1.subfields.keys():
                 self.insert_subfield(key, arg1.subfields[key].copy())
 
     def idiv_subfields(self, arg2):
         if not self.subfield_math: return
-        if isinstance(arg2, Array) and arg2.subfield_math:
+        if isinstance(arg2, Array):
+            if not arg2.subfield_math: return
+
             set1 = set(self.subfields)
             set2 = set(arg2.subfields)
             set12 = set1 & set2

@@ -51,9 +51,7 @@ def from_file(filespec, parameters={}):
 
         
     # Create a Snapshot
-    result = oops.obs.Snapshot(vic.get_2d_array(),      # data
-                               ["v","u"],               # axes
-                               (tdb0, tdb1),            # time
+    result = oops.obs.Snapshot((tdb0, tdb1),            # time
                                FOVS[camera,mode],       # fov
                                "CASSINI",               # path_id
                                "CASSINI_ISS_" + camera) # frame_id
@@ -61,6 +59,7 @@ def from_file(filespec, parameters={}):
     # Insert the Vicar object as asubfield in case more info is needed.
     # This object behaves like a dictionary for most practical purposes.
     result.insert_subfield("vicar_dict", vic)
+    result.insert_subfield("data", vic.get_2d_array())
 
     return result
 
@@ -92,9 +91,7 @@ def from_index(filespec, parameters={}):
         else:
             camera = "NAC"
 
-        item = oops.obs.Snapshot(None,                      # data
-                                 ["v","u"],                 # axes
-                                 (tdb0, tdb1),              # time
+        item = oops.obs.Snapshot((tdb0, tdb1),              # time
                                  FOVS[camera,mode],         # fov
                                  "CASSINI",                 # path_id
                                  "CASSINI_ISS_" + camera)   # frame_id

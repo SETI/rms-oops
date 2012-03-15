@@ -49,9 +49,12 @@ class Subarray(FOV):
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
         given a Pair of coordinates (u,v).
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_duv", which
         contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
@@ -59,7 +62,7 @@ class Subarray(FOV):
         """
 
         old_xy = self.fov.xy_from_uv(self.new_origin_in_old_uv + uv_pair,
-                                     derivs)
+                                     extras, derivs)
         new_xy = old_xy - self.new_los_wrt_old_xy
 
         if derivs:
@@ -67,16 +70,20 @@ class Subarray(FOV):
 
         return new_xy
 
-    def uv_from_xy(self, xy_pair, derivs=False):
+    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
         coordinates in radians.
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_dxy", which
         contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
         shape [2,2].
         """
 
-        old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair, derivs)
+        old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair,
+                                     extras, derivs)
         new_uv = old_uv - self.new_origin_in_old_uv
 
         if derivs:

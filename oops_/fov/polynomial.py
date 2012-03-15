@@ -15,7 +15,8 @@ class Polynomial(FOV):
     """The Polynomial subclass of FOV describes a field of view in which the
     distortion is described by a 2-D polynomial. This is the approached used by
     Space Telescope Science Institute to describe the Hubble instrument fields
-    of view.
+    of view. A Polynomial FOV has no dependence on the optional extra indices
+    that can be associated with time, wavelength band, etc.
     """
 
     def __init__(self, uv_coefft, uv_shape, uv_los=None, uv_area=None):
@@ -64,7 +65,7 @@ class Polynomial(FOV):
 
     ########################################
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
         given a Pair of coordinates (u,v).
 
@@ -118,7 +119,7 @@ class Polynomial(FOV):
 
     ########################################
 
-    def uv_from_xy(self, xy_pair, derivs=False, iters=2):
+    def uv_from_xy(self, xy_pair, extras=(), derivs=False, iters=2):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
         coordinates in radians.
 

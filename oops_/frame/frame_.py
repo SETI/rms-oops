@@ -105,8 +105,9 @@ class Frame(object):
         debugging."""
 
         if registry.J2000 is None:
-            registry.J2000 = NullFrame("J2000")
+            registry.J2000 = Wayframe("J2000")
             registry.J2000.ancestry = [registry.J2000]
+            registry.FRAME_CLASS = Frame
 
         registry.FRAME_REGISTRY = {"J2000": registry.J2000,
                                    ("J2000","J2000"): registry.J2000}
@@ -154,9 +155,9 @@ class Frame(object):
             # Fill in the ancestry too
             self.ancestry = [self] + reference.ancestry
 
-            # Also save the NullFrame Frame
+            # Also save the Wayframe Frame
             key = (self.frame_id, self.frame_id)
-            registry.FRAME_REGISTRY[key] = NullFrame(self.frame_id)
+            registry.FRAME_REGISTRY[key] = Wayframe(self.frame_id)
 
             # Also define the path with respect to J2000 if possible
             if self.reference_id != "J2000":
@@ -337,8 +338,8 @@ class Frame(object):
         # Make sure a QuickFrame has been requested
         if quick is False: return self
 
-        # A NullFrame frame is too easy
-        if type(self) == NullFrame: return self
+        # A Wayframe is too easy
+        if type(self) == Wayframe: return self
 
         # A QuickFrame would be redundant
         if type(self) == QuickFrame: return self
@@ -482,8 +483,9 @@ class LinkedFrame(Frame):
 
 ################################################################################
 
-class NullFrame(Frame):
-    """A Frame that always returns a null transform."""
+class Wayframe(Frame):
+    """A Frame that always returns an identity transform. It can be useful for
+    turning a frame ID into a Frame object."""
 
     def __init__(self, frame_id, origin_id=None):
 
@@ -503,7 +505,7 @@ class NullFrame(Frame):
 
         return Transform.null_transform(self.frame_id, self.origin_id)
 
-    def __str__(self): return "Frame(" + self.frame_id + ")"
+    def __str__(self): return "Wayframe(" + self.frame_id + ")"
 
 ################################################################################
 
@@ -727,7 +729,6 @@ class QuickFrame(Frame):
 # Initialize the registry
 ################################################################################
 
-registry.FRAME_CLASS = Frame
 Frame.initialize_registry()
 
 ################################################################################

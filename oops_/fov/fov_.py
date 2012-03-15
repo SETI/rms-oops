@@ -3,6 +3,8 @@
 #
 # 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
 # 2/22/12 MRS - Revised the handling of derivatives.
+# 3/9/12 MRS - Added the "extras" argument to support additional Observation
+#   subclasses
 ################################################################################
 
 import numpy as np
@@ -35,8 +37,9 @@ class FOV(object):
     of coordinates to use a in frame the describes the layout of detectors on
     the focal plane of the instrument.
 
-    This class may have to be extended if necessary to handle a field of view
-    that time-dependency, such as a pushbroom or raster-scanning imager.
+    The class also allows for the possibility that the field of view has
+    additional dependencies on wavelength, etc. Most functions support a tuple
+    of arguments called extras to contain these additional parameters.
 
     Every FOV should have the following attributes:
         uv_los      a Pair defining the (u,v) coordinates of the nominal line of
@@ -65,9 +68,12 @@ class FOV(object):
 
         pass
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
         given a Pair of coordinates (u,v).
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_duv", which
         contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
@@ -76,9 +82,12 @@ class FOV(object):
 
         pass
 
-    def uv_from_xy(self, xy_pair, derivs=False):
+    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
         coordinates in radians.
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_dxy", which
         contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
@@ -91,13 +100,16 @@ class FOV(object):
 # Derived methods, to override only if necessary
 ########################################################
 
-    def area_factor(self, uv_pair):
+    def area_factor(self, uv_pair, extras=()):
         """Returns the relative area of a pixel or other sensor at (u,v)
         coordinates, compared to a nominal pixel area.
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
         """
 
         # Get the partial derivatives
-        xy = self.xy_from_uv(uv_pair, derivs=True)
+        xy = self.xy_from_uv(uv_pair, extras, derivs=True)
 
         dx_du = xy.d_duv.vals[...,0,0]
         dx_dv = xy.d_duv.vals[...,0,1]
@@ -164,7 +176,8 @@ class FOV(object):
 
         If derivs is True, then the Pair returned has a subfield "d_dlos", which
         contains the derivatives d(x,y)/d(los) as a MatrixN with item shape
-        [2,3]."""
+        [2,3].
+        """
 
         # Scale to z=1 and then convert to Pair
         los = Vector3.as_vector3(los)
@@ -193,17 +206,20 @@ class FOV(object):
 
         return xy
 
-    def los_from_uv(self, uv_pair, derivs=False):
+    def los_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns the line of sight (los) as a Vector3 object. The los points
         in the direction specified by coordinate Pair (u,v). Note that this is
         the direction _opposite_ to that in which the photon is moving.
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then the Vector3 returned has a subfield "d_duv",
         which contains the partial derivatives d(los)/d(u,v) as a MatrixN with
         item shape [3,2]. 
         """
 
-        xy_pair = self.xy_from_uv(uv_pair, derivs)
+        xy_pair = self.xy_from_uv(uv_pair, extras, derivs)
         los = self.los_from_xy(xy_pair, derivs)
 
         if derivs:
@@ -212,11 +228,14 @@ class FOV(object):
 
         return los
 
-    def uv_from_los(self, los, derivs=False):
+    def uv_from_los(self, los, extras=(), derivs=False):
         """Returns the coordinate Pair (u,v) based on a line of sight Vector3
         pointing in the direction of a line of sight, i.e., _opposite_ to
         the direction in which the photon is moving. The length of the vector is
         ignored.
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then Pair return has a subarrray "d_dlos", which
         contains the partial derivatives d(u,v)/d(los) as a MatrixN with item
@@ -224,7 +243,7 @@ class FOV(object):
         """
 
         xy = self.xy_from_los(los, derivs)
-        uv = self.uv_from_xy(xy, derivs)
+        uv = self.uv_from_xy(xy, extras, derivs)
 
         if derivs:
             uv.insert_subfield("d_dlos", uv.d_dxy * xy.d_dlos)
@@ -233,7 +252,8 @@ class FOV(object):
 
     def uv_is_inside(self, uv_pair):
         """Returns a boolean Scalar indicating True for (u,v) coordinates that
-        fall inside the FOV, False otherwise."""
+        fall inside the FOV, False otherwise.
+        """
 
         uv_pair = Pair.as_pair(uv_pair)
         return Scalar((uv_pair.vals[...,0] >= 0.) &
@@ -241,17 +261,17 @@ class FOV(object):
                       (uv_pair.vals[...,0] <= self.uv_shape.vals[0]) &
                       (uv_pair.vals[...,1] <= self.uv_shape.vals[1]))
 
-    def xy_is_inside(self, xy_pair):
+    def xy_is_inside(self, xy_pair, extras=()):
         """Returns a boolean Scalar indicating True for (x,y) coordinates that
         fall inside the FOV, False otherwise."""
 
-        return self.uv_is_inside(self.uv_from_xy(xy_pair))
+        return self.uv_is_inside(self.uv_from_xy(xy_pair, extras), extras)
 
-    def los_is_inside(self, los):
+    def los_is_inside(self, los, extras=()):
         """Returns a boolean Scalar indicating True line of sight vectors that
         fall inside the FOV, False otherwise."""
 
-        return self.uv_is_inside(self.uv_from_los(los))
+        return self.uv_is_inside(self.uv_from_los(los, extras), extras)
 
 ################################################################################
 # UNIT TESTS

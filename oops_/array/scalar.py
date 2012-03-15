@@ -193,6 +193,30 @@ class Scalar(Array):
 
         return Scalar(self.vals.clip(minval, maxval), self.mask, self.units)
 
+    def mean(self):
+        """Returns the mean of the unmasked values."""
+
+        if np.shape(self.mask) == ():
+            if self.mask:
+                return self.masked_version()
+            else:
+                mean = np.mean(self.vals)
+        else:
+            mean = ma.mean(self.mvals)
+
+        if self.units is None and not ma.is_masked(mean):
+            return mean
+        else:
+            return Scalar(mean, self.units)
+
+    def is_between(self, range):
+        """Returns a scalar of boolean values equal to True where every value
+        of the scalar falls between limits defined by the first and second
+        values of a Pair. Standard rules of broadcasting apply."""
+
+        (minval, maxval) = Array.PAIR_CLASS.as_pair(range).as_scalars()
+        between = (self >= minval & self <= maxval)
+
     ####################################
     # Binary logical operators
     ####################################

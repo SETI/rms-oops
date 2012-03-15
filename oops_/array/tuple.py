@@ -83,7 +83,7 @@ class Tuple(Array):
         return Tuple(np.rollaxis(np.array(arrays), 0, len(arrays)), mask, units)
 
     @staticmethod
-    def cross_scalars(*args):
+    def meshgrid(*args):
         """Returns a new Tuple constructed by combining every possible set of
         components provided as a list of scalars. The returned Tuple will have a
         shape defined by concatenating the shapes of all the arguments.
@@ -117,6 +117,11 @@ class Tuple(Array):
             buffer[...,i] = reshaped[i].vals
 
         return Tuple(buffer)
+
+    @staticmethod
+    def cross_scalars(*args):
+        """Deprecated name for meshgrid."""
+        return Tuple.meshgrid(*args)
 
     @staticmethod
     def from_scalar_list(list):

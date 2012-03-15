@@ -132,11 +132,11 @@ class Matrix3(Array):
                 return self.unrotate_vector3(arg)
 
             if arg.rank == 2:
-                return self.rotate_matrixn(arg)
+                return self.unrotate_matrixn(arg)
 
         arg = np.array(arg)
         if len(arg.shape) >= 2 and arg.shape[-2:] == (3,3):
-            return self.rotate_matrix3(arg)
+            return self.unrotate_matrix3(arg)
 
         elif len(arg.shape) >= 1 and arg.shape[-1:] == (3,):
             return self.unrotate_vector3(arg)
@@ -200,13 +200,13 @@ class Matrix3(Array):
         else:
             use_matrix3 = arg.shape[-1] == 3
 
-        vals1 = self.vals[..., np.newaxis, :]
-        vals2 = arg.vals[..., np.newaxis, :, :]
+        vals1 = self.vals[..., np.newaxis]
+        vals2 = arg.vals[..., np.newaxis, :]
 
         if use_matrix3:
-            return Matrix3(np.sum(vals1 * vals2, axis=-2), self.mask | arg.mask)
+            return Matrix3(np.sum(vals1 * vals2, axis=-3), self.mask | arg.mask)
         else:
-            return MatrixN(np.sum(vals1 * vals2, axis=-2), self.mask | arg.mask)
+            return MatrixN(np.sum(vals1 * vals2, axis=-3), self.mask | arg.mask)
 
     ####################################################
     # Overrides of multiplication operators

@@ -36,16 +36,19 @@ class Subsampled(FOV):
 
         self.uv_shape = (self.fov.uv_shape / self.rescale).int()
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
         given a Pair of coordinates (u,v).
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_duv", which
         contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
         shape [2,2].
         """
 
-        xy = self.fov.xy_from_uv(self.rescale * uv_pair, derivs)
+        xy = self.fov.xy_from_uv(self.rescale * uv_pair, extras, derivs)
 
         if derivs:
             xy.insert_subfield("d_uv", xy.d_duv.copy())
@@ -53,16 +56,19 @@ class Subsampled(FOV):
 
         return xy
 
-    def uv_from_xy(self, xy_pair, derivs=False):
+    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
         coordinates in radians.
+
+        Additional parameters that might affect the transform can be included
+        in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_dxy", which
         contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
         shape [2,2].
         """
 
-        uv_old = self.fov.uv_from_xy(xy_pair, derivs)
+        uv_old = self.fov.uv_from_xy(xy_pair, extras, derivs)
         uv_new = uv_old / self.rescale
 
         if derivs is True:

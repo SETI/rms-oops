@@ -265,14 +265,13 @@ class RingPlane(Surface):
             #                   = 0 (which also should have been obvious)
 
             dt_dobs_z = -1. / los_z
-            t_los_norm = t * los.norm()
 
             vals = np.zeros(t.shape + [1,3])
             vals[...,0,2] = dt_dobs_z.vals
 
             dt_dobs = MatrixN(vals, t.mask)
             t.insert_subfield("d_dobs", dt_dobs)
-            t.insert_subfield("d_dlos", dt_dobs * t_los_norm)
+            t.insert_subfield("d_dlos", dt_dobs * t)
 
             vals = np.zeros(t.shape + [3,3])
             vals[...,0,0] = 1.
@@ -282,7 +281,7 @@ class RingPlane(Surface):
 
             dpos_dobs = MatrixN(vals, t.mask)
             pos.insert_subfield("d_dobs", dpos_dobs)
-            pos.insert_subfield("d_dlos", dpos_dobs * t_los_norm)
+            pos.insert_subfield("d_dlos", dpos_dobs * t)
 
         return (pos, t)
 

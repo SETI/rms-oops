@@ -16,6 +16,7 @@ import oops_.constants as constants
 from oops_.array.all import *
 from oops_.config import QUICK, SURFACE_PHOTONS, LOGGING
 from oops_.event import Event
+from oops_.path.all import *
 
 class Surface(object):
     """Surface is an abstract class describing a 2-D object that moves and
@@ -279,65 +280,52 @@ class Surface(object):
 # Photon Solver
 ################################################################################
 
-    def photon_from_event(self, event, quick=QUICK, derivs=False,
+    def photon_from_event(self, link, quick=QUICK, derivs=False,
                                 iters     = SURFACE_PHOTONS.max_iterations,
                                 precision = SURFACE_PHOTONS.dlt_precision,
                                 limit     = SURFACE_PHOTONS.dlt_limit):
         """Returns the photon arrival event at the body's surface, for photons
-        departing earlier from the specified event.
-        """
+        departing earlier from the specified linking event. See _solve_photon()
+        for details. """
 
-        return self._solve_photon(event, +1, quick, derivs,
-                                         iters, precision, limit)
+        return self._solve_photon(link, +1, quick, derivs,
+                                        iters, precision, limit)
 
-    def photon_to_event(self, event, quick=QUICK, derivs=False,
+    def photon_to_event(self, link, quick=QUICK, derivs=False,
                               iters     = SURFACE_PHOTONS.max_iterations,
                               precision = SURFACE_PHOTONS.dlt_precision,
                               limit     = SURFACE_PHOTONS.dlt_limit):
         """Returns the photon departure event at the body's surface, for photons
-        arriving later at the specified event. See _solve_photon() for details.
-        """
+        arriving later at the specified linking event. See _solve_photon() for
+        details. """
 
-        return self._solve_photon(event, -1, quick, derivs,
-                                         iters, precision, limit)
+        return self._solve_photon(link, -1, quick, derivs,
+                                        iters, precision, limit)
 
-    def _solve_photon(self, event, sign, quick=QUICK, derivs=False,
+    def _solve_photon(self, link, sign, quick=QUICK, derivs=False,
                             iters     = SURFACE_PHOTONS.max_iterations,
                             precision = SURFACE_PHOTONS.dlt_precision,
                             limit     = SURFACE_PHOTONS.dlt_limit):
-        """Solve for the Event object located on the body's surface that falls
-        at the other end of the photon's path to or from another Event.
+        """Solve for the event object located on the body's surface that falls
+        at the other end of the photon's path to or from a linking event.
 
         Input:
-            event       the reference Event of a photon's arrival or departure.
+            link        the linking event of a photon's arrival or departure.
 
-            sign        -1 to return earlier Events, corresponding to photons
+            sign        -1 to return earlier events, corresponding to photons
                            departing from the surface and arriving later at the
-                           reference event.
-                        +1 to return later Events, corresponding to photons
-                           departing from the reference event and arriving later
+                           linking event.
+                        +1 to return later events, corresponding to photons
+                           departing from the linking event and arriving later
                            at the surface.
 
-            quick       True to use QuickPaths and QuickFrames, where warranted,
-                        to speed up the calculation.
+            quick       False to disable QuickPaths and QuickFrames, True to use
+                        default parameters; a dictionary to override selected
+                        default parameters.
 
-            derivs      if True, the following subfields are added to the
-                        event:
-                           dtime_dpos   partial derivative of event time with
-                                        respect to changes in the observer
-                                        position, a MatrixN with item [1,3].
-                           dpos_dpos    partial derivative of the event position
-                                        with respect to changes in the observer
-                                        position, a MatrixN with item [3,3].
-                           dtime_dlos   partial derivative of event time with
-                                        respect to changes in the line of sight
-                                        vector (arriving or departing) as a
-                                        MatrixN with item shape [1,3].
-                           dpos_dlos    partial derivative of the event position
-                                        with respect to changes in the line of
-                                        sight vector (arriving or departing), as
-                                        a MatrixN with item shape [3,3].
-                        All quantities are given in the frame of the surface.
+            derivs      True to include subfields containing the partial
+                        derivatives with respect to the time and line of sight
+                        of the linking event.
 
             The following input parameters have default defined in file
             oops_.config.SURFACE_PHOTONS:
@@ -358,15 +346,20 @@ class Surface(object):
                         field subfields "perp" and "vflat" are always filled in.
                         The subfields (arr, arr_lt) or (dep, dep_lt) are filled
                         in for arriving or departing photons, respectively.
+
+                        If derivs is True, then these subfields are included:
+                        time.d_dlos, pos.d_dlos, time.d_dt, and pos.d_dt. All
+                        partial derivative of the surface event with respect to
+                        the time and line of sight of the linking event.
         """
 
         # Interpret the sign
         signed_c = sign * constants.C
         if sign < 0.:
             surface_key = "dep"
-            event_key = "arr"
+            link_key = "arr"
         else:
-            event_key = "dep"
+            link_key = "dep"
             surface_key = "arr" 
 
         # Define the surface path and frame relative to the SSB in J2000
@@ -374,14 +367,14 @@ class Surface(object):
         frame_wrt_j2000 = registry.connect_frames(self.frame_id, "J2000")
 
         # Define the observer and line of sight in the SSB frame
-        event_wrt_ssb = event.wrt_ssb(quick)
-        obs_wrt_ssb = event_wrt_ssb.pos
-        los_wrt_ssb = event_wrt_ssb.subfields[event_key].unit() * constants.C
+        link_wrt_ssb = link.wrt_ssb(quick)
+        obs_wrt_ssb = link_wrt_ssb.pos
+        los_wrt_ssb = link_wrt_ssb.subfields[link_key].unit() * constants.C
 
         # Make an initial guess at the light travel time using the range to the
         # surface's origin
         lt = (obs_wrt_ssb -
-              origin_wrt_ssb.event_at_time(event.time).pos).norm() / signed_c
+              origin_wrt_ssb.event_at_time(link.time).pos).norm() / signed_c
         lt_min = lt.min() - limit
         lt_max = lt.max() + limit
 
@@ -397,7 +390,7 @@ class Surface(object):
         for iter in range(iters):
 
             # Evaluate the current time
-            surface_time = event.time + lt
+            surface_time = link.time + lt
 
             # Quicken when needed
             origin_wrt_ssb = origin_wrt_ssb.quick_path(surface_time,
@@ -410,13 +403,14 @@ class Surface(object):
                             - origin_wrt_ssb.event_at_time(surface_time).pos)
 
             # Rotate into the surface-fixed frame
-            transform = frame_wrt_j2000.transform_at_time(surface_time)
-            pos_in_frame = transform.rotate(pos_in_j2000)
-            los_in_frame = transform.rotate(los_wrt_ssb)
-            obs_in_frame = pos_in_frame - lt * los_in_frame
+            surface_xform = frame_wrt_j2000.transform_at_time(surface_time)
+            pos_wrt_surface = surface_xform.rotate(pos_in_j2000)
+            los_wrt_surface = surface_xform.rotate(los_wrt_ssb)
+            obs_wrt_surface = pos_wrt_surface - lt * los_wrt_surface
 
             # Update the intercept times; save the intercept positions
-            (intercept, new_lt) = self.intercept(obs_in_frame, los_in_frame)
+            (pos_wrt_surface, new_lt) = self.intercept(obs_wrt_surface,
+                                                       los_wrt_surface)
 
             new_lt = new_lt.clip(lt_min, lt_max)
             dlt = new_lt - lt
@@ -433,55 +427,65 @@ class Surface(object):
 
         # Update the mask on light time to hide intercepts behind the observer
         # or outside the defined limit
-        lt.mask = (event.mask | lt.mask | (lt.vals * sign < 0.) |
+        lt.mask = (link.mask | lt.mask | (lt.vals * sign < 0.) |
                    (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(lt.mask): lt.mask = False
 
-        # Create the surface Event object
-        surface_time = event.time + lt
-        surface_event = Event(surface_time, intercept, (0,0,0),
+        # Evaluate the current time
+        surface_time = link.time + lt
+
+        # Locate the photons relative to the current origin in SSB/J2000
+        pos_in_j2000 = (obs_wrt_ssb + lt * los_wrt_ssb
+                            - origin_wrt_ssb.event_at_time(surface_time).pos)
+
+        # Rotate into the surface-fixed frame
+        surface_xform = frame_wrt_j2000.transform_at_time(surface_time, quick)
+        pos_wrt_surface = surface_xform.rotate(pos_in_j2000)
+        los_wrt_surface = surface_xform.rotate(los_wrt_ssb)
+
+        # Create the surface event in its own frame
+        surface_event = Event(surface_time, pos_wrt_surface, (0,0,0),
                               self.origin_id, self.frame_id)
-        surface_event.insert_subfield("perp",  self.normal(intercept))
-        surface_event.insert_subfield("vflat", self.velocity(intercept))
 
-        transform = frame_wrt_j2000.transform_at_time(surface_time)
-        los_in_frame = transform.rotate(los_wrt_ssb)
-
-        surface_event.insert_subfield(surface_key, -lt * los_in_frame)
-        surface_event.insert_subfield(surface_key + "_lt", -lt)
-
-        # Insert the derivative aubarrays if necessary
+        # Fill in derivatives if necessary
         if derivs:
 
-            # Re-start geometry from the origin, but in the surface frame
-            obs_in_frame = intercept + surface_event.subfields[surface_key]
-            (intercept, dlt) = self.intercept(obs_in_frame, los_in_frame,
-                                              derivs=True)
+            obs_wrt_surface = pos_wrt_surface - lt * los_wrt_surface
+            los_wrt_surface = los_wrt_surface.unit()
+            (pos, dist) = self.intercept(obs_wrt_surface, los_wrt_surface,
+                                                          derivs=True)
 
-            # Rotate derivatives WRT origin
-            dtime_dpos = sign * dlt.d_dobs
-            dtime_dlos = sign * dlt.d_dlos
-            dpos_dpos = intercept.d_dobs
-            dpos_dlos = intercept.d_dlos
+            dtime_dobs = dist.d_dobs / signed_c
+            dtime_dlos = dist.d_dlos / signed_c
+            dpos_dobs = pos.d_dobs
+            dpos_dlos = pos.d_dlos
 
-            j2000_wrt_surface_mat = transform.matrix.transpose()
-            event_frame = registry.connect_frames(event.frame_id, "J2000")
-            event_wrt_j2000_mat = (
-                event_frame.transform_at_time(event.time, quick).matrix)
+            # Transform derivatives WRT link position to derivatives WRT time
+            delta_v = surface_xform.rotate(link_wrt_ssb.vel) - surface_event.vel
+            dtime_dt = dist.d_dobs * delta_v / signed_c
+            dpos_dt  = pos.d_dobs  * delta_v
 
-            event_wrt_surface_mat = (
-                event_wrt_j2000_mat.rotate_matrix3(j2000_wrt_surface_mat))
+            # Set up transform between link frame and surface frame
+            j2000_link_frame = registry.connect_frames("J2000", link.frame_id)
+            j2000_link_xform = j2000_link_frame.transform_at_time(link.time,
+                                                                  quick)
+            xform = surface_xform.rotate_transform(j2000_link_xform)
 
-            dtime_dpos = event_wrt_surface_mat.rotate(dtime_dpos.T()).T()
-            dtime_dlos = event_wrt_surface_mat.rotate(dtime_dlos.T()).T()
-            dpos_dpos  = event_wrt_surface_mat.rotate(dpos_dpos.T()).T()
-            dpos_dlos  = event_wrt_surface_mat.rotate(dpos_dlos.T()).T()
+            # Transform derivatives WRT los to los in link frame
+            dtime_dlos = xform.unrotate(dtime_dlos.T()).T()
+            dpos_dlos  = xform.unrotate(dpos_dlos.T()).T()
 
             # Save the derivatives as subfields
-            surface_event.time.insert_subfield("d_dpos", dtime_dpos)
+            surface_event.time.insert_subfield("d_dt",   dtime_dt)
             surface_event.time.insert_subfield("d_dlos", dtime_dlos)
-            surface_event.pos.insert_subfield( "d_dpos", dpos_dpos)
+            surface_event.pos.insert_subfield( "d_dt",   dpos_dt)
             surface_event.pos.insert_subfield( "d_dlos", dpos_dlos)
+
+        surface_event.insert_subfield("perp",  self.normal(pos_wrt_surface))
+        surface_event.insert_subfield("vflat", self.velocity(pos_wrt_surface))
+
+        surface_event.insert_subfield(surface_key, los_wrt_surface)
+        surface_event.insert_subfield(surface_key + "_lt", -lt)
 
         return surface_event
 

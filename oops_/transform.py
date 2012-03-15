@@ -2,6 +2,7 @@
 # oops_/transform.py: Class Transform
 #
 # 2/5/12 Modified (MRS): Revised for consistent style.
+# 3/12/12 MRS - Implemented derivative support.
 ################################################################################
 
 import numpy as np
@@ -17,22 +18,21 @@ class Transform(object):
                         into the target frame.
         omega           the angular rotation vector of the target frame
                         relative to the reference, and specified in the
-                        reference coordinate frame. Default is a zero vector.
+                        reference coordinate frame.
 
     Given a state vector (pos,vel) in the reference coordinate frame, we can
     convert to a state vector in the target frame as follows:
         pos_target = matrix * pos_ref
         vel_target = matrix * (vel_ref - omega x pos_ref)
-                   = matrix * vel_ref + omega1 x pos_ref
-    where
-        omega1     = -matrix * omega
-                   = the negative of the rotation vector, transformed into the
-                     target frame.
 
     The inverse transformation is:
         pos_ref = matrix-T * pos_target
         vel_ref = matrix-T * vel_target + omega x pos_ref
                 = matrix-T * (vel_target - omega1 x pos_target)
+    where
+        omega1     = -matrix * omega
+                   = the negative of the rotation vector, transformed into the
+                     target frame.
 
     With this definition, a transform can also be used to describe the
     orientation and rotation rate of a planetary body:
@@ -55,6 +55,9 @@ class Transform(object):
         shape           the intrinsic shape of the transform.
     """
 
+    ZERO_MATRIXN = VectorN([0,0,0]).as_column()
+    ZERO_VECTOR3 = Vector3([0,0,0])
+
     def __init__(self, matrix, omega, frame_id, reference_id, origin_id=None):
         """Constructor for a Transform object.
 
@@ -72,7 +75,8 @@ class Transform(object):
         self.matrix = Matrix3.as_matrix3(matrix)
         self.omega  = Vector3.as_vector3(omega)
 
-        self.is_fixed = self.omega == Vector3([0,0,0])
+        self.is_fixed = (self.omega == Transform.ZERO_VECTOR3)
+        self.matrixn = MatrixN(self.matrix)
 
         self.frame_id     = frame_id
         self.reference_id = reference_id
@@ -83,8 +87,9 @@ class Transform(object):
             frame = registry.FRAME_REGISTRY[self.reference_id]
             self.origin_id = frame.origin_id
 
-        self.filled_omega1 = None           # filled in only when needed
-        self.filled_shape = None
+        self.filled_shape = None            # filled in only when needed
+        self.filled_omega1 = None
+        self.filled_dmatrix_dt = None
 
     @property
     def shape(self):
@@ -110,6 +115,16 @@ class Transform(object):
 
         return self.filled_omega1
 
+    @property
+    def dmatrix_dt(self):
+        """Returns the time-derivative of the rotation matrix."""
+
+        if self.filled_dmatrix_dt is None:
+            self.filled_dmatrix_dt = (-self.matrix *
+                                       self.omega.cross_product_as_matrix())
+
+        return self.filled_dmatrix_dt
+
     # string operations
     def __str__(self):
         return ("Transform(shape=" +
@@ -122,7 +137,7 @@ class Transform(object):
 # Vector operations
 ################################################################################
 
-    def rotate(self, pos):
+    def rotate(self, pos, derivs=False):
         """Rotates the coordinates of a position forward into the target frame.
         It also rotates any subarrays.
 
@@ -130,38 +145,80 @@ class Transform(object):
             pos         position as a Vector3, in the reference frame. A value
                         of None returns None. Velocity is assumed zero.
 
-        Return:         the same Vector3 position transformed into the target
-                        frame.
+            derivs      True to calculate the time-derivative as well.
+
+        Return:         an equivalent Vector3 position transformed into the
+                        target frame.
+
+                        If derivs is True, then the returned position has a
+                        subfield "d_dt", a Vector3 representing the partial
+                        derivatives with respect to time.
         """
 
         if pos is None: return None
         if pos == Empty(): return pos
 
-        return self.matrix.rotate(pos)
+        self.matrix.subfield_math = derivs
+        self.omega.subfield_math = derivs
 
-    def rotate_pos_vel(self, pos, vel):
+        pos_target = self.matrix * pos
+
+        # Calculate/update the time-derivative if necessary
+        if derivs:
+            if self.is_fixed or pos == Transform.ZERO_VECTOR3:
+                pos_target.insert_subfield_if_new("d_dt",
+                                        Transform.ZERO_MATRIXN)
+            else:
+                pos_target.add_to_subfield("d_dt",
+                                        self.dmatrix_dt.rotate(pos).as_column())
+
+        return pos_target
+
+    def rotate_pos_vel(self, pos, vel, derivs=False):
         """Rotates the coordinates of a position and velocity forward into the
         target frame, also allowing for the artificial component of the velocity
         for a position off the origin in a rotating frame.
 
         Input:
             pos         position as a Vector3, in the reference frame.
+
             vel         velocity as a Vector3, in the reference frame.
+
+            derivs      True to calculate the time-derivative as well.
 
         Return:         a tuple containing the same Vector3 position and
                         velocity transformed into the target frame.
+
+                        If derivs is True, then the returned position has a
+                        subfield "d_dt", a Vector3 representing the partial
+                        derivatives with respect to time.
         """
 
-        pos_target = self.matrix.rotate_vector3(pos)
+        self.matrix.subfield_math = derivs
+        self.omega.subfield_math = derivs
 
-        if self.is_fixed:
-            vel_target = self.matrix.rotate_vector3(vel)
+        # pos_target = matrix * pos_ref
+        # vel_target = matrix * (vel_ref - omega x pos_ref)
+
+        pos_target = self.matrix * pos
+
+        velocity_is_easy = self.is_fixed or pos == Transform.ZERO_VECTOR3
+        if velocity_is_easy:
+            vel_target = self.matrix * vel
         else:
             vel_target = self.matrix * (vel - self.omega.cross(pos))
 
+        # Calculate/update the time-derivative if necessary
+        if derivs:
+            if velocity_is_easy:
+                pos_target.add_to_subfield("d_dt", vel_target.as_column())
+            else:
+                dpos_dt = self.matrix * vel + self.dmatrix_dt.rotate(pos)
+                pos_target.add_to_subfield("d_dt", dpos_dt.as_column())
+
         return (pos_target, vel_target)
 
-    def unrotate(self, pos):
+    def unrotate(self, pos, derivs=False):
         """Un-rotates the coordinates of a position backward into the reference
         frame.
 
@@ -169,34 +226,78 @@ class Transform(object):
             pos         position as a Vector3, in the target frame. A value of
                         None returns None. Velocity is assumed zero.
 
+            derivs      True to calculate dpos/dpos and dpos/dt as well.
+
         Return:         the same Vector3 position transformed back into the
                         reference frame.
+
+                        If derivs is True, then the returned position has a
+                        subfield "d_dt", a Vector3 representing the partial
+                        derivatives with respect to time.
         """
 
         if pos is None: return None
         if pos == Empty(): return pos
 
-        return self.matrix.unrotate(pos)
+        self.matrix.subfield_math = derivs
+        self.omega.subfield_math = derivs
 
-    def unrotate_pos_vel(self, pos, vel):
+        pos_ref = self.matrix.unrotate(pos)
+
+        # Calculate/update the time-derivative if necessary
+        if derivs:
+            if self.is_fixed or pos == Transform.ZERO_VECTOR3:
+                pos_ref.insert_subfield_if_new("d_dt",
+                                    Transform.ZERO_MATRIXN)
+            else:
+                pos_ref.add_to_subfield("d_dt",
+                                    self.dmatrix_dt.unrotate(pos).as_column())
+
+        return pos_ref
+
+    def unrotate_pos_vel(self, pos, vel, derivs=False):
         """Un-rotates the coordinates of a position and velocity backward into
         the reference frame.
 
         Input:
-            vel         velocity as a Vector3, in the target frame.
             pos         position as a Vector3, in the target frame.
+
+            vel         velocity as a Vector3, in the target frame.
+
+            derivs      True to calculate derivatives of position with respect
+                        to pos, vel and time in the target frame. Derivatives
+                        of the velocities are not calculated.
 
         Return:         a tuple containing the same Vector3 position and
                         velocity transformed back into the reference frame.
+
+                        If derivs is True, then the returned position has a
+                        subfield "d_dt", a Vector3 representing the partial
+                        derivatives with respect to time.
         """
 
-        pos_ref = self.matrix.unrotate_vector3(pos)
+        self.matrix.subfield_math = derivs
+        self.omega.subfield_math = derivs
 
-        if self.is_fixed:
-            vel_ref = self.matrix.unrotate_vector3(vel)
+        # pos_ref = matrix-T * pos_target
+        # vel_ref = matrix-T * vel_target + omega x pos_ref
+
+        pos_ref = self.matrix.unrotate(pos)
+
+        velocity_is_easy = self.is_fixed or pos == Transform.ZERO_VECTOR3
+        if velocity_is_easy:
+            vel_ref = self.matrix.unrotate(vel)
         else:
-            vel_ref = (self.matrix.unrotate_vector3(vel) +
-                       self.omega.cross(pos_ref))
+            dpos_ref_dt = self.matrix.unrotate(vel)
+            vel_ref = dpos_ref_dt + self.omega.cross(pos_ref)
+
+        # Calculate/update the time-derivative if necessary
+        if derivs:
+            if velocity_is_easy:
+                pos_ref.add_to_subfield("d_dt", vel_ref.as_column())
+            else:
+                dpos_dt = dpos_ref_dt + self.dmatrix_dt.unrotate(pos)
+                pos_ref.add_to_subfield("d_dt", dpos_dt.as_column())
 
         return (pos_ref, vel_ref)
 
@@ -223,15 +324,18 @@ class Transform(object):
         the argument transform into the frame of this transform."""
 
         # Two tranforms
-        #   P1 = M0 P0; V1 = M0(V0 - omega0 x P0)
-        #   P2 = M1 P1; V2 = M1(V1 - omega1 x P1)
+        #   P1 = M P0; V1 = M (V0 - omega x P0)
+        #   P2 = N P1; V2 = N (V1 - kappa x P1)
         #
         # Combine...
-        #   P2 = [M1 M0] P0
+        #   P2 = [N M] P0
         #
-        #   V2 = M1 [M0(V0 - omega0 x P0) - omega1 x M0 P0]
-        #      = M1 M0 (V0 - omega0 x P0) - M1 M0 M0T (omega1 x M0 P0)
-        #      = [M1 M0] (V0 - [M0T omega1 + omega0] x P0)
+        #   V2 = N [M (V0 - omega x P0) - kappa x M P0]
+        #      = N [M (V0 - omega x P0) - M MT (kappa x M P0)
+        #      = N M [(V0 - omega x P0) - MT ([M MT kappa] x M P0)]
+        #      = N M [(V0 - omega x P0) - MT ([M MT kappa] x M P0)]
+        #      = N M [(V0 - omega x P0) - MT M ([MT kappa] x P0)]
+        #      = N M [(V0 - [omega + MT kappa] x P0)]
 
         if self.origin_id is None:
             origin_id = arg.origin_id
@@ -239,7 +343,7 @@ class Transform(object):
             origin_id = self.origin_id
         else:
             origin_id = self.origin_id
-            assert self.origin_id == arg.origin_id
+            # assert self.origin_id == arg.origin_id
 
         return Transform(self.matrix.rotate_matrix3(arg.matrix),
                          arg.matrix.unrotate_vector3(self.omega) + arg.omega,
@@ -266,12 +370,12 @@ class Test_Transform(unittest.TestCase):
     def runTest(self):
 
         # Additional imports needed for testing
-        from oops_.frame.frame_ import Frame, NullFrame
+        from oops_.frame.frame_ import Frame, Wayframe
         from oops_.frame.spinframe import SpinFrame
 
         # Fake out the FRAME REGISTRY with something that has .shape = []
-        registry.FRAME_REGISTRY["TEST"] = NullFrame("J2000")
-        registry.FRAME_REGISTRY["SPIN"] = NullFrame("J2000")
+        registry.FRAME_REGISTRY["TEST"] = Wayframe("J2000")
+        registry.FRAME_REGISTRY["SPIN"] = Wayframe("J2000")
 
         tr = Transform(Matrix3(np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])),
                        Vector3(np.array([0.,0.,0.])), "J2000", "J2000")
@@ -330,6 +434,8 @@ class Test_Transform(unittest.TestCase):
         diff = tr.rotate_pos_vel(p,v)[1] - tr.invert().unrotate_pos_vel(p,v)[1]
         self.assertTrue(np.all(diff.vals > -eps))
         self.assertTrue(np.all(diff.vals <  eps))
+
+        # Transform derivatives are unit tested as part of the SpinFrame tests
 
 ########################################
 if __name__ == '__main__':

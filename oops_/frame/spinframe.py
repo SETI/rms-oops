@@ -134,6 +134,35 @@ class Test_SpinFrame(unittest.TestCase):
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
 
+        # Test time-derivatives of transforms
+        time = Scalar(np.random.randn(400))
+        pos  = Vector3(np.random.randn(400,3))
+        vel  = Vector3(np.random.randn(400,3))
+
+        dt = 1.e-6
+        tr0 = spin1.transform_at_time(time)
+        tr1 = spin1.transform_at_time(time + dt)
+
+        (pos0, vel0) = tr0.rotate_pos_vel(pos, vel, derivs=True)
+        (pos1, vel1) = tr1.rotate_pos_vel(pos + vel*dt, vel, derivs=False)
+        dpos_dt_test = (pos1 - pos0) / dt
+        self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
+
+        (pos0, vel0) = tr0.unrotate_pos_vel(pos, vel, derivs=True)
+        (pos1, vel1) = tr1.unrotate_pos_vel(pos + vel*dt, vel, derivs=False)
+        dpos_dt_test = (pos1 - pos0) / dt
+        self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
+
+        pos0 = tr0.rotate(pos, derivs=True)
+        pos1 = tr1.rotate(pos, derivs=False)
+        dpos_dt_test = (pos1 - pos0) / dt
+        self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
+
+        pos0 = tr0.unrotate(pos, derivs=True)
+        pos1 = tr1.unrotate(pos, derivs=False)
+        dpos_dt_test = (pos1 - pos0) / dt
+        self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
+
 #########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

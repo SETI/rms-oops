@@ -186,6 +186,16 @@ class Pair(Array):
         arg = Pair.as_pair(arg)
         return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
 
+    @staticmethod
+    def meshgrid(arg1, arg2):
+        """Returns a new Pair constructed by combining every possible set of
+        components provided as a list of scalars. The returned Pair will have a
+        shape defined by concatenating the shapes of the arguments.
+        """
+
+        tuple = Array.TUPLE_CLASS.meshgrid(arg1, arg2)
+        return Pair.as_pair(tuple)
+
 ################################################################################
 # Once defined, register with Array class
 ################################################################################

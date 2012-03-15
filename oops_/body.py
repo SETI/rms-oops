@@ -25,7 +25,7 @@ class Body(object):
         path_id         the ID of the Path this body follows.
         path            a Waypoint for the body's path
         frame_id        the ID of the coordinate frame describing this body.
-        frame           a NullFrame for the body's frame.
+        frame           a Wayframe for the body's frame.
         ring_frame_id   the ID of a "despun" frame relevant to a ring that might
                         orbit this body. None if not (yet) defined.
         ring_frame      a RingFrame for the body.
@@ -68,7 +68,7 @@ class Body(object):
         self.ring_frame_id = None
 
         self.path = path_.Waypoint(self.path_id)
-        self.frame = frame_.NullFrame(self.frame_id)
+        self.frame = frame_.Wayframe(self.frame_id)
 
         if type(parent) == type(""):
             self.parent = registry.body_lookup(parent)
@@ -539,7 +539,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         try:
             frame = frame_.SpiceFrame(spice_id)
         except LookupError:
-            frame = frame_.NullFrame("J2000", path.path_id)
+            frame = frame_.Wayframe("J2000", path.path_id)
 
         # The name of the path is the name of the body
         name = path.path_id

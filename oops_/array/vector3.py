@@ -138,7 +138,7 @@ class Vector3(Array):
         return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
 
     def cross_product_as_matrix(self):
-        """Returns a Matrix3 object for which matrix multiply produces the same
+        """Returns a MatrixN object for which matrix multiply produces the same
         result as taking a cross product with this vector."""
 
         vals = np.zeros(self.shape + [3,3])
@@ -149,7 +149,7 @@ class Vector3(Array):
         vals[...,2,0] = -self.vals[...,1]
         vals[...,2,1] =  self.vals[...,0]
 
-        return Array.MATRIX3_CLASS(vals, self.mask)
+        return Array.MATRIXN_CLASS(vals, self.mask)
 
     def as_column(self):
         """Converts the vector to an 3x1 column matrix."""
