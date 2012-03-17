@@ -1184,6 +1184,8 @@ class Array(object):
         if axis2 >= len(self.shape):
             raise ValueError("bad axis2 argument to swapaxes")
 
+        if axis1 == axis2: return self
+
         vals = self.vals.swapaxes(axis1, axis2)
 
         if np.shape(self.mask) == ():
@@ -1195,7 +1197,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].swapaxes(axis1,axis2))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.swapaxes(axis1,axis2))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1224,7 +1230,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].reshape(shape))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.reshape(shape))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1252,7 +1262,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].flatten())
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.flatten())
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1275,7 +1289,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].reorder_axes(axes))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.reorder_axes(axes))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1295,7 +1313,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].append_axes(axes))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.append_axes(axes))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1316,7 +1338,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].prepend_axes(axes))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.prepend_axes(axes))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1337,7 +1363,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].strip_axes(axes))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.strip_axes(axes))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1360,7 +1390,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].rotate_axes(axis))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.rotate_axes(axis))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
@@ -1385,7 +1419,11 @@ class Array(object):
         obj.__init__(vals, mask, self.units)
 
         for key in self.subfields.keys():
-            obj.insert_subfield(key, self.subfields[key].rebroadcast(newshape))
+            subfield = self.subfields[key]
+            if isinstance(subfield, Array):
+                obj.insert_subfield(key, subfield.rebroadcast(newshape))
+            else:
+                obj.insert_subfield(key, subfield)
 
         return obj
 
