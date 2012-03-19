@@ -163,7 +163,8 @@ class Snapshot(Observation):
             
             Return:     Boolean.  True if exists, else False.
             """
-        image_event = Event(self.midtime, (0,0,0), (0,0,0), origin_id, self.frame_id)
+        image_event = Event(self.midtime, (0,0,0), (0,0,0), origin_id,
+                            self.frame_id)
         surface_path = path_.connect(path_id, origin_id, self.frame_id)
         (abs_event, rel_event) = surface_path.photon_to_event(image_event)
         xy_pair = self.fov.xy_from_los(rel_event.pos)
@@ -184,7 +185,8 @@ class Snapshot(Observation):
             Return:     Boolean.  True if any part w/in fov.
             """
         # get position of object relative to view point
-        image_event = Event(self.midtime, (0,0,0), (0,0,0), origin_id, self.frame_id)
+        image_event = Event(self.midtime, (0,0,0), (0,0,0), origin_id,
+                            self.frame_id)
         surface_path = path_.Path.connect(mass_body.path_id, origin_id,
                                           self.frame_id)
         #rel_event = surface_path.photon_to_event(image_event)[1]
@@ -288,8 +290,6 @@ class Test_Snapshot(unittest.TestCase):
                   registry.body_lookup("PHOEBE"),
                   registry.body_lookup("HYPERION")]
         i = 0
-        #check_name = "HYPERION"
-        #print "Any part of %s in view: " % check_name
         for path in paths:
             snapshot = iss.from_file(path)
             j = 0
@@ -300,7 +300,7 @@ class Test_Snapshot(unittest.TestCase):
                 j += 1
             i += 1
 
-########################################
+################################################################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
