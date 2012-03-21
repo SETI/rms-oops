@@ -676,9 +676,9 @@ class Event(object):
 
         if aberration:
             if subfield == "arr":
-                ray = -self.aberrated_arr(quick)
+                ray = -self.aberrated_arr_ssb(quick)
             else:
-                ray = self.aberrated_dep(quick)
+                ray = self.aberrated_dep_ssb(quick)
         else:
             if subfield == "arr":
                 ray = -self.wrt_ssb(quick).arr
