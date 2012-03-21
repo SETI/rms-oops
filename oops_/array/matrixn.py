@@ -54,6 +54,47 @@ class MatrixN(Array):
         raise ValueError("MatrixN with item shape " + str(self.item) +
                          " cannot be converted to a Vector3")
 
+    def as_scalar(self):
+        """Converts a 1x1 MatrixN to a Scalar."""
+
+        if self.item[-2:] == [1,1]:
+            return Scalar(self.vals[...,0,0], self.mask)
+
+        raise ValueError("MatrixN with item shape " + str(self.item) +
+                         " cannot be converted to a Scalar")
+
+    def as_row(self, row):
+        """Returns the selected row of an M x N MatrixN as a VectorN of item
+        shape [N]."""
+
+        return VectorN(self.vals[...,row,:], self.mask)
+
+    def as_rows(self):
+        """Converts an M x N MatrixN to a list containing M row matrices as
+        VectorN objects of item shape [N]."""
+
+        list = []
+        for row in range(self.item[0]):
+            list.append(VectorN(self.vals[...,row,:], self.mask))
+
+        return list
+
+    def as_column(self, col):
+        """Returns the selected column of an M x N MatrixN as a VectorN of item
+        shape [M]."""
+
+        return VectorN(self.vals[..., col], self.mask)
+
+    def as_columns(self):
+        """Converts an M x N MatrixN to a list containing N column matices as
+        VectorN objects of item shape [M]."""
+
+        list = []
+        for col in range(self.item[1]):
+            list.append(MatrixN(self.vals[...,col], self.mask))
+
+        return list
+
     def multiply_matrix(self, arg):
         """A general definition of matrix * matrix."""
 

@@ -41,7 +41,7 @@ QUICK = True                    # Defines the default input argument as
 
 class PATH_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
-    dlt_precision = 1.e-7       # Iterations stops when every change in light
+    dlt_precision = 1.e-6       # Iterations stops when every change in light
                                 # travel time from one iteration to the next
                                 # drops below this threshold.
     dlt_limit = 10.             # The allowed range of variations in light
@@ -53,19 +53,27 @@ class PATH_PHOTONS(object):
 
 class SURFACE_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
-    dlt_precision = 1.e-7       # See PATH_PHOTONS for more info.
-    dlt_limit = 10              # See PATH_PHOTONS for more info.
+    dlt_precision = 1.e-6       # See PATH_PHOTONS for more info.
+    dlt_limit = 10.             # See PATH_PHOTONS for more info.
+
+
+EVENT_COLLAPSE_THRESHOLD = 3.   # When an event returned by a calculation spans
+                                # a range of times smaller than this threshold,
+                                # the time field is converted to a single value.
+                                # This approximation can speed up some
+                                # calculations substantially.
 
 ################################################################################
 # Logging and Monitoring
 ################################################################################
 
 class LOGGING(object):
-    prefix = ""                 # Prefix characters in front of a log message
-    quickpath_creation = False  # Log the creation of QuickPaths.
-    quickframe_creation = False # Log the creation of QuickFrames.
-    path_iterations = False     # Log iterations of Path._solve_photons().
-    surface_iterations = False  # Log iterations of Surface._solve_photons()
+    prefix = ""                     # Prefix in front of a log message
+    quickpath_creation = False      # Log the creation of QuickPaths.
+    quickframe_creation = False     # Log the creation of QuickFrames.
+    path_iterations = False         # Log iterations of Path._solve_photons().
+    surface_iterations = False      # Log iterations of Surface._solve_photons()
+    event_time_collapse = False     # Report event time collapse
 
     @staticmethod
     def all(flag):
@@ -73,6 +81,7 @@ class LOGGING(object):
         LOGGING.quickframe_creation = flag
         LOGGING.path_iterations = flag
         LOGGING.surface_iterations = flag
+        LOGGING.event_time_collapse = flag
 
     @staticmethod
     def off(): LOGGING.all(False)

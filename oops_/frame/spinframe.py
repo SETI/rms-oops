@@ -1,7 +1,9 @@
 ################################################################################
-# oops_/frame/spin.py: Subclass SpinFrame of class Frame
+# oops_/frame/spinframe.py: Subclass SpinFrame of class Frame
 #
 # 2/8/12 Created (MRS)
+# 3/17/12 MRS - removed the requirement that it be given a unique ID and
+#   registered.
 ################################################################################
 
 import numpy as np
@@ -13,33 +15,51 @@ from oops_.transform import Transform
 import oops_.registry as registry
 
 class SpinFrame(Frame):
-    """Spin is a Frame subclass describing a frame in uniform rotation about
-    the Z-axis of another frame.
+    """SpinFrame is a Frame subclass describing a frame in uniform rotation
+    about one axis of another frame. It can be created without a frame_id,
+    reference_id or origin_id; in this case it is not registered and can
+    therefore be used as a component of another frame.
     """
 
-    def __init__(self, rate, offset, epoch, id, reference):
+    def __init__(self, offset, rate, epoch, axis, reference, id=None):
         """Constructor for a Spin Frame.
 
         Input:
-            rate        the rotation rate of the frame in radians/second.
             offset      the angular offset of the frame at the epoch.
+            rate        the rotation rate of the frame in radians/second.
             epoch       the time TDB at which the frame is defined.
-            id          the ID under which the frame will be registered.
-            reference   the reference frame relative to which this frame spins.
+            axis        the rotation axis: 0 for x, 1 for y, 2 for z.
+            reference   the frame relative to which this frame is defined.
+            id          the ID under which this frame is to be registered;
+                        None to use a temporary ID.
+
+        Note that rate, offset and epoch can be Scalar values, in which case the
+        shape of the SpinFrame is defined by broadcasting the shapes of these
+        Scalars.
         """
 
-        self.rate = rate
-        self.offset = offset
-        self.epoch = epoch
+        self.offset = Scalar.as_scalar(offset)
+        self.rate = Scalar.as_scalar(rate)
+        self.epoch = Scalar.as_scalar(epoch)
 
-        self.frame_id = id
+        self.shape = Array.broadcast_shape((self.rate, self.offset, self.epoch))
+
+        self.axis2 = axis           # Most often, the Z-axis
+        self.axis0 = (self.axis2 + 1) % 3
+        self.axis1 = (self.axis2 + 2) % 3
+
+        omega_vals = np.zeros(self.shape + [3])
+        omega_vals[..., self.axis2] = self.rate.vals
+        self.omega = Vector3(omega_vals, self.rate.mask)
+
+        if id is None:
+            self.frame_id = registry.temporary_frame_id()
+        else:
+            self.frame_id = id
 
         reference = registry.as_frame(reference)
-        self.reference_id = reference.frame_id
+        self.reference_id = registry.as_frame_id(reference)
         self.origin_id = reference.origin_id
-        self.shape = reference.shape
-
-        self.omega = Vector3((0.,0.,self.rate))
 
         self.register()
 
@@ -50,18 +70,17 @@ class SpinFrame(Frame):
         times."""
 
         time = Scalar.as_scalar(time)
-        angle = (time.vals - self.epoch) * self.rate + self.offset
+        angle = (time - self.epoch) * self.rate + self.offset
 
-        matrix = np.zeros(time.shape + [3,3])
-        matrix[...,2,2] = 1.
+        mat = np.zeros(angle.shape + [3,3])
+        mat[..., self.axis2, self.axis2] = 1.
+        mat[..., self.axis0, self.axis0] = np.cos(angle.vals)
+        mat[..., self.axis1, self.axis1] = mat[..., self.axis0, self.axis0]
+        mat[..., self.axis0, self.axis1] = np.sin(angle.vals)
+        mat[..., self.axis1, self.axis0] = -mat[...,self.axis0,self.axis1]
 
-        matrix[...,0,0] = np.cos(angle)
-        matrix[...,1,1] = matrix[...,0,0]
-
-        matrix[...,0,1] = np.sin(angle)
-        matrix[...,1,0] = -matrix[...,0,1]
-
-        return Transform(matrix, self.omega, self.frame_id, self.reference_id)
+        matrix = Matrix3(mat, angle.mask)
+        return Transform(matrix, self.omega, self.reference_id, self.origin_id)
 
 ################################################################################
 # UNIT TESTS
@@ -80,10 +99,10 @@ class Test_SpinFrame(unittest.TestCase):
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
 
-        spin1  = SpinFrame(1., 0.,  0., "spin1", "J2000")
-        spin2  = SpinFrame(2., 0.,  0., "spin2", "J2000")
-        spin3  = SpinFrame(1., 0.,  0., "spin3", "spin2")
-        spin1a = SpinFrame(1., 1.,  1., "spin1a", "J2000")
+        spin1  = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
+        spin2  = SpinFrame(0., 2., 0., 2, "J2000", "spin2")
+        spin3  = SpinFrame(0., 1., 0., 2, "spin2", "spin3")
+        spin1a = SpinFrame(1., 1., 1., 2, "J2000", "spin1a")
 
         event = Event(0., (1,0,0), (0,0,0), "SSB", "J2000")
         self.assertEqual(event.pos, (1,0,0))
@@ -131,9 +150,6 @@ class Test_SpinFrame(unittest.TestCase):
         self.assertTrue((event1a.pos - (1, -eps,0)).norm() < 1.e-15)
         self.assertTrue((event1a.vel - (-eps,-1,0)).norm() < 1.e-15)
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
-
         # Test time-derivatives of transforms
         time = Scalar(np.random.randn(400))
         pos  = Vector3(np.random.randn(400,3))
@@ -162,6 +178,9 @@ class Test_SpinFrame(unittest.TestCase):
         pos1 = tr1.unrotate(pos, derivs=False)
         dpos_dt_test = (pos1 - pos0) / dt
         self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
+
+        registry.initialize_frame_registry()
+        registry.initialize_path_registry()
 
 #########################################
 if __name__ == '__main__':

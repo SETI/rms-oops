@@ -461,6 +461,7 @@ class Path(object):
 
         # Update the path event one last time
         path_event_ssb = path_wrt_ssb.event_at_time(path_time)
+        path_event_ssb.collapse_time()
 
         # Fill in the photon paths...
 

@@ -44,9 +44,45 @@ class Backplane(object):
 
         self.obs_event = obs.event_at_grid(self.meshgrid, t)
 
+        # The surface_events dictionary comes in two versions, one with
+        # derivatives and one without. Each dictionary is keyed by a tuple of
+        # strings, where each string is the name of a body from which photons
+        # depart. Each event is defined by a call to Surface.photon_to_event()
+        # to the next. The last event is the arrival at the observation, which
+        # is implied so it does not appear in the key. For example, ("SATURN",)
+        # is the key for an event defining the departures of photons from the
+        # surface of Saturn to the observer. Shadow calculations require a
+        # pair of steps; for example, ("saturn","saturn_main_rings") is the key
+        # for the event of intercept points on Saturn that fall in the path of
+        # the photons arriving at Saturn's rings from the Sun.
+        #
+        # Note that body names in event keys are converted to lower case.
+
         self.surface_events_w_derivs = {(): self.obs_event}
         self.surface_events = {(): self.obs_event.plain()}
+
+        # The path_events dictionary holds photon departure events from paths.
+        # All photons originate from the Sun so this name is implied. For
+        # example, ("SATURN",) is the key for the event of a photon departing
+        # the Sun such that it later arrives at the Saturn surface arrival
+        # event.
+
         self.path_events = {}
+
+        # The backplanes dictionary holds every backplane that has been
+        # calculated. This includes boolean backplanes, aka masks. A backplane
+        # is keyed by (name of backplane, event_key, optional additional
+        # parameters). The name of the backplane is always the name of the
+        # backplane method that generates this backplane. For example,
+        # ("phase_angle", ("saturn",)) is the key for a backplane of phase angle
+        # values at the Saturn intercept points.
+        #
+        # If the function that returns a backplane requires additional
+        # parameters, those appear in the tuple after the event key in the same
+        # order that they appear in the calling function. For example,
+        # ("latitude", ("saturn",), "graphic") is the key for the backplane of
+        # planetographic latitudes at Saturn.
+
         self.backplanes = {}
 
     ############################################################################
@@ -59,6 +95,9 @@ class Backplane(object):
 
     @staticmethod
     def fix_event_key(event_key):
+        """Repairs the given event key to make it suitable as an index into the
+        event dictionary. A string gets turned into a tuple."""
+
         if type(event_key) == type(""):
             return (event_key,)
         elif type(event_key) == type(()):
@@ -68,6 +107,10 @@ class Backplane(object):
 
     @staticmethod
     def fix_backplane_key(backplane_key):
+        """Repairs the given backplane key to make it suitable as an index into
+        the backplane dictionary. A string is turned into a tuple. If the
+        argument is a backplane already, the key is extracted from it."""
+
         if type(backplane_key) == type(""):
             return (backplane_key,)
         elif type(backplane_key) == type(()):
@@ -98,7 +141,7 @@ class Backplane(object):
             ignore = self.get_surface_event_w_derivs(event_key)
             return self.surface_events[event_key]
 
-        # Create the event
+        # Create the event and save it in the dictionary
         dest = self.get_surface_event(event_key[1:])
         surface = registry.body_lookup(event_key[0].upper()).surface
 
@@ -186,12 +229,12 @@ class Backplane(object):
             return Scalar(np.zeros(self.meshgrid.shape, dtyp="bool"))
 
     def new_backplane(self, key, backplane):
-        """Adds this backplane to the dictionary."""
+        """Inserts this backplane into the dictionary."""
 
         if isinstance(backplane, np.ndarray):
             backplane = Scalar(backplane)
 
-        # For reference, add the key to the backplane object
+        # For reference, we add the key as an attribute of each backplane object
         backplane = backplane.plain()
         backplane.key = key
 
@@ -375,29 +418,28 @@ class Backplane(object):
         (r,lon) = surface.as_coords(event.pos, axes=2)
 
         # Save with mask
-        self.new_backplane(("ring_intercept_radius", event_key, True), r)
-        self.new_backplane(("ring_intercept_longitude", event_key,
-                                                        True, "j2000"), lon)
+        self.new_backplane(("ring_radius", event_key, True), r)
+        self.new_backplane(("ring_longitude", event_key, True, "j2000"), lon)
 
         # Also save without mask
         r = Scalar(r.vals, False)
         lon = Scalar(lon.vals, False)
-        self.new_backplane(("ring_intercept_radius", event_key, False), r)
-        self.new_backplane(("ring_intercept_longitude", event_key,
+        self.new_backplane(("ring_radius", event_key, False), r)
+        self.new_backplane(("ring_longitude", event_key,
                                                         False, "j2000"), lon)
 
-    def ring_intercept_radius(self, event_key, masked=True):
+    def ring_radius(self, event_key, masked=True):
         """Radius of the ring intercept point in the image.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("ring_intercept_radius", event_key, masked)
+        key = ("ring_radius", event_key, masked)
         if key not in self.backplanes.keys():
             self._fill_ring_intercepts(event_key)
 
         return self.backplanes[key]
 
-    def ring_intercept_longitude(self, event_key, masked=True,
+    def ring_longitude(self, event_key, masked=True,
                                                   reference="j2000"):
         """Longitude of the ring intercept point in the image.
         """
@@ -406,7 +448,7 @@ class Backplane(object):
         assert reference in {"j2000", "obs", "oha", "sun", "sha"}
 
         # Look up under the desired reference
-        key0 = ("ring_intercept_longitude", event_key)
+        key0 = ("ring_longitude", event_key)
         key = key0 + (masked, reference)
         if key in self.backplanes.keys():
             return self.backplanes[key]
@@ -491,12 +533,12 @@ class Backplane(object):
     # Longitude keys: ("ring_intercept_angular_resolution", event_key, masked)
     ############################################################################
 
-    def ring_intercept_radial_resolution(self, event_key, masked=True):
+    def ring_radial_resolution(self, event_key, masked=True):
         """Projected radial resolution in km/pixel at the ring intercept point.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("ring_intercept_radial_resolution", event_key, masked)
+        key = ("ring_radial_resolution", event_key, masked)
         try:
             return self.backplanes[key]
         except KeyError: pass
@@ -512,13 +554,13 @@ class Backplane(object):
         self.new_backplane(key, res)
         return self.backplanes[key]
 
-    def ring_intercept_angular_resolution(self, event_key, masked=True):
+    def ring_angular_resolution(self, event_key, masked=True):
         """Projected angular resolution in radians/pixel at the ring intercept
         point.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("ring_intercept_angular_resolution", event_key, masked)
+        key = ("ring_angular_resolution", event_key, masked)
         try:
             return self.backplanes[key]
         except KeyError: pass
@@ -558,12 +600,10 @@ class Backplane(object):
 
         (lon,lat) = surface.as_coords(event.pos, axes=2, derivs=False)
 
-        self.new_backplane(("surface_intercept_longitude", event_key,
-                                                "east", 0, "iau"), lon)
-        self.new_backplane(("surface_intercept_latitude", event_key, 
-                                                "squashed"), lat)
+        self.new_backplane(("longitude", event_key, "east", 0, "iau"), lon)
+        self.new_backplane(("latitude", event_key, "squashed"), lat)
 
-    def surface_intercept_longitude(self, event_key, direction="east",
+    def longitude(self, event_key, direction="east",
                                     minimum=0, reference="iau"):
         """Longitude at the surface intercept point in the image.
         """
@@ -574,7 +614,7 @@ class Backplane(object):
         assert reference in {"iau", "sun", "sha", "obs", "oha"}
 
         # Look up under the desired reference
-        key0 = ("surface_intercept_longitude", event_key)
+        key0 = ("longitude", event_key)
         key = key0 + (direction, minimum, reference)
         if key in self.backplanes.keys():
             return self.backplanes[key]
@@ -608,7 +648,7 @@ class Backplane(object):
         self.new_backplane(key, lon)
         return self.backplanes[key]
 
-    def surface_intercept_latitude(self, event_key, lat_type="centric"):
+    def latitude(self, event_key, lat_type="centric"):
         """Latitude at the surface intercept point in the image.
         """
 
@@ -616,7 +656,7 @@ class Backplane(object):
         assert lat_type in {"centric", "graphic", "squashed"}
 
         # Look up under the desired reference
-        key0 = ("surface_intercept_latitude", event_key)
+        key0 = ("latitude", event_key)
         key = key0 + (lat_type,)
         if key in self.backplanes.keys():
             return self.backplanes[key]
@@ -710,30 +750,30 @@ class Backplane(object):
         dpos_duv = event.pos.d_dlos * self.meshgrid.dlos_duv
         (minres, maxres) = surface_.Surface.resolution(dpos_duv)
 
-        self.new_backplane(("surface_intercept_finest_resolution", event_key),
+        self.new_backplane(("finest_resolution", event_key),
                                                                         minres)
-        self.new_backplane(("surface_intercept_coarsest_resolution", event_key),
+        self.new_backplane(("coarsest_resolution", event_key),
                                                                         maxres)
 
-    def surface_intercept_finest_resolution(self, event_key):
+    def finest_resolution(self, event_key):
         """Projected spatial resolution in km/pixel in the optimal direction at
         the intercept point.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("surface_intercept_finest_resolution", event_key)
+        key = ("finest_resolution", event_key)
         if key not in self.backplanes.keys():
             self._fill_surface_resolution(event_key)
 
         return self.backplanes[key]
 
-    def surface_intercept_coarsest_resolution(self, event_key):
+    def coarsest_resolution(self, event_key):
         """Projected spatial resolution in km/pixel in the worst direction at
         the intercept point.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("surface_intercept_coarsest_resolution", event_key)
+        key = ("coarsest_resolution", event_key)
         if key not in self.backplanes.keys():
             self._fill_surface_resolution(event_key)
 
@@ -1020,15 +1060,22 @@ class Backplane(object):
     # Method to access a backplane or mask by key
     ############################################################################
 
+    # Here we use the class introspection capabilities of Python to provide a
+    # general way to generate any backplane based on its key. This makes it
+    # possible to access any backplane via its key rather than by making an
+    # explicit call to the function that generates the key.
+
+    # Here we keep track of all the function names that generate backplanes. For
+    # security, we disallow evaluate() to access any function not in this list.
+
     CALLABLES = {
         "right_ascension", "declination",
         "range", "light_time",
         "incidence_angle", "emission_angle", "phase_angle", "scattering_angle",
-        "ring_intercept_radius", "ring_intercept_longitude",
-        "ring_intercept_radial_resolution", "ring_intercept_angular_resolution",
-        "surface_intercept_longitude", "surface_intercept_latitude",
-        "surface_intercept_finest_resolution",
-        "surface_intercept_coarsest_resolution",
+        "ring_radius", "ring_longitude",
+        "ring_radial_resolution", "ring_angular_resolution",
+        "longitude", "latitude",
+        "finest_resolution", "coarsest_resolution",
         "where_intercepted",
         "where_inside_shadow", "where_outside_shadow",
         "where_in_front", "where_in_back",
@@ -1152,69 +1199,65 @@ class Test_Backplane(unittest.TestCase):
         test = bp.scattering_angle("saturn")
         show_info("Saturn scattering angle (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn")
+        test = bp.longitude("saturn")
         show_info("Saturn longitude (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn", direction="west")
+        test = bp.longitude("saturn", direction="west")
         show_info("Saturn longitude westward (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn", minimum=-180)
+        test = bp.longitude("saturn", minimum=-180)
         show_info("Saturn longitude with -180 minimum (deg)",
                                                     test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn", reference="iau")
+        test = bp.longitude("saturn", reference="iau")
         show_info("Saturn longitude wrt IAU frame (deg)",
                                                     test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn", reference="sun")
+        test = bp.longitude("saturn", reference="sun")
         show_info("Saturn longitude wrt Sun (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn", reference="sha")
+        test = bp.longitude("saturn", reference="sha")
         show_info("Saturn longitude wrt SHA (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn", reference="obs")
+        test = bp.longitude("saturn", reference="obs")
         show_info("Saturn longitude wrt observer (deg)",
                                                     test * constants.DPR)
 
-        test = bp.surface_intercept_longitude("saturn", reference="oha")
+        test = bp.longitude("saturn", reference="oha")
         show_info("Saturn longitude wrt OHA (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_latitude("saturn", lat_type="centric")
+        test = bp.latitude("saturn", lat_type="centric")
         show_info("Saturn geocentric latitude (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_latitude("saturn", lat_type="graphic")
+        test = bp.latitude("saturn", lat_type="graphic")
         show_info("Saturn geographic latitude (deg)", test * constants.DPR)
 
-        test = bp.surface_intercept_finest_resolution("saturn")
+        test = bp.finest_resolution("saturn")
         show_info("Saturn finest surface resolution (km)", test)
 
-        test = bp.surface_intercept_coarsest_resolution("saturn")
+        test = bp.coarsest_resolution("saturn")
         show_info("Saturn coarsest surface resolution (km)", test)
 
-        test = bp.ring_intercept_radius("saturn_main_rings", masked=True)
+        test = bp.ring_radius("saturn_main_rings", masked=True)
         show_info("Ring radius (km)", test)
 
-        test = bp.ring_intercept_radius("saturn_main_rings", masked=False)
+        test = bp.ring_radius("saturn_main_rings", masked=False)
         show_info("Ring radius unmasked (km)", test)
 
-        test = bp.ring_intercept_longitude("saturn_main_rings",
-                                                    reference="j2000")
+        test = bp.ring_longitude("saturn_main_rings",reference="j2000")
         show_info("Ring longitude wrt J2000 (deg)", test * constants.DPR)
 
-        test = bp.ring_intercept_longitude("saturn_main_rings",
-                                                    reference="sun")
+        test = bp.ring_longitude("saturn_main_rings", reference="sun")
         show_info("Ring longitude wrt Sun (deg)", test * constants.DPR)
 
-        test = bp.ring_intercept_longitude("saturn_main_rings",
-                                                    reference="sha")
+        test = bp.ring_longitude("saturn_main_rings", reference="sha")
         show_info("Ring longitude wrt SHA (deg)", test * constants.DPR)
 
-        test = bp.ring_intercept_longitude("saturn_main_rings",
-                                                    reference="obs")
+        test = bp.ring_longitude("saturn_main_rings", reference="obs")
         show_info("Ring longitude wrt observer (deg)",
                                                     test * constants.DPR)
 
-        test = bp.ring_intercept_longitude("saturn_main_rings",
+        test = bp.ring_longitude("saturn_main_rings",
                                                     reference="oha")
         show_info("Ring longitude wrt OHA (deg)", test * constants.DPR)
 
@@ -1236,10 +1279,10 @@ class Test_Backplane(unittest.TestCase):
         test = bp.phase_angle("saturn_main_rings")
         show_info("Ring phase angle (deg)", test * constants.DPR)
 
-        test = bp.ring_intercept_radial_resolution("saturn_main_rings")
+        test = bp.ring_radial_resolution("saturn_main_rings")
         show_info("Ring radial resolution (km/pixel)", test)
 
-        test = bp.ring_intercept_angular_resolution("saturn_main_rings")
+        test = bp.ring_angular_resolution("saturn_main_rings")
         show_info("Ring angular resolution (deg/pixel)",
                                                     test * constants.DPR)
 
@@ -1325,23 +1368,19 @@ class Test_Backplane(unittest.TestCase):
         test = bp.border_outside(mask)
         show_info("Saturn outside border", test)
 
-        test = bp.where_below(("ring_intercept_radius", "saturn_main_rings"),
-                              100000.)
+        test = bp.where_below(("ring_radius", "saturn_main_rings"), 100000.)
         show_info("Ring area below 100,000 km", test)
 
-        test = bp.border_below(("ring_intercept_radius", "saturn_main_rings"),
-                              100000.)
+        test = bp.border_below(("ring_radius", "saturn_main_rings"), 100000.)
         show_info("Ring border below 100,000 km", test)
 
-        test = bp.border_atop(("ring_intercept_radius", "saturn_main_rings"),
-                              100000.)
+        test = bp.border_atop(("ring_radius", "saturn_main_rings"), 100000.)
         show_info("Ring border atop 100,000 km", test)
 
-        test = bp.border_atop(("ring_intercept_radius", "saturn_main_rings"),
-                              100000.)
+        test = bp.border_atop(("ring_radius", "saturn_main_rings"), 100000.)
         show_info("Ring border above 100,000 km", test)
 
-        test = bp.evaluate(("border_atop", ("ring_intercept_radius",
+        test = bp.evaluate(("border_atop", ("ring_radius",
                                             "saturn_main_rings"), 100000.))
         show_info("Ring border above 100,000 km via evaluate()", test)
 

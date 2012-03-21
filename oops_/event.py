@@ -9,7 +9,7 @@ import numpy as np
 import unittest
 
 from oops_.array.all import *
-from oops_.config import QUICK
+from oops_.config import QUICK, EVENT_COLLAPSE_THRESHOLD, LOGGING
 import oops_.registry as registry
 import oops_.constants as constants
 
@@ -164,6 +164,26 @@ class Event(object):
         self.filled_mask = None
         ignore = self.mask
 
+    def collapse_time(self, threshold=EVENT_COLLAPSE_THRESHOLD):
+        """Replaces the time array by the average of its min and max, provided
+        the range of times is less than or equal to the specified threshold."""
+
+        if self.time.shape != []:
+            tmin = self.time.min()
+            tmax = self.time.max()
+            if (tmax - tmin <= threshold):
+                self.time = Scalar((tmin + tmax) / 2.)
+
+                # Update the SSB version as well
+                if self.filled_ssb is not None:
+                    self.filled_ssb.time = self.time
+
+            if LOGGING.event_time_collapse:
+                print LOGGING.prefix, "Event.collapse_time()",
+                print self.time.vals, tmax - tmin
+
+        return self
+
     def wrt_ssb(self, quick=QUICK, derivs=False):
         """Returns the event relative to SSB coordinates in the J2000 frame
         while also filling in the internal cached value if necessary. """
@@ -228,6 +248,31 @@ class Event(object):
 
         result.filled_shape = self.filled_shape
         result.filled_mask  = self.filled_mask
+
+        if self.filled_ssb is self:
+            result.filled_ssb = result
+        else:
+            result.filled_ssb = None
+
+        return result
+
+    def unmasked(self, subfields=True):
+        """Returns a shallow copy of self with the mask removed."""
+
+        result = Event(self.time.unmasked(),
+                       self.pos.unmasked(), self.vel.unmasked(),
+                       self.origin_id, self.frame_id)
+
+        if subfields:
+            for key in self.subfields.keys():
+                subfield = self.subfields[key]
+                if isinstance(subfield, Array):
+                    result.insert_subfield(key, subfield.unmasked())
+                else:
+                    result.insert_subfield(key, subfield)
+
+        result.filled_shape = self.filled_shape
+        result.filled_mask  = False
 
         if self.filled_ssb is self:
             result.filled_ssb = result

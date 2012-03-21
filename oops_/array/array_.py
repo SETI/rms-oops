@@ -331,6 +331,15 @@ class Array(object):
         obj.__init__(self.vals, self.mask, self.units)
         return obj
 
+    def unmasked(self):
+        """Returns a shallow copy of the object without a mask."""
+
+        if self.mask is False: return self
+
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals, False, self.units)
+        return obj
+
     ####################################################
     # Subarray support methods
     ####################################################
@@ -1438,7 +1447,8 @@ class Array(object):
                         Values of None and Empty() are ignored. Anything (such
                         as a numpy array) that has an intrinsic shape attribute
                         can be used. A list or tuple is treated as the
-                        definition of an additional shape.
+                        definition of an additional shape. Scalars have shape
+                        ().
 
             item        a list or tuple to be appended to the shape. Default is
                         []. Makes it possible to use the returned shape in the
@@ -1461,7 +1471,10 @@ class Array(object):
             try:
                 shape = list(array.shape)
             except AttributeError:
-                shape = list(array)
+                if type(array) == type(()) or type(array) == type([]):
+                    shape = list(array)
+                else:
+                    shape = list(np.shape(array))
 
             # Expand the shapes to the same rank
             len_shape = len(shape)

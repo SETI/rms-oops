@@ -83,9 +83,11 @@ class Transform(object):
 
         if origin_id is not None:
             self.origin_id = origin_id
-        else:
+        elif reference_id is not None:
             frame = registry.FRAME_REGISTRY[self.reference_id]
             self.origin_id = frame.origin_id
+        else:
+            self.origin_id = None
 
         self.filled_shape = None            # filled in only when needed
         self.filled_omega1 = None

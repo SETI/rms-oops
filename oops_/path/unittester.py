@@ -6,6 +6,7 @@ import unittest
 import cspice
 
 from path_      import Test_Path
+from circlepath import Test_CirclePath
 from multipath  import Test_MultiPath
 from spicepath  import Test_SpicePath
 

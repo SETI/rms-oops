@@ -23,6 +23,9 @@ class RingPlane(Surface):
     longitude, elevation), with an optional offset in elevation from the
     equatorial (z=0) plane."""
 
+    Z_AXIS = Vector3((0,0,1))
+    ZERO_ROW = Vector3((0,0,0)).as_row()
+    Z_AXIS_ROW = Vector3((0,0,1)).as_row()
     ZERO_MATRIX = MatrixN([(0,0,0),(0,0,0),(0,0,0)])
     UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
 
@@ -57,8 +60,6 @@ class RingPlane(Surface):
         else:
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
-
-        self.z_unit = Vector3((0,0,1))
 
     def as_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
@@ -108,20 +109,18 @@ class RingPlane(Surface):
         if derivs:
             if np.shape(derivs) == (): derivs = (derivs, derivs, derivs)
 
-            zero = VectorN([0,0,0]).as_row()
-
             if derivs[0]:
                 dr_dpos = VectorN(pos.vals[...]*(1,1,0), pos.mask).unit()
                 r.insert_subfield("d_dpos", dr_dpos.as_row())
-                r.insert_subfield("d_dobs", zero)
+                r.insert_subfield("d_dobs", RingPlane.ZERO_MATRIX)
 
             if derivs[1]:
-                dtheta_dpos = self.z_unit.cross(pos) / pos.dot(pos)
+                dtheta_dpos = RingPlane.Z_AXIS.cross(pos) / r**2
                 theta.insert_subfield("d_dpos", dtheta_dpos.as_row())
-                theta.insert_subfield("d_dobs", zero)
+                theta.insert_subfield("d_dobs", RingPlane.ZERO_MATRIX)
 
             if axes > 2 and derivs[2]:
-                z.insert_subfield("d_dpos", z_unit.as_row())
+                z.insert_subfield("d_dpos", RingPlane.Z_AXIS_ROW)
 
         if axes > 2:
             return (r, theta, z)
@@ -161,8 +160,8 @@ class RingPlane(Surface):
         z     = Scalar.as_standard(z)
 
         # Convert to vectors
-        shape = Array.broadcast_shape((r, theta, z), [3])
-        vals = np.empty(shape)
+        shape = Array.broadcast_shape((r, theta, z))
+        vals = np.empty(shape + [3])
 
         cos_theta = np.cos(theta.vals)
         sin_theta = np.sin(theta.vals)
@@ -458,6 +457,8 @@ class Test_RingPlane(unittest.TestCase):
 
         # Intercepts that point away from the ring plane
         self.assertTrue(np.all(factors.vals > 0.))
+
+        # Note: Additional unit testing is performed in orbitplane.py
 
 ########################################
 if __name__ == '__main__':

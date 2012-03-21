@@ -59,7 +59,7 @@ class Surface(object):
                         partial derivatives of each coordinate with respect to
                         surface position and observer position are returned as
                         well. Using a tuple, you can indicate whether to return
-                        partial derivatives on an coordinate-by-coordinate
+                        partial derivatives on a coordinate-by-coordinate
                         basis.
 
         Return:         coordinate values packaged as a tuple containing two or
@@ -206,6 +206,107 @@ class Surface(object):
         """
 
         return Vector3((0,0,0))
+
+################################################################################
+# Override if a surface uses an internal frame or path that differs from the
+# frame and path with which it was defined.
+################################################################################
+
+    def as_event(self, time, coords, dcoords_dt=None, obs=None):
+        """Converts a time and coordinates in the surface's internal coordinate
+        system into an event object.
+
+        Input:
+            time        the Scalar of time values at which to evaluate the
+                        coordinates.
+            coords      a tuple containing the two or three coordinate values.
+                        If only two are provided, the third is assumed to be
+                        zero.
+            dcoords_dt  an optional tuple containing rates of changes of the
+                        coordinates. If provided, these values define the
+                        velocity vector of the event object.
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer.
+
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
+
+        Return:         an event object relative to the origin and frame of the
+                        surface.
+        """
+
+        if len(coords) == 2:
+            (coord1, coord2) = coords
+            coord3 = Scalar((0,0,0))
+        else:
+            (coord1, coord2, coord3) = coords
+
+        derivs = (dcoords_dt is not None)
+        pos = self.as_vector3(coord1, coord2, coord3, obs, derivs=derivs)
+        vel = self.velocity(pos)
+
+        if derivs:
+            if len(dcoords_dt) == 2:
+                (dcoord1_dt, dcoord2_dt) = dcoords_dt
+                dcoord3_dt = Scalar(0.)
+            else:
+                (dcoord1_dt, dcoord2_dt, dcoord3_dt) = dcoords_dt
+
+            (dpos_dcoord1,
+             dpos_dcoord2, dpos_dcoord3) = pos.d_dcoord.as_columns()
+
+            vel = vel + (dpos_dcoord1 * dcoord1_dt +
+                         dpos_dcoord2 * dcoord2_dt +
+                         dpos_dcoord3 * dcoord3_dt).as_vector3()
+            pos = pos.plain()
+
+        return Event(time, pos, vel, self.origin_id, self.frame_id)
+
+    def event_as_coords(self, event, obs=None, axes=3, derivs=False):
+        """Converts an event object to coordinates and, optionally, their
+        time-derivatives.
+
+        Input:
+            event       an event object.
+            obs         a Vector3 of observer positions. In some cases, a
+                        surface is defined in part by the position of the
+                        observer. In the case of a RingPlane, this argument is
+                        ignored and can be omitted.
+            axes        2 or 3, indicating whether to return a tuple of two or
+                        three Scalar objects.
+            derivs      a boolean or tuple of booleans. If True, then the
+                        partial derivatives of each coordinate with respect to
+                        time are returned as well. Using a tuple, you can
+                        indicate whether to return time derivatives on a
+                        coordinate-by-coordinate basis.
+
+        Return:         coordinate values packaged as a tuple containing two or
+                        three unitless Scalars, one for each coordinate.
+
+                        If derivs is True, then the coordinate has extra
+                        attributes "d_dpos" and "d_dobs", which contain the
+                        partial derivatives with respect to the surface position
+                        and the observer position, represented as a MatrixN
+                        objects with item shape [1,3].
+        """
+
+        event = event.wrt(self.origin_id, self.frame_id)
+        coords = self.as_coords(event.pos, obs, axes, derivs)
+
+        if derivs is False: return coords
+
+        if derivs is True: derivs = (True, True, True)
+
+        vel = event.vel - self.velocity(event.pos)
+        for (deriv,coord) in zip(derivs[:axes], coords):
+            if deriv:
+                coord.add_to_subfield("d_dt",
+                        (coord.d_dpos * vel.as_column()).as_scalar())
+                coord.delete_subfield("d_dpos")
+                coord.delete_subfield("d_dobs")
+
+        return coords
 
 ################################################################################
 # No need to override
@@ -446,6 +547,7 @@ class Surface(object):
         # Create the surface event in its own frame
         surface_event = Event(surface_time, pos_wrt_surface, (0,0,0),
                               self.origin_id, self.frame_id)
+        surface_event.collapse_time()
 
         # Fill in derivatives if necessary
         if derivs:

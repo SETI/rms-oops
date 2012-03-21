@@ -4,6 +4,7 @@
 # 2/20/12 MRS - Adapted from frame/registry.py and path/registry.py. This is a
 #   cleaner way to accomplish the same goal.
 # 3/8/12 MRS - Moved the body registry here from body.py.
+# 3/20/12 MRS - Introduced temporary IDs.
 ################################################################################
 # Frame Registry
 ################################################################################
@@ -25,6 +26,7 @@
 J2000 = None
 FRAME_REGISTRY = {}
 FRAME_CLASS = None
+TEMPORARY_FRAME_ID = 10000
 
 def is_frame(item):
     """Returns true if the item is a Frame object."""
@@ -55,6 +57,18 @@ def as_primary_frame(frame):
     name or a Frame object."""
 
     return frame_lookup(as_frame_id(frame))
+
+def temporary_frame_id():
+    """Returns a temporary frame ID. This is assigned once and never re-used.
+    """
+
+    global TEMPORARY_FRAME_ID
+
+    while True:
+        frame_id = "TEMPORARY_" + str(TEMPORARY_FRAME_ID)
+        if frame_id not in FRAME_REGISTRY.keys():
+            return frame_id
+        TEMPORARY_FRAME_ID += 1
 
 def initialize_frame_registry():
     """Initializes the registry. It is not generally necessary to call this
@@ -102,6 +116,7 @@ def connect_frames(target, reference):
 SSB = None
 PATH_REGISTRY = {}
 PATH_CLASS = None
+TEMPORARY_PATH_ID = 10000
 
 def is_path(item):
     """Returns true if the item is a Path object."""
@@ -133,6 +148,18 @@ def as_primary_path(path):
     registered name or a Path object."""
 
     return path_lookup(as_path_id(path))
+
+def temporary_path_id():
+    """Returns a temporary path ID. This is assigned once and never re-used.
+    """
+
+    global TEMPORARY_PATH_ID
+
+    while True:
+        path_id = "TEMPORARY_" + str(TEMPORARY_PATH_ID)
+        if path_id not in PATH_REGISTRY.keys():
+            return path_id
+        TEMPORARY_PATH_ID += 1
 
 def initialize_path_registry():
     """Initializes the registry. It is not generally necessary to call this
