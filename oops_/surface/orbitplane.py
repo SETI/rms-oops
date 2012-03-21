@@ -353,7 +353,7 @@ class OrbitPlane(Surface):
             sin_lon_sub_peri = y/r
 
             dr_dt = (self.ae * self.n_sub_prec) * sin_lon_sub_peri
-            r_dlon_dt = self.n_sub_prec * r * (1 + 2*self.ae * cos_lon_sub_prec)
+            r_dlon_dt = self.n_sub_prec * r * (1 + 2*self.ae * cos_lon_sub_peri)
 
             dx_dt = dr_dt * cos_lon_sub_peri - r_dlon_dt * sin_lon_sub_peri
             dy_dt = dr_dt * sin_lon_sub_peri + r_dlon_dt * cos_lon_sub_peri

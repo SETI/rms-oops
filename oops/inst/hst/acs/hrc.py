@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/acs/hrc.py: HST/ACS subclass HRC
+# oops/inst/hst/acs/hrc.py: HST/ACS subclass HRC
 ################################################################################
 
 import pyfits

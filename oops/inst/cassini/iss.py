@@ -10,11 +10,9 @@ import cspice
 import oops
 
 import utils as cassini
-import oops.body as body
 
 INSTRUMENT_KERNEL = None
 FOVS = {}
-DN_SCALING = None
 
 ################################################################################
 # Standard class methods
@@ -116,7 +114,7 @@ def from_index(filespec, parameters={}):
 def initialize():
     """Fills in key information about the WAC and NAC. Must be called first."""
 
-    global INSTRUMENT_KERNEL, FOVS, DN_SCALING
+    global INSTRUMENT_KERNEL, FOVS
 
     cassini.load_instruments()
 
@@ -163,9 +161,6 @@ def initialize():
     ignore = oops.frame.Cmatrix(rot180, "CASSINI_ISS_WAC",
                                         "CASSINI_ISS_WAC_FLIPPED")
 
-    # Default scaling for raw images
-    DN_SCALING = oops.calib.Scaling("DN", 1.)
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -177,7 +172,12 @@ class Test_Cassini_ISS(unittest.TestCase):
 
     def runTest(self):
 
-        pass
+        snapshots = from_index("test_data/cassini/ISS/index.lbl")
+        snapshot = from_file("test_data/cassini/ISS/W1575634136_1.IMG")
+        snapshot3940 = snapshots[3940]  #should be same as snapshot
+    
+        self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
+        self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
 
 ############################################
 if __name__ == '__main__':

@@ -203,7 +203,7 @@ def body_lookup(key):
 
 def as_body(body):
     """If the argument is a body object, it returns that body. Otherwise, the
-    argument is interpreted as a key into the SOLAR_SYSTEM dictionary, and the
+    argument is interpreted as a key into the BODY_REGISTRY dictionary, and the
     associated body is returned."""
 
     if is_body(body): return body

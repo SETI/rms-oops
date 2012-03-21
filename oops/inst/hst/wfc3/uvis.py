@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/wfc3/uvis.py: HST/WFC3 subclass UVIS
+# oops/inst/hst/wfc3/uvis.py: HST/WFC3 subclass UVIS
 ################################################################################
 
 import pyfits

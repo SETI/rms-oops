@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/__init__.py
+# oops/inst/hst/__init__.py
 ################################################################################
 
 import numpy as np
@@ -147,13 +147,18 @@ class HST(object):
 
         return frame_id
 
-    def iof_calibration(self, hst_file, fov, parameters={}):
+    def iof_calibration(self, hst_file, fov, extended=True, parameters={}):
         """Returns a Calibration object suitable for integrating the I/F of
         point objects in an HST image.
 
         Input:
             hst_file        the object returned by pyfits.open().
             fov             the field of view describing the observation.
+            extended        True to provide a calibration for extended sources,
+                            in which case field-of-view distortion is ignored;
+                            False to provide a calibration object for point
+                            sources, in which case the distortion of the field
+                            of view must be taken into account.
             parameters      a dictionary of arbitrary parameters.
                 parameters["solar_range"]
                             if present, this parameters defines the Sun-target
@@ -179,7 +184,8 @@ class HST(object):
         # If necessary, get the solar range from the target name
         if solar_range is None:
             target_body = self.target_body(hst_file)
-            target_sun_path = oops.Path.connect(target_body, "SUN")
+            target_sun_path = oops.registry.connect_paths(target_body.path_id,
+                                                          "SUN")
                 # Paths of the relevant bodies need to be defined in advance!
 
             times = self.time_limits(hst_file)
@@ -199,17 +205,21 @@ class HST(object):
         # Generate the calibration factor
         try:
             photflam = hst_file[1].header["PHOTFLAM"]
-        except KeyError:    # no PHOTFLAM, so calibration is impossible
-            return oops.Scaling("DN", 1.)
-
+        except KeyError:
+            raise IOError("PHOTFLAM calibration factor not found in file " +
+                          self.filespec(hst_file))
+                            
         factor = photflam / self.solar_f(hst_file, solar_range, solar_model)
 
         # Create and return the calibration for solar reflectivity
-        return oops.AreaScaling("REFLECTIVITY", factor, fov)
+        if extended:
+            return oops.calib.ExtendedSource("I/F", factor)
+        else:
+            return oops.calib.PointSource("I/F", factor, fov)
 
     def target_body(self, hst_file):
-        """This procedure returns the SPICE name of a target body based on
-        target name used by the program P.I."""
+        """This procedure returns the body object defining the image target. It
+        is based on educated guesses from the target name used by the P.I."""
 
         global HST_TARGET_DICT
 
@@ -222,27 +232,38 @@ class HST(object):
             key3 = targname[0:3]
 
         try:
-            return HST_TARGET_DICT[key3]
+            body_name = HST_TARGET_DICT[key3]
         except KeyError:
-            return HST_TARGET_DICT[key2]
-
+            body_name = HST_TARGET_DICT[key2]
         # Raises a KeyError on failure
+
+        return oops.registry.body_lookup(body_name)
 
     def construct_snapshot(self, hst_file, parameters={}):
         """Returns a Snapshot object for the data found in the specified image.
         """
 
         fov = self.define_fov(hst_file, parameters)
-        return oops.obs.Snapshot(self.data_array(hst_file),
-                                 ["v","u"],
-                                 self.time_limits(hst_file),
-                                 fov,
-                                 "EARTH",
-                                 self.register_frame(hst_file))
 
-        snapshot.insert_subfield("quality", self.quality_mask(hst_file))
-        snapshot.insert_subfield("calibration",
-                                self.iof_calibration(hst_file, fov, parameters))
+        try:
+            point_calib = self.iof_calibration(hst_file, fov,
+                                                    False, parameters)
+            extended_calib = self.iof_calibration(hst_file, fov,
+                                                    True, parameters)
+        except IOError:
+            point_calib = None
+            extended_calib = None
+
+        return oops.obs.Snapshot(self.time_limits(hst_file),        # time
+                                 fov,                               # fov
+                                 "EARTH",                           # path_id
+                                 self.register_frame(hst_file),     # frame_id
+                                 data = self.data_array(hst_file),  # subfields
+                                 quality = self.quality_mask(hst_file),
+                                 target = self.target_body(hst_file),
+                                 point_calib = point_calib,
+                                 extended_calib = extended_calib,
+                                 pyfits = hst_file)
 
     ############################################################################
     # IDC (distortion model) support functions
@@ -443,8 +464,8 @@ class HST(object):
         # Extract all size and offset parameters from the header
         header1 = hst_file[1].header
         crpix   = oops.Pair((header1["CRPIX1"],   header1["CRPIX2"]  ))
-        sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS1"]))
-        binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS1"]))
+        sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS2"]))
+        binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS2"]))
 
         return oops.fov.Flat(scale * binaxis, sizaxis, crpix)
 
@@ -460,13 +481,16 @@ class HST(object):
         """
 
         # Check for a drizzle correction
-        try:
-            drizcorr = hst_file[0].header["DRIZCORR"]
-        except KeyError:
-            drizcorr = ""
+        # try:
+        #     drizcorr = hst_file[0].header["DRIZCORR"]
+        # except KeyError:
+        #     drizcorr = ""
 
         # If drizzled, construct and return a Flat FOV
-        if drizcorr == "COMPLETE":
+        # if drizcorr == "COMPLETE":
+
+        suffix = self.filespec(hst_file)[-8:-5].upper()
+        if suffix == "DRZ":
             return self.construct_drz_fov(fov_dict, hst_file)
 
         # Otherwise, construct the default Polynomial FOV
@@ -477,9 +501,9 @@ class HST(object):
         crpix   = oops.Pair((header1["CRPIX1"],   header1["CRPIX2"]  ))
 
         try:
-            centera = oops.Pair((header1["CENTERA1"], header1["CENTERA1"]))
-            sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS1"]))
-            binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS1"]))
+            centera = oops.Pair((header1["CENTERA1"], header1["CENTERA2"]))
+            sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS2"]))
+            binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS2"]))
 
         # If subarrays are unsupported...
         except KeyError:
@@ -620,19 +644,19 @@ class HST(object):
         instrument = this.instrument_name(hst_file)
 
         if instrument == "ACS":
-            from oops_.inst.hst.acs import ACS
+            from oops.inst.hst.acs import ACS
             obs = ACS.from_opened_fitsfile(hst_file, parameters)
 
         elif instrument == "NICMOS":
-            from oops_.inst.hst.nicmos import NICMOS
+            from oops.inst.hst.nicmos import NICMOS
             obs = NICMOS.from_opened_fitsfile(hst_file, parameters)
 
         elif instrument == "WFC3":
-            from oops_.inst.hst.wfc3 import WFC3
+            from oops.inst.hst.wfc3 import WFC3
             obs = WFC3.from_opened_fitsfile(hst_file, parameters)
 
         elif instrument == "WFPC2":
-            from oops_.inst.hst.wfpc2 import WFPC2
+            from oops.inst.hst.wfpc2 import WFPC2
             obs = WFPC2.from_opened_fitsfile(hst_file, parameters)
 
         else:
@@ -658,7 +682,7 @@ class Test_HST(unittest.TestCase):
     def runTest(self):
 
         import cspice
-        from oops_.inst.hst.acs.hrc import HRC
+        from oops.inst.hst.acs.hrc import HRC
 
         APR = 180./np.pi * 3600.
 

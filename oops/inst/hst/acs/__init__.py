@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/acs/__init__.py: HST subclass ACS
+# oops/inst/hst/acs/__init__.py: HST subclass ACS
 ################################################################################
 
 import pyfits
@@ -75,15 +75,15 @@ class ACS(HST):
         detector = this.detector_name(hst_file)
     
         if detector == "HRC":
-            from oops_.inst.hst.acs.hrc import HRC
+            from oops.inst.hst.acs.hrc import HRC
             obs = HRC.from_opened_fitsfile(hst_file, parameters)
     
         elif detector == "WFC":
-            from oops_.inst.hst.acs.wfc import WFC
+            from oops.inst.hst.acs.wfc import WFC
             obs = WFC.from_opened_fitsfile(hst_file, parameters)
     
         elif detector == "SBC":
-            from oops_.inst.hst.acs.sbc import SBC
+            from oops.inst.hst.acs.sbc import SBC
             obs = SBC.from_opened_fitsfile(hst_file, parameters)
     
         else:

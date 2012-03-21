@@ -292,6 +292,7 @@ class Path(object):
 ################################################################################
 
     def photon_to_event(self, link, quick=QUICK, derivs=False, guess=None,
+                              update=True,
                               iters     = PATH_PHOTONS.max_iterations,
                               precision = PATH_PHOTONS.dlt_precision,
                               limit     = PATH_PHOTONS.dlt_limit):
@@ -299,10 +300,11 @@ class Path(object):
         linking event of the photon's arrival. See _solve_photon() for details.
         """
 
-        return self._solve_photon(link, -1, quick, derivs, guess,
+        return self._solve_photon(link, -1, quick, derivs, guess, update,
                                          iters, precision, limit)
 
     def photon_from_event(self, link, quick=QUICK, derivs=False, guess=None,
+                                update=True,
                                 iters     = PATH_PHOTONS.max_iterations,
                                 precision = PATH_PHOTONS.dlt_precision,
                                 limit     = PATH_PHOTONS.dlt_limit):
@@ -310,10 +312,11 @@ class Path(object):
         linking event of the photon's departure. See _solve_photon() for details.
         """
 
-        return self._solve_photon(link, +1, quick, derivs, guess,
+        return self._solve_photon(link, +1, quick, derivs, guess, update,
                                          iters, precision, limit)
 
     def _solve_photon(self, link, sign, quick=QUICK, derivs=False, guess=None,
+                            update=True,
                             iters     = PATH_PHOTONS.max_iterations,
                             precision = PATH_PHOTONS.dlt_precision,
                             limit     = PATH_PHOTONS.dlt_limit):
@@ -343,6 +346,10 @@ class Path(object):
                         path; otherwise None. Should only be used if the event
                         time was already returned from a similar calculation.
 
+            update      True to update the photon arrival or departure event in
+                        the linking event; False to leave the linking event
+                        unchanged.
+
             The following input parameters have default defined in file
             oops_.config.PATH_PHOTONS:
 
@@ -359,8 +366,9 @@ class Path(object):
 
         Return:         the photon arrival event at the path, always given at
                         position (0,0,0) and velocity (0,0,0) relative to the
-                        path. These subfields are also filled in for both the
-                        given event and the returned event:
+                        path. The following subfields are filled in for the
+                        returned event and, if update is True, for the linking
+                        event as well:
 
                         arr/dep         the vector from the departing photon
                                         event to the arriving photon event, in
@@ -488,21 +496,23 @@ class Path(object):
         path_event_ssb.insert_subfield(path_key, signed_los_ssb)
         path_event_ssb.insert_subfield(path_key + "_lt", lt)
 
-        # Update the linking event WRT SSB
-        link_wrt_ssb.insert_subfield(link_key, signed_los_ssb.plain())
-        link_wrt_ssb.insert_subfield(link_key + "_lt", lt)
+        # Update the linking event
+        if update:
 
-        # Update the linking event in its native frame
-        link_frame = registry.connect_frames(link.frame_id, "J2000")
-        link_transform = link_frame.transform_at_time(link.time, quick)
+            link_wrt_ssb.insert_subfield(link_key, signed_los_ssb.plain())
+            link_wrt_ssb.insert_subfield(link_key + "_lt", lt)
 
-        signed_los_link = link_transform.rotate(signed_los_ssb, derivs=derivs)
-        # If derivs is True, then dlos/dt will be rotated and then combined with
-        # any time-derivative arising from the frame rotation.
+            link_frame = registry.connect_frames(link.frame_id, "J2000")
+            link_transform = link_frame.transform_at_time(link.time, quick)
 
-        link.insert_subfield(link_key, signed_los_link)
-        link.insert_subfield(link_key + "_lt", lt)
-        link.filled_ssb = link_wrt_ssb
+            signed_los_link = link_transform.rotate(signed_los_ssb,
+                                                    derivs=derivs)
+            # If derivs is True, then dlos/dt will be rotated and then combined
+            # with any time-derivative arising from the frame rotation.
+
+            link.insert_subfield(link_key, signed_los_link)
+            link.insert_subfield(link_key + "_lt", lt)
+            link.filled_ssb = link_wrt_ssb
 
         # Transform the path event back to its origin and frame
         path_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick,

@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/acs/wfc.py: HST/ACS subclass WFC
+# oops/inst/hst/acs/wfc.py: HST/ACS subclass WFC
 ################################################################################
 
 import pyfits

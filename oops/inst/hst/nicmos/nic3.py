@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/nicmos/nic3.py: HST/NICMOS subclass NIC3
+# oops/inst/hst/nicmos/nic3.py: HST/NICMOS subclass NIC3
 ################################################################################
 
 import pyfits

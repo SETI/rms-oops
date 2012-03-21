@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/wfc3/__init__.py: HST subclass WFC3
+# oops/inst/hst/wfc3/__init__.py: HST subclass WFC3
 ################################################################################
 
 import pyfits
@@ -62,11 +62,11 @@ class WFC3(HST):
         detector = this.detector_name(hst_file)
     
         if detector == "UVIS":
-            from oops_.inst.hst.wfc3.uvis import UVIS
+            from oops.inst.hst.wfc3.uvis import UVIS
             obs = UVIS.from_opened_fitsfile(hst_file, parameters)
     
         elif detector == "IR":
-            from oops_.inst.hst.wfc3.ir import IR
+            from oops.inst.hst.wfc3.ir import IR
             obs = IR.from_opened_fitsfile(hst_file, parameters)
     
         else:

@@ -598,40 +598,59 @@ class Event(object):
 # Geometry procedures
 ################################################################################
 
-    def aberrated_ray(self, ray, quick=QUICK):
+    def aberrated_ray_ssb(self, ray_ssb, quick=QUICK):
         """Returns the apparent direction of a photon given its actual
         direction in the SSB/J2000 frame."""
 
         # This procedure is equivalent to a vector subtraction of the velocity
         # of the observer from the ray, given the ray has length C.
 
-        return ray - (self.wrt_ssb(quick).vel +
-                      self.wrt_ssb(quick).vflat) * ray.norm() / constants.C
+        return ray_ssb - (self.wrt_ssb(quick).vel +
+                          self.wrt_ssb(quick).vflat)*ray_ssb.norm()/constants.C
+
+    def aberrated_arr_ssb(self, quick=QUICK):
+        """Aberrated arriving ray in the SSB/J2000 frame."""
+        return self.aberrated_ray_ssb(self.wrt_ssb(quick).arr)
 
     def aberrated_arr(self, quick=QUICK):
-        return self.aberrated_ray(self.wrt_ssb(quick).arr)
+        """Aberrated arriving ray in the event frame."""
+        arr_ssb = self.aberrated_ray_ssb(self.wrt_ssb(quick).arr)
+
+        frame = registry.connect_frames(self.frame_id, "J2000")
+        xform = frame.transform_at_time(self.time, quick)
+        return xform.rotate(arr_ssb)
+
+    def aberrated_dep_ssb(self, quick=QUICK):
+        """Aberrated departing ray in the SSB/J2000 frame."""
+        return self.aberrated_ray_ssb(self.wrt_ssb(quick).dep)
 
     def aberrated_dep(self, quick=QUICK):
-        return self.aberrated_ray(self.wrt_ssb(quick).dep)
+        """Aberrated departing ray in the event frame."""
+        dep_ssb = self.aberrated_ray_ssb(self.wrt_ssb(quick).dep)
+
+        frame = registry.connect_frames(self.frame_id, "J2000")
+        xform = frame.transform_at_time(self.time, quick)
+        return xform.rotate(dep_ssb)
 
     def incidence_angle(self, aberration=False, quick=QUICK):
         """Returns the incidence angle, measured between the surface normal and
         the reversed direction of the arriving photon."""
 
-        return self.wrt_ssb(quick).perp.sep(self.aberrated_arr(), reversed=True)
+        return self.wrt_ssb(quick).perp.sep(self.aberrated_arr_ssb(),
+                                            reversed=True)
 
     def emission_angle(self, quick=QUICK):
         """Returns the emission angle, measured between the surface normal and
         the direction of the departing photon."""
 
-        return self.wrt_ssb(quick).perp.sep(self.aberrated_dep(quick))
+        return self.wrt_ssb(quick).perp.sep(self.aberrated_dep_ssb(quick))
 
     def phase_angle(self, quick=QUICK):
         """Returns the phase angle, measured between the direction of the
         arriving photon and the reversed direction of the departing photon."""
 
-        return self.aberrated_arr(quick).sep(self.aberrated_dep(quick),
-                                             reversed=True)
+        return self.aberrated_arr_ssb(quick).sep(self.aberrated_dep_ssb(quick),
+                                                 reversed=True)
 
     def ra_and_dec(self, aberration=False, subfield="arr", frame="J2000",
                          quick=QUICK):

@@ -205,6 +205,8 @@ class WFPC2(HST):
         multiplied together to obtain the throughput of the given instrument,
         detector and filter combination."""
 
+        global GENERAL_SYN_FILES, FILTER_SYN_FILE_PARTS
+
         # Copy all the standard file names
         syn_filenames = []
         for filename in GENERAL_SYN_FILES:
@@ -215,9 +217,9 @@ class WFPC2(HST):
                             hst_file[0].header["FILTNAM2"]):
             filter_name = filter_name.strip()
             if filter_name != "":
-                syn_filenames.append(FILTER_SYN_FILE[0] +
+                syn_filenames.append(FILTER_SYN_FILE_PARTS[0] +
                                      filter_name.lower() +
-                                     FILTER_SYN_FILE[1])
+                                     FILTER_SYN_FILE_PARTS[1])
 
         return syn_filenames
 

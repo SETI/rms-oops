@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/acs/sbc.py: HST/ACS subclass SBC
+# oops/inst/hst/acs/sbc.py: HST/ACS subclass SBC
 ################################################################################
 
 import pyfits

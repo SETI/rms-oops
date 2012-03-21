@@ -1,308 +1,254 @@
 ################################################################################
-# oops_/inst/hst/wfc3/uvis_test_suite.py
+# oops/inst/hst/wfc3/uvis_test_suite.py
 ################################################################################
 
 import numpy as np
 import scipy.ndimage.filters as filters
 import pylab
+
+# Load oops
 import oops
+
+# Load the HST reader
 import oops.inst.hst as hst
 
+# At this point, a Body class object has been created for every planet and moon
+# (including Pluto). If you don't believe me...
+print oops.registry.BODY_REGISTRY.keys()
+
+# Below is just a handy routine for illustrative purposes. Cut, paste, ignore.
 
 PRINT = True
-DISPLAY = False
+DISPLAY = True
 PAUSE = False
 
 def show_info(title, array):
-    """Internal method to print summary information and display images as
-    desired."""
-    #
     global PRINT, DISPLAY, PAUSE
     if not PRINT: return
-    #
     print ""
     print title
-    #
-    if isinstance(array, np.ndarray):
-        if array.dtype == np.dtype("bool"):
-            count = np.sum(array)
-            total = np.size(array)
-            percent = int(count / float(total) * 100. + 0.5)
-            print " ", (count, total-count),
-            print (percent, 100-percent), "(True, False pixels)"
-            if DISPLAY:
-                ignore = pylab.imshow(array, norm=None, vmin=0, vmax=1)
-                if PAUSE: ignore = raw_input(title + ": ")
-        #
+    if np.any(array.mask):
+        print "  ", (np.min(array.vals),
+                       np.max(array.vals)), "(unmasked min, max)"
+        print "  ", (array.min(),
+                       array.max()), "(masked min, max)"
+        masked = np.sum(array.mask)
+        total = np.size(array.mask)
+        percent = int(masked / float(total) * 100. + 0.5)
+        print "  ", (masked, total-masked),
+        print         (percent, 100-percent), "(masked, unmasked pixels)"
+        if DISPLAY:
+            ignore = pylab.imshow(array.vals)
+            ignore = raw_input(title + ": ")
+            background = np.zeros(array.shape, dtype="uint8")
+            background[0::2,0::2] = 1
+            background[1::2,1::2] = 1
+            ignore = pylab.imshow(background)
+            ignore = pylab.imshow(array.mvals)
+            if PAUSE: ignore = raw_input(title + ": ")
+    elif array.vals.dtype == np.dtype("bool"):
+        masked = np.sum(array.vals)
+        total = np.size(array.vals)
+        percent = int(masked / float(total) * 100. + 0.5)
+        print "  ", (masked, total-masked),
+        print         (percent, 100-percent), "(masked, unmasked pixels)"
+        if DISPLAY and masked != 0 and masked != total:
+            ignore = pylab.imshow(array.vals)
+            if PAUSE: ignore = raw_input(title + ": ")
+    else:
+        minval = np.min(array.vals)
+        maxval = np.max(array.vals)
+        if minval == maxval:
+            print "  ", minval
         else:
-            minval = np.min(array)
-            maxval = np.max(array)
-            if minval == maxval:
-                print "  ", minval
-            else:
-                print "  ", (minval, maxval), "(min, max)"
-                #
-                if DISPLAY:
-                    ignore = pylab.imshow(array)
-                    if PAUSE: ignore = raw_input(title + ": ")
-    #
-    elif isinstance(array, oops.Array):
-        if np.any(array.mask):
-            print "  ", (np.min(array.vals),
-                           np.max(array.vals)), "(unmasked min, max)"
-            print "  ", (array.min(),
-                           array.max()), "(masked min, max)"
-            masked = np.sum(array.mask)
-            total = np.size(array.mask)
-            percent = int(masked / float(total) * 100. + 0.5)
-            print "  ", (masked, total-masked),
-            print         (percent, 100-percent), "(masked, unmasked pixels)"
-            #
+            print "  ", (minval, maxval), "(min, max)"
             if DISPLAY:
                 ignore = pylab.imshow(array.vals)
-                ignore = raw_input(title + ": ")
-                background = np.zeros(array.shape, dtype="uint8")
-                background[0::2,0::2] = 1
-                background[1::2,1::2] = 1
-                ignore = pylab.imshow(background)
-                ignore = pylab.imshow(array.mvals)
                 if PAUSE: ignore = raw_input(title + ": ")
-        #
-        else:
-            minval = np.min(array.vals)
-            maxval = np.max(array.vals)
-            if minval == maxval:
-                print "  ", minval
-            else:
-                print "  ", (minval, maxval), "(min, max)"
-                #
-                if DISPLAY:
-                    ignore = pylab.imshow(array.vals)
-                    if PAUSE: ignore = raw_input(title + ": ")
-    #
-    else:
-        print "  ", array
 
-# def uvis_test_suite(filespec, derivs, info, display):
-#     """Master test suite for an HST/WFC3/UVIS image.
-# 
-#     Input:
-#         filespec    file path and name to a UVIS image file.
-#         derivs      True to calculate derivatives where needed to derive
-#                     quantities related to spatial resolution; False to omit all
-#                     resolution calculations.
-#         info        True to print out geometry information as it progresses.
-#         display     True to display each backplane using Pylab, and pause until
-#                     the user hits RETURN.
-#     """
-
+# Pick a file, any file
 # filespec = "test_data/hst/ibht02v4q_flt.fits"
 filespec = "test_data/hst/ibht02v5q_flt.fits"
 # filespec = "test_data/hst/ibht02v6q_flt.fits"
 
-# Define the bodies we care about
-ring_body = oops.registry.body_lookup("URANUS_RING_PLANE")
-uranus_body = oops.registry.body_lookup("URANUS")
-sun_body = oops.registry.body_lookup("SUN")
-
-moon_bodies = uranus_body.select_children(include_all=["SATELLITE", "REGULAR"])
-moon_multipath = oops.Body.define_multipath(moon_bodies, id="URANUS_MOONS")
-
-derivs = True
-
-# Create the snapshot objects
+# Create the snapshot object. It contains everything you need to know.
 snapshot = hst.from_file(filespec)
 
-# Create the snapshot event
-# ... with a grid point at the middle of each pixel
-fov_shape = snapshot.fov.uv_shape
+# Wanna know the target body?
+print snapshot.target.name
 
-uv_pair = oops.Pair.cross_scalars(
-    np.arange(fov_shape.vals[0]) + 0.5,
-    np.arange(fov_shape.vals[1]) + 0.5
-)
+# Display the image (upside-down by default in pylab)
+pylab.imshow(snapshot.data)
 
-los = snapshot.fov.los_from_uv(uv_pair, derivs=True)
-# los.d_duv is now the [3,2] MatrixN of derivatives dlos/d(u,v), where los
-# is in the frame of the Cassini camera.
+# Create a meshgrid for the field of view. This is just a 2-D array of indices
+# into the image array. However, it caches useful information for cases when you
+# deal with the same field of view over and over in multiple images. You just
+# need to create the meshgrid once.
 
-# This line swaps the image for proper display using pylab.imshow().
-# Also change sign for incoming photons, and for subfield "d_duv".
-arrivals = -los.swapaxes(0,1)
+meshgrid = oops.Meshgrid.for_fov(snapshot.fov, swap=True)
+# swap=True because HST image arrays are indexed (vertical,horizontal). The
+# alternative would be to swap the axes of the data object. Your choice.
 
-# Define the event as a 1024x1024 array of simultaneous photon arrivals
-# coming from slightly different directions
-snapshot_event = oops.Event(
-    snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
-    snapshot.path_id, snapshot.frame_id, arr=arrivals)
+# A backplane object holds all the geometry information we could want
+bp = oops.Backplane(snapshot, meshgrid)
 
-# For single-point calculations about the geometry
-point_event = oops.Event(
-    snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
-    snapshot.path_id, snapshot.frame_id)
+# Every backplane you could ever want
+# The first argument to each function is the body ID
+# Some functions take additional arguments
+show_info("Right ascension (deg)", bp.right_ascension() * oops.DPR)
 
-############################################
-# Sky coordinates
-############################################
+show_info("Declination (deg)", bp.declination() * oops.DPR)
 
-(right_ascension, declination) = snapshot_event.ra_and_dec()
-show_info("Right ascension (deg)", right_ascension * oops.DPR)
-show_info("Declination (deg)", declination * oops.DPR)
+show_info("Ring radius (km)", bp.ring_radius("uranus_ring_plane"))
 
-snapshot.insert_subfield("right_ascension", right_ascension)
-snapshot.insert_subfield("declination", declination)
+show_info("Ring longitude WRT J2000 (deg)",
+            bp.ring_longitude("uranus_ring_plane", "j2000") * oops.DPR)
 
-############################################
-# Sub-observer ring geometry
-############################################
+show_info("Ring longitude WRT Sun (deg)",
+            bp.ring_longitude("uranus_ring_plane", "sun") * oops.DPR)
 
-# Define the apparent location of the observer relative to Uranus ring frame
-ring_center_event = ring_body.path.photon_to_event(point_event)
-ring_center_event = ring_center_event.wrt_body(ring_body)
-ring_center_event.insert_subfield("perp", oops.Vector3((0,0,1)))    # Z-axis
+show_info("Ring longitude WRT SHA (deg)",
+            bp.ring_longitude("uranus_ring_plane", "sha") * oops.DPR)
 
-# Event separation in ring surface coordinates
-obs_wrt_ring_center = oops.Edelta.sub_events(point_event, ring_center_event)
-obs_wrt_ring_range = obs_wrt_ring_center.pos.norm()
+show_info("Ring longitude WRT observer (deg)",
+            bp.ring_longitude("uranus_ring_plane", "obs") * oops.DPR)
 
-(obs_wrt_ring_radius,
-obs_wrt_ring_longitude) = ring_body.surface.as_coords(
-                                                obs_wrt_ring_center.pos,
-                                                axes=2)
+show_info("Ring longitude WRT OHA (deg)",
+            bp.ring_longitude("uranus_ring_plane", "oha") * oops.DPR)
 
+show_info("Ring radial resolution (km/pixel)",
+            bp.ring_radial_resolution("uranus_ring_plane"))
 
-ring_center_emission = ring_center_event.emission_angle()
+show_info("Ring angular resolution (deg/pixel)",
+            bp.ring_angular_resolution("uranus_ring_plane") * oops.DPR)
 
-show_info("Ring range to observer (km)", obs_wrt_ring_range)
-show_info("Ring longitude of observer (deg)", obs_wrt_ring_longitude * oops.DPR)
-show_info("Ring center emission angle (deg)", ring_center_emission * oops.DPR)
+show_info("Ring incidence angle (deg)",
+            bp.incidence_angle("uranus_ring_plane") * oops.DPR)
 
-snapshot.insert_subfield("obs_wrt_ring_range", obs_wrt_ring_range)
-snapshot.insert_subfield("obs_wrt_ring_longitude", obs_wrt_ring_longitude)
-snapshot.insert_subfield("ring_center_emission", ring_center_emission)
+show_info("Ring emission angle (deg)",
+            bp.emission_angle("uranus_ring_plane") * oops.DPR)
 
-############################################
-# Sub-solar ring geometry
-############################################
+show_info("Ring phase angle (deg)",
+            bp.phase_angle("uranus_ring_plane") * oops.DPR)
 
-# Define the apparent location of the Sun relative to the ring frame
-sun_center_event = sun_body.path.photon_to_event(ring_center_event)
-sun_center_event = sun_center_event.wrt_body(ring_body)
+show_info("Uranus planetographic latitude (deg)",
+            bp.latitude("uranus", "graphic") * oops.DPR)
 
-# Event separation in ring surface coordinates
-sun_wrt_ring_center = oops.Edelta.sub_events(sun_center_event,
-                                             ring_center_event)
+show_info("Uranus planetocentric latitude (deg)",
+            bp.latitude("uranus", "centric") * oops.DPR)
 
-sun_wrt_ring_range = sun_wrt_ring_center.pos.norm()
+show_info("Uranus longitude WRT IAU (deg)",
+            bp.longitude("uranus", "iau", "east", 0) * oops.DPR)
 
-(sun_wrt_ring_radius,
-sun_wrt_ring_longitude) = ring_body.surface.as_coords(
-                                                sun_wrt_ring_center.pos,
-                                                axes=2)
+show_info("Uranus longitude WRT Sun (deg)",
+            bp.longitude("uranus", "sun", "east", 0) * oops.DPR)
 
-show_info("Ring range to Sun (km)", sun_wrt_ring_range)
-show_info("Ring longitude of Sun (deg)", sun_wrt_ring_longitude * oops.DPR)
+show_info("Uranus longitude WRT Sun, -180 to 180 (deg)",
+            bp.longitude("uranus", "sun", "east", -180) * oops.DPR)
 
-ring_center_incidence = ring_center_event.incidence_angle()
-ring_center_phase = ring_center_event.phase_angle()
+show_info("Uranus longitude WRT observer (deg)",
+            bp.longitude("uranus", "obs", "east", 0) * oops.DPR)
 
-show_info("Ring range to Sun (km)", sun_wrt_ring_range)
-show_info("Ring longitude of Sun (deg)", sun_wrt_ring_longitude * oops.DPR)
-show_info("Ring center incidence angle (deg)", ring_center_incidence * oops.DPR)
-show_info("Ring center phase angle (deg)", ring_center_phase * oops.DPR)
+show_info("Uranus longitude WRT observer, -180 to 180 (deg)",
+            bp.longitude("uranus", "obs", "east", -180) * oops.DPR)
 
-snapshot.insert_subfield("sun_wrt_ring_range", sun_wrt_ring_range)
-snapshot.insert_subfield("sun_wrt_ring_longitude", sun_wrt_ring_longitude)
-snapshot.insert_subfield("ring_center_incidence", ring_center_incidence)
-snapshot.insert_subfield("ring_center_phase", ring_center_phase)
+show_info("Uranus finest surface resolution (km/pixel)",
+            bp.finest_resolution("uranus"))
 
-############################################
-# Sub-observer Uranus geometry
-############################################
+show_info("Uranus coarsest surface resolution (km/pixel)",
+            bp.coarsest_resolution("uranus"))
 
-# Define the apparent location of the observer relative to the Uranus frame
-uranus_center_event = uranus_body.path.photon_to_event(point_event)
-uranus_center_event = uranus_center_event.wrt_body(uranus_body)
+show_info("Uranus incidence angle (deg)",
+            bp.incidence_angle("uranus") * oops.DPR)
 
-# Event separation in Uranus surface coordinates
-obs_wrt_uranus_center = oops.Edelta.sub_events(point_event,
-                                               uranus_center_event)
+show_info("Uranus emission angle (deg)",
+            bp.emission_angle("uranus") * oops.DPR)
 
-(obs_wrt_uranus_longitude,
-obs_wrt_uranus_latitude) = uranus_body.surface.as_coords(
-                                                obs_wrt_uranus_center.pos,
-                                                axes=2)
+show_info("Uranus phase angle (deg)",
+            bp.phase_angle("uranus") * oops.DPR)
 
-show_info("Uranus longitude of observer (deg)", obs_wrt_uranus_longitude *
-                                              oops.DPR)
-show_info("Uranus latitude of observer (km)", obs_wrt_uranus_latitude *
-                                              oops.DPR)
+# We can also define masks
+show_info("Uranus mask",
+            bp.where_intercepted("uranus"))
 
-snapshot.insert_subfield("obs_wrt_uranus_longitude",
-                                                 obs_wrt_uranus_longitude)
-snapshot.insert_subfield("obs_wrt_uranus_latitude", obs_wrt_uranus_latitude)
+show_info("Approximate mu ring mask",
+            bp.where_between(("ring_radius", "uranus_ring_plane"), 9.e4, 11.e4))
 
-############################################
-# Sub-solar Uranus geometry
-############################################
+show_info("Defined mu ring mask",
+            bp.where_intercepted("mu_ring"))
 
-# Define the apparent location of the Sun relative to the Uranus frame
-sun_center_event = sun_body.path.photon_from_event(uranus_center_event)
-sun_center_event = sun_center_event.wrt_body(uranus_body)
+# We can also outline masks
+show_info("Boundary outside Uranus",
+            bp.border_outside(("where_intercepted", "uranus")))
 
-# Event separation in Uranus surface coordinates
-sun_wrt_uranus_center = oops.Edelta.sub_events(sun_center_event,
-                                               uranus_center_event)
+show_info("Boundary inside Uranus",
+            bp.border_inside(("where_intercepted", "uranus")))
 
-(sun_wrt_uranus_longitude,
-sun_wrt_uranus_latitude) = uranus_body.surface.as_coords(
-                                                sun_wrt_uranus_center.pos,
-                                                axes=2)
+# We can also outline contours of a particular value
+show_info("Just above 100,000 km",
+            bp.border_above(("ring_radius","uranus_ring_plane"), 100000.))
+show_info("Just below 100,000 km",
+            bp.border_below(("ring_radius","uranus_ring_plane"), 100000.))
+show_info("Roughly centered on 100,000 km",
+            bp.border_atop(("ring_radius","uranus_ring_plane"), 100000.))
 
-show_info("Uranus longitude of Sun (deg)", sun_wrt_uranus_longitude * oops.DPR)
-show_info("Uranus latitude of Sun (km)", sun_wrt_uranus_latitude * oops.DPR)
+# The Uranian precessing/inclined rings are defined but have not been fully
+# validated
 
-snapshot.insert_subfield("sun_wrt_uranus_longitude", sun_wrt_uranus_longitude)
-snapshot.insert_subfield("sun_wrt_uranus_latitude", sun_wrt_uranus_latitude)
+epsilon = bp.ring_radius("epsilon_ring")
+centered = bp.ring_radius("uranus_ring_plane")
+print (epsilon - centered).min(), (epsilon - centered).max()
 
-############################################
-# Target bodies in sky coordinates and in fov
-############################################
+# So here is a plot of the nominal epsilon ring
 
+border = bp.border_atop(("ring_radius", "epsilon_ring"), 51149.32)
+pylab.imshow(border.vals)
+
+overlay = np.maximum(snapshot.data, snapshot.data.max() * border.vals)
+pylab.imshow(overlay)
+# You can see an offset in the position of the epsilon ring by about 10 pixels.
+# This is the pointing error for the image, and we need to find a way to fix it.
+
+# A quick cleanup of the image shows the ring more clearly
 blur = filters.median_filter(snapshot.data, 9)
 flat = (snapshot.data - blur)
 pylab.imshow(flat.clip(-200,600))
-pylab.gray()
 
-uranus_arrival_event = oops.Event(
-    snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
-    snapshot.path_id, snapshot.frame_id)
-
-ignore = uranus_body.path.photon_to_event(uranus_arrival_event)
-
-(uranus_center_ra, uranus_center_dec) = uranus_arrival_event.ra_and_dec()
-
-uranus_uv = snapshot.fov.uv_from_los(-uranus_arrival_event.arr).as_scalars()
-pylab.plot(uranus_uv[0].vals, uranus_uv[1].vals, "go")
-
-moon_arrival_event = oops.Event(
-    snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
-    snapshot.path_id, snapshot.frame_id)
-
-ignore = moon_multipath.photon_to_event(moon_arrival_event)
-
-# (moon_center_ra, moon_center_dec) = moon_arrival_event.ra_and_dec()
-#
-# for i in range(len(moon_multipath)):
-#     id = moon_multipath[i].path_id
-#     show_info(id + " center ra (deg)", moon_center_ra[i] * oops.DPR)
-#     show_info(id + " center dec (deg)", moon_center_dec[i] * oops.DPR)
-
-moon_uv = snapshot.fov.uv_from_los(-moon_arrival_event.arr).as_scalars()
-clip_u = moon_uv[0].clip(0, snapshot.data.shape[1])
-clip_v = moon_uv[1].clip(0, snapshot.data.shape[0])
-
-pylab.plot(clip_u.vals, clip_v.vals, "r+")
+overlay = np.maximum(flat, 600 * border.vals).clip(-200,600)
+pylab.imshow(overlay)
+# I am thinking we can do some test with the ring itself to find the offset
+# automatically. My idea is to use an FFT to find the offset between the image
+# and a blurred version of the border mask that maximized the correlation
+# between the images. TBD.
 
 
+# Onward to the moons...
+
+# Select all the regular moons of Uranus
+moons = snapshot.target.select_children(include_all=["REGULAR", "SATELLITE"])
+
+# Extract the names in order
+names = [moon.name for moon in moons]
+print names
+
+# Create a "multipath" that defines the path of each
+multipath = oops.Body.define_multipath(moons, id="URANIAN_MOONS")
+
+# Locate the moons in the FOV by solving for the photon paths
+image_event = oops.Event(snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
+                         snapshot.path_id, snapshot.frame_id)
+moon_event = multipath.photon_to_event(image_event)
+# At this point, image_event.arr contains the arrival vector of the photons from
+# each moon.
+
+# Where are they in the image?
+
+# This is the (u,v) image coordinate pair for each moon
+moon_uv = snapshot.fov.uv_from_los(-image_event.arr)
+print moon_uv
+
+# Or we can convert them to ra and dec with full sub-pixel precision
+(ra,dec) = image_event.ra_and_dec()
+radec = oops.Pair.from_scalars(ra, dec) * oops.DPR  # converted to degrees
+print radec
 

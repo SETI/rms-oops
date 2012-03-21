@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/inst/hst/nicmos/__init__.py: HST subclass NICMOS
+# oops/inst/hst/nicmos/__init__.py: HST subclass NICMOS
 ################################################################################
 
 import pyfits
@@ -146,15 +146,15 @@ class NICMOS(HST):
         detector = this.detector_name(hst_file)
 
         if detector == "NIC1":
-            from oops_.inst.hst.nicmos.nic1 import NIC1
+            from oops.inst.hst.nicmos.nic1 import NIC1
             obs = NIC1.from_opened_fitsfile( hst_file, parameters)
 
         elif detector == "NIC2":
-            from oops_.inst.hst.nicmos.nic2 import NIC2
+            from oops.inst.hst.nicmos.nic2 import NIC2
             obs = NIC2.from_opened_fitsfile(hst_file, parameters)
 
         elif detector == "NIC3":
-            from oops_.inst.hst.nicmos.nic3 import NIC3
+            from oops.inst.hst.nicmos.nic3 import NIC3
             obs = NIC3.from_opened_fitsfile(hst_file, parameters)
 
         else:

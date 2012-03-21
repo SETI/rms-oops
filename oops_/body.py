@@ -9,12 +9,14 @@ import os
 import spicedb
 import julian
 import gravity
+import cspice
 
 import oops_.path.all as path_
 import oops_.frame.all as frame_
 import oops_.surface.all as surface
 import oops_.spice_support as spice
 import oops_.registry as registry
+import oops_.constants as constants
 
 class Body(object):
     """Body is a class that defines the properties of, and relationships
@@ -106,7 +108,8 @@ class Body(object):
 
         self.surface = surface
         self.radius  = radius
-        assert self.surface.origin_id == self.path_id
+        # assert self.surface.origin_id == self.path_id
+        # This assertion is not strictly necessary
 
     def apply_ring_frame(self, epoch=None):
         """Adds the and ring_frame and ring_frame_id attributes to a Body."""
@@ -407,8 +410,46 @@ SATURN_C_RING = (122340., 136780.)
 SATURN_F_RING_LIMIT = 140612.
 
 URANUS_EPSILON_LIMIT = 51604.
+URANUS_MU_LIMIT = [97700. - 17000./2, 97700. + 17700./2]
+URANUS_NU_LIMIT = [67300. -  3800./2, 67300. +  3800./2]
 
 NEPTUNE_ADAMS_LIMIT = 62940.
+
+# Special definitions of Uranian eccentric/inclined rings
+URANUS_EPOCH = cspice.utc2et("1977-03-10T20:00:00")
+URANUS_OLD_GRAVITY = gravity.Gravity(5793939., [3.34343e-3, -2.885e-5], 26200.)
+
+# Local function used to adapt the tabulated elements from French et al. 1991.
+def uranus_elements(a, e, peri, i, node, da):
+    n = URANUS_OLD_GRAVITY.n(a)
+    prec = URANUS_OLD_GRAVITY.combo(a, (1,-1, 0))
+    regr = URANUS_OLD_GRAVITY.combo(a, (1, 0,-1))
+    peri *= constants.RPD
+    node *= constants.RPD
+    i *= constants.RPD
+    return (a, 0., n, e, peri, prec, i, node, regr, (a+da/2))
+    # The extra item returned is the outer radius in the orbit's frame
+
+URANUS_SIX_ELEMENTS  = uranus_elements(
+                        41837.15, 1.013e-3, 242.80, 0.0616,  12.12, 2.8)
+URANUS_FIVE_ELEMENTS = uranus_elements(
+                        42234.82, 1.899e-3, 170.31, 0.0536, 286.57, 2.8)
+URANUS_FOUR_ELEMENTS = uranus_elements(
+                        42570.91, 1.059e-3, 127.28, 0.0323,  89.26, 2.7)
+URANUS_ALPHA_ELEMENTS = uranus_elements(
+                        44718.45, 0.761e-3, 333.24, 0.0152,  63.08, 7.15+3.52)
+URANUS_BETA_ELEMENTS = uranus_elements(
+                        45661.03, 0.442e-3, 224.88, 0.0051, 310.05, 8.15+3.07)
+URANUS_ETA_ELEMENTS = uranus_elements(
+                        47175.91, 0.004e-3, 228.10, 0.0000,   0.00, 1.7)
+URANUS_GAMMA_ELEMENTS = uranus_elements(
+                        47626.87, 0.109e-3, 132.10, 0.0000,   0.00, 3.8)
+URANUS_DELTA_ELEMENTS = uranus_elements(
+                        48300.12, 0.004e-3, 216.70, 0.0011, 260.70, 7.0)
+URANUS_LAMBDA_ELEMENTS = uranus_elements(
+                        50023.94, 0.000e-3,   0.00, 0.0000,   0.00, 2.5)
+URANUS_EPSILON_ELEMENTS = uranus_elements(
+                        51149.32, 7.936e-3, 214.97, 0.0000,   0.00, 58.1+37.6)
 
 ################################################################################
 # Convenient procedure to load the entire Solar System
@@ -507,6 +548,36 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
                   ["SATELLITE", "IRREGULAR"])
     define_ring("URANUS", "URANUS_RING_PLANE", URANUS_EPSILON_LIMIT, [])
+    define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [])
+    define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [])
+
+    ignore = frame_.SpiceFrame("B1950", "J2000")
+    uranus_wrt_b1950 = registry.connect_frames("IAU_URANUS", "B1950")
+    ignore = frame_.RingFrame(uranus_wrt_b1950, URANUS_EPOCH, "URANUS_RINGS")
+
+    define_orbit("URANUS", "SIX_RING", URANUS_SIX_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", [])
+    define_orbit("URANUS", "FIVE_RING", URANUS_FIVE_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", [])
+    define_orbit("URANUS", "FOUR_RING", URANUS_FOUR_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", [])
+    define_orbit("URANUS", "ALPHA_RING", URANUS_ALPHA_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+    define_orbit("URANUS", "BETA_RING", URANUS_BETA_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+    define_orbit("URANUS", "ETA_RING", URANUS_ETA_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+    define_orbit("URANUS", "GAMMA_RING", URANUS_GAMMA_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+    define_orbit("URANUS", "DELTA_RING", URANUS_DELTA_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+    define_orbit("URANUS", "LAMBDA_RING", URANUS_LAMBDA_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", [])
+    define_orbit("URANUS", "EPSILON_RING", URANUS_EPSILON_ELEMENTS,
+                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+
+def define_orbit(parent_name, ring_name, elements, epoch, radii,
+                              reference, keywords):
 
     # Moons and rings of Neptune
     define_bodies(NEPTUNE_CLASSICAL, "NEPTUNE", "NEPTUNE",
@@ -596,6 +667,24 @@ def define_ring(parent_name, ring_name, radii, keywords):
     body.apply_surface(shape, rmax)
 
     body.add_keywords([parent, "RING", ring_name])
+    body.add_keywords(keywords)
+
+def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
+    """Defines the path, frame, surface and body for a given eccentric and/or
+    inclined ring as defined by a set of orbital elements.
+    """
+
+    parent = registry.body_lookup(parent_name)
+
+    orbit = surface.OrbitPlane(elements, epoch, parent.path_id, reference,
+                               id=ring_name)
+
+    body = Body(ring_name, orbit.internal_origin_id, orbit.internal_frame_id,
+                parent, parent)
+    body.apply_surface(orbit, elements[9])
+
+    body.add_keywords([parent, "RING", "ORBIT", ring_name])
+    body.add_keywords(keywords)
 
 ################################################################################
 # Initialize the registry

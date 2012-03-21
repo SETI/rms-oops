@@ -399,9 +399,8 @@ class Backplane(object):
     ############################################################################
     # Ring plane geometry
     #
-    # Radius keys are ("ring_intercept_radius", event_key, mask)
-    # Longitude keys are ("ring_intercept_longitude", event_key, mask,
-    #                     reference)
+    # Radius keys are ("ring_radius", event_key)
+    # Longitude keys are ("ring_longitude", event_key, reference)
     #   where reference can be "j2000", "obs", "oha", "sun" or "sha".
     ############################################################################
 
@@ -413,34 +412,25 @@ class Backplane(object):
         event_key = Backplane.fix_event_key(event_key)
         event = self.get_surface_event(event_key)
         surface = registry.body_lookup(event_key[0].upper()).surface
-        assert isinstance(surface, surface_.RingPlane)
+        assert isinstance(surface, (surface_.RingPlane, surface_.OrbitPlane))
 
         (r,lon) = surface.as_coords(event.pos, axes=2)
 
-        # Save with mask
-        self.new_backplane(("ring_radius", event_key, True), r)
-        self.new_backplane(("ring_longitude", event_key, True, "j2000"), lon)
+        self.new_backplane(("ring_radius", event_key), r)
+        self.new_backplane(("ring_longitude", event_key, "j2000"), lon)
 
-        # Also save without mask
-        r = Scalar(r.vals, False)
-        lon = Scalar(lon.vals, False)
-        self.new_backplane(("ring_radius", event_key, False), r)
-        self.new_backplane(("ring_longitude", event_key,
-                                                        False, "j2000"), lon)
-
-    def ring_radius(self, event_key, masked=True):
+    def ring_radius(self, event_key):
         """Radius of the ring intercept point in the image.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("ring_radius", event_key, masked)
+        key = ("ring_radius", event_key)
         if key not in self.backplanes.keys():
             self._fill_ring_intercepts(event_key)
 
         return self.backplanes[key]
 
-    def ring_longitude(self, event_key, masked=True,
-                                                  reference="j2000"):
+    def ring_longitude(self, event_key, reference="j2000"):
         """Longitude of the ring intercept point in the image.
         """
 
@@ -449,12 +439,12 @@ class Backplane(object):
 
         # Look up under the desired reference
         key0 = ("ring_longitude", event_key)
-        key = key0 + (masked, reference)
+        key = key0 + (reference,)
         if key in self.backplanes.keys():
             return self.backplanes[key]
 
         # If it is not found with reference J2000, fill in those backplanes
-        key_j2000 = key0 + (masked, "j2000")
+        key_j2000 = key0 + ("j2000",)
         if key_j2000 not in self.backplanes.keys():
             self._fill_ring_intercepts(event_key)
 
@@ -471,9 +461,8 @@ class Backplane(object):
         elif reference == "oha":
             ref_lon = self._sub_observer_ring_longitude(event_key) - np.pi
 
-        lon = (self.backplanes[key0 + (True, "j2000")] - ref_lon) % (2*np.pi)
-        self.new_backplane(key0 + (True, reference), lon)
-        self.new_backplane(key0 + (False, reference), Scalar(lon.vals, False))
+        lon = (self.backplanes[key0 + ("j2000",)] - ref_lon) % (2*np.pi)
+        self.new_backplane(key0 + (reference,), lon)
 
         return self.backplanes[key]
 
@@ -492,14 +481,14 @@ class Backplane(object):
         event = self.get_surface_event(event_key)
         center_event = Event(event.time, (0,0,0), (0,0,0),
                                          event.origin_id, event.frame_id)
-        ignore = path_.Waypoint(self.obs.path_id).photon_from_event(
-                                                                center_event)
+        obs_path = path_.Waypoint(self.obs_event.origin_id)
+        ignore = obs_path.photon_from_event(center_event)
 
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, surface_.RingPlane)
         (r,lon) = surface.as_coords(center_event.aberrated_dep(), axes=2)
 
-        self.new_backplane(key, Scalar(lon.vals))
+        self.new_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     def _sub_solar_ring_longitude(self, event_key):
@@ -523,22 +512,22 @@ class Backplane(object):
         assert isinstance(surface, surface_.RingPlane)
         (r,lon) = surface.as_coords(-center_event.aberrated_arr(), axes=2)
 
-        self.new_backplane(key, Scalar(lon.vals))
+        self.new_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     ############################################################################
     # Ring plane resolution
     #
-    # Radius keys: ("ring_intercept_radial_resolution", event_key, masked)
-    # Longitude keys: ("ring_intercept_angular_resolution", event_key, masked)
+    # Radius keys: ("ring_intercept_radial_resolution", event_key)
+    # Longitude keys: ("ring_intercept_angular_resolution", event_key)
     ############################################################################
 
-    def ring_radial_resolution(self, event_key, masked=True):
+    def ring_radial_resolution(self, event_key):
         """Projected radial resolution in km/pixel at the ring intercept point.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("ring_radial_resolution", event_key, masked)
+        key = ("ring_radial_resolution", event_key)
         try:
             return self.backplanes[key]
         except KeyError: pass
@@ -554,13 +543,13 @@ class Backplane(object):
         self.new_backplane(key, res)
         return self.backplanes[key]
 
-    def ring_angular_resolution(self, event_key, masked=True):
+    def ring_angular_resolution(self, event_key):
         """Projected angular resolution in radians/pixel at the ring intercept
         point.
         """
 
         event_key = Backplane.fix_event_key(event_key)
-        key = ("ring_angular_resolution", event_key, masked)
+        key = ("ring_angular_resolution", event_key)
         try:
             return self.backplanes[key]
         except KeyError: pass
@@ -579,10 +568,10 @@ class Backplane(object):
     ############################################################################
     # Surface geometry
     #
-    # Longitude keys are ("surface_intercept_longitude", event_key,
-    #                     direction, minimum, reference)
-    #   where direction can be "east", "west"; minimum can be 0 or -180,
-    #   reference can be "iau", "sun", "sha", "obs" or "oha".
+    # Longitude keys are ("longitude", event_key, reference, direction, minimum)
+    #   reference can be "iau", "sun", "sha", "obs" or "oha"
+    #   where direction can be "east", "west"
+    #   minimum can be 0 or -180
     #
     # Latitude keys are ("surface_intercept_latitude", event_key, lat_type)
     #   where lat_type can be "squashed", "centric" or "graphic"
@@ -600,27 +589,27 @@ class Backplane(object):
 
         (lon,lat) = surface.as_coords(event.pos, axes=2, derivs=False)
 
-        self.new_backplane(("longitude", event_key, "east", 0, "iau"), lon)
+        self.new_backplane(("longitude", event_key, "iau", "east", 0), lon)
         self.new_backplane(("latitude", event_key, "squashed"), lat)
 
-    def longitude(self, event_key, direction="east",
-                                    minimum=0, reference="iau"):
+    def longitude(self, event_key, reference="iau", direction="east",
+                                                    minimum=0, ):
         """Longitude at the surface intercept point in the image.
         """
 
         event_key = Backplane.fix_event_key(event_key)
+        assert reference in {"iau", "sun", "sha", "obs", "oha"}
         assert direction in {"east", "west"}
         assert minimum in {0, -180}
-        assert reference in {"iau", "sun", "sha", "obs", "oha"}
 
         # Look up under the desired reference
         key0 = ("longitude", event_key)
-        key = key0 + (direction, minimum, reference)
+        key = key0 + (reference, direction, minimum)
         if key in self.backplanes.keys():
             return self.backplanes[key]
 
         # If it is not found with default keys, fill in those backplanes
-        key_default = key0 + ("east", 0, "iau")
+        key_default = key0 + ("iau", "east", 0)
         if key_default not in self.backplanes.keys():
             self._fill_surface_intercepts(event_key)
 
@@ -697,14 +686,14 @@ class Backplane(object):
         event = self.get_surface_event(event_key)
         center_event = Event(event.time, (0,0,0), (0,0,0),
                                          event.origin_id, event.frame_id)
-        ignore = path_.Waypoint(self.obs.path_id).photon_from_event(
-                                                                center_event)
+        obs_path = path_.Waypoint(self.obs_event.origin_id)
+        ignore = obs_path.photon_from_event(center_event)
 
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, (surface_.Spheroid, surface_.Ellipsoid))
         (lon,lat) = surface.as_coords(center_event.aberrated_dep(), axes=2)
 
-        self.new_backplane(key, Scalar(lon.vals))
+        self.new_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     def _sub_solar_surface_longitude(self, event_key):
@@ -728,7 +717,7 @@ class Backplane(object):
         assert isinstance(surface, (surface_.Spheroid, surface_.Ellipsoid))
         (lon,lat) = surface.as_coords(-center_event.aberrated_arr(), axes=2)
 
-        self.new_backplane(key, Scalar(lon.vals))
+        self.new_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     ############################################################################
@@ -1238,10 +1227,10 @@ class Test_Backplane(unittest.TestCase):
         test = bp.coarsest_resolution("saturn")
         show_info("Saturn coarsest surface resolution (km)", test)
 
-        test = bp.ring_radius("saturn_main_rings", masked=True)
+        test = bp.ring_radius("saturn_main_rings")
         show_info("Ring radius (km)", test)
 
-        test = bp.ring_radius("saturn_main_rings", masked=False)
+        test = bp.ring_radius("saturn_main_rings").unmasked()
         show_info("Ring radius unmasked (km)", test)
 
         test = bp.ring_longitude("saturn_main_rings",reference="j2000")
