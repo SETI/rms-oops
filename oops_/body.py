@@ -111,16 +111,18 @@ class Body(object):
         # assert self.surface.origin_id == self.path_id
         # This assertion is not strictly necessary
 
-    def apply_ring_frame(self, epoch=None):
+    def apply_ring_frame(self, epoch=None, retrograde=False):
         """Adds the and ring_frame and ring_frame_id attributes to a Body."""
 
-        # Make sure the epochs match
+        # On a repeat call, make sure they match
         if self.ring_frame_id is not None:
             ringframe = registry.as_frame(self.ring_frame_id)
             assert ringframe.epoch == epoch
+            assert ringframe.retrograde == retrograde
             return
 
-        self.ring_frame = frame_.RingFrame(self.frame_id, epoch)
+        self.ring_frame = frame_.RingFrame(self.frame_id, epoch=epoch,
+                                           retrograde=retrograde)
         self.ring_frame_id = self.ring_frame.frame_id
 
     def apply_gravity(self, gravity):
@@ -492,6 +494,9 @@ def define_solar_system(start_time, stop_time, asof=None):
     spicedb.furnish_solar_system(start_time, stop_time, asof)
     spicedb.close_db()
 
+    # We might need B1950 in addition to J2000
+    ignore = frame_.SpiceFrame("B1950", "J2000")
+
     # SSB and Sun and SSB
     define_bodies(["SSB"], None, None, ["SUN", "BARYCENTER"])
     define_bodies(["SUN"], None, None, ["SUN"])
@@ -547,37 +552,35 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "REGULAR"])
     define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
                   ["SATELLITE", "IRREGULAR"])
-    define_ring("URANUS", "URANUS_RING_PLANE", URANUS_EPSILON_LIMIT, [])
-    define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [])
-    define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [])
+    define_ring("URANUS", "URANUS_RING_PLANE", URANUS_EPSILON_LIMIT, [],
+                                                            retrograde=True)
+    define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [],   retrograde=True)
+    define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [],   retrograde=True)
 
-    ignore = frame_.SpiceFrame("B1950", "J2000")
     uranus_wrt_b1950 = registry.connect_frames("IAU_URANUS", "B1950")
-    ignore = frame_.RingFrame(uranus_wrt_b1950, URANUS_EPOCH, "URANUS_RINGS")
+    ignore = frame_.RingFrame(uranus_wrt_b1950, URANUS_EPOCH,
+                                         "URANUS_RINGS_B1950", retrograde=True)
 
     define_orbit("URANUS", "SIX_RING", URANUS_SIX_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", [])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", [])
     define_orbit("URANUS", "FIVE_RING", URANUS_FIVE_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", [])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", [])
     define_orbit("URANUS", "FOUR_RING", URANUS_FOUR_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", [])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", [])
     define_orbit("URANUS", "ALPHA_RING", URANUS_ALPHA_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
     define_orbit("URANUS", "BETA_RING", URANUS_BETA_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
     define_orbit("URANUS", "ETA_RING", URANUS_ETA_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
     define_orbit("URANUS", "GAMMA_RING", URANUS_GAMMA_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
     define_orbit("URANUS", "DELTA_RING", URANUS_DELTA_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
     define_orbit("URANUS", "LAMBDA_RING", URANUS_LAMBDA_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", [])
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", [])
     define_orbit("URANUS", "EPSILON_RING", URANUS_EPSILON_ELEMENTS,
-                           URANUS_EPOCH, "URANUS_RINGS", ["MAIN"])
-
-def define_orbit(parent_name, ring_name, elements, epoch, radii,
-                              reference, keywords):
+                           URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
 
     # Moons and rings of Neptune
     define_bodies(NEPTUNE_CLASSICAL, "NEPTUNE", "NEPTUNE",
@@ -638,14 +641,14 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         if "BARYCENTER" in body.keywords and parent is not None:
             body.add_keywords(parent)
 
-def define_ring(parent_name, ring_name, radii, keywords):
+def define_ring(parent_name, ring_name, radii, keywords, retrograde=False):
     """Defines the path, frame, surface and body for a given ring, given its
     inner and outer radii. A single radius value is used to define the outer
     limit of rings, but the ring plane itself has no boundaries.
     """
 
     parent = registry.body_lookup(parent_name)
-    parent.apply_ring_frame()
+    parent.apply_ring_frame(retrograde=retrograde)
 
     # Interpret the radii
     try:

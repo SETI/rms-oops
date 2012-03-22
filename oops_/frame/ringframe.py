@@ -19,7 +19,7 @@ class RingFrame(Frame):
     ascending node of the equator within the reference frame.
     """
 
-    def __init__(self, frame, epoch=None, id=None):
+    def __init__(self, frame, epoch=None, id=None, retrograde=False):
         """Constructor for a RingFrame Frame.
 
         Input:
@@ -37,6 +37,9 @@ class RingFrame(Frame):
                         default, it is the planet frame's name with "_DESPUN"
                         added as a suffix when epoch is None, or "_INERTIAL"
                         added as a suffix when an epoch is specified.
+
+            retrograde  True to flip the sign of the Z-axis. Necessary for
+                        retrograde systems like Uranus.
         """
 
         frame = registry.as_frame(frame)
@@ -52,6 +55,7 @@ class RingFrame(Frame):
 
         self.planet_frame = frame
         self.epoch = epoch
+        self.retrograde = retrograde
         self.transform = None
 
         # For a fixed epoch, derive the inertial tranform now
@@ -80,10 +84,13 @@ class RingFrame(Frame):
             return self.transform
 
         # Otherwise, calculate it for the current time
-        frame = self.planet_frame.transform_at_time(time, quick)
-        matrix = frame.matrix.vals
+        xform = self.planet_frame.transform_at_time(time, quick)
+        matrix = xform.matrix.vals
 
         # The bottom row of the matrix is the z-axis of the frame
+        if self.retrograde:
+            matrix[...,2,:] = -matrix[...,2,:]
+
         z_axis = matrix[...,2,:]
 
         # Replace the X-axis of the matrix using (0,0,1) cross Z-axis
@@ -98,7 +105,7 @@ class RingFrame(Frame):
         # Replace the Y-axis of the matrix using Y = Z cross X
         matrix[...,1,:] = utils.cross3d(z_axis, matrix[...,0,:])
 
-        return Transform(Matrix3(matrix, frame.matrix.mask), Vector3([0,0,0]),
+        return Transform(Matrix3(matrix, xform.matrix.mask), Vector3([0,0,0]),
                          self.frame_id, self.reference_id, None)
 
 ################################################################################
