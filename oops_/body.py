@@ -418,7 +418,6 @@ URANUS_NU_LIMIT = [67300. -  3800./2, 67300. +  3800./2]
 NEPTUNE_ADAMS_LIMIT = 62940.
 
 # Special definitions of Uranian eccentric/inclined rings
-URANUS_EPOCH = cspice.utc2et("1977-03-10T20:00:00")
 URANUS_OLD_GRAVITY = gravity.Gravity(5793939., [3.34343e-3, -2.885e-5], 26200.)
 
 # Local function used to adapt the tabulated elements from French et al. 1991.
@@ -557,6 +556,7 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [],   retrograde=True)
     define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [],   retrograde=True)
 
+    URANUS_EPOCH = cspice.utc2et("1977-03-10T20:00:00")
     uranus_wrt_b1950 = registry.connect_frames("IAU_URANUS", "B1950")
     ignore = frame_.RingFrame(uranus_wrt_b1950, URANUS_EPOCH,
                                          "URANUS_RINGS_B1950", retrograde=True)
