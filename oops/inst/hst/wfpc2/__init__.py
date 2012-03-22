@@ -240,12 +240,6 @@ class WFPC2(HST):
         obs = this.construct_snapshot(hst_file, parameters)
 
         # Insert subfields common to all NICMOS images
-        obs.insert_subfield("detector", WFPC2().detector_name(hst_file,
-                                                              parameters))
-        obs.insert_subfield("filter", WFPC2().filter_name(hst_file))
-        obs.insert_subfield("quality", WFPC2().quality_mask(hst_file,
-                                                            parameters))
-        obs.insert_subfield("error", None)
         obs.insert_subfield("layer", layer)
         obs.insert_subfield("chip", WFPC2.CHIPS[layer])
 

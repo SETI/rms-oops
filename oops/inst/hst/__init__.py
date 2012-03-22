@@ -111,10 +111,16 @@ class HST(object):
 
         return hst_file[1].data
 
+    def error_array(self, hst_file, parameters={}):
+        """Returns an array containing the uncertainty values associated with
+        the data."""
+
+        return hst_file[2].data
+
     def quality_mask(self, hst_file, parameters={}):
         """Returns an array containing the data quality mask."""
 
-        return hst_file[2].data
+        return hst_file[3].data
 
     # This works for Snapshot observations. Others must override.
     def time_limits(self, hst_file):
@@ -254,16 +260,26 @@ class HST(object):
             point_calib = None
             extended_calib = None
 
+        # Create a list of FITS header objects for a subfield
+        headers = []
+        for objects in hst_file:
+            headers.append(objects.header)
+
         return oops.obs.Snapshot(self.time_limits(hst_file),        # time
                                  fov,                               # fov
                                  "EARTH",                           # path_id
                                  self.register_frame(hst_file),     # frame_id
-                                 data = self.data_array(hst_file),  # subfields
+                                 data = self.data_array(hst_file),
+                                 error = self.error_array(hst_file),
                                  quality = self.quality_mask(hst_file),
                                  target = self.target_body(hst_file),
+                                 telescope = self.telescope_name(hst_file),
+                                 instrument = self.instrument_name(hst_file),
+                                 detector = self.detector_name(hst_file),
+                                 filter = self.filter_name(hst_file),
                                  point_calib = point_calib,
                                  extended_calib = extended_calib,
-                                 pyfits = hst_file)
+                                 headers = headers)
 
     ############################################################################
     # IDC (distortion model) support functions
@@ -662,14 +678,6 @@ class HST(object):
         else:
             raise IOError("unsupported instrument in HST file " +
                           this.filespec(hst_file) + ": " + instrument)
-
-        # Insert a list of FITS header objects as a subfield
-        obs.insert_subfield("instrument", instrument)
-
-        headers = []
-        for objects in hst_file:
-            headers.append(objects.header)
-        obs.insert_subfield("header", headers)
 
         return obs
 

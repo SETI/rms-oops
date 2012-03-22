@@ -161,12 +161,6 @@ class NICMOS(HST):
             raise IOError("unrecognized detector in HST/NICMOS file " +
                           this.filespec(hst_file) + ": " + detector)
 
-        # Insert subfields common to all NICMOS images
-        obs.insert_subfield("detector", detector)
-        obs.insert_subfield("filter", NICMOS().filter_name(hst_file))
-        obs.insert_subfield("quality", hst_file[2].data)
-        obs.insert_subfield("error", hst_file[3].data)
-
         return obs
 
 ################################################################################
