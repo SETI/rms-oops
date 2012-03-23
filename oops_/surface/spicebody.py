@@ -46,13 +46,13 @@ def spice_body(spice_id):
 
 import unittest
 
-cspice.furnsh("test_data/spice/naif0009.tls")
-cspice.furnsh("test_data/spice/pck00010.tpc")
-cspice.furnsh("test_data/spice/de421.bsp")
-
 class Test_spice_body(unittest.TestCase):
     
     def runTest(self):
+
+        cspice.furnsh("test_data/spice/naif0009.tls")
+        cspice.furnsh("test_data/spice/pck00010.tpc")
+        cspice.furnsh("test_data/spice/de421.bsp")
 
         ignore = SpicePath("VENUS", "SSB", "J2000", "APHRODITE")
         ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
