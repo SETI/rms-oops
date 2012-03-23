@@ -176,7 +176,7 @@ class Transform(object):
 
         return pos_target
 
-    def rotate_pos_vel(self, pos, vel, derivs=False):
+    def rotate_pos_vel(self, pos, vel):
         """Rotates the coordinates of a position and velocity forward into the
         target frame, also allowing for the artificial component of the velocity
         for a position off the origin in a rotating frame.
@@ -186,37 +186,23 @@ class Transform(object):
 
             vel         velocity as a Vector3, in the reference frame.
 
-            derivs      True to calculate the time-derivative as well.
-
         Return:         a tuple containing the same Vector3 position and
                         velocity transformed into the target frame.
 
-                        If derivs is True, then the returned position has a
-                        subfield "d_dt", a Vector3 representing the partial
-                        derivatives with respect to time.
+        Note that this method has no "derivs" argument because derivatives are
+        handled automatically in the velocity component.
         """
-
-        self.matrix.subfield_math = derivs
-        self.omega.subfield_math = derivs
 
         # pos_target = matrix * pos_ref
         # vel_target = matrix * (vel_ref - omega x pos_ref)
 
         pos_target = self.matrix * pos
 
-        velocity_is_easy = self.is_fixed or pos == Transform.ZERO_VECTOR3
+        velocity_is_easy = self.is_fixed or (pos == Transform.ZERO_VECTOR3)
         if velocity_is_easy:
             vel_target = self.matrix * vel
         else:
             vel_target = self.matrix * (vel - self.omega.cross(pos))
-
-        # Calculate/update the time-derivative if necessary
-        if derivs:
-            if velocity_is_easy:
-                pos_target.add_to_subfield("d_dt", vel_target.as_column())
-            else:
-                dpos_dt = self.matrix * vel + self.dmatrix_dt.rotate(pos)
-                pos_target.add_to_subfield("d_dt", dpos_dt.as_column())
 
         return (pos_target, vel_target)
 
@@ -257,7 +243,7 @@ class Transform(object):
 
         return pos_ref
 
-    def unrotate_pos_vel(self, pos, vel, derivs=False):
+    def unrotate_pos_vel(self, pos, vel):
         """Un-rotates the coordinates of a position and velocity backward into
         the reference frame.
 
@@ -266,20 +252,12 @@ class Transform(object):
 
             vel         velocity as a Vector3, in the target frame.
 
-            derivs      True to calculate derivatives of position with respect
-                        to pos, vel and time in the target frame. Derivatives
-                        of the velocities are not calculated.
-
         Return:         a tuple containing the same Vector3 position and
                         velocity transformed back into the reference frame.
 
-                        If derivs is True, then the returned position has a
-                        subfield "d_dt", a Vector3 representing the partial
-                        derivatives with respect to time.
+        Note that this method has no "derivs" argument because derivatives are
+        handled automatically in the velocity component.
         """
-
-        self.matrix.subfield_math = derivs
-        self.omega.subfield_math = derivs
 
         # pos_ref = matrix-T * pos_target
         # vel_ref = matrix-T * vel_target + omega x pos_ref
@@ -290,16 +268,7 @@ class Transform(object):
         if velocity_is_easy:
             vel_ref = self.matrix.unrotate(vel)
         else:
-            dpos_ref_dt = self.matrix.unrotate(vel)
-            vel_ref = dpos_ref_dt + self.omega.cross(pos_ref)
-
-        # Calculate/update the time-derivative if necessary
-        if derivs:
-            if velocity_is_easy:
-                pos_ref.add_to_subfield("d_dt", vel_ref.as_column())
-            else:
-                dpos_dt = dpos_ref_dt + self.dmatrix_dt.unrotate(pos)
-                pos_ref.add_to_subfield("d_dt", dpos_dt.as_column())
+            vel_ref = self.matrix.unrotate(vel) + self.omega.cross(pos_ref)
 
         return (pos_ref, vel_ref)
 

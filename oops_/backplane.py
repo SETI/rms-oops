@@ -167,18 +167,18 @@ class Backplane(object):
         dest = self.get_surface_event(event_key[1:])
         surface = registry.body_lookup(event_key[0].upper()).surface
 
-        # Always calculate derivatives for the first step from the observer
         event = surface.photon_to_event(dest, derivs=True)
         event.event_key = event_key
         self.surface_events_w_derivs[event_key] = event
 
-        event = event.plain()
-        event.event_key = event_key
-        self.surface_events[event_key] = event
+        event_wo_derivs = event.plain()
+        event_wo_derivs.event_key = event_key
+        self.surface_events[event_key] = event_wo_derivs
 
         # Also save into the dictionary keyed by the string name alone
         if len(event_key) == 1:
-            self.surface_events[event_key[0]] = event
+            self.surface_events_w_derivs[event_key[0]] = event
+            self.surface_events[event_key[0]] = event_wo_derivs
 
         return event
 
@@ -414,6 +414,7 @@ class Backplane(object):
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, (surface_.RingPlane, surface_.OrbitPlane))
 
+        # (r,lon) = surface.event_as_coords(event, axes=2)
         (r,lon) = surface.as_coords(event.pos, axes=2)
 
         self.new_backplane(("ring_radius", event_key), r)
@@ -534,9 +535,10 @@ class Backplane(object):
 
         event = self.get_surface_event_w_derivs(event_key)
         surface = registry.body_lookup(event_key[0].upper()).surface
-        assert isinstance(surface, surface_.RingPlane)
+        assert isinstance(surface, (surface_.RingPlane, surface_.OrbitPlane))
 
-        (rad,lon) = surface.as_coords(event.pos, axes=2, derivs=(True,False))
+        (rad,lon) = surface.event_as_coords(event, axes=2, derivs=(True,False))
+
         drad_duv = rad.d_dpos * event.pos.d_dlos * self.meshgrid.dlos_duv
         res = drad_duv.as_pair().norm()
 
@@ -558,7 +560,7 @@ class Backplane(object):
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, surface_.RingPlane)
 
-        (rad,lon) = surface.as_coords(event.pos, axes=2, derivs=(False,True))
+        (rad,lon) = surface.event_as_coords(event, axes=2, derivs=(False,True))
         dlon_duv = lon.d_dpos * event.pos.d_dlos * self.meshgrid.dlos_duv
         res = dlon_duv.as_pair().norm()
 
@@ -587,7 +589,7 @@ class Backplane(object):
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, (surface_.Spheroid, surface_.Ellipsoid))
 
-        (lon,lat) = surface.as_coords(event.pos, axes=2, derivs=False)
+        (lon,lat) = surface.event_as_coords(event, axes=2, derivs=False)
 
         self.new_backplane(("longitude", event_key, "iau", "east", 0), lon)
         self.new_backplane(("latitude", event_key, "squashed"), lat)

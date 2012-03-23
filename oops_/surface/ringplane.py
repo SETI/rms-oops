@@ -68,10 +68,7 @@ class RingPlane(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface, with
                         optional units.
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a RingPlane, this argument is
-                        ignored and can be omitted.
+            obs         ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      a boolean or tuple of booleans. If True, then the
@@ -112,12 +109,12 @@ class RingPlane(Surface):
             if derivs[0]:
                 dr_dpos = VectorN(pos.vals[...]*(1,1,0), pos.mask).unit()
                 r.insert_subfield("d_dpos", dr_dpos.as_row())
-                r.insert_subfield("d_dobs", RingPlane.ZERO_MATRIX)
+                r.insert_subfield("d_dobs", RingPlane.ZERO_ROW)
 
             if derivs[1]:
                 dtheta_dpos = RingPlane.Z_AXIS.cross(pos) / r**2
                 theta.insert_subfield("d_dpos", dtheta_dpos.as_row())
-                theta.insert_subfield("d_dobs", RingPlane.ZERO_MATRIX)
+                theta.insert_subfield("d_dobs", RingPlane.ZERO_ROW)
 
             if axes > 2 and derivs[2]:
                 z.insert_subfield("d_dpos", RingPlane.Z_AXIS_ROW)
@@ -136,10 +133,7 @@ class RingPlane(Surface):
             theta       a Scalar of longitude values, with optional units.
             z           an optional Scalar of elevation values, with optional
                         units; default is Scalar(0.).
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a RingPlane, this argument is
-                        ignored and can be omitted.
+            obs         ignored.
             derivs      if True, the partial derivatives of the returned vector
                         with respect to the coordinates are returned as well.
 
@@ -320,73 +314,6 @@ class RingPlane(Surface):
             perp.insert_subfield("d_dpos", RingPlane.ZERO_MATRIX.copy())
 
         return perp
-
-    def intercept_with_normal(self, normal):
-        """Constructs the intercept point on the surface where the normal vector
-        is parallel to the given vector.
-
-        Input:
-            normal      a Vector3 of normal vectors, with optional units.
-            derivs      true to return a matrix of partial derivatives.
-
-        Return:         a unitless Vector3 of surface intercept points, in km.
-                        Where no solution exists, the components of the returned
-                        vector should be masked.
-
-                        If derivs is True, then the returned intercept points
-                        have a subfield "d_dperp", which contains the partial
-                        derivatives with respect to components of the normal
-                        vector, as a MatrixN object with item shape [3,3].
-        """
-
-        # For a flat ring plane this is a degenerate problem. The function
-        # returns (0,0,0) as the location where every exactly perpendicular
-        # vector intercepts the plane. It returns masked values everywhere
-        # else.
-
-        normal = Vector3.as_standard(normal)
-
-        vals = np.zeros(normal.shape + [3])
-        mask = (normal.mask | (normal.vals[...,0] != 0.)
-                            | (normal.vals[...,1] != 0.))
-
-        intercept = Vector3(vals, mask)
-
-        if derivs:
-            intercept.insert_subfield("d_dperp", RingPlane.ZERO_MATRIX.copy())
-
-        return intercept
-
-    def intercept_normal_to(self, pos):
-        """Constructs the intercept point on the surface where a normal vector
-        passes through a given position.
-
-        Input:
-            pos         a Vector3 of positions near the surface, with optional
-                        units.
-
-        Return:         a unitless vector3 of surface intercept points. Where no
-                        solution exists, the returned vector should be masked.
-
-                        If derivs is True, then the returned intercept points
-                        have a subfield "d_dpos", which contains the partial
-                        derivatives with respect to components of the given
-                        position vector, as a MatrixN object with item shape
-                        [3,3].
-        """
-
-        intercept = Vector3.as_standard(pos) * (1,1,0)
-
-        # The intercept is undefined outside the ring's radial limits
-        if self.radii is not None:
-            r_sq = intercept.vals[...,0]**2 + intercept.vals[...,1]**2
-            intercept.mask = (intercept.mask | (r_sq < self.radii_sq[0]) |
-                                               (r_sq > self.radii_sq[1]))
-
-        if derivs:
-            intercept.insert_subfield("d_dpos", RingPlane.ZERO_MATRIX.copy())
-
-        return intercept
 
     def velocity(self, pos):
         """Returns the local velocity vector at a point within the surface.

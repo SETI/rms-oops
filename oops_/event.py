@@ -531,16 +531,17 @@ class Event(object):
                         reference frame must be the current frame of the event.
             quick       False to disable QuickPaths; True for the default
                         options; a dictionary to override specific options.
-            derivs      if True, any vectors in the event are returned with
-                        additional subfields "d_dt" and "d_dpos", representing
-                        the partial derivatives in the new frame and path
-                        relative to those in the original frame.
+            derivs      if True, then any subfields in the event are returned
+                        with a subfield "d_dt", representing its partial
+                        derivative in this frame relative to that in the
+                        original frame. This is combined with any pre-existing
+                        subfield of the same name.
         """
 
         assert self.frame_id == frame.reference_id
 
         transform = frame.transform_at_time(self.time, quick)
-        (pos, vel) = transform.rotate_pos_vel(self.pos, self.vel, derivs=derivs)
+        (pos, vel) = transform.rotate_pos_vel(self.pos, self.vel)
         result = Event(self.time, pos, vel, self.origin_id, frame.frame_id)
 
         for key in self.subfields:
@@ -568,16 +569,17 @@ class Event(object):
                         The returned event will use the reference frame instead.
             quick       False to disable QuickPaths; True for the default
                         options; a dictionary to override specific options.
-            derivs      if True, any vectors in the event are returned with
-                        additional subfields "d_dt", representing the rate of
-                        change due to rotation of the frame.
+            derivs      if True, then any subfields in the event are returned
+                        with a subfield "d_dt", representing its partial
+                        derivative in this frame relative to that in the
+                        previous frame. This is combined with any pre-existing
+                        subfield of the same name.
         """
 
         assert self.frame_id == frame.frame_id
 
         transform = frame.transform_at_time(self.time, quick)
-        (pos, vel) = transform.unrotate_pos_vel(self.pos, self.vel,
-                                                derivs=derivs)
+        (pos, vel) = transform.unrotate_pos_vel(self.pos, self.vel)
         result = Event(self.time, pos, vel, self.origin_id, frame.reference_id)
 
         for key in self.subfields:

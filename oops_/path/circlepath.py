@@ -69,7 +69,7 @@ class CirclePath(Path):
                         and velocity of the path.
         """
 
-        lon = self.lon + self.rate * (time - self.epoch)
+        lon = self.lon + self.rate * (Scalar.as_scalar(time) - self.epoch)
         r_cos_lon = self.radius * lon.cos()
         r_sin_lon = self.radius * lon.sin()
 

@@ -7,6 +7,9 @@
 # 3/5/12 MRS: Added class function resolution(), which calculates spatial
 #   resolution on a surface based on derivatives with respect to pixel
 #   coordinates (u,v).
+# 3/23/12 MRS - Introduced event_as_coords() and as_event() as alternatives to
+#   as_coords() and as_vector(). They begin to address the problems with virtual
+#   surfaces such as Ansa.
 ################################################################################
 
 import numpy as np
@@ -25,9 +28,9 @@ class Surface(object):
     on the surface, and an optional third coordinate can define points above or
     below that surface. The shape is always fixed."""
 
-########################################
-# Each subclass must override...
-########################################
+    ########################################
+    # Each subclass must override...
+    ########################################
 
     def __init__(self):
         """Constructor for a Surface object.
@@ -49,10 +52,8 @@ class Surface(object):
         Input:
             pos         a Vector3 of positions at or near the surface, with
                         optional units.
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a RingPlane, this argument is
-                        ignored and can be omitted.
+            obs         a Vector3 of observer observer positions. Ignored for
+                        solid surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      a boolean or tuple of booleans. If True, then the
@@ -86,9 +87,8 @@ class Surface(object):
             coord3      a third scalar that is equal to zero on the defined
                         surface and that measures distance away from that
                         surface.
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer.
+            obs         a Vector3 of observer positions. Ignored for solid
+                        surfaces but needed for virtual surfaces.
             derivs      if True, the partial derivatives of the returned vector
                         with respect to the coordinates are returned as well.
 
@@ -153,9 +153,14 @@ class Surface(object):
 
         pass
 
+    ########################################
+    # Optional Methods...
+    ########################################
+
     def intercept_with_normal(self, normal, derivs=False):
         """Constructs the intercept point on the surface where the normal vector
-        is parallel to the given vector.
+        is parallel to the given vector. This is only needed for a limited set
+        of subclasses such as Spheroid.
 
         Input:
             normal      a Vector3 of normal vectors, with optional units.
@@ -171,11 +176,13 @@ class Surface(object):
                         vector, as a MatrixN object with item shape [3,3].
         """
 
-        pass
+        raise NotImplementedError("intercept_with_normal() not implemented " +
+                                  "for class " + type(self).__name__)
 
     def intercept_normal_to(self, pos, derivs=False):
         """Constructs the intercept point on the surface where a normal vector
-        passes through a given position.
+        passes through a given position. This is only needed for a limited set
+        of subclasses such as Spheroid.
 
         Input:
             pos         a Vector3 of positions near the surface, with optional
@@ -191,7 +198,8 @@ class Surface(object):
                         [3,3].
         """
 
-        pass
+        raise NotImplementedError("intercept_normal_to() not implemented " +
+                                  "for class " + type(self).__name__)
 
     def velocity(self, pos):
         """Returns the local velocity vector at a point within the surface.
@@ -207,11 +215,71 @@ class Surface(object):
 
         return Vector3((0,0,0))
 
-################################################################################
-# Override if a surface uses an internal frame or path that differs from the
-# frame and path with which it was defined.
-################################################################################
+    ############################################################################
+    # Generally should not require overrides
+    ############################################################################
 
+    # 3/23 MRS - This alternative to as_coords() should be adaptable to virtual
+    # surfaces. Tested and in use by Backplane class.
+    def event_as_coords(self, event, axes=3, derivs=False):
+        """Converts an event object to coordinates and, optionally, their
+        derivatives. It uses the linked object to determine the direction to
+        the observer.
+
+        Input:
+            event       an event occurring at or near the surface.
+            subfield    "arr" if this event is defined by arriving photons from
+                        another event; "dep" if this event is defined by photons
+                        departing to another event.
+            axes        2 or 3, indicating whether to return a tuple of two or
+                        three Scalar objects.
+            derivs      a boolean or tuple of booleans. If True, then the
+                        partial derivatives of each coordinate are returned as
+                        well. Using a tuple, you can indicate whether to return
+                        time derivatives on a coordinate-by-coordinate basis.
+
+        Return:         coordinate values packaged as a tuple containing two or
+                        three unitless Scalars, one for each coordinate.
+
+                        Where derivs is True, then each coordinate returned will
+                        have a subfield "d_dt" inserted or updated with the
+                        rate of change.
+        """
+
+        # Locate the event WRT the surface frame if it is not already there
+        any_derivs = np.any(derivs)
+        wrt_surface = event.wrt(self.origin_id, self.frame_id,
+                                derivs=any_derivs)
+
+        # Define the connection to the observer, if any, in the surface frame
+        if event.sign == 0:
+            obs = None
+        elif event.sign < 0:
+            obs = event.pos + event.dep_lt * event.dep.unit() * constants.C
+        else:
+            obs = event.pos + event.arr_lt * event.arr.unit() * constants.C
+
+        # Evaluate the coords and optional derivatives
+        coords = self.as_coords(wrt_surface.pos, obs=obs, axes=axes,
+                                derivs=derivs)
+
+        if not any_derivs: return coords
+
+        # Update the derivatives WRT time if necessary
+        for coord in coords:
+            if "d_dpos" in coord.subfields.keys():
+                vel = wrt_surface.vel.as_column()
+                coord.add_to_subfield("d_dt", (coord.d_dpos * vel).as_scalar())
+
+           # This part not yet tested but I think it should work. 3/23 MRS
+            if "d_dobs" in coord.subfields.keys() and event.link is not None:
+                vel = event.link.vel.as_column()
+                coord.add_to_subfield("d_dt", (coord.d_dobs * vel).as_scalar())
+
+        return coords
+
+    # 3/23 MRS currently used in OrbitFrame unit tests
+    # May need to be modified for further use
     def as_event(self, time, coords, dcoords_dt=None, obs=None):
         """Converts a time and coordinates in the surface's internal coordinate
         system into an event object.
@@ -243,7 +311,7 @@ class Surface(object):
             (coord1, coord2, coord3) = coords
 
         derivs = (dcoords_dt is not None)
-        pos = self.as_vector3(coord1, coord2, coord3, obs, derivs=derivs)
+        pos = self.as_vector3(coord1, coord2, coord3, obs=obs, derivs=derivs)
         vel = self.velocity(pos)
 
         if derivs:
@@ -262,120 +330,6 @@ class Surface(object):
             pos = pos.plain()
 
         return Event(time, pos, vel, self.origin_id, self.frame_id)
-
-    def event_as_coords(self, event, obs=None, axes=3, derivs=False):
-        """Converts an event object to coordinates and, optionally, their
-        time-derivatives.
-
-        Input:
-            event       an event object.
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a RingPlane, this argument is
-                        ignored and can be omitted.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
-            derivs      a boolean or tuple of booleans. If True, then the
-                        partial derivatives of each coordinate with respect to
-                        time are returned as well. Using a tuple, you can
-                        indicate whether to return time derivatives on a
-                        coordinate-by-coordinate basis.
-
-        Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
-
-                        If derivs is True, then the coordinate has extra
-                        attributes "d_dpos" and "d_dobs", which contain the
-                        partial derivatives with respect to the surface position
-                        and the observer position, represented as a MatrixN
-                        objects with item shape [1,3].
-        """
-
-        event = event.wrt(self.origin_id, self.frame_id)
-        coords = self.as_coords(event.pos, obs, axes, derivs)
-
-        if derivs is False: return coords
-
-        if derivs is True: derivs = (True, True, True)
-
-        vel = event.vel - self.velocity(event.pos)
-        for (deriv,coord) in zip(derivs[:axes], coords):
-            if deriv:
-                coord.add_to_subfield("d_dt",
-                        (coord.d_dpos * vel.as_column()).as_scalar())
-                coord.delete_subfield("d_dpos")
-                coord.delete_subfield("d_dobs")
-
-        return coords
-
-################################################################################
-# No need to override
-################################################################################
-
-    @staticmethod
-    def resolution(dpos_duv):
-        """Determines the spatial resolution on a surface.
-
-        Input:
-            dpos_duv    A MatrixN with item shape [3,2], defining the partial
-                        derivatives d(x,y,z)/d(u,v), where (x,y,z) are the 3-D
-                        coordinates of a point on the surface, and (u,v) are
-                        pixel coordinates.
-
-        Return:         A tuple (res_min, res_max) where:
-            res_min     A Scalar containing resolution values (km/pixel) in the
-                        direction of finest spatial resolution.
-            res_max     A Scalar containing resolution values (km/pixel) in the
-                        direction of coarsest spatial resolution.
-        """
-
-        # Define vectors parallel to the surface, containing the derivatives
-        # with respect to each pixel coordinate.
-        dpos_du = Vector3(dpos_duv.vals[...,0], dpos_duv.mask)
-        dpos_dv = Vector3(dpos_duv.vals[...,1], dpos_duv.mask)
-
-        # The resolution should be independent of the rotation angle of the
-        # grid. We therefore need to solve for an angle theta such that
-        #   dpos_du' = cos(theta) dpos_du - sin(theta) dpos_dv
-        #   dpos_dv' = sin(theta) dpos_du + cos(theta) dpos_dv
-        # where
-        #   dpos_du' <dot> dpos_dv' = 0
-        #
-        # Then, the magnitudes of dpos_du' and dpos_dv' will be the local values
-        # of finest and coarsest spatial resolution.
-        #
-        # Laying aside the overall scaling for a moment, instead solve:
-        #   dpos_du' =   dpos_du - t dpos_dv
-        #   dpos_dv' = t dpos_du +   dpos_dv
-        # for which the dot product is zero.
-        #
-        # 0 =   t^2 (dpos_du <dot> dpos_dv)
-        #     + t   (|dpos_dv|^2 - |dpos_du|^2)
-        #     -     (dpos_du <dot> dpos_dv)
-        #
-        # Use the quadratic formula.
-
-        a = dpos_du.dot(dpos_dv)
-        b = dpos_dv.dot(dpos_dv) - dpos_du.dot(dpos_du)
-        # c = -a
-
-        # discr = b**2 - 4*a*c
-        discr = b**2 + 4*a**2
-        t = (discr.sqrt() - b)/ (2*a)
-
-        # Now normalize and construct the primed partials
-        cos_theta = 1. / (1 + t**2).sqrt()
-        sin_theta = t * cos_theta
-
-        dpos_du_prime_norm = (cos_theta * dpos_du - sin_theta * dpos_dv).norm()
-        dpos_dv_prime_norm = (sin_theta * dpos_du + cos_theta * dpos_dv).norm()
-
-        minres = Scalar(np.minimum(dpos_du_prime_norm.vals,
-                                   dpos_dv_prime_norm.vals), dpos_duv.mask)
-        maxres = Scalar(np.maximum(dpos_du_prime_norm.vals,
-                                   dpos_dv_prime_norm.vals), dpos_duv.mask)
-
-        return (minres, maxres)
 
 ################################################################################
 # Photon Solver
@@ -548,6 +502,8 @@ class Surface(object):
         surface_event = Event(surface_time, pos_wrt_surface, (0,0,0),
                               self.origin_id, self.frame_id)
         surface_event.collapse_time()
+        surface_event.link = link
+        surface_event.sign = sign
 
         # Fill in derivatives if necessary
         if derivs:
@@ -590,6 +546,75 @@ class Surface(object):
         surface_event.insert_subfield(surface_key + "_lt", -lt)
 
         return surface_event
+
+################################################################################
+# Class Method
+################################################################################
+
+    @staticmethod
+    def resolution(dpos_duv):
+        """Determines the spatial resolution on a surface.
+
+        Input:
+            dpos_duv    A MatrixN with item shape [3,2], defining the partial
+                        derivatives d(x,y,z)/d(u,v), where (x,y,z) are the 3-D
+                        coordinates of a point on the surface, and (u,v) are
+                        pixel coordinates.
+
+        Return:         A tuple (res_min, res_max) where:
+            res_min     A Scalar containing resolution values (km/pixel) in the
+                        direction of finest spatial resolution.
+            res_max     A Scalar containing resolution values (km/pixel) in the
+                        direction of coarsest spatial resolution.
+        """
+
+        # Define vectors parallel to the surface, containing the derivatives
+        # with respect to each pixel coordinate.
+        dpos_du = Vector3(dpos_duv.vals[...,0], dpos_duv.mask)
+        dpos_dv = Vector3(dpos_duv.vals[...,1], dpos_duv.mask)
+
+        # The resolution should be independent of the rotation angle of the
+        # grid. We therefore need to solve for an angle theta such that
+        #   dpos_du' = cos(theta) dpos_du - sin(theta) dpos_dv
+        #   dpos_dv' = sin(theta) dpos_du + cos(theta) dpos_dv
+        # where
+        #   dpos_du' <dot> dpos_dv' = 0
+        #
+        # Then, the magnitudes of dpos_du' and dpos_dv' will be the local values
+        # of finest and coarsest spatial resolution.
+        #
+        # Laying aside the overall scaling for a moment, instead solve:
+        #   dpos_du' =   dpos_du - t dpos_dv
+        #   dpos_dv' = t dpos_du +   dpos_dv
+        # for which the dot product is zero.
+        #
+        # 0 =   t^2 (dpos_du <dot> dpos_dv)
+        #     + t   (|dpos_dv|^2 - |dpos_du|^2)
+        #     -     (dpos_du <dot> dpos_dv)
+        #
+        # Use the quadratic formula.
+
+        a = dpos_du.dot(dpos_dv)
+        b = dpos_dv.dot(dpos_dv) - dpos_du.dot(dpos_du)
+        # c = -a
+
+        # discr = b**2 - 4*a*c
+        discr = b**2 + 4*a**2
+        t = (discr.sqrt() - b)/ (2*a)
+
+        # Now normalize and construct the primed partials
+        cos_theta = 1. / (1 + t**2).sqrt()
+        sin_theta = t * cos_theta
+
+        dpos_du_prime_norm = (cos_theta * dpos_du - sin_theta * dpos_dv).norm()
+        dpos_dv_prime_norm = (sin_theta * dpos_du + cos_theta * dpos_dv).norm()
+
+        minres = Scalar(np.minimum(dpos_du_prime_norm.vals,
+                                   dpos_dv_prime_norm.vals), dpos_duv.mask)
+        maxres = Scalar(np.maximum(dpos_du_prime_norm.vals,
+                                   dpos_dv_prime_norm.vals), dpos_duv.mask)
+
+        return (minres, maxres)
 
 ################################################################################
 # UNIT TESTS

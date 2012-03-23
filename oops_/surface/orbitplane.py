@@ -53,21 +53,24 @@ class OrbitPlane(Surface):
 
             epoch       the time TDB relative to which all orbital elements are
                         defined.
-            origin      the path or ID of the orbit center.
+            origin      the path or ID of the planet center.
             frame       the frame or ID of the frame in which the orbit is
                         defined. Should be inertial.
             id          the name under which to register a temporary path or
                         frame if it is needed. Not used for circular, equatorial
                         orbits. None to use temporary path and frame names.
+
+        Note that the origin_id and frame_id used by the returned OrbitPlane
+        object will differ from those used to define it here. 
         """
 
         # Save the initial center path and frame. The frame should be inertial.
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id = registry.as_frame_id(frame)
+        self.defined_origin_id = registry.as_path_id(origin)
+        self.defined_frame_id = registry.as_frame_id(frame)
 
         # We will update the surface's actual path and frame as needed
-        self.internal_origin_id = self.origin_id
-        self.internal_frame_id = self.frame_id
+        self.internal_origin_id = self.defined_origin_id
+        self.internal_frame_id = self.defined_frame_id
 
         # Save the orbital elements
         self.a   = elements[0]
@@ -94,7 +97,7 @@ class OrbitPlane(Surface):
                                                 elements[7],  # ascending node
                                                 elements[8],  # regression rate
                                                 self.epoch,
-                                                self.frame_id,
+                                                self.internal_frame_id,
                                                 True,         # despin
                                                 self.inclined_frame_id)
             self.internal_frame_id = self.inclined_frame_id
@@ -112,8 +115,8 @@ class OrbitPlane(Surface):
             self.e = elements[3]
             self.has_eccentricity = (self.e != 0)
 
-        # If the orbit is eccentric, define a special-purpose path defining the
-        # center of the displaced ring
+        # If the orbit is eccentric, construct a special-purpose path defining
+        # the center of the displaced ring
         if self.has_eccentricity:
             self.ae = self.a * self.e
             self.lon_sub_peri = self.lon - elements[4]
@@ -140,7 +143,7 @@ class OrbitPlane(Surface):
             if id is None:
                 self.spin_frame_id = registry.temporary_frame_id()
             else:
-                self.spin_frame_id = id + "_ECCENTRICITY"
+                self.spin_frame_id = id + "_PERICENTER"
 
             self.spin_frame = frame_.SpinFrame(elements[4],     # pericenter
                                             elements[5],        # precession
@@ -160,18 +163,25 @@ class OrbitPlane(Surface):
                                    self.internal_frame_id,
                                    radii=(0,self.a), gravity=None, elevation=0.)
 
-    def as_coords(self, pos, obs=None, axes=2, derivs=False):
+        self.refplane = RingPlane(self.defined_origin_id,
+                                  self.defined_frame_id, 
+                                  radii=(0,self.a), gravity=None, elevation=0.)
+
+        # The world needs to see the internal frame and path for intercept() to
+        # work properly
+        self.origin_id = self.internal_origin_id
+        self.frame_id = self.internal_frame_id
+
+    def as_coords(self, pos, axes=2, obs=None, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
         Input:
             pos         a Vector3 of positions at or near the surface, with
                         optional units.
-            obs         a Vector3 of observer positions, required for surfaces
-                        that are defined in part by the position of the
-                        observer; otherwise ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
+            obs         ignored.
             derivs      a boolean or tuple of booleans. If True, then the
                         partial derivatives of each coordinate with respect to
                         surface position and observer position are returned as
@@ -182,14 +192,16 @@ class OrbitPlane(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three unitless Scalars, one for each coordinate.
 
-                        If derivs is True, then the coordinate has extra
-                        attributes "d_dpos" and "d_dobs", which contain the
-                        partial derivatives with respect to the surface position
-                        and the observer position, represented as a MatrixN
-                        objects with item shape [1,3].
+                        Where derivs is True, then the coordinate has subfield
+                        "d_dpos", which contains the partial derivatives with
+                        respect to the surface position, represented as a
+                        MatrixN object with item shape [1,3].
         """
 
-        return self.ringplane.as_coords(pos, obs, axes, derivs)
+        results = self.ringplane.as_coords(pos, axes=axes, derivs=derivs)
+        refs = self.refplane.as_coords(pos, axes)
+
+        return self.ringplane.as_coords(pos, axes=axes, derivs=derivs)
 
     def as_vector3(self, r, theta, z=Scalar(0.), obs=None, derivs=False):
         """Converts coordinates in the surface's internal coordinate system into
@@ -200,10 +212,7 @@ class OrbitPlane(Surface):
             theta       a Scalar of longitude values, with optional units.
             z           an optional Scalar of elevation values, with optional
                         units; default is Scalar(0.).
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a RingPlane, this argument is
-                        ignored and can be omitted.
+            obs         ignored.
             derivs      if True, the partial derivatives of the returned vector
                         with respect to the coordinates are returned as well.
 
@@ -218,7 +227,7 @@ class OrbitPlane(Surface):
                         item shape [3,3].
         """
 
-        return self.ringplane.as_vector3(r, theta, z, obs, derivs)
+        return self.ringplane.as_vector3(r, theta, z, derivs=derivs)
 
     def intercept(self, obs, los, derivs=False):
         """Returns the position where a specified line of sight intercepts the
@@ -246,7 +255,7 @@ class OrbitPlane(Surface):
                         is assumed to have unit length.
         """
 
-        return self.ringplane.intercept(obs, los, derivs)
+        return self.ringplane.intercept(obs, los, derivs=derivs)
 
     def normal(self, pos, derivs=False):
         """Returns the normal vector at a position at or near a surface.
@@ -267,52 +276,13 @@ class OrbitPlane(Surface):
                         [3,3].
         """
 
-        return self.ringplane.normal(pos, derivs)
-
-    def intercept_with_normal(self, normal):
-        """Constructs the intercept point on the surface where the normal vector
-        is parallel to the given vector.
-
-        Input:
-            normal      a Vector3 of normal vectors, with optional units.
-            derivs      true to return a matrix of partial derivatives.
-
-        Return:         a unitless Vector3 of surface intercept points, in km.
-                        Where no solution exists, the components of the returned
-                        vector should be masked.
-
-                        If derivs is True, then the returned intercept points
-                        have a subfield "d_dperp", which contains the partial
-                        derivatives with respect to components of the normal
-                        vector, as a MatrixN object with item shape [3,3].
-        """
-
-        return self.ringplane.intercept_with_normal(normal)
-
-    def intercept_normal_to(self, pos):
-        """Constructs the intercept point on the surface where a normal vector
-        passes through a given position.
-
-        Input:
-            pos         a Vector3 of positions near the surface, with optional
-                        units.
-
-        Return:         a unitless vector3 of surface intercept points. Where no
-                        solution exists, the returned vector should be masked.
-
-                        If derivs is True, then the returned intercept points
-                        have a subfield "d_dpos", which contains the partial
-                        derivatives with respect to components of the given
-                        position vector, as a MatrixN object with item shape
-                        [3,3].
-        """
-
-        return self.ringplane.intercept_normal_to(pos)
+        return self.ringplane.normal(pos, derivs=derivs)
 
     def velocity(self, pos):
         """Returns the local velocity vector at a point within the surface.
         This can be used to describe the orbital motion of ring particles or
-        local wind speeds on a planet.
+        local wind speeds on a planet. In this case, it defines the velocity of
+        an orbiting object.
 
         Input:
             pos         a Vector3 of positions at or near the surface, with
@@ -346,7 +316,7 @@ class OrbitPlane(Surface):
             # dy/dy = dr/dt * sin(lon) + r cos(lon) dlon/dt
 
             (x,y,z) = pos.as_scalars()
-            x += self.ae        # shift origin to center of planet
+            x = x + self.ae        # shift origin to center of planet
 
             r = (x**2 + y**2).sqrt()
             cos_lon_sub_peri = x/r
@@ -364,68 +334,6 @@ class OrbitPlane(Surface):
             return self.n * pos.cross((0,0,-1))
 
     ############################################################################
-    # Overrides of event methods
-    ############################################################################
-
-    def as_event(self, time, coords, dcoords_dt=None, obs=None):
-        """Converts a time and coordinates in the surface's internal coordinate
-        system into an event object.
-
-        Input:
-            time        the Scalar of time values at which to evaluate the
-                        coordinates.
-            coords      a tuple containing the two or three coordinate values.
-                        If only two are provided, the third is assumed to be
-                        zero.
-            dcoords_dt  an optional tuple containing rates of changes of the
-                        coordinates. If provided, these values define the
-                        velocity vector of the event object.
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
-
-        Return:         an event object relative to the origin and frame of the
-                        surface.
-        """
-
-        event = self.ringplane.as_event(time, coords, dcoords_dt, obs)
-        return event.wrt(self.origin_id, self.frame_id)
-
-    def event_as_coords(self, event, obs=None, axes=3, derivs=False):
-        """Converts an event object to coordinates and, optionally, their
-        time-derivatives.
-
-        Input:
-            event       an event object.
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a RingPlane, this argument is
-                        ignored and can be omitted.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
-            derivs      a boolean or tuple of booleans. If True, then the
-                        partial derivatives of each coordinate with respect to
-                        time are returned as well. Using a tuple, you can
-                        indicate whether to return time derivatives on a
-                        coordinate-by-coordinate basis.
-
-        Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
-
-                        If derivs is True, then the coordinate has extra
-                        attributes "d_dpos" and "d_dobs", which contain the
-                        partial derivatives with respect to the surface position
-                        and the observer position, represented as a MatrixN
-                        objects with item shape [1,3].
-        """
-
-        event = event.wrt(self.internal_origin_id, self.internal_frame_id)
-        return self.ringplane.event_as_coords(event, obs, axes, derivs)
-
-    ############################################################################
     # Longitude-anomaly conversions
     ############################################################################
 
@@ -440,7 +348,7 @@ class OrbitPlane(Surface):
         else:
             return anom + (2*self.ae) * anom.sin()
 
-    def to_mean_anomaly(self, lon, iters=4):
+    def to_mean_anomaly(self, lon):
         """Returns the mean anomaly given a longitude in this frame, accurate
         to first order in eccentricity. Iteration is performed using Newton's
         method to ensure that this function is an exact inverse of
@@ -460,17 +368,18 @@ class OrbitPlane(Surface):
         # For x[n] as a guess at n,
         #   x[n+1] = x[n] - y(x[n]) / dy/dx
 
-        x = lon.copy()
         ae_x2 = 2 * self.ae
+        x = lon - ae_x2 * lon.sin()
 
-        max_abs_dx = 4. # It's bigger than pi
-
-        for iter in range(iters):
-            dx = (lon - ae_x2 * x.sin()) / (1 + ae_x2 * x.cos())
-            print iter, abs(dx).max()
-            if dx == 0.: break
-
+        # Iterate until all improvement ceases. Should not take long
+        prev_max_abs_dx = 2*np.pi
+        max_abs_dx = np.pi
+        while (max_abs_dx < prev_max_abs_dx):
+            dx = (lon - x - ae_x2 * x.sin()) / (1 + ae_x2 * x.cos())
             x += dx
+
+            prev_max_abs_dx = max_abs_dx
+            max_abs_dx = abs(dx).max()
 
         return x
 
@@ -556,8 +465,7 @@ class Test_OrbitPlane(unittest.TestCase):
         delta = 1.e-5
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        event = Event(0., pos, Vector3((0,0,0)),
-                      orbit.origin_id, orbit.frame_id)
+        event = Event(0., pos, Vector3((0,0,0)), "SSB", "J2000")
         (r,l,z) = orbit.event_as_coords(event, derivs=False)
 
         r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
@@ -586,11 +494,10 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
-            event = Event(0., pos, vel, orbit.origin_id, orbit.frame_id)
+            event = Event(0., pos, vel, "SSB", "J2000")
             (r,l,z) = orbit.event_as_coords(event, derivs=True)
 
-            event = Event(eps, pos + vel*eps, vel,
-                          orbit.origin_id, orbit.frame_id)
+            event = Event(eps, pos + vel*eps, vel, "SSB", "J2000")
             (r1,l1,z1) = orbit.event_as_coords(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = (l1 - l) / eps
@@ -637,8 +544,7 @@ class Test_OrbitPlane(unittest.TestCase):
 
         dz = 0.1
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
-        event = Event(0., pos, Vector3((0,0,0)),
-                      orbit.origin_id, orbit.frame_id)
+        event = Event(0., pos, Vector3((0,0,0)), "SSB", "J2000")
         (r,l,z) = orbit.event_as_coords(event, derivs=False)
 
         r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])
@@ -672,11 +578,10 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
-            event = Event(0., pos, vel, orbit.origin_id, orbit.frame_id)
+            event = Event(0., pos, vel, "SSB", "J2000")
             (r,l,z) = orbit.event_as_coords(event, derivs=True)
 
-            event = Event(eps, pos + vel*eps, vel,
-                          orbit.origin_id, orbit.frame_id)
+            event = Event(eps, pos + vel*eps, vel, "SSB", "J2000")
             (r1,l1,z1) = orbit.event_as_coords(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = ((l1 - l + np.pi) % (2*np.pi) - np.pi) / eps
@@ -705,6 +610,17 @@ class Test_OrbitPlane(unittest.TestCase):
         pos1 = orbit.as_vector3(r, l, z + eps, derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
+
+        # From/to mean anomaly
+        elements = (1, 0, 1, 0.1, 0, 0.1)
+        epoch = 0
+        orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
+
+        l = np.arange(361) * np.pi/180.
+        anoms = orbit.to_mean_anomaly(l)
+
+        lons = orbit.from_mean_anomaly(anoms)
+        self.assertTrue(abs(lons - l) < 1.e-15)
 
 ########################################
 if __name__ == '__main__':

@@ -71,10 +71,7 @@ class Spheroid(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface, with
                         optional units.
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a Spheroid, this argument is
-                        ignored and can be omitted.
+            obs         ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      a boolean or tuple of booleans. If True, then the
@@ -121,10 +118,7 @@ class Spheroid(Surface):
             lat         latitude in radians
             elev        a rough measure of distance from the surface, in km;
                         default is Scalar(0.).
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of a Spheroid, this argument is
-                        ignored and can be omitted.
+            obs         ignored.
             derivs      if True, the partial derivatives of the returned vector
                         with respect to the coordinates are returned as well.
 
@@ -552,7 +546,7 @@ class Test_Spheroid(unittest.TestCase):
         intercept = planet.intercept_normal_to(obs)
         sep = (obs - intercept).sep(planet.normal(intercept))
         k = obs - intercept
-        self.assertTrue(sep < 1.e-12)
+        self.assertTrue(sep < 3.e-12)
 
 ########################################
 if __name__ == '__main__':
