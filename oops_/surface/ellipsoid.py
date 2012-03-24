@@ -62,7 +62,7 @@ class Ellipsoid(Surface):
         self.unsquash = Vector3((1., self.unsquash_y, self.unsquash_z))
         self.unsquash_sq = self.unsquash**2
 
-    def as_coords(self, position, axes=2):
+    def to_coords(self, position, axes=2):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -108,37 +108,38 @@ class Ellipsoid(Surface):
         else:
             return (lon, lat, r - self.req)
 
-    def as_vector3(self, lon, lat, elev=0.):
-        """Converts coordinates in the surface's internal coordinate system into
-        position vectors at or near the surface.
+    def from_coords(self, coords, obs=None, derivs=False):
+        """Returns the position where a point with the given surface coordinates
+        would fall in the surface frame, given the location of the observer.
 
         Input:
-            lon         longitude in radians.
-            lat         latitude in radians
-            elev        a rough measure of distance from the surface, in km;
-                        default is Scalar(0.).
-            obs         a Vector3 of observer positions. In some cases, a
-                        surface is defined in part by the position of the
-                        observer. In the case of an Ellipsoid, this argument is
-                        ignored and can be omitted.
-            derivs      if True, the partial derivatives of the returned vector
-                        with respect to the coordinates are returned as well.
+            coords      a tuple of two or three Scalars defining the coordinates
+                lon     longitude in radians.
+                lat     latitude in radians
+                elev    a rough measure of distance from the surface, in km;
+            obs         position of the observer in the surface frame; ignored.
+            derivs      True to include the partial derivatives of the intercept
+                        point with respect to observer and to the coordinates.
 
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
+        Return:         a unitless Vector3 of intercept points defined by the
+                        coordinates.
 
-        Return:         a unitless Vector3 of (unsquashed) positions, in km.
-
-                        If derivs is True, then the returned Vector3 object has
-                        a subfield "d_dcoord", which contains the partial
-                        derivatives d(x,y,z)/d(lon,lat,z), as a MatrixN with
-                        item shape [3,3].
+                        If derivs is True, then pos is returned with subfields
+                        "d_dobs" and "d_dcoords", where the former contains the
+                        MatrixN of partial derivatives with respect to obs and
+                        the latter is the MatrixN of partial derivatives with
+                        respect to the coordinates. The MatrixN item shapes are
+                        [3,3].
         """
 
         # Convert to Scalars in standard units
-        lon = Scalar.as_standard(lon)
-        lat = Scalar.as_standard(lat)
-        r = Scalar.as_standard(elev) + self.req
+        lon = Scalar.as_standard(coords[0])
+        lat = Scalar.as_standard(coords[1])
+
+        if len(coords) == 2:
+            r = Scalar(0.)
+        else:
+            r = Scalar.as_standard(elev) + self.req
 
         r_coslat = r * lat.cos()
         x = r_coslat * lon.cos()

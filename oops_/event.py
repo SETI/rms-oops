@@ -180,7 +180,7 @@ class Event(object):
 
             if LOGGING.event_time_collapse:
                 print LOGGING.prefix, "Event.collapse_time()",
-                print self.time.vals, tmax - tmin
+                print tmax - tmin
 
         return self
 

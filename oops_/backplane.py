@@ -228,7 +228,7 @@ class Backplane(object):
         else:
             return Scalar(np.zeros(self.meshgrid.shape, dtyp="bool"))
 
-    def new_backplane(self, key, backplane):
+    def register_backplane(self, key, backplane):
         """Inserts this backplane into the dictionary."""
 
         if isinstance(backplane, np.ndarray):
@@ -267,8 +267,8 @@ class Backplane(object):
         extras = (aberration, subfield, frame)
 
         (ra, dec) = self.get_event_with_arr(event_key).ra_and_dec(*extras)
-        self.new_backplane(("right_ascension", event_key) + extras, ra)
-        self.new_backplane(("declination", event_key) + extras, dec)
+        self.register_backplane(("right_ascension", event_key) + extras, ra)
+        self.register_backplane(("declination", event_key) + extras, dec)
 
     def right_ascension(self, event_key=(), aberration=False, subfield="arr",
                               frame="j2000"):
@@ -318,8 +318,8 @@ class Backplane(object):
 
         key = ("range", event_key, subfield)
         if key not in self.backplanes.keys():
-            self.new_backplane(key, self.light_time(event_key,
-                                                   subfield) * constants.C)
+            self.register_backplane(key,
+                            self.light_time(event_key, subfield) * constants.C)
 
         return self.backplanes[key]
 
@@ -337,7 +337,7 @@ class Backplane(object):
             else:
                 event = self.get_surface_event(event_key)
 
-            self.new_backplane(key, abs(event.subfields[subfield + "_lt"]))
+            self.register_backplane(key, abs(event.subfields[subfield + "_lt"]))
 
         return self.backplanes[key]
 
@@ -358,7 +358,7 @@ class Backplane(object):
         key = ("incidence_angle", event_key)
         if key not in self.backplanes.keys():
             event = self.get_event_with_arr(event_key)
-            self.new_backplane(key, event.incidence_angle())
+            self.register_backplane(key, event.incidence_angle())
 
         return self.backplanes[key]
 
@@ -369,7 +369,7 @@ class Backplane(object):
         key = ("emission_angle", event_key)
         if key not in self.backplanes.keys():
             event = self.get_surface_event(event_key)
-            self.new_backplane(key, event.emission_angle())
+            self.register_backplane(key, event.emission_angle())
 
         return self.backplanes[key]
 
@@ -381,7 +381,7 @@ class Backplane(object):
         key = ("phase_angle", event_key)
         if key not in self.backplanes.keys():
             event = self.get_event_with_arr(event_key)
-            self.new_backplane(key, event.phase_angle())
+            self.register_backplane(key, event.phase_angle())
 
         return self.backplanes[key]
 
@@ -392,7 +392,7 @@ class Backplane(object):
         event_key = Backplane.fix_event_key(event_key)
         key = ("scattering_angle", event_key)
         if key not in self.backplanes.keys():
-            self.new_backplane(key, np.pi - self.phase_angle(event_key))
+            self.register_backplane(key, np.pi - self.phase_angle(event_key))
 
         return self.backplanes[key]
 
@@ -415,10 +415,10 @@ class Backplane(object):
         assert isinstance(surface, (surface_.RingPlane, surface_.OrbitPlane))
 
         # (r,lon) = surface.event_as_coords(event, axes=2)
-        (r,lon) = surface.as_coords(event.pos, axes=2)
+        (r,lon) = surface.event_as_coords(event, axes=2)
 
-        self.new_backplane(("ring_radius", event_key), r)
-        self.new_backplane(("ring_longitude", event_key, "j2000"), lon)
+        self.register_backplane(("ring_radius", event_key), r)
+        self.register_backplane(("ring_longitude", event_key, "j2000"), lon)
 
     def ring_radius(self, event_key):
         """Radius of the ring intercept point in the image.
@@ -463,7 +463,7 @@ class Backplane(object):
             ref_lon = self._sub_observer_ring_longitude(event_key) - np.pi
 
         lon = (self.backplanes[key0 + ("j2000",)] - ref_lon) % (2*np.pi)
-        self.new_backplane(key0 + (reference,), lon)
+        self.register_backplane(key0 + (reference,), lon)
 
         return self.backplanes[key]
 
@@ -487,9 +487,9 @@ class Backplane(object):
 
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, surface_.RingPlane)
-        (r,lon) = surface.as_coords(center_event.aberrated_dep(), axes=2)
+        (r,lon) = surface.to_coords(center_event.aberrated_dep(), axes=2)
 
-        self.new_backplane(key, lon.unmasked())
+        self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     def _sub_solar_ring_longitude(self, event_key):
@@ -511,9 +511,9 @@ class Backplane(object):
 
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, surface_.RingPlane)
-        (r,lon) = surface.as_coords(-center_event.aberrated_arr(), axes=2)
+        (r,lon) = surface.to_coords(-center_event.aberrated_arr(), axes=2)
 
-        self.new_backplane(key, lon.unmasked())
+        self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     ############################################################################
@@ -542,7 +542,7 @@ class Backplane(object):
         drad_duv = rad.d_dpos * event.pos.d_dlos * self.meshgrid.dlos_duv
         res = drad_duv.as_pair().norm()
 
-        self.new_backplane(key, res)
+        self.register_backplane(key, res)
         return self.backplanes[key]
 
     def ring_angular_resolution(self, event_key):
@@ -564,7 +564,7 @@ class Backplane(object):
         dlon_duv = lon.d_dpos * event.pos.d_dlos * self.meshgrid.dlos_duv
         res = dlon_duv.as_pair().norm()
 
-        self.new_backplane(key, res)
+        self.register_backplane(key, res)
         return self.backplanes[key]
 
     ############################################################################
@@ -591,8 +591,8 @@ class Backplane(object):
 
         (lon,lat) = surface.event_as_coords(event, axes=2, derivs=False)
 
-        self.new_backplane(("longitude", event_key, "iau", "east", 0), lon)
-        self.new_backplane(("latitude", event_key, "squashed"), lat)
+        self.register_backplane(("longitude", event_key, "iau", "east", 0), lon)
+        self.register_backplane(("latitude", event_key, "squashed"), lat)
 
     def longitude(self, event_key, reference="iau", direction="east",
                                                     minimum=0, ):
@@ -636,7 +636,7 @@ class Backplane(object):
         else:
             lon = (lon + np.pi) % (2.*np.pi) - np.pi
 
-        self.new_backplane(key, lon)
+        self.register_backplane(key, lon)
         return self.backplanes[key]
 
     def latitude(self, event_key, lat_type="centric"):
@@ -670,7 +670,7 @@ class Backplane(object):
         else:
             lat = surface.lat_to_graphic(lat)
 
-        self.new_backplane(key, lat)
+        self.register_backplane(key, lat)
         return self.backplanes[key]
 
     def _sub_observer_surface_longitude(self, event_key):
@@ -693,9 +693,9 @@ class Backplane(object):
 
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, (surface_.Spheroid, surface_.Ellipsoid))
-        (lon,lat) = surface.as_coords(center_event.aberrated_dep(), axes=2)
+        (lon,lat) = surface.to_coords(center_event.aberrated_dep(), axes=2)
 
-        self.new_backplane(key, lon.unmasked())
+        self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     def _sub_solar_surface_longitude(self, event_key):
@@ -717,9 +717,9 @@ class Backplane(object):
 
         surface = registry.body_lookup(event_key[0].upper()).surface
         assert isinstance(surface, (surface_.Spheroid, surface_.Ellipsoid))
-        (lon,lat) = surface.as_coords(-center_event.aberrated_arr(), axes=2)
+        (lon,lat) = surface.to_coords(-center_event.aberrated_arr(), axes=2)
 
-        self.new_backplane(key, lon.unmasked())
+        self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
     ############################################################################
@@ -741,9 +741,9 @@ class Backplane(object):
         dpos_duv = event.pos.d_dlos * self.meshgrid.dlos_duv
         (minres, maxres) = surface_.Surface.resolution(dpos_duv)
 
-        self.new_backplane(("finest_resolution", event_key),
+        self.register_backplane(("finest_resolution", event_key),
                                                                         minres)
-        self.new_backplane(("coarsest_resolution", event_key),
+        self.register_backplane(("coarsest_resolution", event_key),
                                                                         maxres)
 
     def finest_resolution(self, event_key):
@@ -783,7 +783,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             event = self.get_surface_event(event_key)
             mask = self.mask_as_scalar(~event.mask)
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -798,7 +798,7 @@ class Backplane(object):
             event = self.get_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
             mask = self.mask_as_scalar(~event.mask & ~shadow_event.mask)
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -813,7 +813,7 @@ class Backplane(object):
             event = self.get_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
             mask = self.mask_as_scalar(~event.mask & shadow_event.mask)
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -832,7 +832,7 @@ class Backplane(object):
             back_masked    =  self.get_surface_event(back_body).mask
             mask = self.mask_as_scalar(front_unmasked & (back_masked |
                     (self.range(event_key).vals < self.range(back_body).vals)))
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -852,7 +852,7 @@ class Backplane(object):
             front_unmasked = ~self.get_surface_event(front_body).mask
             mask = self.mask_as_scalar(back_unmasked & front_unmasked &
                     (self.range(event_key).vals > self.range(front_body).vals))
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -866,7 +866,7 @@ class Backplane(object):
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_scalar((incidence.vals <= np.pi/2) &
                                        ~incidence.mask)
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -880,7 +880,7 @@ class Backplane(object):
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_scalar((incidence.vals > np.pi/2) &
                                        ~incidence.mask)
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -897,7 +897,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
             mask = (backplane.vals <= value) & ~backplane.mask
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -910,7 +910,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
             mask = (backplane.vals >= value) & ~backplane.mask
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -924,7 +924,7 @@ class Backplane(object):
             backplane = self.evaluate(backplane_key)
             mask = ((backplane.vals >= low) &
                     (backplane.vals <= high) & ~backplane.mask)
-            self.new_backplane(key, mask)
+            self.register_backplane(key, mask)
 
         return self.backplanes[key]
 
@@ -958,7 +958,7 @@ class Backplane(object):
                 xborder[1:]  |= ((xbackplane[1:].vals  >= 0) &
                                  (xbackplane[:-1].vals < 0))
 
-            self.new_backplane(key, Scalar(border & ~backplane.mask))
+            self.register_backplane(key, Scalar(border & ~backplane.mask))
 
         return self.backplanes[key]
 
@@ -999,7 +999,7 @@ class Backplane(object):
                 xborder[1:]  |= ((xsign[1:] == -xsign[:-1]) &
                                  (xabs[1:] <= xabs[:-1]))
 
-            self.new_backplane(key, border)
+            self.register_backplane(key, border)
 
         return self.backplanes[key]
 
@@ -1031,7 +1031,7 @@ class Backplane(object):
                 xborder[1:]  |= ((xbackplane[1:].vals ^ xbackplane[:-1].vals) &
                                   xbackplane[1:].vals)
 
-            self.new_backplane(key, Scalar(border))
+            self.register_backplane(key, Scalar(border))
 
         return self.backplanes[key]
 
@@ -1374,6 +1374,32 @@ class Test_Backplane(unittest.TestCase):
         test = bp.evaluate(("border_atop", ("ring_radius",
                                             "saturn_main_rings"), 100000.))
         show_info("Ring border above 100,000 km via evaluate()", test)
+
+        ########################
+
+        # Testing empty events
+
+        snap = iss.from_file(UNITTEST_FILESPEC)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=UNITTEST_UNDERSAMPLE,
+                                    swap=True)
+        bp = Backplane(snap, meshgrid)
+
+        # Override some internals...
+        old_obs = bp.obs_event
+        bp.obs_event = Event(Scalar(old_obs.time, mask=True),
+                             old_obs.pos, old_obs.vel,
+                             old_obs.origin_id, old_obs.frame_id,
+                             arr = old_obs.arr)
+
+        bp.surface_events_w_derivs = {(): bp.obs_event}
+        bp.surface_events = {(): bp.obs_event.plain()}
+
+        test = bp.range("saturn")
+        show_info("Range to Saturn, entirely masked (km)", test)
+
+        test = bp.phase_angle("saturn")
+        show_info("Phase angle at Saturn, entirely masked (deg)",
+                                                test * constants.DPR)
 
         config.LOGGING.off()
 

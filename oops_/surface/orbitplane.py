@@ -172,7 +172,7 @@ class OrbitPlane(Surface):
         self.origin_id = self.internal_origin_id
         self.frame_id = self.internal_frame_id
 
-    def as_coords(self, pos, axes=2, obs=None, derivs=False):
+    def to_coords(self, pos, axes=2, obs=None, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -198,36 +198,34 @@ class OrbitPlane(Surface):
                         MatrixN object with item shape [1,3].
         """
 
-        results = self.ringplane.as_coords(pos, axes=axes, derivs=derivs)
-        refs = self.refplane.as_coords(pos, axes)
+        return self.ringplane.to_coords(pos, axes=axes, derivs=derivs)
 
-        return self.ringplane.as_coords(pos, axes=axes, derivs=derivs)
-
-    def as_vector3(self, r, theta, z=Scalar(0.), obs=None, derivs=False):
-        """Converts coordinates in the surface's internal coordinate system into
-        position vectors at or near the surface.
+    def from_coords(self, coords, obs=None, derivs=False):
+        """Returns the position where a point with the given surface coordinates
+        would fall in the surface frame, given the location of the observer.
 
         Input:
-            r           a Scalar of radius values, with optional units.
-            theta       a Scalar of longitude values, with optional units.
-            z           an optional Scalar of elevation values, with optional
+            coords      a tuple of two or three Scalars defining the coordinates
+                r       a Scalar of radius values, with optional units.
+                theta   a Scalar of pericenter values, with optional units.
+                z       an optional Scalar of elevation values, with optional
                         units; default is Scalar(0.).
-            obs         ignored.
-            derivs      if True, the partial derivatives of the returned vector
-                        with respect to the coordinates are returned as well.
+            obs         position of the observer in the surface frame; ignored.
+            derivs      True to include the partial derivatives of the intercept
+                        point with respect to observer and to the coordinates.
 
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
+        Return:         a unitless Vector3 of intercept points defined by the
+                        coordinates.
 
-        Return:         a unitless Vector3 object of positions, in km.
-
-                        If derivs is True, then the returned Vector3 object has
-                        a subfield "d_dcoord", which contains the partial
-                        derivatives d(x,y,z)/d(r,theta,z), as a MatrixN with
-                        item shape [3,3].
+                        If derivs is True, then pos is returned with subfields
+                        "d_dobs" and "d_dcoords", where the former contains the
+                        MatrixN of partial derivatives with respect to obs and
+                        the latter is the MatrixN of partial derivatives with
+                        respect to the coordinates. The MatrixN item shapes are
+                        [3,3].
         """
 
-        return self.ringplane.as_vector3(r, theta, z, derivs=derivs)
+        return self.ringplane.from_coords(coords, obs, derivs=derivs)
 
     def intercept(self, obs, los, derivs=False):
         """Returns the position where a specified line of sight intercepts the
@@ -401,7 +399,7 @@ class Test_OrbitPlane(unittest.TestCase):
         orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.as_coords(pos, axes=3, derivs=False)
+        (r,l,z) = orbit.to_coords(pos, axes=3, derivs=False)
 
         r_true = Scalar([1,2,1,1])
         l_true = Scalar([0, 0, np.pi, np.pi/2])
@@ -412,7 +410,7 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(z - z_true) < 1.e-12)
 
         # Circular orbit, no derivatives, reverse
-        pos2 = orbit.as_vector3(r, l, z, derivs=False)
+        pos2 = orbit.from_coords((r, l, z), derivs=False)
 
         self.assertTrue(abs(pos - pos2) < 1.e-10)
 
@@ -423,7 +421,7 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for step in ([eps,0,0], [0,eps,0], [0,0,eps]):
             dpos = Vector3(step)
-            (r,l,z) = orbit.as_coords(pos + dpos, axes=3, derivs=True)
+            (r,l,z) = orbit.to_coords(pos + dpos, axes=3, derivs=True)
 
             r_test = r + (r.d_dpos * dpos.as_column()).as_scalar()
             l_test = l + (l.d_dpos * dpos.as_column()).as_scalar()
@@ -435,21 +433,21 @@ class Test_OrbitPlane(unittest.TestCase):
 
         # Circular orbit, with derivatives, reverse
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.as_coords(pos, axes=3, derivs=False)
+        (r,l,z) = orbit.to_coords(pos, axes=3, derivs=False)
         eps = 1.e-6
         delta = 1.e-5
 
-        pos0 = orbit.as_vector3(r, l, z, derivs=True)
+        pos0 = orbit.from_coords((r, l, z), derivs=True)
 
-        pos1 = orbit.as_vector3(r + eps, l, z, derivs=False)
+        pos1 = orbit.from_coords((r + eps, l, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
-        pos1 = orbit.as_vector3(r, l + eps, z, derivs=False)
+        pos1 = orbit.from_coords((r, l + eps, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
-        pos1 = orbit.as_vector3(r, l, z + eps, derivs=False)
+        pos1 = orbit.from_coords((r, l, z + eps), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
@@ -477,7 +475,7 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(z - z_true) < delta)
 
         # Eccentric orbit, no derivatives, reverse
-        event2 = orbit.as_event(event.time, (r,l,z))
+        event2 = orbit.coords_as_event(event.time, (r,l,z))
         self.assertTrue(abs(pos - event.pos) < 1.e-10)
         self.assertTrue(abs(event.vel) < 1.e-10)
 
@@ -509,21 +507,21 @@ class Test_OrbitPlane(unittest.TestCase):
 
         # Eccentric orbit, with derivatives, reverse
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.as_coords(pos, axes=3, derivs=False)
+        (r,l,z) = orbit.to_coords(pos, axes=3, derivs=False)
         eps = 1.e-6
         delta = 1.e-5
 
-        pos0 = orbit.as_vector3(r, l, z, derivs=True)
+        pos0 = orbit.from_coords((r, l, z), derivs=True)
 
-        pos1 = orbit.as_vector3(r + eps, l, z, derivs=False)
+        pos1 = orbit.from_coords((r + eps, l, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
-        pos1 = orbit.as_vector3(r, l + eps, z, derivs=False)
+        pos1 = orbit.from_coords((r, l + eps, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
-        pos1 = orbit.as_vector3(r, l, z + eps, derivs=False)
+        pos1 = orbit.from_coords((r, l, z + eps), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
@@ -556,7 +554,7 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(z - z_true) < delta)
 
         # Inclined orbit, no derivatives, reverse
-        event2 = orbit.as_event(event.time, (r,l,z))
+        event2 = orbit.coords_as_event(event.time, (r,l,z))
         self.assertTrue(abs(pos - event.pos) < 1.e-10)
         self.assertTrue(abs(event.vel) < 1.e-10)
 
@@ -593,21 +591,21 @@ class Test_OrbitPlane(unittest.TestCase):
 
         # Inclined orbit, with derivatives, reverse
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.as_coords(pos, axes=3, derivs=False)
+        (r,l,z) = orbit.to_coords(pos, axes=3, derivs=False)
         eps = 1.e-6
         delta = 1.e-5
 
-        pos0 = orbit.as_vector3(r, l, z, derivs=True)
+        pos0 = orbit.from_coords((r, l, z), derivs=True)
 
-        pos1 = orbit.as_vector3(r + eps, l, z, derivs=False)
+        pos1 = orbit.from_coords((r + eps, l, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
-        pos1 = orbit.as_vector3(r, l + eps, z, derivs=False)
+        pos1 = orbit.from_coords((r, l + eps, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 
-        pos1 = orbit.as_vector3(r, l, z + eps, derivs=False)
+        pos1 = orbit.from_coords((r, l, z + eps), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
         self.assertTrue(abs(pos1_test - pos1) < delta)
 

@@ -87,7 +87,13 @@ class Scalar(Array):
         if self.units is not None and self.units.triple != [0,0,0]:
             raise ValueError("illegal units for arcsin(): " + units.name)
 
-        return Scalar(np.arcsin(self.vals), self.mask)
+        new_mask = (self.vals < -1) | (self.vals > 1)
+        if np.any(new_mask):
+            values = self.vals.copy()
+            values[new_mask] = 0.
+            return Scalar(np.arcsin(values), self.mask | new_mask)
+        else:
+            return Scalar(np.arcsin(self.vals), self.mask)
 
     def arccos(self):
         """Returns the arccosine of each value."""
@@ -95,7 +101,13 @@ class Scalar(Array):
         if self.units is not None and self.units.triple != [0,0,0]:
             raise ValueError("illegal units for arccos(): " + units.name)
 
-        return Scalar(np.arccos(self.vals), self.mask)
+        new_mask = (self.vals < -1) | (self.vals > 1)
+        if np.any(new_mask):
+            values = self.vals.copy()
+            values[new_mask] = 0.
+            return Scalar(np.arccos(values), self.mask | new_mask)
+        else:
+            return Scalar(np.arccos(self.vals), self.mask)
 
     def arctan(self):
         """Returns the arctangent of each value."""

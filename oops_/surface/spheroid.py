@@ -64,7 +64,7 @@ class Spheroid(Surface):
         self.unsquash  = Vector3((1., 1., self.unsquash_z))
         self.unsquash_sq    = self.unsquash**2
 
-    def as_coords(self, pos, obs=None, axes=2, derivs=False):
+    def to_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -100,43 +100,50 @@ class Spheroid(Surface):
         lat = (z/r).arcsin()
         lon = y.arctan2(x) % (2.*np.pi)
 
-        if derivs:
-            raise NotImplementedError("spheroid coordinate derivatives are " +
-                                      "not yet supported")
+        if derivs is False: derivs = (False, False, False)
+        if derivs is True: derivs = (True, True, True)
+
+        if np.any(derivs):
+            raise NotImplementedError("Spheroid.to_coords() " +
+                                      " does not implement derivatives")
 
         if axes == 2:
             return (lon, lat)
         else:
             return (lon, lat, r - self.req)
 
-    def as_vector3(self, lon, lat, elev=Scalar(0.), obs=None, derivs=False):
-        """Converts coordinates in the surface's internal coordinate system into
-        position vectors at or near the surface.
+    def from_coords(self, coords, obs=None, derivs=False):
+        """Returns the position where a point with the given surface coordinates
+        would fall in the surface frame, given the location of the observer.
 
         Input:
-            lon         longitude in radians.
-            lat         latitude in radians
-            elev        a rough measure of distance from the surface, in km;
-                        default is Scalar(0.).
-            obs         ignored.
-            derivs      if True, the partial derivatives of the returned vector
-                        with respect to the coordinates are returned as well.
+            coords      a tuple of two or three Scalars defining the coordinates
+                lon     longitude in radians.
+                lat     latitude in radians
+                elev    a rough measure of distance from the surface, in km;
+            obs         position of the observer in the surface frame; ignored.
+            derivs      True to include the partial derivatives of the intercept
+                        point with respect to observer and to the coordinates.
 
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
+        Return:         a unitless Vector3 of intercept points defined by the
+                        coordinates.
 
-        Return:         a unitless Vector3 of (unsquashed) positions, in km.
-
-                        If derivs is True, then the returned Vector3 object has
-                        a subfield "d_dcoord", which contains the partial
-                        derivatives d(x,y,z)/d(lon,lat,z), as a MatrixN with
-                        item shape [3,3].
+                        If derivs is True, then pos is returned with subfields
+                        "d_dobs" and "d_dcoords", where the former contains the
+                        MatrixN of partial derivatives with respect to obs and
+                        the latter is the MatrixN of partial derivatives with
+                        respect to the coordinates. The MatrixN item shapes are
+                        [3,3].
         """
 
         # Convert to Scalars in standard units
-        lon = Scalar.as_standard(lon)
-        lat = Scalar.as_standard(lat)
-        r = Scalar.as_standard(elev) + self.req
+        lon = Scalar.as_standard(coords[0])
+        lat = Scalar.as_standard(coords[1])
+
+        if len(coords) == 2:
+            r = Scalar(0.)
+        else:
+            r = Scalar.as_standard(coords[2]) + self.req
 
         r_coslat = r * lat.cos()
         x = r_coslat * lon.cos()
@@ -146,8 +153,8 @@ class Spheroid(Surface):
         pos = Vector3.from_scalars(x,y,z)
 
         if derivs:
-            raise NotImplementedError("spheroid position derivatives are " +
-                                      "not yet supported")
+            raise NotImplementedError("Spheroid.from_coords() " +
+                                      " does not implement derivatives")
 
         return pos
 
@@ -291,8 +298,8 @@ class Spheroid(Surface):
         perp = Vector3.as_standard(pos) * self.unsquash_sq
 
         if derivs:
-            raise NotImplementedError("spheroid normal() derivatives are " +
-                                      "not supported")
+            raise NotImplementedError("Spheroid.normal() " +
+                                      "does not implement derivatives")
 
         return perp
 
@@ -317,8 +324,9 @@ class Spheroid(Surface):
         result = Vector3.as_standard(normal) * self.squash_sq
 
         if derivs:
-            raise NotImplementedError("spheroid intercept_with_normal() " +
-                                      "derivatives are not implemented")
+            raise NotImplementedError("Spheroid.intercept_with_normal() " +
+                                      "does not implement derivatives")
+
         return result
 
     def intercept_normal_to(self, pos, derivs=False):
@@ -438,8 +446,9 @@ class Spheroid(Surface):
         t = pos_cept.vals[...,0] / norm.vals[...,0]
 
         if derivs:
-            raise NotImplementedError("spheroid intercept_normal_to() " +
-                                      "derivatives are not implemented")
+            raise NotImplementedError("Spheroid.intercept_normal_to() " +
+                                      "does not implement derivatives")
+
         return newton_intercept_normal_to(pos, t)
 
     def velocity(self, pos):
@@ -509,8 +518,8 @@ class Test_Spheroid(unittest.TestCase):
         NPTS = 10000
         obs = (2 * np.random.rand(NPTS,3) - 1.) * REQ
 
-        (lon,lat,elev) = planet.as_coords(obs,axes=3)
-        test = planet.as_vector3(lon,lat,elev)
+        (lon,lat,elev) = planet.to_coords(obs,axes=3)
+        test = planet.from_coords((lon,lat,elev))
         self.assertTrue(abs(test - obs) < 3.e-9)
 
         # Spheroid intercepts & normals

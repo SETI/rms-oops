@@ -61,7 +61,7 @@ class RingPlane(Surface):
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
 
-    def as_coords(self, pos, obs=None, axes=2, derivs=False):
+    def to_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -103,7 +103,7 @@ class RingPlane(Surface):
             z = Scalar(pos.vals[...,2] - self.elevation, mask)
 
         # Generate derivatives if necessary
-        if derivs:
+        if np.any(derivs):
             if np.shape(derivs) == (): derivs = (derivs, derivs, derivs)
 
             if derivs[0]:
@@ -124,34 +124,39 @@ class RingPlane(Surface):
         else:
             return (r, theta)
 
-    def as_vector3(self, r, theta, z=Scalar(0.), obs=None, derivs=False):
-        """Converts coordinates in the surface's internal coordinate system into
-        position vectors at or near the surface.
+    def from_coords(self, coords, obs=None, derivs=False):
+        """Returns the position where a point with the given surface coordinates
+        would fall in the surface frame, given the location of the observer.
 
         Input:
-            r           a Scalar of radius values, with optional units.
-            theta       a Scalar of longitude values, with optional units.
-            z           an optional Scalar of elevation values, with optional
+            coords      a tuple of two or three Scalars defining the coordinates
+                r       a Scalar of radius values, with optional units.
+                theta   a Scalar of longitude values, with optional units.
+                z       an optional Scalar of elevation values, with optional
                         units; default is Scalar(0.).
-            obs         ignored.
-            derivs      if True, the partial derivatives of the returned vector
-                        with respect to the coordinates are returned as well.
+            obs         position of the observer in the surface frame; ignored.
+            derivs      True to include the partial derivatives of the intercept
+                        point with respect to observer and to the coordinates.
 
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
+        Return:         a unitless Vector3 of intercept points defined by the
+                        coordinates.
 
-        Return:         a unitless Vector3 object of positions, in km.
-
-                        If derivs is True, then the returned Vector3 object has
-                        a subfield "d_dcoord", which contains the partial
-                        derivatives d(x,y,z)/d(r,theta,z), as a MatrixN with
-                        item shape [3,3].
+                        If derivs is True, then pos is returned with subfields
+                        "d_dobs" and "d_dcoords", where the former contains the
+                        MatrixN of partial derivatives with respect to obs and
+                        the latter is the MatrixN of partial derivatives with
+                        respect to the coordinates. The MatrixN item shapes are
+                        [3,3].
         """
 
         # Convert to Scalars and strip units, if any
-        r     = Scalar.as_standard(r)
-        theta = Scalar.as_standard(theta)
-        z     = Scalar.as_standard(z)
+        r     = Scalar.as_standard(coords[0])
+        theta = Scalar.as_standard(coords[1])
+
+        if len(coords) == 2:
+            z = Scalar(0.)
+        else:
+            z = Scalar.as_standard(coords[2])
 
         # Convert to vectors
         shape = Array.broadcast_shape((r, theta, z))
@@ -362,12 +367,12 @@ class Test_RingPlane(unittest.TestCase):
         # Coordinate/vector conversions
         obs = np.random.rand(2,4,3,3)
 
-        (r,theta,z) = plane.as_coords(obs,axes=3)
+        (r,theta,z) = plane.to_coords(obs,axes=3)
         self.assertTrue(theta >= 0.)
         self.assertTrue(theta < 2.*np.pi)
         self.assertTrue(r >= 0.)
 
-        test = plane.as_vector3(r,theta,z)
+        test = plane.from_coords((r,theta,z))
         self.assertTrue(np.all(np.abs(test.vals - obs) < 1.e-15))
 
         # Ring intercepts

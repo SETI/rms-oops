@@ -409,6 +409,24 @@ class Path(object):
             link_key = "dep"
             path_key = "arr" 
 
+        # If the link is entirely masked...
+        if np.all(link.mask):
+
+            # Return an entirely masked event of the same shape
+            buffer = np.zeros(link.shape + [3])     # OK to share memory
+            buffer[...,2] = 1.                      # Avoids some divide-by-zero
+            path_event = Event(Scalar(buffer[...,0], mask=True),
+                               Vector3(buffer, mask=True),
+                               Vector3(buffer, mask=True),
+                               self.origin_id, self.frame_id,
+                               arr = Vector3(buffer, mask=True),
+                               dep = Vector3(buffer, mask=True),
+                               arr_lt = Scalar(buffer[...,0], mask=True),
+                               dep_lt = Scalar(buffer[...,0], mask=True))
+            path_event.link = link
+            path_event.sign = sign
+            return path_event
+
         # Define the path and the linking event relative to the SSB in J2000
         link_wrt_ssb = link.wrt_ssb(quick, derivs=derivs)
         path_wrt_ssb = Path.connect(self, "SSB", "J2000")
@@ -470,6 +488,8 @@ class Path(object):
         # Update the path event one last time
         path_event_ssb = path_wrt_ssb.event_at_time(path_time)
         path_event_ssb.collapse_time()
+        path_event_ssb.link = link
+        path_event_ssb.sign = sign
 
         # Fill in the photon paths...
 

@@ -7,9 +7,9 @@
 # 3/5/12 MRS: Added class function resolution(), which calculates spatial
 #   resolution on a surface based on derivatives with respect to pixel
 #   coordinates (u,v).
-# 3/23/12 MRS - Introduced event_as_coords() and as_event() as alternatives to
-#   as_coords() and as_vector(). They begin to address the problems with virtual
-#   surfaces such as Ansa.
+# 3/23/12 MRS - Introduced event_as_coords() and coords_as_event() as
+#   alternatives to to_coords() and from_coords(). They help to address the
+#   problems with virtual surfaces such as Ansa.
 ################################################################################
 
 import numpy as np
@@ -45,7 +45,7 @@ class Surface(object):
 
         pass
 
-    def as_coords(self, pos, obs=None, axes=2, derivs=False):
+    def to_coords(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -75,32 +75,29 @@ class Surface(object):
 
         pass
 
-    def as_vector3(self, coord1, coord2, coord3=Scalar(0.), obs=None,
-                                                            derivs=False):
-        """Converts coordinates in the surface's internal coordinate system into
-        position vectors at or near the surface.
+    def from_coords(self, coords, obs, derivs=False):
+        """Returns the position where a point with the given surface coordinates
+        would fall in the surface frame, given the location of the observer.
 
         Input:
-            coord1, coord2
-                        two Scalars that define the coordinate grid on the
-                        surface.
-            coord3      a third scalar that is equal to zero on the defined
-                        surface and that measures distance away from that
-                        surface.
-            obs         a Vector3 of observer positions. Ignored for solid
-                        surfaces but needed for virtual surfaces.
-            derivs      if True, the partial derivatives of the returned vector
-                        with respect to the coordinates are returned as well.
+            coords      a tuple of two or three Scalars defining the coordinates
+            obs         position of the observer in the surface frame. Ignored
+                        for solid surfaces but needed for virtual surfaces.
+            derivs      True to include the partial derivatives of the intercept
+                        point with respect to observer and to the coordinates.
+
+        Return:         a unitless Vector3 of intercept points defined by the
+                        coordinates.
+
+                        If derivs is True, then pos is returned with subfields
+                        "d_dobs" and "d_dcoords", where the former contains the
+                        MatrixN of partial derivatives with respect to obs and
+                        the latter is the MatrixN of partial derivatives with
+                        respect to the coordinates. The MatrixN item shapes are
+                        [3,3].
 
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
-
-        Return:         a unitless Vector3 object of positions, in km.
-
-                        If derivs is True, then the returned Vector3 object has
-                        a subfield "d_dcoord", which contains the partial
-                        derivatives d(x,y,z)/d(coord1,coord2,coord3), as a
-                        MatrixN with item shape [3,3].
         """
 
         pass
@@ -260,7 +257,7 @@ class Surface(object):
             obs = event.pos + event.arr_lt * event.arr.unit() * constants.C
 
         # Evaluate the coords and optional derivatives
-        coords = self.as_coords(wrt_surface.pos, obs=obs, axes=axes,
+        coords = self.to_coords(wrt_surface.pos, obs=obs, axes=axes,
                                 derivs=derivs)
 
         if not any_derivs: return coords
@@ -280,7 +277,7 @@ class Surface(object):
 
     # 3/23 MRS currently used in OrbitFrame unit tests
     # May need to be modified for further use
-    def as_event(self, time, coords, dcoords_dt=None, obs=None):
+    def coords_as_event(self, time, coords, dcoords_dt=None, obs=None):
         """Converts a time and coordinates in the surface's internal coordinate
         system into an event object.
 
@@ -311,7 +308,7 @@ class Surface(object):
             (coord1, coord2, coord3) = coords
 
         derivs = (dcoords_dt is not None)
-        pos = self.as_vector3(coord1, coord2, coord3, obs=obs, derivs=derivs)
+        pos = self.from_coords((coord1, coord2, coord3), obs=obs, derivs=derivs)
         vel = self.velocity(pos)
 
         if derivs:
@@ -430,8 +427,33 @@ class Surface(object):
         # surface's origin
         lt = (obs_wrt_ssb -
               origin_wrt_ssb.event_at_time(link.time).pos).norm() / signed_c
-        lt_min = lt.min() - limit
-        lt_max = lt.max() + limit
+        lt_min = lt.min()
+        lt_max = lt.max()
+
+        # If the link is entirely masked...
+        if lt_min == lt_max:
+          if np.all(link.mask):
+
+            # Return an entirely masked result
+            buffer = np.zeros(link.shape + [3])     # OK to share memory
+            buffer[...,2] = 1.                      # Avoids some divide-by-zero
+            surface_event = Event(Scalar(buffer[...,0], mask=True),
+                                  Vector3(buffer, mask=True),
+                                  Vector3(buffer, mask=True),
+                                  self.origin_id, self.frame_id,
+                                  perp = Vector3(buffer, mask=True),
+                                  vflat = Vector3(buffer, mask=True),
+                                  arr = Vector3(buffer, mask=True),
+                                  dep = Vector3(buffer, mask=True),
+                                  arr_lt = Scalar(buffer[...,0], mask=True),
+                                  dep_lt = Scalar(buffer[...,0], mask=True))
+            surface_event.link = link
+            surface_event.sign = sign
+            return surface_event
+
+        # Expand the interval
+        lt_min -= limit
+        lt_max += limit
 
         # Interpret the quick parameters
         if quick is not False:
