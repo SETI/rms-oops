@@ -1,7 +1,8 @@
 ################################################################################
-# oops_/surface/ansa.py: PseudoSurface subclass of class Surface
+# oops_/surface/ansa.py: Ansa subclass of class Surface
 #
 # 2/27/12 Checked in (BSW)
+# 3/24/12 MRS - revised for new surface API.
 ################################################################################
 
 import numpy as np
@@ -11,10 +12,17 @@ from oops_.array.all import *
 import oops_.registry as registry
 
 class Ansa(Surface):
+    """The Ansa surface is defined as the locus of points where a radius vector
+    from the pole of the Z-axis is perpendicular to the line of sight. This 
+    provides a convenient coordinate system for describing rings when viewed
+    nearly edge-on. The coordinates are (r,z,theta) where
+        r       radial distance from the Z-axis, positive on the "right" side
+                (if Z is pointing "up"); negative on the left side.
+        z       vertical distance from the (x,y) plane.
+        theta   angular distance from the ansa, with positive values further
+                away from the observer and negative values closer.
     """
-    TBD
-        """
-    
+
     def __init__(self, origin, frame, radii=None):
         """Constructor for an Ansa Surface.
 
