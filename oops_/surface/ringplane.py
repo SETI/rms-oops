@@ -63,8 +63,8 @@ class RingPlane(Surface):
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
 
-    def to_coords(self, pos, obs=None, axes=2, derivs=False):
-        """Converts from position vectors in the internal frame into the surface
+    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
+        """Converts from position vectors in the internal frame to the surface
         coordinate system.
 
         Input:
@@ -126,7 +126,7 @@ class RingPlane(Surface):
         else:
             return (r, theta)
 
-    def from_coords(self, coords, obs=None, derivs=False):
+    def vector3_from_coords(self, coords, obs=None, derivs=False):
         """Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
 
@@ -369,12 +369,12 @@ class Test_RingPlane(unittest.TestCase):
         # Coordinate/vector conversions
         obs = np.random.rand(2,4,3,3)
 
-        (r,theta,z) = plane.to_coords(obs,axes=3)
+        (r,theta,z) = plane.coords_from_vector3(obs,axes=3)
         self.assertTrue(theta >= 0.)
         self.assertTrue(theta < 2.*np.pi)
         self.assertTrue(r >= 0.)
 
-        test = plane.from_coords((r,theta,z))
+        test = plane.vector3_from_coords((r,theta,z))
         self.assertTrue(np.all(np.abs(test.vals - obs) < 1.e-15))
 
         # Ring intercepts

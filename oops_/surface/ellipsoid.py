@@ -64,7 +64,7 @@ class Ellipsoid(Surface):
         self.unsquash = Vector3((1., self.unsquash_y, self.unsquash_z))
         self.unsquash_sq = self.unsquash**2
 
-    def to_coords(self, position, axes=2):
+    def coords_from_vector3(self, position, axes=2):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -110,7 +110,7 @@ class Ellipsoid(Surface):
         else:
             return (lon, lat, r - self.req)
 
-    def from_coords(self, coords, obs=None, derivs=False):
+    def vector3_from_coords(self, coords, obs=None, derivs=False):
         """Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
 

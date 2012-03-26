@@ -8,8 +8,8 @@
 #   resolution on a surface based on derivatives with respect to pixel
 #   coordinates (u,v).
 # 3/23/12 MRS - Introduced event_as_coords() and coords_as_event() as
-#   alternatives to to_coords() and from_coords(). They help to address the
-#   problems with virtual surfaces such as Ansa.
+#   alternatives to coords_from_vector3() and vector3_from_coords(). They help
+#   to address the problems with virtual surfaces such as Ansa.
 # 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
 ################################################################################
 
@@ -46,7 +46,7 @@ class Surface(object):
 
         pass
 
-    def to_coords(self, pos, obs=None, axes=2, derivs=False):
+    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -76,7 +76,7 @@ class Surface(object):
 
         pass
 
-    def from_coords(self, coords, obs, derivs=False):
+    def vector3_from_coords(self, coords, obs, derivs=False):
         """Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
 
@@ -258,8 +258,8 @@ class Surface(object):
             obs = event.pos + event.arr_lt * event.arr.unit() * constants.C
 
         # Evaluate the coords and optional derivatives
-        coords = self.to_coords(wrt_surface.pos, obs=obs, axes=axes,
-                                derivs=derivs)
+        coords = self.coords_from_vector3(wrt_surface.pos, obs=obs, axes=axes,
+                                                           derivs=derivs)
 
         if not any_derivs: return coords
 
@@ -309,7 +309,8 @@ class Surface(object):
             (coord1, coord2, coord3) = coords
 
         derivs = (dcoords_dt is not None)
-        pos = self.from_coords((coord1, coord2, coord3), obs=obs, derivs=derivs)
+        pos = self.vector3_from_coords((coord1, coord2, coord3), obs=obs,
+                                                                 derivs=derivs)
         vel = self.velocity(pos)
 
         if derivs:

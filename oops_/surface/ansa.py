@@ -39,7 +39,7 @@ class Ansa(Surface):
         self.origin_id = registry.as_path_id(origin)
         self.frame_id  = registry.as_frame_id(frame)
 
-    def to_coords(self, pos, obs, axes=2, derivs=False):
+    def coords_from_vector3(self, pos, obs, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -84,8 +84,8 @@ class Ansa(Surface):
 
         # Fill in the third coordinate if necessary
         if axes > 2:
-            # As discussed in the math found below with from_coords(), the ansa
-            # longitude relative to the observer is:
+            # As discussed in the math found below with vector3_from_coords(),
+            # the ansa longitude relative to the observer is:
 
             phi = (rabs / obs_xy).arccos()
             theta = sign*lon - phi
@@ -109,12 +109,12 @@ class Ansa(Surface):
                 z.insert_subfield("d_dobs",Vector3((0,0,0)).as_row())
 
             if axes > 2 and derivs[2]:
-                raise NotImplementedError("Ansa.to_coords() does not " +
-                                          "implement theta derivatives")
+                raise NotImplementedError("Ansa.coords_from_vector3() " +
+                                    "does not implement theta derivatives")
 
         return coords
 
-    def from_coords(self, coords, obs, derivs=False):
+    def vector3_from_coords(self, coords, obs, derivs=False):
         """Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
 
@@ -196,7 +196,7 @@ class Ansa(Surface):
                                    rabs * pos_lon.sin(), z)
 
         if derivs:
-            raise NotImplementedError("Ansa.from_coords() " +
+            raise NotImplementedError("Ansa.vector3_from_coords() " +
                                       "does not implement derivatives")
 
         return pos
@@ -379,18 +379,18 @@ class Test_Ansa(unittest.TestCase):
         self.assertTrue(abs(pos_xy.sep(los_xy) - np.pi/2) < 1.e-8)
         self.assertTrue(abs(obs + t * los - pos) < 1.e-8)
 
-        # to_coords()
+        # coords_from_vector3()
         obs = Vector3(np.random.rand(100,3) * 1.e6)
         pos = Vector3(np.random.rand(100,3) * 1.e5)
 
-        (r,z) = surface.to_coords(pos, obs, axes=2)
+        (r,z) = surface.coords_from_vector3(pos, obs, axes=2)
 
         pos_xy = pos * (1,1,0)
         pos_z  = pos.as_scalar(2)
         self.assertTrue(abs(pos_xy.norm() - abs(r)) < 1.e-8)
         self.assertTrue(abs(pos_z - z) < 1.e-8)
 
-        (r,z,theta) = surface.to_coords(pos, obs, axes=3)
+        (r,z,theta) = surface.coords_from_vector3(pos, obs, axes=3)
 
         pos_xy = pos * (1,1,0)
         pos_z  = pos.as_scalar(2)
@@ -398,13 +398,13 @@ class Test_Ansa(unittest.TestCase):
         self.assertTrue(abs(pos_z - z) < 1.e-8)
         self.assertTrue(abs(theta) <= np.pi)
 
-        # from_coords()
+        # vector3_from_coords()
         obs = Vector3(1.e-5 + np.random.rand(100,3) * 1.e6)
         r = Scalar(1.e-4 + np.random.rand(100) * 9e-4)
         z = Scalar((2 * np.random.rand(100) - 1) * 1.e5)
         theta = Scalar(np.random.rand(100))
 
-        pos = surface.from_coords((r,z), obs)
+        pos = surface.vector3_from_coords((r,z), obs)
 
         pos_xy = pos * (1,1,0)
         pos_z  = pos.as_scalar(2)
@@ -414,42 +414,42 @@ class Test_Ansa(unittest.TestCase):
         obs_xy = obs * (1,1,0)
         self.assertTrue(abs(pos_xy.sep(obs_xy - pos_xy) - np.pi/2) < 1.e-5)
 
-        pos1 = surface.from_coords((r,z,theta), obs)
+        pos1 = surface.vector3_from_coords((r,z,theta), obs)
         pos1_xy = pos1 * (1,1,0)
         self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
 
-        pos1 = surface.from_coords((r,z,-theta), obs)
+        pos1 = surface.vector3_from_coords((r,z,-theta), obs)
         pos1_xy = pos1 * (1,1,0)
         self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
 
-        pos = surface.from_coords((-r,z), obs)
+        pos = surface.vector3_from_coords((-r,z), obs)
         pos_xy = pos * (1,1,0)
 
-        pos1 = surface.from_coords((-r,z,-theta), obs)
+        pos1 = surface.vector3_from_coords((-r,z,-theta), obs)
         pos1_xy = pos1 * (1,1,0)
         self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
 
-        pos1 = surface.from_coords((-r,z,theta), obs)
+        pos1 = surface.vector3_from_coords((-r,z,theta), obs)
         pos1_xy = pos1 * (1,1,0)
         self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
 
-        # from_coords() & to_coords()
+        # vector3_from_coords() & coords_from_vector3()
         obs = Vector3((1.e6,0,0))
         r = Scalar(1.e4 + np.random.rand(100) * 9.e4)
         r *= np.sign(2 * np.random.rand(100) - 1)
         z = Scalar((2 * np.random.rand(100) - 1) * 1.e5)
         theta = Scalar((2 * np.random.rand(100) - 1) * 1.)
 
-        pos = surface.from_coords((r,z,theta), obs)
-        coords = surface.to_coords(pos, obs, axes=3)
+        pos = surface.vector3_from_coords((r,z,theta), obs)
+        coords = surface.coords_from_vector3(pos, obs, axes=3)
         self.assertTrue(abs(r - coords[0]) < 1.e-5)
         self.assertTrue(abs(z - coords[1]) < 1.e-5)
         self.assertTrue(abs(theta - coords[2]) < 1.e-8)
 
         obs = Vector3(np.random.rand(100,3) * 1.e6)
         pos = Vector3(np.random.rand(100,3) * 1.e5)
-        coords = surface.to_coords(pos, obs, axes=3)
-        test_pos = surface.from_coords(coords, obs)
+        coords = surface.coords_from_vector3(pos, obs, axes=3)
+        test_pos = surface.vector3_from_coords(coords, obs)
         self.assertTrue(abs(test_pos - pos) < 1.e-5)
 
         # intercept() derivatives

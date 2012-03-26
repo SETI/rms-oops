@@ -539,7 +539,8 @@ class Backplane(object):
 
         surface = Backplane.get_surface(event_key[0])
         assert surface.COORDINATE_TYPE == "polar"
-        (r,lon) = surface.to_coords(center_event.aberrated_dep(), axes=2)
+        (r,lon) = surface.coords_from_vector3(center_event.aberrated_dep(),
+                                              axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
@@ -563,7 +564,8 @@ class Backplane(object):
 
         surface = Backplane.get_surface(event_key[0])
         assert event.surface.COORDINATE_TYPE == "polar"
-        (r,lon) = surface.to_coords(-center_event.aberrated_arr(), axes=2)
+        (r,lon) = surface.coords_from_vector3(-center_event.aberrated_arr(),
+                                              axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
@@ -849,8 +851,9 @@ class Backplane(object):
         ignore = obs_path.photon_from_event(center_event)
 
         assert event.surface.COORDINATE_TYPE == "spherical"
-        (lon,lat) = event.surface.to_coords(center_event.aberrated_dep(),
-                                            axes=2)
+        (lon,
+        lat) = event.surface.coords_from_vector3(center_event.aberrated_dep(),
+                                                 axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
@@ -873,8 +876,9 @@ class Backplane(object):
         ignore = path_.Waypoint("SUN").photon_to_event(center_event)
 
         assert event.surface.COORDINATE_TYPE == "spherical"
-        (lon,lat) = event.surface.to_coords(-center_event.aberrated_arr(),
-                                             axes=2)
+        (lon,
+        lat) = event.surface.coords_from_vector3(-center_event.aberrated_arr(),
+                                                 axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
@@ -1247,10 +1251,10 @@ class Backplane(object):
 
 import unittest
 
-UNITTEST_PRINT = True
+UNITTEST_PRINT = False
 UNITTEST_LOGGING = False
 UNITTEST_FILESPEC = "test_data/cassini/ISS/W1573721822_1.IMG"
-UNITTEST_UNDERSAMPLE = 1
+UNITTEST_UNDERSAMPLE = 10
 
 def show_info(title, array):
     """Internal method to print summary information and display images as

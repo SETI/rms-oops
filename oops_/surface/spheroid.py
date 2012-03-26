@@ -66,7 +66,7 @@ class Spheroid(Surface):
         self.unsquash  = Vector3((1., 1., self.unsquash_z))
         self.unsquash_sq    = self.unsquash**2
 
-    def to_coords(self, pos, obs=None, axes=2, derivs=False):
+    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
         coordinate system.
 
@@ -106,7 +106,7 @@ class Spheroid(Surface):
         if derivs is True: derivs = (True, True, True)
 
         if np.any(derivs):
-            raise NotImplementedError("Spheroid.to_coords() " +
+            raise NotImplementedError("Spheroid.coords_from_vector3() " +
                                       " does not implement derivatives")
 
         if axes == 2:
@@ -114,7 +114,7 @@ class Spheroid(Surface):
         else:
             return (lon, lat, r - self.req)
 
-    def from_coords(self, coords, obs=None, derivs=False):
+    def vector3_from_coords(self, coords, obs=None, derivs=False):
         """Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
 
@@ -155,7 +155,7 @@ class Spheroid(Surface):
         pos = Vector3.from_scalars(x,y,z)
 
         if derivs:
-            raise NotImplementedError("Spheroid.from_coords() " +
+            raise NotImplementedError("Spheroid.vector3_from_coords() " +
                                       " does not implement derivatives")
 
         return pos
@@ -520,8 +520,8 @@ class Test_Spheroid(unittest.TestCase):
         NPTS = 10000
         obs = (2 * np.random.rand(NPTS,3) - 1.) * REQ
 
-        (lon,lat,elev) = planet.to_coords(obs,axes=3)
-        test = planet.from_coords((lon,lat,elev))
+        (lon,lat,elev) = planet.coords_from_vector3(obs,axes=3)
+        test = planet.vector3_from_coords((lon,lat,elev))
         self.assertTrue(abs(test - obs) < 3.e-9)
 
         # Spheroid intercepts & normals
