@@ -5,6 +5,7 @@
 # 3/1/12 Modified (MRS) - revised and implified connect() and connect_to();
 #   added convergence testing to _solve_photon; added quick parameter dictionary
 #   and config file.
+# 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
 ################################################################################
 
 import numpy as np
@@ -250,9 +251,7 @@ class Path(object):
                        event.vel - offset.vel,
                        self.path_id, event.frame_id)
 
-        for key in event.subfields.keys():
-            result.insert_subfield(key, event.subfields[key].copy(derivs))
-
+        result.copy_subfields_from(event)
         return result
 
     def add_to_event(self, event, quick=QUICK, derivs=False):
@@ -282,9 +281,7 @@ class Path(object):
                        event.vel + offset.vel,
                        self.origin_id, event.frame_id)
 
-        for key in event.subfields.keys():
-            result.insert_subfield(key, event.subfields[key].copy(derivs))
-
+        result.copy_subfields_from(event)
         return result
 
 ################################################################################
@@ -422,9 +419,8 @@ class Path(object):
                                arr = Vector3(buffer, mask=True),
                                dep = Vector3(buffer, mask=True),
                                arr_lt = Scalar(buffer[...,0], mask=True),
-                               dep_lt = Scalar(buffer[...,0], mask=True))
-            path_event.link = link
-            path_event.sign = sign
+                               dep_lt = Scalar(buffer[...,0], mask=True),
+                               link = link, sign = sign)
             return path_event
 
         # Define the path and the linking event relative to the SSB in J2000
@@ -488,8 +484,8 @@ class Path(object):
         # Update the path event one last time
         path_event_ssb = path_wrt_ssb.event_at_time(path_time)
         path_event_ssb.collapse_time()
-        path_event_ssb.link = link
-        path_event_ssb.sign = sign
+        path_event_ssb.insert_subfield("link", link)
+        path_event_ssb.insert_subfield("sign", sign)
 
         # Fill in the photon paths...
 

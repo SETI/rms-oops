@@ -29,6 +29,8 @@ class OrbitPlane(Surface):
     However, coordinates and intercepts are calculated at all locations.
     """
 
+    COORDINATE_TYPE = "polar"
+
     def __init__(self, elements, epoch, origin, frame, id=None):
         """Constructor for an OffsetPlane surface.
 

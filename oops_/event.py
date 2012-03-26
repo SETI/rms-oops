@@ -34,8 +34,8 @@ class Event(object):
             frame_id    the ID of a frame identifying the coordinate system.
                         Default is to match the frame of the origin.
 
-        These optional attributes define the connection between this event and
-        some other event.
+        These subfields define the connection between this event and some other
+        event.
             link        an Event object relative to which this one was defined.
                         Any partial derivatives in this Event object are assumed
                         to be relative to changes at the prior event.
@@ -80,9 +80,6 @@ class Event(object):
         self.origin_id = registry.as_path_id(origin)
         self.frame_id = registry.as_path(origin).frame_id
 
-        self.link = None
-        self.sign = 0
-
         if frame is not None:
             self.frame_id = registry.as_frame_id(frame)
 
@@ -90,6 +87,8 @@ class Event(object):
         self.insert_subfield("arr", Empty())            # These always exist
         self.insert_subfield("dep", Empty())
         self.insert_subfield("vflat", Vector3([0.,0.,0.])) # default
+        self.insert_subfield("link", None)
+        self.insert_subfield("sign", 0)
 
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
@@ -180,7 +179,7 @@ class Event(object):
 
             if LOGGING.event_time_collapse:
                 print LOGGING.prefix, "Event.collapse_time()",
-                print tmax - tmin
+                print tmin, tmax - tmin
 
         return self
 
@@ -211,12 +210,7 @@ class Event(object):
                        self.pos.copy(derivs), self.vel.copy(derivs),
                        self.origin_id, self.frame_id)
 
-        for key in self.subfields.keys():
-            subfield = self.subfields[key]
-            if isinstance(subfield, Array):
-                result.insert_subfield(key, subfield.copy(derivs))
-            else:
-                result.insert_subfield(key, subfield)
+        result.copy_subfields_from(self, derivs)
 
         result.filled_shape = self.filled_shape
         result.filled_mask  = self.filled_mask
@@ -229,6 +223,14 @@ class Event(object):
             result.filled_ssb = None
 
         return result
+
+    def copy_subfields_from(self, source, derivs=True):
+        for key in source.subfields.keys():
+            subfield = source.subfields[key]
+            if isinstance(subfield, Array):
+                self.insert_subfield(key, subfield.copy(derivs))
+            else:
+                self.insert_subfield(key, subfield)
 
     def plain(self, subfields=True):
         """Returns a shallow copy of self with derivatives and, optionally, the

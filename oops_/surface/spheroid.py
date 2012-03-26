@@ -35,6 +35,8 @@ class Spheroid(Surface):
 
     UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
 
+    COORDINATE_TYPE = "spherical"
+
     def __init__(self, origin, frame, radii):
         """Constructor for a Spheroid surface.
 

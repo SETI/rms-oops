@@ -31,6 +31,8 @@ class Ellipsoid(Surface):
     direction of increasing elevation is not exactly normal to the surface.
     """
 
+    COORDINATE_TYPE = "spherical"
+
     def __init__(self, origin, frame, radii):
         """Constructor for an Ellipsoid object.
             

@@ -10,6 +10,7 @@
 # 3/23/12 MRS - Introduced event_as_coords() and coords_as_event() as
 #   alternatives to to_coords() and from_coords(). They help to address the
 #   problems with virtual surfaces such as Ansa.
+# 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
 ################################################################################
 
 import numpy as np
@@ -446,9 +447,8 @@ class Surface(object):
                                   arr = Vector3(buffer, mask=True),
                                   dep = Vector3(buffer, mask=True),
                                   arr_lt = Scalar(buffer[...,0], mask=True),
-                                  dep_lt = Scalar(buffer[...,0], mask=True))
-            surface_event.link = link
-            surface_event.sign = sign
+                                  dep_lt = Scalar(buffer[...,0], mask=True),
+                                  link = link, sign = sign)
             return surface_event
 
         # Expand the interval
@@ -522,10 +522,9 @@ class Surface(object):
 
         # Create the surface event in its own frame
         surface_event = Event(surface_time, pos_wrt_surface, (0,0,0),
-                              self.origin_id, self.frame_id)
+                              self.origin_id, self.frame_id,
+                              link = link, sign = sign)
         surface_event.collapse_time()
-        surface_event.link = link
-        surface_event.sign = sign
 
         # Fill in derivatives if necessary
         if derivs:

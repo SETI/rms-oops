@@ -29,6 +29,8 @@ class RingPlane(Surface):
     ZERO_MATRIX = MatrixN([(0,0,0),(0,0,0),(0,0,0)])
     UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
 
+    COORDINATE_TYPE = "polar"
+
     def __init__(self, origin, frame, radii=None, gravity=None,
                        elevation=0.):
         """Constructor for a RingPlane surface.

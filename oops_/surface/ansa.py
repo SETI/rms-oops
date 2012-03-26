@@ -23,7 +23,9 @@ class Ansa(Surface):
                 away from the observer and negative values closer.
     """
 
-    def __init__(self, origin, frame, radii=None):
+    COORDINATE_TYPE = "cylindrical"
+
+    def __init__(self, origin, frame):
         """Constructor for an Ansa Surface.
 
         Input:
@@ -32,18 +34,10 @@ class Ansa(Surface):
 
             frame       a Frame object or ID in which the ring plane is the
                         (x,y) plane (where z == 0).
-
-            radii       the nominal inner and outer radii of the ring, in km.
-                        None for a ring with no radial limits.
-            """
+        """
 
         self.origin_id = registry.as_path_id(origin)
         self.frame_id  = registry.as_frame_id(frame)
-
-        if radii is None:
-            self.radii = None
-        else:
-            self.radii    = np.asfarray(radii)
 
     def to_coords(self, pos, obs, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
@@ -70,8 +64,10 @@ class Ansa(Surface):
                         MatrixN objects with item shape [1,3].
         """
 
-        (pos_x, pos_y, pos_z) = Vector3.as_standard(pos).as_scalars()
-        (obs_x, obs_y, obs_z) = Vector3.as_standard(obs).as_scalars()
+        pos = Vector3.as_standard(pos)
+        obs = Vector3.as_standard(obs)
+        (pos_x, pos_y, pos_z) = pos.as_scalars()
+        (obs_x, obs_y, obs_z) = obs.as_scalars()
 
         rabs   = (pos_x**2 + pos_y**2).sqrt()
         obs_xy = (obs_x**2 + obs_y**2).sqrt()
@@ -86,12 +82,6 @@ class Ansa(Surface):
         r = rabs * sign
         z = pos_z.copy()
 
-        if self.radii is not None:
-            r.mask = r.mask | rabs < self.radii[0] | rabs > self.radii[1]
-            r.collapse_mask()
-
-            z.mask = r.mask
-
         # Fill in the third coordinate if necessary
         if axes > 2:
             # As discussed in the math found below with from_coords(), the ansa
@@ -99,7 +89,6 @@ class Ansa(Surface):
 
             phi = (rabs / obs_xy).arccos()
             theta = sign*lon - phi
-            theta.mask = r.mask
             coords = (r, z, theta)
 
         else:
@@ -107,8 +96,21 @@ class Ansa(Surface):
 
         # Check the derivative requirements
         if np.any(derivs):
-            raise NotImplementedError("Ansa.to_coords() " +
-                                      "does not implement derivatives")
+            if derivs is True: derivs = (derivs, derivs, derivs)
+
+            if derivs[0]:
+                dr_dpos = pos/r
+                dr_dpos.vals[...,2] = 0.
+                r.insert_subfield("d_dpos", dr_dpos.as_row())
+                r.insert_subfield("d_dobs", Vector3((0,0,0)).as_row())
+
+            if derivs[1]:
+                z.insert_subfield("d_dpos",Vector3((0,0,1)).as_row())
+                z.insert_subfield("d_dobs",Vector3((0,0,0)).as_row())
+
+            if axes > 2 and derivs[2]:
+                raise NotImplementedError("Ansa.to_coords() does not " +
+                                          "implement theta derivatives")
 
         return coords
 
