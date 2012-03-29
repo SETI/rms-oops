@@ -6,12 +6,39 @@
 
 import numpy as np
 import numpy.ma as ma
+from numpy import matrix
 
 from oops_.array.array_  import Array
 from oops_.array.pair    import Pair
 from oops_.array.scalar  import Scalar
 from oops_.array.vector3 import Vector3
 from oops_.array.vectorn import VectorN
+
+# For 3x3 matrix multiply
+# From http://www.dr-lex.be/random/matrix_inv.html
+#
+# | a11 a12 a13 |-1             |   a33a22-a32a23  -(a33a12-a32a13)   a23a12-a22a13  |
+# | a21 a22 a23 |    =  1/DET * | -(a33a21-a31a23)   a33a11-a31a13  -(a23a11-a21a13) |
+# | a31 a32 a33 |               |   a32a21-a31a22  -(a32a11-a31a12)   a22a11-a21a12  |
+# 
+# with DET  =  a11(a33a22-a32a23)-a21(a33a12-a32a13)+a31(a23a12-a22a13)
+#
+# Decrement indices by one
+#
+# | a00 a01 a02 |-1             | a11a22-a12a21  a21a02-a22a01  a12a01-a11a02  |
+# | a10 a11 a12 |    =  1/DET * | a12a20-a10a22  a22a00-a20a02  a10a02-a12a00  |
+# | a20 a21 a22 |               | a10a21-a11a20  a20a01-a21a00  a11a00-a10a01  |
+# 
+# with DET  =  a00(a11a22-a21a12)-a12(a22a01-a21a02)+a20(a12a01-a11a02)
+
+I1A = np.array([[1,2,1],[1,0,1],[1,2,1]])
+J1A = np.array([[1,1,2],[2,0,0],[0,0,1]])
+I1B = np.array([[2,0,0],[2,2,0],[2,0,0]])
+J1B = np.array([[2,2,1],[0,2,2],[1,1,0]])
+I2A = np.array([[1,2,1],[1,2,1],[1,2,1]])
+J2A = np.array([[2,2,1],[0,0,2],[1,1,0]])
+I2B = np.array([[2,0,0],[2,0,0],[2,0,0]])
+J2B = np.array([[1,1,2],[2,2,0],[0,0,1]])
 
 class MatrixN(Array):
     """An Array of arbitrary matrices."""
@@ -139,8 +166,22 @@ class MatrixN(Array):
 
             return MatrixN(inverse_vals, self.mask) / det
 
+        # 3 x 3 case
+        if self.item[0] == 3:
+            global I1A, J1A, I1B, J1B, I2A, J2A, I2B, J2B
+
+            inverse_vals = (self.vals[...,I1A,J1A] * self.vals[...,I1B,J1B] -
+                            self.vals[...,I2A,J2A] * self.vals[...,I2B,J2B])
+
+            det = (self.vals[...,0,0] * inverse_vals[...,0,0] +
+                   self.vals[...,0,1] * inverse_vals[...,1,0] +
+                   self.vals[...,0,2] * inverse_vals[...,2,0])
+
+            return MatrixN(inverse_vals, self.mask) / det
+
         # Remainder are TBD
-        return NotImplemented
+        raise NotImplementedError("inversion of matrices larger than 3x3 is "
+                                  "not implemented")
 
     def transpose(self):
         """Transpose of matrix."""
@@ -294,6 +335,21 @@ class Test_MatrixN(unittest.TestCase):
 
         j = MatrixN([(-1,0),(0,2),(1,1)])
         self.assertEqual(j*m, MatrixN([(-3,-2,-1),(2,4,0),(4,4,1)]))
+
+        # 3x3 Matrix inverse
+        test = MatrixN(np.random.rand(200,3,3))
+        inverse = test.inverse()
+        product = test * inverse
+
+        self.assertTrue(np.all(abs(product.vals[...,0,0] - 1) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,1,1] - 1) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,2,2] - 1) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,0,1]) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,1,0]) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,2,0]) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,0,2]) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,2,1]) < 1.e-12))
+        self.assertTrue(np.all(abs(product.vals[...,1,2]) < 1.e-12))
 
 ############################################
 if __name__ == '__main__':

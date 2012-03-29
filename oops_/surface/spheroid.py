@@ -7,6 +7,8 @@
 #   Unit tests added.
 # 3/4/12 MRS: cleaned up comments, added NotImplementedErrors for features still
 #   TBD.
+# 3/29/12 MRS: added derivatives to intercept_normal_to() and support for new
+#   Limb surface. Lots of new unit tests.
 ################################################################################
 
 import numpy as np
@@ -34,10 +36,13 @@ class Spheroid(Surface):
     """
 
     UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
+    ONES_VECTOR = Vector3([1,1,1])
 
     COORDINATE_TYPE = "spherical"
 
-    def __init__(self, origin, frame, radii):
+    DEBUG = False       # True for convergence testing in intercept_normal_to()
+
+    def __init__(self, origin, frame, radii, exclusion=0.95):
         """Constructor for a Spheroid surface.
 
         Input:
@@ -48,6 +53,10 @@ class Spheroid(Surface):
                         the Z-coordinate.
             radii       a tuple (a,c), defining the long and short radii of the
                         spheroid.
+            exclusion   the fraction of the polar radius within which
+                        calculations of intercept_normal_to() are suppressed.
+                        Values of less than 0.9 are not recommended because
+                        the problem becomes numerically unstable.
         """
 
         self.origin_id = registry.as_path_id(origin)
@@ -57,14 +66,26 @@ class Spheroid(Surface):
         self.radii_sq = self.radii**2
         self.req    = radii[0]
         self.req_sq = self.req**2
+        self.rpol   = self.radii[2]
 
         self.squash_z   = radii[1] / radii[0]
         self.unsquash_z = radii[0] / radii[1]
 
         self.squash    = Vector3((1., 1., self.squash_z))
-        self.squash_sq = self.squash**2
-        self.unsquash  = Vector3((1., 1., self.unsquash_z))
-        self.unsquash_sq    = self.unsquash**2
+        self.squash_sq = Vector3((1., 1., self.squash_z**2))
+
+        self.unsquash     = Vector3((1., 1., self.unsquash_z))
+        self.unsquash_sq  = Vector3((1., 1., self.unsquash_z**2))
+
+        self.unsquash_sq_2d = MatrixN(([1,0,0],
+                                       [0,1,0],
+                                       [0,0,self.unsquash_z**2]))
+
+        # This is the exclusion zone radius, within which calculations of
+        # intercept_normal_to() are automatically masked due to the ill-defined
+        # geometry.
+
+        self.exclusion = exclusion * self.rpol
 
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
@@ -101,9 +122,6 @@ class Spheroid(Surface):
         (x,y,z) = unsquashed.as_scalars()
         lat = (z/r).arcsin()
         lon = y.arctan2(x) % (2.*np.pi)
-
-        if derivs is False: derivs = (False, False, False)
-        if derivs is True: derivs = (True, True, True)
 
         if np.any(derivs):
             raise NotImplementedError("Spheroid.coords_from_vector3() " +
@@ -217,6 +235,7 @@ class Spheroid(Surface):
         bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
         t = (bsign_sqrtd_div2 - b_div2) / a
         pos = obs + t*los
+        pos = self._apply_exclusion(pos)
 
         if derivs:
             # Using step-by-step differentiation of the equations above
@@ -300,8 +319,7 @@ class Spheroid(Surface):
         perp = Vector3.as_standard(pos) * self.unsquash_sq
 
         if derivs:
-            raise NotImplementedError("Spheroid.normal() " +
-                                      "does not implement derivatives")
+            perp.insert_subfield("d_dpos", self.unsquash_sq_2d)
 
         return perp
 
@@ -323,13 +341,13 @@ class Spheroid(Surface):
                         vector, as a MatrixN object with item shape [3,3].
         """
 
-        result = Vector3.as_standard(normal) * self.squash_sq
+        cept = (Vector3.as_standard(normal) * self.squash).unit() * self.radii
 
         if derivs:
             raise NotImplementedError("Spheroid.intercept_with_normal() " +
                                       "does not implement derivatives")
 
-        return result
+        return cept
 
     def intercept_normal_to(self, pos, derivs=False):
         """Constructs the intercept point on the surface where a normal vector
@@ -338,6 +356,8 @@ class Spheroid(Surface):
         Input:
             pos         a Vector3 of positions near the surface, with optional
                         units.
+            derivs      true to return a matrix of partial derivatives
+                        d(intercept)/d(pos).
 
         Return:         a unitless vector3 of surface intercept points. Where no
                         solution exists, the returned vector should be masked.
@@ -349,123 +369,202 @@ class Spheroid(Surface):
                         [3,3].
         """
 
-        def guess_intercept_normal_to(pos):
-            sq_pos = pos * self.squash_sq
-            cept = sq_pos.unit() * self.radii * self.squash_sq
-            return cept
+        return self.intercept_normal_to_iterated(pos, derivs)[0]
 
-        def f(t, pos):
-            """Compute F(t) = ( (x0 * a**2) / (t + a**2) )**2 +
-                              ( (y0 * a**2) / (t + a**2) )**2 +
-                              ( (z0 * c**2) / (t + c**2) )**2 - 1, where
-                <x0,y0,z0> represents pos, and self.radii is <a,a,c>.
-                
-            Input:
-                pos     a Vector3 of positions near the surface, with optional
-                        units
-                t       t in F(t).
-                
-            Return      Solution to F(t)
-            """
-            denom = np.array([t,]*3).transpose() + self.radii_sq
-            v1 = Vector3(self.radii_sq * pos.vals)
-            v = v1 / denom
-            w1 = v**2
-            # w = w1.vals.sum(axis=1) - 1.
-            w = w1.vals.sum(axis=-1) - 1.
-            return w
-
-        def fprime(t, pos):
-            """Compute F'(t) = (-2 * x0**2 * a**4) / (t + a**2)**3 +
-                               (-2 * y0**2 * a**4) / (t + a**2)**3 +
-                               (-2 * z0**2 * c**4) / (t + c**2)**3, where
-                <x0,y0,z0> represents pos, and self.radii is <a,a,c>.
-                
-            Input:
-                pos     a Vector3 of positions near the surface, with optional
-                        units
-                t       t in F(t).
-                
-            Return      Solution to F'(t)
-            """
-            denom = (np.array([t,]*3).transpose() + self.radii_sq)**3
-            v = (-2. * pos**2 * self.radii**4) / denom
-            # w = v.vals.sum(axis=1)
-            w = v.vals.sum(axis=-1)
-            return w
-
-        def intercept_normal_close(pos, cept, norm, t):
-            """Check if angle between the surface normal and the vector from the
-            point on the surface to the point in question, pos, is very small.
-            For some reason sep() was not working without creating unit vectors.
-            
-            Input:
-                pos     a Vector3 of positions near the surface, with optional
-                        units
-                cept    intercept point on surface
-                norm    surface normal
-                t       multiple of unit surface normal to reach pos.
-                
-            Return:     Boolean whether close enough.
-            """
-                
-            cept = pos - norm * t
-            # test_vector = (pos - cept).unit()
-            # sep = test_vector.sep(norm.unit())
-            sep = (pos - cept).sep(norm)
-            return sep < 1.e-9
-
-        def newton_intercept_normal_to(pos, t):
-            """Runs Newton numerical method until angle between normal vector
-            and vector from surface intercept point and pos is close to zero.
-            
-            Input:
-                pos     a Vector3 of positions near the surface, with optiona
-                        units
-                t       t such that F(t) = ( (x0 * a**2) / (t + a**2) )**2 +
-                        ( (y0 * a**2) / (t + a**2) )**2 +
-                        ( (z0 * c**2) / (t + c**2) )**2 - 1, where <x0,y0,z0>
-                        represents pos, and self.radii is <a,a,c>.
-            
-            Return:     a unitless vector3 of surface intercept points. Where no
-                        solution exists, the returned vector should be masked.
-            """
-            denom = np.array([t,]*3).transpose() + self.radii_sq
-            numer = pos * self.radii_sq
-            cept = numer / denom
-            norm = self.normal(cept)
-            if intercept_normal_close(pos, cept, norm, t):
-                return cept
-            else:
-                f_of_t = self.f(t, pos)
-                fprime_of_t = self.fprime(t, pos)
-                t -= f_of_t / fprime_of_t
-                return self.newton_intercept_normal_to(pos, t)
-
-        cept = guess_intercept_normal_to(pos)
-        norm = self.normal(cept).unit()
-        pos_cept = pos - cept
-        t = pos_cept.vals[...,0] / norm.vals[...,0]
-
-        if derivs:
-            raise NotImplementedError("Spheroid.intercept_normal_to() " +
-                                      "does not implement derivatives")
-
-        return newton_intercept_normal_to(pos, t)
-
-    def velocity(self, pos):
-        """Returns the local velocity vector at a point within the surface.
-        This can be used to describe the orbital motion of ring particles or
-        local wind speeds on a planet.
+    def intercept_normal_to_iterated(self, pos, derivs=False, guess=None):
+        """This is the same as above but allows an initial guess at the t array
+        to be passed in, and returns a tuple containing both the intercept and
+        the values of t.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
+            pos         a Vector3 of positions near the surface, with optional
+                        units.
+            derivs      true to return a matrix of partial derivatives
+                        d(intercept)/d(pos).
+            guess       initial guess at the t array.
 
-        Return:         a unitless Vector3 of velocities, in units of km/s.
+        Return:         a tuple (pos,t):
+            intercept   a unitless vector3 of surface intercept points. Where no
+                        solution exists, the returned vector should be masked.
+            t           the scale factor such that:
+                            cept + t * normal(cept) = pos
         """
 
-        return Vector3((0,0,0))
+        pos = Vector3.as_standard(pos)
+        pos = self._apply_exclusion(pos)
+
+        # The intercept point satisfies:
+        #   cept + t * perp(cept) = pos
+        # where
+        #   perp(cept) = cept * unsquash_sq
+        #
+        # Let A1 == unsquash_z
+        # Let A2 == unsquash_z**2
+        #
+        # Expanding,
+        #   pos_x = (1 + t) cept_x
+        #   pos_y = (1 + t) cept_y
+        #   pos_z = (1 + A2 t) cept_z
+        #
+        # The intercept point must also satisfy
+        #   |cept * unsquash| = req
+        # or
+        #   cept_x**2 + cept_y**2 + A2 cept_z**2 = req_sq
+        #
+        # Solve:
+        #   cept_x**2 + cept_y**2 + A2 cept_z**2 - req_sq = 0
+        #
+        #   pos_x**2 / (1 + t)**2 +
+        #   pos_y**2 / (1 + t)**2 +
+        #   pos_z**2 / (1 + A2 t)**2 * A2 - req_sq = 0
+        #
+        # f(t) = the above expression
+        #
+        # df/dt = -2 pos_x**2 / (1 + t)**3 +
+        #       = -2 pos_y**2 / (1 + t)**3 +
+        #       = -2 pos_z**2 / (1 + A2 t)**3 A2**2
+        #
+        # Let denom = [1 + t, 1 + t, 1 + A2 t]
+        # Let unsquash = [1, 1, A1]
+        # Let unsquash_sq = [1, 1, A2]
+        #
+        # f(t) = (pos * scale) dot (pos * scale) - req_sq
+        #
+        # df/dt = -2 (pos * scale) dot (pos * scale**2)
+
+        # Make an initial guess at t, if necessary
+        if guess is None:
+            cept = (pos * self.unsquash).unit() * self.radii
+            t = (pos - cept).norm() / self.normal(cept).norm()
+        else:
+            t = guess.copy(False)
+
+        # Terminate when accuracy stops improving by at least a factor of 2
+        prev_max_dt = 3.e99
+        max_dt = 1.e99
+
+        if Spheroid.DEBUG: print "SPHEROID START"
+
+        while (max_dt < prev_max_dt * 0.5 or max_dt > 1.e-3):
+            denom = Spheroid.ONES_VECTOR + t * self.unsquash_sq
+            pos_scale = pos * self.unsquash / denom
+            f = pos_scale.dot(pos_scale) - self.req_sq
+            df_dt_div_neg2 = pos_scale.dot(pos_scale * self.unsquash_sq/denom)
+
+            dt = -0.5 * f/df_dt_div_neg2
+            t -= dt
+
+            prev_max_dt = max_dt
+            max_dt = abs(dt).max()
+            if Spheroid.DEBUG: print "SPHEROID", max_dt, np.sum(t.mask)
+
+        denom = Spheroid.ONES_VECTOR + t * self.unsquash_sq
+        cept = pos / denom
+
+        if derivs:
+            # First, we need dt/dpos
+            #
+            # pos_x**2 / (1 + t)**2 +
+            # pos_y**2 / (1 + t)**2 +
+            # pos_z**2 / (1 + A2 t)**2 * A2 - req_sq = 0
+            #
+            # 2 pos_x / (1+t)**2
+            #   + pos_x**2 * (-2)/(1+t)**3 dt/dpos_x
+            #   + pos_y**2 * (-2)/(1+t)**3 dt/dpos_x
+            #   + pos_z**2 * (-2)/(1+A2 t)**3 A2**2 dt/dpos_x = 0
+            #
+            # dt/dpos_x [(pos_x**2 + pos_y**2)/(1+t)**3 +
+            #             pos_z**2 * A2**2/(1 + A2 t)**3] = pos_x / (1+t)**2
+            #
+            # Similar for dt/dpos_y
+            #
+            # (pos_x**2 + pos_y**2) * (-2)/(1+t)**3 dt/dpos_z
+            #   + pos_z**2 * (-2)/(1 + A2 t)**3 A2**2 dt/dpos_z
+            #   + 2 pos_z/(1 + A2 t)**2 A2 = 0
+            #
+            # dt/dpos_z [(pos_x**2 + pos_y**2) / (1+t)**3 +
+            #             pos_z**2*A2**2/(1 + A2 t)**3] = pos_z A2/(1 + A2 t)**2
+            #
+            # Let denom = [1 + t, 1 + t, 1 + A2 t]
+            # Let unsquash_sq = [1, 1, A2]
+            #
+            # Let denom1 = [(pos_x**2 + pos_y**2)/(1+t)**3 +
+            #                pos_z**2 * A2**2 / (1 + A2 t)**3]
+            # in the expressions for dt/dpos. Note that this is identical to
+            # df_dt_div_neg2 in the expressions above.
+            #
+            # dt/dpos_x * denom1 = pos_x  / (1+t)**2
+            # dt/dpos_y * denom1 = pos_y  / (1+t)**2
+            # dt/dpos_z * denom1 = pos_z  * A2 / (1 + A2 t)**2
+
+            dt_dpos = pos * self.unsquash_sq / (denom**2 * df_dt_div_neg2)
+            dt_dpos = dt_dpos.as_row()
+
+            # Now we can proceed with dcept/dpos
+            #
+            # cept + perp(cept) * t = pos
+            #
+            # dcept/dpos + perp(cept) dt/dpos + t dperp/dcept dcept/dpos = I
+            #
+            # (I + t dperp/dcept) dcept/dpos = I - perp(cept) dt/dpos
+            #
+            # dcept/dpos = (I + t dperp/dcept)**(-1) * (I - perp dt/dpos)
+
+            perp = self.normal(cept, derivs=True)
+            dperp_dcept = perp.d_dpos
+            perp = perp.plain()
+
+            # Note that (I + t dperp/dcept) is diagonal!
+            scale = Spheroid.UNIT_MATRIX + t * dperp_dcept
+            scale.vals[...,0,0] = 1 / scale.vals[...,0,0]
+            scale.vals[...,1,1] = 1 / scale.vals[...,1,1]
+            scale.vals[...,2,2] = 1 / scale.vals[...,2,2]
+
+            dcept_dpos = scale * (Spheroid.UNIT_MATRIX
+                                                - perp.as_column() * dt_dpos)
+
+            t.insert_subfield("d_dpos", dt_dpos)
+            cept.insert_subfield("d_dpos", dcept_dpos)
+
+        return (cept, t)
+
+    def _apply_exclusion(self, pos):
+        """This internal method is used by intercept_normal_to() to exclude any
+        positions that fall too close to the center of the surface. The math
+        is poorly-behaved in this region.
+
+        (1) It sets the mask on any of these points to True.
+        (2) It sets the magnitude of any of these points to the edge of the
+            exclusion zone, in order to avoid runtime errors in the math
+            libraries.
+        """
+
+        # Define the exclusion zone
+        pos.vals[np.isnan(pos.vals)] = 0.
+
+        pos_unsquashed = pos * self.unsquash
+        pos_sq_vals = pos_unsquashed.dot(pos_unsquashed).vals
+        mask = (pos_sq_vals <= self.exclusion**2)
+
+        if not np.any(mask): return pos
+
+        # Suppress any exact zeros
+        mask2 = (pos_sq_vals == 0)
+        if np.any(mask2):
+
+            # For the scalar case, replace with a nonzero vector and repeat
+            if mask2 is True:
+                return self._mask_pos(Vector3((0,0,self.exclusion/2.)))
+
+            # Otherwise, just replace the zero values
+            pos_sq_vals[mask][2] = self.exclusion**2/4.
+
+        # Scale all masked vectors out the exclusion radius
+        factor = self.exclusion / np.sqrt(pos_sq_vals)
+        pos.vals[mask] *= factor[mask][...,np.newaxis]
+        pos.mask = pos.mask | mask
+
+        return pos
 
     ############################################################################
     # Latitude conversions
@@ -514,6 +613,7 @@ class Test_Spheroid(unittest.TestCase):
 
         REQ  = 60268.
         RPOL = 54364.
+        RPOL = 50000.
         planet = Spheroid("SSB", "J2000", (REQ, RPOL))
 
         # Coordinate/vector conversions
@@ -522,7 +622,7 @@ class Test_Spheroid(unittest.TestCase):
 
         (lon,lat,elev) = planet.coords_from_vector3(obs,axes=3)
         test = planet.vector3_from_coords((lon,lat,elev))
-        self.assertTrue(abs(test - obs) < 3.e-9)
+        self.assertTrue(abs(test - obs) < 1.e-8)
 
         # Spheroid intercepts & normals
         obs[...,0] = np.abs(obs[...,0])
@@ -545,19 +645,74 @@ class Test_Spheroid(unittest.TestCase):
 
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
-        
+
+        # Test normal()
+        cept = Vector3(np.random.random((100,3))).unit() * planet.radii
+        perp = planet.normal(cept)
+        test1 = (cept * planet.unsquash).unit()
+        test2 = (perp * planet.squash).unit()
+
+        self.assertTrue(abs(test1 - test2) < 1.e-12)
+
+        eps = 1.e-7
+        (lon,lat) = planet.coords_from_vector3(cept, axes=2)
+        cept1 = planet.vector3_from_coords((lon+eps,lat,0.))
+        cept2 = planet.vector3_from_coords((lon-eps,lat,0.))
+
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - np.pi/2) < 1.e-8)
+
+        (lon,lat) = planet.coords_from_vector3(cept, axes=2)
+        cept1 = planet.vector3_from_coords((lon,lat+eps,0.))
+        cept2 = planet.vector3_from_coords((lon,lat-eps,0.))
+
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - np.pi/2) < 1.e-8)
+
         # Test intercept_with_normal()
         vector = Vector3(np.random.random((100,3)))
-        intercept = planet.intercept_with_normal(vector)
-        sep = vector.sep(planet.normal(intercept))
+        cept = planet.intercept_with_normal(vector)
+        sep = vector.sep(planet.normal(cept))
         self.assertTrue(sep < 1.e-14)
 
         # Test intercept_normal_to()
-        obs = Vector3(np.random.random((10,3)) * 10.*REQ + REQ)
-        intercept = planet.intercept_normal_to(obs)
-        sep = (obs - intercept).sep(planet.normal(intercept))
-        k = obs - intercept
+        pos = Vector3(np.random.random((100,3)) * 4.*REQ + REQ)
+        cept = planet.intercept_normal_to(pos)
+        sep = (pos - cept).sep(planet.normal(cept))
         self.assertTrue(sep < 3.e-12)
+        self.assertTrue(abs((cept*planet.unsquash).norm() - planet.req) < 1.e-6)
+
+        # Test normal() derivative
+        cept = Vector3(np.random.random((100,3))).unit() * planet.radii
+        perp = planet.normal(cept, derivs=True)
+        eps = 1.e-5
+        dpos = ((eps,0,0), (0,eps,0), (0,0,eps))
+        for i in range(3):
+            perp1 = planet.normal(cept + dpos[i])
+            dperp_dpos = (perp1 - perp) / eps
+
+            self.assertTrue(abs(dperp_dpos - perp.d_dpos.as_row(i)) < 1.e-4)
+
+        # Test intercept_normal_to() derivative
+        pos = Vector3(np.random.random((100,3)) * 4.*REQ + REQ)
+        (cept,t) = planet.intercept_normal_to_iterated(pos, derivs=True)
+        self.assertTrue(abs((cept*planet.unsquash).norm() - planet.req) < 1.e-6)
+
+        eps = 1.
+        dpos = ((eps,0,0), (0,eps,0), (0,0,eps))
+        perp = planet.normal(cept)
+        for i in range(3):
+            (cept1,t1) = planet.intercept_normal_to_iterated(pos + dpos[i],
+                                                             False, t.plain())
+            (cept2,t2) = planet.intercept_normal_to_iterated(pos - dpos[i],
+                                                             False, t.plain())
+            dcept_dpos = (cept1 - cept2) / (2*eps)
+            ref = cept.d_dpos.as_column(i).as_vector3()
+
+            self.assertTrue(abs(dcept_dpos.sep(perp) - np.pi/2) < 1.e-5)
+            self.assertTrue(abs(dcept_dpos - ref) < 1.e-5)
+
+            dt_dpos = (t1 - t2) / (2*eps)
+            ref = t.d_dpos.vals[...,0,i]
+            self.assertTrue(abs(dt_dpos/ref - 1) < 1.e-5)
 
 ########################################
 if __name__ == '__main__':

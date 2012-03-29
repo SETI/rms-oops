@@ -14,6 +14,7 @@ from oops_.array.array_  import Array
 from oops_.array.empty   import Empty
 from oops_.array.scalar  import Scalar
 from oops_.array.vector3 import Vector3
+from oops_.array.vectorn import VectorN
 from oops_.array.matrixn import MatrixN
 import oops_.array.utils as utils
 
@@ -34,6 +35,38 @@ class Matrix3(Array):
     def as_standard(arg):
         if not isinstance(arg, Matrix3): arg = Matrix3(arg)
         return arg
+
+    def as_row(self, row):
+        """Returns the selected row of an M x N MatrixN as a VectorN of item
+        shape [N]."""
+
+        return VectorN(self.vals[...,row,:], self.mask)
+
+    def as_rows(self):
+        """Converts an M x N MatrixN to a list containing M row matrices as
+        VectorN objects of item shape [N]."""
+
+        list = []
+        for row in range(self.item[0]):
+            list.append(VectorN(self.vals[...,row,:], self.mask))
+
+        return list
+
+    def as_column(self, col):
+        """Returns the selected column of an M x N MatrixN as a VectorN of item
+        shape [M]."""
+
+        return VectorN(self.vals[..., col], self.mask)
+
+    def as_columns(self):
+        """Converts an M x N MatrixN to a list containing N column matices as
+        VectorN objects of item shape [M]."""
+
+        list = []
+        for col in range(self.item[1]):
+            list.append(MatrixN(self.vals[...,col], self.mask))
+
+        return list
 
     def multiply_matrix(self, arg):
         """A general definition of matrix * matrix."""

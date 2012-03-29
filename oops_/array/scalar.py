@@ -284,7 +284,7 @@ class Scalar(Array):
     @staticmethod
     def _scalar_unless_shapeless(values, mask):
         if np.shape(values) == () and not mask: return values
-        return Scalar(values)
+        return Scalar(values, mask)
 
     ####################################
     # In-place binary logical operators

@@ -189,7 +189,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.name in names:
+            if body.name in names and body not in list:
                 list.append(body)
         return list
 
@@ -202,7 +202,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.name not in names:
+            if body.name not in names and body not in list:
                 list.append(body)
         return list
 
@@ -213,7 +213,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.radius >= min and body.radius <= max:
+            if body.radius >= min and body.radius <= max and body not in list:
                 list.append(body)
         return list
 
@@ -224,7 +224,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.radius < min or body.radius > max:
+            if body.radius < min or body.radius > max and body not in list:
                 list.append(body)
         return list
 
@@ -239,7 +239,7 @@ class Body(object):
         list = []
         for body in bodies:
             name = type(body.surface).__name__
-            if name in class_names:
+            if name in class_names and body not in list:
                 list.append(body)
         return list
 
@@ -254,7 +254,7 @@ class Body(object):
         list = []
         for body in bodies:
             name = type(body.surface).__name__
-            if name not in class_names:
+            if name not in class_names and body not in list:
                 list.append(body)
         return list
 
@@ -264,7 +264,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.gm is not None:
+            if body.gm is not None and body not in list:
                 list.append(body)
         return list
 
@@ -274,7 +274,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.gm is None:
+            if body.gm is None and body not in list:
                 list.append(body)
         return list
 
@@ -284,7 +284,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.children != []:
+            if body.children != [] and body not in list:
                 list.append(body)
         return list
 
@@ -294,7 +294,7 @@ class Body(object):
 
         list = []
         for body in bodies:
-            if body.children == []:
+            if body.children == [] and body not in list:
                 list.append(body)
         return list
 
@@ -308,7 +308,7 @@ class Body(object):
         list = []
         for body in bodies:
             for keyword in keywords:
-                if keyword in body.keywords:
+                if keyword in body.keywords and body not in list:
                     list.append(body)
                     break
         return list
@@ -328,7 +328,7 @@ class Body(object):
                     is_match = False
                     break
 
-            if is_match:
+            if is_match and body not in list:
                 list.append(body)
 
         return list
@@ -348,7 +348,7 @@ class Body(object):
                     is_found = True
                     break
 
-            if not is_found:
+            if not is_found and body not in list:
                 list.append(body)
 
         return list
