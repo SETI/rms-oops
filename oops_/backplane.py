@@ -181,6 +181,10 @@ class Backplane(object):
         if event_key[0].upper() == "SUN":
             return self.get_path_event(event_key)
 
+        # call indicates an Ansa surface
+        if event_key[0].upper() == "ANSA":
+            return self.get_ansa_surface_event(event_key)
+
         # Always calculate derivatives for the first step from the observer
         if len(event_key) == 1:
             ignore = self.get_surface_event_w_derivs(event_key)

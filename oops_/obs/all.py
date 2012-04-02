@@ -6,5 +6,6 @@
 
 from oops_.obs.observation_ import Observation
 from oops_.obs.snapshot     import Snapshot
+from oops_.obs.pushbroom    import Pushbroom
 
 ################################################################################
