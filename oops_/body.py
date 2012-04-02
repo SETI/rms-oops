@@ -389,11 +389,11 @@ SATURN_IRREGULAR = (range(636,649) + range(650,653) +
                     [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
 
 URANUS_CLASSICAL  = range(701,706)
-URANUS_REGULAR    = range(701,716) + [726,727]
+URANUS_INNER      = range(706,716) + [726,727]
 URANUS_IRREGULAR  = range(716,726)
 
 NEPTUNE_CLASSICAL = range(801,803)
-NEPTUNE_REGULAR   = range(801,809)
+NEPTUNE_INNER     = range(803,809)
 NEPTUNE_IRREGULAR = range(809,814)
 
 PLUTO_CLASSICAL   = [901]
@@ -547,7 +547,7 @@ def define_solar_system(start_time, stop_time, asof=None):
     # Moons and rings of Uranus
     define_bodies(URANUS_CLASSICAL, "URANUS", "URANUS",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
-    define_bodies(URANUS_REGULAR,   "URANUS", "URANUS",
+    define_bodies(URANUS_INNER, "URANUS", "URANUS",
                   ["SATELLITE", "REGULAR"])
     define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
                   ["SATELLITE", "IRREGULAR"])
@@ -585,7 +585,7 @@ def define_solar_system(start_time, stop_time, asof=None):
     # Moons and rings of Neptune
     define_bodies(NEPTUNE_CLASSICAL, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
-    define_bodies(NEPTUNE_REGULAR,   "NEPTUNE", "NEPTUNE",
+    define_bodies(NEPTUNE_INNER, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "REGULAR"])
     define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "IRREGULAR"])
