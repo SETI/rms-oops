@@ -199,6 +199,7 @@ def is_body(item):
 def body_lookup(key):
     """Returns a body from the registry given its name."""
 
+    global BODY_REGSITRY
     return BODY_REGISTRY[key]
 
 def as_body(body):
@@ -215,6 +216,14 @@ def as_body_name(body):
 
     if is_body(body): return body.name
     return body
+
+def initialize_body_registry():
+    """Initializes the registry. It is not generally necessary to call this
+    function, but it can be used to reset the registry for purposes of
+    debugging."""
+
+    global BODY_REGISTRY
+    BODY_REGISTRY = {}
 
 ################################################################################
 # General Functions

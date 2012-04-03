@@ -9,7 +9,7 @@ import numpy as np
 import unittest
 
 from oops_.array.all import *
-from oops_.config import QUICK, EVENT_COLLAPSE_THRESHOLD, LOGGING
+from oops_.config import EVENT_CONFIG, LOGGING
 import oops_.registry as registry
 import oops_.constants as constants
 
@@ -163,9 +163,11 @@ class Event(object):
         self.filled_mask = None
         ignore = self.mask
 
-    def collapse_time(self, threshold=EVENT_COLLAPSE_THRESHOLD):
+    def collapse_time(self, threshold=None):
         """Replaces the time array by the average of its min and max, provided
         the range of times is less than or equal to the specified threshold."""
+
+        if threshold is None: threshold = EVENT_CONFIG.collapse_threshold
 
         if self.time.shape != []:
             tmin = self.time.min()
@@ -183,7 +185,7 @@ class Event(object):
 
         return self
 
-    def wrt_ssb(self, quick=QUICK, derivs=False):
+    def wrt_ssb(self, quick=None, derivs=False):
         """Returns the event relative to SSB coordinates in the J2000 frame
         while also filling in the internal cached value if necessary. """
 
@@ -380,7 +382,7 @@ class Event(object):
 # Event transformations
 ############################################
 
-    def wrt(self, path=None, frame=None, quick=QUICK, derivs=False):
+    def wrt(self, path=None, frame=None, quick=None, derivs=False):
         """Returns a new event specified relative to a new path and/or a
         new coordinate frame.
 
@@ -439,7 +441,7 @@ class Event(object):
         event.subarray_math = derivs
         return event
 
-    def wrt_path(self, path, quick=QUICK, derivs=False):
+    def wrt_path(self, path, quick=None, derivs=False):
         """Returns an equivalent event, but defined relative to a different
         origin. The frame will be unchanged.
 
@@ -464,7 +466,7 @@ class Event(object):
 
         return path.subtract_from_event(self, derivs=derivs)
 
-    def wrt_frame(self, frame, quick=QUICK, derivs=False):
+    def wrt_frame(self, frame, quick=None, derivs=False):
         """Returns an equivalent event, but defined relative to a different
         frame. The path is unchanged.
 
@@ -489,7 +491,7 @@ class Event(object):
 
         return self.rotate_by_frame(frame, quick=False, derivs=derivs)
 
-    def wrt_event(self, event, quick=QUICK, derivs=False):
+    def wrt_event(self, event, quick=None, derivs=False):
         """Returns an equivalent event, but defined relative to the frame and
         path of the specified body.
 
@@ -506,7 +508,7 @@ class Event(object):
         body = registry.as_body(body)
         return self.wrt(body.path_id, body.frame_id, quick=quick, derivs=derivs)
 
-    def wrt_body(self, body, quick=QUICK, derivs=False):
+    def wrt_body(self, body, quick=None, derivs=False):
         """Returns an equivalent event, but defined relative to the frame and
         path of the specified body.
 
@@ -523,7 +525,7 @@ class Event(object):
         body = registry.as_body(body)
         return self.wrt(body.path_id, body.frame_id, quick=quick, derivs=derivs)
 
-    def rotate_by_frame(self, frame, quick=QUICK, derivs=False):
+    def rotate_by_frame(self, frame, quick=None, derivs=False):
         """Returns the same event after all coordinates have been transformed
         forward into a new frame. The origin is unchanged. Coordinate rotation
         is also performed on any subfields that are not Scalars.
@@ -560,7 +562,7 @@ class Event(object):
 
         return result
 
-    def unrotate_by_frame(self, frame, quick=QUICK, derivs=False):
+    def unrotate_by_frame(self, frame, quick=None, derivs=False):
         """Returns the same event after all coordinates have been transformed
         backward to the parent frame. The origin is unchanged. Subarrays that
         are not Scalars are also transformed.
@@ -602,7 +604,7 @@ class Event(object):
 # Geometry procedures
 ################################################################################
 
-    def aberrated_ray_ssb(self, ray_ssb, quick=QUICK):
+    def aberrated_ray_ssb(self, ray_ssb, quick=None):
         """Returns the apparent direction of a photon given its actual
         direction in the SSB/J2000 frame."""
 
@@ -612,11 +614,11 @@ class Event(object):
         return ray_ssb - (self.wrt_ssb(quick).vel +
                           self.wrt_ssb(quick).vflat)*ray_ssb.norm()/constants.C
 
-    def aberrated_arr_ssb(self, quick=QUICK):
+    def aberrated_arr_ssb(self, quick=None):
         """Aberrated arriving ray in the SSB/J2000 frame."""
         return self.aberrated_ray_ssb(self.wrt_ssb(quick).arr)
 
-    def aberrated_arr(self, quick=QUICK):
+    def aberrated_arr(self, quick=None):
         """Aberrated arriving ray in the event frame."""
         arr_ssb = self.aberrated_ray_ssb(self.wrt_ssb(quick).arr)
 
@@ -624,11 +626,11 @@ class Event(object):
         xform = frame.transform_at_time(self.time, quick)
         return xform.rotate(arr_ssb)
 
-    def aberrated_dep_ssb(self, quick=QUICK):
+    def aberrated_dep_ssb(self, quick=None):
         """Aberrated departing ray in the SSB/J2000 frame."""
         return self.aberrated_ray_ssb(self.wrt_ssb(quick).dep)
 
-    def aberrated_dep(self, quick=QUICK):
+    def aberrated_dep(self, quick=None):
         """Aberrated departing ray in the event frame."""
         dep_ssb = self.aberrated_ray_ssb(self.wrt_ssb(quick).dep)
 
@@ -636,20 +638,20 @@ class Event(object):
         xform = frame.transform_at_time(self.time, quick)
         return xform.rotate(dep_ssb)
 
-    def incidence_angle(self, aberration=False, quick=QUICK):
+    def incidence_angle(self, aberration=False, quick=None):
         """Returns the incidence angle, measured between the surface normal and
         the reversed direction of the arriving photon."""
 
         return self.wrt_ssb(quick).perp.sep(self.aberrated_arr_ssb(),
                                             reversed=True)
 
-    def emission_angle(self, quick=QUICK):
+    def emission_angle(self, quick=None):
         """Returns the emission angle, measured between the surface normal and
         the direction of the departing photon."""
 
         return self.wrt_ssb(quick).perp.sep(self.aberrated_dep_ssb(quick))
 
-    def phase_angle(self, quick=QUICK):
+    def phase_angle(self, quick=None):
         """Returns the phase angle, measured between the direction of the
         arriving photon and the reversed direction of the departing photon."""
 
@@ -657,7 +659,7 @@ class Event(object):
                                                  reversed=True)
 
     def ra_and_dec(self, aberration=False, subfield="arr", frame="J2000",
-                         quick=QUICK):
+                         quick=None):
         """Returns the J2000 right ascension amd declination in the path and
         frame of the event, as a tuple of two scalars.
 

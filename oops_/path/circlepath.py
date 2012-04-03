@@ -7,7 +7,6 @@ import cspice
 
 from oops_.path.path_ import Path, Waypoint, RotatedPath
 from oops_.array.all import *
-from oops_.config import QUICK
 from oops_.event import Event
 import oops_.registry as registry
 import oops_.spice_support as spice
@@ -58,7 +57,7 @@ class CirclePath(Path):
 
 ########################################
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         """Returns an Event object corresponding to a specified Scalar time on
         this path.
 

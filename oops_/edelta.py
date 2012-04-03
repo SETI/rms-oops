@@ -9,7 +9,6 @@ import unittest
 
 from oops_.event import Event
 from oops_.array.all import *
-from oops_.config import QUICK
 import oops_.registry as registry
 import oops_.constants as constants
 
@@ -100,7 +99,7 @@ class Edelta(object):
 
         return self.filled_mask
 
-    def wrt_ssb(self, quick=QUICK):
+    def wrt_ssb(self, quick=None):
         """Returns an equivalent Event object, defined in absolute terms
         relative to the Solar System Barycenter and the J2000 frame."""
 
@@ -181,7 +180,7 @@ class Edelta(object):
     ####################################################
 
     @staticmethod
-    def sub_events(event, origin, quick=QUICK):
+    def sub_events(event, origin, quick=None):
         """Returns the difference between two events as an Edelta object. The
         difference is returned in the frame of the origin."""
 

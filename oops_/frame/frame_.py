@@ -11,7 +11,7 @@ import scipy.interpolate as interp
 
 import oops_.registry as registry
 from oops_.array.all import *
-from oops_.config import QUICK, QUICK_DICTIONARY, LOGGING
+from oops_.config import QUICK, LOGGING
 from oops_.transform import Transform
 
 class Frame(object):
@@ -57,7 +57,7 @@ class Frame(object):
 
         pass
 
-    def transform_at_time(self, time, quick=QUICK):
+    def transform_at_time(self, time, quick=None):
         """Returns a Transform object that rotates coordinates from the
         reference frame into this frame as a function of time. If the frame is
         rotating, then the coordinates must be given relative to the center of
@@ -314,7 +314,7 @@ class Frame(object):
 
 ########################################
 
-    def quick_frame(self, time, quick=QUICK):
+    def quick_frame(self, time, quick=None):
         """Returns a new QuickFrame object that provides accurate approximations
         to the transform returned by this frame. It can speed up performance
         substantially when the same frame must be evaluated repeatedly but
@@ -324,7 +324,7 @@ class Frame(object):
             time        a Scalar defining the set of times at which the frame is
                         to be evaluated.
             quick       if False, no QuickFrame is created and self is returned;
-                        if True, the default dictionary QUICK_DICTIONARY is
+                        if True, the default dictionary QUICK.dictionary is
                         used; if another dictionary, then the values provided
                         override the defaults and the merged dictionary is used.
         """
@@ -336,6 +336,7 @@ class Frame(object):
         SAVINGS = 0.2       # Require at least a 20% savings in evaluation time.
 
         # Make sure a QuickFrame has been requested
+        if quick is None: quick = QUICK.flag
         if quick is False: return self
 
         # A Wayframe is too easy
@@ -345,7 +346,7 @@ class Frame(object):
         if type(self) == QuickFrame: return self
 
         # Obtain the local QuickFrame dictionary
-        quickdict = QUICK_DICTIONARY
+        quickdict = QUICK.dictionary 
         if type(quick) == type({}):
             quickdict = dict(quickdict, **quick)
 
@@ -434,7 +435,7 @@ class ReversedFrame(Frame):
 
         self.shape = self.oldframe.shape
 
-    def transform_at_time(self, time, quick=QUICK):
+    def transform_at_time(self, time, quick=None):
 
         return self.oldframe.transform_at_time(time).invert()
 
@@ -473,7 +474,7 @@ class LinkedFrame(Frame):
             self.origin_id = self.parent.origin_id
             # assert self.frame.origin_id == self.parent.origin_id
 
-    def transform_at_time(self, time, quick=QUICK):
+    def transform_at_time(self, time, quick=None):
 
         parent = self.parent.transform_at_time(time)
         transform = self.frame.transform_at_time(time)
@@ -501,7 +502,7 @@ class Wayframe(Frame):
 
         self.shape = []
 
-    def transform_at_time(self, time, quick=QUICK):
+    def transform_at_time(self, time, quick=None):
 
         return Transform.null_transform(self.frame_id, self.origin_id)
 
@@ -601,7 +602,7 @@ class QuickFrame(Frame):
 
     ####################################
 
-    def transform_at_time(self, time, quick=QUICK):
+    def transform_at_time(self, time, quick=None):
         (matrix, omega) = self._interpolate_matrix_omega(time)
         return Transform(matrix, omega,
                          self.frame_id, self.reference_id, self.origin_id)
@@ -754,12 +755,12 @@ class Test_Frame(unittest.TestCase):
         ignore = SpiceFrame("IAU_EARTH", "J2000")
         moon  = SpiceFrame("IAU_MOON", "IAU_EARTH")
         quick = QuickFrame(moon, (-5.,5.),
-                        dict(QUICK_DICTIONARY, **{"frame_self_check":3.e-14}))
+                        dict(QUICK.dictionary, **{"frame_self_check":3.e-14}))
 
         # Perfect precision is impossible
         try:
             quick = QuickFrame(moon, (-5.,5.),
-                        dict(QUICK_DICTIONARY, **{"frame_self_check":0.}))
+                        dict(QUICK.dictionary, **{"frame_self_check":0.}))
             self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
         except ValueError: pass
 

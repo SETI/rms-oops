@@ -182,8 +182,8 @@ class Backplane(object):
             return self.get_path_event(event_key)
 
         # call indicates an Ansa surface
-        if event_key[0].upper() == "ANSA":
-            return self.get_ansa_surface_event(event_key)
+#         if event_key[0].upper() == "ANSA":
+#             return self.get_ansa_surface_event(event_key)
 
         # Always calculate derivatives for the first step from the observer
         if len(event_key) == 1:
@@ -1306,6 +1306,11 @@ class Test_Backplane(unittest.TestCase):
 
     def runTest(self):
 
+        import oops_.registry as registry
+        registry.initialize_frame_registry()
+        registry.initialize_path_registry()
+        registry.initialize_body_registry()
+
         import oops.inst.cassini.iss as iss
 
         if UNITTEST_LOGGING: config.LOGGING.on("        ")
@@ -1594,6 +1599,11 @@ class Test_Backplane(unittest.TestCase):
                                                 test * constants.DPR)
 
         config.LOGGING.off()
+
+        registry.initialize_frame_registry()
+        registry.initialize_path_registry()
+        registry.initialize_body_registry()
+        iss.ISS.reset()
 
 ########################################
 if __name__ == '__main__':

@@ -12,7 +12,11 @@
 # parameters is used.
 ################################################################################
 
-QUICK_DICTIONARY = {
+class QUICK(object):
+  flag = True                   # Defines the default behavior as quick=True or
+                                # quick=False.
+
+  dictionary = {
     "use_quickpaths": True,
     "path_time_step": 0.05,     # time step in seconds.
     "path_time_extension": 0.,  # secs by which to extend interval at each end.
@@ -30,14 +34,11 @@ QUICK_DICTIONARY = {
                                 # to cache for any given frame.
 }
 
-QUICK = True                    # Defines the default input argument as
-                                # quick=True or quick=False.
-
 ################################################################################
 # Photon solver parameters
 ################################################################################
 
-# For Path.solve_photons()
+# For Path._solve_photons()
 
 class PATH_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
@@ -49,7 +50,7 @@ class PATH_PHOTONS(object):
                                 # should be related to the physical scale of
                                 # the system being studied.
 
-# For Surface.solve_photons()
+# For Surface._solve_photons()
 
 class SURFACE_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
@@ -57,7 +58,12 @@ class SURFACE_PHOTONS(object):
     dlt_limit = 10.             # See PATH_PHOTONS for more info.
 
 
-EVENT_COLLAPSE_THRESHOLD = 3.   # When an event returned by a calculation spans
+################################################################################
+# Event precision
+################################################################################
+
+class EVENT_CONFIG(object):
+    collapse_threshold = 3.     # When an event returned by a calculation spans
                                 # a range of times smaller than this threshold,
                                 # the time field is converted to a single value.
                                 # This approximation can speed up some

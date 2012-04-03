@@ -7,7 +7,6 @@ import cspice
 
 from oops_.path.path_ import Path
 from oops_.array.all import *
-from oops_.config import QUICK
 from oops_.event import Event
 
 import oops_.registry as registry
@@ -70,7 +69,7 @@ class MultiPath(Path):
 
 ########################################
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         """Returns an Event object corresponding to a specified Scalar time on
         this path. The times are broadcasted across the shape of the MultiPath.
 
@@ -85,18 +84,36 @@ class MultiPath(Path):
 
         # Broadcast to the same shape
         time = Scalar.as_scalar(time)
-        (time, paths) = np.broadcast_arrays(time.vals, self.paths)
+
+        masked = np.any(time.mask)
+        if masked:
+            (time_vals, time_mask,
+            paths) = np.broadcast_arrays(time.vals, time.mask, self.paths)
+            time_mask = np.array(time_mask.copy())
+        else:
+            (time_vals, paths) = np.broadcast_arrays(time.vals, self.paths)
+
+        time_vals = time_vals.copy()
 
         # Create the event object
-        pos = np.empty(time.shape + (3,))
-        vel = np.empty(time.shape + (3,))
+        pos = np.empty(time_vals.shape + (3,))
+        vel = np.empty(time_vals.shape + (3,))
 
         for index, path in np.ndenumerate(paths):
-            event = path.event_at_time(time[index], quick)
-            pos[index] = event.pos.vals
-            vel[index] = event.vel.vals
+            if masked and time_mask[index]:
+                pos[index] = np.zeros(3)
+                vel[index] = np.zeros(3)
+            else:
+                event = path.event_at_time(time_vals[index], quick)
+                pos[index] = event.pos.vals
+                vel[index] = event.vel.vals
 
-        return Event(time, pos, vel, self.origin_id, self.frame_id)
+        if masked:
+            new_time = Scalar(time_vals, time_mask)
+        else:
+            new_time = Scalar(time_vals)
+
+        return Event(new_time, pos, vel, self.origin_id, self.frame_id)
 
 ################################################################################
 # UNIT TESTS

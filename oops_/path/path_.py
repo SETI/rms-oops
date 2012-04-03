@@ -14,7 +14,7 @@ import scipy.interpolate as interp
 import oops_.constants as constants
 import oops_.registry as registry
 from oops_.array.all import *
-from oops_.config import QUICK, QUICK_DICTIONARY, PATH_PHOTONS, LOGGING
+from oops_.config import QUICK, PATH_PHOTONS, LOGGING
 from oops_.event import Event
 
 class Path(object):
@@ -55,7 +55,7 @@ class Path(object):
 
         pass
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         """Returns an Event object corresponding to a specified Scalar time on
         this path.
 
@@ -221,7 +221,7 @@ class Path(object):
 # These must be defined here and not in Event.py, because that would create a
 # circular dependency in the order that modules are loaded.
 
-    def subtract_from_event(self, event, quick=QUICK, derivs=False):
+    def subtract_from_event(self, event, quick=None, derivs=False):
         """Returns an equivalent event, but with this path redefining its
         origin.
 
@@ -254,7 +254,7 @@ class Path(object):
         result.copy_subfields_from(event)
         return result
 
-    def add_to_event(self, event, quick=QUICK, derivs=False):
+    def add_to_event(self, event, quick=None, derivs=False):
         """Returns an equivalent event, but with the origin of this path
         redefining its origin.
 
@@ -288,7 +288,7 @@ class Path(object):
 # Photon Solver
 ################################################################################
 
-    def photon_to_event(self, link, quick=QUICK, derivs=False, guess=None,
+    def photon_to_event(self, link, quick=None, derivs=False, guess=None,
                               update=True,
                               iters     = PATH_PHOTONS.max_iterations,
                               precision = PATH_PHOTONS.dlt_precision,
@@ -300,7 +300,7 @@ class Path(object):
         return self._solve_photon(link, -1, quick, derivs, guess, update,
                                          iters, precision, limit)
 
-    def photon_from_event(self, link, quick=QUICK, derivs=False, guess=None,
+    def photon_from_event(self, link, quick=None, derivs=False, guess=None,
                                 update=True,
                                 iters     = PATH_PHOTONS.max_iterations,
                                 precision = PATH_PHOTONS.dlt_precision,
@@ -312,7 +312,7 @@ class Path(object):
         return self._solve_photon(link, +1, quick, derivs, guess, update,
                                          iters, precision, limit)
 
-    def _solve_photon(self, link, sign, quick=QUICK, derivs=False, guess=None,
+    def _solve_photon(self, link, sign, quick=None, derivs=False, guess=None,
                             update=True,
                             iters     = PATH_PHOTONS.max_iterations,
                             precision = PATH_PHOTONS.dlt_precision,
@@ -445,13 +445,22 @@ class Path(object):
 
         # Speed up the path and frame evaluations if requested
         # Interpret the quick parameters
-        if quick is not False:
-            loop_quick = {"path_extension": limit,
-                          "frame_extension": limit}
+        if quick is False:
+            quick_dict = False
+        else:
             if type(quick) == type({}):
-                loop_quick = dict(quick, **loop_quick)
+                quickdict = dict(QUICK.dictionary, **quick)
+            else:
+                quickdict = QUICK.dictionary
+            quickdict = dict(quickdict, **{"path_extension": limit,
+                                           "frame_extension": limit})
 
-        path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=loop_quick)
+        path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=quickdict)
+
+        # Broadcast the path_time to encompass the shape of the path, if any
+        shape = Array.broadcast_shape((path_time, link))
+        if path_time.shape != shape:
+            path_time = path_time.rebroadcast(shape).copy()
 
         # Iterate a fixed number of times or until the threshold of error
         # tolerance is reached. Convergence takes just a few iterations.
@@ -671,7 +680,7 @@ class Path(object):
             time        a Scalar defining the set of times at which the frame is
                         to be evaluated.
             quick       if False, no QuickPath is created and self is returned;
-                        if True, the default dictionary QUICK_DICTIONARY is
+                        if True, the default dictionary QUICK.dictionary is
                         used; if another dictionary, then the values provided
                         override the defaults and the merged dictionary is used.
         """
@@ -692,7 +701,7 @@ class Path(object):
         if type(self) == QuickPath: return self
 
         # Obtain the local QuickPath dictionary
-        quickdict = QUICK_DICTIONARY
+        quickdict = QUICK.dictionary
         if type(quick) == type({}):
             quickdict = dict(quickdict, **quick)
 
@@ -800,7 +809,7 @@ class LinkedPath(Path):
         self.frame_id  = self.parent.frame_id
         self.shape     = Array.broadcast_shape((self.path, self.parent))
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         event = self.path.event_at_time(time, quick)
 
         if self.frame is not None:
@@ -844,7 +853,7 @@ class RelativePath(Path):
             self.path_frame = registry.connect_frames(self.path.frame_id,
                                                       self.origin.frame_id)
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         event = self.path.event_at_time(time, quick)
 
         if self.frame is not None:
@@ -875,7 +884,7 @@ class ReversedPath(Path):
         self.frame_id  = self.path.frame_id
         self.shape     = self.path.shape
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         event = self.path.event_at_time(time, quick)
         event.pos = -event.pos
         event.vel = -event.vel
@@ -906,7 +915,7 @@ class RotatedPath(Path):
         self.origin_id = self.path.origin_id
         self.shape     = self.path.shape
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         event = self.path.event_at_time(time)
         event = event.rotate_by_frame(self.frame)
 
@@ -932,7 +941,7 @@ class Waypoint(Path):
         self.frame_id  = frame_id
         self.shape     = []
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         return Event.null_event(time, self.path_id, self.frame_id)
 
     def __str__(self):
@@ -995,7 +1004,7 @@ class QuickPath(Path):
 
     ####################################
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         (pos, vel) = self._interpolate_pos_vel(time)
         return Event(time, pos, vel, self.origin_id, self.frame_id)
 
@@ -1179,12 +1188,12 @@ class Test_Path(unittest.TestCase):
 
         # QuickPath tests
         moon = SpicePath("MOON", "EARTH")
-        quick = QuickPath(moon, (-5.,5.), QUICK_DICTIONARY)
+        quick = QuickPath(moon, (-5.,5.), QUICK.dictionary)
 
         # Perfect precision is impossible
         try:
             quick = QuickPath(moon, np.arange(0.,100.,0.0001),
-                              dict(QUICK_DICTIONARY, **{"path_self_check":0.}))
+                              dict(QUICK.dictionary, **{"path_self_check":0.}))
             self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
         except ValueError: pass
 

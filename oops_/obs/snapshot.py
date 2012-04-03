@@ -8,10 +8,9 @@ import math
 
 from oops_.obs.observation_ import Observation
 from oops_.array.all import *
-from oops_.config import QUICK
 
 import oops_.frame.all as frame_
-import oops_.path.all  as path_
+import oops_.path.all as path_
 import oops_.surface.all as surface_
 from oops_.event import Event
 
@@ -93,7 +92,7 @@ class Snapshot(Observation):
 
         return Snapshot.ZERO_PAIR
 
-    def uv_from_path(self, path, quick=QUICK, derivs=False):
+    def uv_from_path(self, path, quick=None, derivs=False):
         """Solves for the (u,v) indices of an object in the field of view, given
         its path.
 
@@ -233,15 +232,16 @@ import unittest
 class Test_Snapshot(unittest.TestCase):
 
     def runTest(self):
-        
+
         # Imports are here to avoid conflicts
         import oops_.registry as registry
+        registry.initialize_frame_registry()
+        registry.initialize_path_registry()
+        registry.initialize_body_registry()
+
         import oops.inst.cassini.iss as iss
-        
-        #registry.initialize_frame_registry()
-        #registry.initialize_path_registry()
-        
-        print '\n'
+        iss.ISS.initialize()
+
         paths = ["test_data/cassini/ISS/W1575634136_1.IMG",
                  "test_data/cassini/ISS/W1573721822_1.IMG",
                  "test_data/cassini/ISS/N1649465367_1.IMG",
@@ -299,6 +299,11 @@ class Test_Snapshot(unittest.TestCase):
                 self.assertTrue(in_view == solns[j][i])
                 j += 1
             i += 1
+
+        registry.initialize_frame_registry()
+        registry.initialize_path_registry()
+        registry.initialize_body_registry()
+        iss.ISS.reset()
 
 ################################################################################
 if __name__ == '__main__':

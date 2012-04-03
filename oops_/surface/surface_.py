@@ -334,7 +334,7 @@ class Surface(object):
 # Photon Solver
 ################################################################################
 
-    def photon_from_event(self, link, quick=QUICK, derivs=False,
+    def photon_from_event(self, link, quick=None, derivs=False,
                                 iters     = SURFACE_PHOTONS.max_iterations,
                                 precision = SURFACE_PHOTONS.dlt_precision,
                                 limit     = SURFACE_PHOTONS.dlt_limit):
@@ -345,7 +345,7 @@ class Surface(object):
         return self._solve_photon(link, +1, quick, derivs,
                                         iters, precision, limit)
 
-    def photon_to_event(self, link, quick=QUICK, derivs=False,
+    def photon_to_event(self, link, quick=None, derivs=False,
                               iters     = SURFACE_PHOTONS.max_iterations,
                               precision = SURFACE_PHOTONS.dlt_precision,
                               limit     = SURFACE_PHOTONS.dlt_limit):
@@ -356,7 +356,7 @@ class Surface(object):
         return self._solve_photon(link, -1, quick, derivs,
                                         iters, precision, limit)
 
-    def _solve_photon(self, link, sign, quick=QUICK, derivs=False,
+    def _solve_photon(self, link, sign, quick=None, derivs=False,
                             iters     = SURFACE_PHOTONS.max_iterations,
                             precision = SURFACE_PHOTONS.dlt_precision,
                             limit     = SURFACE_PHOTONS.dlt_limit):
@@ -457,11 +457,15 @@ class Surface(object):
         lt_max += limit
 
         # Interpret the quick parameters
-        if quick is not False:
-            loop_quick = {"path_extension": limit,
-                          "frame_extension": limit}
+        if quick is False:
+            quick_dict = False
+        else:
             if type(quick) == type({}):
-                loop_quick = dict(quick, **loop_quick)
+                quickdict = dict(QUICK.dictionary, **quick)
+            else:
+                quickdict = QUICK.dictionary
+            quickdict = dict(quickdict, **{"path_extension": limit,
+                                           "frame_extension": limit})
 
         # Iterate. Convergence is rapid because all speeds are non-relativistic
         max_dlt = np.inf
@@ -472,9 +476,9 @@ class Surface(object):
 
             # Quicken when needed
             origin_wrt_ssb = origin_wrt_ssb.quick_path(surface_time,
-                                                       quick=loop_quick)
+                                                       quick=quickdict)
             frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
-                                                          quick=loop_quick)
+                                                          quick=quickdict)
 
             # Locate the photons relative to the current origin in SSB/J2000
             pos_in_j2000 = (obs_wrt_ssb + lt * los_wrt_ssb

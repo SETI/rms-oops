@@ -88,7 +88,7 @@ class SpicePath(Path):
 
 ########################################
 
-    def event_at_time(self, time, quick=QUICK):
+    def event_at_time(self, time, quick=None):
         """Returns an Event object corresponding to a specified Scalar time on
         this path.
 
@@ -113,6 +113,7 @@ class SpicePath(Path):
                                                        self.frame_id)
 
         # Use a QuickPath if warranted, possibly making a recursive call
+        if quick is None: quick = QUICK.flag
         if quick:
             return self.quick_path(time, quick).event_at_time(time, False)
 

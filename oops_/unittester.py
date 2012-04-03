@@ -8,7 +8,7 @@ from oops_.cmodel.unittester  import *
 from oops_.format.unittester  import *
 from oops_.fov.unittester     import *
 from oops_.frame.unittester   import *
-#from obs.unittester     import *
+from obs.unittester           import *
 from oops_.path.unittester    import *
 from oops_.surface.unittester import *
 

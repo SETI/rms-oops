@@ -168,7 +168,7 @@ class Observation(object):
     #
     # It is safe to call the function with iters=0 for a Snapshot observation.
 
-    def uv_from_path(self, path, extras=(), quick=QUICK, derivs=False, iters=3):
+    def uv_from_path(self, path, extras=(), quick=None, derivs=False, iters=3):
         """Solves for the (u,v) indices of an object in the field of view, given
         its path.
 

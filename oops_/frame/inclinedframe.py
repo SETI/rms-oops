@@ -10,7 +10,6 @@ from oops_.frame.frame_ import Frame
 from oops_.frame.spinframe import SpinFrame
 from oops_.frame.rotation import Rotation
 from oops_.array.all import *
-from oops_.config import QUICK
 from oops_.transform import Transform
 
 import oops_.registry as registry
@@ -82,7 +81,7 @@ class InclinedFrame(Frame):
 
 ########################################
 
-    def transform_at_time(self, time, quick=QUICK):
+    def transform_at_time(self, time, quick=None):
         """Returns the Transform to the given Frame at a specified Scalar of
         times."""
 

@@ -707,9 +707,9 @@ class Test_Body(unittest.TestCase):
 
         # Imports are here to avoid conflicts
         import oops_.registry as registry
-
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
+        registry.initialize_body_registry()
 
         define_solar_system("2000-01-01", "2010-01-01")
 
@@ -757,8 +757,7 @@ class Test_Body(unittest.TestCase):
 
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
-
-        registry.BODY_REGISTRY = {}
+        registry.initialize_body_registry()
 
 ########################################
 if __name__ == '__main__':

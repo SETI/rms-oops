@@ -9,10 +9,7 @@ import pdstable
 import cspice
 import oops
 
-import utils as cassini
-
-INSTRUMENT_KERNEL = None
-FOVS = {}
+from oops.inst.cassini.cassini_ import Cassini
 
 ################################################################################
 # Standard class methods
@@ -22,7 +19,7 @@ def from_file(filespec, parameters={}):
     """A general, static method to return an Snapshot object based on a given
     Cassini ISS image file."""
 
-    initialize()    # Define everything the first time through
+    ISS.initialize()    # Define everything the first time through
 
     # Load the VICAR file
     vic = vicar.VicarImage.from_file(filespec)
@@ -45,13 +42,12 @@ def from_file(filespec, parameters={}):
         camera = "NAC"
 
     # Make sure the SPICE kernels are loaded
-    cassini.load_cks( tdb0, tdb1)
-    cassini.load_spks(tdb0, tdb1)
+    Cassini.load_cks( tdb0, tdb1)
+    Cassini.load_spks(tdb0, tdb1)
 
-        
     # Create a Snapshot
     result = oops.obs.Snapshot((tdb0, tdb1),            # time
-                               FOVS[camera,mode],       # fov
+                               ISS.fovs[camera,mode],   # fov
                                "CASSINI",               # path_id
                                "CASSINI_ISS_" + camera) # frame_id
 
@@ -69,7 +65,7 @@ def from_index(filespec, parameters={}):
     in an ISS index file. The filespec refers to the label of the index file.
     """
 
-    initialize()    # Define everything the first time through
+    ISS.initialize()    # Define everything the first time through
 
     # Read the index file
     table = pdstable.PdsTable(filespec, ["START_TIME", "STOP_TIME"])
@@ -104,69 +100,95 @@ def from_index(filespec, parameters={}):
     tdb0 = row_dicts[0]["START_TIME"]
     tdb1 = row_dicts[-1]["STOP_TIME"]
 
-    cassini.load_cks( tdb0, tdb1)
-    cassini.load_spks(tdb0, tdb1)
+    Cassini.load_cks( tdb0, tdb1)
+    Cassini.load_spks(tdb0, tdb1)
 
     return snapshots
 
 ################################################################################
 
-def initialize():
-    """Fills in key information about the WAC and NAC. Must be called first."""
+class ISS(object):
+    """A instance-free class to hold Cassini ISS instrument parameters."""
 
-    global INSTRUMENT_KERNEL, FOVS
+    instrument_kernel = None
+    fovs = {}
+    initialized = False
 
-    cassini.load_instruments()
+    @staticmethod
+    def initialize():
+        """Fills in key information about the WAC and NAC. Must be called first.
+        """
 
-    # Quick exit after first call
-    if INSTRUMENT_KERNEL is not None: return
+        # Quick exit after first call
+        if ISS.initialized: return
 
-    # Load the instrument kernel
-    INSTRUMENT_KERNEL = cassini.spice_instrument_kernel("ISS")[0]
+        Cassini.initialize()
+        Cassini.load_instruments()
 
-    # Construct a flat FOV for each camera
-    for detector in ["NAC", "WAC"]:
-        info = INSTRUMENT_KERNEL["INS"]["CASSINI_ISS_" + detector]
+        # Load the instrument kernel
+        ISS.instrument_kernel = Cassini.spice_instrument_kernel("ISS")[0]
 
-        # Full field of view
-        lines = info["PIXEL_LINES"]
-        samples = info["PIXEL_SAMPLES"]
+        # Construct a flat FOV for each camera
+        for detector in ["NAC", "WAC"]:
+            info = ISS.instrument_kernel["INS"]["CASSINI_ISS_" + detector]
 
-        xfov = info["FOV_REF_ANGLE"]
-        yfov = info["FOV_CROSS_ANGLE"]
-        assert info["FOV_ANGLE_UNITS"] == "DEGREES"
+            # Full field of view
+            lines = info["PIXEL_LINES"]
+            samples = info["PIXEL_SAMPLES"]
 
-        uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
-        vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
+            xfov = info["FOV_REF_ANGLE"]
+            yfov = info["FOV_CROSS_ANGLE"]
+            assert info["FOV_ANGLE_UNITS"] == "DEGREES"
 
-        # Display directions: [u,v] = [right,down]
-        full_fov = oops.fov.Flat((uscale,vscale), (samples,lines))
+            uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
+            vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
 
-        # Load the dictionary, include the subsampling modes
-        FOVS[detector, "FULL"] = full_fov
-        FOVS[detector, "SUM2"] = oops.fov.Subsampled(full_fov, 2)
-        FOVS[detector, "SUM4"] = oops.fov.Subsampled(full_fov, 4)
+            # Display directions: [u,v] = [right,down]
+            full_fov = oops.fov.Flat((uscale,vscale), (samples,lines))
 
-    # Construct a SpiceFrame for each camera
-    # Deal with the fact that the instrument's internal coordinate system is
-    # rotated 180 degrees
-    ignore = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
-                                   id="CASSINI_ISS_NAC_FLIPPED")
-    ignore = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
-                                   id="CASSINI_ISS_WAC_FLIPPED")
+            # Load the dictionary, include the subsampling modes
+            ISS.fovs[detector, "FULL"] = full_fov
+            ISS.fovs[detector, "SUM2"] = oops.fov.Subsampled(full_fov, 2)
+            ISS.fovs[detector, "SUM4"] = oops.fov.Subsampled(full_fov, 4)
 
-    rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-    ignore = oops.frame.Cmatrix(rot180, "CASSINI_ISS_NAC",
-                                        "CASSINI_ISS_NAC_FLIPPED")
-    ignore = oops.frame.Cmatrix(rot180, "CASSINI_ISS_WAC",
-                                        "CASSINI_ISS_WAC_FLIPPED")
+        # Construct a SpiceFrame for each camera
+        # Deal with the fact that the instrument's internal coordinate system is
+        # rotated 180 degrees
+        ignore = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
+                                       id="CASSINI_ISS_NAC_FLIPPED")
+        ignore = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
+                                       id="CASSINI_ISS_WAC_FLIPPED")
+
+        rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
+        ignore = oops.frame.Cmatrix(rot180, "CASSINI_ISS_NAC",
+                                            "CASSINI_ISS_NAC_FLIPPED")
+        ignore = oops.frame.Cmatrix(rot180, "CASSINI_ISS_WAC",
+                                            "CASSINI_ISS_WAC_FLIPPED")
+
+        ISS.initialized = True
+
+    @staticmethod
+    def reset():
+        """Resets the internal Cassini ISS parameters. Can be useful for
+        debugging."""
+
+        ISS.instrument_kernel = None
+        ISS.fovs = {}
+        ISS.initialized = False
+
+        Cassini.reset()
+
+################################################################################
+# Initialize at load time
+################################################################################
+
+ISS.initialize()
 
 ################################################################################
 # UNIT TESTS
 ################################################################################
 
 import unittest
-
 
 class Test_Cassini_ISS(unittest.TestCase):
 
@@ -183,5 +205,3 @@ class Test_Cassini_ISS(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
-
-

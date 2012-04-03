@@ -67,7 +67,7 @@ class SpiceFrame(Frame):
 
 ########################################
 
-    def transform_at_time(self, time, quick=QUICK):
+    def transform_at_time(self, time, quick=None):
         """Returns a Transform object that rotates coordinates in a reference
         frame into the new frame.
 
@@ -88,6 +88,7 @@ class SpiceFrame(Frame):
             return Transform(matrix, omega, self.frame_id, self.reference_id)
 
         # Apply the quick_frame if requested, possibly making a recursive call
+        if quick is None: quick = QUICK.flag
         if quick:
             return self.quick_frame(time, quick).transform_at_time(time, False)
 

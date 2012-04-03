@@ -6,9 +6,6 @@ import numpy as np
 
 from oops_.obs.observation_ import Observation
 from oops_.array.all import *
-from oops_.config import QUICK
-
-
 import oops_.frame.all as frame_
 import oops_.path.all  as path_
 
@@ -22,8 +19,6 @@ class Pushbroom(Observation):
     while the number of time steps is equal to the number of samples in the u
     or v direction, depending on the direction of sweep. In effect, then, the
     virtual array samples a diagonal ramp through the cube.
-
-    In its general form, the time step is 
     """
 
     def __init__(self, axis, tstride, texp,
@@ -103,10 +98,7 @@ class Pushbroom(Observation):
         uv_pair = Pair.as_pair(uv_pair)
 
         tstep = uv_pair.as_scalar(time_axis)
-        #mask = tstep.mask | ~self.fov.is_inside(uv_pair)
-        # previous line causing syntax error... NEED TO FIX... for moment just
-        # use the next line, but fix previous line and remove next line
-        mask = tstep.mask
+        mask = tstep.mask | ~self.fov.is_inside(uv_pair)
 
         time0 = Scalar(self.time[0] + tstep * self.tstride, mask)
         time1 = time0 + self.texp
