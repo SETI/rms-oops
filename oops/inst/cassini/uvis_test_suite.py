@@ -1,7 +1,7 @@
 import numpy as np
 import pylab
 import oops
-import oops.inst.cassini.vims as cassini_vims
+import oops.inst.cassini.uvis as cassini_uvis
 
 PRINT = True
 DISPLAY = True
@@ -76,11 +76,11 @@ def show_info(title, array):
     else:
         print "    ", array
 
-def vims_test_suite(filespec, derivs, info, display):
-    """Master test suite for a Cassini VIMS image.
+def uvis_test_suite(filespec, derivs, info, display):
+    """Master test suite for a Cassini UVIS image.
         
         Input:
-        filespec    file path and name to a Cassini VIMS image file.
+        filespec    file path and name to a Cassini UVIS image file.
         derivs      True to calculate derivatives where needed to derive
         quantities related to spatial resolution; False to omit all
         resolution calculations.
@@ -98,17 +98,17 @@ def vims_test_suite(filespec, derivs, info, display):
     saturn_body = oops.registry.body_lookup("SATURN")
     sun_body = oops.registry.body_lookup("SUN")
     
-    # Create the pushbroom objects
-    pushbrooms = cassini_vims.from_file(filespec)
+    # Create the snapshot object
+    snapshot = cassini_uvis.from_file(filespec)
     
-    # Create the pusbroom event for the visual image
+    # Create the snapshot event
     # ... with a grid point at the middle of each pixel
-    fov_shape = pushbrooms[0].fov.uv_shape
+    fov_shape = snapshot.fov.uv_shape
     
     uv_pair = oops.Pair.cross_scalars(np.arange(fov_shape.vals[0]) + 0.5,
                                       np.arange(fov_shape.vals[1]) + 0.5)
     
-    los = pushbrooms[0].fov.los_from_uv(uv_pair, derivs=derivs)
+    los = snapshot.fov.los_from_uv(uv_pair, derivs=derivs)
     # los.d_duv is now the [3,2] MatrixN of derivatives dlos/d(u,v), where los
     # is in the frame of the Cassini camera.
     
@@ -118,26 +118,25 @@ def vims_test_suite(filespec, derivs, info, display):
     
     # Define the event as a 1024x1024 array of simultaneous photon arrivals
     # coming from slightly different directions
-    pushbroom_event = oops.Event(pushbrooms[0].midtime, (0.,0.,0.), (0.,0.,0.),
-                                 pushbrooms[0].path_id, pushbrooms[0].frame_id,
-                                 arr=arrivals)
+    snapshot_event = oops.Event(snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
+                                snapshot.path_id, snapshot.frame_id,
+                                arr=arrivals)
     
     # For single-point calculations about the geometry
-    point_event = oops.Event(pushbrooms[0].midtime, (0.,0.,0.), (0.,0.,0.),
-                             pushbrooms[0].path_id, pushbrooms[0].frame_id)
+    point_event = oops.Event(
+                             snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
+                             snapshot.path_id, snapshot.frame_id)
     
     ############################################
     # Sky coordinates
     ############################################
     
-    print "area 1"
-    (right_ascension, declination) = pushbroom_event.ra_and_dec()
-    print "area 2"
+    (right_ascension, declination) = snapshot_event.ra_and_dec()
     show_info("Right ascension (deg)", right_ascension * oops.DPR)
     show_info("Declination (deg)", declination * oops.DPR)
     
-    pushbrooms[0].insert_subfield("right_ascension", right_ascension)
-    pushbrooms[0].insert_subfield("declination", declination)
+    snapshot.insert_subfield("right_ascension", right_ascension)
+    snapshot.insert_subfield("declination", declination)
     
     ############################################
     # Sub-observer ring geometry
@@ -165,10 +164,10 @@ def vims_test_suite(filespec, derivs, info, display):
               oops.DPR)
     show_info("Ring elevation of observer(km)", obs_wrt_ring_elevation)
     
-    pushbrooms[0].insert_subfield("obs_wrt_ring_range", obs_wrt_ring_range)
-    pushbrooms[0].insert_subfield("obs_wrt_ring_radius", obs_wrt_ring_radius)
-    pushbrooms[0].insert_subfield("obs_wrt_ring_longitude", obs_wrt_ring_longitude)
-    pushbrooms[0].insert_subfield("obs_wrt_ring_elevation", obs_wrt_ring_elevation)
+    snapshot.insert_subfield("obs_wrt_ring_range", obs_wrt_ring_range)
+    snapshot.insert_subfield("obs_wrt_ring_radius", obs_wrt_ring_radius)
+    snapshot.insert_subfield("obs_wrt_ring_longitude", obs_wrt_ring_longitude)
+    snapshot.insert_subfield("obs_wrt_ring_elevation", obs_wrt_ring_elevation)
     
     ############################################
     # Sub-solar ring geometry
@@ -195,10 +194,10 @@ def vims_test_suite(filespec, derivs, info, display):
     show_info("Ring longitude of Sun (deg)", sun_wrt_ring_longitude * oops.DPR)
     show_info("Ring elevation of Sun (km)", sun_wrt_ring_elevation)
     
-    pushbrooms[0].insert_subfield("sun_wrt_ring_range", sun_wrt_ring_range)
-    pushbrooms[0].insert_subfield("sun_wrt_ring_radius", sun_wrt_ring_radius)
-    pushbrooms[0].insert_subfield("sun_wrt_ring_longitude", sun_wrt_ring_longitude)
-    pushbrooms[0].insert_subfield("sun_wrt_ring_elevation", sun_wrt_ring_elevation)
+    snapshot.insert_subfield("sun_wrt_ring_range", sun_wrt_ring_range)
+    snapshot.insert_subfield("sun_wrt_ring_radius", sun_wrt_ring_radius)
+    snapshot.insert_subfield("sun_wrt_ring_longitude", sun_wrt_ring_longitude)
+    snapshot.insert_subfield("sun_wrt_ring_elevation", sun_wrt_ring_elevation)
     
     ############################################
     # Sub-observer Saturn geometry
@@ -227,11 +226,11 @@ def vims_test_suite(filespec, derivs, info, display):
               oops.DPR)
     show_info("Saturn elevation of observer (km)", obs_wrt_saturn_elevation)
     
-    pushbrooms[0].insert_subfield("obs_wrt_saturn_range", obs_wrt_saturn_range)
-    pushbrooms[0].insert_subfield("obs_wrt_saturn_longitude",
+    snapshot.insert_subfield("obs_wrt_saturn_range", obs_wrt_saturn_range)
+    snapshot.insert_subfield("obs_wrt_saturn_longitude",
                              obs_wrt_saturn_longitude)
-    pushbrooms[0].insert_subfield("obs_wrt_saturn_latitude", obs_wrt_saturn_latitude)
-    pushbrooms[0].insert_subfield("obs_wrt_saturn_elevation",
+    snapshot.insert_subfield("obs_wrt_saturn_latitude", obs_wrt_saturn_latitude)
+    snapshot.insert_subfield("obs_wrt_saturn_elevation",
                              obs_wrt_saturn_elevation)
     
     ############################################
@@ -261,19 +260,19 @@ def vims_test_suite(filespec, derivs, info, display):
               oops.DPR)
     show_info("Saturn elevation of Sun (km)", sun_wrt_saturn_elevation)
     
-    pushbrooms[0].insert_subfield("sun_wrt_saturn_range", sun_wrt_saturn_range)
-    pushbrooms[0].insert_subfield("sun_wrt_saturn_longitude",
+    snapshot.insert_subfield("sun_wrt_saturn_range", sun_wrt_saturn_range)
+    snapshot.insert_subfield("sun_wrt_saturn_longitude",
                              sun_wrt_saturn_longitude)
-    pushbrooms[0].insert_subfield("sun_wrt_saturn_latitude", sun_wrt_saturn_latitude)
-    pushbrooms[0].insert_subfield("sun_wrt_saturn_elevation",
+    snapshot.insert_subfield("sun_wrt_saturn_latitude", sun_wrt_saturn_latitude)
+    snapshot.insert_subfield("sun_wrt_saturn_elevation",
                              sun_wrt_saturn_elevation)
     
     ############################################
-    # Ring intercept points in pushbroom
+    # Ring intercept points in snapshot
     ############################################
     
     # Find the ring intercept events
-    ring_event_w_derivs = ring_body.surface.photon_to_event(pushbroom_event,
+    ring_event_w_derivs = ring_body.surface.photon_to_event(snapshot_event,
                                                             derivs=derivs)
     ring_event = ring_event_w_derivs.copy()
     ring_event.delete_sub_subfields()
@@ -297,11 +296,11 @@ def vims_test_suite(filespec, derivs, info, display):
     show_info("Ring longitude (deg)", ring_longitude * oops.DPR)
     show_info("Ring emission angle (deg)", ring_emission * oops.DPR)
     
-    pushbrooms[0].insert_subfield("ring_mask", ring_mask)
-    pushbrooms[0].insert_subfield("ring_range", ring_range)
-    pushbrooms[0].insert_subfield("ring_radius", ring_radius)
-    pushbrooms[0].insert_subfield("ring_longitude", ring_longitude)
-    pushbrooms[0].insert_subfield("ring_emission", ring_emission)
+    snapshot.insert_subfield("ring_mask", ring_mask)
+    snapshot.insert_subfield("ring_range", ring_range)
+    snapshot.insert_subfield("ring_radius", ring_radius)
+    snapshot.insert_subfield("ring_longitude", ring_longitude)
+    snapshot.insert_subfield("ring_emission", ring_emission)
     
     # Get the ring plane resolution
     if derivs:
@@ -317,17 +316,17 @@ def vims_test_suite(filespec, derivs, info, display):
         show_info("Ring angular resolution (deg/pixel)",
                   ring_angular_resolution * oops.DPR)
         
-        pushbrooms[0].insert_subfield("ring_radial_resolution",
+        snapshot.insert_subfield("ring_radial_resolution",
                                  ring_radial_resolution)
-        pushbrooms[0].insert_subfield("ring_angular_resolution",
+        snapshot.insert_subfield("ring_angular_resolution",
                                  ring_angular_resolution)
     
     ############################################
-    # Saturn intercept points in pushbroom
+    # Saturn intercept points in snapshot
     ############################################
     
     # Find the ring intercept events
-    saturn_event_w_derivs = saturn_body.surface.photon_to_event(pushbroom_event,
+    saturn_event_w_derivs = saturn_body.surface.photon_to_event(snapshot_event,
                                                                 derivs=derivs)
     saturn_event = saturn_event_w_derivs.copy()
     saturn_event.delete_sub_subfields()
@@ -356,12 +355,12 @@ def vims_test_suite(filespec, derivs, info, display):
               oops.DPR)
     show_info("Saturn emission angle (deg)", saturn_emission * oops.DPR)
     
-    pushbrooms[0].insert_subfield("saturn_mask", saturn_mask)
-    pushbrooms[0].insert_subfield("saturn_range", saturn_range)
-    pushbrooms[0].insert_subfield("saturn_longitude", saturn_longitude)
-    pushbrooms[0].insert_subfield("saturn_centric_lat", saturn_centric_lat)
-    pushbrooms[0].insert_subfield("saturn_graphic_lat", saturn_graphic_lat)
-    pushbrooms[0].insert_subfield("saturn_emission", saturn_emission)
+    snapshot.insert_subfield("saturn_mask", saturn_mask)
+    snapshot.insert_subfield("saturn_range", saturn_range)
+    snapshot.insert_subfield("saturn_longitude", saturn_longitude)
+    snapshot.insert_subfield("saturn_centric_lat", saturn_centric_lat)
+    snapshot.insert_subfield("saturn_graphic_lat", saturn_graphic_lat)
+    snapshot.insert_subfield("saturn_emission", saturn_emission)
     
     # Get the Saturn surface resolution and foreshortening
     if derivs:
@@ -370,11 +369,11 @@ def vims_test_suite(filespec, derivs, info, display):
         dpos_du = oops.Vector3(dpos_duv.vals[...,0], dpos_duv.mask)
         dpos_dv = oops.Vector3(dpos_duv.vals[...,1], dpos_duv.mask)
         
-        pushbrooms[0].insert_subfield("dpos_du", dpos_du)
-        pushbrooms[0].insert_subfield("dpos_dv", dpos_dv)
-        pushbrooms[0].insert_subfield("perp", saturn_event.perp)
-        pushbrooms[0].insert_subfield("pos", saturn_event.pos)
-        pushbrooms[0].insert_subfield("time", saturn_event.time)
+        snapshot.insert_subfield("dpos_du", dpos_du)
+        snapshot.insert_subfield("dpos_dv", dpos_dv)
+        snapshot.insert_subfield("perp", saturn_event.perp)
+        snapshot.insert_subfield("pos", saturn_event.pos)
+        snapshot.insert_subfield("time", saturn_event.time)
         
         (saturn_resolution_min,
          saturn_resolution_max) = oops.surface.Surface.resolution(dpos_duv)
@@ -383,8 +382,8 @@ def vims_test_suite(filespec, derivs, info, display):
         show_info("Saturn coarsest resolution (km/pixel)",
                   saturn_resolution_max)
         
-        pushbrooms[0].insert_subfield("saturn_resolution_min", saturn_resolution_min)
-        pushbrooms[0].insert_subfield("saturn_resolution_max", saturn_resolution_max)
+        snapshot.insert_subfield("saturn_resolution_min", saturn_resolution_min)
+        snapshot.insert_subfield("saturn_resolution_max", saturn_resolution_max)
     
     ############################################
     # Which object is in front?
@@ -402,8 +401,8 @@ def vims_test_suite(filespec, derivs, info, display):
     show_info("Rings in front mask", ring_unobscured_mask)
     show_info("Saturn in front mask", saturn_unobscured_mask)
     
-    pushbrooms[0].insert_subfield("ring_unobscured_mask", ring_unobscured_mask)
-    pushbrooms[0].insert_subfield("saturn_unobscured_mask", saturn_unobscured_mask)
+    snapshot.insert_subfield("ring_unobscured_mask", ring_unobscured_mask)
+    snapshot.insert_subfield("saturn_unobscured_mask", saturn_unobscured_mask)
     
     ############################################
     # Ring lighting geometry
@@ -420,9 +419,9 @@ def vims_test_suite(filespec, derivs, info, display):
     show_info("Ring incidence angle (deg)", ring_incidence * oops.DPR)
     show_info("Ring phase angle (deg)", ring_phase * oops.DPR)
     
-    pushbrooms[0].insert_subfield("sun_ring_range", sun_ring_range)
-    pushbrooms[0].insert_subfield("ring_incidence", ring_incidence)
-    pushbrooms[0].insert_subfield("ring_phase", ring_phase)
+    snapshot.insert_subfield("sun_ring_range", sun_ring_range)
+    snapshot.insert_subfield("ring_incidence", ring_incidence)
+    snapshot.insert_subfield("ring_phase", ring_phase)
     
     ############################################
     # Saturn lighting geometry
@@ -441,10 +440,10 @@ def vims_test_suite(filespec, derivs, info, display):
     show_info("Saturn phase angle (deg)", saturn_phase * oops.DPR)
     show_info("Saturn lit side mask)", saturn_lit_side_mask)
     
-    pushbrooms[0].insert_subfield("sun_saturn_range", sun_saturn_range)
-    pushbrooms[0].insert_subfield("saturn_incidence", saturn_incidence)
-    pushbrooms[0].insert_subfield("saturn_phase", saturn_phase)
-    pushbrooms[0].insert_subfield("saturn_lit_side_mask", saturn_lit_side_mask)
+    snapshot.insert_subfield("sun_saturn_range", sun_saturn_range)
+    snapshot.insert_subfield("saturn_incidence", saturn_incidence)
+    snapshot.insert_subfield("saturn_phase", saturn_phase)
+    snapshot.insert_subfield("saturn_lit_side_mask", saturn_lit_side_mask)
     
     ############################################
     # Shadow of Saturn on the rings
@@ -457,7 +456,7 @@ def vims_test_suite(filespec, derivs, info, display):
     ring_unshadowed_mask = ring_in_shadow_event.mask
     
     show_info("Rings unshadowed mask", ring_unshadowed_mask)
-    pushbrooms[0].insert_subfield("ring_unshadowed_mask", ring_unshadowed_mask)
+    snapshot.insert_subfield("ring_unshadowed_mask", ring_unshadowed_mask)
     
     ############################################
     # Shadow of the rings on Saturn
@@ -470,7 +469,7 @@ def vims_test_suite(filespec, derivs, info, display):
     saturn_unshadowed_mask = saturn_in_shadow_event.mask
     
     show_info("Saturn unshadowed mask", saturn_unshadowed_mask)
-    pushbrooms[0].insert_subfield("saturn_unshadowed_mask", saturn_unshadowed_mask)
+    snapshot.insert_subfield("saturn_unshadowed_mask", saturn_unshadowed_mask)
     
     ############################################
     # Composite masks
@@ -485,13 +484,13 @@ def vims_test_suite(filespec, derivs, info, display):
     show_info("Rings visible and lit mask", ring_visible_and_lit_mask)
     show_info("Saturn visible and lit mask", saturn_visible_and_lit_mask)
     
-    pushbrooms[0].insert_subfield("ring_visible_and_lit_mask",
+    snapshot.insert_subfield("ring_visible_and_lit_mask",
                              ring_visible_and_lit_mask)
     
-    pushbrooms[0].insert_subfield("saturn_visible_and_lit_mask",
+    snapshot.insert_subfield("saturn_visible_and_lit_mask",
                              saturn_visible_and_lit_mask)
     
-    return pushbrooms
+    return snapshot
 
 ################################################################################
 # UNIT TESTS
@@ -503,15 +502,15 @@ UNITTEST_PRINTING = True
 UNITTEST_LOGGING = True
 UNITTEST_DERIVS = True
 
-class Test_Cassini_VIMS_Suite(unittest.TestCase):
+class Test_Cassini_UVIS_Suite(unittest.TestCase):
     
     def runTest(self):
         
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
         
-        filespec = "test_data/cassini/VIMS/V1546355804_1.QUB"
-        pushbrooms = vims_test_suite(filespec, UNITTEST_DERIVS,
-                                     UNITTEST_PRINTING, False)
+        filespec = "test_data/cassini/UVIS/COUVIS_0034/DATA/D2011_090/EUV2011_090_23_13.LBL"
+        snapshot = uvis_test_suite(filespec, UNITTEST_DERIVS,
+                                  UNITTEST_PRINTING, False)
         
         oops.config.LOGGING.off()
 
