@@ -167,7 +167,8 @@ class Event(object):
         """Replaces the time array by the average of its min and max, provided
         the range of times is less than or equal to the specified threshold."""
 
-        if threshold is None: threshold = EVENT_CONFIG.collapse_threshold
+        if threshold is None:
+            threshold = EVENT_CONFIG.collapse_threshold
 
         if self.time.shape != []:
             tmin = self.time.min()

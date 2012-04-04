@@ -22,7 +22,7 @@ class Backplane(object):
     sets of backplanes associated with a particular observation. It caches
     intermediate results to speed up calculations."""
 
-    def __init__(self, obs, meshgrid=None, extras=(), t=Scalar(0.)):
+    def __init__(self, obs, meshgrid=None, extras=(), t=Scalar(0.5)):
         """The constructor.
 
         Input:
