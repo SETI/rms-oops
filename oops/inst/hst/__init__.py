@@ -1,5 +1,9 @@
 ################################################################################
 # oops/inst/hst/__init__.py
+#
+# 4/8/12 MRS - corrected a small rotational error in the frame, due to the
+#   peculiar way that the HST distortion models interact with the definition of
+#   the ORIENT parameter. See the parameter v_wrt_y_deg.
 ################################################################################
 
 import numpy as np
@@ -137,15 +141,21 @@ class HST(object):
 
         return (tdb0, tdb1)
 
-    def register_frame(self, hst_file, parameters={}):
+    def register_frame(self, hst_file, v_wrt_y_deg=0., parameters={}):
         """Returns the Cmatrix Frame that rotates from J2000 coordinates into
         the frame of the HST observation.
+
+        v_wrt_y_deg is the angle from the y-axis of the camera frame to the
+        v-axis of the pixel grid, in degrees. I find this to be nonzero in HST
+        distortion models. Because the camera ORIENT is defined relative to the
+        v-axis, we need to subtract this value to get the orientation of the
+        y-axis. MRS 4/8/12.
         """
 
         header1 = hst_file[1].header
         ra    = header1["CRVAL1"]
         dec   = header1["CRVAL2"]
-        clock = header1["ORIENTAT"]
+        clock = header1["ORIENTAT"] - v_wrt_y_deg
         frame_id = hst_file[0].header["FILENAME"]
 
         frame = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock, frame_id)
@@ -251,6 +261,12 @@ class HST(object):
 
         fov = self.define_fov(hst_file, parameters)
 
+        uv_center = fov.uv_from_xy((0,0))
+        xy_center = fov.xy_from_uv(uv_center, derivs=True)
+
+        v_wrt_y_deg = np.arctan(xy_center.d_duv.vals[0,1] /
+                                xy_center.d_duv.vals[1,1]) * oops.DPR
+
         try:
             point_calib = self.iof_calibration(hst_file, fov,
                                                     False, parameters)
@@ -268,7 +284,8 @@ class HST(object):
         return oops.obs.Snapshot(self.time_limits(hst_file),        # time
                                  fov,                               # fov
                                  "EARTH",                           # path_id
-                                 self.register_frame(hst_file),     # frame_id
+                                 self.register_frame(hst_file, v_wrt_y_deg),
+                                                                    # frame_id
                                  data = self.data_array(hst_file),
                                  error = self.error_array(hst_file),
                                  quality = self.quality_mask(hst_file),

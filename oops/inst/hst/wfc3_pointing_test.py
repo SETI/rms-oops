@@ -25,15 +25,16 @@ pylab.imshow(snapshot.data)
 # Give the image a quick cleanup
 blur = filters.median_filter(snapshot.data, 9)
 flat = (snapshot.data - blur)
-image = flat.clip(-3000,12000).astype("float")
+image = flat.clip(-1000,6000).astype("float")
 pylab.imshow(image)
 
 # Define the model image as two ansas of the epsilon ring
 meshgrid = oops.Meshgrid.for_fov(snapshot.fov, swap=True)
 bp = oops.Backplane(snapshot, meshgrid)
 
-epsilon = bp.border_atop(("ring_radius", "epsilon_ring"), 51149.32).vals.astype("float")
-pylab.imshow(epsilon)
+epsilon = bp.border_atop(("ring_radius", "epsilon_ring"),
+                         51149.32).vals.astype("float")
+pylab.imshow(np.maximum(epsilon * image.max(), image))
 
 # Subtract out the saturated columns
 disk = bp.where_intercepted("uranus").vals
@@ -50,7 +51,7 @@ pylab.imshow(model)
 
 # Locate the pixel offsets with the highest correlation between image and model
 corr = correlate2d(image, model)
-pylab.imshow(corr)
+# pylab.imshow(corr)
 
 (vmax,umax) = np.where(corr == corr.max())
 umax = umax[0]
@@ -65,3 +66,10 @@ print (umax,vmax)
 # Update the FOV object with the new pointing offset
 snapshot.fov = oops.fov.Offset(snapshot.fov, (umax,vmax))
 
+# Define the model image as two ansas of the epsilon ring
+meshgrid = oops.Meshgrid.for_fov(snapshot.fov, swap=True)
+bp = oops.Backplane(snapshot, meshgrid)
+
+epsilon = bp.border_atop(("ring_radius", "epsilon_ring"),
+                         51149.32).vals.astype("float")
+pylab.imshow(np.maximum(epsilon * image.max(), image))

@@ -148,7 +148,7 @@ class Polynomial(FOV):
             # print iter, max(np.max(np.abs(du)),np.max(np.abs(dv)))
 
         if derivs:
-            uv_test.insert_subfield("d_xy", duv_dxy)
+            uv_test.insert_subfield("d_dxy", duv_dxy)
 
         return uv_test
 
