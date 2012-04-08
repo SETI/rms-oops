@@ -221,11 +221,13 @@ class HST(object):
         # Generate the calibration factor
         try:
             photflam = hst_file[1].header["PHOTFLAM"]
+            texp = hst_file[0].header["EXPTIME"]
         except KeyError:
             raise IOError("PHOTFLAM calibration factor not found in file " +
                           self.filespec(hst_file))
-                            
-        factor = photflam / self.solar_f(hst_file, solar_range, solar_model)
+
+        factor = photflam / (fov.uv_area * texp *
+                             self.solar_f(hst_file, solar_range, solar_model))
 
         # Create and return the calibration for solar reflectivity
         if extended:
