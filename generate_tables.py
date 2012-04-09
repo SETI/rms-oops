@@ -236,7 +236,7 @@ def generate_table_for_index(file_name):
     snapshots = cassini_iss.from_index(file_name)
     output_buf = ''
         #for i in range(252, 500):
-    for i in range(0,500):
+    for i in range(1,100):
         #for i in range(432,433):
         snapshot = snapshots[i]
         print snapshot.index_dict['FILE_NAME']

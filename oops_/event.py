@@ -173,7 +173,7 @@ class Event(object):
         if self.time.shape != []:
             tmin = self.time.min()
             tmax = self.time.max()
-            span = tmax - tmin:
+            span = tmax - tmin
             if np.all(span.mask):
                 self.time = Scalar((np.max(self.time.vals) +
                                     np.min(self.time.vals))/2., True)
@@ -295,7 +295,7 @@ class Event(object):
         but entirely masked. The returned event uses the given origin frame and
         sign."""
 
-        buffer = np.zeros(link.shape + [3])     # OK to share memory
+        buffer = np.zeros(self.shape + [3])     # OK to share memory
         buffer[...,2] = 1.                      # Avoids divide-by-zero bugs
         return Event(Scalar(buffer[...,0], mask=True),
                      Vector3(buffer, mask=True),
