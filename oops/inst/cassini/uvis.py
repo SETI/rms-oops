@@ -182,7 +182,7 @@ def from_index(filespec, parameters={}):
         product_id = file_name.split('/')[-1].split('.')[0]
         lines = mc.dict[product_id]["LINE"]
         samples = mc.dict[product_id]["SAMPLE"]
-        if lines == 1 or samples == 1:
+        if lines <= 1 or samples <= 1:
             continue
         #for key in dict:
             #print "%s = %s" % (key, dict[key])
@@ -209,8 +209,8 @@ def from_index(filespec, parameters={}):
     
         time_diff = total_time - (integration_duration * samples)
         if abs(time_diff) > 1e-9:
-            print "diff total time:"
-            print total_time - calc_total_time
+            print "diff total time for file %s:" % file_name
+            print time_diff
         
         target_name = dict["TARGET_NAME"]
         time_tuple = (tdb0, tdb1)
