@@ -199,8 +199,17 @@ def generate_metadata(snapshot, resolution):
     #####################################################
     # ANSA surface values
     #####################################################
+        
+    test = bp.ansa_radius("saturn:ansa")
+    output_buf += add_info(test)
+    #show_info("Saturn:ansa radius (km)", test)
+        
+    test = bp.ansa_elevation("saturn:ansa")
+    output_buf += add_info(test)
+    #show_info("Saturn:ansa elevation (km)", test)
+
     # For single-point calculations about the geometry
-    point_event = oops.Event(snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
+    """point_event = oops.Event(snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
                              snapshot.path_id, snapshot.frame_id)
     # Define the apparent location of the observer relative to Saturn ring frame
     ring_body = oops.registry.body_lookup("SATURN_MAIN_RINGS")
@@ -228,7 +237,7 @@ def generate_metadata(snapshot, resolution):
     r_z_theta.mask = rings_in_view
 
     print "r max:"
-    print np.max(r_z_theta.mvals[...,0])
+    print np.max(r_z_theta.mvals[...,0])"""
 
     return output_buf
 

@@ -25,7 +25,7 @@ def sumover(item):
     except TypeError:
         return int(item)
 
-def create_vis_observation(dict, filespec=None, label=None):
+def create_vims_observation(dict, filespec=None, label=None):
     # Get key information from the header
     if filespec is None:
         tdb0 = dict["START_TIME"]
@@ -186,7 +186,7 @@ def from_file(filespec, parameters={}):
     label = pdsparser.PdsLabel.from_file(filespec)
     qube = label["QUBE"]
     
-    return create_vis_observation(qube, filespec, label)
+    return create_vims_observation(qube, filespec, label)
 
 ################################################################################
 
@@ -230,7 +230,7 @@ def from_index(filespec, parameters={}):
     # Create a list of Snapshot objects
     observations = []
     for dict in row_dicts:
-        observations.append(create_vis_observation(dict))
+        observations.append(create_vims_observation(dict))
 
     
     # Make sure all the SPICE kernels are loaded

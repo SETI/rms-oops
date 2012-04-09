@@ -87,7 +87,7 @@ def from_index(filespec, parameters={}):
             camera = "NAC"
 
         item = oops.obs.Snapshot((tdb0, tdb1),              # time
-                                 FOVS[camera,mode],         # fov
+                                 ISS.fovs[camera,mode],     # fov
                                  "CASSINI",                 # path_id
                                  "CASSINI_ISS_" + camera)   # frame_id
 

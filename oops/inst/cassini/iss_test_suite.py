@@ -156,9 +156,8 @@ def iss_test_suite(filespec, derivs, info, display):
 
     (obs_wrt_ring_radius,
     obs_wrt_ring_longitude,
-    obs_wrt_ring_elevation) = ring_body.surface.as_coords(
-                                                    obs_wrt_ring_center.pos,
-                                                    axes=3)
+    obs_wrt_ring_elevation) = ring_body.surface.event_as_coords(obs_wrt_ring_center.event,
+                                                                axes=3)
     
     show_info("Ring range to observer (km)", obs_wrt_ring_range)
     show_info("Ring radius of observer (km)", obs_wrt_ring_radius)
@@ -187,9 +186,8 @@ def iss_test_suite(filespec, derivs, info, display):
 
     (sun_wrt_ring_radius,
     sun_wrt_ring_longitude,
-    sun_wrt_ring_elevation) = ring_body.surface.as_coords(
-                                                    sun_wrt_ring_center.pos,
-                                                    axes=3)
+    sun_wrt_ring_elevation) = ring_body.surface.event_as_coords(sun_wrt_ring_center.event,
+                                                                axes=3)
     
     show_info("Ring range to Sun (km)", sun_wrt_ring_range)
     show_info("Ring radius of Sun (km)", sun_wrt_ring_radius)
@@ -217,9 +215,8 @@ def iss_test_suite(filespec, derivs, info, display):
 
     (obs_wrt_saturn_longitude,
     obs_wrt_saturn_latitude,
-    obs_wrt_saturn_elevation) = saturn_body.surface.as_coords(
-                                                    obs_wrt_saturn_center.pos,
-                                                    axes=3)
+    obs_wrt_saturn_elevation) = saturn_body.surface.event_as_coords(obs_wrt_saturn_center.event,
+                                                                    axes=3)
     
     show_info("Saturn range to observer (km)", obs_wrt_saturn_range)
     show_info("Saturn longitude of observer (deg)", obs_wrt_saturn_longitude *
@@ -251,8 +248,8 @@ def iss_test_suite(filespec, derivs, info, display):
 
     (sun_wrt_saturn_longitude,
     sun_wrt_saturn_latitude,
-    sun_wrt_saturn_elevation) = saturn_body.surface.as_coords(
-                                                    sun_wrt_saturn_center.pos,
+    sun_wrt_saturn_elevation) = saturn_body.surface.event_as_coords(
+                                                    sun_wrt_saturn_center,
                                                     axes=3)
 
     show_info("Saturn range to Sun (km)", sun_wrt_saturn_range)
@@ -287,8 +284,8 @@ def iss_test_suite(filespec, derivs, info, display):
 
     # Get the radius and inertial longitude; track radial derivatives
     (ring_radius,
-    ring_longitude) = ring_body.surface.as_coords(ring_event.pos,
-                                                  axes=2, derivs=derivs)
+    ring_longitude) = ring_body.surface.event_as_coords(ring_event, axes=2,
+                                                        derivs=derivs)
 
     ring_emission = ring_event.emission_angle()
 
@@ -341,8 +338,8 @@ def iss_test_suite(filespec, derivs, info, display):
 
     # Get the longitude and three kinds of latitude
     (saturn_longitude,
-    saturn_squashed_lat) = saturn_body.surface.as_coords(saturn_event.pos,
-                                                         axes=2)
+    saturn_squashed_lat) = saturn_body.surface.event_as_coords(saturn_event,
+                                                               axes=2)
     saturn_centric_lat = saturn_body.surface.lat_to_centric(saturn_squashed_lat)
     saturn_graphic_lat = saturn_body.surface.lat_to_graphic(saturn_squashed_lat)
 
