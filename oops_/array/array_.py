@@ -686,11 +686,14 @@ class Array(object):
         # Mask any items to be divided by zero
         div_by_zero = (vals == 0)
         if np.any(div_by_zero):
-            vals = vals.copy()
-            vals[div_by_zero] = 1
-            # Collapse mask down to one element per item of Array
-            for iters in range(self.rank):
-                div_by_zero = np.any(div_by_zero, axis=-1)
+            if np.shape(vals) == ():
+                vals = 1
+            else:
+                vals = vals.copy()
+                vals[div_by_zero] = 1
+                # Collapse mask down to one element per item of Array
+                for iters in range(self.rank):
+                    div_by_zero = np.any(div_by_zero, axis=-1)
         else:
             div_by_zero = False
 
@@ -729,11 +732,14 @@ class Array(object):
         # Mask any items to be divided by zero
         div_by_zero = (vals == 0)
         if np.any(div_by_zero):
-            vals = vals.copy()
-            vals[div_by_zero] = 1
-            # Collapse mask down to one element per item of Array
-            for iters in range(self.rank):
-                div_by_zero = np.any(div_by_zero, axis=-1)
+            if np.shape(vals) == ():
+                vals = 1
+            else:
+                vals = vals.copy()
+                vals[div_by_zero] = 1
+                # Collapse mask down to one element per item of Array
+                for iters in range(self.rank):
+                    div_by_zero = np.any(div_by_zero, axis=-1)
         else:
             div_by_zero = False
 
@@ -801,11 +807,14 @@ class Array(object):
         # Mask any items to be divided by zero
         div_by_zero = (vals == 0)
         if np.any(div_by_zero):
-            vals = vals.copy()
-            vals[div_by_zero] = 1
-            # Collapse mask down to one element per item of Array
-            for iters in range(self.rank):
-                div_by_zero = np.any(div_by_zero, axis=-1)
+            if np.shape(vals) == ():
+                vals = 1
+            else:
+                vals = vals.copy()
+                vals[div_by_zero] = 1
+                # Collapse mask down to one element per item of Array
+                for iters in range(self.rank):
+                    div_by_zero = np.any(div_by_zero, axis=-1)
         else:
             div_by_zero = False
 
@@ -829,8 +838,11 @@ class Array(object):
 
         div_by_zero = (vals == 0)
         if np.any(div_by_zero):
-            vals = vals.copy()
-            vals[div_by_zero] = 1
+            if np.shape(vals) == ():
+                vals = 1
+            else:
+                vals = vals.copy()
+                vals[div_by_zero] = 1
         else:
             div_by_zero = False
 
@@ -958,6 +970,9 @@ class Array(object):
 
         if self.mask is False:
             return bool(np.all(self.vals))
+        elif np.all(self.mask):
+            raise ValueError("the truth value of an entirely masked object " +
+                             "is undefined.")
         return bool(np.all(self.vals[~self.mask]))
 
     ####################################
