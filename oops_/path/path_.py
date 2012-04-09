@@ -408,20 +408,7 @@ class Path(object):
 
         # If the link is entirely masked...
         if np.all(link.mask):
-
-            # Return an entirely masked event of the same shape
-            buffer = np.zeros(link.shape + [3])     # OK to share memory
-            buffer[...,2] = 1.                      # Avoids some divide-by-zero
-            path_event = Event(Scalar(buffer[...,0], mask=True),
-                               Vector3(buffer, mask=True),
-                               Vector3(buffer, mask=True),
-                               self.origin_id, self.frame_id,
-                               arr = Vector3(buffer, mask=True),
-                               dep = Vector3(buffer, mask=True),
-                               arr_lt = Scalar(buffer[...,0], mask=True),
-                               dep_lt = Scalar(buffer[...,0], mask=True),
-                               link = link, sign = sign)
-            return path_event
+            return self._masked_link(link, sign, derivs)
 
         # Define the path and the linking event relative to the SSB in J2000
         link_wrt_ssb = link.wrt_ssb(quick, derivs=derivs)
@@ -488,6 +475,9 @@ class Path(object):
             if LOGGING.surface_iterations:
                 print LOGGING.prefix, "Path._solve_photon", iter, max_dlt
 
+            if np.all(max_dlt.mask):
+                return self._masked_link(link, sign, derivs)
+
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 
         # Update the path event one last time
@@ -543,6 +533,17 @@ class Path(object):
         path_event = path_event_ssb.wrt(self.path_id, self.frame_id, quick,
                                         derivs=derivs)
         path_event.filled_ssb = path_event_ssb
+        return path_event
+
+    def _masked_link(self, link, sign, derivs=False):
+        """Returns an entirely masked path event."""
+
+        path_event = link.masked_link(self.origin_id, self.frame_id, sign)
+
+        if derivs:
+            path_event.time.insert_subfield("d_dt", Empty())
+            path_event.pos.insert_subfield( "d_dt", Empty())
+
         return path_event
 
 ################################################################################

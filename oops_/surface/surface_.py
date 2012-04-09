@@ -435,22 +435,7 @@ class Surface(object):
         # If the link is entirely masked...
         if lt_min == lt_max:
           if np.all(link.mask):
-
-            # Return an entirely masked result
-            buffer = np.zeros(link.shape + [3])     # OK to share memory
-            buffer[...,2] = 1.                      # Avoids some divide-by-zero
-            surface_event = Event(Scalar(buffer[...,0], mask=True),
-                                  Vector3(buffer, mask=True),
-                                  Vector3(buffer, mask=True),
-                                  self.origin_id, self.frame_id,
-                                  perp = Vector3(buffer, mask=True),
-                                  vflat = Vector3(buffer, mask=True),
-                                  arr = Vector3(buffer, mask=True),
-                                  dep = Vector3(buffer, mask=True),
-                                  arr_lt = Scalar(buffer[...,0], mask=True),
-                                  dep_lt = Scalar(buffer[...,0], mask=True),
-                                  link = link, sign = sign)
-            return surface_event
+            return self._masked_link(link, sign, derivs)
 
         # Expand the interval
         lt_min -= limit
@@ -504,6 +489,9 @@ class Surface(object):
 
             if LOGGING.surface_iterations:
                 print LOGGING.prefix, "Surface._solve_photon", iter, max_dlt
+
+            if np.all(max_dlt.mask):
+                return self._masked_link(link, sign, derivs)
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 
@@ -570,6 +558,19 @@ class Surface(object):
 
         surface_event.insert_subfield(surface_key, los_wrt_surface)
         surface_event.insert_subfield(surface_key + "_lt", -lt)
+
+        return surface_event
+
+    def _masked_link(self, link, sign, derivs=False):
+        """Returns an entirely masked surface event."""
+
+        surface_event = link.masked_link(self.origin_id, self.frame_id, sign)
+
+        if derivs:
+            surface_event.time.insert_subfield("d_dt",   Empty())
+            surface_event.time.insert_subfield("d_dlos", Empty())
+            surface_event.pos.insert_subfield( "d_dt",   Empty())
+            surface_event.pos.insert_subfield( "d_dlos", Empty())
 
         return surface_event
 

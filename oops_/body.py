@@ -396,8 +396,8 @@ NEPTUNE_CLASSICAL = range(801,803)
 NEPTUNE_INNER     = range(803,809)
 NEPTUNE_IRREGULAR = range(809,814)
 
-PLUTO_CLASSICAL   = [901]
-PLUTO_REGULAR     = range(901,905)
+CHARON        = [901]
+PLUTO_REGULAR = range(902,905)
 
 ################################################################################
 # Definitions of ring systems
@@ -592,9 +592,9 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_ring("NEPTUNE", "NEPTUNE_RING_PLANE", NEPTUNE_ADAMS_LIMIT, [])
 
     # Moons and rings of Pluto
-    define_bodies(PLUTO_CLASSICAL, "PLUTO", "PLUTO",
+    define_bodies(CHARON, "PLUTO", "PLUTO",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
-    define_bodies(PLUTO_REGULAR,   "PLUTO", "PLUTO",
+    define_bodies(PLUTO_REGULAR, "PLUTO", "PLUTO BARYCENTER",
                   ["SATELLITE", "REGULAR"])
     define_ring("PLUTO", "PLUTO_RING_PLANE", None, [])
 

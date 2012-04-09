@@ -173,7 +173,11 @@ class Event(object):
         if self.time.shape != []:
             tmin = self.time.min()
             tmax = self.time.max()
-            if (tmax - tmin <= threshold):
+            span = tmax - tmin:
+            if np.all(span.mask):
+                self.time = Scalar((np.max(self.time.vals) +
+                                    np.min(self.time.vals))/2., True)
+            elif span <= threshold:
                 self.time = Scalar((tmin + tmax) / 2.)
 
                 # Update the SSB version as well
@@ -285,6 +289,25 @@ class Event(object):
             result.filled_ssb = None
 
         return result
+
+    def masked_link(self, origin, frame, sign):
+        """Returns an event linked to this one, with the same shape as self,
+        but entirely masked. The returned event uses the given origin frame and
+        sign."""
+
+        buffer = np.zeros(link.shape + [3])     # OK to share memory
+        buffer[...,2] = 1.                      # Avoids divide-by-zero bugs
+        return Event(Scalar(buffer[...,0], mask=True),
+                     Vector3(buffer, mask=True),
+                     Vector3(buffer, mask=True),
+                     origin, frame,
+                     perp = Vector3(buffer, mask=True),
+                     vflat = Vector3(buffer, mask=True),
+                     arr = Vector3(buffer, mask=True),
+                     dep = Vector3(buffer, mask=True),
+                     arr_lt = Scalar(buffer[...,0], mask=True),
+                     dep_lt = Scalar(buffer[...,0], mask=True),
+                     link = self, sign = sign)
 
     @staticmethod
     def null_event(time, origin="SSB", frame="J2000"):
