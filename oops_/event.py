@@ -295,18 +295,17 @@ class Event(object):
         but entirely masked. The returned event uses the given origin frame and
         sign."""
 
-        buffer = np.zeros(self.shape + [3])     # OK to share memory
-        buffer[...,2] = 1.                      # Avoids divide-by-zero bugs
-        return Event(Scalar(buffer[...,0], mask=True),
-                     Vector3(buffer, mask=True),
-                     Vector3(buffer, mask=True),
+        shape = self.shape
+        return Event(Scalar.all_masked(shape),
+                     Vector3.all_masked(shape),
+                     Vector3.all_masked(shape),
                      origin, frame,
-                     perp = Vector3(buffer, mask=True),
-                     vflat = Vector3(buffer, mask=True),
-                     arr = Vector3(buffer, mask=True),
-                     dep = Vector3(buffer, mask=True),
-                     arr_lt = Scalar(buffer[...,0], mask=True),
-                     dep_lt = Scalar(buffer[...,0], mask=True),
+                     perp = Vector3.all_masked(shape),
+                     vflat = Vector3.all_masked(shape),
+                     arr = Vector3.all_masked(shape),
+                     dep = Vector3.all_masked(shape),
+                     arr_lt = Scalar.all_masked(shape),
+                     dep_lt = Scalar.all_masked(shape),
                      link = self, sign = sign)
 
     @staticmethod

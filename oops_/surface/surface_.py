@@ -567,10 +567,14 @@ class Surface(object):
         surface_event = link.masked_link(self.origin_id, self.frame_id, sign)
 
         if derivs:
-            surface_event.time.insert_subfield("d_dt",   Empty())
-            surface_event.time.insert_subfield("d_dlos", Empty())
-            surface_event.pos.insert_subfield( "d_dt",   Empty())
-            surface_event.pos.insert_subfield( "d_dlos", Empty())
+            surface_event.time.insert_subfield("d_dt",
+                                        Scalar.all_masked())
+            surface_event.time.insert_subfield("d_dlos",
+                                        MatrixN.all_masked(item=[1,3]))
+            surface_event.pos.insert_subfield( "d_dt",
+                                        MatrixN.all_masked(item=[3,1]))
+            surface_event.pos.insert_subfield( "d_dlos",
+                                        MatrixN.all_masked(item=[3,3]))
 
         return surface_event
 

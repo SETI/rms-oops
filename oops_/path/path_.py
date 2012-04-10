@@ -541,8 +541,9 @@ class Path(object):
         path_event = link.masked_link(self.origin_id, self.frame_id, sign)
 
         if derivs:
-            path_event.time.insert_subfield("d_dt", Empty())
-            path_event.pos.insert_subfield( "d_dt", Empty())
+            path_event.time.insert_subfield("d_dt", Scalar.all_masked())
+            path_event.pos.insert_subfield( "d_dt",
+                                                MatrixN.all_masked(item=[3,1]))
 
         return path_event
 

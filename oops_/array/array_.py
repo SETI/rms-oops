@@ -226,13 +226,14 @@ class Array(object):
         return Array.MATRIXN_CLASS.as_matrixn(self)
 
     def masked_version(self):
-        """Retuns on Array of the same subclass, containing a single masked
-        value."""
+        """Retuns on Array of the same subclass and shape, containing all
+        masked values."""
 
         obj = Array.__new__(type(self))
 
         if type(self.vals) == type(np.ndarray):
             vals = np.zeros(self.item, dtype=self.vals.dtype)
+            vals = np.broadcast_arrays(vals, self.vals)[0]
         elif type(self.vals) == type(0):
             vals = 0
         else:
@@ -240,6 +241,21 @@ class Array(object):
 
         obj.__init__(vals, True, self.units)
         return obj
+
+    @classmethod
+    def all_masked(cls, shape=[], item=[]):
+        """Returns an entirely masked object of the specified subclass and
+        shape. The shape is emulated via broadcasting so the object should be
+        treated as immutable."""
+
+        temp = Array.__new__(cls)
+        if item is None: item = [3,3]   # Any subclass can be initialized with a
+                                        # 3x3 array. This is a bit of a kluge.
+        temp.__init__(np.ones(item))
+
+        obj = Array.__new__(cls)
+        obj.__init__(np.zeros(temp.item), mask=True)
+        return obj.rebroadcast(shape)
 
     def __repr__(self):
         """show values of Array or subtype. repr() call returns array at start
