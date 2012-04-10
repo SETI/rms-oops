@@ -475,7 +475,7 @@ class Path(object):
             if LOGGING.surface_iterations:
                 print LOGGING.prefix, "Path._solve_photon", iter, max_dlt
 
-            if np.all(max_dlt.mask):
+            if type(max_dlt) == Scalar and np.all(max_dlt.mask):
                 return self._masked_link(link, sign, derivs)
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
