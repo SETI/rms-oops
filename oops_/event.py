@@ -174,7 +174,7 @@ class Event(object):
             tmin = self.time.min()
             tmax = self.time.max()
             span = tmax - tmin
-            if np.all(span.mask):
+            if type(span) == Scalar and np.all(span.mask):
                 self.time = Scalar((np.max(self.time.vals) +
                                     np.min(self.time.vals))/2., True)
             elif span <= threshold:
