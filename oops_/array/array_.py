@@ -243,7 +243,7 @@ class Array(object):
         return obj
 
     @classmethod
-    def all_masked(cls, shape=[], item=[]):
+    def all_masked(cls, shape=[], item=None):
         """Returns an entirely masked object of the specified subclass and
         shape. The shape is emulated via broadcasting so the object should be
         treated as immutable."""
