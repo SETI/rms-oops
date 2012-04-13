@@ -284,7 +284,7 @@ class Backplane(object):
         if mask:
             return Scalar(np.ones(self.meshgrid.shape, dtype="bool"))
         else:
-            return Scalar(np.zeros(self.meshgrid.shape, dtyp="bool"))
+            return Scalar(np.zeros(self.meshgrid.shape, dtype="bool"))
 
     def register_backplane(self, key, backplane):
         """Inserts this backplane into the dictionary."""
