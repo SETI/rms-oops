@@ -254,7 +254,7 @@ class Array(object):
         temp.__init__(np.ones(item))
 
         obj = Array.__new__(cls)
-        obj.__init__(np.zeros(temp.item), mask=True)
+        obj.__init__(np.ones(temp.item), mask=True)
         return obj.rebroadcast(shape)
 
     def __repr__(self):
