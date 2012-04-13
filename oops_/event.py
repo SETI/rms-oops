@@ -312,6 +312,7 @@ class Event(object):
             event.filled_ssb = event
         else:
             event.filled_ssb = Event(
+                      Scalar.all_masked(shape),
                       Vector3.all_masked(shape),
                       Vector3.all_masked(shape),
                       "SSB", "J2000",
