@@ -408,7 +408,7 @@ class Path(object):
 
         # If the link is entirely masked...
         if np.all(link.mask):
-            return self._masked_link(link, sign, derivs)
+            return self._masked_link(link, sign, link_key, derivs)
 
         # Define the path and the linking event relative to the SSB in J2000
         link_wrt_ssb = link.wrt_ssb(quick, derivs=derivs)
@@ -476,7 +476,7 @@ class Path(object):
                 print LOGGING.prefix, "Path._solve_photon", iter, max_dlt
 
             if type(max_dlt) == Scalar and np.all(max_dlt.mask):
-                return self._masked_link(link, sign, derivs)
+                return self._masked_link(link, sign, link_key, derivs)
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt: break
 
@@ -535,7 +535,7 @@ class Path(object):
         path_event.filled_ssb = path_event_ssb
         return path_event
 
-    def _masked_link(self, link, sign, derivs=False):
+    def _masked_link(self, link, sign, link_key, derivs=False):
         """Returns an entirely masked path event."""
 
         path_event = link.masked_link(self.origin_id, self.frame_id, sign)
@@ -544,6 +544,9 @@ class Path(object):
             path_event.time.insert_subfield("d_dt", Scalar.all_masked())
             path_event.pos.insert_subfield( "d_dt",
                                                 MatrixN.all_masked(item=[3,1]))
+
+        link.insert_subfield(link_key, Vector3.all_masked())
+        link.insert_subfield(link_key + "_lt", Scalar.all_masked())
 
         return path_event
 

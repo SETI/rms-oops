@@ -296,17 +296,37 @@ class Event(object):
         sign."""
 
         shape = self.shape
-        return Event(Scalar.all_masked(shape),
-                     Vector3.all_masked(shape),
-                     Vector3.all_masked(shape),
-                     origin, frame,
-                     perp = Vector3.all_masked(shape),
-                     vflat = Vector3.all_masked(shape),
-                     arr = Vector3.all_masked(shape),
-                     dep = Vector3.all_masked(shape),
-                     arr_lt = Scalar.all_masked(shape),
-                     dep_lt = Scalar.all_masked(shape),
-                     link = self, sign = sign)
+        event = Event(Scalar.all_masked(shape),
+                      Vector3.all_masked(shape),
+                      Vector3.all_masked(shape),
+                      origin, frame,
+                      perp = Vector3.all_masked(shape),
+                      vflat = Vector3.all_masked(shape),
+                      arr = Vector3.all_masked(shape),
+                      dep = Vector3.all_masked(shape),
+                      arr_lt = Scalar.all_masked(shape),
+                      dep_lt = Scalar.all_masked(shape),
+                      link = self, sign = sign)
+
+        if origin == "SSB" and frame == "J2000":
+            event.filled_ssb = event
+        else:
+            event.filled_ssb = Event(
+                      Vector3.all_masked(shape),
+                      Vector3.all_masked(shape),
+                      "SSB", "J2000",
+                      perp = Vector3.all_masked(shape),
+                      vflat = Vector3.all_masked(shape),
+                      arr = Vector3.all_masked(shape),
+                      dep = Vector3.all_masked(shape),
+                      arr_lt = Scalar.all_masked(shape),
+                      dep_lt = Scalar.all_masked(shape),
+                      link = self, sign = sign)
+
+        event.filled_shape = shape
+        event.filled_mask = True
+
+        return event
 
     @staticmethod
     def null_event(time, origin="SSB", frame="J2000"):
