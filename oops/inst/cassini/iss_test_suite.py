@@ -104,6 +104,8 @@ def iss_test_suite(filespec, derivs, info, display):
     # Create the snapshot event
     # ... with a grid point at the middle of each pixel
     fov_shape = snapshot.fov.uv_shape
+    print "fov_shape:"
+    print fov_shape
     
     uv_pair = oops.Pair.cross_scalars(
         np.arange(fov_shape.vals[0]) + 0.5,
@@ -249,7 +251,7 @@ def iss_test_suite(filespec, derivs, info, display):
     (sun_wrt_saturn_longitude,
     sun_wrt_saturn_latitude,
     sun_wrt_saturn_elevation) = saturn_body.surface.event_as_coords(
-                                                    sun_wrt_saturn_center,
+                                                    sun_wrt_saturn_center.event,
                                                     axes=3)
 
     show_info("Saturn range to Sun (km)", sun_wrt_saturn_range)
@@ -273,8 +275,10 @@ def iss_test_suite(filespec, derivs, info, display):
     # Find the ring intercept events
     ring_event_w_derivs = ring_body.surface.photon_to_event(snapshot_event,
                                                             derivs=derivs)
-    ring_event = ring_event_w_derivs.copy()
-    ring_event.delete_sub_subfields()
+    #ring_event = ring_event_w_derivs.copy()
+    #ring_event.delete_sub_subfields()
+    # I think this is wanted now instead.
+    ring_event = ring_event_w_derivs.plain()
 
     # This mask is True inside the rings, False outside
     ring_mask = ~ring_event.mask
@@ -327,8 +331,10 @@ def iss_test_suite(filespec, derivs, info, display):
     # Find the ring intercept events
     saturn_event_w_derivs = saturn_body.surface.photon_to_event(snapshot_event,
                                                                 derivs=derivs)
-    saturn_event = saturn_event_w_derivs.copy()
-    saturn_event.delete_sub_subfields()
+    #saturn_event = saturn_event_w_derivs.copy()
+    #saturn_event.delete_sub_subfields()
+    # I think this is wanted now instead.
+    saturn_event = saturn_event_w_derivs.plain()
 
     # This mask is True on the planet, False off the planet
     saturn_mask = ~saturn_event.mask

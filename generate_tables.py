@@ -1,4 +1,8 @@
 import numpy as np
+import sys
+print sys.executable
+print sys.path
+
 import pylab
 import oops
 import oops.inst.cassini.iss as cassini_iss
@@ -11,6 +15,7 @@ spacer = '    ,   '
 
 PRINT = False
 DISPLAY = False
+OBJC_DISPLAY = True
 
 def add_info(array):
     if PRINT:
@@ -50,7 +55,29 @@ def show_info(title, array):
         desired."""
     
     global PRINT, DISPLAY
-    if not PRINT: return
+    if not PRINT:
+        if OBJC_DISPLAY:
+            if isinstance(array, np.ndarray):
+                if array.dtype == np.dtype("bool"):
+                    pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                                 array, vmin=0, vmax=1)
+                else:
+                    minval = np.min(array)
+                    maxval = np.max(array)
+                    if minval != maxval:
+                         pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                                      array)
+            elif isinstance(array, oops.Array):
+                if np.any(array.mask):
+                    pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                                 array.vals)
+                else:
+                    minval = np.min(array.vals)
+                    maxval = np.max(array.vals)
+                    if minval != maxval:
+                            pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                                         array.vals)
+        return
     
     print ""
     print title
@@ -65,6 +92,9 @@ def show_info(title, array):
             if DISPLAY:
                 ignore = pylab.imshow(array, norm=None, vmin=0, vmax=1)
                 ignore = raw_input(title + ": ")
+            elif OBJC_DISPLAY:
+                pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                             array, vmin=0, vmax=1)
         
         else:
             minval = np.min(array)
@@ -76,7 +106,10 @@ def show_info(title, array):
                 
                 if DISPLAY:
                     ignore = pylab.imshow(array)
-                ignore = raw_input(title + ": ")
+                    ignore = raw_input(title + ": ")
+                elif OBJC_DISPLAY:
+                    pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                                 array)
     
     elif isinstance(array, oops.Array):
         if np.any(array.mask):
@@ -99,6 +132,9 @@ def show_info(title, array):
                 ignore = pylab.imshow(background)
                 ignore = pylab.imshow(array.mvals)
                 ignore = raw_input(title + ": ")
+            elif OBJC_DISPLAY:
+                pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                             array.vals)
         
         else:
             minval = np.min(array.vals)
@@ -111,6 +147,9 @@ def show_info(title, array):
                 if DISPLAY:
                     ignore = pylab.imshow(array.vals)
                     ignore = raw_input(title + ": ")
+                elif OBJC_DISPLAY:
+                    pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                                 array.vals)
     
     else:
         print "    ", array
@@ -152,12 +191,15 @@ def generate_metadata(snapshot, resolution):
     bp = oops.Backplane(snapshot, meshgrid)
     test = bp.right_ascension()
     output_buf += add_info(test * oops.DPR)
+    show_info("Right Ascension:", test)
 
     test = bp.declination()
     output_buf += add_info(test * oops.DPR)
+    print "************** generate_tables area 3 *****************************"
 
     test = bp.ring_radius("saturn_main_rings")
     output_buf += add_info(test)
+    print "************** generate_tables area 4 *************************************************************************************************"
 
     test = bp.ring_radial_resolution("saturn_main_rings")
     output_buf += add_info(test)
@@ -235,13 +277,18 @@ def generate_metadata(snapshot, resolution):
 def generate_table_for_index(file_name):
     snapshots = cassini_iss.from_index(file_name)
     output_buf = ''
+        #for snapshot in snapshots:
         #for i in range(252, 500):
-    for i in range(1,100):
+    for i in range(2,3):
         #for i in range(432,433):
         snapshot = snapshots[i]
         print snapshot.index_dict['FILE_NAME']
         file_line = generate_metadata(snapshot, 8)
         output_buf += file_line + '\n'
+    #print snapshots[1].index_dict['FILE_NAME']
+    #file_line = generate_metadata(snapshots[1], 8)
+    #output_buf += file_line + '\n'
+
     return output_buf
 
 list_file = open(index_file, 'r')

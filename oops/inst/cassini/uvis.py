@@ -14,7 +14,7 @@ import cspice
 import oops
 
 from oops.inst.cassini.cassini_ import Cassini
-
+print "i am executing uvis.py"
 
 ################################################################################
 # Standard class methods
@@ -47,7 +47,7 @@ def from_file(filespec, parameters={}):
     
     # Load the VICAR file
     label = uvis_from_file(filespec)
-    #qube = label["QUBE"]
+    qube = label["QUBE"]
     
     # Get key information from the header
     time = label["START_TIME"].value
@@ -57,7 +57,12 @@ def from_file(filespec, parameters={}):
     time = label["STOP_TIME"].value
     if time[-1] == "Z": time = time[:-1]
     tdb1 = cspice.str2et(time)
+    total_time = tdb1 - tdb0
     
+    integration_duration = float(label["INTEGRATION_DURATION"])
+    target_name = str(label["TARGET_NAME"])
+    time_tuple = (tdb0, tdb1)
+
     # Make sure the SPICE kernels are loaded
     Cassini.load_cks( tdb0, tdb1)
     Cassini.load_spks(tdb0, tdb1)
@@ -75,11 +80,30 @@ def from_file(filespec, parameters={}):
 
     mode = str(label["SLIT_STATE"])
 
-    uvis_ss = oops.obs.Snapshot((tdb0, tdb1),               # time
-                                UVIS.fovs[detector, mode],  # fov
-                                "CASSINI",                  # path_id
-                                "CASSINI_UVIS_" + detector)
-    return uvis_ss
+    #fov = UVIS.fovs[detector, mode]
+    # now modify fov since spice toolkit does not have proper values for
+    # lines and samples
+    samples = int(qube["CORE_ITEMS"][2])
+    lines = int(qube["CORE_ITEMS"][1])
+    uscale = np.arctan(np.tan(UVIS.xfov[detector]) / (samples/2.))
+    vscale = np.arctan(np.tan(UVIS.yfov[detector]) / (lines/2.))
+    
+    # Display directions: [u,v] = [right,down]
+    fov = oops.fov.Flat((uscale,vscale), (samples,lines))
+
+    uvis_pb = oops.obs.Pushbroom(1,
+                                 total_time / samples,
+                                 integration_duration,
+                                 target_name,
+                                 time_tuple,
+                                 fov,
+                                 "CASSINI",
+                                 "CASSINI_UVIS_" + detector)
+    #uvis_ss = oops.obs.Snapshot((tdb0, tdb1),               # time
+    #                            fov,                        # fov
+    #                            "CASSINI",                  # path_id
+    #                            "CASSINI_UVIS_" + detector)
+    return uvis_pb
 
 ################################################################################
 
@@ -126,20 +150,10 @@ def uvis_from_index(filespec):
         if "RECORD_TYPE" in line:
             #words = line.split("=")
             newline = "RECORD_TYPE             = FIXED_LENGTH"
-            print "RECORD_TYPE line:"
-            print newline
             newlines.append(newline)
         elif "^TABLE" in line:
             words = line.split("=")
             newlines.append("^INDEX_TABLE = " + words[-1])
-            """newline = ""
-            for word in words:
-                sword = word.rstrip()
-                if sword == "^TABLE":
-                    newline = "^INDEX_TABLE"
-                else:
-                    newline += " " + sword
-            newlines.append(newline)"""
         elif first_obj == "None":
             if "OBJECT" in line:
                 words = line.split("=")
@@ -182,6 +196,8 @@ def from_index(filespec, parameters={}):
         product_id = file_name.split('/')[-1].split('.')[0]
         lines = mc.dict[product_id]["LINE"]
         samples = mc.dict[product_id]["SAMPLE"]
+        print "lines: ", lines
+        print "samples: ", samples
         if lines <= 1 or samples <= 1:
             continue
         #for key in dict:
@@ -215,12 +231,26 @@ def from_index(filespec, parameters={}):
         target_name = dict["TARGET_NAME"]
         time_tuple = (tdb0, tdb1)
 
-        uvis_pb = oops.obs.Pushbroom(0,
+        #uscale = np.arctan(np.tan(UVIS.xfov[detector]) / (samples/2.))
+        #vscale = np.arctan(np.tan(UVIS.yfov[detector]) / (lines/2.))
+        uscale = np.arctan(np.tan(UVIS.xfov[detector]) / (samples/2.))
+        vscale = np.arctan(np.tan(UVIS.yfov[detector]) / (lines/2.))
+                
+        # Display directions: [u,v] = [right,down]
+        fov = oops.fov.Flat((uscale,vscale), (samples,lines))
+
+        #fov = UVIS.fovs[detector, mode]
+        # now modify fov since spice toolkit does not have proper values for
+        # lines and samples
+        #fov.uv_shape = (samples, lines)
+        #fov.uv_scale /= (samples, lines)
+
+        uvis_pb = oops.obs.Pushbroom(1,
                                      total_time / samples,
                                      integration_duration,
                                      target_name,
                                      time_tuple,
-                                     UVIS.fovs[detector, mode],
+                                     fov,
                                      "CASSINI",
                                      "CASSINI_UVIS_" + detector)
         #uvis_ss = oops.obs.Snapshot((tdb0, tdb1),               # time
@@ -249,10 +279,14 @@ class UVIS(object):
     instrument_kernel = None
     fovs = {}
     initialized = False
+    conversion = {}
+    xfov = {}
+    yfov = {}
     
     @staticmethod
     def initialize():
-        """Fills in key information about the WAC and NAC. Must be called first."""
+        """Fills in key information about the WAC and NAC. Must be called first.
+        """
         
         # Quick exit after first call
         if UVIS.initialized: return
@@ -271,13 +305,18 @@ class UVIS(object):
             # Full field of view
             lines = info["PIXEL_LINES"]
             samples = info["PIXEL_SAMPLES"]
+            #print "for UVIS detector %s, lines = %d, samples = %d" % (detector,
+            #                                                          lines,
+            #                                                          samples)
             
-            xfov = info["FOV_REF_ANGLE"]
-            yfov = info["FOV_CROSS_ANGLE"]
+            UVIS.xfov[detector] = info["FOV_REF_ANGLE"]
+            UVIS.yfov[detector] = info["FOV_CROSS_ANGLE"]
             #assert info["FOV_ANGLE_UNITS"] == "DEGREES"
-            conversion = 1.
             if info["FOV_ANGLE_UNITS"] == "DEGREES":
-                conversion = np.pi/180.
+                UVIS.xfov[detector] *= np.pi/180.
+                UVIS.yfov[detector] *= np.pi/180.
+        
+            """
             
             uscale = np.arctan(np.tan(xfov * conversion) / (samples/2.))
             vscale = np.arctan(np.tan(yfov * conversion) / (lines/2.))
@@ -301,10 +340,21 @@ class UVIS(object):
             else:
                 #NULL shows up in non EUV/FUV data
                 UVIS.fovs[detector, "NULL"] = full_fov
-        
+            """
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal coordinate system is
         # rotated 180 degrees
+        ignore = oops.frame.SpiceFrame("CASSINI_UVIS_SOL_OFF",
+                                       id="CASSINI_UVIS_SOL_OFF_ROTATED")
+        ignore = oops.frame.SpiceFrame("CASSINI_UVIS_HSP",
+                                       id="CASSINI_UVIS_HSP_ROTATED")
+        ignore = oops.frame.SpiceFrame("CASSINI_UVIS_FUV",
+                                       id="CASSINI_UVIS_FUV_ROTATED")
+        ignore = oops.frame.SpiceFrame("CASSINI_UVIS_EUV",
+                                       id="CASSINI_UVIS_EUV_ROTATED")
+        ignore = oops.frame.SpiceFrame("CASSINI_UVIS_SOLAR",
+                                       id="CASSINI_UVIS_SOLAR_ROTATED")
+        """
         ignore = oops.frame.SpiceFrame("CASSINI_UVIS_SOL_OFF",
                                        id="CASSINI_UVIS_SOL_OFF_FLIPPED")
         ignore = oops.frame.SpiceFrame("CASSINI_UVIS_HSP",
@@ -314,10 +364,22 @@ class UVIS(object):
         ignore = oops.frame.SpiceFrame("CASSINI_UVIS_EUV",
                                        id="CASSINI_UVIS_EUV_FLIPPED")
         ignore = oops.frame.SpiceFrame("CASSINI_UVIS_SOLAR",
-                                       id="CASSINI_UVIS_SOLAR_FLIPPED")
+                                       id="CASSINI_UVIS_SOLAR_FLIPPED")"""
         #ignore = oops.frame.SpiceFrame("CASSINI_UVIS_HDAC",
         #                               id="CASSINI_UVIS_HDAC_FLIPPED")
         
+        rot90 = oops.Matrix3([[0,-1,0],[1,0,0],[0,0,1]])
+        ignore = oops.frame.Cmatrix(rot90, "CASSINI_UVIS_SOL_OFF",
+                                    "CASSINI_UVIS_SOL_OFF_ROTATED")
+        ignore = oops.frame.Cmatrix(rot90, "CASSINI_UVIS_HSP",
+                                    "CASSINI_UVIS_HSP_ROTATED")
+        ignore = oops.frame.Cmatrix(rot90, "CASSINI_UVIS_FUV",
+                                    "CASSINI_UVIS_FUV_ROTATED")
+        ignore = oops.frame.Cmatrix(rot90, "CASSINI_UVIS_EUV",
+                                    "CASSINI_UVIS_EUV_ROTATED")
+        ignore = oops.frame.Cmatrix(rot90, "CASSINI_UVIS_SOLAR",
+                                    "CASSINI_UVIS_SOLAR_ROTATED")
+        """
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
         ignore = oops.frame.Cmatrix(rot180, "CASSINI_UVIS_SOL_OFF",
                                     "CASSINI_UVIS_SOL_OFF_FLIPPED")
@@ -328,7 +390,7 @@ class UVIS(object):
         ignore = oops.frame.Cmatrix(rot180, "CASSINI_UVIS_EUV",
                                     "CASSINI_UVIS_EUV_FLIPPED")
         ignore = oops.frame.Cmatrix(rot180, "CASSINI_UVIS_SOLAR",
-                                    "CASSINI_UVIS_SOLAR_FLIPPED")
+                                    "CASSINI_UVIS_SOLAR_FLIPPED")"""
         #ignore = oops.frame.Cmatrix(rot180, "CASSINI_UVIS_HDAC",
         #                            "CASSINI_UVIS_HDAC_FLIPPED")
         UVIS.initialized = True
@@ -345,6 +407,12 @@ class UVIS(object):
             Cassini.reset()
 
 ################################################################################
+# Initialize at load time
+################################################################################
+
+UVIS.initialize()
+
+################################################################################
 # UNIT TESTS
 ################################################################################
 
@@ -358,12 +426,13 @@ class Test_Cassini_UVIS(unittest.TestCase):
         #from_file("test_data/cassini/UVIS/EUV1999_007_17_05.DAT")
         #from_file("test_data/cassini/UVIS/EUV1999_007_17_05.LBL")
         #ob = from_file("test_data/cassini/UVIS/COUVIS_0034/DATA/D2011_090/EUV2011_090_23_13.LBL")
+        ob = from_file("test_data/cassini/UVIS/COUVIS_0024/DATA/D2008_184/FUV2008_184_04_30.LBL")
         #print "observation time:"
         #print ob.time
-        obs = from_index("test_data/cassini/UVIS/INDEX.LBL")
-        for a in obs:
-            sys.stdout.write("    a time: ")
-            print a.time
+        #obs = from_index("test_data/cassini/UVIS/INDEX.LBL")
+        #for a in obs:
+        #    sys.stdout.write("    a time: ")
+        #    print a.time
         #mc = MissingColumns("COUVIS_0001")
         #mc.display()
 
