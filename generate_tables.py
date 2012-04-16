@@ -195,11 +195,10 @@ def generate_metadata(snapshot, resolution):
 
     test = bp.declination()
     output_buf += add_info(test * oops.DPR)
-    print "************** generate_tables area 3 *****************************"
 
     test = bp.ring_radius("saturn_main_rings")
     output_buf += add_info(test)
-    print "************** generate_tables area 4 *************************************************************************************************"
+    print this_doesnt_work
 
     test = bp.ring_radial_resolution("saturn_main_rings")
     output_buf += add_info(test)
