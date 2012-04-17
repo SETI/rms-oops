@@ -254,8 +254,10 @@ class Array(object):
         temp.__init__(np.ones(item))
 
         obj = Array.__new__(cls)
-        obj.__init__(np.ones(temp.item), mask=True)
-        return obj.rebroadcast(shape)
+#         obj.__init__(np.ones(temp.item), mask=True)
+#         return obj.rebroadcast(shape)     !!! this is terribly broken
+        obj.__init__(np.ones(shape + temp.item), mask=True)
+        return obj
 
     def __repr__(self):
         """show values of Array or subtype. repr() call returns array at start

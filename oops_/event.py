@@ -73,6 +73,7 @@ class Event(object):
                         of the time, pos, vel, arr and dep masks.
         """
 
+        self.I_AM_MASKED = False
         self.time  = Scalar.as_scalar(time)
         self.pos   = Vector3.as_vector3(pos)
         self.vel   = Vector3.as_vector3(vel)
@@ -297,15 +298,15 @@ class Event(object):
 
         shape = self.shape
         event = Event(Scalar.all_masked(shape),
-                      Vector3.all_masked(shape),
-                      Vector3.all_masked(shape),
+                      Vector3.all_masked(),
+                      Vector3.all_masked(),
                       origin, frame,
-                      perp = Vector3.all_masked(shape),
-                      vflat = Vector3.all_masked(shape),
-                      arr = Vector3.all_masked(shape),
-                      dep = Vector3.all_masked(shape),
-                      arr_lt = Scalar.all_masked(shape),
-                      dep_lt = Scalar.all_masked(shape),
+                      perp = Vector3.all_masked(),
+                      vflat = Vector3.all_masked(),
+                      arr = Vector3.all_masked(),
+                      dep = Vector3.all_masked(),
+                      arr_lt = Scalar.all_masked(),
+                      dep_lt = Scalar.all_masked(),
                       link = self, sign = sign)
 
         if origin == "SSB" and frame == "J2000":
@@ -313,20 +314,21 @@ class Event(object):
         else:
             event.filled_ssb = Event(
                       Scalar.all_masked(shape),
-                      Vector3.all_masked(shape),
-                      Vector3.all_masked(shape),
+                      Vector3.all_masked(),
+                      Vector3.all_masked(),
                       "SSB", "J2000",
-                      perp = Vector3.all_masked(shape),
-                      vflat = Vector3.all_masked(shape),
-                      arr = Vector3.all_masked(shape),
-                      dep = Vector3.all_masked(shape),
-                      arr_lt = Scalar.all_masked(shape),
-                      dep_lt = Scalar.all_masked(shape),
+                      perp = Vector3.all_masked(),
+                      vflat = Vector3.all_masked(),
+                      arr = Vector3.all_masked(),
+                      dep = Vector3.all_masked(),
+                      arr_lt = Scalar.all_masked(),
+                      dep_lt = Scalar.all_masked(),
                       link = self, sign = sign)
 
         event.filled_shape = shape
         event.filled_mask = True
 
+        event.I_AM_MASKED = True
         return event
 
     @staticmethod
