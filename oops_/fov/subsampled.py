@@ -51,8 +51,7 @@ class Subsampled(FOV):
         xy = self.fov.xy_from_uv(self.rescale * uv_pair, extras, derivs)
 
         if derivs:
-            xy.insert_subfield("d_uv", xy.d_duv.copy())
-            xy.d_duv.vals *= self.rescale.vals
+            xy.insert_subfield("d_uv", xy.d_duv * self.rescale.vals)
 
         return xy
 
