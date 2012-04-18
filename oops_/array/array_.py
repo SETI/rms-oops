@@ -934,8 +934,17 @@ class Array(object):
             compare = np.all(compare, axis=-1)
 
         # Quick test: If both masks are empty, just return the comparison
-        if (not np.any(self.mask) and not np.any(arg.mask)):
+        if (not np.any(self.mask)) and (not np.any(arg.mask)):
             return Array.into_scalar(compare)
+
+        # If both masks are all True, the objects are equal
+        if np.all(self.mask) and np.all(arg.mask):
+            if np.shape(compare) == (): return True
+            return Array.into_scalar(np.ones(compare.shape, dtype="bool"))
+
+        # Deal with unmasked scalar case
+        if np.shape(compare) == ():
+            return compare
 
         # Otherwise, perform the detailed comparison
         compare[self.mask & arg.mask] = True
@@ -977,6 +986,15 @@ class Array(object):
         # Quick test: If both masks are empty, just return the comparison
         if (not np.any(self.mask) and not np.any(arg.mask)):
             return Array.into_scalar(compare)
+
+        # If both masks are all True, the objects are equal
+        if np.all(self.mask) and np.all(arg.mask):
+            if np.shape(compare) == (): return False
+            return Array.into_scalar(np.zeros(compare.shape, dtype="bool"))
+
+        # Deal with unmasked scalar case
+        if np.shape(compare) == ():
+            return compare
 
         # Otherwise, perform the detailed comparison
         compare[self.mask & arg.mask] = False

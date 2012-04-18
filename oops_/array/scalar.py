@@ -722,8 +722,9 @@ class Test_Scalar(unittest.TestCase):
         bar.mask = np.array(1*[True] + 5*[False])   # Mask out the False value
         self.assertTrue(bar)
 
-        bar.mask = np.array(6*[True])               # Mask out every value
-        self.assertTrue(bar)
+        # This behavior has been redefined to raise a ValueError
+        # bar.mask = np.array(6*[True])               # Mask out every value
+        # self.assertTrue(bar)
 
         self.assertEqual(str(test), "Scalar[-- -- -- 3 4 5, mask]")
 

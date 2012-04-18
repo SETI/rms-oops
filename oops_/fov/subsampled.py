@@ -28,6 +28,10 @@ class Subsampled(FOV):
         self.fov = fov
         self.rescale  = Pair.as_pair(rescale).copy()
         self.rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
+        self.rescale_mat = MatrixN([[self.rescale.vals[0], 0.],
+                                    [0., self.rescale.vals[1]]])
+        self.rescale_inv = MatrixN([[1./self.rescale.vals[0], 0.],
+                                    [0., 1./self.rescale.vals[1]]])
 
         # Required fields
         self.uv_scale = self.fov.uv_scale / self.rescale
@@ -51,7 +55,7 @@ class Subsampled(FOV):
         xy = self.fov.xy_from_uv(self.rescale * uv_pair, extras, derivs)
 
         if derivs:
-            xy.insert_subfield("d_uv", xy.d_duv * self.rescale.vals)
+            xy.insert_subfield("d_uv", xy.d_duv * self.rescale_mat)
 
         return xy
 
@@ -71,8 +75,7 @@ class Subsampled(FOV):
         uv_new = uv_old / self.rescale
 
         if derivs is True:
-            uv_new.insert_subfield("d_dxy", uv_old.d_dxy.copy())
-            uv_new.d_dxy.vals /= self.rescale.vals
+            uv_new.insert_subfield("d_dxy", uv.d_dxy * self.rescale_inv)
 
         return uv_new
 
@@ -106,6 +109,7 @@ class Test_Subsampled(unittest.TestCase):
         uv_test = test.uv_from_xy(xy)
         self.assertEqual(uv_test, uv)
 
+        self.assertEqual(flat.area_factor(uv), 1.)
         self.assertEqual(test.area_factor(uv), 1.)
 
         xy = test.xy_from_uv(uv)
