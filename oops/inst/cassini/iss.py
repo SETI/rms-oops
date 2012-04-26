@@ -54,6 +54,8 @@ def from_file(filespec, parameters={}):
     # Insert the Vicar object as asubfield in case more info is needed.
     # This object behaves like a dictionary for most practical purposes.
     result.insert_subfield("vicar_dict", vic)
+    # make consistent with from_index()
+    #result.insert_subfield("index_dict", vic)
     result.insert_subfield("data", vic.get_2d_array())
 
     return result

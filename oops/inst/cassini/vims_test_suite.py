@@ -4,7 +4,7 @@ import oops
 import oops.inst.cassini.vims as cassini_vims
 
 PRINT = True
-DISPLAY = True
+DISPLAY = False
 
 def show_info(title, array):
     """Internal method to print summary information and display images as
@@ -51,7 +51,7 @@ def show_info(title, array):
             print "    ", (masked, total-masked),
             print         (percent, 100-percent), "(masked, unmasked pixels)"
             
-            if DISPLAY:
+            if DISPLAY and array.vals.size > 1:
                 ignore = pylab.imshow(array.vals)
                 ignore = raw_input(title + ": ")
                 background = np.zeros(array.shape, dtype="uint8")
@@ -130,9 +130,7 @@ def vims_test_suite(filespec, derivs, info, display):
     # Sky coordinates
     ############################################
     
-    print "area 1"
     (right_ascension, declination) = pushbroom_event.ra_and_dec()
-    print "area 2"
     show_info("Right ascension (deg)", right_ascension * oops.DPR)
     show_info("Declination (deg)", declination * oops.DPR)
     
@@ -155,9 +153,8 @@ def vims_test_suite(filespec, derivs, info, display):
     
     (obs_wrt_ring_radius,
      obs_wrt_ring_longitude,
-     obs_wrt_ring_elevation) = ring_body.surface.as_coords(
-                                                           obs_wrt_ring_center.pos,
-                                                           axes=3)
+     obs_wrt_ring_elevation) = ring_body.surface.event_as_coords(obs_wrt_ring_center.event,
+                                                                 axes=3)
     
     show_info("Ring range to observer (km)", obs_wrt_ring_range)
     show_info("Ring radius of observer (km)", obs_wrt_ring_radius)
@@ -186,9 +183,8 @@ def vims_test_suite(filespec, derivs, info, display):
     
     (sun_wrt_ring_radius,
      sun_wrt_ring_longitude,
-     sun_wrt_ring_elevation) = ring_body.surface.as_coords(
-                                                           sun_wrt_ring_center.pos,
-                                                           axes=3)
+     sun_wrt_ring_elevation) = ring_body.surface.event_as_coords(sun_wrt_ring_center.event,
+                                                                 axes=3)
     
     show_info("Ring range to Sun (km)", sun_wrt_ring_range)
     show_info("Ring radius of Sun (km)", sun_wrt_ring_radius)
@@ -216,10 +212,11 @@ def vims_test_suite(filespec, derivs, info, display):
     
     (obs_wrt_saturn_longitude,
      obs_wrt_saturn_latitude,
-     obs_wrt_saturn_elevation) = saturn_body.surface.as_coords(
-                                                               obs_wrt_saturn_center.pos,
-                                                               axes=3)
-    
+     obs_wrt_saturn_elevation) = saturn_body.surface.event_as_coords(obs_wrt_saturn_center.event,
+                                                                     axes=3)
+    #print "obs_wrt_saturn_longitude.shape: ", obs_wrt_saturn_longitude.shape
+    #print this_doesnt_work
+
     show_info("Saturn range to observer (km)", obs_wrt_saturn_range)
     show_info("Saturn longitude of observer (deg)", obs_wrt_saturn_longitude *
               oops.DPR)
@@ -250,9 +247,8 @@ def vims_test_suite(filespec, derivs, info, display):
     
     (sun_wrt_saturn_longitude,
      sun_wrt_saturn_latitude,
-     sun_wrt_saturn_elevation) = saturn_body.surface.as_coords(
-                                                               sun_wrt_saturn_center.pos,
-                                                               axes=3)
+     sun_wrt_saturn_elevation) = saturn_body.surface.event_as_coords(sun_wrt_saturn_center.event,
+                                                                     axes=3)
     
     show_info("Saturn range to Sun (km)", sun_wrt_saturn_range)
     show_info("Saturn longitude of Sun (deg)", sun_wrt_saturn_longitude *
@@ -275,8 +271,10 @@ def vims_test_suite(filespec, derivs, info, display):
     # Find the ring intercept events
     ring_event_w_derivs = ring_body.surface.photon_to_event(pushbroom_event,
                                                             derivs=derivs)
-    ring_event = ring_event_w_derivs.copy()
-    ring_event.delete_sub_subfields()
+    #ring_event = ring_event_w_derivs.copy()
+    #ring_event.delete_sub_subfields()
+    ring_event = ring_event_w_derivs.plain()
+    print "ring_event.pos: ", ring_event.pos
     
     # This mask is True inside the rings, False outside
     ring_mask = ~ring_event.mask
@@ -286,8 +284,8 @@ def vims_test_suite(filespec, derivs, info, display):
     
     # Get the radius and inertial longitude; track radial derivatives
     (ring_radius,
-     ring_longitude) = ring_body.surface.as_coords(ring_event.pos,
-                                                   axes=2, derivs=derivs)
+     ring_longitude) = ring_body.surface.event_as_coords(ring_event,
+                                                         axes=2, derivs=derivs)
     
     ring_emission = ring_event.emission_angle()
     
@@ -329,8 +327,9 @@ def vims_test_suite(filespec, derivs, info, display):
     # Find the ring intercept events
     saturn_event_w_derivs = saturn_body.surface.photon_to_event(pushbroom_event,
                                                                 derivs=derivs)
-    saturn_event = saturn_event_w_derivs.copy()
-    saturn_event.delete_sub_subfields()
+    #saturn_event = saturn_event_w_derivs.copy()
+    #saturn_event.delete_sub_subfields()
+    saturn_event = saturn_event_w_derivs.plain()
     
     # This mask is True on the planet, False off the planet
     saturn_mask = ~saturn_event.mask
@@ -340,8 +339,8 @@ def vims_test_suite(filespec, derivs, info, display):
     
     # Get the longitude and three kinds of latitude
     (saturn_longitude,
-     saturn_squashed_lat) = saturn_body.surface.as_coords(saturn_event.pos,
-                                                          axes=2)
+     saturn_squashed_lat) = saturn_body.surface.event_as_coords(saturn_event,
+                                                                axes=2)
     saturn_centric_lat = saturn_body.surface.lat_to_centric(saturn_squashed_lat)
     saturn_graphic_lat = saturn_body.surface.lat_to_graphic(saturn_squashed_lat)
     
@@ -511,7 +510,7 @@ class Test_Cassini_VIMS_Suite(unittest.TestCase):
         
         filespec = "test_data/cassini/VIMS/V1546355804_1.QUB"
         pushbrooms = vims_test_suite(filespec, UNITTEST_DERIVS,
-                                     UNITTEST_PRINTING, False)
+                                     UNITTEST_PRINTING, DISPLAY)
         
         oops.config.LOGGING.off()
 

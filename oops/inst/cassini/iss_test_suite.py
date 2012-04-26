@@ -4,7 +4,7 @@ import oops
 import oops.inst.cassini.iss as cassini_iss
 
 PRINT = True
-DISPLAY = True
+DISPLAY = False
 
 def show_info(title, array):
     """Internal method to print summary information and display images as
@@ -51,7 +51,7 @@ def show_info(title, array):
             print "    ", (masked, total-masked),
             print         (percent, 100-percent), "(masked, unmasked pixels)"
 
-            if DISPLAY:
+            if DISPLAY and array.vals.size > 1:
                 ignore = pylab.imshow(array.vals)
                 ignore = raw_input(title + ": ")
                 background = np.zeros(array.shape, dtype="uint8")
@@ -219,6 +219,8 @@ def iss_test_suite(filespec, derivs, info, display):
     obs_wrt_saturn_latitude,
     obs_wrt_saturn_elevation) = saturn_body.surface.event_as_coords(obs_wrt_saturn_center.event,
                                                                     axes=3)
+    print "obs_wrt_saturn_latitude.shape: ", obs_wrt_saturn_latitude.vals.shape
+    print "size(obs_wrt_saturn_latitude): ", obs_wrt_saturn_latitude.vals.size
     
     show_info("Saturn range to observer (km)", obs_wrt_saturn_range)
     show_info("Saturn longitude of observer (deg)", obs_wrt_saturn_longitude *
@@ -515,7 +517,7 @@ class Test_Cassini_ISS_Suite(unittest.TestCase):
 
         filespec = "test_data/cassini/ISS/W1573721822_1.IMG"
         snapshot = iss_test_suite(filespec, UNITTEST_DERIVS,
-                                  UNITTEST_PRINTING, False)
+                                  UNITTEST_PRINTING, DISPLAY)
 
         oops.config.LOGGING.off()
 

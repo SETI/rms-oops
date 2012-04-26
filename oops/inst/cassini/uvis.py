@@ -14,7 +14,6 @@ import cspice
 import oops
 
 from oops.inst.cassini.cassini_ import Cassini
-print "i am executing uvis.py"
 
 ################################################################################
 # Standard class methods

@@ -58,7 +58,7 @@ def show_info(title, array):
             print "    ", (masked, total-masked),
             print         (percent, 100-percent), "(masked, unmasked pixels)"
             
-            if DISPLAY:
+            if DISPLAY and array.vals.size > 1:
                 ignore = pylab.imshow(array.vals)
                 ignore = raw_input(title + ": ")
                 background = np.zeros(array.shape, dtype="uint8")
