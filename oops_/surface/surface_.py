@@ -11,6 +11,7 @@
 #   alternatives to coords_from_vector3() and vector3_from_coords(). They help
 #   to address the problems with virtual surfaces such as Ansa.
 # 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
+# 5/2/12 MRS - fixed bug in event_as_coords().
 ################################################################################
 
 import numpy as np
@@ -257,16 +258,21 @@ class Surface(object):
         else:
             obs = event.pos + event.arr_lt * event.arr.unit() * constants.C
 
+        # Make sure the position array has the same shape as the event
+        pos = wrt_surface.pos.rebroadcast(wrt_surface.shape)
+
         # Evaluate the coords and optional derivatives
-        coords = self.coords_from_vector3(wrt_surface.pos, obs=obs, axes=axes,
-                                                           derivs=derivs)
+        coords = self.coords_from_vector3(pos, obs=obs, axes=axes,
+                                                        derivs=derivs)
 
         if not any_derivs: return coords
 
         # Update the derivatives WRT time if necessary
+        vel = wrt_surface.vel.rebroadcast(wrt_surface.shape)
+
         for coord in coords:
             if "d_dpos" in coord.subfields.keys():
-                vel = wrt_surface.vel.as_column()
+                vel = vel.as_column()
                 coord.add_to_subfield("d_dt", (coord.d_dpos * vel).as_scalar())
 
            # This part not yet tested but I think it should work. 3/23 MRS
