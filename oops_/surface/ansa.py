@@ -3,11 +3,13 @@
 #
 # 2/27/12 Checked in (BSW)
 # 3/24/12 MRS - revised for new surface API.
+# 5/4/12 MRS - added associated RingPlane surfaces to the Ansa class.
 ################################################################################
 
 import numpy as np
 
-from oops_.surface.surface_ import Surface
+from oops_.surface.surface_  import Surface
+from oops_.surface.ringplane import RingPlane
 from oops_.array.all import *
 import oops_.registry as registry
 
@@ -25,7 +27,7 @@ class Ansa(Surface):
 
     COORDINATE_TYPE = "cylindrical"
 
-    def __init__(self, origin, frame):
+    def __init__(self, origin, frame, gravity=None, ringplane=None):
         """Constructor for an Ansa Surface.
 
         Input:
@@ -34,10 +36,36 @@ class Ansa(Surface):
 
             frame       a Frame object or ID in which the ring plane is the
                         (x,y) plane (where z == 0).
+
+            gravity     an optional Gravity object, used to define the orbital
+                        velocities relative to the surface. Also used if there
+                        is a need to define an associated RingPlane frame.
+
+            ringplane   used by static method for_ringplane(); otherwise it
+                        should be ignored.
         """
 
         self.origin_id = registry.as_path_id(origin)
         self.frame_id  = registry.as_frame_id(frame)
+        self.gravity   = gravity
+
+        if ringplane is None:
+            self.ringplane = RingPlane(self.origin_id, self.frame_id,
+                                       gravity=self.gravity)
+        else:
+            self.ringplane = ringplane
+
+    @staticmethod
+    def for_ringplane(ringplane):
+        """Constructor for an Ansa Surface associated with a given RingPlane.
+
+        Input:
+            ringplane   a ringplane surface relative to which this ansa surface
+                        is to be defined.
+        """
+
+        return Ansa(ringplane.origin_id, ringplane.frame_id, ringplane.gravity,
+                    ringplane)
 
     def coords_from_vector3(self, pos, obs, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
