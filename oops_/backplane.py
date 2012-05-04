@@ -544,7 +544,7 @@ class Backplane(object):
         surface = Backplane.get_surface(event_key[0])
         assert surface.COORDINATE_TYPE == "polar"
         (r,lon) = surface.coords_from_vector3(center_event.aberrated_dep(),
-                                              axes=2)
+                                              obs=self.obs_event.pos, axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
@@ -569,7 +569,7 @@ class Backplane(object):
         surface = Backplane.get_surface(event_key[0])
         #assert event.surface.COORDINATE_TYPE == "polar"
         (r,lon) = surface.coords_from_vector3(-center_event.aberrated_arr(),
-                                              axes=2)
+                                              obs=self.obs_event.pos, axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]

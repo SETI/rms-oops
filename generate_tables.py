@@ -265,17 +265,17 @@ class FileGeometry(object):
             #spans = self.angle_coverage(self.longitude_j2000 * oops.DPR)
             sub_geom = FileGeometry(self)
             sub_geom.or_mask(radius_mask)
-            lines += sub_geom.output_single_line(start, end)
+            lines += sub_geom.output_single_line(start, end, 1)
             
         return lines
         
 
-    def output_single_line(self, start=None, end=None):
+    def output_single_line(self, start=None, end=None, index=None):
         """output to a string line in the OPUS1 format"""
         line = self.image_name
-        if (start is not None) and (end is not None):
+        if (start is not None) and (end is not None) and (index is not None):
             # for Opus2 format
-            line += ", %f, %f" % (start, end)
+            line += ", %f, %f, %d" % (start, end, index)
         line += self.add_single_minmax_info(self.ra * oops.DPR)
         line += self.add_single_minmax_info(self.dec * oops.DPR)
         line += self.add_single_minmax_info(self.ring_radius)
@@ -524,8 +524,22 @@ def generate_metadata(snapshot, resolution):
     output_buf += camera"""
     geometry = FileGeometry()
     geometry.set_image_camera(snapshot)
+    
+    # deal with possible pointing errors - up to 3 pixels in any
+    # direction for WAC and 30 pixels for NAC
+    name = snapshot.index_dict["INSTRUMENT_NAME"]
+    error_buffer = 60
+    if "WIDE" in name:
+        error_buffer = 6
+    #print "snapshot.fov.uv_shape: ", snapshot.fov.uv_shape
+    limit = snapshot.fov.uv_shape + oops.Pair(np.array([error_buffer,
+                                                        error_buffer]))
 
-    meshgrid = Meshgrid.for_fov(snapshot.fov, undersample=resolution, swap=True)
+    meshgrid = Meshgrid.for_fov(snapshot.fov, undersample=resolution,
+                                limit=limit, swap=True)
+    
+    #meshgrid = Meshgrid.for_fov(snapshot.fov, undersample=resolution,
+    #                            swap=True)
     bp = oops.Backplane(snapshot, meshgrid)
 
     intercepted = bp.where_intercepted("saturn_main_rings")
@@ -593,40 +607,30 @@ def generate_metadata(snapshot, resolution):
     #####################################################
     # ANSA surface values
     #####################################################
-    intercepted = bp.where_intercepted("saturn_main_rings:ansa")
-    saturn_in_front = bp.where_in_front("saturn:ansa", "saturn_main_rings:ansa")
     saturn_intercepted = bp.where_intercepted("saturn:ansa")
-    rings_blocked = saturn_in_front & saturn_intercepted
-    rings_in_view = intercepted & (~rings_blocked)
-
-    rings_not_in_shadow = bp.where_outside_shadow("saturn_main_rings:ansa",
-                                                  "saturn:ansa")
-    vis_rings_not_shadow = rings_in_view & rings_not_in_shadow
 
     test = bp.ansa_radius("saturn:ansa")
-    test.mask |= ~vis_rings_not_shadow.vals
+    test.mask |= saturn_intercepted.vals
     geometry.ansa_radius = test.copy()
         
     test = bp.ansa_elevation("saturn:ansa")
-    test.mask |= ~vis_rings_not_shadow.vals
+    test.mask |= saturn_intercepted.vals
     geometry.ansa_elevation = test.copy()
 
-    """
     test = bp.ring_longitude("saturn:ansa",reference="j2000")
-    test.mask |= ~vis_rings_not_shadow.vals
+    test.mask |= saturn_intercepted.vals
     geometry.ansa_longitude_j2000 = test.copy()
 
     test = bp.ring_longitude("saturn:ansa", reference="sha")
-    test.mask |= ~vis_rings_not_shadow.vals
+    test.mask |= saturn_intercepted.vals
     geometry.ansa_longitude_sha = test.copy()
-    """
 
     test = bp.range("saturn:ansa")
-    test.mask |= ~vis_rings_not_shadow.vals
+    test.mask |= saturn_intercepted.vals
     geometry.ansa_range = test.copy()
 
     test = bp.ansa_radial_resolution("saturn:ansa")
-    test.mask |= ~vis_rings_not_shadow.vals
+    test.mask |= saturn_intercepted.vals
     geometry.ansa_resolution = test.copy()
 
     return geometry
@@ -655,7 +659,7 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
     nSnapshots = len(snapshots)
     i = 0
     then = datetime.datetime.now()
-    start = 0
+    start = 1820
     geometries = []
     for i in range(start,nSnapshots):
         snapshot = snapshots[i]
