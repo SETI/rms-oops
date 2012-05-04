@@ -5,6 +5,7 @@
 # 3/24/12 MRS - Revised handling of keys into the backplane dictionary, added
 #   support for ansa surfaces; an entirely masked backplane no longer causes
 #   problems.
+# 5/4/12 MRS - Updated ansa backplanes and added ansa longitude backplanes.
 ################################################################################
 
 import numpy as np
