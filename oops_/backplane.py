@@ -155,7 +155,7 @@ class Backplane(object):
 
         if modifier == "ansa":
             if body.surface.COORDINATE_TYPE == "polar":     # if it's a ring
-                return surface_.Ansa(body.path_id, body.frame_id)
+                return surface_.Ansa.for_ringplane(body.surface)
             else:                                           # if it's a planet
                 return surface_.Ansa(body.path_id, body.ring_frame_id)
 
@@ -180,10 +180,6 @@ class Backplane(object):
         # The Sun is always treated as a path, not a surface
         if event_key[0].upper() == "SUN":
             return self.get_path_event(event_key)
-
-        # call indicates an Ansa surface
-#         if event_key[0].upper() == "ANSA":
-#             return self.get_ansa_surface_event(event_key)
 
         # Always calculate derivatives for the first step from the observer
         if len(event_key) == 1:
@@ -469,7 +465,7 @@ class Backplane(object):
         # Get the ring intercept coordinates
         event_key = Backplane.standardize_event_key(event_key)
         event = self.get_surface_event(event_key)
-        #assert event.surface.COORDINATE_TYPE == "polar"
+        assert event.surface.COORDINATE_TYPE == "polar"
 
         (r,lon) = event.surface.event_as_coords(event, axes=2)
 
@@ -544,7 +540,7 @@ class Backplane(object):
         surface = Backplane.get_surface(event_key[0])
         assert surface.COORDINATE_TYPE == "polar"
         (r,lon) = surface.coords_from_vector3(center_event.aberrated_dep(),
-                                              obs=self.obs_event.pos, axes=2)
+                                              axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
@@ -567,9 +563,9 @@ class Backplane(object):
         ignore = path_.Waypoint("SUN").photon_to_event(center_event)
 
         surface = Backplane.get_surface(event_key[0])
-        #assert event.surface.COORDINATE_TYPE == "polar"
+        assert event.surface.COORDINATE_TYPE == "polar"
         (r,lon) = surface.coords_from_vector3(-center_event.aberrated_arr(),
-                                              obs=self.obs_event.pos, axes=2)
+                                              axes=2)
 
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
@@ -577,8 +573,8 @@ class Backplane(object):
     ############################################################################
     # Ring plane resolution
     #
-    # Radius keys: ("ring_intercept_radial_resolution", event_key)
-    # Longitude keys: ("ring_intercept_angular_resolution", event_key)
+    # Radius keys: ("ring_radial_resolution", event_key)
+    # Longitude keys: ("ring_angular_resolution", event_key)
     ############################################################################
 
     def ring_radial_resolution(self, event_key):
@@ -686,6 +682,120 @@ class Backplane(object):
             self._fill_ansa_intercepts(event_key)
 
         return self.backplanes[key]
+
+    ############################################################################
+    # Ring ansa longitude
+    #
+    # Longitude keys are ("ansa_longitude", event_key, reference)
+    #   where reference can be "j2000", "obs", "oha", "sun" or "sha".
+    ############################################################################
+
+    def _fill_ansa_longitudes(self, event_key):
+        """Internal method to fill in the ansa intercept longitude backplane
+        in J2000 coordinates.
+        """
+
+        # Get the ansa intercept event
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == "cylindrical"
+
+        # Get the longitude in the associated ring plane
+        (r,lon) = event.surface.ringplane.event_as_coords(event, axes=2)
+
+        self.register_backplane(("ansa_longitude", event_key, "j2000"), lon)
+
+    def ansa_longitude(self, event_key, reference="j2000"):
+        """Longitude of the ansa intercept point in the image.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert reference in {"j2000", "obs", "oha", "sun", "sha"}
+
+        # Look up under the desired reference
+        key0 = ("ansa_longitude", event_key)
+        key = key0 + (reference,)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # If it is not found with reference J2000, fill in those backplanes
+        key_j2000 = key0 + ("j2000",)
+        if key_j2000 not in self.backplanes.keys():
+            self._fill_ansa_longitudes(event_key)
+
+        # Now apply the reference longitude
+        if reference == "j2000":
+            return self.backplanes[key]
+
+        if reference == "sun":
+            ref_lon = self._sub_solar_ansa_longitude(event_key)
+        elif reference == "sha":
+            ref_lon = self._sub_solar_ansa_longitude(event_key) - np.pi
+        elif reference == "obs":
+            ref_lon = self._sub_observer_ansa_longitude(event_key)
+        elif reference == "oha":
+            ref_lon = self._sub_observer_ansa_longitude(event_key) - np.pi
+
+        lon = (self.backplanes[key0 + ("j2000",)] - ref_lon) % (2*np.pi)
+        self.register_backplane(key0 + (reference,), lon)
+
+        return self.backplanes[key]
+
+    def _sub_observer_ansa_longitude(self, event_key):
+        """Sub-observer longitude at the planet center, but evaluated at the
+        ansa intercept time. Used only internally.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("_sub_observer_ansa_longitude", event_key)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # At each intercept time, determine the outgoing direction to the
+        # observer from the center of the planet
+        event = self.get_surface_event(event_key)
+        center_event = Event(event.time, (0,0,0), (0,0,0),
+                                         event.origin_id, event.frame_id)
+        obs_path = path_.Waypoint(self.obs_event.origin_id)
+        ignore = obs_path.photon_from_event(center_event)
+
+        surface = Backplane.get_surface(event_key[0]).ringplane
+        (r,lon) = surface.coords_from_vector3(center_event.aberrated_dep(),
+                                              axes=2)
+
+        self.register_backplane(key, lon.unmasked())
+        return self.backplanes[key]
+
+    def _sub_solar_ansa_longitude(self, event_key):
+        """Sub-solar longitude at the planet center, but evaluated at the ansa
+        intercept time. Used only internally.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("_sub_solar_ansa_longitude", event_key)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # At each intercept time, determine the incoming direction from the Sun
+        # to the center of the planet
+        event = self.get_surface_event(event_key)
+        center_event = Event(event.time, (0,0,0), (0,0,0),
+                                         event.origin_id, event.frame_id)
+        ignore = path_.Waypoint("SUN").photon_to_event(center_event)
+
+        surface = Backplane.get_surface(event_key[0]).ringplane
+        (r,lon) = surface.coords_from_vector3(-center_event.aberrated_arr(),
+                                              axes=2)
+
+        self.register_backplane(key, lon.unmasked())
+        return self.backplanes[key]
+
+    ############################################################################
+    # Ansa resolution
+    #
+    # Radius keys: ("ansa_radial_resolution", event_key)
+    # Elevation keys: ("ansa_vertical_resolution", event_key)
+    ############################################################################
 
     def ansa_radial_resolution(self, event_key):
         """Projected radial resolution in km/pixel at the ring ansa intercept
@@ -1226,6 +1336,8 @@ class Backplane(object):
         "incidence_angle", "emission_angle", "phase_angle", "scattering_angle",
         "ring_radius", "ring_longitude",
         "ring_radial_resolution", "ring_angular_resolution",
+        "ansa_radius", "ansa_elevation", "ansa_longitude",
+        "ansa_radial_resolution", "ansa_vertical_resolution",
         "longitude", "latitude",
         "finest_resolution", "coarsest_resolution",
         "where_intercepted",
@@ -1571,6 +1683,18 @@ class Test_Backplane(unittest.TestCase):
 
         test = bp.finest_resolution("saturn_main_rings:ansa")
         show_info("Saturn_main_ring:ansa coarsest resolution (km)", test)
+
+        ########################
+        # Testing ansa longitudes
+
+        test = bp.ansa_longitude("saturn:ansa")
+        show_info("Saturn ansa longitude wrt J2000 (deg)", test)
+
+        test = bp.ansa_longitude("saturn:ansa", "obs")
+        show_info("Saturn ansa longitude wrt observer (deg)", test)
+
+        test = bp.ansa_longitude("saturn:ansa", "sun")
+        show_info("Saturn ansa longitude wrt Sun (deg)", test)
 
         ########################
         # Testing empty events
