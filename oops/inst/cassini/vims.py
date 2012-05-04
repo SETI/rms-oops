@@ -344,6 +344,11 @@ class Test_Cassini_VIMS(unittest.TestCase):
         ob = from_file("test_data/cassini/VIMS/V1546355804_1.QUB")
         print "observation time:"
         print ob[0].time
+        resolution = 8.0
+        meshgrid = Meshgrid.for_fov(ob.fov, undersample=resolution, swap=True)
+        bp = oops.Backplane(ob, meshgrid)
+        
+
         #from_index("test_data/cassini/VIMS/index.lbl")
         """obs = from_index("test_data/cassini/VIMS/COVIMS_0016/INDEX.LBL")
         for ob in obs:

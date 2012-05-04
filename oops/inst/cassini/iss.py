@@ -141,10 +141,17 @@ class ISS(object):
             xfov = info["FOV_REF_ANGLE"]
             yfov = info["FOV_CROSS_ANGLE"]
             assert info["FOV_ANGLE_UNITS"] == "DEGREES"
-
+            
             uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
             vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
-
+            
+            # deal with possible pointing errors - up to 3 pixels in any
+            # direction for WAC and 30 pixels for NAC
+            error_buffer = 6
+            if detector is "NAC":
+                error_buffer = 60
+            samples += error_buffer
+            lines += error_buffer
             # Display directions: [u,v] = [right,down]
             full_fov = oops.fov.Flat((uscale,vscale), (samples,lines))
 

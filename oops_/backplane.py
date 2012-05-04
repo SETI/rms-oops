@@ -469,7 +469,7 @@ class Backplane(object):
         # Get the ring intercept coordinates
         event_key = Backplane.standardize_event_key(event_key)
         event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == "polar"
+        #assert event.surface.COORDINATE_TYPE == "polar"
 
         (r,lon) = event.surface.event_as_coords(event, axes=2)
 
@@ -567,7 +567,7 @@ class Backplane(object):
         ignore = path_.Waypoint("SUN").photon_to_event(center_event)
 
         surface = Backplane.get_surface(event_key[0])
-        assert event.surface.COORDINATE_TYPE == "polar"
+        #assert event.surface.COORDINATE_TYPE == "polar"
         (r,lon) = surface.coords_from_vector3(-center_event.aberrated_arr(),
                                               axes=2)
 
