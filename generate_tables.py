@@ -1,7 +1,5 @@
 import numpy as np
 import sys
-print sys.executable
-print sys.path
 import csv
 import datetime
 
@@ -14,6 +12,58 @@ from oops_.meshgrid import Meshgrid
 import vicar
 
 
+################################################################################
+# Hanlde command line arguments for generate_tables.py
+################################################################################
+list_file = 'geometry_list.csv'
+radii_file = 'geometry_ring_ranges.csv'
+grid_resolution = 8.
+start_file_index = 0
+stop_file_index = -1
+do_output_opus1 = True
+do_output_opus2 = True
+
+nArguments = len(sys.argv)
+for i in range(nArguments):
+    if sys.argv[i] == '-lf':
+        if i < (nArguments - 1):
+            list_file = sys.argv[i+1]
+            i += 1
+    elif sys.argv[i] == '-rf':
+        if i < (nArguments - 1):
+            radii_file = sys.argv[i+1]
+            i += 1
+    elif sys.argv[i] == '-res':
+        if i < (nArguments - 1):
+            grid_resolution = float(sys.argv[i+1])
+            i += 1
+    elif sys.argv[i] == '-start':
+        if i < (nArguments - 1):
+            start_file_index = int(sys.argv[i+1])
+            i += 1
+    elif sys.argv[i] == '-stop':
+        if i < (nArguments - 1):
+            stop_file_index = int(sys.argv[i+1])
+            i += 1
+    elif sys.argv[i] == '-opus1':
+        if i < (nArguments - 1):
+            do_output_opus1 = int(sys.argv[i+1])
+            i += 1
+    elif sys.argv[i] == '-opus2':
+        if i < (nArguments - 1):
+            do_output_opus2 = int(sys.argv[i+1])
+            i += 1
+    elif sys.argv[i] == '-h':
+        print "usage: python %s [-lf list_file] [-rf radii_file] [-res grid_resolution] [-start start_file_index] [-stop stop_file_index] [-opus1 do_output_opus1] [-opus2 do_output_opus2]" % sys.argv[0]
+        print "default values:"
+        print "\tlist_file: ", list_file
+        print "\tradii_file: ", radii_file
+        print "\tgrid_resolution: ", grid_resolution
+        print "\tstart_file_index: ", start_file_index
+        print "\tstop_file_index (-1 means do all): ", stop_file_index
+        print "\tdo_output_opus1: ", int(do_output_opus1)
+        print "\tdo_output_opus2: ", int(do_output_opus2)
+        sys.exit()
 
 ################################################################################
 
@@ -141,7 +191,10 @@ class FileGeometry(object):
                 if num_zero == min_zero:
                     current_section_start = i + 1 - num_zero
                     if i != 0:
-                        current_value_start = sorted_angles[samples-1]
+                        if samples == 0:
+                            current_value_start = 0.
+                        else:
+                            current_value_start = sorted_angles[samples-1]
                     in_zero = True
             elif h[i] != 0:
                 num_zero = 0
@@ -178,7 +231,6 @@ class FileGeometry(object):
                 empty_sections[0] = new_section
                 empty_sections.pop()
         
-        
         #find the largest of those
         item = max(empty_sections, key=lambda x: x[1])
         return (item[3], item[2])
@@ -210,7 +262,10 @@ class FileGeometry(object):
                 if num_zero == min_zero:
                     current_section_start = i + 1 - num_zero
                     if i != 0:
-                        current_value_start = sorted_angles[samples-1]
+                        if samples == 0:
+                            current_value_start = 0.
+                        else:
+                            current_value_start = sorted_angles[samples-1]
                     in_zero = True
             elif h[i] != 0:
                 num_zero = 0
@@ -233,7 +288,39 @@ class FileGeometry(object):
                     empty_sections.append(current_section)
             samples += h[i]
             i += 1
-        return empty_sections
+        
+        # if we have a a gap that starts at zero and ends at 360, we need to combine
+        # them
+        first_section = empty_sections[0]
+        if first_section[0] == 0:
+            last_section = empty_sections[-1]
+            if (last_section[0] + last_section[1]) == 360:
+                new_section = (last_section[0],
+                               first_section[1] + last_section[1],
+                               last_section[2],
+                               first_section[3])
+                empty_sections[0] = new_section
+                empty_sections.pop()
+
+        angle_masks = []
+        spans = []
+        for i in range(len(empty_sections)):
+            min_angle = empty_sections[i][2] / oops.DPR
+            max_angle = empty_sections[i][3] / oops.DPR
+            span = (max_angle, min_angle)
+            spans.append(span)
+            a = angles.vals > min_angle
+            b = angles.vals < max_angle
+            if min_angle > max_angle:
+                angle_mask = a | b
+            else:
+                #print "empty_section: ", empty_sections[i]
+                #print "min_angle: ", min_angle
+                #print "a: ", a
+                #print "b: ", b
+                angle_mask = a & b
+            angle_masks.append(angle_mask)
+        return (angle_masks, spans)
 
     def output_opus2(self, radii_ranges):
         """output to a string lines in the OPUS2 format representing one image.
@@ -249,28 +336,34 @@ class FileGeometry(object):
         """
         l = len(radii_ranges)
         lines = ""
-        for i in range(l):
+        for i in (range(l-1)):
             start = radii_ranges[i]
             if i < l:
                 end = radii_ranges[i+1]
             else:
                 end = sys.float_info.max
-            radius_mask = self.ring_radius < start or self.ring_radius >= end
+            a = self.ring_radius.vals < start
+            b = self.ring_radius.vals >= end
+            radius_mask = a | b
             
             # now for each radius range we have a line for each angle span
             # ACTUALLY, it makes no sense to print a separate line for each
             # span as what is filled in for the other values other than this
             # particular angle?  What about other angles than have multiple
             # min/max spans?
-            #spans = self.angle_coverage(self.longitude_j2000 * oops.DPR)
-            sub_geom = FileGeometry(self)
-            sub_geom.or_mask(radius_mask)
-            lines += sub_geom.output_single_line(start, end, 1)
+            (angle_masks, spans) = self.angle_coverage(self.longitude_j2000 * oops.DPR)
+            j = 0
+            for angle_mask in angle_masks:
+                sub_mask = radius_mask & angle_mask
+                sub_geom = FileGeometry(self)
+                sub_geom.or_mask(sub_mask)
+                lines += sub_geom.output_single_line(start, end, j+1, spans[j])
+                j += 1
             
         return lines
         
 
-    def output_single_line(self, start=None, end=None, index=None):
+    def output_single_line(self, start=None, end=None, index=None, span=None):
         """output to a string line in the OPUS1 format"""
         line = self.image_name
         if (start is not None) and (end is not None) and (index is not None):
@@ -280,17 +373,24 @@ class FileGeometry(object):
         line += self.add_single_minmax_info(self.dec * oops.DPR)
         line += self.add_single_minmax_info(self.ring_radius)
         line += self.add_single_minmax_info(self.radial_resolution)
-        if not np.all(self.longitude_j2000.mask):
+        #print "self.longitude_j2000.mask: ", self.longitude_j2000.mask
+        if np.all(self.longitude_j2000.mask):
+            line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
+            line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
+            line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
+        elif span is not None:
+            line += ", %f, %f" % (span[0], span[1])
+            line += self.add_single_minmax_info(self.longitude_obs)
+            line += self.add_single_minmax_info(self.longitude_sha)
+        else:
             limits = self.angle_single_limits(self.longitude_j2000 * oops.DPR)
             line += add_info(self.longitude_j2000, limits)
-        else:
-            line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
+            limits = self.angle_single_limits(self.longitude_obs * oops.DPR)
+            line += self.add_single_minmax_info(self.longitude_obs, limits)
+            limits = self.angle_single_limits(self.longitude_sha * oops.DPR)
+            line += self.add_single_minmax_info(self.longitude_sha, limits)
         #line += self.add_single_minmax_info(self.longitude_j2000)
-        limits = self.angle_single_limits(self.longitude_obs * oops.DPR)
-        line += self.add_single_minmax_info(self.longitude_obs, limits)
         #line += self.add_single_minmax_info(self.longitude_obs)
-        limits = self.angle_single_limits(self.longitude_sha * oops.DPR)
-        line += self.add_single_minmax_info(self.longitude_sha, limits)
         #line += self.add_single_minmax_info(self.longitude_sha)
         line += self.add_single_minmax_info(self.phase * oops.DPR)
         line += self.add_single_minmax_info(self.incidence * oops.DPR)
@@ -307,10 +407,12 @@ class FileGeometry(object):
         #line += self.add_single_minmax_info(self.backlit_rings)
         line += self.add_single_minmax_info(self.ansa_radius)
         line += self.add_single_minmax_info(self.ansa_elevation)
-        line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
-        line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
         #line += self.add_single_minmax_info(self.ansa_longitude_j2000 * oops.DPR)
         #line += self.add_single_minmax_info(self.ansa_longitude_sha * oops.DPR)
+        limits = self.angle_single_limits(self.ansa_longitude_j2000 * oops.DPR)
+        line += self.add_single_minmax_info(self.ansa_longitude_j2000, limits)
+        limits = self.angle_single_limits(self.ansa_longitude_sha * oops.DPR)
+        line += self.add_single_minmax_info(self.ansa_longitude_sha, limits)
         line += self.add_single_minmax_info(self.ansa_range)
         line += self.add_single_minmax_info(self.ansa_resolution)
         line += '\n'
@@ -319,8 +421,6 @@ class FileGeometry(object):
 
 
 
-list_file = 'geometry_list.csv'
-radii_file = 'geometry_ring_ranges.csv'
 spacer = '    ,   '
 
 PRINT = False
@@ -349,28 +449,36 @@ def show_info(title, array):
     """Internal method to print summary information and display images as
         desired."""
     
+    print "into show_info with array: ", array
     global PRINT, DISPLAY
     if not PRINT:
         if OBJC_DISPLAY:
+            print "printing imsave area 0.3"
             if isinstance(array, np.ndarray):
+                print "printing imsave area 0.5"
                 if array.dtype == np.dtype("bool"):
+                    print "printing imsave area 1"
                     pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                  array, vmin=0, vmax=1, cmap=pylab.cm.gray)
                 else:
                     minval = np.min(array)
                     maxval = np.max(array)
                     if minval != maxval:
-                         pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                        print "printing imsave area 2"
+                        pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                       array, cmap=pylab.cm.gray)
             elif isinstance(array, oops.Array):
+                print "printing imsave area 2.5"
                 if np.any(array.mask):
+                    print "printing imsave area 3"
                     pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                  array.vals)
                 else:
                     minval = np.min(array.vals)
                     maxval = np.max(array.vals)
                     if minval != maxval:
-                            pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
+                        print "printing imsave area 4"
+                        pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                          array.vals, cmap=pylab.cm.gray)
         return
     
@@ -551,7 +659,6 @@ def generate_metadata(snapshot, resolution):
     rings_not_in_shadow = bp.where_outside_shadow("saturn_main_rings", "saturn")
     vis_rings_not_shadow = rings_in_view & rings_not_in_shadow
 
-
     test = bp.right_ascension()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ra = test.copy()
@@ -608,29 +715,32 @@ def generate_metadata(snapshot, resolution):
     # ANSA surface values
     #####################################################
     saturn_intercepted = bp.where_intercepted("saturn:ansa")
+    #show_info("ansa intercepted:", saturn_intercepted)
 
     test = bp.ansa_radius("saturn:ansa")
-    test.mask |= saturn_intercepted.vals
+    test.mask |= ~saturn_intercepted.vals
     geometry.ansa_radius = test.copy()
-        
+
     test = bp.ansa_elevation("saturn:ansa")
-    test.mask |= saturn_intercepted.vals
+    test.mask |= ~saturn_intercepted.vals
     geometry.ansa_elevation = test.copy()
 
-    test = bp.ring_longitude("saturn:ansa",reference="j2000")
-    test.mask |= saturn_intercepted.vals
+    test = bp.ansa_longitude("saturn:ansa",reference="j2000")
+    #print "test of ansa_longitude before mask: ", test
+    test.mask |= ~saturn_intercepted.vals
+    #print "test of ansa_longitude after mask: ", test
     geometry.ansa_longitude_j2000 = test.copy()
 
-    test = bp.ring_longitude("saturn:ansa", reference="sha")
-    test.mask |= saturn_intercepted.vals
+    test = bp.ansa_longitude("saturn:ansa", reference="sha")
+    test.mask |= ~saturn_intercepted.vals
     geometry.ansa_longitude_sha = test.copy()
 
     test = bp.range("saturn:ansa")
-    test.mask |= saturn_intercepted.vals
+    test.mask |= ~saturn_intercepted.vals
     geometry.ansa_range = test.copy()
 
     test = bp.ansa_radial_resolution("saturn:ansa")
-    test.mask |= saturn_intercepted.vals
+    test.mask |= ~saturn_intercepted.vals
     geometry.ansa_resolution = test.copy()
 
     return geometry
@@ -646,8 +756,11 @@ def output_opus1_file(file_name, geometries):
 def output_opus2_file(file_name, geometries, radii_ranges):
     f = open(file_name, 'w')
     output_buf = ""
+    #i = start_file_index
     for geometry in geometries:
+        #print "outputting geometry ", i
         output_buf += geometry.output_opus2(radii_ranges)
+        #i += 1
     f.write(output_buf)
     f.close()
 
@@ -657,11 +770,14 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
     output_buf = ''
     snapshots = cassini_iss.from_index(file_name)
     nSnapshots = len(snapshots)
+    if stop_file_index > 0 and stop_file_index < nSnapshots:
+        nSnapshots = stop_file_index
     i = 0
     then = datetime.datetime.now()
-    start = 1820
+    start = start_file_index
     geometries = []
-    for i in range(start,nSnapshots):
+    info_str = ""
+    for i in range(start, nSnapshots):
         snapshot = snapshots[i]
         #for snapshot in snapshots:
         image_code = snapshot.index_dict['IMAGE_NUMBER']
@@ -671,25 +787,23 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
         else:
             image_code += '/N'
     
+        info_len = len(info_str)
+        init_info_str = "    " + str(i+1) + " of " + str(nSnapshots)
         if i not in omit_range and image_code in fortran_list:
-            print "    %d of %d, %s" % (i, nSnapshots,
-                                        snapshot.index_dict['FILE_NAME'])
-            #file_line = generate_metadata(snapshot, 8)
-            #output_buf += file_line + '\n'
-            geometry = generate_metadata(snapshot, 256)
+            geometry = generate_metadata(snapshot, grid_resolution)
             geometries.append(geometry)
-        else:
-            print "        OMITTING %d of %d, %s" % (i, nSnapshots,
-                                                     snapshot.index_dict['FILE_NAME'])
         now = datetime.datetime.now()
         time_so_far = now - then
         time_left = time_so_far * (nSnapshots - start) / (i + 1 - start) - time_so_far
-        print "        time remaining: (approximately) ", time_left
-        """if (i % 100) == 99:
-            temp_file_name = "./test_data/cassini/ISS/COISS_geom/temp" + str(i) + ".tab"
-            output_opus1_file(temp_file_name, geometries)"""
+        init_info_str += ", time rem: " + str(time_left)
+        info_str = init_info_str.split('.')[0]
+        for item in range(0, info_len):
+            sys.stdout.write('\b')
+        sys.stdout.write(info_str)
+        sys.stdout.flush()
         #i += 1
     
+    sys.stdout.write('\n')
     #return output_buf
     return geometries
 
@@ -720,8 +834,13 @@ for row in volumeReader:
     print "Generating geometry table for file: ", index_file_name
     geometries = generate_table_for_index(index_file_name, omit_range,
                                           fortran_list)
-    output_opus1_file(geom_file_name, geometries)
-    output_opus2_file(geom_file_name, geometries, radii_ranges)
+    if do_output_opus1:
+        print "writing OPUS 1 file ", geom_file_name
+        output_opus1_file(geom_file_name, geometries)
+    if do_output_opus2:
+        geom_file_name += "2"
+        print "writing OPUS 2 file ", geom_file_name
+        output_opus2_file(geom_file_name, geometries, radii_ranges)
 print "Done."
 """
 list_file = open(index_file, 'r')
