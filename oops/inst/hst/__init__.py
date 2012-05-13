@@ -268,6 +268,7 @@ class HST(object):
 
         v_wrt_y_deg = np.arctan(xy_center.d_duv.vals[0,1] /
                                 xy_center.d_duv.vals[1,1]) * oops.DPR
+        # print "v_wrt_y_deg", v_wrt_y_deg
 
         try:
             point_calib = self.iof_calibration(hst_file, fov,

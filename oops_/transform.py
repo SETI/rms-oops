@@ -159,6 +159,7 @@ class Transform(object):
 
         if pos is None: return None
         if pos == Empty(): return pos
+        pos = Vector3.as_vector3(pos)
 
         self.matrix.subfield_math = derivs
         self.omega.subfield_math = derivs
@@ -193,6 +194,9 @@ class Transform(object):
         handled automatically in the velocity component.
         """
 
+        pos = Vector3.as_vector3(pos)
+        vel = Vector3.as_vector3(vel)
+
         # pos_target = matrix * pos_ref
         # vel_target = matrix * (vel_ref - omega x pos_ref)
 
@@ -226,6 +230,7 @@ class Transform(object):
 
         if pos is None: return None
         if pos == Empty(): return pos
+        pos = Vector3.as_vector3(pos)
 
         self.matrix.subfield_math = derivs
         self.omega.subfield_math = derivs
@@ -258,6 +263,9 @@ class Transform(object):
         Note that this method has no "derivs" argument because derivatives are
         handled automatically in the velocity component.
         """
+
+        pos = Vector3.as_vector3(pos)
+        vel = Vector3.as_vector3(vel)
 
         # pos_ref = matrix-T * pos_target
         # vel_ref = matrix-T * vel_target + omega x pos_ref

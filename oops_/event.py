@@ -596,7 +596,7 @@ class Event(object):
 
         for key in self.subfields:
             subfield = self.subfields[key]
-            if isinstance(subfield, Array):
+            if isinstance(subfield, Array) and subfield.rank > 0:
                 result.insert_subfield(key, transform.rotate(subfield,
                                                              derivs=derivs))
             else:
@@ -634,7 +634,7 @@ class Event(object):
 
         for key in self.subfields:
             subfield = self.subfields[key]
-            if isinstance(subfield, Array):
+            if isinstance(subfield, Array) and subfield.rank > 0:
                 result.insert_subfield(key, transform.unrotate(subfield,
                                                                derivs=derivs))
             else:
