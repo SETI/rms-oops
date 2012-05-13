@@ -140,12 +140,14 @@ class Transform(object):
 ################################################################################
 
     def rotate(self, pos, derivs=False):
-        """Rotates the coordinates of a position forward into the target frame.
-        It also rotates any subarrays.
+        """Rotates the coordinates of a position or matrix forward into the
+        target frame. It also rotates any subarrays.
 
         Input:
-            pos         position as a Vector3, in the reference frame. A value
-                        of None returns None. Velocity is assumed zero.
+            pos         a Vector3, VectorN or MatrixN object. The size of the
+                        leading axis must be 3. Anything not a subclass of Array
+                        (e.g., a list or tuple) is converted to a Vector3 first.
+                        Velocity is always assumed zero.
 
             derivs      True to calculate the time-derivative as well.
 
@@ -159,7 +161,9 @@ class Transform(object):
 
         if pos is None: return None
         if pos == Empty(): return pos
-        pos = Vector3.as_vector3(pos)
+
+        if not isinstance(pos, Array):
+            pos = Vector3.as_vector3(pos)
 
         self.matrix.subfield_math = derivs
         self.omega.subfield_math = derivs
@@ -215,8 +219,10 @@ class Transform(object):
         frame.
 
         Input:
-            pos         position as a Vector3, in the target frame. A value of
-                        None returns None. Velocity is assumed zero.
+            pos         a Vector3, VectorN or MatrixN object. The size of the
+                        leading axis must be 3. Anything not a subclass of Array
+                        (e.g., a list or tuple) is converted to a Vector3 first.
+                        Velocity is always assumed zero.
 
             derivs      True to calculate dpos/dpos and dpos/dt as well.
 
@@ -230,7 +236,9 @@ class Transform(object):
 
         if pos is None: return None
         if pos == Empty(): return pos
-        pos = Vector3.as_vector3(pos)
+
+        if not isinstance(pos, Array):
+            pos = Vector3.as_vector3(pos)
 
         self.matrix.subfield_math = derivs
         self.omega.subfield_math = derivs
