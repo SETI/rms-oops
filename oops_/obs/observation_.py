@@ -4,6 +4,7 @@
 # 2/11/12 Modified (MRS) - updated for style
 # 3/9/12 MRS - new methods fleshed out in preparation for additional observation
 #   classes such as pushbrooms and raster scanners.
+# 5/14/12 MRS: addeded gridless_event() method.
 ################################################################################
 
 import numpy as np
@@ -153,6 +154,25 @@ class Observation(object):
 
         # Insert the arrival directions
         event.insert_subfield("arr", -meshgrid.los)
+
+        return event
+
+    def gridless_event(self, t=Scalar(0.5)):
+        """Returns an event object describing the arrival of a photon at an
+        instrument, irrespective of the direction.
+
+        Input:
+            t           a Scalar of fractional time offsets into each exposure;
+                        default is 0.5.
+
+        Return:         the corresponding event.
+        """
+
+        (time0, time1) = self.time
+        times = t * time1 + (1-t) * time0
+
+        event = Event(times, Vector3((0,0,0)), Vector3((0,0,0)),
+                             self.path_id, self.frame_id)
 
         return event
 
