@@ -125,13 +125,13 @@ class Matrix3(Array):
 
     def rotate(self, arg):
         """Matrix3  rotation of anything. Note that rotation of a scalar returns
-        the same scalar."""
+        the same scalar. Subfields are ignored."""
 
         if isinstance(arg, Array):
 
             # Rotation of a scalar leaves it unchanged
             if arg.rank == 0:
-                return arg
+                return arg.plain()
 
             # Rotation of a vector
             if arg.rank == 1:
@@ -155,11 +155,11 @@ class Matrix3(Array):
 
     def unrotate(self, arg):
         """Matrix3 inverse rotation of anything. Note that rotation of a scalar
-        returns the same scalar."""
+        returns the same scalar. Subfields are ignored."""
 
         if isinstance(arg, Array):
             if arg.rank == 0:
-                return arg
+                return arg.plain()
 
             if arg.rank == 1:
                 return self.unrotate_vector3(arg)
@@ -178,6 +178,7 @@ class Matrix3(Array):
             return Scalar(arg)
 
     ############################
+    # Base multiply operations, ignoring subfields
 
     def rotate_vector3(self, arg):
         arg = Vector3.as_vector3(arg)
@@ -247,7 +248,7 @@ class Matrix3(Array):
 
     def __mul__(self, arg):
         result = self.rotate(arg)
-        if result is arg: return result
+        # if result is arg: return result
 
         # Multiply subfields if necessary
         result.mul_subfields(self, arg)
