@@ -131,8 +131,8 @@ def vims_test_suite(filespec, derivs, info, display):
     ############################################
     
     (right_ascension, declination) = pushbroom_event.ra_and_dec()
-    show_info("Right ascension (deg)", right_ascension * oops.DPR)
-    show_info("Declination (deg)", declination * oops.DPR)
+    #show_info("Right ascension (deg)", right_ascension * oops.DPR)
+    #show_info("Declination (deg)", declination * oops.DPR)
     
     pushbrooms[0].insert_subfield("right_ascension", right_ascension)
     pushbrooms[0].insert_subfield("declination", declination)

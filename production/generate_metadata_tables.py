@@ -20,6 +20,7 @@ radii_file = 'geometry_ring_ranges.csv'
 grid_resolution = 8.
 start_file_index = 0
 stop_file_index = -1
+write_frequency = 50
 do_output_opus1 = True
 do_output_opus2 = True
 
@@ -45,6 +46,10 @@ for i in range(nArguments):
         if i < (nArguments - 1):
             stop_file_index = int(sys.argv[i+1])
             i += 1
+    elif sys.argv[i] == '-wfreq':
+        if i < (nArguments - 1):
+            write_frequency = int(sys.argv[i+1])
+            i += 1
     elif sys.argv[i] == '-opus1':
         if i < (nArguments - 1):
             do_output_opus1 = int(sys.argv[i+1])
@@ -54,13 +59,14 @@ for i in range(nArguments):
             do_output_opus2 = int(sys.argv[i+1])
             i += 1
     elif sys.argv[i] == '-h':
-        print "usage: python %s [-lf list_file] [-rf radii_file] [-res grid_resolution] [-start start_file_index] [-stop stop_file_index] [-opus1 do_output_opus1] [-opus2 do_output_opus2]" % sys.argv[0]
+        print "usage: python %s [-lf list_file] [-rf radii_file] [-res grid_resolution] [-start start_file_index] [-stop stop_file_index] [-wfreq write_frequency] [-opus1 do_output_opus1] [-opus2 do_output_opus2]" % sys.argv[0]
         print "default values:"
         print "\tlist_file: ", list_file
         print "\tradii_file: ", radii_file
         print "\tgrid_resolution: ", grid_resolution
         print "\tstart_file_index: ", start_file_index
         print "\tstop_file_index (-1 means do all): ", stop_file_index
+        print "\twrite_frequency: ", write_frequency
         print "\tdo_output_opus1: ", int(do_output_opus1)
         print "\tdo_output_opus2: ", int(do_output_opus2)
         sys.exit()
@@ -97,6 +103,16 @@ class FileGeometry(object):
         self.ansa_longitude_sha = None
         self.ansa_range = None
         self.ansa_resolution = None
+        self.az_sun = None
+        self.el_sun = None
+        self.az_obs = None
+        self.el_obs = None
+        self.sub_solar_long = None
+        self.sub_solar_lat = None
+        self.solar_dist = None
+        self.sub_obs_long = None
+        self.sub_obs_lat = None
+        self.obs_dist = None
 
     def copy_data(self, parent):
         self.image_name = parent.image_name
@@ -114,12 +130,19 @@ class FileGeometry(object):
         self.shadow_of_planet = parent.shadow_of_planet.copy()
         self.planet_behind_rings = parent.planet_behind_rings.copy()
         self.backlit_rings = parent.backlit_rings.copy()
+		# we don't use ansa data in OPUS 2, which is when we use copy_data()
+        """
         self.ansa_radius = parent.ansa_radius.copy()
         self.ansa_elevation = parent.ansa_elevation.copy()
         self.ansa_longitude_j2000 = parent.ansa_longitude_j2000.copy()
         self.ansa_longitude_sha = parent.ansa_longitude_sha.copy()
         self.ansa_range = parent.ansa_range.copy()
         self.ansa_resolution = parent.ansa_resolution.copy()
+        """
+        self.az_sun = parent.az_sun.copy()
+        self.el_sun = parent.el_sun.copy()
+        self.az_obs = parent.az_obs.copy()
+        self.el_obs = parent.el_obs.copy()
 
     def or_mask(self, mask):
         self.ra.mask |= mask
@@ -136,12 +159,19 @@ class FileGeometry(object):
         self.shadow_of_planet.mask |= mask
         self.planet_behind_rings.mask |= mask
         self.backlit_rings.mask |= mask
+		# we don't use ansa data in OPUS 2, which is when we use or_mask()
+        """
         self.ansa_radius.mask |= mask
         self.ansa_elevation.mask |= mask
         self.ansa_longitude_j2000.mask |= mask
         self.ansa_longitude_sha.mask |= mask
         self.ansa_range.mask |= mask
         self.ansa_resolution.mask |= mask
+        """
+        self.az_sun.mask |= mask
+        self.el_sun.mask |= mask
+        self.az_obs.mask |= mask
+        self.el_obs.mask |= mask
 
     def set_image_camera(self, snapshot):
         """output to string the image/camera label"""
@@ -396,25 +426,38 @@ class FileGeometry(object):
         line += self.add_single_minmax_info(self.incidence * oops.DPR)
         line += self.add_single_minmax_info(self.emission * oops.DPR)
         line += self.add_single_minmax_info(self.range_to_rings)
-        line += " %.15f," % np.float(np.all(self.shadow_of_planet.vals))
-        line += " %.15f," % np.float(np.any(self.shadow_of_planet.vals))
+        line += " %f," % np.float(np.all(self.shadow_of_planet.vals))
+        line += " %f," % np.float(np.any(self.shadow_of_planet.vals))
         #line += self.add_single_minmax_info(self.shadow_of_planet)
-        line += " %.15f," % np.float(np.all(self.planet_behind_rings.vals))
-        line += " %.15f," % np.float(np.any(self.planet_behind_rings.vals))
+        line += " %f," % np.float(np.all(self.planet_behind_rings.vals))
+        line += " %f," % np.float(np.any(self.planet_behind_rings.vals))
         #line += self.add_single_minmax_info(self.planet_behind_rings)
-        line += " %.15f," % np.float(np.all(self.backlit_rings.vals))
-        line += " %.15f," % np.float(np.any(self.backlit_rings.vals))
+        line += " %f," % np.float(np.all(self.backlit_rings.vals))
+        line += " %f," % np.float(np.any(self.backlit_rings.vals))
         #line += self.add_single_minmax_info(self.backlit_rings)
-        line += self.add_single_minmax_info(self.ansa_radius)
-        line += self.add_single_minmax_info(self.ansa_elevation)
-        #line += self.add_single_minmax_info(self.ansa_longitude_j2000 * oops.DPR)
-        #line += self.add_single_minmax_info(self.ansa_longitude_sha * oops.DPR)
-        limits = self.angle_single_limits(self.ansa_longitude_j2000 * oops.DPR)
-        line += self.add_single_minmax_info(self.ansa_longitude_j2000, limits)
-        limits = self.angle_single_limits(self.ansa_longitude_sha * oops.DPR)
-        line += self.add_single_minmax_info(self.ansa_longitude_sha, limits)
-        line += self.add_single_minmax_info(self.ansa_range)
-        line += self.add_single_minmax_info(self.ansa_resolution)
+        if start is None:
+            line += self.add_single_minmax_info(self.ansa_radius)
+            line += self.add_single_minmax_info(self.ansa_elevation)
+            limits = self.angle_single_limits(self.ansa_longitude_j2000 * oops.DPR)
+            line += self.add_single_minmax_info(self.ansa_longitude_j2000, limits)
+            limits = self.angle_single_limits(self.ansa_longitude_sha * oops.DPR)
+            line += self.add_single_minmax_info(self.ansa_longitude_sha, limits)
+            line += self.add_single_minmax_info(self.ansa_range)
+            line += self.add_single_minmax_info(self.ansa_resolution)
+
+        # new backplanes
+        line += self.add_single_minmax_info(self.az_sun * oops.DPR)
+        line += self.add_single_minmax_info(self.el_sun * oops.DPR)
+        line += self.add_single_minmax_info(self.az_obs * oops.DPR)
+        line += self.add_single_minmax_info(self.el_obs * oops.DPR)
+
+        if start is None:
+            line += " %f," % self.sub_solar_long.vals
+            line += " %f," % self.sub_solar_lat.vals
+            line += " %f," % self.solar_dist.vals
+            line += " %f," % self.sub_obs_long.vals
+            line += " %f," % self.sub_obs_lat.vals
+            line += " %f," % self.obs_dist.vals
         line += '\n'
         return line
 
@@ -422,6 +465,8 @@ class FileGeometry(object):
 
 
 spacer = '    ,   '
+radii_ranges = []
+geom_file_name = ""
 
 PRINT = False
 DISPLAY = False
@@ -699,7 +744,7 @@ def generate_metadata(snapshot, resolution):
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.emission = test.copy()
 
-    test = bp.range("saturn_main_rings")
+    test = bp.distance("saturn_main_rings")
     test.mask |= ~vis_rings_not_shadow.vals
     range_test = test.rebroadcast(test.mask.shape)
     geometry.range_to_rings = range_test.copy()
@@ -735,13 +780,39 @@ def generate_metadata(snapshot, resolution):
     test.mask |= ~saturn_intercepted.vals
     geometry.ansa_longitude_sha = test.copy()
 
-    test = bp.range("saturn:ansa")
+    test = bp.distance("saturn:ansa")
     test.mask |= ~saturn_intercepted.vals
     geometry.ansa_range = test.copy()
 
     test = bp.ansa_radial_resolution("saturn:ansa")
     test.mask |= ~saturn_intercepted.vals
     geometry.ansa_resolution = test.copy()
+
+	#####################################################
+	# new backplanes and other values
+	#####################################################
+    test = bp.ring_azimuth("saturn_main_rings",reference="sun")
+    test.mask |= ~vis_rings_not_shadow.vals
+    geometry.az_sun = test.copy()
+
+    test = bp.ring_elevation("saturn_main_rings",reference="sun")
+    test.mask |= ~vis_rings_not_shadow.vals
+    geometry.el_sun = test.copy()
+
+    test = bp.ring_azimuth("saturn_main_rings",reference="obs")
+    test.mask |= ~vis_rings_not_shadow.vals
+    geometry.az_obs = test.copy()
+        
+    test = bp.ring_elevation("saturn_main_rings",reference="obs")
+    test.mask |= ~vis_rings_not_shadow.vals
+    geometry.el_obs = test.copy()
+
+    geometry.sub_solar_long = bp.sub_solar_longitude("saturn_main_rings")
+    geometry.sub_solar_lat = bp.sub_solar_latitude("saturn_main_rings")
+    geometry.solar_dist = bp.solar_distance_to_center("saturn_main_rings")
+    geometry.sub_obs_long = bp.sub_observer_longitude("saturn_main_rings")
+    geometry.sub_obs_lat = bp.sub_observer_latitude("saturn_main_rings")
+    geometry.obs_dist = bp.observer_distance_to_center("saturn_main_rings")
 
     return geometry
 
@@ -756,11 +827,33 @@ def output_opus1_file(file_name, geometries):
 def output_opus2_file(file_name, geometries, radii_ranges):
     f = open(file_name, 'w')
     output_buf = ""
-    #i = start_file_index
     for geometry in geometries:
-        #print "outputting geometry ", i
         output_buf += geometry.output_opus2(radii_ranges)
-        #i += 1
+    f.write(output_buf)
+    f.close()
+
+def append_opus1_file(file_name, geometries, start, stop, omit_range):
+    if start < write_frequency:
+        f = open(file_name, 'w')
+    else:
+        f = open(file_name, 'a')
+    output_buf = ""
+    for i in range(start, stop):
+        if i not in omit_range:
+            output_buf += geometries[i].output_single_line()
+    f.write(output_buf)
+    f.close()
+
+def append_opus2_file(file_name, geometries, radii_ranges, start, stop,
+                      omit_range):
+    if start < write_frequency:
+        f = open(file_name, 'w')
+    else:
+        f = open(file_name, 'a')
+    output_buf = ""
+    for i in range(start, stop):
+        if i not in omit_range:
+            output_buf += geometries[i].output_opus2(radii_ranges)
     f.write(output_buf)
     f.close()
 
@@ -777,6 +870,13 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
     start = start_file_index
     geometries = []
     info_str = ""
+    actual_i = start
+    zero_time = then - then
+    write_time = zero_time
+    nIOs = 1
+    if write_frequency > 0:
+        nIOs += (nSnapshots - start) / write_frequency
+    iIOs = 0
     for i in range(start, nSnapshots):
         snapshot = snapshots[i]
         #for snapshot in snapshots:
@@ -788,21 +888,86 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
             image_code += '/N'
     
         info_len = len(info_str)
+        i1 = i + 1
         init_info_str = "    " + str(i+1) + " of " + str(nSnapshots)
         if i not in omit_range and image_code in fortran_list:
             geometry = generate_metadata(snapshot, grid_resolution)
             geometries.append(geometry)
+            actual_i += 1
+        
+        # write time and image number status to stdout
         now = datetime.datetime.now()
         time_so_far = now - then
         time_left = time_so_far * (nSnapshots - start) / (i + 1 - start) - time_so_far
+        if write_time != zero_time:
+            time_left += (nIOs - iIOs) * write_time
         init_info_str += ", time rem: " + str(time_left)
         info_str = init_info_str.split('.')[0]
         for item in range(0, info_len):
             sys.stdout.write('\b')
         sys.stdout.write(info_str)
         sys.stdout.flush()
+        if i not in omit_range and image_code in fortran_list:
+            if write_frequency > 0 and (actual_i % write_frequency) == 0:
+                if write_time == zero_time:
+                    write_then = datetime.datetime.now()
+                i0 = actual_i - write_frequency
+                if do_output_opus1:
+                    info_str = "appending rows %d to %d to OPUS 1 file %s" % (i0,
+                                                                              actual_i,
+                                                                              geom_file_name)
+                    for item in range(0, info_len):
+                        sys.stdout.write('\b')
+                    sys.stdout.write(info_str)
+                    sys.stdout.flush()
+                    info_len = len(info_str)
+                    
+                    #print "\nappending rows %d to %d to OPUS 1 file %s" % (i0,
+                    #                                                       actual_i,
+                    #                                                       geom_file_name)
+                    append_opus1_file(geom_file_name, geometries, i0, actual_i,
+                                      omit_range)
+                if do_output_opus2:
+                    geom_file_name2 = geom_file_name.replace("summary", "detailed")
+                    info_str = "appending rows %d to %d to OPUS 2 file %s" % (i0,
+                                                                         actual_i,
+                                                                         geom_file_name2)
+                    for item in range(0, info_len):
+                        sys.stdout.write('\b')
+                    sys.stdout.write(info_str)
+                    sys.stdout.flush()
+                    info_len = len(info_str)
+                    #print "appending rows %d to %d to OPUS 2 file %s" % (i0,
+                    #                                                     actual_i,
+                    #                                                     geom_file_name2)
+                    append_opus2_file(geom_file_name2, geometries, radii_ranges, i0,
+                                      actual_i, omit_range)
+                    for item in range(0, info_len):
+                        sys.stdout.write('\b')
+                    for item in range(0, info_len):
+                        sys.stdout.write(' ')
+                if write_time == zero_time:
+                    write_time = datetime.datetime.now() - write_then
+                iIOs += 1
+
         #i += 1
     
+    if write_frequency > 0 and (actual_i % write_frequency) != 0:
+        i0 = (actual_i / write_frequency) * write_frequency
+        if do_output_opus1:
+            print "\nappending rows %d to %d to OPUS 1 file %s" % (i0,
+                                                                   actual_i,
+                                                                   geom_file_name)
+            append_opus1_file(geom_file_name, geometries, i0, actual_i,
+                              omit_range)
+        if do_output_opus2:
+            geom_file_name2 = geom_file_name.replace("summary", "detailed")
+            print "appending rows %d to %d to OPUS 2 file %s" % (i0,
+                                                                 actual_i,
+                                                                 geom_file_name2)
+            append_opus2_file(geom_file_name2, geometries, radii_ranges, i0,
+                              actual_i, omit_range)
+
     sys.stdout.write('\n')
     #return output_buf
     return geometries
@@ -817,7 +982,6 @@ def get_fortran_file_list(fortran_file_name):
     return file_list
 
 radiiReader = csv.reader(open(radii_file, 'rU'), delimiter=';')
-radii_ranges = []
 for row in radiiReader:
     for i in range(len(row)):
         radii_ranges.append(float(row[i]))
@@ -834,22 +998,12 @@ for row in volumeReader:
     print "Generating geometry table for file: ", index_file_name
     geometries = generate_table_for_index(index_file_name, omit_range,
                                           fortran_list)
-    if do_output_opus1:
-        print "writing OPUS 1 file ", geom_file_name
-        output_opus1_file(geom_file_name, geometries)
-    if do_output_opus2:
-        geom_file_name += "2"
-        print "writing OPUS 2 file ", geom_file_name
-        output_opus2_file(geom_file_name, geometries, radii_ranges)
+    if write_frequency < 0:
+        if do_output_opus1:
+            print "writing OPUS 1 file ", geom_file_name
+            output_opus1_file(geom_file_name, geometries)
+        if do_output_opus2:
+            geom_file_name2 = geom_file_name.replace("summary", "detailed")
+            print "writing OPUS 2 file ", geom_file_name2
+            output_opus2_file(geom_file_name2, geometries, radii_ranges)
 print "Done."
-"""
-list_file = open(index_file, 'r')
-lines = list_file.readlines()
-for line in lines:
-    line = line.strip('\n')
-    print "generate table for index: %s" % line
-    output_buf = generate_table_for_index(line)
-    output_file = open("test_geom.tab", 'w')
-    output_file.write(output_buf)
-    output_file.close()
-"""
