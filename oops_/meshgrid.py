@@ -47,6 +47,12 @@ class Meshgrid(object):
         self.filled_los = None
         self.filled_uv_w_derivs = None
 
+    def __str__(self):
+        """show overview of Meshgrid for debugging purposes."""
+        s = "Meshgrid\n\tshape = " + str(self.shape) + "\n"
+        s += "\tfov.uv_los: " + str(self.fov.uv_los.vals) + "\n"
+        return s
+
     @staticmethod
     def for_fov(fov, origin=0.5, undersample=1, oversample=1, limit=None,
                      swap=False, extras=()):

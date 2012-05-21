@@ -117,6 +117,16 @@ class Event(object):
 
         return self.filled_mask
 
+
+    def __str__(self):
+        """show overview of Event for debugging purposes."""
+        s = "Event\n\ttime = " + str(self.time) + "\n"
+        s += "\torigin_id: " + self.origin_id + "\n"
+        s += "\tframe_id: " + self.frame_id + "\n"
+        s += "\tpos: " + str(self.pos.vals) + "\n"
+        s += "\tvel: " + str(self.vel.vals) + "\n"
+        return s
+
     # subfield_math pseudo-attribute
     def get_subfield_math(self):
         return self.subfield_math_property
