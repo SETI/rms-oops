@@ -73,6 +73,14 @@ class Pushbroom(Observation):
 
         return
 
+    def __str__(self):
+        """show overview of Pushbroom for debugging purposes."""
+        s = "Pushbroom\n\taxis  = " + str(self.time_axis) + "\n"
+        s += "\ttstride: " + str(self.tstride) + "\n"
+        s += "\ttexp: " + str(self.texp) + "\n"
+        s += "\ttime: " + str(self.time) + "\n"
+        return s
+
     def times_at_uv(self, uv_pair, extras=()):
         """Returns the start and stop times of the specified spatial pixel
         (u,v).
@@ -95,10 +103,18 @@ class Pushbroom(Observation):
         time and index are masked.
         """
 
+        """print "pushbroom path_id: ", self.path_id
+        print "pushbroom frame_id: ", self.frame_id
+        print "pushbroom target: ", self.target
+        print "pushbroom time: ", self.time
+        print "pushbroom midtime: ", self.midtime
+        print "pushbroom tstride: ", self.tstride
+        print "pushbroom texp: ", self.texp
+        """
         uv_pair = Pair.as_pair(uv_pair)
 
-        tstep = uv_pair.as_scalar(time_axis)
-        mask = tstep.mask | ~self.fov.is_inside(uv_pair)
+        tstep = uv_pair.as_scalar(self.time_axis)
+        mask = tstep.mask | ~self.fov.uv_is_inside(uv_pair).vals
 
         time0 = Scalar(self.time[0] + tstep * self.tstride, mask)
         time1 = time0 + self.texp

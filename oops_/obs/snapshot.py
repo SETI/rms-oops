@@ -57,6 +57,12 @@ class Snapshot(Observation):
         # Attributes specific to a Snapshot
         self.midtime = (self.time[0] + self.time[1]) / 2.
         self.texp = self.time[1] - self.time[0]
+    
+    def __str__(self):
+        """show overview of Snapshot for debugging purposes."""
+        s = "Snapshot\n\ttexp: " + str(self.texp) + "\n"
+        s += "\ttime: " + str(self.time) + "\n"
+        return s
 
     def times_at_uv(self, uv_pair, extras=()):
         """Returns the start time and stop time associated with the selected
