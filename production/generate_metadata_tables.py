@@ -6,11 +6,16 @@ import datetime
 import pylab
 import oops
 import oops.inst.cassini.iss as cassini_iss
+import oops.inst.cassini.vims as cassini_vims
 import oops_.surface.ansa as ansa_
 from math import log, ceil
 from oops_.meshgrid import Meshgrid
 import vicar
 
+
+ISS_TYPE = "ISS"
+VIMS_TYPE = "VIMS"
+UVIS_TYPE = "UVIS"
 
 ################################################################################
 # Hanlde command line arguments for generate_tables.py
@@ -71,12 +76,42 @@ for i in range(nArguments):
         print "\tdo_output_opus2: ", int(do_output_opus2)
         sys.exit()
 
+
+def image_code_name(snapshot, file_type):
+    if file_type is ISS_TYPE:
+        image_code = snapshot.index_dict['IMAGE_NUMBER']
+        name = snapshot.index_dict["INSTRUMENT_NAME"]
+        if "WIDE" in name:
+            image_code += '/W'
+        else:
+            image_code += '/N'
+    else:
+        file_name = snapshot.index_dict['FILE_NAME']
+        #strip letter off of front and extension off of end
+        number_code = file_name.split('.')[0][1:]
+        if "_IR" in snapshot.path_id:
+            wave = 'I'
+            if 'NORMAL' in snapshot.index_dict['IR_SAMPLING_MODE_ID']:
+                res = 'N'
+            else:
+                res = 'L'
+        else:
+            wave = 'V'
+            if 'NORMAL' in snapshot.index_dict['VIS_SAMPLING_MODE_ID']:
+                res = 'N'
+            else:
+                res = 'L'
+        image_code = number_code + '/' + wave + '/' + res
+        print "image_code: ", image_code
+    return image_code
+
 ################################################################################
 
 class FileGeometry(object):
     
     def __init__(self, parent=None):
         if parent is None:
+            self.file_type = ISS_TYPE
             self.clear()
         else:
             self.copy_data(parent)
@@ -115,6 +150,7 @@ class FileGeometry(object):
         self.obs_dist = None
 
     def copy_data(self, parent):
+        self.file_type = parent.file_type
         self.image_name = parent.image_name
         self.ra = parent.ra.copy()
         self.dec = parent.dec.copy()
@@ -470,7 +506,7 @@ geom_file_name = ""
 
 PRINT = False
 DISPLAY = False
-OBJC_DISPLAY = True
+OBJC_DISPLAY = False
 
 def add_info(array, minmax=None):
     if PRINT:
@@ -530,8 +566,11 @@ def show_info(title, array):
     print ""
     print title
     
+    print "printing imsave area 5"
     if isinstance(array, np.ndarray):
+        print "printing imsave area 5.3"
         if array.dtype == np.dtype("bool"):
+            print "printing imsave area 5.4"
             count = np.sum(array)
             total = np.size(array)
             percent = int(count / float(total) * 100. + 0.5)
@@ -545,21 +584,25 @@ def show_info(title, array):
                              array, vmin=0, vmax=1, cmap=pylab.cm.gray)
         
         else:
+            print "printing imsave area 5.5"
             minval = np.min(array)
             maxval = np.max(array)
+            print "minval = ", minval
+            print "maxval = ", maxval
             if minval == maxval:
                 print "    ", minval
             else:
                 print "    ", (minval, maxval), "(min, max)"
                 
                 if DISPLAY:
-                    ignore = pylab.imshow(array)
+                    ignore = pylab.imshow(array, cmap=pylab.cm.gray)
                     ignore = raw_input(title + ": ")
                 elif OBJC_DISPLAY:
                     pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                  array, cmap=pylab.cm.gray)
     
     elif isinstance(array, oops.Array):
+        print "printing imsave area 6"
         if np.any(array.mask):
             print "    ", (np.min(array.vals),
                            np.max(array.vals)), "(unmasked min, max)"
@@ -663,56 +706,100 @@ def create_overlay_image(overlay_mask, resolution, underlay_file_name,
     pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png", ov_res,
                  cmap=pylab.cm.gray)
 
-def generate_metadata(snapshot, resolution):
+def get_error_buffer_size(snapshot, file_type):
+    # deal with possible pointing errors - up to 3 pixels in any
+    # direction for WAC and 30 pixels for NAC
+    error_buffer = 60
+    if file_type is ISS_TYPE:
+        name = snapshot.index_dict["INSTRUMENT_NAME"]
+        if "WIDE" in name:
+            error_buffer = 6
+    elif file_type is VIMS_TYPE:
+        if 'NORMAL' not in snapshot.index_dict['VIS_SAMPLING_MODE_ID']:
+            error_buffer = 6
+    return error_buffer
+
+def generate_metadata(snapshot, resolution, file_type):
     
     #print the camera field
-    """output_buf = '"S/IMG/CO/ISS/'
-    
-    output_buf += snapshot.index_dict['IMAGE_NUMBER']
-    name = snapshot.index_dict["INSTRUMENT_NAME"]
-    if "WIDE" in name:
-        camera = '/W"'
-    else:
-        camera = '/N"'
-    output_buf += camera"""
     geometry = FileGeometry()
-    geometry.set_image_camera(snapshot)
+    geometry.file_type = file_type
+    geometry.image_name = image_code_name(snapshot, file_type)
+    #geometry.set_image_camera(snapshot)
     
     # deal with possible pointing errors - up to 3 pixels in any
     # direction for WAC and 30 pixels for NAC
-    name = snapshot.index_dict["INSTRUMENT_NAME"]
-    error_buffer = 60
-    if "WIDE" in name:
-        error_buffer = 6
+    error_buffer = get_error_buffer_size(snapshot, file_type)
     #print "snapshot.fov.uv_shape: ", snapshot.fov.uv_shape
     limit = snapshot.fov.uv_shape + oops.Pair(np.array([error_buffer,
                                                         error_buffer]))
 
+    #print "observation = ", snapshot
     meshgrid = Meshgrid.for_fov(snapshot.fov, undersample=resolution,
                                 limit=limit, swap=True)
+    #print "meshgrid = ", meshgrid
+    #print "meshgrid xy los: ", meshgrid.fov.xy_from_uv((32.,32.))
     
     #meshgrid = Meshgrid.for_fov(snapshot.fov, undersample=resolution,
     #                            swap=True)
     bp = oops.Backplane(snapshot, meshgrid)
 
     intercepted = bp.where_intercepted("saturn_main_rings")
+    """
+    if np.all(intercepted.vals):
+        print "VIEW CLAIMS ENTIRE INTERCEPTION WITH RINGS"
+    elif np.any(intercepted.vals):
+        print "VIEW CLAIMS PARTIAL INTERCEPTION WITH RINGS"
+    else:
+        print "VIEW CLAIMS NO INTERCEPTION WITH RINGS"
+    show_info("Intercepted:", intercepted.vals)
+    """
     saturn_in_front = bp.where_in_front("saturn", "saturn_main_rings")
     saturn_intercepted = bp.where_intercepted("saturn")
+    """
+    show_info("saturn_intercepted:", saturn_intercepted.vals)
+    if np.all(saturn_intercepted.vals):
+        print "SATURN INTEREPTED EVERYWHERE"
+    elif np.any(saturn_intercepted.vals):
+        print "SATURN INTERCEPTED SOME PLACES"
+    else:
+        print "SATURN NOT INTERCEPTED"
+    """
     rings_blocked = saturn_in_front & saturn_intercepted
     rings_in_view = intercepted & (~rings_blocked)
-
+    """
+    if np.all(rings_in_view.vals):
+        print "ONLY RINGS CLAIM IN VIEW"
+    else:
+        print "RINGS CLAIM PARTIAL VIEW"
+    """
     rings_not_in_shadow = bp.where_outside_shadow("saturn_main_rings", "saturn")
     vis_rings_not_shadow = rings_in_view & rings_not_in_shadow
+	#show_info("Visible Rings not in shadow:", vis_rings_not_shadow.vals)
 
+	#print "Doing right ascension:"
     test = bp.right_ascension()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ra = test.copy()
 
+	#print "Doing declination:"
     test = bp.declination()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.dec = test.copy()
 
+	#print "Doing ring radius:"
     test = bp.ring_radius("saturn_main_rings")
+    """
+    print "###################################################################"
+    if np.all(test.mask):
+        print "ring_radius mask entirely true"
+    elif np.any(test.mask):
+        print "ring_radius mask partially true"
+    else:
+        print "ring_radius mask entirely false"
+    print "ring radius: ", test
+    print "###################################################################"
+    """
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ring_radius = test.copy()
 
@@ -721,6 +808,7 @@ def generate_metadata(snapshot, resolution):
     geometry.radial_resolution = test.copy()
 
     test = bp.ring_longitude("saturn_main_rings",reference="j2000")
+	#show_info("Ring longitude:", test.vals)
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.longitude_j2000 = test.copy()
     
@@ -745,6 +833,7 @@ def generate_metadata(snapshot, resolution):
     geometry.emission = test.copy()
 
     test = bp.distance("saturn_main_rings")
+	#print "distance: ", test
     test.mask |= ~vis_rings_not_shadow.vals
     range_test = test.rebroadcast(test.mask.shape)
     geometry.range_to_rings = range_test.copy()
@@ -857,11 +946,29 @@ def append_opus2_file(file_name, geometries, radii_ranges, start, stop,
     f.write(output_buf)
     f.close()
 
+def index_file_type(file_name):
+    fd = open(file_name)
+    for line in fd:
+        if "INSTRUMENT_ID" in line:
+            if VIMS_TYPE in line:
+                return VIMS_TYPE
+        elif "DWELL_TIME" in line:
+            return UVIS_TYPE
+    return ISS_TYPE
+        
+        
 
 def generate_table_for_index(file_name, omit_range, fortran_list):
     print "omit_range = ", omit_range
     output_buf = ''
-    snapshots = cassini_iss.from_index(file_name)
+    file_type = index_file_type(file_name)
+    if file_type is ISS_TYPE:
+        snapshots = cassini_iss.from_index(file_name)
+    elif file_type is VIMS_TYPE:
+        snapshots = cassini_vims.from_index(file_name)
+    else:
+        print "unsupported file type for index file."
+        return None
     nSnapshots = len(snapshots)
     if stop_file_index > 0 and stop_file_index < nSnapshots:
         nSnapshots = stop_file_index
@@ -878,20 +985,24 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
         nIOs += (nSnapshots - start) / write_frequency
     iIOs = 0
     for i in range(start, nSnapshots):
-        snapshot = snapshots[i]
-        #for snapshot in snapshots:
-        image_code = snapshot.index_dict['IMAGE_NUMBER']
-        name = snapshot.index_dict["INSTRUMENT_NAME"]
-        if "WIDE" in name:
-            image_code += '/W'
+        if file_type is ISS_TYPE:
+            snapshot = snapshots[i]
         else:
-            image_code += '/N'
+            snapshot = snapshots[i][1]
+        #for snapshot in snapshots:
+
+        image_code = image_code_name(snapshot, file_type)
+		#print "Observation: ", snapshot
+        #print "i: ", i
+        #print "image_code: ", image_code
+        #print "time: ", snapshot.time
+        #continue
     
         info_len = len(info_str)
         i1 = i + 1
         init_info_str = "    " + str(i+1) + " of " + str(nSnapshots)
-        if i not in omit_range and image_code in fortran_list:
-            geometry = generate_metadata(snapshot, grid_resolution)
+        if i not in omit_range and (len(fortran_list) == 0) or (image_code in fortran_list):
+            geometry = generate_metadata(snapshot, grid_resolution, file_type)
             geometries.append(geometry)
             actual_i += 1
         
@@ -907,7 +1018,7 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
             sys.stdout.write('\b')
         sys.stdout.write(info_str)
         sys.stdout.flush()
-        if i not in omit_range and image_code in fortran_list:
+        if i not in omit_range and (len(fortran_list) == 0) or (image_code in fortran_list):
             if write_frequency > 0 and (actual_i % write_frequency) == 0:
                 if write_time == zero_time:
                     write_then = datetime.datetime.now()
@@ -973,12 +1084,13 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
     return geometries
 
 def get_fortran_file_list(fortran_file_name):
-    reader = csv.reader(open(fortran_file_name, 'rU'), delimiter=',')
     file_list = []
-    for row in reader:
-        files = str(row[0]).split('S/IMG/CO/ISS/')
-        file_plus_letter = files[1]
-        file_list.append(file_plus_letter)
+    if fortran_file_name != "":
+        reader = csv.reader(open(fortran_file_name, 'rU'), delimiter=',')
+        for row in reader:
+            files = str(row[0]).split('S/IMG/CO/ISS/')
+            file_plus_letter = files[1]
+            file_list.append(file_plus_letter)
     return file_list
 
 radiiReader = csv.reader(open(radii_file, 'rU'), delimiter=';')
