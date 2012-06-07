@@ -160,7 +160,7 @@ class HST(object):
 
         header1 = hst_file[index].header
 
-        if header1["CTYPE1"] != "RA---TAN" or header1["CTYPE2"] != "DEC--TAN":
+        if header1["CTYPE1"][:2] != "RA" or header1["CTYPE2"][:3] != "DEC":
             return None
 
         ra  = header1["CRVAL1"]
@@ -177,7 +177,6 @@ class HST(object):
 
         v_wrt_y_deg = np.arctan(xy_center.d_duv.vals[0,1] /
                                 xy_center.d_duv.vals[1,1]) * oops.DPR
-        # print "v_wrt_y_deg", v_wrt_y_deg
 
         # Get ORIENT
         try:
