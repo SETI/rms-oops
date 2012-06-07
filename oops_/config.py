@@ -57,7 +57,6 @@ class SURFACE_PHOTONS(object):
     dlt_precision = 1.e-6       # See PATH_PHOTONS for more info.
     dlt_limit = 10.             # See PATH_PHOTONS for more info.
 
-
 ################################################################################
 # Event precision
 ################################################################################

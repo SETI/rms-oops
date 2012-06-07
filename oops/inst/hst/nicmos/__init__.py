@@ -1,5 +1,8 @@
 ################################################################################
 # oops/inst/hst/nicmos/__init__.py: HST subclass NICMOS
+#
+# 5/21/12 MRS - corrected super().register_frame() so that it works for NICMOS
+#   images; local method deleted.
 ################################################################################
 
 import pyfits
@@ -90,26 +93,6 @@ class NICMOS(HST):
         idc_key = (hst_file[0].header["FILTER"],)
 
         return self.construct_fov(IDC_DICT[det][idc_key], hst_file)
-
-    def register_frame(self, hst_file, parameters={}):
-        """Returns the Cmatrix Frame that rotates from J2000 coordinates into
-        the frame of the HST observation.
-        """
-
-        # TBD -- this does not work
-#         header1 = hst_file[1].header
-#         ra    = header1["CRVAL1"]
-#         dec   = header1["CRVAL2"]
-#         clock = header1["ORIENTAT"]
-        ra = 0.
-        dec = 0.
-        clock = 0.
-        frame_id = hst_file[0].header["FILENAME"]
-
-        frame = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock, frame_id)
-        frame.reregister()
-
-        return frame_id
 
     def select_syn_files(self, hst_file, parameters={}):
         """Returns the list of SYN files containing profiles that are to be

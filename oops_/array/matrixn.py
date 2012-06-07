@@ -118,7 +118,7 @@ class MatrixN(Array):
 
         list = []
         for col in range(self.item[1]):
-            list.append(MatrixN(self.vals[...,col], self.mask))
+            list.append(VectorN(self.vals[...,col], self.mask))
 
         return list
 
@@ -284,6 +284,20 @@ class MatrixN(Array):
             if arg.item[1] == 1: return self != arg.as_column()
 
         return Array.__ne__(self, arg)
+
+# Useful class constants
+MatrixN.ZERO33 = MatrixN([[0,0,0],[0,0,0],[0,0,0]])
+MatrixN.UNIT33 = MatrixN([[1,0,0],[0,1,0],[0,0,1]])
+
+MatrixN.ZERO3_ROW = MatrixN([[0,0,0]])
+MatrixN.XAXIS_ROW = MatrixN([[1,0,0]])
+MatrixN.YAXIS_ROW = MatrixN([[0,1,0]])
+MatrixN.ZAXIS_ROW = MatrixN([[0,0,1]])
+
+MatrixN.ZERO3_COL = MatrixN([[0],[0],[0]])
+MatrixN.XAXIS_COL = MatrixN([[1],[0],[0]])
+MatrixN.YAXIS_COL = MatrixN([[0],[1],[0]])
+MatrixN.ZAXIS_COL = MatrixN([[0],[0],[1]])
 
 ################################################################################
 # Once defined, register with VectorN class

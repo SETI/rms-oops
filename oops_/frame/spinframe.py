@@ -11,7 +11,6 @@ import numpy as np
 from oops_.frame.frame_ import Frame
 from oops_.array.all import *
 from oops_.transform import Transform
-
 import oops_.registry as registry
 
 class SpinFrame(Frame):
@@ -96,8 +95,7 @@ class Test_SpinFrame(unittest.TestCase):
         from oops_.event import Event
         from oops_.transform import Transform
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
         spin1  = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
         spin2  = SpinFrame(0., 2., 0., 2, "J2000", "spin2")
@@ -179,8 +177,7 @@ class Test_SpinFrame(unittest.TestCase):
         dpos_dt_test = (pos1 - pos0) / dt
         self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
 #########################################
 if __name__ == '__main__':

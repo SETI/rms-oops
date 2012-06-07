@@ -4,6 +4,11 @@
 # 4/8/12 MRS - corrected a small rotational error in the frame, due to the
 #   peculiar way that the HST distortion models interact with the definition of
 #   the ORIENT parameter. See the parameter v_wrt_y_deg.
+#
+# 6/7/12 MRS - removed error condition that arises for ramp filters; instead,
+#   calibration objects will be None. Replaced the Cmatrix frame by a Tracker
+#   frame to track moving targets properly. Modified register_frame() to work
+#   with NICMOS and support WFPC2.
 ################################################################################
 
 import numpy as np
@@ -52,12 +57,12 @@ HST_TARGET_DICT = {"MAR": "MARS",
                    "URA": "URANUS",
                    "NEP": "NEPTUNE",
                    "PLU": "PLUTO",
-                   "IO" : "JUPITER",
-                   "EUR": "JUPITER",
-                   "GAN": "JUPITER",
-                   "CAL": "JUPITER",
-                   "ENC": "SATURN",
-                   "TIT": "SATURN",
+                   "IO" : "IO",
+                   "EUR": "EUROPA",
+                   "GAN": "GANYMEDE",
+                   "CAL": "CALLISTO",
+                   "ENC": "ENCELADUS",
+                   "TIT": "TITAN",
                    "PHO": "PHOEBE"}
 
 # Define some important paths and frames
@@ -127,7 +132,7 @@ class HST(object):
         return hst_file[3].data
 
     # This works for Snapshot observations. Others must override.
-    def time_limits(self, hst_file):
+    def time_limits(self, hst_file, parameters={}):
         """Returns a tuple containing the overall start and end times of the
         observation."""
 
@@ -141,25 +146,66 @@ class HST(object):
 
         return (tdb0, tdb1)
 
-    def register_frame(self, hst_file, v_wrt_y_deg=0., parameters={}):
-        """Returns the Cmatrix Frame that rotates from J2000 coordinates into
+    def register_frame(self, hst_file, fov, parameters={}, index=1, suffix=""):
+        """Returns the Tracker frame that rotates from J2000 coordinates into
         the frame of the HST observation.
 
-        v_wrt_y_deg is the angle from the y-axis of the camera frame to the
-        v-axis of the pixel grid, in degrees. I find this to be nonzero in HST
-        distortion models. Because the camera ORIENT is defined relative to the
-        v-axis, we need to subtract this value to get the orientation of the
-        y-axis. MRS 4/8/12.
+        HST pointing information refers to the start time of an exposure. For a
+        moving target, we require a Tracker frame to ensure that the frame
+        evaluates properly as a function of observation time.
+
+        The index and suffix arguments are used by WFPC2 to override the default
+        behavior.
         """
 
-        header1 = hst_file[1].header
-        ra    = header1["CRVAL1"]
-        dec   = header1["CRVAL2"]
-        clock = header1["ORIENTAT"] - v_wrt_y_deg
-        frame_id = hst_file[0].header["FILENAME"]
+        header1 = hst_file[index].header
 
-        frame = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock, frame_id)
-        frame.reregister()
+        if header1["CTYPE1"] != "RA---TAN" or header1["CTYPE2"] != "DEC--TAN":
+            return None
+
+        ra  = header1["CRVAL1"]
+        dec = header1["CRVAL2"]
+
+        # v_wrt_y_deg is the angle from the y-axis of the camera frame to the
+        # v-axis of the pixel grid, in degrees. I find this to be nonzero in HST
+        # distortion models. Because the camera ORIENT is defined relative to
+        # the v-axis, we need to subtract this value to get the orientation of
+        # the y-axis. MRS 4/8/12.
+
+        uv_center = fov.uv_from_xy((0,0))
+        xy_center = fov.xy_from_uv(uv_center, derivs=True)
+
+        v_wrt_y_deg = np.arctan(xy_center.d_duv.vals[0,1] /
+                                xy_center.d_duv.vals[1,1]) * oops.DPR
+        # print "v_wrt_y_deg", v_wrt_y_deg
+
+        # Get ORIENT
+        try:
+            orient = header1["ORIENTAT"]
+        except KeyError:
+            # If ORIENT is missing, as is the case for NICMOS, we can construct
+            # it from the partial derivatives CD1_1 = dRA/du, CD1_2 = dRA/dv,
+            # CD2_1 = dDEC/du, CD2_2 = dDEC/dv
+
+            dnorth_dv = header1["CD2_2"]
+            dleft_dv  = header1["CD1_2"]
+            # Note: Previously I had this:
+            #   dleft_dv  = header1["CD1_2"] * np.cos(ra * oops.RPD)
+            # However, I found that the cosine term is not used by STScI.
+
+            orient = np.arctan2(dleft_dv, dnorth_dv) * oops.DPR
+
+        clock = orient - v_wrt_y_deg
+
+        frame_id = hst_file[0].header["FILENAME"] + suffix
+
+        cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
+                                                 frame_id + "_CMATRIX")
+
+        time_limits = self.time_limits(hst_file)
+        tracker = oops.frame.Tracker(cmatrix,
+                                     self.target_body(hst_file).path_id,
+                                     "EARTH", time_limits[0], frame_id)
 
         return frame_id
 
@@ -202,7 +248,7 @@ class HST(object):
             target_body = self.target_body(hst_file)
             target_sun_path = oops.registry.connect_paths(target_body.path_id,
                                                           "SUN")
-                # Paths of the relevant bodies need to be defined in advance!
+            # Paths of the relevant bodies need to be defined in advance!
 
             times = self.time_limits(hst_file)
             tdb = (times[0] + times[1]) / 2.
@@ -263,19 +309,12 @@ class HST(object):
 
         fov = self.define_fov(hst_file, parameters)
 
-        uv_center = fov.uv_from_xy((0,0))
-        xy_center = fov.xy_from_uv(uv_center, derivs=True)
-
-        v_wrt_y_deg = np.arctan(xy_center.d_duv.vals[0,1] /
-                                xy_center.d_duv.vals[1,1]) * oops.DPR
-        # print "v_wrt_y_deg", v_wrt_y_deg
-
         try:
-            point_calib = self.iof_calibration(hst_file, fov,
-                                                    False, parameters)
-            extended_calib = self.iof_calibration(hst_file, fov,
-                                                    True, parameters)
-        except IOError:
+            point_calib = self.iof_calibration(hst_file, fov, False,
+                                               parameters)
+            extended_calib = self.iof_calibration(hst_file, fov, True,
+                                                  parameters)
+        except IOError, AttributeError:
             point_calib = None
             extended_calib = None
 
@@ -284,22 +323,23 @@ class HST(object):
         for objects in hst_file:
             headers.append(objects.header)
 
-        return oops.obs.Snapshot(self.time_limits(hst_file),        # time
-                                 fov,                               # fov
-                                 "EARTH",                           # path_id
-                                 self.register_frame(hst_file, v_wrt_y_deg),
+        return oops.obs.Snapshot(
+                        self.time_limits(hst_file, parameters),     # time
+                        fov,                                        # fov
+                        "EARTH",                                    # path_id
+                        self.register_frame(hst_file, fov, parameters),
                                                                     # frame_id
-                                 data = self.data_array(hst_file),
-                                 error = self.error_array(hst_file),
-                                 quality = self.quality_mask(hst_file),
-                                 target = self.target_body(hst_file),
-                                 telescope = self.telescope_name(hst_file),
-                                 instrument = self.instrument_name(hst_file),
-                                 detector = self.detector_name(hst_file),
-                                 filter = self.filter_name(hst_file),
-                                 point_calib = point_calib,
-                                 extended_calib = extended_calib,
-                                 headers = headers)
+                        data = self.data_array(hst_file, parameters),
+                        error = self.error_array(hst_file, parameters),
+                        quality = self.quality_mask(hst_file, parameters),
+                        target = self.target_body(hst_file),
+                        telescope = self.telescope_name(hst_file),
+                        instrument = self.instrument_name(hst_file),
+                        detector = self.detector_name(hst_file),
+                        filter = self.filter_name(hst_file),
+                        point_calib = point_calib,
+                        extended_calib = extended_calib,
+                        headers = headers)
 
     ############################################################################
     # IDC (distortion model) support functions
@@ -747,6 +787,11 @@ class Test_HST(unittest.TestCase):
         self.assertEqual(snapshot.instrument, "WFPC2")
         self.assertEqual(snapshot.detector, "")
         self.assertEqual(snapshot.layer, 2)
+
+        snapshot = from_file(prefix + "ua1b0309m_d0m.fits", {"layer":3})
+        self.assertEqual(snapshot.instrument, "WFPC2")
+        self.assertEqual(snapshot.detector, "")
+        self.assertEqual(snapshot.layer, 3)
 
         self.assertRaises(IOError, from_file, prefix + "ua1b0309m_d0m.fits",
                                               {"mask":"required"})

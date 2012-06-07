@@ -6,6 +6,7 @@
 #   are now separate files.
 # Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
 # 3/2/12 MRS: Integrated with VectorN and MatrixN.
+# 6/7/12 MRS: Added the replace_zeros() method.
 ################################################################################
 
 import numpy as np
@@ -228,6 +229,26 @@ class Scalar(Array):
 
         (minval, maxval) = Array.PAIR_CLASS.as_pair(range).as_scalars()
         between = (self >= minval & self <= maxval)
+
+    def replace(self, mask, value=1.):
+        """Replaces masked entries with the given value."""
+
+        if not np.any(mask): return
+
+        if np.shape(mask) == ():
+            self.vals = value
+        else:
+            self.vals[mask] = value
+
+    def zero_mask(self):
+        """Returns a boolean mask of zero-valued entries."""
+
+        return (self.vals == 0.)
+
+    def replace_zeros(self, value=1.):
+        """Replaces zero-valued entries with the given value."""
+
+        self.replace(self.zero_mask(), value)
 
     ####################################
     # Binary logical operators

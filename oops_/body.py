@@ -552,9 +552,9 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
                   ["SATELLITE", "IRREGULAR"])
     define_ring("URANUS", "URANUS_RING_PLANE", URANUS_EPSILON_LIMIT, [],
-                                                            retrograde=True)
-    define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [],   retrograde=True)
-    define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [],   retrograde=True)
+                                                          retrograde=True)
+    define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [], retrograde=True)
+    define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [], retrograde=True)
 
     URANUS_EPOCH = cspice.utc2et("1977-03-10T20:00:00")
     uranus_wrt_b1950 = registry.connect_frames("IAU_URANUS", "B1950")

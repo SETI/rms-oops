@@ -12,6 +12,10 @@
 #   to address the problems with virtual surfaces such as Ansa.
 # 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
 # 5/2/12 MRS - fixed bug in event_as_coords().
+# 6/6/12 MRS - added t_guess as a standard argument to intercept(), revised
+#   _solve_photon() to take advantage of it; added class constants
+#   *_DERIVS_ARE_IMPLEMENTED that can inform the calling program immediately if
+#   if derivs are implemented, avoiding the need to catch a NotImplementedError.
 ################################################################################
 
 import numpy as np
@@ -29,6 +33,14 @@ class Surface(object):
     necessarily rectangular, in which two primary coordinates define locations
     on the surface, and an optional third coordinate can define points above or
     below that surface. The shape is always fixed."""
+
+    # Class constants to override where derivs are undefined
+    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = True
+    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = True
+    intercept_DERIVS_ARE_IMPLEMENTED = True
+    normal_DERIVS_ARE_IMPLEMENTED = True
+    intercept_with_normal_DERIVS_ARE_IMPLEMENTED = True
+    intercept_normal_to_DERIVS_ARE_IMPLEMENTED = True
 
     ########################################
     # Each subclass must override...
@@ -104,7 +116,7 @@ class Surface(object):
 
         pass
 
-    def intercept(self, obs, los, derivs=False):
+    def intercept(self, obs, los, derivs=False, t_guess=False):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
@@ -113,6 +125,7 @@ class Surface(object):
             los         line of sight as a Vector3, with optional units.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
+            t_guess     initial guess at the t array, optional.
 
         Return:         a tuple (pos, t) where
             pos         a unitless Vector3 of intercept points on the surface,
@@ -461,6 +474,7 @@ class Surface(object):
 
         # Iterate. Convergence is rapid because all speeds are non-relativistic
         max_dlt = np.inf
+        new_lt = None
         for iter in range(iters):
 
             # Evaluate the current time
@@ -484,7 +498,8 @@ class Surface(object):
 
             # Update the intercept times; save the intercept positions
             (pos_wrt_surface, new_lt) = self.intercept(obs_wrt_surface,
-                                                       los_wrt_surface)
+                                                       los_wrt_surface,
+                                                       t_guess = new_lt)
 
             new_lt = new_lt.clip(lt_min, lt_max)
             dlt = new_lt - lt

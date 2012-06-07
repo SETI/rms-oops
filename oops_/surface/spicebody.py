@@ -14,6 +14,7 @@ from oops_.surface.spheroid import Spheroid
 from oops_.surface.ellipsoid import Ellipsoid
 from oops_.path.spicepath import SpicePath
 from oops_.frame.spiceframe import SpiceFrame
+import oops_.registry as registry
 import oops_.spice_support as spice
 
 def spice_body(spice_id):
@@ -62,6 +63,8 @@ class Test_spice_body(unittest.TestCase):
         self.assertEqual(body.frame_id,  "SLOWSPINNER")
         self.assertEqual(body.req, 6051.8)
         self.assertEqual(body.squash_z, 1.)
+
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

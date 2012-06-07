@@ -23,12 +23,6 @@ class RingPlane(Surface):
     longitude, elevation), with an optional offset in elevation from the
     equatorial (z=0) plane."""
 
-    Z_AXIS = Vector3((0,0,1))
-    ZERO_ROW = Vector3((0,0,0)).as_row()
-    Z_AXIS_ROW = Vector3((0,0,1)).as_row()
-    ZERO_MATRIX = MatrixN([(0,0,0),(0,0,0),(0,0,0)])
-    UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
-
     COORDINATE_TYPE = "polar"
 
     def __init__(self, origin, frame, radii=None, gravity=None,
@@ -119,15 +113,15 @@ class RingPlane(Surface):
             if derivs[0]:
                 dr_dpos = VectorN(pos.vals[...]*(1,1,0), pos.mask).unit()
                 r.insert_subfield("d_dpos", dr_dpos.as_row())
-                r.insert_subfield("d_dobs", RingPlane.ZERO_ROW)
+                r.insert_subfield("d_dobs", MatrixN.ZERO3_ROW)
 
             if derivs[1]:
-                dtheta_dpos = RingPlane.Z_AXIS.cross(pos) / r**2
+                dtheta_dpos = Vector3.ZAXIS.cross(pos) / r**2
                 theta.insert_subfield("d_dpos", dtheta_dpos.as_row())
-                theta.insert_subfield("d_dobs", RingPlane.ZERO_ROW)
+                theta.insert_subfield("d_dobs", MatrixN.ZERO3_ROW)
 
             if axes > 2 and derivs[2]:
-                z.insert_subfield("d_dpos", RingPlane.Z_AXIS_ROW)
+                z.insert_subfield("d_dpos", MatrixN.ZAXIS_ROW)
 
         if axes > 2:
             return (r, theta, z)
@@ -193,7 +187,7 @@ class RingPlane(Surface):
 
         return pos
 
-    def intercept(self, obs, los, derivs=False):
+    def intercept(self, obs, los, derivs=False, t_guess=None):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
@@ -202,6 +196,7 @@ class RingPlane(Surface):
             los         line of sight as a Vector3, with optional units.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
+            t_guess     initial guess at the t array, optional.
 
         Return:         (pos, t)
             pos         a unitless Vector3 of intercept points on the surface,
@@ -326,7 +321,7 @@ class RingPlane(Surface):
         perp = Vector3(vals, mask)
 
         if derivs:
-            perp.insert_subfield("d_dpos", RingPlane.ZERO_MATRIX.copy())
+            perp.insert_subfield("d_dpos", MatrixN.ZERO33.copy())
 
         return perp
 
@@ -401,6 +396,8 @@ class Test_RingPlane(unittest.TestCase):
         self.assertTrue(np.all(factors.vals > 0.))
 
         # Note: Additional unit testing is performed in orbitplane.py
+
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

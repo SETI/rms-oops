@@ -33,6 +33,14 @@ class Ellipsoid(Surface):
 
     COORDINATE_TYPE = "spherical"
 
+    # Class constants to override where derivs are undefined
+    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
+    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
+    intercept_DERIVS_ARE_IMPLEMENTED = False
+    normal_DERIVS_ARE_IMPLEMENTED = False
+    intercept_with_normal_DERIVS_ARE_IMPLEMENTED = False
+    intercept_normal_to_DERIVS_ARE_IMPLEMENTED = False
+
     def __init__(self, origin, frame, radii):
         """Constructor for an Ellipsoid object.
             
@@ -156,7 +164,7 @@ class Ellipsoid(Surface):
 
         return pos
 
-    def intercept(self, obs, los, derivs=False):
+    def intercept(self, obs, los, derivs=False, t_guess=None):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
@@ -165,6 +173,7 @@ class Ellipsoid(Surface):
             los         line of sight as a Vector3, with optional units.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
+            t_guess     initial guess at the t array, optional.
 
         Return:         a tuple (pos, t) where
             pos         a unitless Vector3 of intercept points on the surface,

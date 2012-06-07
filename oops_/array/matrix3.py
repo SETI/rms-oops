@@ -311,6 +311,9 @@ class Matrix3(Array):
     def __abs__(self):
         return Scalar(np.sqrt(np.sum(np.sum(self.vals**2, axis=-1), axis=-1)))
 
+# A useful class constant
+Matrix3.UNIT = Matrix3([[1,0,0],[0,1,0],[0,0,1]])
+
 ################################################################################
 # Once defined, register with Array class
 ################################################################################

@@ -12,6 +12,7 @@
 #   ring_emission_angle() and ring_incidence_angle() to support the standard
 #   conventions for rings; set up faster/better evaluations of ring and ansa
 #   longitudes.
+#  6/6/12 MRS - Added limb geometry.
 ################################################################################
 
 import numpy as np
@@ -154,6 +155,10 @@ class Backplane(object):
             modifier = "ring"
             body_id = surface_id[:-5]
 
+        elif surface_id.endswith(":limb"):
+            modifier = "limb"
+            body_id = surface_id[:-5]
+
         else:
             modifier = None
             body_id = surface_id
@@ -172,6 +177,9 @@ class Backplane(object):
                 return surface_.Ansa.for_ringplane(body.surface)
             else:                                           # if it's a planet
                 return surface_.Ansa(body.path_id, body.ring_frame_id)
+
+        if modifier == "limb":
+            return surface_.Limb(body.surface, exclusion=1.)
 
     @staticmethod
     def get_path(path_id):
@@ -195,15 +203,19 @@ class Backplane(object):
         if event_key[0].upper() == "SUN":
             return self.get_path_event(event_key)
 
-        # Always calculate derivatives for the first step from the observer
-        if len(event_key) == 1:
-            ignore = self.get_surface_event_w_derivs(event_key)
-            return self.surface_events[event_key]
-
-        # Create the event and save it in the dictionary
+        # Look up the photon's departure surface and destination
         dest = self.get_surface_event(event_key[1:])
         surface = Backplane.get_surface(event_key[0])
 
+        # Calculate derivatives for the first step from the observer, if allowed
+        if len(event_key) == 1 and surface.intercept_DERIVS_ARE_IMPLEMENTED:
+            try:
+                ignore = self.get_surface_event_w_derivs(event_key)
+                return self.surface_events[event_key]
+            except NotImplementedError:
+                pass
+
+        # Create the event and save it in the dictionary
         event = surface.photon_to_event(dest)
 
         # Save extra information in the event object
@@ -468,11 +480,14 @@ class Backplane(object):
     ############################################################################
     # Basic geometry
     #
-    # Range keys are ("distance", event_key, subfield)
-    # Light time keys are ("light_time", event_key, subfield)
+    # Range keys are ("distance", event_key, direction)
+    # Light time keys are ("light_time", event_key, direction)
+    #   direction is either "arr" for the distance to the lighting source or
+    #   "dep" for the distance to the observer.
     #
-    # Subfield is either "arr" for the distance to the lighting source or "dep"
-    # for the distance to the observer.
+    # Resolution keys are ("resolution, event_key, axis)
+    #   axis is either 0 for the horizontal axis in the FOC or v for the
+    #   vertical axis in the FOV.
     ############################################################################
 
     def distance(self, event_key, subfield="dep"):
@@ -503,6 +518,25 @@ class Backplane(object):
                 event = self.get_surface_event(event_key)
 
             self.register_backplane(key, abs(event.subfields[subfield + "_lt"]))
+
+        return self.backplanes[key]
+
+    def resolution(self, event_key, axis=0):
+        """Projected spatial resolution in km/pixel at the intercept point,
+        based on range alone.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("resolution", event_key, axis)
+        if key not in self.backplanes.keys():
+            distance = self.distance(event_key)
+
+            (dlos_du, dlos_dv) = self.meshgrid.dlos_duv.as_columns()
+            u_resolution = distance * dlos_du.as_vector3().norm()
+            v_resolution = distance * dlos_dv.as_vector3().norm()
+
+            self.register_backplane(("resolution", event_key, 0), u_resolution)
+            self.register_backplane(("resolution", event_key, 1), v_resolution)
 
         return self.backplanes[key]
 
@@ -1109,7 +1143,7 @@ class Backplane(object):
         return self.backplanes[key]
 
     ############################################################################
-    # Surface geometry
+    # Body surface geometry
     #
     # Longitude keys are ("longitude", event_key, reference, direction, minimum)
     #   reference can be "iau", "sun", "sha", "obs" or "oha"
@@ -1203,7 +1237,7 @@ class Backplane(object):
             return lat
 
         event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == "spherical"
+        assert event.surface.COORDINATE_TYPE in {"spherical", "limb"}
 
         if lat_type == "centric":
             lat = event.surface.lat_to_centric(lat)
@@ -1231,7 +1265,7 @@ class Backplane(object):
         obs_path = path_.Waypoint(self.obs_event.origin_id)
         ignore = obs_path.photon_from_event(center_event)
 
-        assert event.surface.COORDINATE_TYPE == "spherical"
+        assert event.surface.COORDINATE_TYPE in {"spherical", "limb"}
         (lon,
         lat) = event.surface.coords_from_vector3(center_event.aberrated_dep(),
                                                  axes=2)
@@ -1256,7 +1290,7 @@ class Backplane(object):
                                          event.origin_id, event.frame_id)
         ignore = path_.Waypoint("SUN").photon_to_event(center_event)
 
-        assert event.surface.COORDINATE_TYPE == "spherical"
+        assert event.surface.COORDINATE_TYPE in {"spherical", "limb"}
         (lon,
         lat) = event.surface.coords_from_vector3(-center_event.aberrated_arr(),
                                                  axes=2)
@@ -1305,6 +1339,40 @@ class Backplane(object):
         key = ("coarsest_resolution", event_key)
         if key not in self.backplanes.keys():
             self._fill_surface_resolution(event_key)
+
+        return self.backplanes[key]
+
+    ############################################################################
+    # Limb geometry
+    #
+    # Elevation keys are ("elevation", limb_event_key).
+    # Limb_resolution keys are ("lim_resolution, limb_event_key).
+    # Longitude and latitude keys are the same as for body surface geometry.
+    ############################################################################
+
+    def _fill_limb_intercepts(self, event_key):
+        """Internal method to fill in the limb intercept geometry backplanes.
+        """
+
+        # Get the limb intercept coordinates
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == "limb"
+
+        (lon,lat,z) = event.surface.event_as_coords(event, axes=3)
+
+        self.register_backplane(("longitude", event_key, "iau", "east", 0), lon)
+        self.register_backplane(("latitude", event_key, "squashed"), lat)
+        self.register_backplane(("elevation", event_key), z)
+
+    def elevation(self, event_key):
+        """Elevation of a limb point above the body's surface.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("elevation", event_key)
+        if key not in self.backplanes.keys():
+            self._fill_limb_intercepts(event_key)
 
         return self.backplanes[key]
 
@@ -1601,7 +1669,7 @@ class Backplane(object):
 
     CALLABLES = {
         "right_ascension", "declination",
-        "distance", "light_time",
+        "distance", "light_time", "resolution",
         "incidence_angle", "emission_angle", "phase_angle", "scattering_angle",
         "ring_radius", "ring_longitude", "ring_azimuth", "ring_elevation",
         "ring_radial_resolution", "ring_angular_resolution",
@@ -1609,6 +1677,7 @@ class Backplane(object):
         "ansa_radial_resolution", "ansa_vertical_resolution",
         "longitude", "latitude",
         "finest_resolution", "coarsest_resolution",
+        "elevation",
         "where_intercepted",
         "where_inside_shadow", "where_outside_shadow",
         "where_in_front", "where_in_back",
@@ -1636,7 +1705,7 @@ class Backplane(object):
 
 import unittest
 
-UNITTEST_PRINT = True
+UNITTEST_PRINT = False
 UNITTEST_LOGGING = False
 UNITTEST_FILESPEC = "test_data/cassini/ISS/W1573721822_1.IMG"
 UNITTEST_UNDERSAMPLE = 16
@@ -2102,6 +2171,34 @@ class Test_Backplane(unittest.TestCase):
 
         test = bp.ansa_longitude("saturn_main_rings:ansa", reference="old-oha")
         show_info("Ansa longitude wrt OHA (deg), old way", test * constants.DPR)
+
+        ########################
+        # Limb and resolution, 6/6/12
+
+        test = bp.elevation("saturn:limb")
+        show_info("Limb elevation (km)", test)
+
+        test = bp.longitude("saturn:limb")
+        show_info("Limb longitude (deg)", test * constants.DPR)
+
+        test = bp.latitude("saturn:limb")
+        show_info("Limb latitude (deg)", test * constants.DPR)
+
+        test = bp.longitude("saturn:limb", reference="obs", minimum=-180)
+        show_info("Limb longitude wrt observer, -180 (deg)",
+                                                        test * constants.DPR)
+
+        test = bp.latitude("saturn:limb", lat_type="graphic")
+        show_info("Limb planetographic latitude (deg)", test * constants.DPR)
+
+        test = bp.latitude("saturn:limb", lat_type="centric")
+        show_info("Limb planetocentric latitude (deg)", test * constants.DPR)
+
+        test = bp.resolution("saturn:limb", 0)
+        show_info("Limb resolution horizontal (km/pixel)", test)
+
+        test = bp.resolution("saturn:limb", 1)
+        show_info("Limb resolution vertical (km/pixel)", test)
 
         ########################
         # Testing empty events

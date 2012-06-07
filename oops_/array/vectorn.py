@@ -188,6 +188,12 @@ class VectorN(Array):
 
         return Array.__ne__(self, arg)
 
+# Useful class constants
+VectorN.ZERO3 = VectorN([0,0,0])
+VectorN.XAXIS = VectorN([1,0,0])
+VectorN.YAXIS = VectorN([0,1,0])
+VectorN.ZAXIS = VectorN([0,0,1])
+
 ################################################################################
 # Once defined, register with Array class
 ################################################################################

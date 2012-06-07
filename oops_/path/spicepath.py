@@ -769,6 +769,7 @@ class Test_SpicePath(unittest.TestCase):
         registry.initialize_path_registry()
         registry.initialize_frame_registry()
 
+      spice.initialize()
       Path.USE_QUICKPATHS = True
       Frame.USE_QUICKFRAMES = True
 

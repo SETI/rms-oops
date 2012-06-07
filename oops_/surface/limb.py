@@ -2,6 +2,7 @@
 # oops_/surface/limb.py: Limb subclass of class Surface
 #
 # 3/29/12 MRS: New, with initial unit tests of intercept().
+# 6/6/12 MRS: Defined coordinates, updated constructor, improved speed.
 ################################################################################
 
 import numpy as np
@@ -10,68 +11,52 @@ from oops_.surface.surface_ import Surface
 from oops_.surface.spheroid import Spheroid
 from oops_.surface.ellipsoid import Ellipsoid
 from oops_.array.all import *
+from oops_.config import SURFACE_PHOTONS, LOGGING
 import oops_.registry as registry
 
 class Limb(Surface):
     """The Limb surface is defined as the locus of points where a surface normal
     from a spheroid or ellipsoid is perpendicular to the line of sight. This 
     provides a convenient coordinate system for describing cloud features on the
-    limb of a body. The coordinates are (z,clock) where
-        z       vertical distance above the surface at the visible limb.
-        clock   a clock angle measured from the projected north pole of the body
-                in the clockwise direction.
-        dist    a distance offset along the line of sight, where 0 corresponds
-                to the limb point and positive values are more distant.
+    limb of a body.
+
+    The coordinates are (lon, lat, z), much the same as for the surface of the
+    associated spheroid or ellipsoid. The key difference is in how the
+    intercept point is derived.
+        lon     longitude at the ground point beneath the limb point, using the
+                same definition as that of the associated spheroid or ellipsoid.
+        lat     latitude at the ground point beneath the limb point, using the
+                same definition as that of the associated spheroid or ellipsoid.
+        z       the elevation above the surface, as an actual distance measured
+                normal to the ring plane. Note that this definition differs from
+                that used by the spheroid and ellipsoid surface.
     """
 
-    UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
-
     COORDINATE_TYPE = "limb"
-
     DEBUG = False   # Set to True for convergence testing in intercept()
 
-    def __init__(self, origin, frame, radii, exclusion=0.95):
+    # Class constants to override where derivs are undefined
+    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
+    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
+    intercept_DERIVS_ARE_IMPLEMENTED = False
+    normal_DERIVS_ARE_IMPLEMENTED = False
+
+    def __init__(self, ground, exclusion=0.95):
         """Constructor for a Limb surface.
 
         Input:
-            origin      the Path object or ID defining the center of the
-                        spheroid.
-            frame       the Frame object or ID defining the coordinate frame in
-                        which the spheroid is fixed, with the short axis along
-                        the Z-coordinate.
-            radii       a tuple (a,b,c), defining the long and short radii of
-                        the spheroid or ellipsoid.
+            ground      the Surface object relative to which limb points are to
+                        be defined. It should be a Spheroid or Ellipsoid.
             exclusion   the fraction of the polar radius within which
                         calculations of the surface are suppressed. Values of
                         less than 0.9 are not recommended because the problem
                         becomes numerically unstable.
         """
 
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id  = registry.as_frame_id(frame)
-
-        self.radii = np.array(radii)
-        self.req   = radii[0]
-        self.rpol  = radii[-1]
-
-        if radii[0] == radii[1]:
-            self.ground = Spheroid(origin, frame, self.radii[1:],
-                                                  exclusion=exclusion)
-        else:
-            self.ground = Ellipsoid(origin, frame, self.radii,
-                                                   exclusion=exclusion)
-
-        # This defines the boundary of the inner exclusion zone, where the limb
-        # geometry is poorly defined. We define this region as follows:
-        #
-        # (1) "Unsquash" the geometry so that the body is spherical
-        # (2) Exlude the central sphere of radius equal to the equatorial radius
-        #     minus the polar radius.
-        # (3) Re-apply the squash to restore the geometry. The excluded zone
-        #     becomes similarly squashed.
-
-        self.unsquash = self.ground.unsquash
-        self.squash = self.ground.squash
+        assert ground.COORDINATE_TYPE == "spherical"
+        self.ground = ground
+        self.origin_id = ground.origin_id
+        self.frame_id  = ground.frame_id
 
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts position vectors in the internal frame into the surface
@@ -80,9 +65,10 @@ class Limb(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface, with
                         optional units.
-            obs         ignored.
+            obs         a Vector3 of observer observer positions. Ignored for
+                        solid surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
+                        three Scalar objects
             derivs      a boolean or tuple of booleans. If True, then the
                         partial derivatives of each coordinate with respect to
                         surface position and observer position are returned as
@@ -102,7 +88,16 @@ class Limb(Surface):
                         objects with item shape [1,3].
         """
 
-        pass
+        pos = Vector3.as_standard(pos)
+        groundtrack = self.ground.intercept_normal_to(pos, derivs)
+
+        (lon, lat) = self.ground.coords_from_vector3(groundtrack, derivs)
+        z = (pos - groundtrack).norm()
+
+        if axes == 2:
+            return (lon, lat)
+        else:
+            return (lon, lat, z)
 
     def vector3_from_coords(self, coords, obs=None, derivs=False):
         """Returns the position where a point with the given surface coordinates
@@ -112,8 +107,8 @@ class Limb(Surface):
             coords      a tuple of two or three Scalars defining the coordinates
                 lon     longitude in radians.
                 lat     latitude in radians
-                elev    a rough measure of distance from the surface, in km;
-            obs         position of the observer in the surface frame; ignored.
+                z       the perpendicular distance from the surface, in km;
+            obs         position of the observer in the surface frame.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to observer and to the coordinates.
 
@@ -128,9 +123,16 @@ class Limb(Surface):
                         [3,3].
         """
 
-        pass
+        lon = Scalar.as_standard(coords[0])
+        lat = Scalar.as_standard(coords[1])
+        z = Scalar.as_standard(coords[2])
 
-    def intercept(self, obs, los, derivs=False, groundtrack=False):
+        groundtrack = self.ground.vector3_from_coords((lon,lat), derivs=derivs)
+        normal = self.ground.normal(groundtrack, derivs=derivs).unit()
+        return groundtrack + z * normal
+
+    def intercept(self, obs, los, derivs=False, t_guess=None,
+                  groundtrack=False):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
@@ -139,13 +141,14 @@ class Limb(Surface):
             los         line of sight as a Vector3, with optional units.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
+            t_guess     initial guess at the t array, optional.
             groundtrack True to include the surface intercept points of the body
                         associated with each limb intercept. This array can
                         speed up any subsequent calculations such as calls to
                         normal(), and can be used to determine locations in
                         body coordinates.
 
-        Return:         a tuple (pos, t) where
+        Return:         a tuple (pos, t) where:
             pos         a unitless Vector3 of intercept points on the surface,
                         in km.
             t           a unitless Scalar such that:
@@ -160,10 +163,14 @@ class Limb(Surface):
                         derivatives of t. For purposes of differentiation, los
                         is assumed to have unit length.
 
-                        If groundtrack is True, then pos contains a subfield
-                        "groundtrack" that contains the associated points on
-                        the body surface as a Vector3.
+                        If groundtrack is True, pos contains a subfield
+                        "groundtrack" containing the associated positions on the
+                        surface of the body.
         """
+
+        if derivs:
+            raise NotImplementedError("Limb.intercept() " +
+                                      " does not implement derivatives")
 
         # Convert to standard units
         obs = Vector3.as_standard(obs)
@@ -187,18 +194,19 @@ class Limb(Surface):
         #
         # t = -(obs dot los) / (los dot los)
 
-        t = -obs.dot(los) / los.dot(los)
+        if t_guess is None:
+            t = -obs.dot(los) / los.dot(los)
+        else:
+            t = t_guess.copy()
 
-        prev_max_dt = 3.e99
-        max_dt = 1.e98
-        helper = None       # To speed up calls to intercept_normal_to()
+        max_dt = 1.e99
+        guess = None       # Used to speed up calls to intercept_normal_to()
 
-        if Limb.DEBUG: print "LIMB START"
-        while (max_dt < prev_max_dt * 0.5 or max_dt > 1.e-3):
+        for iter in range(SURFACE_PHOTONS.max_iterations):
             pos = obs + t * los
 
-            (cept, helper) = self.ground.intercept_normal_to_iterated(pos,
-                                                     derivs=True, guess=helper)
+            (cept, guess) = self.ground.intercept_normal_to_iterated(pos,
+                                                     derivs=True, t_guess=guess)
             perp = self.ground.normal(cept, derivs=True)
 
             df_dt = (perp.d_dpos * cept.d_dpos * los).dot(los)
@@ -208,17 +216,23 @@ class Limb(Surface):
 
             prev_max_dt = max_dt
             max_dt = abs(dt).max()
-            if Limb.DEBUG: print "LIMB:", max_dt, np.sum(t.mask)
+
+            if LOGGING.surface_iterations or Limb.DEBUG:
+                print LOGGING.prefix, "Surface.limb.intercept", iter, max_dt
+
+            if (max_dt <= SURFACE_PHOTONS.dlt_precision or
+                max_dt >= prev_max_dt * 0.5): break
 
         pos = obs + t * los
-
-        if groundtrack:
-            cept = self.ground.intercept_normal_to_iterated(pos,guess=helper)[0]
-            pos.insert_subfield("groundtrack", cept)
 
         if derivs:
             raise NotImplementedError("Limb.intercept() " +
                                       " does not implement derivatives")
+
+        if groundtrack:
+            track = self.ground.intercept_normal_to_iterated(pos,
+                                                             t_guess=guess)[0]
+            pos.insert_subfield("groundtrack", track)
 
         return (pos, t)
 
@@ -248,15 +262,41 @@ class Limb(Surface):
         if "groundtrack" in pos.subfields.keys():
             groundtrack = pos.groundtrack
         else:
-            groundtrack = self.ground.intercept_normal_to(pos)
+            groundtrack = self.ground.intercept_normal_to(pos, derivs=derivs)
 
-        perp = self.ground.normal(groundtrack)
+        return self.ground.normal(groundtrack, derivs=derivs)
 
-        if derivs:
-            raise NotImplementedError("Limb.normal() " +
-                                      "does not implement derivatives")
+    ############################################################################
+    # Latitude conversions
+    ############################################################################
 
-        return perp
+    def lat_to_centric(self, lat):
+        """Converts a latitude value given in internal spheroid coordinates to
+        its planetocentric equivalent.
+        """
+
+        return self.ground.lat_to_centric(lat)
+
+    def lat_to_graphic(self, lat):
+        """Converts a latitude value given in internal spheroid coordinates to
+        its planetographic equivalent.
+        """
+
+        return self.ground.lat_to_graphic(lat)
+
+    def lat_from_centric(self, lat):
+        """Converts a latitude value given in planetocentric coordinates to its
+        equivalent value in internal spheroid coordinates.
+        """
+
+        return self.ground.lat_from_centric(lat)
+
+    def lat_from_graphic(self, lat):
+        """Converts a latitude value given in planetographic coordinates to its
+        equivalent value in internal spheroid coordinates.
+        """
+
+        return self.ground.lat_from_graphic(lat)
 
 ################################################################################
 # UNIT TESTS
@@ -268,19 +308,38 @@ class Test_Limb(unittest.TestCase):
 
     def runTest(self):
 
+        save_dlt_precision = SURFACE_PHOTONS.dlt_precision
+        SURFACE_PHOTONS.dlt_precision = 0
+
         from oops_.frame.frame_ import Frame
         from oops_.path.path_ import Path
 
         REQ  = 60268.
         RPOL = 50000.
-        limb = Limb("SSB", "J2000", (REQ, REQ, RPOL), exclusion=1)
+        ground = Spheroid("SSB", "J2000", (REQ, RPOL))
+        limb = Limb(ground, exclusion=1)
 
         obs = Vector3(np.random.random((1000,3)) * 4.*REQ + REQ)
         los = Vector3(np.random.random((1000,3)))
 
         (cept,t) = limb.intercept(obs, los, groundtrack=True)
 
-        self.assertTrue(abs(limb.normal(cept).sep(los) - np.pi/2) < 1.e-8)
+        self.assertTrue(abs(limb.normal(cept).sep(los) - np.pi/2) < 1.e-5)
+
+        lon = np.random.random(10) * 2.*np.pi
+        lat = np.arcsin(np.random.random(10) * 2. - 1.)
+        z = np.random.random(10) * 10000.
+
+        pos = limb.vector3_from_coords((lon,lat,z))
+        coords = limb.coords_from_vector3(pos, axes=3)
+
+        self.assertTrue(abs(coords[0] - lon) < 1.e-6)
+        self.assertTrue(abs(coords[1] - lat) < 1.e-6)
+        self.assertTrue(abs(coords[2] - z) < 1.e-2)
+
+        SURFACE_PHOTONS.dlt_precision = save_dlt_precision
+
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

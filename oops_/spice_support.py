@@ -16,7 +16,6 @@ import oops_.registry as registry
 # corresponding names in the Frame and Path registries.
 
 FRAME_TRANSLATION = {"J2000":"J2000", cspice.namfrm("J2000"):"J2000"}
-
 PATH_TRANSLATION = {"SSB":"SSB", 0:"SSB", "SOLAR SYSTEM BARYCENTER":"SSB"}
 
 ################################################################################
@@ -120,6 +119,14 @@ def frame_id_and_name(arg):
 
         # If so, return the name of the associated frame
         return cspice.cidfrm(id)
+
+########################################
+
+def initialize():
+    global FRAME_TRANSLATION, PATH_TRANSLATION
+
+    FRAME_TRANSLATION = {"J2000":"J2000", cspice.namfrm("J2000"):"J2000"}
+    PATH_TRANSLATION = {"SSB":"SSB", 0:"SSB", "SOLAR SYSTEM BARYCENTER":"SSB"}
 
 ################################################################################
 # UNIT TESTS

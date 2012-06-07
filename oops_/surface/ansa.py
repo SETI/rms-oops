@@ -27,6 +27,10 @@ class Ansa(Surface):
 
     COORDINATE_TYPE = "cylindrical"
 
+    # Class constants to override where derivs are undefined
+    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
+    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
+
     def __init__(self, origin, frame, gravity=None, ringplane=None):
         """Constructor for an Ansa Surface.
 
@@ -229,7 +233,7 @@ class Ansa(Surface):
 
         return pos
 
-    def intercept(self, obs, los, derivs=False):
+    def intercept(self, obs, los, derivs=False, t_guess=None):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
@@ -238,6 +242,7 @@ class Ansa(Surface):
             los         line of sight as a Vector3, with optional units.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
+            t_guess     initial guess at the t array, optional.
 
         Return:         (pos, t)
             pos         a unitless Vector3 of intercept points on the surface,
@@ -524,6 +529,8 @@ class Test_Ansa(unittest.TestCase):
         dt_dlos_test = (t1 - t0) / eps * los_norm
         self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,2]) < 3.e-3)
         self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,0,2]) < 3.e-3)
+
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

@@ -15,6 +15,7 @@ import numpy as np
 
 from oops_.surface.surface_ import Surface
 from oops_.array.all import *
+from oops_.config import SURFACE_PHOTONS, LOGGING
 import oops_.registry as registry
 
 class Spheroid(Surface):
@@ -35,12 +36,14 @@ class Spheroid(Surface):
     direction of increasing elevation is not exactly normal to the surface.
     """
 
-    UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
-    ONES_VECTOR = Vector3([1,1,1])
-
     COORDINATE_TYPE = "spherical"
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
+
+    # Class constants to override where derivs are undefined
+    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
+    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
+    intercept_with_normal_DERIVS_ARE_IMPLEMENTED = False
 
     def __init__(self, origin, frame, radii, exclusion=0.95):
         """Constructor for a Spheroid surface.
@@ -123,6 +126,9 @@ class Spheroid(Surface):
         lat = (z/r).arcsin()
         lon = y.arctan2(x) % (2.*np.pi)
 
+        if derivs is False: derivs = (False, False, False)
+        if derivs is True: derivs = (True, True, True)
+
         if np.any(derivs):
             raise NotImplementedError("Spheroid.coords_from_vector3() " +
                                       " does not implement derivatives")
@@ -161,7 +167,7 @@ class Spheroid(Surface):
         lat = Scalar.as_standard(coords[1])
 
         if len(coords) == 2:
-            r = Scalar(0.)
+            r = Scalar(self.req)
         else:
             r = Scalar.as_standard(coords[2]) + self.req
 
@@ -178,7 +184,7 @@ class Spheroid(Surface):
 
         return pos
 
-    def intercept(self, obs, los, derivs=False):
+    def intercept(self, obs, los, derivs=False, t_guess=None):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
@@ -187,6 +193,7 @@ class Spheroid(Surface):
             los         line of sight as a Vector3, with optional units.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
+            t_guess     initial guess at the t array, optional.
 
         Return:         a tuple (pos, t) where
             pos         a unitless Vector3 of intercept points on the surface,
@@ -274,20 +281,16 @@ class Spheroid(Surface):
             #           (b.sign()*dsqrt - b)*d_inv2a_da * da_dlos).as_vectorn()
             # dt_dobs = (inv2a * (b.sign()*d_dsqrt_dobs - db_dobs)).as_vectorn()
             # 
-            # dpos_dobs = (los.as_column() * dt_dobs.as_row() +
-            #              Spheroid.UNIT_MATRIX)
-            # dpos_dlos = (los.as_column() * dt_dlos.as_row() +
-            #              Spheroid.UNIT_MATRIX * t)
+            # dpos_dobs = los.as_column() * dt_dobs.as_row() + MatrixN.UNIT33
+            # dpos_dlos = los.as_column() * dt_dlos.as_row() + MatrixN.UNIT33*t
 
             dt_dlos = ((d_bsign_sqrtd_dlos_div2
                         - db_dlos_div2 - 2 * t * da_dlos_div2) / a).as_vectorn()
             dt_dobs = ((d_bsign_sqrtd_dobs_div2
                         - db_dobs_div2) / a).as_vectorn()
 
-            dpos_dobs = (los.as_column() * dt_dobs.as_row() +
-                         Spheroid.UNIT_MATRIX)
-            dpos_dlos = (los.as_column() * dt_dlos.as_row() +
-                         Spheroid.UNIT_MATRIX * t)
+            dpos_dobs = los.as_column() * dt_dobs.as_row() + MatrixN.UNIT33
+            dpos_dlos = los.as_column() * dt_dlos.as_row() + MatrixN.UNIT33 * t
 
             los_norm = los.norm()
             pos.insert_subfield("d_dobs", dpos_dobs)
@@ -371,17 +374,17 @@ class Spheroid(Surface):
 
         return self.intercept_normal_to_iterated(pos, derivs)[0]
 
-    def intercept_normal_to_iterated(self, pos, derivs=False, guess=None):
+    def intercept_normal_to_iterated(self, pos, derivs=False, t_guess=None):
         """This is the same as above but allows an initial guess at the t array
         to be passed in, and returns a tuple containing both the intercept and
-        the values of t.
+        the values of t. Also used by the Limb class.
 
         Input:
             pos         a Vector3 of positions near the surface, with optional
                         units.
             derivs      true to return a matrix of partial derivatives
                         d(intercept)/d(pos).
-            guess       initial guess at the t array.
+            t_guess     initial guess at the t array.
 
         Return:         a tuple (pos,t):
             intercept   a unitless vector3 of surface intercept points. Where no
@@ -433,20 +436,16 @@ class Spheroid(Surface):
         # df/dt = -2 (pos * scale) dot (pos * scale**2)
 
         # Make an initial guess at t, if necessary
-        if guess is None:
+        if t_guess is None:
             cept = (pos * self.unsquash).unit() * self.radii
             t = (pos - cept).norm() / self.normal(cept).norm()
         else:
-            t = guess.copy(False)
+            t = t_guess.copy(False)
 
         # Terminate when accuracy stops improving by at least a factor of 2
-        prev_max_dt = 3.e99
         max_dt = 1.e99
-
-        if Spheroid.DEBUG: print "SPHEROID START"
-
-        while (max_dt < prev_max_dt * 0.5 or max_dt > 1.e-3):
-            denom = Spheroid.ONES_VECTOR + t * self.unsquash_sq
+        for iter in range(SURFACE_PHOTONS.max_iterations):
+            denom = Vector3.ONES + t * self.unsquash_sq
             pos_scale = pos * self.unsquash / denom
             f = pos_scale.dot(pos_scale) - self.req_sq
             df_dt_div_neg2 = pos_scale.dot(pos_scale * self.unsquash_sq/denom)
@@ -456,9 +455,15 @@ class Spheroid(Surface):
 
             prev_max_dt = max_dt
             max_dt = abs(dt).max()
-            if Spheroid.DEBUG: print "SPHEROID", max_dt, np.sum(t.mask)
 
-        denom = Spheroid.ONES_VECTOR + t * self.unsquash_sq
+            if LOGGING.surface_iterations or Spheroid.DEBUG:
+                print LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
+                print iter, max_dt
+
+            if (max_dt <= SURFACE_PHOTONS.dlt_precision or
+                max_dt >= prev_max_dt * 0.5): break
+
+        denom = Vector3.ONES + t * self.unsquash_sq
         cept = pos / denom
 
         if derivs:
@@ -515,13 +520,12 @@ class Spheroid(Surface):
             perp = perp.plain()
 
             # Note that (I + t dperp/dcept) is diagonal!
-            scale = Spheroid.UNIT_MATRIX + t * dperp_dcept
+            scale = MatrixN.UNIT33 + t * dperp_dcept
             scale.vals[...,0,0] = 1 / scale.vals[...,0,0]
             scale.vals[...,1,1] = 1 / scale.vals[...,1,1]
             scale.vals[...,2,2] = 1 / scale.vals[...,2,2]
 
-            dcept_dpos = scale * (Spheroid.UNIT_MATRIX
-                                                - perp.as_column() * dt_dpos)
+            dcept_dpos = scale * (MatrixN.UNIT33 - perp.as_column() * dt_dpos)
 
             t.insert_subfield("d_dpos", dt_dpos)
             cept.insert_subfield("d_dpos", dcept_dpos)
@@ -692,7 +696,7 @@ class Test_Spheroid(unittest.TestCase):
             self.assertTrue(abs(dperp_dpos - perp.d_dpos.as_row(i)) < 1.e-4)
 
         # Test intercept_normal_to() derivative
-        pos = Vector3(np.random.random((100,3)) * 4.*REQ + REQ)
+        pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         (cept,t) = planet.intercept_normal_to_iterated(pos, derivs=True)
         self.assertTrue(abs((cept*planet.unsquash).norm() - planet.req) < 1.e-6)
 
@@ -701,18 +705,22 @@ class Test_Spheroid(unittest.TestCase):
         perp = planet.normal(cept)
         for i in range(3):
             (cept1,t1) = planet.intercept_normal_to_iterated(pos + dpos[i],
-                                                             False, t.plain())
+                                                             derivs=False,
+                                                             t_guess=t.plain())
             (cept2,t2) = planet.intercept_normal_to_iterated(pos - dpos[i],
-                                                             False, t.plain())
+                                                             derivs=False,
+                                                             t_guess=t.plain())
             dcept_dpos = (cept1 - cept2) / (2*eps)
-            ref = cept.d_dpos.as_column(i).as_vector3()
-
             self.assertTrue(abs(dcept_dpos.sep(perp) - np.pi/2) < 1.e-5)
+
+            ref = cept.d_dpos.as_column(i).as_vector3()
             self.assertTrue(abs(dcept_dpos - ref) < 1.e-5)
 
             dt_dpos = (t1 - t2) / (2*eps)
             ref = t.d_dpos.vals[...,0,i]
             self.assertTrue(abs(dt_dpos/ref - 1) < 1.e-5)
+
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

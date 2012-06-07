@@ -11,5 +11,6 @@ from oops_.frame.ringframe      import RingFrame
 from oops_.frame.rotation       import Rotation
 from oops_.frame.spiceframe     import SpiceFrame
 from oops_.frame.spinframe      import SpinFrame
+from oops_.frame.tracker        import Tracker
 
 ################################################################################

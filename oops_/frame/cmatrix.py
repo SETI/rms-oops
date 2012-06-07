@@ -131,8 +131,7 @@ class Test_Cmatrix(unittest.TestCase):
         from oops_.path.spicepath import SpicePath
         from oops_.event import Event
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
         ignore = SpicePath("MARS", "SSB")
         mars = SpiceFrame("IAU_MARS", "J2000")
@@ -201,8 +200,7 @@ class Test_Cmatrix(unittest.TestCase):
         self.assertTrue(np.all(wrt_mars.vel.y[:,0] == -wrt_mars90s.vel.x[:,3]))
         self.assertTrue(np.all(wrt_mars.vel.z[:,0] ==  wrt_mars90s.vel.z[:,3]))
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

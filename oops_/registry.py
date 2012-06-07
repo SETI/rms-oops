@@ -235,4 +235,9 @@ def is_id(item):
     abbr = item.__class__.__name__[0:3]
     return abbr in ("int", "str")
 
+def initialize():
+    initialize_path_registry()
+    initialize_frame_registry()
+    initialize_body_registry()
+
 ################################################################################

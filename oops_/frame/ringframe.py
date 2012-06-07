@@ -122,8 +122,7 @@ class Test_RingFrame(unittest.TestCase):
         from oops_.path.spicepath import SpicePath
         from oops_.event import Event
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
         center = SpicePath("MARS", "SSB")
         planet = SpiceFrame("IAU_MARS", "J2000")
@@ -161,8 +160,7 @@ class Test_RingFrame(unittest.TestCase):
         self.assertTrue(np.all(np.abs(diff.vals) < 1.e-4))
         self.assertTrue(np.mean(np.abs(diff.vals) > 1.e-8))
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

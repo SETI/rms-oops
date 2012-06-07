@@ -230,7 +230,7 @@ class OrbitPlane(Surface):
 
         return self.ringplane.vector3_from_coords(coords, obs, derivs=derivs)
 
-    def intercept(self, obs, los, derivs=False):
+    def intercept(self, obs, los, derivs=False, t_guess=None):
         """Returns the position where a specified line of sight intercepts the
         surface.
 
@@ -239,6 +239,7 @@ class OrbitPlane(Surface):
             los         line of sight as a Vector3, with optional units.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to obs and los.
+            t_guess     initial guess at the t array, optional.
 
         Return:         (pos, t)
             pos         a unitless Vector3 of intercept points on the surface,

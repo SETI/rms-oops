@@ -746,8 +746,7 @@ class Test_Frame(unittest.TestCase):
         from spiceframe import SpiceFrame
         from oops_.path.spicepath import SpicePath
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
         # QuickFrame tests
         ignore = SpicePath("EARTH", "SSB")
@@ -769,8 +768,7 @@ class Test_Frame(unittest.TestCase):
         # ignore = moon.transform_at_time(test, quick=False)  # takes about 10 sec
         ignore = quick.transform_at_time(test) # takes way less than 1 sec
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
 ########################################
 if __name__ == '__main__':

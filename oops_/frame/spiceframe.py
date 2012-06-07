@@ -126,8 +126,7 @@ class Test_SpiceFrame(unittest.TestCase):
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
 
         ignore = SpicePath("EARTH", "SSB")
 
@@ -275,8 +274,8 @@ class Test_SpiceFrame(unittest.TestCase):
         self.assertTrue(np.abs(test_ra - right_ascension) < 0.5)
         self.assertTrue(np.abs(test_dec - declination) < 0.5)
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
+        registry.initialize()
+        spice.initialize()
 
         Path.USE_QUICKPATHS = True
         Frame.USE_QUICKFRAMES = True

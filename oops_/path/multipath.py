@@ -10,6 +10,7 @@ from oops_.array.all import *
 from oops_.event import Event
 
 import oops_.registry as registry
+import oops_.spice_support as spice
 
 class MultiPath(Path):
     """A MultiPath gathers a set of paths into a single N-dimensional Path
@@ -127,8 +128,7 @@ class Test_MultiPath(unittest.TestCase):
 
         from spicepath import SpicePath
 
-        registry.initialize_path_registry()
-        registry.initialize_frame_registry()
+        registry.initialize()
 
         sun   = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SSB")
@@ -187,8 +187,8 @@ class Test_MultiPath(unittest.TestCase):
         self.assertTrue(event012a.pos[0:2] == event01x.pos)
         self.assertTrue(event012a.vel[0:2] == event01x.vel)
 
-        registry.initialize_path_registry()
-        registry.initialize_frame_registry()
+        registry.initialize()
+        spice.initialize()
 
 ########################################
 if __name__ == '__main__':

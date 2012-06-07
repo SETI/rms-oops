@@ -1,5 +1,8 @@
 ################################################################################
 # oops/instrument/hst/wfpc2/__init__.py: HST subclass WFPC2
+#
+# 6/7/12 MRS - revised super().register_frame() so that it can support WFPC2;
+#   local method modified to call super() version.
 ################################################################################
 
 import os.path
@@ -135,9 +138,8 @@ class WFPC2(HST):
                               data_filespec)
 
         # Attempt to load and return the mask
+        mask_filespec = os.path.join(head[:-3] + mask_tag + head[-1], tail)
         try:
-            mask_filespec = os.path.join(head[:-3] + mask_tag + head[-1], tail)
-
             f = pyfits.open(mask_filespec)
             mask_array = f[layer].data
             f.close()
@@ -151,8 +153,8 @@ class WFPC2(HST):
                 raise IOError("WFPC2 mask file not found: " +
                               mask_filespec)
 
-    def define_frame(self, hst_file, parameters={}):
-        """Returns the Cmatrix Frame that rotates from J2000 coordinates into
+    def register_frame(self, hst_file, fov, parameters={}):
+        """Returns the Tracker frame that rotates from J2000 coordinates into
         the frame of the HST observation.
         """
 
@@ -164,13 +166,9 @@ class WFPC2(HST):
         else:
             layer = 1
 
-        header1 = hst_file[layer].header
-        ra    = header1["CRVAL1"]
-        dec   = header1["CRVAL2"]
-        clock = header1["ORIENTAT"]
-        frame_id = hst_file[0].header["FILENAME"] + "_" + WFPC2.CHIPS[layer]
-
-        return oops.Cmatrix(ra, dec, clock, frame_id)
+        return super(WFPC2,self).register_frame(hst_file, fov, parameters,
+                                            index = layer,
+                                            suffix = "_" + WFPC2.CHIPS[layer])
 
     # The IDC dictionaries for WFPC2 are keyed by (FILTNAM1, FILTNAM2, DETCHIP)
     def define_fov(self, hst_file, parameters={}):

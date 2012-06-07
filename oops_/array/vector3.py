@@ -4,6 +4,7 @@
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 # Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
 # 3/2/12 MRS - Integrated with VectorN and MatrixN.
+# 6/7/12 MRS - Added the spin() and replace_zeros() methods.
 ################################################################################
 
 import numpy as np
@@ -137,6 +138,35 @@ class Vector3(Array):
 
         return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
 
+    def spin(self, pole, angle=None):
+        """Returns the result of rotating this Vector3 around the given pole
+        vector by the given angle. If angle is None, then the rotation angle
+        is pole.norm().arcsin().
+        """
+
+        pole = Vector3.as_vector3(pole)
+
+        if angle is None:
+            norm = pole.norm()
+            angle = norm.arcsin()
+            norm.replace_zeros()
+            zaxis = pole / norm
+            zaxis.replace_zeros()
+        else:
+            angle = Scalar.as_scalar(angle)
+            mask = (angle.vals == 0.)
+            if np.any(mask):
+                pole = pole.copy().replace(mask, Vector3.ZAXIS)
+            zaxis = pole.unit()
+
+        z = self.dot(zaxis)
+        perp = self - z * zaxis
+        r = perp.norm()
+        perp.replace_zeros(Vector3.XAXIS)
+        xaxis = perp.unit()
+        yaxis = zaxis.cross(xaxis)
+        return r * (angle.cos() * xaxis + angle.sin() * yaxis) + z * zaxis
+
     def cross_product_as_matrix(self):
         """Returns a MatrixN object for which matrix multiply produces the same
         result as taking a cross product with this vector."""
@@ -160,6 +190,35 @@ class Vector3(Array):
         """Converts the vector to a 1x3 row matrix."""
 
         return VectorN(self).as_row()
+
+    def replace(self, mask, value=(0.,0.,1.)):
+        """Replaces masked entries with the given value."""
+
+        if not np.any(mask): return
+
+        value = Vector3.as_vector3(value)
+        if np.shape(mask) == ():
+            self.vals[:] = value.vals
+        else:
+            self.vals[mask,:] = value.vals
+
+    def zero_mask(self):
+        """Returns a boolean mask of all the zero-valued vectors."""
+
+        return (np.sum(self.vals**2, axis=-1) == 0.)
+
+    def replace_zeros(self, value=(0.,0.,1.)):
+        """Replaces zero-valued entries with the given replacement."""
+
+        mask = (np.sum(self.vals**2, axis=-1) == 0.)
+        self.replace(self.zero_mask(), value)
+
+# Useful class constants
+Vector3.ZERO  = Vector3([0,0,0])
+Vector3.XAXIS = Vector3([1,0,0])
+Vector3.YAXIS = Vector3([0,1,0])
+Vector3.ZAXIS = Vector3([0,0,1])
+Vector3.ONES  = Vector3([1,1,1])
 
 ################################################################################
 # Once defined, register with Array class
@@ -368,7 +427,7 @@ class Test_Vector3(unittest.TestCase):
         self.assertEqual(aperp.shape, [2,3,4,2])
         self.assertEqual(aproj.shape, [2,3,4,2])
 
-        eps = 3.e-14
+        eps = 1.e-13
         self.assertTrue(aperp.sep(b) > np.pi/2 - eps)
         self.assertTrue(aperp.sep(b) < np.pi/2 + eps)
         self.assertTrue(aproj.sep(b) % np.pi > -eps)
