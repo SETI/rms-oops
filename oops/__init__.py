@@ -2,6 +2,8 @@
 # oops/__init__.py
 #
 # 3/8/12 Created by MRS.
+# 6/28/12 MRS - Added "import cspice" to solve the conflict between cspice and
+#   MKL functions inconveniently both named dpstrf_().
 ################################################################################
 
 # Examples of import statements and how they work:
@@ -39,6 +41,10 @@
 #   This statement imports the selected components of oops without the "oops"
 #   prefix, e.g., surface.Spheroid and path.SpicePath. It does not import the
 #   remainder of oops.
+
+import cspice       # This is CRITICAL to avoid the MKL error in calls to
+                    # dpstrf(). Somehow, this ensures that the cspice function
+                    # overrides the MKL function of the same name.
 
 from oops_.array.all import *
 
