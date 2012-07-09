@@ -51,6 +51,7 @@ class Meshgrid(object):
         """show overview of Meshgrid for debugging purposes."""
         s = "Meshgrid\n\tshape = " + str(self.shape) + "\n"
         s += "\tfov.uv_los: " + str(self.fov.uv_los.vals) + "\n"
+        s += "\tfov.uv_scale: " + str(self.fov.uv_scale.vals) + "\n"
         return s
 
     @staticmethod

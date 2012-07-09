@@ -89,6 +89,14 @@ class Spheroid(Surface):
         # geometry.
 
         self.exclusion = exclusion * self.rpol
+    
+    def __str__(self):
+        """show overview of Spheroid for debugging purposes."""
+        s = "Spheroid\n\torigin_id: " + self.origin_id + "\n"
+        s += "\tframe_id: " + self.frame_id + "\n"
+        s += "\tradii: " + str(self.radii) + "\n"
+        s += "\texclusion: " + str(self.exclusion) + "\n"
+        return s
 
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
@@ -460,6 +468,8 @@ class Spheroid(Surface):
                 print LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
                 print iter, max_dt
 
+            if max_dt.shape == []:
+                break
             if (max_dt <= SURFACE_PHOTONS.dlt_precision or
                 max_dt >= prev_max_dt * 0.5): break
 

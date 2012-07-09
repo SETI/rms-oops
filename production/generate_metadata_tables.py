@@ -1,10 +1,10 @@
+import oops
 import numpy as np
 import sys
 import csv
 import datetime
 
 import pylab
-import oops
 import oops.inst.cassini.iss as cassini_iss
 import oops.inst.cassini.vims as cassini_vims
 import oops_.surface.ansa as ansa_
@@ -504,8 +504,8 @@ spacer = '    ,   '
 radii_ranges = []
 geom_file_name = ""
 
-PRINT = False
-DISPLAY = False
+PRINT = True
+DISPLAY = True
 OBJC_DISPLAY = False
 
 def add_info(array, minmax=None):
@@ -719,6 +719,25 @@ def get_error_buffer_size(snapshot, file_type):
             error_buffer = 6
     return error_buffer
 
+def snapshot_has_partial_intercept(snapshot, resolution, file_type):
+    error_buffer = get_error_buffer_size(snapshot, file_type)
+    limit = snapshot.fov.uv_shape + oops.Pair(np.array([error_buffer,
+                                                        error_buffer]))
+    
+    meshgrid = Meshgrid.for_fov(snapshot.fov, undersample=resolution,
+                                limit=limit, swap=True)
+    bp = oops.Backplane(snapshot, meshgrid)
+    
+    intercepted = bp.where_intercepted("saturn_main_rings")
+    
+    if np.all(intercepted.vals):
+        return 1
+    elif np.any(intercepted.vals):
+        return 0
+    else:
+        return -1
+
+
 def generate_metadata(snapshot, resolution, file_type):
     
     #print the camera field
@@ -744,16 +763,13 @@ def generate_metadata(snapshot, resolution, file_type):
     #                            swap=True)
     bp = oops.Backplane(snapshot, meshgrid)
 
-    intercepted = bp.where_intercepted("saturn_main_rings")
-    """
-    if np.all(intercepted.vals):
-        print "VIEW CLAIMS ENTIRE INTERCEPTION WITH RINGS"
-    elif np.any(intercepted.vals):
-        print "VIEW CLAIMS PARTIAL INTERCEPTION WITH RINGS"
-    else:
-        print "VIEW CLAIMS NO INTERCEPTION WITH RINGS"
-    show_info("Intercepted:", intercepted.vals)
-    """
+    try:
+        intercepted = bp.where_intercepted("saturn_main_rings")
+    except:
+        return None
+    
+    #show_info("Intercepted:", intercepted.vals)
+    
     saturn_in_front = bp.where_in_front("saturn", "saturn_main_rings")
     saturn_intercepted = bp.where_intercepted("saturn")
     """
@@ -951,14 +967,40 @@ def index_file_type(file_name):
     for line in fd:
         if "INSTRUMENT_ID" in line:
             if VIMS_TYPE in line:
+                fd.close()
                 return VIMS_TYPE
         elif "DWELL_TIME" in line:
+            fd.close()
             return UVIS_TYPE
+    fd.close()
     return ISS_TYPE
-        
-        
+
+
+def look_for_proper_rotation(file_name, omit_range, fortran_list, j):
+    file_type = index_file_type(file_name)
+    snapshots = cassini_vims.different_rots_from_index(index_file_name, start_file_index, j)
+
+    nSnapshots = len(snapshots)
+    if stop_file_index > 0 and stop_file_index < nSnapshots:
+        nSnapshots = stop_file_index
+
+    snapshot = snapshots[0]
+    if snapshot_has_partial_intercept(snapshot, grid_resolution, file_type):
+        print "snapshot %d does not have partial intercept" % j
+    else:
+        print "snapshot %d has partial intercept!!!!!!!!!!!!!!!!!" % j
 
 def generate_table_for_index(file_name, omit_range, fortran_list):
+    """Create the geometry objects for all the image files in the list of files
+        within the index file file_name.
+        
+        Input:
+        file_name       index file for this volume.
+        omit_range      list of images, by index, to omit that are not
+        omitted in the FORTRAN code.
+        fortran_list    list of files processed in the FORTRAN code (so we
+        can avoid further segmnentation faults.
+        """
     print "omit_range = ", omit_range
     output_buf = ''
     file_type = index_file_type(file_name)
@@ -992,19 +1034,15 @@ def generate_table_for_index(file_name, omit_range, fortran_list):
         #for snapshot in snapshots:
 
         image_code = image_code_name(snapshot, file_type)
-		#print "Observation: ", snapshot
-        #print "i: ", i
-        #print "image_code: ", image_code
-        #print "time: ", snapshot.time
-        #continue
     
         info_len = len(info_str)
         i1 = i + 1
         init_info_str = "    " + str(i+1) + " of " + str(nSnapshots)
         if i not in omit_range and (len(fortran_list) == 0) or (image_code in fortran_list):
             geometry = generate_metadata(snapshot, grid_resolution, file_type)
-            geometries.append(geometry)
-            actual_i += 1
+            if geometry is not None:
+                geometries.append(geometry)
+                actual_i += 1
         
         # write time and image number status to stdout
         now = datetime.datetime.now()
@@ -1107,6 +1145,9 @@ for row in volumeReader:
     len_of_row = len(row)
     for i in range(3,len_of_row):
         omit_range.append(int(row[i]))
+    #for j in range(64):
+    #    look_for_proper_rotation(index_file_name, omit_range, fortran_list, j)
+    #break
     print "Generating geometry table for file: ", index_file_name
     geometries = generate_table_for_index(index_file_name, omit_range,
                                           fortran_list)

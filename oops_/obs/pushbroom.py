@@ -103,14 +103,6 @@ class Pushbroom(Observation):
         time and index are masked.
         """
 
-        """print "pushbroom path_id: ", self.path_id
-        print "pushbroom frame_id: ", self.frame_id
-        print "pushbroom target: ", self.target
-        print "pushbroom time: ", self.time
-        print "pushbroom midtime: ", self.midtime
-        print "pushbroom tstride: ", self.tstride
-        print "pushbroom texp: ", self.texp
-        """
         uv_pair = Pair.as_pair(uv_pair)
 
         tstep = uv_pair.as_scalar(self.time_axis)

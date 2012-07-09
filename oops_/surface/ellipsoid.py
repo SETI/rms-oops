@@ -31,6 +31,8 @@ class Ellipsoid(Surface):
     direction of increasing elevation is not exactly normal to the surface.
     """
 
+    UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
+
     COORDINATE_TYPE = "spherical"
 
     # Class constants to override where derivs are undefined
@@ -206,14 +208,125 @@ class Ellipsoid(Surface):
         d_sqrt = d.sqrt()
         t = (d_sqrt - b) / (2. * a)
         pos = obs + t*los
-
+        
         if derivs:
-            raise NotImplementedError("ellipsoid intercept derivatives are " +
-                                      "not yet supported")
+            # Using step-by-step differentiation of the equations above
+            b_div2 = los_unsquashed.dot(obs_unsquashed)
+            d_div4 = b_div2**2 - a * c
+            bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
+            
+            # da_dlos = 2 * los * self.unsquash_sq
+            # db_dlos = 2 * obs * self.unsquash_sq
+            # db_dobs = 2 * los * self.unsquash_sq
+            # dc_dobs = 2 * obs * self.unsquash_sq
+            
+            da_dlos_div2 = los * self.unsquash_sq
+            db_dlos_div2 = obs * self.unsquash_sq
+            db_dobs_div2 = los * self.unsquash_sq
+            dc_dobs_div2 = obs * self.unsquash_sq
+            
+            # dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
+            # dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
+            
+            dd_dlos_div8 = b_div2 * db_dlos_div2 - c * da_dlos_div2
+            dd_dobs_div8 = b_div2 * db_dobs_div2 - a * dc_dobs_div2
+            
+            # dsqrt = d.sqrt()
+            # d_dsqrt_dd = 0.5 / dsqrt
+            # d_dsqrt_dlos = d_dsqrt_dd * dd_dlos
+            # d_dsqrt_dobs = d_dsqrt_dd * dd_dobs
+            
+            # d[bsign_sqrtd]/d[x] = 1/2 / bsign_sqrtd * d[d]/d[x]
+            #                     = 1/4 / bsign_sqrtd_div2 * d[d]/d[x]
+            
+            d_bsign_sqrtd_dlos_div2 = dd_dlos_div8 / bsign_sqrtd_div2
+            d_bsign_sqrtd_dobs_div2 = dd_dobs_div8 / bsign_sqrtd_div2
+            
+            # inv2a = 0.5/a
+            # d_inv2a_da = -2 * inv2a**2
+            # 
+            # dt_dlos = (inv2a * (b.sign()*d_dsqrt_dlos - db_dlos) +
+            #           (b.sign()*dsqrt - b)*d_inv2a_da * da_dlos).as_vectorn()
+            # dt_dobs = (inv2a * (b.sign()*d_dsqrt_dobs - db_dobs)).as_vectorn()
+            # 
+            # dpos_dobs = (los.as_column() * dt_dobs.as_row() +
+            #              Spheroid.UNIT_MATRIX)
+            # dpos_dlos = (los.as_column() * dt_dlos.as_row() +
+            #              Spheroid.UNIT_MATRIX * t)
+            
+            dt_dlos = ((d_bsign_sqrtd_dlos_div2
+                        - db_dlos_div2 - 2 * t * da_dlos_div2) / a).as_vectorn()
+            dt_dobs = ((d_bsign_sqrtd_dobs_div2
+                        - db_dobs_div2) / a).as_vectorn()
+            
+            dpos_dobs = (los.as_column() * dt_dobs.as_row() +
+                         Ellipsoid.UNIT_MATRIX)
+            dpos_dlos = (los.as_column() * dt_dlos.as_row() +
+                         Ellipsoid.UNIT_MATRIX * t)
+            
+            los_norm = los.norm()
+            pos.insert_subfield("d_dobs", dpos_dobs)
+            pos.insert_subfield("d_dlos", dpos_dlos * los_norm)
+            t.insert_subfield("d_dobs", dt_dobs.as_row())
+            t.insert_subfield("d_dlos", dt_dlos.as_row() * los_norm)
+
+        #if derivs:
+            #raise NotImplementedError("ellipsoid intercept derivatives are " +
+            #                          "not yet supported")
 
         return (pos, t)
 
-    def normal(self, position):
+    def intercept_neighborhood(self, obs, los, neighborhood, derivs=False):
+        """Returns the position where a specified line of sight intercepts the
+            surface.
+            
+            Input:
+            obs         observer position as a Vector3, with optional units.
+            los         line of sight as a Vector3, with optional units.
+            derivs      True to include the partial derivatives of the intercept
+            point with respect to obs and los.
+            
+            Return:         a tuple (pos, t) where
+            pos         a unitless Vector3 of intercept points on the surface,
+            in km.
+            t           a unitless Scalar such that:
+            position = obs + t * los
+            
+            If derivs is True, then pos and t are returned with
+            subfields "d_dobs" and "d_dlos", where the former
+            contains the MatrixN of partial derivatives with respect
+            to obs and the latter is the MatrixN of partial
+            derivatives with respect to los. The MatrixN item shapes
+            are [3,3] for the derivatives of pos, and [1,3] for the
+            derivatives of t.
+            """
+        
+        # Convert to standard units and un-squash
+        obs = Vector3.as_standard(obs)
+        los = Vector3.as_standard(los)
+        
+        obs_unsquashed = Vector3.as_standard(obs) * self.unsquash
+        los_unsquashed = Vector3.as_standard(los) * self.unsquash
+        
+        # Solve for the intercept distance, masking lines of sight that miss
+        my_req = self.req + neighborhood
+        my_req_sq = my_req**2
+        a = los_unsquashed.dot(los_unsquashed)
+        b = los_unsquashed.dot(obs_unsquashed) * 2.
+        c = obs_unsquashed.dot(obs_unsquashed) - my_req_sq
+        d = b**2 - 4. * a * c
+        
+        d_sqrt = d.sqrt()
+        t = (d_sqrt - b) / (2. * a)
+        pos = obs + t*los
+        
+        if derivs:
+            raise NotImplementedError("ellipsoid intercept derivatives are " +
+                                      "not yet supported")
+        
+        return (pos, t)
+
+    def normal(self, position, derivs=False):
         """Returns the normal vector at a position at or near a surface.
 
         Input:
@@ -232,7 +345,7 @@ class Ellipsoid(Surface):
                         [3,3].
         """
 
-        perp = Vector3.as_standard(pos) * self.unsquash_sq
+        perp = Vector3.as_standard(position) * self.unsquash_sq
 
         if derivs:
             raise NotImplementedError("ellipsoid normal derivatives are " +
