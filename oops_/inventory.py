@@ -3,11 +3,11 @@
 #
 # 6/12/12 Created (BSW)
 ################################################################################
+import oops
 
 import numpy as np
 import math
 
-import oops
 import oops_.config as config
 import oops_.constants as constants
 import oops_.registry as registry
@@ -145,8 +145,8 @@ class Inventory(object):
         los *= 1000000.
 
         # get some pixel maximums
-        max_x_pixel = uv_shape[0] + error_buffer_size
-        max_y_pixel = uv_shape[1] + error_buffer_size
+        max_x_pixel = uv_shape[0] + error_buffer_size - 1
+        max_y_pixel = uv_shape[1] + error_buffer_size - 1
         
         # if the dot product of the normal of each plane and the center of
         # object is less then negative the radius, we lie entirely outside
@@ -166,16 +166,22 @@ class Inventory(object):
         meshgrid = Meshgrid.for_fov(self.obs.fov, undersample=grid_resolution,
                                     limit=limit, swap=True)
         bp = oops.Backplane(self.obs, meshgrid)
-        saturn_distance = bp.distance(main_planet)
+        try:
+            saturn_distance = bp.distance(main_planet)
+        except:
+            return None
         target = self.obs.index_dict["TARGET_NAME"].strip().lower()
 
         potential_bodies = []
         body_positions = []
         for mass_body in self.bodies:
-            path = path_.Path.connect(mass_body.path_id, origin_id,
-                                      self.obs.frame_id)
-            abs_event = path.photon_to_event(image_event)
-            rel_event = abs_event.wrt_path(origin_id)
+            try:
+                path = path_.Path.connect(mass_body.path_id, origin_id,
+                                          self.obs.frame_id)
+                abs_event = path.photon_to_event(image_event)
+                rel_event = abs_event.wrt_path(origin_id)
+            except:
+                continue
             # first check that body is in front of camera
             if rel_event.pos.vals[2] < 0.:
                 continue;
@@ -204,7 +210,9 @@ class Inventory(object):
             else:
                 if saturn_distance.shape != []:
                     confirmed_bodies.append(main_planet)
-                target_saturn_distance = saturn_distance.vals
+                target_saturn_distance = np.ma.array(saturn_distance.vals,
+                                                     mask=saturn_distance.mask)
+                #target_saturn_distance = saturn_distance.vals
             
             body_number = 0
             for potential_body in potential_bodies:
@@ -237,7 +245,7 @@ class Inventory(object):
                         else:
                             # most time consuming test... test ring of points,
                             # but don't bother if there are no true mask values
-                            if np.any(target_saturn_distance.mask.vals):
+                            if np.any(target_saturn_distance.mask):
                                 # get radius, in pixels, at the distance of the
                                 # body in the FOV
                                 radius_los = np.array([potential_body.radius,
@@ -247,10 +255,10 @@ class Inventory(object):
                                 # since if they are blocked, all points in
                                 # between are blocked.
                                 pix_radius = self.obs.fov.uv_from_los(radius_los)
-                                ix1 = min(int(ix + pix_radius[0]), max_x_pixel)
-                                ix2 = max(int(ix - pix_radius[0]), 0)
-                                iy1 = min(int(iy + pix_radius[1]), max_y_pixel)
-                                iy2 = max(int(iy - pix_radius[1]), 0)
+                                ix1 = min(int(ix + pix_radius.vals[0]), max_x_pixel)
+                                ix2 = max(int(ix - pix_radius.vals[0]), 0)
+                                iy1 = min(int(iy + pix_radius.vals[1]), max_y_pixel)
+                                iy2 = max(int(iy - pix_radius.vals[1]), 0)
                                 if target_saturn_distance.mask[ix1][iy] or target_saturn_distance.mask[ix2][iy] or target_saturn_distance.mask[ix][iy1] or target_saturn_distance.mask[ix][iy2]:
                                     confirmed_bodies.append(p_body)
                 

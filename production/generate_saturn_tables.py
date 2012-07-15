@@ -3,6 +3,7 @@ import numpy as np
 import sys
 import csv
 import datetime
+import os
 
 import pylab
 import oops.inst.cassini.iss as cassini_iss
@@ -296,7 +297,7 @@ class BodySurfaceSummary(BodySurface):
         self.sub_obs_iau_longitude = parent.sub_obs_iau_longitude
         self.obs_distance_to_body_center = parent.obs_distance_to_body_center
     
-    def output_line(self):
+    def __str__(self):
         """output to a string line"""
         line = self.owner.obs_id
         line += ", %s" % self.owner.body_name
@@ -317,13 +318,13 @@ class BodySurfaceSummary(BodySurface):
         line += " %f," % np.float(np.any(self.behind_rings_flag.vals))
         line += " %f," % np.float(np.all(self.in_ring_shadow_flag.vals))
         line += " %f," % np.float(np.any(self.in_ring_shadow_flag.vals))
-        line += " %f," % self.sub_solar_geocentric_latitude.vals * oops.DPR
-        line += " %f," % self.sub_solar_geographic_latitude.vals * oops.DPR
-        line += " %f," % self.sub_solar_iau_longitude.vals * oops.DPR
-        line += " %f," % self.solar_distance_to_body_center.vals
-        line += " %f," % self.sub_obs_geocentric_latitude.vals * oops.DPR
-        line += " %f," % self.sub_obs_geographic_latitude.vals * oops.DPR
-        line += " %f," % self.sub_obs_iau_longitude.vals * oops.DPR
+        line += " %f," % (self.sub_solar_geocentric_latitude.vals * oops.DPR)
+        line += " %f," % (self.sub_solar_geographic_latitude.vals * oops.DPR)
+        line += " %f," % (360.0 - self.sub_solar_iau_longitude.vals * oops.DPR)
+        line += " %f," % (self.solar_distance_to_body_center.vals)
+        line += " %f," % (self.sub_obs_geocentric_latitude.vals * oops.DPR)
+        line += " %f," % (self.sub_obs_geographic_latitude.vals * oops.DPR)
+        line += " %f," % (360.0 - self.sub_obs_iau_longitude.vals * oops.DPR)
         line += " %f\n" % self.obs_distance_to_body_center.vals
         return line
 
@@ -376,7 +377,7 @@ class BodySurfaceDetail(BodySurface):
         self.behind_rings_flag = parent.behind_rings_flag
         self.in_ring_shadow_flag = parent.in_ring_shadow_flag
     
-    def output_line(self):
+    def __str__(self):
         """output to a string line"""
         line = self.owner.obs_id
         line += ", %s" % self.owner.body_name
@@ -520,7 +521,7 @@ class BodyLimb(BodySurface):
         self.incidence = parent.incidence
         self.range_to_limb = parent.range_to_limb
     
-    def output_line(self):
+    def __str__(self):
         """output to a string line"""
         line = self.owner.obs_id
         line += ", %s" % self.owner.body_name
@@ -565,11 +566,11 @@ class FileGeometry(object):
             self.details.append(new_detail)
         self.limb.copy(parent.limb)
 
-    def output(self):
-        lines = self.summary.output_line()
+    def __str__(self):
+        lines = str(self.summary)
         for detail in self.details:
-            lines += detail.output_line()
-        lines += self.limb.output_line()
+            lines += str(detail)
+        lines += str(self.limb)
         return lines
     
     def set_image_id(self, obs):
@@ -743,7 +744,7 @@ def generate_metadata(obs, resolution, file_type, body_name):
     result = bp.where_sunward(body_name)                 # night side flag
     geometry.summary.night_side_flag = result.copy()
     
-    result = bp.where_in_back(body_name, "saturn_main_rings")# where behind rings
+    result = bp.where_in_back(body_name, "saturn_main_rings")#where behind rings
     geometry.summary.behind_rings_flag = result.copy()
     
     result = bp.where_inside_shadow(body_name, "saturn_main_rings")  # in shadow
@@ -755,7 +756,7 @@ def generate_metadata(obs, resolution, file_type, body_name):
     result = bp.sub_solar_latitude(body_name, "graphic") # subsolar graphic lat
     geometry.summary.sub_solar_geographic_latitude = result.copy()
     
-    result = bp.sub_solar_longitude(body_name)           # subsolar iau longitude
+    result = bp.sub_solar_longitude(body_name)# subsolar long
     geometry.summary.sub_solar_iau_longitude = result.copy()
     
     result = bp.solar_distance_to_center(body_name) # solar distance to body
@@ -767,7 +768,7 @@ def generate_metadata(obs, resolution, file_type, body_name):
     result = bp.sub_observer_latitude(body_name, "graphic")  # obs centric lat
     geometry.summary.sub_obs_geographic_latitude = result.copy()
     
-    result = bp.sub_observer_longitude(body_name)            # obs centric lat
+    result = bp.sub_observer_longitude(body_name)#sub obs long
     geometry.summary.sub_obs_iau_longitude = result.copy()
             
     result = bp.observer_distance_to_center(body_name)
@@ -859,14 +860,13 @@ def index_file_type(file_name):
     fd.close()
     return ISS_TYPE
 
-def append_to_file(file_name, geometries, start, stop):
-    if start < write_frequency:
-        f = open(file_name, 'w')
-    else:
-        f = open(file_name, 'a')
+def append_to_file(file_name, geometries, stop):
+    f = open(file_name, 'a')
     output_buf = ""
-    for i in range(start, stop):
-        output_buf += geometries[i].output()
+    print "range of appending... ", stop
+    print "f = ", f
+    for i in range(stop):
+        output_buf += str(geometries[i])
     f.write(output_buf)
     f.close()
 
@@ -907,9 +907,14 @@ def generate_geometries_for_index(file_name, body_name):
     geometries = []
     info_str = ""
     actual_i = start
-    start_write_index = 0
     progress = Progress(start, nObs)
     omitting = []
+    
+    # remove file if it already exists from previous run
+    try:
+        os.remove(geom_file_name)
+    except OSError as e:
+        pass
     
     for i in range(start, nObs):
         if file_type is ISS_TYPE:
@@ -920,7 +925,6 @@ def generate_geometries_for_index(file_name, body_name):
         info_len = len(info_str)
         i1 = i + 1
         init_info_str = "    " + str(i+1) + " of " + str(nObs)
-            #        if i not in omit_range:
         geometry = generate_metadata(ob, grid_resolution, file_type, body_name.lower())
         if geometry is not None:
             geometries.append(geometry)
@@ -936,22 +940,19 @@ def generate_geometries_for_index(file_name, body_name):
             sys.stdout.write('\b')
         sys.stdout.write(info_str)
         sys.stdout.flush()
-            #        if i not in omit_range and (len(fortran_list) == 0) or (image_code in fortran_list):
         if write_frequency > 0 and (actual_i % write_frequency) == 0:
             i0 = actual_i - write_frequency
             if do_output:
                 info_str = "appending rows %d to %d to output file %s" % (i0,
-                                                                          actual_i,
+                                                                          actual_i - 1,
                                                                           geom_file_name)
                 for item in range(0, info_len):
                     sys.stdout.write('\b')
                 sys.stdout.write(info_str)
                 sys.stdout.flush()
                 
-                end_write_index = len(geometries)
-                append_to_file(geom_file_name, geometries, start_write_index,
-                               end_write_index)
-                start_write_index = end_write_index
+                append_to_file(geom_file_name, geometries, len(geometries))
+                del geometries[0:len(geometries)]
                 
                 # blank out the longer text of this line
                 l = len(info_str)
@@ -964,11 +965,10 @@ def generate_geometries_for_index(file_name, body_name):
         i0 = (actual_i / write_frequency) * write_frequency
         if do_output:
             print "\nappending rows %d to %d to output file %s" % (i0,
-                                                                   actual_i,
+                                                                   actual_i - 1,
                                                                    geom_file_name)
-            end_write_index = len(geometries)
-            append_to_file(geom_file_name, geometries, start_write_index,
-                           end_write_index)
+            append_to_file(geom_file_name, geometries, len(geometries))
+            del geometries[0:len(geometries)]
     
     sys.stdout.write('\n')
     if len(omitting) > 0:
@@ -976,7 +976,6 @@ def generate_geometries_for_index(file_name, body_name):
         for i in omitting:
             sys.stdout.write(i)
         sys.stdout.write('\n')
-    return geometries
 
 
 ################################################################################
@@ -990,9 +989,5 @@ for row in volumeReader:
     body_name = str(row[2])
     print "Generating geometry table for %s, file: %s" % (body_name,
                                                           index_file_name)
-    geometries = generate_geometries_for_index(index_file_name, body_name)
-    if write_frequency < 0:
-        if do_output:
-            print "writing file ", geom_file_name
-            output_file(geom_file_name, geometries)
+    generate_geometries_for_index(index_file_name, body_name)
 print "Done."

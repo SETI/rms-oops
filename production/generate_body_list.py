@@ -1,3 +1,4 @@
+import oops
 import numpy as np
 import sys
 import csv
@@ -5,7 +6,6 @@ import datetime
 import math
 
 import pylab
-import oops
 import oops.inst.cassini.iss as cassini_iss
 import oops.inst.cassini.vims as cassini_vims
 import oops_.surface.ansa as ansa_
@@ -201,6 +201,36 @@ def get_distance_backplane(snapshot, file_type):
         occ_distance = distance_backplane.vals
     return occ_distance
 
+################################################################################
+# timing class                                                                 #
+#                                                                              #
+# class to figure out time left whie running through loop with fairly consistent
+# amount of time for each step of loop.                                        #
+#                                                                              #
+#total - (current_index - start)      time_left                                #
+#-------------------------------   =  ---------                                #
+#total                                total_time                               #
+#                                                                              #
+#current_index - start     time_so_far                                         #
+#---------------------  =  -----------                                         #
+#total                     total_time                                          #
+################################################################################
+class Progress(object):
+	
+    def __init__(self, start, end):
+        self.beginTime = datetime.datetime.now()
+        self.start = start
+        self.end = end
+        self.total = end - start
+	
+    def time_left(self, current_index):
+        current_time = datetime.datetime.now()
+        time_so_far = current_time - self.beginTime
+        index_so_far = current_index + 1 - self.start
+        total_time = time_so_far * self.total / index_so_far
+        return total_time * (self.total - index_so_far) / self.total
+
+
 def single_body_table(file_name, fortran_list, omit_range):
     
     file_type = index_file_type(file_name)
@@ -284,26 +314,24 @@ def point_in_frustrum(frustrum_normals, body, pos, snapshot_bodies,
         body_positions.append(pos.vals)
 
 
-def generate_body_table(file_name, fortran_list, omit_range):
-    # this step actually UNREGISTERS everything for some reason.
-    # make sure registry is set up
-    #registry.initialize_frame_registry()
-    #registry.initialize_path_registry()
-    #registry.initialize_body_registry()
+def generate_body_table(file_name):
 
     file_type = index_file_type(file_name)
     if file_type is ISS_TYPE:
-        snapshots = cassini_iss.from_index(file_name)
+        obs = cassini_iss.from_index(file_name)
     elif file_type is VIMS_TYPE:
-        snapshots = cassini_vims.from_index(file_name)
+        obs = cassini_vims.from_index(file_name)
     else:
         print "unsupported file type for index file."
         return None
-    nSnapshots = len(snapshots)
-    if stop_file_index > 0 and stop_file_index < nSnapshots:
-        nSnapshots = stop_file_index
+    nObs = len(obs)
+    if stop_file_index > 0 and stop_file_index < nObs:
+        nObs = stop_file_index
+    start = start_file_index
+    if start < 0:
+        start = 0
 
-    print "Processing indices %d to %d" % (start_file_index, nSnapshots)
+    print "Processing indices %d to %d" % (start_file_index, nObs)
 
     bodies = [registry.body_lookup("SATURN"),
               registry.body_lookup("MIMAS"),
@@ -329,165 +357,26 @@ def generate_body_table(file_name, fortran_list, omit_range):
               registry.body_lookup("TELESTO"),
               registry.body_lookup("HELENE"),
               registry.body_lookup("POLYDEUCES"),
-              registry.body_lookup("HYPERION"),
               registry.body_lookup("CALYPSO")]
 
-    snapshots_bodies = {}
-    then = datetime.datetime.now()
+    obs_bodies = {}
     progress_str = ""
-    for i in range(start_file_index, nSnapshots):
+    progress = Progress(start, nObs)
+    for i in range(start_file_index, nObs):
         if file_type is ISS_TYPE:
-            snapshot = snapshots[i]
+            ob = obs[i]
         else:
-            snapshot = snapshots[i][1]
-        image_code = image_code_name(snapshot, file_type)
-        if (i not in omit_range) and ((len(fortran_list) == 0) or (image_code in fortran_list)):
-
-            error_buffer_size = get_error_buffer_size(snapshot, file_type)
-            inventory = Inventory(snapshot, bodies)
-            confirmed_bodies = inventory.where_not_blocked("CASSINI", "saturn",
-                                                           error_buffer_size)
-            """
-            # get image event for this snapshot
-            image_event = Event(snapshot.midtime, (0,0,0), (0,0,0), "CASSINI",
-                                snapshot.frame_id)
-
-            # get the planes of the viewing frustrum
-            uv_shape = snapshot.fov.uv_shape.vals
-            uv = np.array([(0,0),
-                           (uv_shape[0],0),
-                           (uv_shape[0],uv_shape[1]),
-                           (0,uv_shape[1])])
-            uv_pair = Pair(uv)
-            los = snapshot.fov.los_from_uv(uv_pair)
-            # scale los to avoid accuracy problems
-            los *= 1000000.
-
-            # if the dot product of the normal of each plane and the center of
-            # object is less then negative the radius, we lie entirely outside
-            # that plane of the frustrum, and therefore no part is in fov.  If
-            # between -r and r, we have intersection, therefore part in fov.
-            # otherwise, entirely in fov.
-            # for the moment use the bounding sphere, but in future use a
-            # bounding box which would be more appropriate for objects not
-            # sphere-like
-            frustrum_normals = []
-            for i in range(4):
-                #j = (i+1)%4
-                #frustrum_normals.append(los[j].cross(los[i]).unit())
-                frustrum_normals.append(los[i].cross(los[(i+1)%4]).unit())
-
-            snapshot_bodies = []
-            body_positions = []
-            #mask = mask_targets(snapshot)
-            #print " in generate_body_table, mask = ", mask
-            for mass_body in bodies:
-                #if(snapshot.surface_in_view_neighborhood(mass_body.surface,
-                #                                         sin_angle)):
-                path = path_.Path.connect(mass_body.path_id, "CASSINI",
-                                          snapshot.frame_id)
-                abs_event = path.photon_to_event(image_event)
-                rel_event = abs_event.wrt_path("CASSINI")
-                # first check that body is in front of camera
-                if rel_event.pos.vals[2] < 0.:
-                    continue;
-                point_in_frustrum(frustrum_normals, mass_body, rel_event.pos,
-                                  snapshot_bodies, body_positions)
-                
-                #if(snapshot.any_part_object_in_view("CASSINI", mass_body)):
-                #    snapshot_bodies.append(mass_body.name.strip())
-
-            if len(snapshot_bodies) == 1 and snapshot_bodies[0] == "saturn":
-                confirmed_bodies.append("saturn")
-            else:
-                error_buffer = get_error_buffer_size(snapshot, file_type)
-                limit = snapshot.fov.uv_shape + oops.Pair(np.array([error_buffer,
-                                                                    error_buffer]))
-
-                meshgrid = Meshgrid.for_fov(snapshot.fov, undersample=grid_resolution,
-                                            limit=limit, swap=True)
-                bp = oops.Backplane(snapshot, meshgrid)
-                saturn_distance = bp.distance("saturn")
-
-                target = snapshot.index_dict["TARGET_NAME"].strip().lower()
-                confirmed_bodies = []
-                if target != "saturn":
-                    t_distance = bp.distance(target)
-                    if saturn_distance.shape == []:
-                        confirmed_bodies.append(target)
-                    else:
-                        if np.less(t_distance.vals, saturn_distance.vals).any():
-                            # target is closer than saturn somehwere
-                            confirmed_bodies.append(target)
-                        if np.less(saturn_distance.vals, t_distance.vals).any():
-                            # saturn is closwer than target somewhere
-                            confirmed_bodies.append("saturn")
-                    occ_distance = np.minimum(saturn_distance.vals, t_distance.vals)
-                    target_saturn_distance = np.ma.array(occ_distance,
-                                                         mask=saturn_distance.mask & t_distance.mask)
-                else:
-                    if saturn_distance.shape != []:
-                        confirmed_bodies.append("saturn")
-                    target_saturn_distance = saturn_distance.vals
-
-
-                body_number = 0
-                for potential_body in snapshot_bodies:
-                    p_body = potential_body.name.lower()
-                    if (p_body != "saturn") and (p_body != target):
-                        pos = body_positions[body_number]
-                        pix = snapshot.fov.uv_from_los(pos)
-                        # now, if the center of the body is off the FOV, then
-                        # the closest point is still going to be part of the
-                        # same body (if that body is at least partially in the
-                        # FOV, which we know it is).
-                        if pix.vals[0] < 0:
-                            pix.vals[0] = 0
-                        elif pix.vals[0] >= target_saturn_distance.shape[0]:
-                            pix.vals[0] = target_saturn_distance.shape[0]
-                        if pix.vals[1] < 0:
-                            pix.vals[1] = 0
-                        elif pix.vals[1] >= target_saturn_distance.shape[1]:
-                            pix.vals[1] = target_saturn_distance.shape[1]
-                        ix = int(pix.vals[0])
-                        iy = int(pix.vals[1])
-                        
-                        if pos[2] < target_saturn_distance[ix][iy]:
-                            confirmed_bodies.append(p_body)
-                        elif target_saturn_distance.mask[ix][iy]:
-                            confirmed_bodies.append(p_body)
-                        else:
-                            # most time consuming test... test ring of points,
-                            # but don't bother if there are no true mask values
-                            if np.any(target_saturn_distance.mask.vals):
-                                # get radius, in pixels, at the distance of the
-                                # body in the FOV
-                                radius_los = np.array([potential_body.radius,
-                                                       potential_body.radius,
-                                                       pos[2]])
-                                # we only need to check perpendicular directions
-                                # since if they are blocked, all points in
-                                # between are blocked.
-                                pix_radius = snapshot.fov.uv_from_los(radius_los)
-                                ix1 = min(int(ix + pix_radius[0]), target_saturn_distance.shape[0])
-                                ix2 = max(int(ix - pix_radius[0]), 0)
-                                iy1 = min(int(iy + pix_radius[1]), target_saturn_distance.shape[1])
-                                iy2 = max(int(iy - pix_radius[1]), 0)
-                                if target_saturn_distance.mask[ix1][iy] or target_saturn_distance.mask[ix2][iy] or target_saturn_distance.mask[ix][iy1] or target_saturn_distance.mask[ix][iy2]:
-                                    confirmed_bodies.append(p_body)
-                                
-                                
-                    body_number += 1
-                """
-    
-    
-            #print "confirmed_bodies: ", csv_row(confirmed_bodies, ';')
-            snapshots_bodies[image_code] = confirmed_bodies
-
-        now = datetime.datetime.now()
-        time_so_far = now - then
-        time_left = time_so_far * (nSnapshots - start_file_index) / (i + 1 - start_file_index) - time_so_far
-
+            ob = obs[i][1]
+        image_code = image_code_name(ob, file_type)
+        error_buffer_size = get_error_buffer_size(ob, file_type)
+        inventory = Inventory(ob, bodies)
+        confirmed_bodies = inventory.where_not_blocked("CASSINI", "saturn",
+                                                       error_buffer_size)
+        if confirmed_bodies is not None:
+            obs_bodies[image_code] = confirmed_bodies
+        
+        time_left = progress.time_left(i)
+        
         l = len(progress_str)
         time_left_str = "File " + str(i+1) + ": " + image_code + ", time rem: " + str(time_left)
         progress_str = time_left_str.split('.')[0]
@@ -498,7 +387,7 @@ def generate_body_table(file_name, fortran_list, omit_range):
 
     print "\nWriting output file ", output_file
     fh = open(output_file, 'w')
-    fh.write(csv_rows(snapshots_bodies, ','))
+    fh.write(csv_rows(obs_bodies, ','))
     fh.close()
 
 
@@ -518,15 +407,10 @@ def get_fortran_file_list(fortran_file_name):
 volumeReader = csv.reader(open(list_file, 'rU'), delimiter=';')
 for row in volumeReader:
     index_file_name = str(row[0])
-    fortran_list = get_fortran_file_list(str(row[1]))
-    output_file = str(row[2])
-    omit_range = []
-    len_of_row = len(row)
-    for i in range(3,len_of_row):
-        omit_range.append(int(row[i]))
-    if do_single_observation:
-        single_body_table(index_file_name, fortran_list, omit_range)
-    else:
-        generate_body_table(index_file_name, fortran_list, omit_range)
+    output_file = str(row[1])
+#    if do_single_observation:
+#        single_body_table(index_file_name, fortran_list, omit_range)
+#    else:
+    generate_body_table(index_file_name)
 if not do_single_observation:
     print "Done."
