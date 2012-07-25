@@ -115,6 +115,17 @@ class BodySurface(object):
     def copy_data(self, parent):
         pass
 
+    def output_pair(self, pair):
+        if pair is None:
+            return ", -0.1000000000000000E+31, -0.1000000000000000E+31"
+        elif pair == (-1e+30, -1e+30):
+            return ", -0.1000000000000000E+31, -0.1000000000000000E+31"
+        s = ", %s, %s" % (str(pair[0]), str(pair[1]))
+        return s
+    
+    def output_singleton(self, singleton):
+        s = ", %s" % (str(singleton))
+        return s
 
     def output_minmax_info(self, array, minmax=None):
         if minmax is not None:
@@ -126,7 +137,13 @@ class BodySurface(object):
         else:
             output_buf = ", %.15f, %.15f" % (array.min(), array.max())
         return output_buf
-
+    
+    def minmax_pair(self, array):
+        if array is None:
+            return (-0.1e+31, -0.1e+31)
+        elif np.all(array.mask):
+            return (-0.1e+31, -0.1e+31)
+        return (array.min(), array.max())
 
     def angle_wrap_coverage(self, angles):
         
@@ -134,7 +151,7 @@ class BodySurface(object):
         bins = np.arange(361)
         m_arr = angles.mvals
         h,b = np.histogram(m_arr[~m_arr.mask], bins)    # hist doesn't support masks
-        
+
         #find all of the sections without values (where the histogram is zero)
         empty_sections = []
         first_non_zero = -1
@@ -171,7 +188,8 @@ class BodySurface(object):
                     first_non_zero = i
             if i == 359:
                 if first_non_zero == -1:
-                    return (angles.min(), angles.max())   # we have no angles
+                    return (-0.1E+31, -0.1E+31)
+                    #return (angles.min(), angles.max())   # we have no angles
                 if in_zero:
                     current_section = (current_section_start,
                                        i + 1 - current_section_start,
@@ -180,8 +198,9 @@ class BodySurface(object):
             samples += h[i]
             i += 1
         
-        # if we have a a gap that starts at zero and ends at 360, we need to combine
-        # them
+        # if we have a a gap that starts at zero and ends at 360, we need to
+        # combine them
+
         first_section = empty_sections[0]
         if first_section[0] == 0:
             last_section = empty_sections[-1]
@@ -342,7 +361,7 @@ class BodySurfaceDetail(BodySurface):
             self.copy_data(parent)
     
     def clear(self):
-        self.latitude_band_number = None
+        self.latitude_band_number = 0
         # these are min/max pairs
         self.geocentric_latitude = None
         self.geographic_latitude = None
@@ -408,8 +427,8 @@ class BodySurfaceDetail(BodySurface):
         #find the histogram for the angles
         bins = np.arange(361)
         m_arr = angles.mvals
-        h,b = np.histogram(m_arr[~m_arr.mask], bins)    # hist doesn't support masks
-        
+        h,b = np.histogram(m_arr[~m_arr.mask], bins) # hist doesn't support masks
+
         #find all of the sections without values (where the histogram is zero)
         empty_sections = []
         first_non_zero = -1
@@ -419,7 +438,7 @@ class BodySurfaceDetail(BodySurface):
         min_zero = 5
         current_value_start = 0.
         current_value_stop = 0.
-        sorted_angles = m_arr.copy().reshape(m_arr.size)    # to get actual values
+        sorted_angles = m_arr.copy().reshape(m_arr.size)  # to get actual values
         sorted_angles.sort()
         samples = 0
         while i < 360:
@@ -653,6 +672,641 @@ class FileGeometry(object):
                 end_angle = 90.
 
 
+################################################################################
+# ProcessedBodySurfaceSummary                                                  #
+################################################################################
+
+class ProcessedBodySurfaceSummary(BodySurface):
+    
+    def __init__(self, owner=None, parent=None):
+        self.owner = owner
+        if parent is None:
+            self.clear()
+        else:
+            self.copy_data(parent)
+    
+    def clear(self):
+        # these are min/max pairs
+        self.geocentric_latitude = None
+        self.geographic_latitude = None
+        self.iau_longitude = None
+        self.sha_longitude = None
+        self.obs_longitude = None
+        self.finest_resolution = None
+        self.coarsest_resolution = None
+        self.phase = None
+        self.incidence = None
+        self.emission = None
+        self.range_to_body = None
+        self.night_side_flag = None
+        self.behind_rings_flag = None
+        self.in_ring_shadow_flag = None
+        # these are single values
+        self.sub_solar_geocentric_latitude = None
+        self.sub_solar_geographic_latitude = None
+        self.sub_solar_iau_longitude = None
+        self.solar_distance_to_body_center = None
+        self.sub_obs_geocentric_latitude = None
+        self.sub_obs_geographic_latitude = None
+        self.sub_obs_iau_longitude = None
+        self.obs_distance_to_body_center = None
+    
+    def copy_data(self, parent):
+        self.file_type = parent.file_type
+        
+        self.obs_id = parent.obs_id
+        self.body_name = parent.body_name
+        
+        self.geocentric_latitude = parent.geocentric_latitude
+        self.geographic_latitude = parent.geographic_latitude
+        self.iau_longitude = parent.iau_longitude
+        self.sha_longitude = parent.sha_longitude
+        self.obs_longitude = parent.obs_longitude
+        self.finest_resolution = parent.finest_resolution
+        self.coarsest_resolution = parent.coarsest_resolution
+        self.phase = parent.phase
+        self.incidence = parent.incidence
+        self.emission = parent.emission
+        self.range_to_body = parent.range_to_body
+        self.night_side_flag = parent.night_side_flag
+        self.behind_rings_flag = parent.behind_rings_flag
+        self.in_ring_shadow_flag = parent.in_ring_shadow_flag
+        
+        self.sub_solar_geocentric_longitude = parent.sub_solar_geocentric_longitude
+        self.sub_solar_geographic_longitude = parent.sub_solar_geographic_longitude
+        self.sub_solar_iau_longitude = parent.sub_solar_iau_longitude
+        self.solar_distance_to_body_center = parent.solar_distance_to_body_center
+        self.sub_obs_geocentric_longitude = parent.sub_obs_geocentric_longitude
+        self.sub_obs_geographic_longitude = parent.sub_obs_geographic_longitude
+        self.sub_obs_iau_longitude = parent.sub_obs_iau_longitude
+        self.obs_distance_to_body_center = parent.obs_distance_to_body_center
+    
+    def set_geocentric_latitude(self, bp):
+        #(self.geocentric_latitude0, self.geocentric_latitude1) = self.minmax_pair(bp * oops.DPR)
+        self.geocentric_latitude = self.minmax_pair(bp * oops.DPR)
+    
+    def set_geographic_latitude(self, bp):
+        self.geographic_latitude = self.minmax_pair(bp * oops.DPR)
+    
+    def set_iau_longitude(self, bp):
+        self.iau_longitude = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_sha_longitude(self, bp):
+        self.sha_longitude = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_obs_longitude(self, bp):
+        self.obs_longitude = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_finest_resolution(self, bp):
+        self.finest_resolution = self.minmax_pair(bp)
+    
+    def set_coarsest_resolution(self, bp):
+        self.coarsest_resolution = self.minmax_pair(bp)
+    
+    def set_phase(self, bp):
+        self.phase = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_incidence(self, bp):
+        self.incidence = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_emission(self, bp):
+        self.emission = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_range_to_body(self, bp):
+        self.range_to_body = self.minmax_pair(bp)
+    
+    def set_night_side_flag(self, bp):
+        self.night_side_flag = (np.float(np.all(bp.vals)),
+                                np.float(np.any(bp.vals)))
+    
+    def set_behind_rings_flag(self, bp):
+        self.behind_rings_flag = (np.float(np.all(bp.vals)),
+                                  np.float(np.any(bp.vals)))
+    
+    def set_in_ring_shadow_flag(self, bp):
+        self.in_ring_shadow_flag = (np.float(np.all(bp.vals)),
+                                    np.float(np.any(bp.vals)))
+    
+    def set_sub_solar_geocentric_latitude(self, bp):
+        self.sub_solar_geocentric_latitude = bp.vals * oops.DPR
+    
+    def set_sub_solar_geographic_latitude(self, bp):
+        self.sub_solar_geographic_latitude = bp.vals * oops.DPR
+    
+    def set_sub_solar_iau_longitude(self, bp):
+        self.sub_solar_iau_longitude = 360.0 - bp.vals * oops.DPR
+    
+    def set_solar_distance_to_body_center(self, bp):
+        self.solar_distance_to_body_center = bp.vals
+    
+    def set_sub_obs_geocentric_latitude(self, bp):
+        self.sub_obs_geocentric_latitude = bp.vals * oops.DPR
+    
+    def set_sub_obs_geographic_latitude(self, bp):
+        self.sub_obs_geographic_latitude = bp.vals * oops.DPR
+    
+    def set_sub_obs_iau_longitude(self, bp):
+        self.sub_obs_iau_longitude = 360.0 - bp.vals * oops.DPR
+    
+    def set_obs_distance_to_body_center(self, bp):
+        self.obs_distance_to_body_center = bp.vals
+    
+    def __str__(self):
+        """output to a string line"""
+        lline = []
+        lline.append(self.owner.obs_id)
+        lline.append(self.owner.body_name)
+        lline.append(self.output_pair(self.geocentric_latitude))
+        lline.append(self.output_pair(self.geographic_latitude))
+        lline.append(self.output_pair(self.iau_longitude))
+        lline.append(self.output_pair(self.sha_longitude))
+        lline.append(self.output_pair(self.obs_longitude))
+        lline.append(self.output_pair(self.finest_resolution))
+        lline.append(self.output_pair(self.coarsest_resolution))
+        lline.append(self.output_pair(self.phase))
+        lline.append(self.output_pair(self.incidence))
+        lline.append(self.output_pair(self.emission))
+        lline.append(self.output_pair(self.range_to_body))
+        lline.append(self.output_pair(self.night_side_flag))
+        lline.append(self.output_pair(self.behind_rings_flag))
+        lline.append(self.output_pair(self.in_ring_shadow_flag))
+        lline.append(self.output_singleton(self.sub_solar_geocentric_latitude))
+        lline.append(self.output_singleton(self.sub_solar_geographic_latitude))
+        lline.append(self.output_singleton(self.sub_solar_iau_longitude))
+        lline.append(self.output_singleton(self.solar_distance_to_body_center))
+        lline.append(self.output_singleton(self.sub_obs_geocentric_latitude))
+        lline.append(self.output_singleton(self.sub_obs_geographic_latitude))
+        lline.append(self.output_singleton(self.sub_obs_iau_longitude))
+        lline.append(self.output_singleton(self.obs_distance_to_body_center))
+        #DEBUG
+        #for s in lline:
+        #    print "s = ", s
+        #end DEBUG
+        line = ' '.join(lline)
+        line += '\n'
+        #print "line: ", line
+        """
+        line = self.owner.obs_id
+        line += ", %s" % self.owner.body_name
+        line += self.output_pair(self.geocentric_latitude)
+        line += self.output_singleton(self.geographic_latitude0)
+        line += self.output_singleton(self.geographic_latitude1)
+        line += self.output_pair(self.iau_longitude)
+        line += self.output_pair(self.sha_longitude)
+        line += self.output_pair(self.obs_longitude)
+        line += self.output_pair(self.finest_resolution)
+        line += self.output_pair(self.coarsest_resolution)
+        line += self.output_pair(self.phase)
+        line += self.output_pair(self.incidence)
+        line += self.output_pair(self.emission)
+        line += self.output_pair(self.range_to_body)
+        line += self.output_pair(self.night_side_flag)
+        line += self.output_pair(self.behind_rings_flag)
+        line += self.output_pair(self.in_ring_shadow_flag)
+        line += self.output_singleton(self.sub_solar_geocentric_latitude)
+        line += self.output_singleton(self.sub_solar_geographic_latitude)
+        line += self.output_singleton(self.sub_solar_iau_longitude)
+        line += self.output_singleton(self.solar_distance_to_body_center)
+        line += self.output_singleton(self.sub_obs_geocentric_latitude)
+        line += self.output_singleton(self.sub_obs_geographic_latitude)
+        line += self.output_singleton(self.sub_obs_iau_longitude)
+        line += self.output_singleton(self.obs_distance_to_body_center)
+        line += "\n"
+        """
+        """line += ", %f, %f" % (self.geocentric_latitude[0], self.geocentric_latitude[1])
+        line += ", %f, %f" % (self.geographic_latitude[0], self.geographic_latitude[1])
+        line += ", %f, %f" % (self.iau_longitude[0], self.iau_longitude[1])
+        line += ", %f, %f" % (self.sha_longitude[0], self.sha_longitude[1])
+        line += ", %f, %f" % (self.obs_longitude[0], self.obs_longitude[1])
+        line += ", %f, %f" % (self.finest_resolution[0], self.finest_resolution[1])
+        line += ", %f, %f" % (self.coarsest_resolution[0], self.coarsest_resolution[1])
+        line += ", %f, %f" % (self.phase[0], self.phase[1])
+        line += ", %f, %f" % (self.incidence[0], self.incidence[1])
+        line += ", %f, %f" % (self.emission[0], self.emission[1])
+        line += ", %f, %f" % (self.range_to_body[0], self.range_to_body[1])
+        line += ", %f, %f" % (self.night_side_flag[0], self.night_side_flag[1])
+        line += ", %f, %f" % (self.behind_rings_flag[0], self.behind_rings_flag[1])
+        line += ", %f, %f" % (self.in_ring_shadow_flag[0], self.in_ring_shadow_flag[1])
+        line += " %f," % (self.sub_solar_geocentric_latitude.valsR)
+        line += " %f," % (self.sub_solar_geographic_latitude.vals)
+        line += " %f," % (self.sub_solar_iau_longitude.vals)
+        line += " %f," % (self.solar_distance_to_body_center.vals)
+        line += " %f," % (self.sub_obs_geocentric_latitude.vals)
+        line += " %f," % (self.sub_obs_geographic_latitude.vals)
+        line += " %f," % (self.sub_obs_iau_longitude.vals)
+        line += " %f\n" % self.obs_distance_to_body_center.vals"""
+        return line
+
+################################################################################
+# ProcessedBodySurfaceDetail                                                   #
+################################################################################
+
+class ProcessedBodySurfaceDetail(BodySurface):
+    
+    def __init__(self, owner=None, parent=None):
+        self.owner = owner
+        if parent is None:
+            self.clear()
+        else:
+            self.copy_data(parent)
+    
+    def clear(self):
+        self.latitude_band_number = 0
+        self.start_angle = 0.
+        self.end_angle = 0.
+        self.latitude_mask = None
+        # these are min/max pairs
+        self.geocentric_latitude = None
+        self.geographic_latitude = None
+        self.iau_longitude = None
+        self.sha_longitude = None
+        self.obs_longitude = None
+        self.finest_resolution = None
+        self.coarsest_resolution = None
+        self.phase = None
+        self.incidence = None
+        self.emission = None
+        self.range_to_body = None
+        self.night_side_flag = None
+        self.behind_rings_flag = None
+        self.in_ring_shadow_flag = None
+    
+    def copy_data(self, parent):
+        self.latitude_band_number = parent.latitude_band_number
+        
+        self.geocentric_latitude = parent.geocentric_latitude
+        self.geographic_latitude = parent.geographic_latitude
+        self.iau_longitude = parent.iau_longitude
+        self.sha_longitude = parent.sha_longitude
+        self.obs_longitude = parent.obs_longitude
+        self.finest_resolution = parent.finest_resolution
+        self.coarsest_resolution = parent.coarsest_resolution
+        self.phase = parent.phase
+        self.incidence = parent.incidence
+        self.emission = parent.emission
+        self.range_to_body = parent.range_to_body
+        self.night_side_flag = parent.night_side_flag
+        self.behind_rings_flag = parent.behind_rings_flag
+        self.in_ring_shadow_flag = parent.in_ring_shadow_flag
+    
+    def set_geocentric_latitude(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.geocentric_latitude = self.minmax_pair(bq * oops.DPR)
+    
+    def set_geographic_latitude(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.geographic_latitude = self.minmax_pair(bq * oops.DPR)
+    
+    def set_iau_longitude(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.iau_longitude = self.angle_wrap_coverage(bq * oops.DPR)
+    
+    def set_sha_longitude(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.sha_longitude = self.angle_wrap_coverage(bq * oops.DPR)
+    
+    def set_obs_longitude(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.obs_longitude = self.angle_wrap_coverage(bq * oops.DPR)
+    
+    def set_finest_resolution(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.finest_resolution = self.minmax_pair(bq)
+    
+    def set_coarsest_resolution(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.coarsest_resolution = self.minmax_pair(bq)
+    
+    def set_phase(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.phase = self.angle_wrap_coverage(bq * oops.DPR)
+    
+    def set_incidence(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.incidence = self.angle_wrap_coverage(bq * oops.DPR)
+    
+    def set_emission(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.emission = self.angle_wrap_coverage(bq * oops.DPR)
+    
+    def set_range_to_body(self, bp):
+        bq = bp.copy()
+        bq.mask |= self.latitude_mask
+        self.range_to_body = self.minmax_pair(bq)
+    
+    def __str__(self):
+        """output to a string line"""
+        line = self.owner.obs_id
+        line += ", %s" % self.owner.body_name
+        line += ", %d" % self.latitude_band_number
+        line += self.output_pair(self.geocentric_latitude)
+        line += self.output_pair(self.geographic_latitude)
+        line += self.output_pair(self.iau_longitude)
+        line += self.output_pair(self.sha_longitude)
+        line += self.output_pair(self.obs_longitude)
+        line += self.output_pair(self.finest_resolution)
+        line += self.output_pair(self.coarsest_resolution)
+        line += self.output_pair(self.phase)
+        line += self.output_pair(self.incidence)
+        line += self.output_pair(self.emission)
+        line += self.output_pair(self.range_to_body)
+        line += self.output_pair(self.night_side_flag)
+        line += self.output_pair(self.behind_rings_flag)
+        line += self.output_pair(self.in_ring_shadow_flag)
+        line += "\n"
+        """line += ", %f, %f" % (self.geocentric_latitude[0], self.geocentric_latitude[1])
+        line += ", %f, %f" % (self.geographic_latitude[0], self.geographic_latitude[1])
+        line += ", %f, %f" % (self.iau_longitude[0], self.iau_longitude[1])
+        line += ", %f, %f" % (self.sha_longitude[0], self.sha_longitude[1])
+        line += ", %f, %f" % (self.obs_longitude[0], self.obs_longitude[1])
+        line += ", %f, %f" % (self.finest_resolution[0], self.finest_resolution[1])
+        line += ", %f, %f" % (self.coarsest_resolution[0], self.coarsest_resolution[1])
+        line += ", %f, %f" % (self.phase[0], self.phase[1])
+        line += ", %f, %f" % (self.incidence[0], self.incidence[1])
+        line += ", %f, %f" % (self.emission[0], self.emission[1])
+        line += ", %f, %f" % (self.range_to_body[0], self.range_to_body[1])
+        line += " %f," % np.float(np.all(self.night_side_flag.vals))
+        line += " %f," % np.float(np.any(self.night_side_flag.vals))
+        line += " %f," % np.float(np.all(self.behind_rings_flag.vals))
+        line += " %f," % np.float(np.any(self.behind_rings_flag.vals))
+        line += " %f," % np.float(np.all(self.in_ring_shadow_flag.vals))
+        line += " %f\n" % np.float(np.any(self.in_ring_shadow_flag.vals))"""
+        return line
+
+################################################################################
+# ProcessedBodyLimb                                                            #
+################################################################################
+
+class ProcessedBodyLimb(BodySurface):
+    
+    def __init__(self, owner=None, parent=None):
+        self.owner = owner
+        if parent is None:
+            self.clear()
+        else:
+            self.copy_data(parent)
+    
+    def clear(self):
+        # these are min/max pairs
+        self.elevation = None
+        self.geocentric_latitude = None
+        self.geographic_latitude = None
+        self.resolution = None
+        self.phase = None
+        self.incidence = None
+        self.range_to_limb = None
+    
+    def copy_data(self, parent):
+        self.elevation = parent.elevation
+        self.geocentric_latitude = parent.geocentric_latitude
+        self.geographic_latitude = parent.geographic_latitude
+        self.resolution = parent.resolution
+        self.phase = parent.phase
+        self.incidence = parent.incidence
+        self.range_to_limb = parent.range_to_limb
+    
+    def set_elevation(self, bp):
+        self.elevation = self.minmax_pair(bp)
+    
+    def set_geocentric_latitude(self, bp):
+        self.geocentric_latitude = self.minmax_pair(bp * oops.DPR)
+        print "limb self.geocentric_latitude: ", self.geocentric_latitude
+    
+    def set_geographic_latitude(self, bp):
+        self.geographic_latitude = self.minmax_pair(bp * oops.DPR)
+    
+    def set_resolution(self, bp):
+        self.resolution = self.minmax_pair(bp)
+    
+    def set_phase(self, bp):
+        self.phase = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_incidence(self, bp):
+        self.incidence = self.angle_wrap_coverage(bp * oops.DPR)
+    
+    def set_range_to_limb(self, bp):
+        self.range_to_limb = self.minmax_pair(bp)
+    
+    def __str__(self):
+        """output to a string line"""
+        line = self.owner.obs_id
+        line += ", %s" % self.owner.body_name
+        line += self.output_pair(self.elevation)
+        line += self.output_pair(self.geocentric_latitude)
+        line += self.output_pair(self.geographic_latitude)
+        line += self.output_pair(self.resolution)
+        line += self.output_pair(self.phase)
+        line += self.output_pair(self.incidence)
+        line += self.output_pair(self.range_to_limb)
+        """line += ", %f, %f" % (self.elevation[0], self.elevation[1])
+        line += ", %f, %f" % (self.geocentric_latitude[0], self.geocentric_latitude[1])
+        line += ", %f, %f" % (self.geographic_latitude[0], self.geographic_latitude[1])
+        line += ", %f, %f" % (self.resolution[0], self.resolution[1])
+        line += ", %f, %f" % (self.phase[0], self.phase[1])
+        line += ", %f, %f" % (self.incidence[0], self.incidence[1])
+        line += ", %f, %f" % (self.range_to_limb[0], self.range_to_limb[1])"""
+        line += "\n"
+        return line
+
+
+################################################################################
+# ProcessedFileGeometry                                                        #
+################################################################################
+class ProcessedFileGeometry(object):
+    
+    def __init__(self, body_name, parent=None):
+        self.body_name = body_name.upper()
+        if parent is None:
+            self.file_type = ISS_TYPE
+            self.clear()
+        else:
+            self.copy_data(parent)
+    
+    def clear(self):
+        self.obs_id = ""
+        self.summary = ProcessedBodySurfaceSummary(self)
+        self.details = []
+        self.limb = ProcessedBodyLimb(self)
+    
+    def create_details(self, bp):
+        freq = 15
+        start_angle = -90.
+        end_angle = start_angle + freq
+        band_number = 1
+        del self.details[:]
+        while start_angle < 90.:
+            detail = ProcessedBodySurfaceDetail(self)
+            detail.start_angle = start_angle
+            detail.end_angle = end_angle
+            a = bp.vals < (start_angle * oops.RPD)
+            b = bp.vals >= (end_angle * oops.RPD)
+            latitude_mask = a | b
+            if not np.all(latitude_mask | bp.mask):
+                detail.latitude_mask = latitude_mask
+                detail.latitude_band_number = band_number
+                self.details.append(detail)
+            band_number += 1
+            start_angle += freq
+            end_angle += freq
+            if end_angle > 90.:
+                end_angle = 90.
+
+    def set_detail_geocentric_latitude(self, bp):
+        for detail in self.details:
+            detail.set_geocentric_latitude(bp)
+
+    def set_detail_geographic_latitude(self, bp):
+        for detail in self.details:
+            detail.set_geographic_latitude(bp)
+
+    def set_detail_iau_longitude(self, bp):
+        for detail in self.details:
+            detail.set_iau_longitude(bp)
+
+    def set_detail_sha_longitude(self, bp):
+        for detail in self.details:
+            detail.set_sha_longitude(bp)
+    
+    def set_detail_obs_longitude(self, bp):
+        for detail in self.details:
+            detail.set_obs_longitude(bp)
+
+    def set_detail_finest_resolution(self, bp):
+        for detail in self.details:
+            detail.set_finest_resolution(bp)
+
+    def set_detail_coarsest_resolution(self, bp):
+        for detail in self.details:
+            detail.set_coarsest_resolution(bp)
+    
+    def set_detail_phase(self, bp):
+        for detail in self.details:
+            detail.set_phase(bp)
+
+    def set_detail_incidence(self, bp):
+        for detail in self.details:
+            detail.set_incidence(bp)
+    
+    def set_detail_emission(self, bp):
+        for detail in self.details:
+            detail.set_emission(bp)
+
+    def set_detail_range_to_body(self, bp):
+        for detail in self.details:
+            detail.set_range_to_body(bp)
+        
+    def copy_data(self, parent):
+        self.file_type = parent.file_type
+        
+        self.obs_id = parent.obs_id
+        self.body_name = parent.body_name
+        
+        self.file_type = parent.file_type
+        self.summary.copy(parent.summary)
+        self.details.empty()
+        for body_detail in parent.details:
+            new_detail = ProcessedBodySurfaceDetail(self)
+            new_detail.copy(body_detail)
+            self.details.append(new_detail)
+        self.limb.copy(parent.limb)
+    
+    def __str__(self):
+        lines = str(self.summary)
+        for detail in self.details:
+            lines += str(detail)
+        lines += str(self.limb)
+        return lines
+    
+    def set_image_id(self, obs):
+        """output to string the image/camera label"""
+        if self.file_type is ISS_TYPE:
+            self.obs_id = '"S/IMG/CO/ISS/'
+            
+            self.obs_id += obs.index_dict['IMAGE_NUMBER']
+            name = obs.index_dict["INSTRUMENT_NAME"]
+            if "WIDE" in name:
+                self.obs_id += '/W"'
+            else:
+                self.obs_id += '/N"'
+        else:
+            file_name = obs.index_dict['FILE_NAME']
+            #strip letter off of front and extension off of end
+            number_code = file_name.split('.')[0][1:]
+            if "_IR" in obs.path_id:
+                wave = 'I'
+                if 'NORMAL' in obs.index_dict['IR_SAMPLING_MODE_ID']:
+                    res = 'N'
+                else:
+                    res = 'L'
+            else:
+                wave = 'V'
+                if 'NORMAL' in obs.index_dict['VIS_SAMPLING_MODE_ID']:
+                    res = 'N'
+                else:
+                    res = 'L'
+            self.obs_id = number_code + '/' + wave + '/' + res
+    
+    
+    def compute_details(self, freq):
+        """compute the Body Details list given the frequency.
+            Input   freq - in degrees, the frequency of the bands."""
+        start_angle = -90.
+        end_angle = freq
+        band_number = 1
+        del self.details[:]
+        while start_angle < 90.:
+            a = self.summary.geocentric_latitude.mvals < (start_angle * oops.RPD)
+            b = self.summary.geocentric_latitude.mvals >= (end_angle * oops.RPD)
+            latitude_mask = a | b
+            if not np.all(latitude_mask):
+                detail = BodySurfaceDetail(self)
+                detail.latitude_band_number = band_number
+                detail.geocentric_latitude = self.summary.geocentric_latitude.copy()
+                detail.geocentric_latitude.mask |= latitude_mask
+                detail.geographic_latitude = self.summary.geographic_latitude.copy()
+                detail.geographic_latitude.mask |= latitude_mask
+                detail.iau_longitude = self.summary.iau_longitude.copy()
+                detail.iau_longitude.mask |= latitude_mask
+                detail.sha_longitude = self.summary.sha_longitude.copy()
+                detail.sha_longitude.mask |= latitude_mask
+                detail.obs_longitude = self.summary.obs_longitude.copy()
+                detail.obs_longitude.mask |= latitude_mask
+                detail.finest_resolution = self.summary.finest_resolution.copy()
+                detail.finest_resolution.mask |= latitude_mask
+                detail.coarsest_resolution = self.summary.coarsest_resolution.copy()
+                detail.coarsest_resolution.mask |= latitude_mask
+                detail.phase = self.summary.phase.copy()
+                detail.phase.mask |= latitude_mask
+                detail.incidence = self.summary.incidence.copy()
+                detail.incidence.mask |= latitude_mask
+                detail.emission = self.summary.emission.copy()
+                detail.emission.mask |= latitude_mask
+                detail.range_to_body = self.summary.range_to_body.copy()
+                detail.range_to_body.mask |= latitude_mask
+                detail.night_side_flag = self.summary.night_side_flag.copy()
+                detail.night_side_flag.mask |= latitude_mask
+                detail.behind_rings_flag = self.summary.behind_rings_flag.copy()
+                detail.behind_rings_flag.mask |= latitude_mask
+                detail.in_ring_shadow_flag = self.summary.in_ring_shadow_flag.copy()
+                detail.in_ring_shadow_flag.mask |= latitude_mask
+                self.details.append(detail)
+            band_number += 1
+            start_angle += freq
+            end_angle += freq
+            if end_angle > 90.:
+                end_angle = 90.
+
+
 
 ################################################################################
 # Actual generation of the data                                                #
@@ -812,6 +1466,161 @@ def generate_metadata(obs, resolution, file_type, body_name):
 
     return geometry
 
+################################################################################
+# Actual generation and processing of the data                                 #
+################################################################################
+def generate_process_metadata(obs, resolution, file_type, body_name):
+    
+    geometry = ProcessedFileGeometry(body_name)
+    geometry.file_type = file_type
+    geometry.set_image_id(obs)
+    
+    # deal with possible pointing errors - up to 3 pixels in any
+    # direction for WAC and 30 pixels for NAC
+    error_buffer = get_error_buffer_size(obs, file_type)
+    limit = obs.fov.uv_shape + oops.Pair(np.array([error_buffer,
+                                                   error_buffer]))
+    
+    meshgrid = Meshgrid.for_fov(obs.fov, undersample=resolution,
+                                limit=limit, swap=True)
+    
+    bp = oops.Backplane(obs, meshgrid)
+    
+    try:
+        intercepted = bp.where_intercepted("saturn_main_rings")
+    except:
+        return None
+    intercept_mask = ~intercepted.vals
+    
+    result = bp.latitude(body_name)                      # geocentric latitude
+    result.mask |= intercept_mask
+
+    # we need to not only set the data, but also, since this is our first mask
+    # create the BodySurfaceDetails
+    geometry.summary.set_geocentric_latitude(result)
+    geometry.create_details(result)
+    geometry.set_detail_geocentric_latitude(result)
+
+    
+    result = bp.latitude(body_name, "graphic")           # geographic latitude
+    result.mask |= intercept_mask
+    geometry.summary.set_geographic_latitude(result)
+    geometry.set_detail_geographic_latitude(result)
+    
+    result = bp.longitude(body_name)                     # iau longitude
+    result.mask |= intercept_mask
+    geometry.summary.set_iau_longitude(result)
+    geometry.set_detail_iau_longitude(result)
+    
+    result1 = bp.longitude(body_name, "sha")              # sha longitude
+    result1.mask |= intercept_mask
+    geometry.summary.set_sha_longitude(result1)
+    geometry.set_detail_sha_longitude(result1)
+    
+    result = bp.longitude(body_name, "obs")              # obs longitude
+    result.mask |= intercept_mask
+    geometry.summary.set_obs_longitude(result)
+    geometry.set_detail_obs_longitude(result)
+    
+    result = bp.finest_resolution(body_name)             # finest resolution
+    result.mask |= intercept_mask
+    geometry.summary.set_finest_resolution(result)
+    geometry.set_detail_finest_resolution(result)
+    
+    result = bp.coarsest_resolution(body_name)           # coarsest resolution
+    result.mask |= intercept_mask
+    geometry.summary.set_coarsest_resolution(result)
+    geometry.set_detail_coarsest_resolution(result)
+    
+    result = bp.phase_angle(body_name)                   # phase angle
+    result.mask |= intercept_mask
+    geometry.summary.set_phase(result)
+    geometry.set_detail_phase(result)
+    
+    result = bp.incidence_angle(body_name)               # incidence angle
+    result.mask |= intercept_mask
+    geometry.summary.set_incidence(result)
+    geometry.set_detail_incidence(result)
+    
+    result = bp.emission_angle(body_name)                # emission angle
+    result.mask |= intercept_mask
+    geometry.summary.set_emission(result)
+    geometry.set_detail_emission(result)
+    
+    result = bp.distance(body_name)                      # distance to body
+    if result.shape != []:
+        result.mask |= intercept_mask
+    geometry.summary.set_range_to_body(result)
+    geometry.set_detail_range_to_body(result)
+    
+    result = bp.where_sunward(body_name)                 # night side flag
+    geometry.summary.set_night_side_flag(result)
+    
+    result = bp.where_in_back(body_name, "saturn_main_rings")#where behind rings
+    geometry.summary.set_behind_rings_flag(result)
+    
+    result = bp.where_inside_shadow(body_name, "saturn_main_rings")  # in shadow
+    geometry.summary.set_in_ring_shadow_flag(result)
+    
+    result = bp.sub_solar_latitude(body_name)            # subsolar centric lat
+    geometry.summary.set_sub_solar_geocentric_latitude(result)
+    
+    result = bp.sub_solar_latitude(body_name, "graphic") # subsolar graphic lat
+    geometry.summary.set_sub_solar_geographic_latitude(result)
+    
+    result = bp.sub_solar_longitude(body_name)# subsolar long
+    geometry.summary.set_sub_solar_iau_longitude(result)
+    
+    result = bp.solar_distance_to_center(body_name) # solar distance to body
+    geometry.summary.set_solar_distance_to_body_center(result)
+    
+    result = bp.sub_observer_latitude(body_name)            # obs centric lat
+    geometry.summary.set_sub_obs_geocentric_latitude(result)
+    
+    result = bp.sub_observer_latitude(body_name, "graphic")  # obs centric lat
+    geometry.summary.set_sub_obs_geographic_latitude(result)
+    
+    result = bp.sub_observer_longitude(body_name)#sub obs long
+    geometry.summary.set_sub_obs_iau_longitude(result)
+    
+    result = bp.observer_distance_to_center(body_name)
+    geometry.summary.set_obs_distance_to_body_center(result)
+    
+    #onto the Limb
+    limb_body = body_name + ":limb"
+    body_intercepted = bp.where_intercepted(limb_body)
+    limb_mask = ~body_intercepted.vals
+    
+    result = bp.elevation(limb_body)
+    result.mask |= limb_mask
+    geometry.limb.set_elevation(result)
+    
+    result = bp.latitude(limb_body)
+    result.mask |= limb_mask
+    geometry.limb.set_geocentric_latitude(result)
+    
+    result = bp.latitude(limb_body, "graphic")
+    result.mask |= limb_mask
+    geometry.limb.set_geographic_latitude(result)
+    
+    result = bp.resolution(limb_body)
+    result.mask |= limb_mask
+    geometry.limb.set_resolution(result)
+    
+    result = bp.phase_angle(limb_body)
+    result.mask |= limb_mask
+    geometry.limb.set_phase(result)
+    
+    result = bp.incidence_angle(limb_body)
+    result.mask |= limb_mask
+    geometry.limb.set_incidence(result)
+    
+    result = bp.distance(limb_body)
+    result.mask |= limb_mask
+    geometry.limb.set_range_to_limb(result)
+    
+    return geometry
+
 
 
 ################################################################################
@@ -863,8 +1672,8 @@ def index_file_type(file_name):
 def append_to_file(file_name, geometries, stop):
     f = open(file_name, 'a')
     output_buf = ""
-    print "range of appending... ", stop
-    print "f = ", f
+    #print "range of appending... ", stop
+    #print "f = ", f
     for i in range(stop):
         output_buf += str(geometries[i])
     f.write(output_buf)
@@ -925,7 +1734,7 @@ def generate_geometries_for_index(file_name, body_name):
         info_len = len(info_str)
         i1 = i + 1
         init_info_str = "    " + str(i+1) + " of " + str(nObs)
-        geometry = generate_metadata(ob, grid_resolution, file_type, body_name.lower())
+        geometry = generate_process_metadata(ob, grid_resolution, file_type, body_name.lower())
         if geometry is not None:
             geometries.append(geometry)
             actual_i += 1
