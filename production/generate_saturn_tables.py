@@ -1080,7 +1080,6 @@ class ProcessedBodyLimb(BodySurface):
     
     def set_geocentric_latitude(self, bp):
         self.geocentric_latitude = self.minmax_pair(bp * oops.DPR)
-        print "limb self.geocentric_latitude: ", self.geocentric_latitude
     
     def set_geographic_latitude(self, bp):
         self.geographic_latitude = self.minmax_pair(bp * oops.DPR)
