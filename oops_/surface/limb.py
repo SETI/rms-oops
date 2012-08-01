@@ -33,7 +33,9 @@ class Limb(Surface):
     """
 
     COORDINATE_TYPE = "limb"
-    DEBUG = False   # Set to True for convergence testing in intercept()
+    DEBUG = False   # True for convergence testing in intercept()
+    SPEEDUP = True  # True to retain history of the most recent guess. This will
+                    # fail if oops ever becomes multithreaded
 
     # Class constants to override where derivs are undefined
     coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
@@ -57,6 +59,11 @@ class Limb(Surface):
         self.ground = ground
         self.origin_id = ground.origin_id
         self.frame_id  = ground.frame_id
+
+        # Used if SPEEDUP = True to speed up repeated calls to
+        #   self.ground.intercept_normal_to_iterated()
+        self.ground_guess = None
+        self.ground_shape = None
 
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts position vectors in the internal frame into the surface
@@ -89,10 +96,22 @@ class Limb(Surface):
         """
 
         pos = Vector3.as_standard(pos)
-        groundtrack = self.ground.intercept_normal_to(pos, derivs)
+
+        # Re-use the most recent guess if the shape is unchanged
+        if pos.shape == self.ground_shape:
+            guess = self.ground_guess
+        else:
+            guess = None
+
+        (groundtrack, guess) = self.ground.intercept_normal_to_iterated(pos,
+                                                        derivs, t_guess=guess)
+        if Limb.SPEEDUP:
+            self.ground_shape = guess.shape
+            self.ground_guess = guess
 
         (lon, lat) = self.ground.coords_from_vector3(groundtrack, derivs)
         z = (pos - groundtrack).norm()
+        z *= (pos.norm() - groundtrack.norm()).sign()
 
         if axes == 2:
             return (lon, lat)
@@ -176,6 +195,12 @@ class Limb(Surface):
         obs = Vector3.as_standard(obs)
         los = Vector3.as_standard(los)
 
+        # Re-use the most recent guess if the shape is unchanged
+        if obs.shape == self.ground_shape and los.shape == self.ground_shape:
+            guess = self.ground_guess
+        else:
+            guess = None
+
         # Solve for the intercept distance where the line of sight is normal to
         # the surface.
         #
@@ -200,16 +225,14 @@ class Limb(Surface):
             t = t_guess.copy()
 
         max_dt = 1.e99
-        guess = None       # Used to speed up calls to intercept_normal_to()
-
         for iter in range(SURFACE_PHOTONS.max_iterations):
             pos = obs + t * los
 
-            (cept, guess) = self.ground.intercept_normal_to_iterated(pos,
-                                                     derivs=True, t_guess=guess)
-            perp = self.ground.normal(cept, derivs=True)
+            (track, guess) = self.ground.intercept_normal_to_iterated(pos,
+                                                    derivs=True, t_guess=guess)
+            perp = self.ground.normal(track, derivs=True)
 
-            df_dt = (perp.d_dpos * cept.d_dpos * los).dot(los)
+            df_dt = (perp.d_dpos * track.d_dpos * los).dot(los)
             dt = perp.plain().dot(los) / df_dt
 
             t = t - dt
@@ -230,9 +253,13 @@ class Limb(Surface):
                                       " does not implement derivatives")
 
         if groundtrack:
-            track = self.ground.intercept_normal_to_iterated(pos,
-                                                             t_guess=guess)[0]
+            (track, guess) = self.ground.intercept_normal_to_iterated(pos,
+                                                    derivs=True, t_guess=guess)
             pos.insert_subfield("groundtrack", track)
+
+        if Limb.SPEEDUP:
+            self.ground_shape = guess.shape
+            self.ground_guess = guess
 
         return (pos, t)
 
@@ -262,7 +289,18 @@ class Limb(Surface):
         if "groundtrack" in pos.subfields.keys():
             groundtrack = pos.groundtrack
         else:
-            groundtrack = self.ground.intercept_normal_to(pos, derivs=derivs)
+
+            # Re-use the most recent guess if the shape is unchanged
+            if pos.shape == self.ground_shape:
+                guess = self.ground_guess
+            else:
+                guess = None
+
+            (groundtrack, guess) = self.ground.intercept_normal_to_iterated(pos,
+                                                derivs=derivs, t_guess=guess)
+            if Limb.SPEEDUP:
+                self.ground_shape = guess.shape
+                self.ground_guess = guess
 
         return self.ground.normal(groundtrack, derivs=derivs)
 

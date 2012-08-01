@@ -28,12 +28,13 @@ class Spheroid(Surface):
     Z-axis. The latitude defined in this manner is neither planetocentric nor
     planetographic; functions are provided to perform the conversion to either
     choice. Longitudes are measured in a right-handed manner, increasing toward
-    the east. Values range from 0 to 2*pi.
+    the east; values range from 0 to 2*pi.
 
     Elevations are defined by "unsquashing" the radial vectors and then
     subtracting off the equatorial radius of the body. Thus, the surface is
-    defined as the locus of points where elevation equals zero. However, the
-    direction of increasing elevation is not exactly normal to the surface.
+    defined as the locus of points where elevation equals zero. However, note
+    that with this definition, the gradient of the elevation value is not
+    exactly normal to the surface.
     """
 
     COORDINATE_TYPE = "spherical"
@@ -52,10 +53,10 @@ class Spheroid(Surface):
             origin      the Path object or ID defining the center of the
                         spheroid.
             frame       the Frame object or ID defining the coordinate frame in
-                        which the spheroid is fixed, with the short axis along
-                        the Z-coordinate.
-            radii       a tuple (a,c), defining the long and short radii of the
-                        spheroid.
+                        which the spheroid is fixed, with the short radius
+                        along the Z-axis.
+            radii       a tuple (a,c) or (a,a,c), defining the long and short
+                        radii of the spheroid.
             exclusion   the fraction of the polar radius within which
                         calculations of intercept_normal_to() are suppressed.
                         Values of less than 0.9 are not recommended because
@@ -65,20 +66,25 @@ class Spheroid(Surface):
         self.origin_id = registry.as_path_id(origin)
         self.frame_id  = registry.as_frame_id(frame)
 
-        self.radii  = np.array((radii[0], radii[0], radii[1]))
+        # Allow either two or three radius values
+        if len(radii) == 2:
+            self.radii = np.array((radii[0], radii[0], radii[1]))
+        else:
+            self.radii = np.array((radii[0], radii[1], radii[2]))
+            assert radii[0] == radii[1]
+
         self.radii_sq = self.radii**2
-        self.req    = radii[0]
+        self.req    = self.radii[0]
         self.req_sq = self.req**2
         self.rpol   = self.radii[2]
 
-        self.squash_z   = radii[1] / radii[0]
-        self.unsquash_z = radii[0] / radii[1]
+        self.squash_z   = self.radii[2] / self.radii[0]
+        self.unsquash_z = self.radii[0] / self.radii[2]
 
-        self.squash    = Vector3((1., 1., self.squash_z))
-        self.squash_sq = Vector3((1., 1., self.squash_z**2))
-
-        self.unsquash     = Vector3((1., 1., self.unsquash_z))
-        self.unsquash_sq  = Vector3((1., 1., self.unsquash_z**2))
+        self.squash    = Vector3((1., 1.,   self.squash_z))
+        self.squash_sq = self.squash**2
+        self.unsquash  = 1. / self.squash
+        self.unsquash_sq = self.unsquash**2
 
         self.unsquash_sq_2d = MatrixN(([1,0,0],
                                        [0,1,0],
@@ -89,14 +95,6 @@ class Spheroid(Surface):
         # geometry.
 
         self.exclusion = exclusion * self.rpol
-    
-    def __str__(self):
-        """show overview of Spheroid for debugging purposes."""
-        s = "Spheroid\n\torigin_id: " + self.origin_id + "\n"
-        s += "\tframe_id: " + self.frame_id + "\n"
-        s += "\tradii: " + str(self.radii) + "\n"
-        s += "\texclusion: " + str(self.exclusion) + "\n"
-        return s
 
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame into the surface
@@ -392,7 +390,9 @@ class Spheroid(Surface):
                         units.
             derivs      true to return a matrix of partial derivatives
                         d(intercept)/d(pos).
-            t_guess     initial guess at the t array.
+            t_guess     initial guess at the t array. This is the scalar such
+                        that
+                            intercept + t * perp(intercept) = pos
 
         Return:         a tuple (pos,t):
             intercept   a unitless vector3 of surface intercept points. Where no
@@ -409,35 +409,35 @@ class Spheroid(Surface):
         # where
         #   perp(cept) = cept * unsquash_sq
         #
-        # Let A1 == unsquash_z
-        # Let A2 == unsquash_z**2
+        # Let C1 == unsquash_z
+        # Let C2 == unsquash_z**2
         #
         # Expanding,
         #   pos_x = (1 + t) cept_x
         #   pos_y = (1 + t) cept_y
-        #   pos_z = (1 + A2 t) cept_z
+        #   pos_z = (1 + C2 t) cept_z
         #
         # The intercept point must also satisfy
         #   |cept * unsquash| = req
         # or
-        #   cept_x**2 + cept_y**2 + A2 cept_z**2 = req_sq
+        #   cept_x**2 + cept_y**2 + C2 cept_z**2 = req_sq
         #
         # Solve:
-        #   cept_x**2 + cept_y**2 + A2 cept_z**2 - req_sq = 0
+        #   cept_x**2 + cept_y**2 + C2 cept_z**2 - req_sq = 0
         #
         #   pos_x**2 / (1 + t)**2 +
         #   pos_y**2 / (1 + t)**2 +
-        #   pos_z**2 / (1 + A2 t)**2 * A2 - req_sq = 0
+        #   pos_z**2 / (1 + C2 t)**2 * C2 - req_sq = 0
         #
         # f(t) = the above expression
         #
         # df/dt = -2 pos_x**2 / (1 + t)**3 +
         #       = -2 pos_y**2 / (1 + t)**3 +
-        #       = -2 pos_z**2 / (1 + A2 t)**3 A2**2
+        #       = -2 pos_z**2 / (1 + C2 t)**3 C2**2
         #
-        # Let denom = [1 + t, 1 + t, 1 + A2 t]
-        # Let unsquash = [1, 1, A1]
-        # Let unsquash_sq = [1, 1, A2]
+        # Let denom = [1 + t, 1 + t, 1 + C2 t]
+        # Let unsquash = [1, 1, C1]
+        # Let unsquash_sq = [1, 1, C2]
         #
         # f(t) = (pos * scale) dot (pos * scale) - req_sq
         #
@@ -468,8 +468,6 @@ class Spheroid(Surface):
                 print LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
                 print iter, max_dt
 
-            if max_dt.shape == []:
-                break
             if (max_dt <= SURFACE_PHOTONS.dlt_precision or
                 max_dt >= prev_max_dt * 0.5): break
 
@@ -481,36 +479,36 @@ class Spheroid(Surface):
             #
             # pos_x**2 / (1 + t)**2 +
             # pos_y**2 / (1 + t)**2 +
-            # pos_z**2 / (1 + A2 t)**2 * A2 - req_sq = 0
+            # pos_z**2 / (1 + C2 t)**2 * C2 - req_sq = 0
             #
             # 2 pos_x / (1+t)**2
             #   + pos_x**2 * (-2)/(1+t)**3 dt/dpos_x
             #   + pos_y**2 * (-2)/(1+t)**3 dt/dpos_x
-            #   + pos_z**2 * (-2)/(1+A2 t)**3 A2**2 dt/dpos_x = 0
+            #   + pos_z**2 * (-2)/(1+C2 t)**3 C2**2 dt/dpos_x = 0
             #
             # dt/dpos_x [(pos_x**2 + pos_y**2)/(1+t)**3 +
-            #             pos_z**2 * A2**2/(1 + A2 t)**3] = pos_x / (1+t)**2
+            #             pos_z**2 * C2**2/(1 + C2 t)**3] = pos_x / (1+t)**2
             #
             # Similar for dt/dpos_y
             #
             # (pos_x**2 + pos_y**2) * (-2)/(1+t)**3 dt/dpos_z
-            #   + pos_z**2 * (-2)/(1 + A2 t)**3 A2**2 dt/dpos_z
-            #   + 2 pos_z/(1 + A2 t)**2 A2 = 0
+            #   + pos_z**2 * (-2)/(1 + C2 t)**3 C2**2 dt/dpos_z
+            #   + 2 pos_z/(1 + C2 t)**2 C2 = 0
             #
             # dt/dpos_z [(pos_x**2 + pos_y**2) / (1+t)**3 +
-            #             pos_z**2*A2**2/(1 + A2 t)**3] = pos_z A2/(1 + A2 t)**2
+            #             pos_z**2*C2**2/(1 + C2 t)**3] = pos_z C2/(1 + C2 t)**2
             #
-            # Let denom = [1 + t, 1 + t, 1 + A2 t]
-            # Let unsquash_sq = [1, 1, A2]
+            # Let denom = [1 + t, 1 + t, 1 + C2 t]
+            # Let unsquash_sq = [1, 1, C2]
             #
             # Let denom1 = [(pos_x**2 + pos_y**2)/(1+t)**3 +
-            #                pos_z**2 * A2**2 / (1 + A2 t)**3]
+            #                pos_z**2 * C2**2 / (1 + C2 t)**3]
             # in the expressions for dt/dpos. Note that this is identical to
             # df_dt_div_neg2 in the expressions above.
             #
             # dt/dpos_x * denom1 = pos_x  / (1+t)**2
             # dt/dpos_y * denom1 = pos_y  / (1+t)**2
-            # dt/dpos_z * denom1 = pos_z  * A2 / (1 + A2 t)**2
+            # dt/dpos_z * denom1 = pos_z  * C2 / (1 + C2 t)**2
 
             dt_dpos = pos * self.unsquash_sq / (denom**2 * df_dt_div_neg2)
             dt_dpos = dt_dpos.as_row()
@@ -626,7 +624,7 @@ class Test_Spheroid(unittest.TestCase):
         from oops_.path.path_ import Path
 
         REQ  = 60268.
-        RPOL = 54364.
+        #RPOL = 54364.
         RPOL = 50000.
         planet = Spheroid("SSB", "J2000", (REQ, RPOL))
 

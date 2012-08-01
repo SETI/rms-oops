@@ -355,9 +355,7 @@ class Surface(object):
 ################################################################################
 
     def photon_from_event(self, link, quick=None, derivs=False,
-                                iters     = SURFACE_PHOTONS.max_iterations,
-                                precision = SURFACE_PHOTONS.dlt_precision,
-                                limit     = SURFACE_PHOTONS.dlt_limit):
+                                iters=None, precision=None, limit=None):
         """Returns the photon arrival event at the body's surface, for photons
         departing earlier from the specified linking event. See _solve_photon()
         for details. """
@@ -366,20 +364,16 @@ class Surface(object):
                                         iters, precision, limit)
 
     def photon_to_event(self, link, quick=None, derivs=False,
-                              iters     = SURFACE_PHOTONS.max_iterations,
-                              precision = SURFACE_PHOTONS.dlt_precision,
-                              limit     = SURFACE_PHOTONS.dlt_limit):
+                        iters=None, precision=None, limit=None):
         """Returns the photon departure event at the body's surface, for photons
         arriving later at the specified linking event. See _solve_photon() for
         details. """
 
         return self._solve_photon(link, -1, quick, derivs,
-                                        iters, precision, limit)
+                                  iters, precision, limit)
 
     def _solve_photon(self, link, sign, quick=None, derivs=False,
-                            iters     = SURFACE_PHOTONS.max_iterations,
-                            precision = SURFACE_PHOTONS.dlt_precision,
-                            limit     = SURFACE_PHOTONS.dlt_limit):
+                      iters=None, precision=None, limit=None):
         """Solve for the event object located on the body's surface that falls
         at the other end of the photon's path to or from a linking event.
 
@@ -426,6 +420,14 @@ class Surface(object):
                         partial derivative of the surface event with respect to
                         the time and line of sight of the linking event.
         """
+
+        # Interpret args
+        if iters is None:
+            iters = SURFACE_PHOTONS.max_iterations
+        if precision is None:
+            precision = SURFACE_PHOTONS.dlt_precision
+        if limit is None:
+            limit = SURFACE_PHOTONS.dlt_limit
 
         # Interpret the sign
         signed_c = sign * constants.C
