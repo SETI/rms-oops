@@ -1,35 +1,35 @@
 ################################################################################
 # oops_/obs/snapshot.py: Subclass Snapshot of class Observation
+#
+# 6/13/12 MRS - updated with revised constructor and to support new API, added
+#   a full suite of unit tests.
+# 7/7/12 MRS - added cadence attribute.
 ################################################################################
 
 import numpy as np
-import sys
-import math
 
 from oops_.obs.observation_ import Observation
+from oops_.cadence.metronome import Metronome
 from oops_.array.all import *
-
-import oops_.frame.all as frame_
-import oops_.path.all as path_
-import oops_.surface.all as surface_
-from oops_.event import Event
-
-from oops import inst
-
-dist_tolerance = 1000.
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
     all exposed at the same time."""
 
-    ZERO_PAIR = Pair((0,0))
-
-    def __init__(self, time, fov, path_id, frame_id, **subfields):
+    def __init__(self, axes, tstart, texp,
+                       fov, path_id, frame_id, **subfields):
         """Constructor for a Snapshot.
 
         Input:
-            time        a tuple defining the start time and end time of the
-                        observation overall, in seconds TDB.
+            axes        a list or tuple of strings, with one value for each axis
+                        in the associated data array. A value of "u" should
+                        appear at the location of the array's u-axis; "v" should
+                        appear at the location of the array's v-axis. For
+                        example, ("v","u"), is correct for a 2-D array read from
+                        an image file in FITS or VICAR format.
+            tstart      the start time of the observation in seconds TDB.
+            texp        exposure time of the observation in seconds.
+
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
@@ -45,58 +45,253 @@ class Snapshot(Observation):
                         Additional subfields may be included as needed.
         """
 
-        self.time = time
+        self.cadence = Metronome(tstart, texp, texp, 1)
         self.fov = fov
         self.path_id = path_id
         self.frame_id = frame_id
+
+        self.axes = list(axes)
+        self.u_axis = self.axes.index("u")
+        self.v_axis = self.axes.index("v")
+        self.uv_shape = list(self.fov.uv_shape.vals)
+
+        self.t_axis = -1
+        self.texp = texp
+        self.time = self.cadence.time
+        self.midtime = self.cadence.midtime
+
+        self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
+        self.scalar_midtime = Scalar(self.midtime)
 
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
-        # Attributes specific to a Snapshot
-        self.midtime = (self.time[0] + self.time[1]) / 2.
-        self.texp = self.time[1] - self.time[0]
-    
-    def __str__(self):
-        """show overview of Snapshot for debugging purposes."""
-        s = "Snapshot\n\ttexp: " + str(self.texp) + "\n"
-        s += "\ttime: " + str(self.time) + "\n"
-        return s
-
-    def times_at_uv(self, uv_pair, extras=()):
-        """Returns the start time and stop time associated with the selected
-        spatial pixel index (u,v).
+    def uvt(self, indices, fovmask=False):
+        """Returns the FOV coordinates (u,v) and the time in seconds TDB
+        associated with the given indices into the data array. This method
+        supports non-integer index values.
 
         Input:
-            uv_pair     a Pair of spatial indices (u,v).
-            extras      Scalars of any extra index values needed to define the
-                        timing of array elements.
-        Return:         a tuple containing Scalars of the start time and stop
-                        time of each (u,v) pair, as seconds TDB.
+            indices     a Tuple of array indices.
+            fovmask     True to mask values outside the field of view.
 
-                        If derivs is True, then each time has a subfield "d_duv"
-                        defining the change in time associated with a 1-pixel
-                        step along the u and v axes. This is represented by a
-                        MatrixN with item shape [1,2].
+        Return:         (uv, time)
+            uv          a Pair defining the values of (u,v) associated with the
+                        array indices.
+            time        a Scalar defining the time in seconds TDB associated
+                        with the array indices.
         """
 
-        return self.time
+        indices = Tuple.as_tuple(indices)
 
-    def sweep_duv_dt(self, uv_pair, extras=()):
+        uv = indices.as_pair((self.u_axis,self.v_axis))
+        time = self.scalar_midtime
+
+        if fovmask:
+            is_inside = self.uv_is_inside(uv, inclusive=True)
+            if not np.all(is_inside):
+                mask = indices.mask | ~is_inside
+                uv.mask = mask
+
+                time_vals = np.empty(indices.shape)
+                time_vals[...] = self.midtime
+                time = Scalar(time_vals, mask)
+
+        return (uv, time)
+
+    def uvt_range(self, indices, fovmask=False):
+        """Returns the ranges of FOV coordinates (u,v) and the time range in
+        seconds TDB associated with the given integer indices into the data
+        array.
+
+        Input:
+            indices     a Tuple of integer array indices.
+            fovmask     True to mask values outside the field of view.
+
+        Return:         (uv_min, uv_max, time_min, time_max)
+            uv_min      a Pair defining the minimum values of (u,v) associated
+                        the pixel.
+            uv_max      a Pair defining the maximum values of (u,v).
+            time_min    a Scalar defining the minimum time associated with the
+                        pixel. It is given in seconds TDB.
+            time_max    a Scalar defining the maximum time value.
+        """
+
+        indices = Tuple.as_int(indices)
+
+        uv_min = indices.as_pair((self.u_axis,self.v_axis))
+        uv_max = uv_min + Pair.ONES
+
+        time_min = self.scalar_time[0]
+        time_max = self.scalar_time[1]
+
+        if fovmask:
+            is_inside = self.uv_is_inside(uv_min, inclusive=False)
+            if not np.all(is_inside):
+                uv_min.mask = uv_min.mask | ~is_inside
+                uv_max.mask = uv_min.mask
+
+                time_min_vals = np.empty(is_inside.shape)
+                time_max_vals = np.empty(is_inside.shape)
+
+                time_min_vals[...] = self.time[0]
+                time_max_vals[...] = self.time[1]
+
+                mask = ~is_inside
+                time_min = Scalar(time_min_vals, mask)
+                time_max = Scalar(time_max_vals, mask)
+
+        return (uv_min, uv_max, time_min, time_max)
+
+# Untested...
+#     def indices_at_uvt(self, uv_pair, time, fovmask=False):
+#         """Returns a Tuple of indices corresponding to a given spatial location
+#         and time. This method supports non-integer positions and time steps, and
+#         returns fractional indices.
+# 
+#         Input:
+#             uv_pair     a Pair of spatial (u,v) coordinates in or near the field
+#                         of view.
+#             time        a Scalar of times in seconds TDB.
+#             fovmask     True to mask values outside the field of view.
+# 
+#         Return:
+#             indices     a Tuple of array indices. Any array indices not
+#                         constrained by (u,v) or time are returned with value 0.
+#                         Note that returned indices can fall outside the nominal
+#                         limits of the data object.
+#         """
+# 
+#         uv_pair = Pair.as_pair(uv_pair)
+#         time = Scalar.as_scalar(time)
+#         (uv_pair, time) = Array_.broadcast_arrays(uv_pair, time)
+# 
+#         (u,v) = uv_pair.as_scalars()
+# 
+#         index_vals = np.zeros(uv_pair.shape + [len(self.axes)])
+#         index_vals[..., self.u_axis] = u.vals
+#         index_vals[..., self.v_axis] = v.vals
+# 
+#         if fovmask:
+#             is_inside = ((self.uv_is_inside(uv_pair, inclusive=True) &
+#                          (time >= self.time[0]) & (time <= self.time[1]))
+#             if not np.all(is_inside):
+#                 mask = uv_pair.mask | ~is_inside
+#             else:
+#                 mask = uv_pair.mask
+# 
+#         return Tuple(index_vals, mask)
+
+    def times_at_uv(self, uv_pair, fovmask=False, extras=None):
+        """Returns the start and stop times of the specified spatial pixel
+        (u,v).
+
+        Input:
+            uv_pair     a Pair of spatial (u,v) coordinates in and observation's
+                        field of view. The coordinates need not be integers, but
+                        any fractional part is truncated.
+            fovmask     True to mask values outside the field of view.
+            extras      an optional tuple or dictionary containing any extra
+                        parameters required for the conversion from (u,v) to
+                        time.
+
+        Return:         a tuple containing Scalars of the start time and stop
+                        time of each (u,v) pair, as seconds TDB.
+        """
+
+        if fovmask:
+            is_inside = self.uv_is_inside(uv_pair, inclusive=True)
+            if not np.all(is_inside):
+                time_min_vals = np.empty(is_inside.shape)
+                time_max_vals = np.empty(is_inside.shape)
+
+                time_min_vals[...] = self.time[0]
+                time_max_vals[...] = self.time[1]
+
+                mask = ~is_inside
+                time_min = Scalar(time_min_vals, mask)
+                time_max = Scalar(time_max_vals, mask)
+
+                return (time_min, time_max)
+
+        return self.scalar_time
+
+# Untested but not needed as of 7/7/12...
+#     def uv_at_time(self, time, fovmask=False, extras=None):
+#         """Returns the (u,v) ranges of spatial pixel observed at the specified
+#         time.
+# 
+#         Input:
+#             uv_pair     a Scalar of time values in seconds TDB.
+#             fovmask     True to mask values outside the time limits and/or the
+#                         field of view.
+#             extras      an optional tuple or dictionary containing any extra
+#                         parameters required for the conversion from (u,v) to
+#                         time.
+# 
+#         Return:         (uv_min, uv_max)
+#             uv_min      the lower (u,v) corner of the area observed at the
+#                         specified time.
+#             uv_max      the upper (u,v) corner of the area observed at the
+#                         specified time.
+#         """
+# 
+#         uv_min = Scalar((0,0))
+#         uv_max = Scalar(self.uv_shape)
+# 
+#         if fovmask or np.any(time.mask):
+#             is_inside = (time >= self.time[0]) & (time <= self.time[1])
+#             if not np.all(is_inside):
+#                 uv_min_vals = np.zeros(time.shape + [2])
+# 
+#                 uv_max_vals = np.empty(time.shape + [2])
+#                 uv_max_vals[...,0] = self.uv_shape[0]
+#                 uv_max_vals[...,1] = self.uv_shape[1]
+# 
+#                 uv_min = Pair(uv_min_vals, time.mask | ~is_inside)
+#                 uv_max = Pair(uv_max_vals, mask)
+# 
+#         return (uv_min, uv_max)
+
+    def sweep_duv_dt(self, uv_pair, extras=None):
         """Returns the mean local sweep speed of the instrument in the (u,v)
         directions.
 
         Input:
             uv_pair     a Pair of spatial indices (u,v).
-            extras      Scalars of any extra index values needed to define the
-                        timing of array elements.
+            extras      an optional tuple or dictionary containing any extra
+                        parameters required to define the timing of array
+                        elements.
 
         Return:         a Pair containing the local sweep speed in units of
                         pixels per second in the (u,v) directions.
         """
 
-        return Snapshot.ZERO_PAIR
+        return Pair.ZERO
+
+    def time_shift(self, dtime):
+        """Returns a copy of the observation object in which times have been
+        shifted by a constant value.
+
+        Input:
+            dtime       the time offset to apply to the observation, in units of
+                        seconds. A positive value shifts the observation later.
+
+        Return:         a (shallow) copy of the object with a new time.
+        """
+
+        obs = Snapshot(self.axes, self.time[0] + dtime, self.texp,
+                       self.fov, self.path_id, self.frame_id)
+
+        for key in self.subfields.keys():
+            obs.insert_subfield(key, self.subfields[key])
+
+        return obs
+
+################################################################################
+# Overrides of Observation methods
+################################################################################
 
     def uv_from_path(self, path, quick=None, derivs=False):
         """Solves for the (u,v) indices of an object in the field of view, given
@@ -118,116 +313,6 @@ class Snapshot(Observation):
 
         # Snapshots are easy and require zero iterations
         return Observation.uv_from_path(self, path, (), quick, derivs, iters=0)
-    
-    def surface_in_view(self, surface):
-        """Determine whether a surface exists in the snapshot.
-            
-            Input:
-            surface     A surface (RingPlane, Spheroid, etc) to be checked
-            
-            Return:     Boolean.  True if exists, else False.
-            """
-        return self.recursive_surface_in_view(surface, 16.)
-    
-    def recursive_surface_in_view(self, surface, resolution):
-        """Recursively check, with finer and finer resolution, whether surface
-            is intersected by ray at center of a pixel.
-            
-            Input:
-            surface     A surface (RingPlane, Spheroid, etc) to be checked.
-            resoltuion  must be power of 2.
-            
-            Return:     Boolean.  True if exists, else False.
-            """
-        uv_shape = self.fov.uv_shape.vals / resolution
-        buffer = np.empty((uv_shape[0], uv_shape[1], 2))
-        buffer[:,:,1] = np.arange(uv_shape[1]).reshape(uv_shape[1],1)
-        buffer[:,:,0] = np.arange(uv_shape[0])
-        buffer *= resolution
-        indices = Pair(buffer + 0.5)
-        
-        rays = self.fov.los_from_uv(indices)
-        arrivals = -rays
-        image_event = Event(self.midtime, (0,0,0), (0,0,0), "CASSINI",
-                            self.frame_id, Empty(), arrivals)
-        
-        (surface_event, rel_surf_evt) = surface.photon_to_event(image_event, 1)
-        
-        if not surface_event.pos.mask.all():
-            return True
-        elif resolution == 1:
-            return False
-        return self.recursive_surface_in_view(surface, resolution / 2.)
-    
-    def surface_center_within_view_bounds(self, origin_id, path_id):
-        """Determine whether teh center of a surface is somewhere within the
-            snapshot bounds, even if subpixel.
-            
-            Input:
-            surface     A surface (RingPlane, Spheroid, etc) to be checked
-            
-            Return:     Boolean.  True if exists, else False.
-            """
-        image_event = Event(self.midtime, (0,0,0), (0,0,0), origin_id,
-                            self.frame_id)
-        surface_path = path_.connect(path_id, origin_id, self.frame_id)
-        (abs_event, rel_event) = surface_path.photon_to_event(image_event)
-        xy_pair = self.fov.xy_from_los(rel_event.pos)
-        uv = self.fov.uv_from_xy(xy_pair)
-        u = uv.vals[...,0]
-        v = uv.vals[...,1]
-        uv_shape = self.fov.uv_shape.vals
-        return((u >= 0.) and (u <= uv_shape[0]) and (v >= 0.) and (v <= uv_shape[1]))
-    
-    def any_part_object_in_view(self, origin_id, mass_body):
-        """Determine if any part of object from path_id is w/in field-of-view.
-            NOTE: This code is for a sphere and should be put in Spheroid,
-            probably.
-            
-            Input:
-            path_id     id of object path
-            
-            Return:     Boolean.  True if any part w/in fov.
-            """
-        # get position of object relative to view point
-        image_event = Event(self.midtime, (0,0,0), (0,0,0), origin_id,
-                            self.frame_id)
-        surface_path = path_.Path.connect(mass_body.path_id, origin_id,
-                                          self.frame_id)
-        #rel_event = surface_path.photon_to_event(image_event)[1]
-        # photon_to_event no longer returns relative event, so need to make
-        # separate call to get it
-        abs_event = surface_path.photon_to_event(image_event)
-        rel_event = abs_event.wrt_path(origin_id)
-        
-        #now get planes of viewing frustrum
-        uv_shape = self.fov.uv_shape.vals
-        uv = np.array([(0,0),
-                       (uv_shape[0],0),
-                       (uv_shape[0],uv_shape[1]),
-                       (0,uv_shape[1])])
-        uv_pair = Pair(uv)
-        los = self.fov.los_from_uv(uv_pair)
-        # if the dot product of the normal of each plane and the center of
-        # object is less then negative the radius, we lie entirely outside that
-        # plane of the frustrum, and therefore no part is in fov.  If between
-        # -r and r, we have intersection, therefore part in fov. otherwise,
-        # entirely in fov.
-        #frustrum_planes = []
-        # for the moment use the bounding sphere, but in future use a bounding
-        # box which would be more appropriate for objects not sphere-like
-        min_r = -mass_body.radius
-        max_r = mass_body.radius
-        for i in range(0,4):
-            normal = los[i].cross(los[(i+1)%4])
-            dist = normal.dot(rel_event.pos)
-            d = dist.vals
-            if d < min_r:    # entirely outside of plane
-                return False
-            if (d < max_r) and (-d > min_r):  # intersects plane
-                return True
-        # must be inside of all the planes
-        return True
 
 ################################################################################
 # UNIT TESTS
@@ -239,77 +324,112 @@ class Test_Snapshot(unittest.TestCase):
 
     def runTest(self):
 
-        # Imports are here to avoid conflicts
-        import oops_.registry as registry
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
-        registry.initialize_body_registry()
+        from oops_.fov.flat import Flat
 
-        import oops.inst.cassini.iss as iss
-        iss.ISS.initialize()
+        fov = Flat((0.001,0.001), (10,20))
+        obs = Snapshot(axes=("u","v"), texp=2.,
+                       tstart=98., fov=fov, path_id="SSB", frame_id="J2000")
 
-        paths = ["test_data/cassini/ISS/W1575634136_1.IMG",
-                 "test_data/cassini/ISS/W1573721822_1.IMG",
-                 "test_data/cassini/ISS/N1649465367_1.IMG",
-                 "test_data/cassini/ISS/N1649465412_1.IMG",
-                 "test_data/cassini/ISS/N1649465464_1.IMG",
-                 "test_data/cassini/ISS/W1572114418_1.IMG",
-                 "test_data/cassini/ISS/W1575632515_1.IMG",
-                 "test_data/cassini/ISS/W1575633938_1.IMG",
-                 "test_data/cassini/ISS/W1575633971_1.IMG",
-                 "test_data/cassini/ISS/W1575634037_1.IMG",
-                 "test_data/cassini/ISS/W1575634070_1.IMG",
-                 "test_data/cassini/ISS/W1575634103_1.IMG",
-                 "test_data/cassini/ISS/W1558932373_3.IMG",
-                 "test_data/cassini/ISS/N1649465323_1.IMG"]
-        saturn_solns = [True, True, True, True, True, True, True, True, True,
-                        True,  True, True, True, True]
-        mimas_solns = [False, False, False, False, False, True, False, False,
-                       False, False, False, False, True, False]
-        enceladus_solns = [True, False, True, True, True, False, False, True,
-                           True, True, True, True, False, True]
-        tethys_solns = [False, False, False, False, False, False, True, False,
-                        False, False, False, False, False, False]
-        dione_solns = [True, False, False, False, False, False, False, True,
-                       True, True, True, True, False, False]
-        rhea_solns = [False, False, True, True, True, False, False, False,
-                      False, False, False, False, False, True]
-        titan_solns = [False, False, False, False, False, True, False, False,
-                       False, False, False, False, False, False]
-        iapetus_solns = [False, False, False, False, False, False, False, False,
-                         False, False, False, False, False, False]
-        phoebe_solns = [False, False, False, False, False, False, False, False,
-                        False, False, False, False, False, False]
-        hyperion_solns = [True, False, False, False, False, False, True, True,
-                          True, True, True, True, False, False]
-        solns = [saturn_solns, mimas_solns, enceladus_solns, tethys_solns,
-                 dione_solns, rhea_solns, titan_solns, iapetus_solns,
-                 phoebe_solns, hyperion_solns]
-        bodies = [registry.body_lookup("SATURN"),
-                  registry.body_lookup("MIMAS"),
-                  registry.body_lookup("ENCELADUS"),
-                  registry.body_lookup("TETHYS"),
-                  registry.body_lookup("DIONE"),
-                  registry.body_lookup("RHEA"),
-                  registry.body_lookup("TITAN"),
-                  registry.body_lookup("IAPETUS"),
-                  registry.body_lookup("PHOEBE"),
-                  registry.body_lookup("HYPERION")]
-        i = 0
-        for path in paths:
-            snapshot = iss.from_file(path)
-            j = 0
-            for mass_body in bodies:
-                in_view = snapshot.any_part_object_in_view("CASSINI",
-                                                           mass_body)
-                self.assertTrue(in_view == solns[j][i])
-                j += 1
-            i += 1
+        indices = Tuple([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
-        registry.initialize_body_registry()
-        iss.ISS.reset()
+        # uvt() with fovmask == False
+        (uv,time) = obs.uvt(indices)
+
+        self.assertFalse(uv.mask)
+        self.assertFalse(time.mask)
+        self.assertEqual(time, 99.)
+        self.assertEqual(uv, indices.as_pair())
+
+        # uvt() with fovmask == True
+        (uv,time) = obs.uvt(indices, fovmask=True)
+
+        self.assertTrue(np.all(uv.mask == np.array(4*[False] + [True])))
+        self.assertTrue(np.all(time.mask == uv.mask))
+        self.assertEqual(time[:4], 99.)
+        self.assertEqual(uv[:4], indices.as_pair()[:4])
+
+        # uvt_range() with fovmask == False
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
+
+        self.assertFalse(uv_min.mask)
+        self.assertFalse(uv_max.mask)
+        self.assertFalse(time_min.mask)
+        self.assertFalse(time_max.mask)
+
+        self.assertEqual(uv_min, indices.as_pair())
+        self.assertEqual(uv_max, indices.as_pair() + (1,1))
+        self.assertEqual(time_min,  98.)
+        self.assertEqual(time_max, 100.)
+
+        # uvt_range() with fovmask == False, new indices
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9))
+
+        self.assertFalse(uv_min.mask)
+        self.assertFalse(uv_max.mask)
+        self.assertFalse(time_min.mask)
+        self.assertFalse(time_max.mask)
+
+        self.assertEqual(uv_min, indices.as_pair())
+        self.assertEqual(uv_max, indices.as_pair() + (1,1))
+        self.assertEqual(time_min,  98.)
+        self.assertEqual(time_max, 100.)
+
+        # uvt_range() with fovmask == True, new indices
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9),
+                                                             fovmask=True)
+
+        self.assertTrue(np.all(uv_min.mask == [False] + 4*[True]))
+        self.assertTrue(np.all(uv_min.mask == uv_max.mask))
+        self.assertTrue(np.all(uv_min.mask == time_min.mask))
+        self.assertTrue(np.all(uv_min.mask == time_max.mask))
+
+        self.assertEqual(uv_min[0], indices.as_pair()[0])
+        self.assertEqual(uv_max[0], (indices.as_pair() + (1,1))[0])
+        self.assertEqual(time_min[0],  98.)
+        self.assertEqual(time_max[0], 100.)
+
+        # times_at_uv() with fovmask == False
+        uv_pair = Pair([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
+
+        (time0, time1) = obs.times_at_uv(uv_pair)
+
+        self.assertEqual(time0,  98.)
+        self.assertEqual(time1, 100.)
+
+        # times_at_uv() with fovmask == True
+        (time0, time1) = obs.times_at_uv(uv_pair, fovmask=True)
+
+        self.assertTrue(np.all(time0.mask == 4*[False] + [True]))
+        self.assertTrue(np.all(time1.mask == 4*[False] + [True]))
+        self.assertEqual(time0[:4],  98.)
+        self.assertEqual(time1[:4], 100.)
+
+        # Alternative axis order ("v","u")
+        obs = Snapshot(axes=("v","u"), texp=2.,
+                       tstart=98., fov=fov, path_id="SSB", frame_id="J2000")
+        indices = Tuple([(0,0),(0,10),(20,0),(20,10),(20,11)])
+
+        (uv,time) = obs.uvt(indices)
+
+        self.assertEqual(uv, indices.as_pair((1,0)))
+
+        (uv,time) = obs.uvt(indices, fovmask=True)
+
+        self.assertEqual(uv[:4], indices.as_pair((1,0))[:4])
+        self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
+
+        # Alternative axis order ("v", "a", "u")
+        obs = Snapshot(axes=("v","a","u"), texp=2.,
+                       tstart=98., fov=fov, path_id="SSB", frame_id="J2000")
+        indices = Tuple([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
+        (uv,time) = obs.uvt(indices)
+
+        self.assertEqual(uv, indices.as_pair((2,0)))
+
+        (uv,time) = obs.uvt(indices, fovmask=True)
+
+        self.assertEqual(uv[:4], indices.as_pair((2,0))[:4])
+        self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
 
 ################################################################################
 if __name__ == '__main__':
