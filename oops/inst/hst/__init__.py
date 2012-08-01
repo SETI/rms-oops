@@ -322,12 +322,16 @@ class HST(object):
         for objects in hst_file:
             headers.append(objects.header)
 
+        times = self.time_limits(hst_file, parameters)
+
         return oops.obs.Snapshot(
-                        self.time_limits(hst_file, parameters),     # time
-                        fov,                                        # fov
-                        "EARTH",                                    # path_id
-                        self.register_frame(hst_file, fov, parameters),
-                                                                    # frame_id
+                        axes = ("v","u"),
+                        tstart = times[0],
+                        texp = times[1] - times[0],
+                        fov = fov,
+                        path_id = "EARTH",
+                        frame_id = self.register_frame(hst_file, fov,
+                                                       parameters),
                         data = self.data_array(hst_file, parameters),
                         error = self.error_array(hst_file, parameters),
                         quality = self.quality_mask(hst_file, parameters),
@@ -822,7 +826,7 @@ class Test_HST(unittest.TestCase):
         buffer[:,:,1] = np.arange(shape[1]) + 0.5
         pixels = oops.Pair(buffer)
 
-        self.assertTrue(np.all(fov.uv_is_inside(pixels).vals))
+        self.assertTrue(np.all(fov.uv_is_inside(pixels)))
 
         # Confirm that a fov.Polynomial is reversible
 
