@@ -243,7 +243,7 @@ import unittest
 from oops_.cadence.metronome import Metronome
 from oops_.cadence.dual import DualCadence
 
-class Test_RasterSlit(unittest.TestCase):
+class Test_RasterSlit1D(unittest.TestCase):
 
     def runTest(self):
 

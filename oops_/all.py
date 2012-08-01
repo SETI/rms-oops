@@ -7,6 +7,7 @@
 
 from oops_.array.all import *
 
+import oops_.cadence.all  as cadence
 import oops_.calib.all    as calib
 import oops_.cmodel.all   as cmodel
 import oops_.format.all   as format
