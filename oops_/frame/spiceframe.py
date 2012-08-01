@@ -83,7 +83,7 @@ class SpiceFrame(Frame):
         if time.shape == []:
             matrix6 = cspice.sxform(self.spice_reference_name,
                                     self.spice_frame_name,
-                                    time.vals)
+                                    float(time.vals))
             (matrix, omega) = cspice.xf2rav(matrix6)
             return Transform(matrix, omega, self.frame_id, self.reference_id)
 
