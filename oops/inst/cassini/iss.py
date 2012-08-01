@@ -6,7 +6,6 @@ import numpy as np
 import julian
 import vicar
 import pdstable
-import cspice
 import oops
 
 from oops.inst.cassini.cassini_ import Cassini
@@ -16,47 +15,35 @@ from oops.inst.cassini.cassini_ import Cassini
 ################################################################################
 
 def from_file(filespec, parameters={}):
-    """A general, static method to return an Snapshot object based on a given
+    """A general, static method to return a Snapshot object based on a given
     Cassini ISS image file."""
 
     ISS.initialize()    # Define everything the first time through
 
     # Load the VICAR file
     vic = vicar.VicarImage.from_file(filespec)
+    dict = vic.as_dict()
 
     # Get key information from the header
-    time = vic["START_TIME"]
-    if time[-1] == "Z": time = time[:-1]
-    tdb0 = cspice.str2et(time)
+    tstart = julian.tdb_from_tai(julian.tai_from_iso(vic["START_TIME"]))
+    texp = dict["EXPOSURE_DURATION"] / 1000.
+    mode = dict["INSTRUMENT_MODE_ID"]
 
-    time = vic["STOP_TIME"]
-    if time[-1] == "Z": time = time[:-1]
-    tdb1 = cspice.str2et(time)
-
-    mode = vic["INSTRUMENT_MODE_ID"]
-
-    name = vic["INSTRUMENT_NAME"]
+    name = dict["INSTRUMENT_NAME"]
     if "WIDE" in name:
         camera = "WAC"
     else:
         camera = "NAC"
 
     # Make sure the SPICE kernels are loaded
-    Cassini.load_cks( tdb0, tdb1)
-    Cassini.load_spks(tdb0, tdb1)
+    Cassini.load_cks( tstart, tstart + texp)
+    Cassini.load_spks(tstart, tstart + texp)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot((tdb0, tdb1),            # time
-                               ISS.fovs[camera,mode],   # fov
-                               "CASSINI",               # path_id
-                               "CASSINI_ISS_" + camera) # frame_id
-
-    # Insert the Vicar object as asubfield in case more info is needed.
-    # This object behaves like a dictionary for most practical purposes.
-    result.insert_subfield("vicar_dict", vic)
-    # make consistent with from_index()
-    #result.insert_subfield("index_dict", vic)
-    result.insert_subfield("data", vic.get_2d_array())
+    result = oops.obs.Snapshot(("v","u"), tstart, texp, ISS.fovs[camera,mode],
+                               "CASSINI", "CASSINI_ISS_" + camera,
+                               dict=dict,               # Add the VICAR dict
+                               data=vic.get_2d_array()) # Add the data array
 
     return result
 
@@ -70,16 +57,18 @@ def from_index(filespec, parameters={}):
     ISS.initialize()    # Define everything the first time through
 
     # Read the index file
-    table = pdstable.PdsTable(filespec, ["START_TIME", "STOP_TIME"])
+    COLUMNS = ["START_TIME", "EXPOSURE_DURATION", "INSTRUMENT_MODE_ID",
+               "INSTRUMENT_NAME"]
+    TIMES = ["START_TIME"]
+    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
     # Create a list of Snapshot objects
     snapshots = []
     for dict in row_dicts:
 
-        tdb0 = julian.tdb_from_tai(dict["START_TIME"])
-        tdb1 = julian.tdb_from_tai(dict["STOP_TIME"])
-
+        tstart = julian.tdb_from_tai(dict["START_TIME"])
+        texp = dict["EXPOSURE_DURATION"] / 1000.
         mode = dict["INSTRUMENT_MODE_ID"]
 
         name = dict["INSTRUMENT_NAME"]
@@ -88,19 +77,15 @@ def from_index(filespec, parameters={}):
         else:
             camera = "NAC"
 
-        item = oops.obs.Snapshot((tdb0, tdb1),              # time
-                                 ISS.fovs[camera,mode],     # fov
-                                 "CASSINI",                 # path_id
-                                 "CASSINI_ISS_" + camera)   # frame_id
-
-        # Tack on the dictionary in case more info is needed
-        item.insert_subfield("index_dict", dict)
+        item = oops.obs.Snapshot(("v","u"), texp, tstart, ISS.fovs[camera,mode],
+                                 "CASSINI", "CASSINI_ISS_" + camera,
+                                 index_dict=dict)        # Add index dictionary
 
         snapshots.append(item)
 
     # Make sure all the SPICE kernels are loaded
-    tdb0 = row_dicts[0]["START_TIME"]
-    tdb1 = row_dicts[-1]["STOP_TIME"]
+    tdb0 = row_dicts[ 0]["START_TIME"]
+    tdb1 = row_dicts[-1]["START_TIME"]
 
     Cassini.load_cks( tdb0, tdb1)
     Cassini.load_spks(tdb0, tdb1)
