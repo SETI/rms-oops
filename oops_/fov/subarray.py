@@ -33,7 +33,7 @@ class Subarray(FOV):
         """
 
         self.fov = fov
-        self.new_los_in_old_uv  = Pair.as_float_pair(new_los)
+        self.new_los_in_old_uv  = Pair.as_float(new_los)
         self.new_los_wrt_old_xy = fov.xy_from_uv(self.new_los_in_old_uv)
 
         self.uv_shape = Pair.as_pair(uv_shape).copy()
@@ -41,7 +41,7 @@ class Subarray(FOV):
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = Pair.as_float_pair(uv_los).copy()
+            self.uv_los = Pair.as_float(uv_los, copy=True)
 
         self.new_origin_in_old_uv = self.new_los_in_old_uv - self.uv_los
 
@@ -102,8 +102,7 @@ class Test_Subarray(unittest.TestCase):
     def runTest(self):
 
         # Imports just required for unit testing
-        from flat     import Flat
-        from subarray import Subarray
+        from flat import Flat
 
         flat = Flat((1/2048.,-1/2048.), 101, (50,75))
 

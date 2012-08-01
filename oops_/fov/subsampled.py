@@ -40,6 +40,8 @@ class Subsampled(FOV):
 
         self.uv_shape = (self.fov.uv_shape / self.rescale).int()
 
+        assert self.rescale * self.uv_shape == self.fov.uv_shape
+
     def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
         given a Pair of coordinates (u,v).
@@ -52,12 +54,14 @@ class Subsampled(FOV):
         shape [2,2].
         """
 
-        xy = self.fov.xy_from_uv(self.rescale * uv_pair, extras, derivs)
+        uv_pair = Pair.as_pair(uv_pair)
+        xy_new = self.fov.xy_from_uv(self.rescale * uv_pair, extras,
+                                     derivs=derivs)
 
         if derivs:
-            xy.insert_subfield("d_uv", xy.d_duv * self.rescale_mat)
+            xy_new.d_duv *= self.rescale_mat
 
-        return xy
+        return xy_new
 
     def uv_from_xy(self, xy_pair, extras=(), derivs=False):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
@@ -71,11 +75,11 @@ class Subsampled(FOV):
         shape [2,2].
         """
 
-        uv_old = self.fov.uv_from_xy(xy_pair, extras, derivs)
+        uv_old = self.fov.uv_from_xy(xy_pair, extras, derivs=derivs)
         uv_new = uv_old / self.rescale
 
         if derivs is True:
-            uv_new.insert_subfield("d_dxy", uv.d_dxy * self.rescale_inv)
+            uv_new.insert_subfield("d_dxy", uv_old.d_dxy * self.rescale_inv)
 
         return uv_new
 
@@ -92,30 +96,59 @@ class Test_Subsampled(unittest.TestCase):
         # Imports just required for unit testing
         from flat import Flat
 
-        buffer = np.empty((51,51,2))
-        buffer[:,:,0] = np.arange(0,51).reshape(51,1)
-        buffer[:,:,1] = np.arange(0,51)
-        uv = Pair(buffer)
+        # Centered sub-sampling...
 
-        flat = Flat((1/2048.,-1/2048.), (0,25))
+        flat = Flat((1/2048.,-1/2048.), 64)
         test = Subsampled(flat, 2)
 
-        xy = test.xy_from_uv(buffer)
-        self.assertEqual(xy[ 0, 0], flat.xy_from_uv((  0,  0)))
-        self.assertEqual(xy[50, 0], flat.xy_from_uv((100,  0)))
-        self.assertEqual(xy[ 0,50], flat.xy_from_uv((  0,100)))
-        self.assertEqual(xy[50,50], flat.xy_from_uv((100,100)))
+        self.assertEqual(flat.xy_from_uv(( 0, 0)), test.xy_from_uv(( 0, 0)))
+        self.assertEqual(flat.xy_from_uv(( 0,64)), test.xy_from_uv(( 0,32)))
+        self.assertEqual(flat.xy_from_uv((64, 0)), test.xy_from_uv((32, 0)))
+        self.assertEqual(flat.xy_from_uv((64,64)), test.xy_from_uv((32,32)))
 
-        uv_test = test.uv_from_xy(xy)
-        self.assertEqual(uv_test, uv)
+        xy = (-32/2048., 32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
 
-        self.assertEqual(flat.area_factor(uv), 1.)
-        self.assertEqual(test.area_factor(uv), 1.)
+        xy = (-32/2048.,-32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
 
-        xy = test.xy_from_uv(uv)
-        self.assertEqual(xy, flat.xy_from_uv(uv*2.))
+        xy = ( 32/2048.,-32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
+
+        xy = ( 32/2048., 32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
 
         self.assertEqual(test.uv_area, 4*flat.uv_area)
+
+        self.assertEqual(flat.area_factor((32,32)), 1.)
+        self.assertEqual(test.area_factor((16,16)), 1.)
+
+        # Off-center sub-sampling...
+
+        flat = Flat((1/2048.,-1/2048.), 64, uv_los=(0,32))
+        test = Subsampled(flat, 2)
+
+        self.assertEqual(flat.xy_from_uv(( 0, 0)), test.xy_from_uv(( 0, 0)))
+        self.assertEqual(flat.xy_from_uv(( 0,64)), test.xy_from_uv(( 0,32)))
+        self.assertEqual(flat.xy_from_uv((64, 0)), test.xy_from_uv((32, 0)))
+        self.assertEqual(flat.xy_from_uv((64,64)), test.xy_from_uv((32,32)))
+
+        xy = ( 0/2048., 32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
+
+        xy = ( 0/2048.,-32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
+
+        xy = (64/2048.,-32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
+
+        xy = (64/2048., 32/2048.)
+        self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
+
+        self.assertEqual(test.uv_area, 4*flat.uv_area)
+
+        self.assertEqual(flat.area_factor((32,32)), 1.)
+        self.assertEqual(test.area_factor((16,16)), 1.)
 
 ########################################
 if __name__ == '__main__':

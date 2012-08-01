@@ -16,7 +16,7 @@ class Flat(FOV):
     distortion, implementing an exact pinhole camera model.
     """
 
-    def __init__(self, uv_scale, uv_shape, uv_los=None):
+    def __init__(self, uv_scale, uv_shape, uv_los=None, uv_area=None):
         """Constructor for a FlatFOV. The U-axis is assumed to align with X and
         the V-axis aligns with Y. A FlatFOV has no dependence on the optional
         extra indices that can be associated with time, wavelength band, etc.
@@ -38,17 +38,24 @@ class Flat(FOV):
             uv_los      a single value, tuple or Pair defining the (u,v)
                         coordinates of the nominal line of sight. By default,
                         this is the midpoint of the rectangle, i.e, uv_shape/2.
+
+            uv_area     an optional parameter defining the nominal field of view
+                        of a pixel. If not provided, the area is calculated
+                        based on the area of the central pixel.
         """
 
-        self.uv_scale = Pair.as_float_pair(uv_scale).copy()
+        self.uv_scale = Pair.as_float(uv_scale, copy=True)
         self.uv_shape = Pair.as_pair(uv_shape).copy()
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = Pair.as_float_pair(uv_los).copy()
+            self.uv_los = Pair.as_float(uv_los, copy=True)
 
-        self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
+        if uv_area is None:
+            self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
+        else:
+            self.uv_area = uv_area
 
         scale = Pair.as_pair(uv_scale)
 
@@ -115,6 +122,9 @@ class Test_Flat(unittest.TestCase):
         self.assertEqual(uv_test, Pair(buffer))
 
         self.assertEqual(test.area_factor(buffer), 1.)
+
+        test2 = Flat((1/2048.,-1/2048.), 101, (50,75), uv_area = test.uv_area*2)
+        self.assertEqual(test2.area_factor(buffer), 0.5)
 
 ########################################
 if __name__ == '__main__':

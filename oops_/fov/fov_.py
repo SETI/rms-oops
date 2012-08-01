@@ -16,9 +16,9 @@ class FOV(object):
     geometry of a field of view. 
 
     The properties of an FOV are defined within a fixed coordinate frame, with
-    the positive Z axis oriented near the center of the line of sight. The X and
-    Y axes are effectively in the plane of the FOV, with the X-axis oriented
-    horizontally and the Y-axis pointed downward. The values for (x,y) are
+    the positive Z axis oriented near the center of the line of sight. The x and
+    y axes are effectively in the plane of the FOV, with the x-axis oriented
+    horizontally and the y-axis pointed downward. The values for (x,y) are
     implemented using a "pinhole camera" model, in which the z-component has
     unit length. Therefore, at least near the center of the field of view, the
     units of x and y are radians.
@@ -26,15 +26,15 @@ class FOV(object):
     The FOV converts between the actual line of sight vector (x,y,z) and an
     internal coordinate system (ICS) that typically defines a pixel grid. It
     also accommodates any spatial distortion of the field of view. The ICS
-    coordinates (u,v) are linear with the grid of pixels and (typically) a unit
+    coordinates (u,v) are linear with the grid of pixels and, typically, a unit
     step in (u,v) shifts the position by one pixel. The u-axis points rightward
-    (in the direction of increasing sample number) and they V-axis points either
-    upward or downward, in the direction of increasing line numbers.
+    in the default display orientation of a data array, and the v-axis points
+    either upward or downward.
 
     Although ICS coordinates (u,v) are defined here in units of pixels, the FOV
     concept can be used to describe an arbitrary field of view, consisting of
     detectors of arbitary shape. In this case, (u,v) are simply a convenient set
-    of coordinates to use a in frame the describes the layout of detectors on
+    of coordinates to use in a frame that describes the layout of detectors on
     the focal plane of the instrument.
 
     The class also allows for the possibility that the field of view has
@@ -250,28 +250,67 @@ class FOV(object):
 
         return uv
 
-    def uv_is_inside(self, uv_pair):
-        """Returns a boolean Scalar indicating True for (u,v) coordinates that
-        fall inside the FOV, False otherwise.
+    def uv_is_inside(self, uv_pair, inclusive=True):
+        """Returns a boolean NumPy array identifying which coordinates fall
+        inside the FOV.
+
+        Input:
+            uv_pair     a Pair of (u,v) coordinates.
+            inclusive   True to interpret coordinate values at the upper end of
+                        each range as inside the FOV; False to interpet them as
+                        outside.
+
+        Return:         a boolean NumPy array indicating True where the point is
+                        inside the FOV.
         """
 
         uv_pair = Pair.as_pair(uv_pair)
-        return Scalar((uv_pair.vals[...,0] >= 0.) &
-                      (uv_pair.vals[...,1] >= 0.) &
-                      (uv_pair.vals[...,0] <= self.uv_shape.vals[0]) &
-                      (uv_pair.vals[...,1] <= self.uv_shape.vals[1]))
+        if inclusive:
+            return ((uv_pair.vals[...,0] >= 0) &
+                    (uv_pair.vals[...,1] >= 0) &
+                    (uv_pair.vals[...,0] <= self.uv_shape.vals[0]) &
+                    (uv_pair.vals[...,1] <= self.uv_shape.vals[1]))
+        else:
+            return ((uv_pair.vals[...,0] >= 0) &
+                    (uv_pair.vals[...,1] >= 0) &
+                    (uv_pair.vals[...,0] < self.uv_shape.vals[0]) &
+                    (uv_pair.vals[...,1] < self.uv_shape.vals[1]))
+
+    def u_or_v_is_inside(self, uv_coord, uv_index, inclusive=True):
+        """Returns a boolean NumPy array identifying which u-coordinates fall
+        inside the FOV.
+
+        Input:
+            uv_coord    a Scalar of u-coordinates or v-coordinates.
+            uv_index    0 to test u-coordinates; 1 to test v-coordinates.
+            inclusive   True to interpret coordinate values at the upper end of
+                        each range as inside the FOV; False to interpet them as
+                        outside.
+
+        Return:         a boolean NumPy array indicating True where the point is
+                        inside the FOV.
+        """
+
+        uv_coord = Scalar.as_scalar(uv_coord)
+        if inclusive:
+            return ((u_coord.vals >= 0) &
+                    (u_coord.vals <= self.uv_shape.vals[uv_index]))
+        else:
+            return ((uv_pair.vals >= 0) &
+                    (uv_pair.vals < self.uv_shape.vals[uv_index]))
 
     def xy_is_inside(self, xy_pair, extras=()):
-        """Returns a boolean Scalar indicating True for (x,y) coordinates that
-        fall inside the FOV, False otherwise."""
+        """Returns a boolean NumPy array indicating True for (x,y) coordinates
+        that fall inside the FOV, False otherwise."""
 
-        return self.uv_is_inside(self.uv_from_xy(xy_pair, extras), extras)
+        return self.uv_is_inside(self.uv_from_xy(xy_pair, extras),
+                                 inclusive=True)
 
     def los_is_inside(self, los, extras=()):
-        """Returns a boolean Scalar indicating True line of sight vectors that
-        fall inside the FOV, False otherwise."""
+        """Returns a boolean NumPy array indicating True for line of sight
+        vectors that fall inside the FOV, False otherwise."""
 
-        return self.uv_is_inside(self.uv_from_los(los, extras), extras)
+        return self.uv_is_inside(self.uv_from_los(los, extras), inclusive=True)
 
 ################################################################################
 # UNIT TESTS

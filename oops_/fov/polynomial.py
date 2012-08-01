@@ -38,8 +38,8 @@ class Polynomial(FOV):
                         coordinates of the nominal line of sight. By default,
                         this is the midpoint of the rectangle, i.e, uv_shape/2.
 
-            uv_area     the nominal area of a pixel in steradians after
-                        distortion has been removed.
+            uv_area     an optional parameter defining the nominal area of a
+                        pixel in steradians after distortion has been removed.
         """
 
         self.uv_coefft = np.asarray(uv_coefft)
@@ -50,7 +50,7 @@ class Polynomial(FOV):
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = Pair.as_float_pair(uv_los).copy()
+            self.uv_los = Pair.as_float(uv_los, copy=True)
 
         # Required attribute
         self.uv_scale = Pair.as_pair((uv_coefft[1,0,0], uv_coefft[0,1,1]))

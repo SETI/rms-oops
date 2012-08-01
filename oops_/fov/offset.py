@@ -25,7 +25,7 @@ class Offset(Subarray):
                         to what the image actually shows.
         """
 
-        new_center = fov.uv_from_xy((0,0)) + Pair.as_float_pair(uv_offset)
+        new_center = fov.uv_from_xy((0,0)) + Pair.as_float(uv_offset)
 
         return Subarray.__init__(self, fov, new_center, fov.uv_shape,
                                        new_center)
