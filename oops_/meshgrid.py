@@ -18,13 +18,13 @@ class Meshgrid(object):
     After you create a Meshgrid object, the following are available as
     properties:
 
-    uv              the (u,v) pairs with no derivatives
+    uv              the (u,v) pairs with no derivatives.
     uv_w_derivs     the (u,v) pairs with d_dlos.
-    duv_dlos        the partial derivatives d(u,v)/dlos
+    duv_dlos        the partial derivatives d(u,v)/dlos.
 
-    los             the line-of-sight unit vectors with no derivatives
-    los_w_derivs    the line-of-sight unit vectors with d_duv
-    dlos_duv        the partial derivatives dlos/d(u,v)
+    los             the line-of-sight unit vectors with no derivatives.
+    los_w_derivs    the line-of-sight unit vectors with d_duv.
+    dlos_duv        the partial derivatives dlos/d(u,v).
     """
 
     def __init__(self, fov, uv_pair, extras=()):
@@ -33,7 +33,7 @@ class Meshgrid(object):
         Input:
             fov         a FOV object.
             uv_pair     a Pair object of arbitrary shape, representing (u,v)
-                        coordinates into a field of view.
+                        coordinates within a field of view.
             extras      additional parameters that might affect the FOV
                         transform.
         """
@@ -51,7 +51,6 @@ class Meshgrid(object):
         """show overview of Meshgrid for debugging purposes."""
         s = "Meshgrid\n\tshape = " + str(self.shape) + "\n"
         s += "\tfov.uv_los: " + str(self.fov.uv_los.vals) + "\n"
-        s += "\tfov.uv_scale: " + str(self.fov.uv_scale.vals) + "\n"
         return s
 
     @staticmethod
@@ -90,21 +89,29 @@ class Meshgrid(object):
 
         origin = Pair.as_pair(origin).vals
         undersample = Pair.as_pair(undersample).vals
-        oversample  = Pair.as_float_pair(oversample).vals
+        oversample  = Pair.as_float(oversample).vals
 
         step = undersample/oversample
         limit += step * 1.e-12  # Allow a little slop at the upper end
 
-        grid = Pair.meshgrid(np.arange(origin[0], limit[0], step[0]),
-                             np.arange(origin[1], limit[1], step[1]))
+        urange = np.arange(origin[0], limit[0], step[0])
+        vrange = np.arange(origin[1], limit[1], step[1])
 
-        if swap: grid = grid.swapaxes(0,1)
+        usize = urange.size
+        vsize = vrange.size
+
+        if usize == 1: urange = np.array(urange[0])
+        if vsize == 1: vrange = np.array(vrange[0])
+
+        grid = Pair.meshgrid(urange, vrange)
+
+        if usize > 1 and vsize > 1 and swap: grid = grid.swapaxes(0,1)
 
         return Meshgrid(fov, grid, extras)
 
     @property
     def los_w_derivs(self):
-        if self.filled_los_w_derivs == None:
+        if self.filled_los_w_derivs is None:
             los = self.fov.los_from_uv(self.uv, self.extras, derivs=True)
             self.filled_los_w_derivs = los
 
@@ -112,7 +119,7 @@ class Meshgrid(object):
 
     @property
     def los(self):
-        if self.filled_los == None:
+        if self.filled_los is None:
             self.filled_los = self.los_w_derivs.plain()
         return self.filled_los
 
@@ -122,7 +129,7 @@ class Meshgrid(object):
 
     @property
     def uv_w_derivs(self):
-        if self.filled_uv_w_derivs == None:
+        if self.filled_uv_w_derivs is None:
             uv = self.fov.uv_from_los(self.los, self.extras, derivs=True)
             self.filled_uv_w_derivs = self.uv
             self.filled_uv_w_derivs.insert_subfield("d_dlos", uv.d_dlos)
