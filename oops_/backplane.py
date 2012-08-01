@@ -12,7 +12,9 @@
 #   ring_emission_angle() and ring_incidence_angle() to support the standard
 #   conventions for rings; set up faster/better evaluations of ring and ansa
 #   longitudes.
-#  6/6/12 MRS - Added limb geometry.
+# 6/6/12 MRS - Added limb geometry.
+# 7/29/12 MRS - Revised the calling sequence to support observation subclasses
+#   other than images.
 ################################################################################
 
 import numpy as np
@@ -30,7 +32,7 @@ class Backplane(object):
     sets of backplanes associated with a particular observation. It caches
     intermediate results to speed up calculations."""
 
-    def __init__(self, obs, meshgrid=None, extras=(), t=Scalar(0.5)):
+    def __init__(self, obs, meshgrid=None, time=None):
         """The constructor.
 
         Input:
@@ -38,23 +40,23 @@ class Backplane(object):
                         associated.
             meshgrid    the optional meshgrid defining the sampling of the FOV.
                         Default is to sample the center of every pixel.
-            extras      any additional indices of the observation that might
-                        affect the backplanes.
-            t           a Scalar of fractional time offsets into each exposure;
-                        default is 0.5. The shape of this Scalar will broadcast
-                        with the shape of the meshgrid.
+            time        a Scalar of times. The shape of this Scalar will be
+                        broadcasted with the shape of the meshgrid. Default is
+                        to sample the midtime of every pixel.
         """
 
         self.obs = obs
 
         if meshgrid is None:
-            self.meshgrid = Meshgrid.for_fov(obs.fov, extras)
+            swap = obs.u_axis > obs.v_axis or obs.u_axis == -1
+            self.meshgrid = Meshgrid.for_fov(obs.fov, swap=swap)
         else:
             self.meshgrid = meshgrid
-        self.extras = extras
 
-        self.obs_event = obs.event_at_grid(self.meshgrid, t)
-        self.obs_gridless_event = obs.gridless_event(t)
+        self.obs_event = obs.event_at_grid(self.meshgrid, time)
+        self.obs_gridless_event = obs.gridless_event(self.meshgrid, time)
+
+        self.shape = self.obs_event.shape
 
         # The surface_events dictionary comes in two versions, one with
         # derivatives and one without. Each dictionary is keyed by a tuple of
@@ -199,8 +201,8 @@ class Backplane(object):
             return self.surface_events[event_key]
         except KeyError: pass
 
-        # The Sun is always treated as a path, not a surface
-        if event_key[0].upper() == "SUN":
+        # The Sun is treated as a path, not a surface, unless it is first
+        if event_key[0].upper() == "SUN" and len(event_key) >1:
             return self.get_path_event(event_key)
 
         # Look up the photon's departure surface and destination
@@ -443,7 +445,8 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         extras = (aberration, subfield, frame)
 
-        (ra, dec) = self.get_surface_event_with_arr(event_key).ra_and_dec(*extras)
+        (ra,
+         dec) = self.get_surface_event_with_arr(event_key).ra_and_dec(*extras)
         self.register_backplane(("right_ascension", event_key) + extras, ra)
         self.register_backplane(("declination", event_key) + extras, dec)
 
@@ -547,10 +550,11 @@ class Backplane(object):
     # Emission keys are ("emission_angle", event_key)
     # Phase angle keys are ("phase_angle", event_key)
     # Scattering angle keys are ("scattering_angle", event_key)
+    # Lambert law keys are ("lambert_law", event_key)
     ############################################################################
 
     def incidence_angle(self, event_key):
-        """Incidence_angle angle of the arriving photons at the local surface.
+        """Incidence angle of the arriving photons at the local surface.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -562,7 +566,8 @@ class Backplane(object):
         return self.backplanes[key]
 
     def emission_angle(self, event_key):
-        """Emission angle of the departing photons at the local surface."""
+        """Emission angle of the departing photons at the local surface.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("emission_angle", event_key)
@@ -592,6 +597,21 @@ class Backplane(object):
         key = ("scattering_angle", event_key)
         if key not in self.backplanes.keys():
             self.register_backplane(key, np.pi - self.phase_angle(event_key))
+
+        return self.backplanes[key]
+
+    def lambert_law(self, event_key):
+        """Lambert-law model cos(incidence_angle) for the surface.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("lambert_law", event_key)
+        if key not in self.backplanes.keys():
+            incidence = self.incidence_angle(event_key)
+            lambert_law = incidence.cos()
+            lambert_law.mask |= (incidence.vals >= np.pi/2)
+            lambert_law.vals[lambert_law.mask] = 0.
+            self.register_backplane(key, lambert_law)
 
         return self.backplanes[key]
 
@@ -1497,7 +1517,7 @@ class Backplane(object):
     ############################################################################
 
     def where_below(self, backplane_key, value):
-        """Returns a mask that contains true wherever the value of the given
+        """Returns a mask that contains True wherever the value of the given
         backplane is less than or equal to the specified value."""
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
@@ -1510,7 +1530,7 @@ class Backplane(object):
         return self.backplanes[key]
 
     def where_above(self, backplane_key, value):
-        """Returns a mask that contains true wherever the value of the given
+        """Returns a mask that contains True wherever the value of the given
         backplane is greater than or equal to the specified value."""
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
@@ -1523,7 +1543,7 @@ class Backplane(object):
         return self.backplanes[key]
 
     def where_between(self, backplane_key, low, high):
-        """Returns a mask that contains true wherever the value of the given
+        """Returns a mask that contains True wherever the value of the given
         backplane is between the specified values, inclusive."""
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
@@ -1671,6 +1691,7 @@ class Backplane(object):
         "right_ascension", "declination",
         "distance", "light_time", "resolution",
         "incidence_angle", "emission_angle", "phase_angle", "scattering_angle",
+        "lambert_law",
         "ring_radius", "ring_longitude", "ring_azimuth", "ring_elevation",
         "ring_radial_resolution", "ring_angular_resolution",
         "ansa_radius", "ansa_elevation", "ansa_longitude",
