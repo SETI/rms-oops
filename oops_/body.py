@@ -596,7 +596,10 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(PLUTO_REGULAR, "PLUTO", "PLUTO BARYCENTER",
                   ["SATELLITE", "REGULAR"])
-    define_ring("PLUTO", "PLUTO_RING_PLANE", None, [])
+    define_ring("PLUTO", "PLUTO_RING_PLANE", None, [],
+                barycenter_name="PLUTO BARYCENTER")
+    define_ring("PLUTO", "PLUTO_INNER_RING_PLANE", None, [],
+                barycenter_name="PLUTO")
 
 def define_bodies(spice_ids, parent, barycenter, keywords):
     """Defines the path, frame, surface and body for a given list of bodies
@@ -641,7 +644,8 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         if "BARYCENTER" in body.keywords and parent is not None:
             body.add_keywords(parent)
 
-def define_ring(parent_name, ring_name, radii, keywords, retrograde=False):
+def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
+                barycenter_name=None):
     """Defines the path, frame, surface and body for a given ring, given its
     inner and outer radii. A single radius value is used to define the outer
     limit of rings, but the ring plane itself has no boundaries.
@@ -649,6 +653,11 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False):
 
     parent = registry.body_lookup(parent_name)
     parent.apply_ring_frame(retrograde=retrograde)
+
+    if barycenter_name is None:
+        barycenter = parent
+    else:
+        barycenter = registry.body_lookup(barycenter_name)
 
     # Interpret the radii
     try:
@@ -663,8 +672,9 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False):
             rmax = radii
             radii = None
 
-    body = Body(ring_name, parent.path_id, parent.ring_frame_id, parent, parent)
-    shape = surface.RingPlane(parent.path_id, parent.ring_frame_id,
+    body = Body(ring_name, barycenter.path_id, parent.ring_frame_id,
+                parent, parent)
+    shape = surface.RingPlane(barycenter.path_id, parent.ring_frame_id,
                               radii, gravity=parent.gravity)
 
     body.apply_surface(shape, rmax)
