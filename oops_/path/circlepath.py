@@ -14,10 +14,10 @@ import oops_.spice_support as spice
 class CirclePath(Path):
     """Subclass CirclePath of class Path that moves in uniform circular motion
     about another path, in an orientation defined by the z-axis of a given
-    frame.."""
+    frame."""
 
     def __init__(self, radius, lon, rate, epoch, origin, frame, id=None):
-        """Constructor for an CirclPath.
+        """Constructor for an CirclePath.
 
         Input:
             radius      radius of the path, km.

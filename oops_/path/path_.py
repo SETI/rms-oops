@@ -290,9 +290,7 @@ class Path(object):
 
     def photon_to_event(self, link, quick=None, derivs=False, guess=None,
                               update=True,
-                              iters     = PATH_PHOTONS.max_iterations,
-                              precision = PATH_PHOTONS.dlt_precision,
-                              limit     = PATH_PHOTONS.dlt_limit):
+                              iters=None, precision=None, limit=None):
         """Returns the departure event at the given path for a photon, given the
         linking event of the photon's arrival. See _solve_photon() for details.
         """
@@ -302,9 +300,7 @@ class Path(object):
 
     def photon_from_event(self, link, quick=None, derivs=False, guess=None,
                                 update=True,
-                                iters     = PATH_PHOTONS.max_iterations,
-                                precision = PATH_PHOTONS.dlt_precision,
-                                limit     = PATH_PHOTONS.dlt_limit):
+                                iters=None, precision=None, limit=None):
         """Returns the arrival event at the given path for a photon, given the
         linking event of the photon's departure. See _solve_photon() for details.
         """
@@ -314,9 +310,7 @@ class Path(object):
 
     def _solve_photon(self, link, sign, quick=None, derivs=False, guess=None,
                             update=True,
-                            iters     = PATH_PHOTONS.max_iterations,
-                            precision = PATH_PHOTONS.dlt_precision,
-                            limit     = PATH_PHOTONS.dlt_limit):
+                            iters=None, precision=None, limit=None):
 
         """Solve for a photon event on this path, given that the other end of
         the photon's path is at another specified event (time and position).
@@ -378,6 +372,13 @@ class Path(object):
                         If derivs is True, then the path event has these
                         subfields: time.d_dt, arr or los.d_dt.
         """
+
+        if iters is None:
+            iters = PATH_PHOTONS.max_iterations
+        if precision is None:
+            precision = PATH_PHOTONS.dlt_precision
+        if limit is None:
+            limit = PATH_PHOTONS.dlt_limit
 
         # Iterate to a solution for the light travel time "lt". Define
         #   y = separation_distance(time + lt) - sign * c * lt

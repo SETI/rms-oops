@@ -104,7 +104,7 @@ class SpicePath(Path):
         if time.shape == []:
             (state,
              lighttime) = cspice.spkez(self.spice_target_id,
-                                       time.vals,
+                                       float(time.vals),
                                        self.spice_frame_name,
                                        "NONE", # no aberration or light time fix
                                        self.spice_origin_id)
