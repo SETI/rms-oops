@@ -24,7 +24,7 @@ class Matrix3(Array):
     def __init__(self, arg, mask=False, units=None):
 
         return Array.__init__(self, arg, mask, units, 2, item=[3,3],
-                                    float=True, dimensionless=True)
+                                    floating=True, dimensionless=True)
 
     @staticmethod
     def as_matrix3(arg):

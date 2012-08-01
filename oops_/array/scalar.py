@@ -22,7 +22,7 @@ class Scalar(Array):
     def __init__(self, arg, mask=False, units=None):
 
         return Array.__init__(self, arg, mask, units, 0, item=None,
-                                    float=False, dimensionless=False)
+                                    floating=False, dimensionless=False)
 
     @staticmethod
     def as_scalar(arg):
@@ -31,26 +31,77 @@ class Scalar(Array):
         return Scalar(arg)
 
     @staticmethod
-    def as_float_scalar(arg):
-        if isinstance(arg, Scalar) and arg.vals.dtype == np.dtype("float"):
+    def as_float(arg, copy=False):
+        """Convert to float if necessary; copy=True to return a new copy."""
+
+        # If not a Scalar, convert it
+        if not isinstance(arg, Scalar):
+            arg = Scalar(arg)
+
+        # If vals is a single value...
+        if arg.shape == []:
+            return Scalar(float(arg.vals), arg.mask, arg.units)
+
+        # If vals is already an floating subtype...
+        if np.issubdtype(arg.vals.dtype, np.core.numerictypes.floating):
+            if copy:
+                return arg.copy()
             return arg
-        if isinstance(arg, Units): return Scalar(1.,units=arg)
-        return Scalar.as_scalar(arg) * 1.
+
+        # Otherwise convert to floating
+        return Scalar(arg.vals.astype("float"), arg.mask, arg.units)
+
+    @staticmethod
+    def as_int(arg, copy=False):
+        """Convert to int if necessary; copy=True to return a new copy."""
+
+        # If not a Scalar, convert it
+        if not isinstance(arg, Scalar):
+            arg = Scalar(arg)
+
+        # If vals is a single value...
+        if arg.shape == []:
+            return Scalar(int(arg.vals), arg.mask, arg.units)
+
+        # If vals is already an integer subtype...
+        if np.issubdtype(arg.vals.dtype, np.core.numerictypes.integer):
+            if copy:
+                return arg.copy()
+            return arg
+
+        # Otherwise convert to integer
+        return Scalar((arg.vals // 1).astype("int"), arg.mask, arg.units)
 
     @staticmethod
     def as_standard(arg):
         if not isinstance(arg, Scalar): arg = Scalar(arg)
         return arg.convert_units(None)
 
+    def as_index(self):
+        """Returns vals in a form suitable for indexing a numpy ndarray.
+        """
+
+        if not isinstance(self.vals, np.ndarray):
+            return int(self.vals)
+        elif np.issubdtype(self.vals.dtype, np.core.numerictypes.integer):
+            return self.vals
+        else:
+            return (self.vals // 1).astype("int")
+
     def int(self):
         """Returns the integer (floor) component of each value."""
 
-        return Scalar((self.vals // 1.).astype("int"), self.mask)
+        return Scalar.as_int(self, copy=False)
 
     def frac(self):
         """Returns the fractional component of each value."""
 
-        return Scalar(self.vals % 1., self.mask)
+        return Scalar(self.vals % 1, self.mask, self.units)
+
+    def float(self):
+        """Returns the same Scalar but containing floating-point values."""
+
+        return Scalar.as_float(self, copy=False)
 
     def sin(self):
         """Returns the sine of each value. Works for units other than radians.
@@ -230,15 +281,26 @@ class Scalar(Array):
         (minval, maxval) = Array.PAIR_CLASS.as_pair(range).as_scalars()
         between = (self >= minval & self <= maxval)
 
-    def replace(self, mask, value=1.):
-        """Replaces masked entries with the given value."""
+    def replace(self, mask, value=1., newmask=None):
+        """Replaces masked entries with the given value and its optional mask.
+        """
 
         if not np.any(mask): return
 
-        if np.shape(mask) == ():
-            self.vals = value
-        else:
+        if np.all(mask):    # replace everything...
+            if isinstance(self.vals, np.ndarray):
+                self.vals[...] = value
+            else:
+                self.vals = value
+
+            if newmask is not None:
+                self.mask = newmask
+
+        else:               # replace selectively...
             self.vals[mask] = value
+            if newmask is not None and newmask is not self.mask:
+                self.expand_mask()
+                self.mask[mask] = newmask
 
     def zero_mask(self):
         """Returns a boolean mask of zero-valued entries."""
@@ -304,7 +366,9 @@ class Scalar(Array):
     # properly, because otherwise "if Scalar(False)" executes
     @staticmethod
     def _scalar_unless_shapeless(values, mask):
-        if np.shape(values) == () and not mask: return values
+        if np.shape(values) == () and not mask:
+            if isinstance(values, np.ndarray): return values[()]
+            return values
         return Scalar(values, mask)
 
     ####################################
@@ -388,6 +452,7 @@ class Scalar(Array):
             else:
                 my_vals = my_vals.reshape(self.shape + arg.rank * [1])
                 if np.any(div_by_zero):
+                    my_vals = my_vals.copy()
                     my_vals[div_by_zero] = 1
                 else:
                     div_by_zero = False
@@ -417,6 +482,7 @@ class Scalar(Array):
             else:
                 my_vals = my_vals.reshape(self.shape + arg.rank * [1])
                 if np.any(div_by_zero):
+                    my_vals = my_vals.copy()
                     my_vals[div_by_zero] = 1
                 else:
                     div_by_zero = False

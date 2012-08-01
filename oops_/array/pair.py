@@ -26,7 +26,7 @@ class Pair(Array):
     def __init__(self, arg, mask=False, units=None):
 
         return Array.__init__(self, arg, mask, units, 1, item=[2],
-                                    float=False, dimensionless=False)
+                                    floating=False, dimensionless=False)
 
     @staticmethod
     def as_pair(arg):
@@ -45,19 +45,63 @@ class Pair(Array):
         return Pair(arg)
 
     @staticmethod
-    def as_float_pair(arg):
-        if isinstance(arg, Pair) and arg.vals.dtype == np.dtype("float"):
-            return arg
+    def as_float(arg, copy=False):
+        """Convert to float if necessary; copy=True to return a new copy."""
 
-        return Pair.as_pair(arg) * 1.
+        if isinstance(arg, Pair):
+            if isinstance(arg.vals, np.ndarray):
+                if arg.vals.dtype == np.dtype("float"):
+                    if copy:
+                        return arg.copy()
+                    else:
+                        return arg
+
+                return Pair(arg.vals.astype("float"), arg.mask, arg.units)
+
+            else:
+                if type(arg.vals) == type(0.):
+                    if copy:
+                        return arg.copy()
+                    else:
+                        return arg
+
+                return Pair(float(arg.vals), arg.mask, arg.units)
+
+        return Pair.as_float(Pair.as_pair(arg))
+
+    @staticmethod
+    def as_int(arg, copy=False):
+        """Convert to int if necessary; copy=True to return a new copy."""
+
+        if isinstance(arg, Pair):
+            if isinstance(arg.vals, np.ndarray):
+                if arg.vals.dtype == np.dtype("int"):
+                    if copy:
+                        return arg.copy()
+                    else:
+                        return arg
+
+                return Pair(arg.vals.astype("int"), arg.mask, arg.units)
+
+            else:
+                if type(arg.vals) == type(0):
+                    if copy:
+                        return arg.copy()
+                    else:
+                        return arg
+
+                return Pair(int(arg.vals), arg.mask, arg.units)
+
+        return Pair.as_int(Pair.as_pair(arg))
 
     @staticmethod
     def as_standard(arg):
         if not isinstance(arg, Pair): arg = Pair(arg)
         return arg.convert_units(None)
 
-    def as_scalar(self, axis):
-        """Returns one of the components of a Pair as a Scalar.
+    def as_scalar(self, axis=0):
+        """Overrides the defaul as_scalar method to include the axis argument.
+        Returns one of the components of a Pair as a Scalar.
 
         Input:
             axis        0 for the x-axis; 1 for the y-axis.
@@ -80,9 +124,13 @@ class Pair(Array):
 
         x = Scalar.as_scalar(x)
         y = Scalar.as_scalar(y).confirm_units(x.units)
-        (x,y) = Array.broadcast_arrays((x,y))
-        return Pair(np.vstack((x.vals,y.vals)).swapaxes(0,-1), x.mask | y.mask,
-                                                               x.units)
+        (x,y) = Array.broadcast_arrays(x,y)
+
+        buffer = np.empty(x.shape + [2])
+        buffer[...,0] = x.vals
+        buffer[...,1] = y.vals
+
+        return Pair(buffer, x.mask | y.mask, x.units)
 
     def as_column(self):
         """Converts the vector to an 2x1 column matrix."""
@@ -126,14 +174,10 @@ class Pair(Array):
         return Pair(self.vals[..., -1::-1], self.mask, self.units)
 
     def as_index(self):
-        """Returns this object as a list of lists, which can be used to index a
-        numpy ndarray, thereby returning an ndarray of the same shape as the
-        Tuple object. Each value is rounded down to the nearest integer."""
+        """Returns this object in a form suitable for indexing another object.
+        """
 
-        if np.any(self.mask):
-            raise ValueError("an index array cannot be masked")
-
-        return list(np.rollaxis(self.vals.astype("int"),-1,0))
+        return list(np.rollaxis((self.vals // 1).astype("int"), -1, 0))
 
     def int(self):
         """Returns the integer (floor) component of each index."""
@@ -144,6 +188,11 @@ class Pair(Array):
         """Returns the fractional component of each index."""
 
         return Pair(self.vals % 1., self.mask)
+
+    def float(self):
+        """Returns the same Pair but containing floating-point values."""
+
+        return Pair.as_float(self, copy=False)
 
     def dot(self, arg):
         """Returns the dot products of two Pairs as a Scalar.
@@ -195,6 +244,12 @@ class Pair(Array):
 
         tuple = Array.TUPLE_CLASS.meshgrid(arg1, arg2)
         return Pair.as_pair(tuple)
+
+# Useful class constants
+Pair.ZERO  = Pair([0.,0.])
+Pair.XAXIS = Pair([1.,0.])
+Pair.YAXIS = Pair([0.,1.])
+Pair.ONES  = Pair([1.,1.])
 
 ################################################################################
 # Once defined, register with Array class

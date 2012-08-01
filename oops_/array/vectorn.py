@@ -22,7 +22,7 @@ class VectorN(Array):
     def __init__(self, arg, mask=False, units=None):
 
         return Array.__init__(self, arg, mask, units, 1, item=None,
-                                    float=True, dimensionless=False)
+                                    floating=True, dimensionless=False)
 
     @staticmethod
     def as_vectorn(arg):

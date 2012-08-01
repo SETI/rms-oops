@@ -23,7 +23,7 @@ class Vector3(Array):
     def __init__(self, arg, mask=False, units=None):
 
         Array.__init__(self, arg, mask, units, 1, item=[3],
-                                  float=True, dimensionless=False)
+                                  floating=True, dimensionless=False)
 
         self.x = self.vals[...,0]
         self.y = self.vals[...,1]

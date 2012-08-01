@@ -45,7 +45,7 @@ class MatrixN(Array):
 
     def __init__(self, arg, mask=False, units=None):
         return Array.__init__(self, arg, mask, units, 2, item=None,
-                                    float=True, dimensionless=True)
+                                    floating=True, dimensionless=True)
 
     @staticmethod
     def as_matrixn(arg):
@@ -240,7 +240,7 @@ class MatrixN(Array):
                                  " *= " + str(arg.item))
 
             result = self * arg
-            self.vals[...] = result[...]
+            self.vals[...] = result.vals[...]
             self.mask |= arg.mask
 
             self.imul_subfields(arg)

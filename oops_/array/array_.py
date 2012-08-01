@@ -68,7 +68,7 @@ class Array(object):
         return obj
 
     def __init__(self, arg, mask, units, rank, item=None,
-                            float=False, dimensionless=False):
+                            floating=False, dimensionless=False):
         """Default constructor."""
 
         self.subfields = {}
@@ -104,6 +104,9 @@ class Array(object):
 
             arg = arg.data
 
+        # Otherwise convert to np.ndarray, even if a scalar
+        # arg = np.asarray(arg)
+
         # Check the overall shape
         ashape = list(np.shape(arg))
         if len(ashape) < rank:
@@ -113,12 +116,12 @@ class Array(object):
 
         # Fill in the vals field
         if ashape == []:
-            if float:
+            if floating:
                 self.vals = float(arg)
             else:
                 self.vals = arg
         else:
-            if float:
+            if floating:
                 self.vals = np.asfarray(arg)
             else:
                 self.vals = np.asarray(arg)
@@ -196,7 +199,9 @@ class Array(object):
         """A static Array method to turn something into a Scalar."""
         return Array.SCALAR_CLASS.as_scalar(arg)
 
-    # Conversions to specific classes, which will only work if items match
+    # Conversions to specific classes, which will only work if items match.
+    # These are overridden by some subclasses to include an axis or axes
+    # argument.
     def as_scalar(self):
         """Casts any Array subclass to a Scalar if possible."""
         return Array.SCALAR_CLASS.as_scalar(self)
@@ -207,7 +212,7 @@ class Array(object):
 
     def as_tuple(self):
         """Casts any Array subclass to a Tuple if possible."""
-        return Array.TUPLE_CLASS.as_pair(self)
+        return Array.TUPLE_CLASS.as_tuple(self)
 
     def as_vector3(self):
         """Casts any Array subclass to a Vector3 if possible."""
@@ -241,6 +246,22 @@ class Array(object):
 
         obj.__init__(vals, True, self.units)
         return obj
+
+    def is_floating(self):
+        """Returns True if the object contains floating-point values."""
+
+        if isinstance(self.vals, np.ndarray):
+            return np.issubdtype(self.vals.dtype, np.core.numerictypes.floating)
+        else:
+            return isinstance(self.vals, (float, np.inexact))
+
+    def is_integer(self):
+        """Returns True if the object contains integer values."""
+
+        if isinstance(self.vals, np.ndarray):
+            return np.issubdtype(self.vals.dtype, np.core.numerictypes.integer)
+        else:
+            return isinstance(self.vals, (int, long, np.integer))
 
     @classmethod
     def all_masked(cls, shape=[], item=None):
@@ -872,6 +893,80 @@ class Array(object):
 
         return self
 
+    def __floordiv__(self, arg):
+        if Array.is_empty(arg): return arg
+
+        try:
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                return Array.into_scalar(arg).__rfloordiv__(self)
+            except:
+                raise e
+
+        # Mask any items to be divided by zero
+        div_by_zero = (vals == 0)
+        if np.any(div_by_zero):
+            if np.shape(vals) == ():
+                vals = 1
+            else:
+                vals = vals.copy()
+                vals[div_by_zero] = 1
+                # Collapse mask down to one element per item of Array
+                for iters in range(self.rank):
+                    div_by_zero = np.any(div_by_zero, axis=-1)
+        else:
+            div_by_zero = False
+
+        obj = Array.__new__(type(self))
+        obj.__init__(self.vals // vals,
+                     self.mask | mask | div_by_zero,
+                     Units.div_units(self.units, units))
+
+        return obj
+
+    def __rfloordiv__(self, arg):
+        if self.rank == 2: return NotImplemented
+
+        try:
+            arg = self.as_my_type(arg)
+            return arg // self
+        except: pass
+
+        (vals, mask, units) = self.as_if_my_rank(arg)
+        vals = np.broadcast_arrays(vals, self.vals)[0]
+        arg = self.as_my_type(vals, mask, units)
+        return arg // self
+
+    def __ifloordiv__(self, arg):
+        try:
+            (vals, mask, units) = self.as_if_my_type(arg)
+        except Exception as e:
+            try:
+                (vals, mask, units) = self.as_if_my_rank(arg)
+            except:
+                raise e
+
+        # Mask any items to be divided by zero
+        div_by_zero = (vals == 0)
+        if np.any(div_by_zero):
+            if np.shape(vals) == ():
+                vals = 1
+            else:
+                vals = vals.copy()
+                vals[div_by_zero] = 1
+                # Collapse mask down to one element per item of Array
+                for iters in range(self.rank):
+                    div_by_zero = np.any(div_by_zero, axis=-1)
+        else:
+            div_by_zero = False
+
+        self.vals //= vals
+        self.mask |= (mask | div_by_zero)
+        self.units = Units.div_units(self.units, units)
+
+        return self
+
     def __pow__(self, arg):
         if Array.is_empty(arg): return arg
 
@@ -1027,13 +1122,20 @@ class Array(object):
         if i is True: return self
         if i is False: return Array.masked_version(self)
 
+        # Handle an Array subclass as an index
+        if isinstance(i, Array):
+            index_mask = i.mask
+            i = i.as_index()
+        else:
+            index_mask = False
+
         # Get the value and mask
         vals = self.vals[i]
 
         if np.shape(self.mask) == ():
-            mask = self.mask
+            mask = self.mask | index_mask
         else:
-            mask = self.mask[i]
+            mask = self.mask[i] | index_mask
 
         # Make sure we have not penetrated the components of a 1-D or 2-D item
         icount = 1
@@ -1149,13 +1251,13 @@ class Array(object):
 
     def astype(self, dtype):
         """converts dtype of elements of Array to said type. creates new
-            instance of Array and returns it.
-            
-            Input:
+        instance of Array and returns it.
+
+        Input:
             dtype:      type, such as int, float32, etc.
-            
+
             Return:     new instance of Array with converted elements.
-            """
+        """
 
         if isinstance(self.vals, np.ndarray):
             if self.vals.dtype == dtype: return self
@@ -1357,7 +1459,7 @@ class Array(object):
 
         return obj
 
-    def append_axes(self, axes):
+    def append_axes(self, axes=1):
         """Appends the specified number of unit axes to the end of the shape."""
 
         if axes == 0: return self
@@ -1381,7 +1483,7 @@ class Array(object):
 
         return obj
 
-    def prepend_axes(self, axes):
+    def prepend_axes(self, axes=1):
         """Prepends the specified number of unit axes to the end of the shape.
         """
 
@@ -1551,7 +1653,7 @@ class Array(object):
         return broadcast + item
 
     @staticmethod
-    def broadcast_arrays(arrays):
+    def broadcast_arrays(*arrays):
         """This static method returns a list of Array objects all broadcasted to
         the same shape. It raises a ValueError if the shapes cannot be
         broadcasted.
