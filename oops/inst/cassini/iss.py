@@ -77,7 +77,7 @@ def from_index(filespec, parameters={}):
         else:
             camera = "NAC"
 
-        item = oops.obs.Snapshot(("v","u"), texp, tstart, ISS.fovs[camera,mode],
+        item = oops.obs.Snapshot(("v","u"), tstart, texp, ISS.fovs[camera,mode],
                                  "CASSINI", "CASSINI_ISS_" + camera,
                                  index_dict=dict)        # Add index dictionary
 
