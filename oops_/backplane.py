@@ -389,7 +389,7 @@ class Backplane(object):
         event = self.get_gridless_event_with_arr(event_key)
         arr = -event.aberrated_arr()
 
-        if type(event.surface) == surface_.Spheroid:
+        if type(event.surface) == surface_.Spheroid or type(event.surface) == surface_.Ellipsoid:
             assert lat_type in {"centric", "graphic"}
         else:
             assert lat_type == "centric"
@@ -402,7 +402,7 @@ class Backplane(object):
         event = self.get_gridless_event(event_key)
         dep = event.aberrated_dep()
 
-        if type(event.surface) == surface_.Spheroid:
+        if type(event.surface) == surface_.Spheroid or type(event.surface) == surface_.Ellipsoid:
             assert lat_type in {"centric", "graphic"}
         else:
             assert lat_type == "centric"
