@@ -17,6 +17,7 @@ from oops_.array.all import *
 from oops_.event import Event
 from oops_.meshgrid import Meshgrid
 from oops_.backplane import Backplane
+import pylab
 
 class Inventory(object):
     """Inventory is a class that allows for finding the inventory of bodies
@@ -89,7 +90,6 @@ class Inventory(object):
         # must be inside of all the planes
         return True
 
-
     def point_in_frustrum(self, frustrum_normals, body, pos, obs_bodies,
                           body_positions):
         intersects = [False, False, False, False]
@@ -99,7 +99,7 @@ class Inventory(object):
             if dist.vals < (-body.radius):
                 return   # entirely outside of plane
             elif math.fabs(dist.vals) < body.radius:
-                # intersects plane, thereforem possibly in the viewing frustrum
+                # intersects plane, therefore possibly in the viewing frustrum
                 # check if intersects OR positive side of perpendicular planes
                 j = (i+1)%4
                 k = (i+3)%4
@@ -135,10 +135,10 @@ class Inventory(object):
         
         # get the planes of the viewing frustrum
         uv_shape = self.obs.fov.uv_shape.vals
-        uv = np.array([(0,0),
-                       (uv_shape[0],0),
-                       (uv_shape[0],uv_shape[1]),
-                       (0,uv_shape[1])])
+        uv = np.array([(-error_buffer_size,-error_buffer_size),
+                       (uv_shape[0]+error_buffer_size,-error_buffer_size),
+                       (uv_shape[0]+error_buffer_size,uv_shape[1]+error_buffer_size),
+                       (-error_buffer_size,uv_shape[1]+error_buffer_size)])
         uv_pair = Pair(uv)
         los = self.obs.fov.los_from_uv(uv_pair)
         # scale los to avoid accuracy problems
@@ -215,6 +215,11 @@ class Inventory(object):
                 #target_saturn_distance = saturn_distance.vals
             
             body_number = 0
+            #pylab.imsave("/Users/bwells/saturnMask.png",
+            #             target_saturn_distance, cmap=pylab.cm.gray)
+            #pylab.imsave("/Users/bwells/saturnMaskMask.png",
+            #             target_saturn_distance.mask, cmap=pylab.cm.gray)
+
             for potential_body in potential_bodies:
                 p_body = potential_body.name.lower()
                 if (p_body != main_planet) and (p_body != target):
@@ -238,9 +243,9 @@ class Inventory(object):
                         ix = int(pix.vals[0])
                         iy = int(pix.vals[1])
                         
-                        if pos[2] < target_saturn_distance[ix][iy]:
+                        if pos[2] < target_saturn_distance[iy][ix]:
                             confirmed_bodies.append(p_body)
-                        elif target_saturn_distance.mask[ix][iy]:
+                        elif target_saturn_distance.mask[iy][ix]:
                             confirmed_bodies.append(p_body)
                         else:
                             # most time consuming test... test ring of points,
@@ -254,12 +259,17 @@ class Inventory(object):
                                 # we only need to check perpendicular directions
                                 # since if they are blocked, all points in
                                 # between are blocked.
-                                pix_radius = self.obs.fov.uv_from_los(radius_los)
-                                ix1 = min(int(ix + pix_radius.vals[0]), max_x_pixel)
-                                ix2 = max(int(ix - pix_radius.vals[0]), 0)
-                                iy1 = min(int(iy + pix_radius.vals[1]), max_y_pixel)
-                                iy2 = max(int(iy - pix_radius.vals[1]), 0)
-                                if target_saturn_distance.mask[ix1][iy] or target_saturn_distance.mask[ix2][iy] or target_saturn_distance.mask[ix][iy1] or target_saturn_distance.mask[ix][iy2]:
+                                min_radius_los = radius_los
+                                min_radius_los[0] = -min_radius_los[0]
+                                min_radius_los[1] = -min_radius_los[1]
+                                max_pix_radius = self.obs.fov.uv_from_los(radius_los)
+                                min_pix_radius = self.obs.fov.uv_from_los(min_radius_los)
+                                diff_radius = max_pix_radius - min_pix_radius
+                                ix1 = min(int(ix + diff_radius.vals[0]), max_x_pixel)
+                                ix2 = max(int(ix - diff_radius.vals[0]), 0)
+                                iy1 = min(int(iy + diff_radius.vals[1]), max_y_pixel)
+                                iy2 = max(int(iy - diff_radius.vals[1]), 0)
+                                if target_saturn_distance.mask[iy][ix1] or target_saturn_distance.mask[iy][ix2] or target_saturn_distance.mask[iy1][ix] or target_saturn_distance.mask[iy2][ix]:
                                     confirmed_bodies.append(p_body)
                 
                 body_number += 1
