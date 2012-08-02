@@ -34,6 +34,8 @@ class Ellipsoid(Surface):
     that with this definition, the gradient of the elevation value is not
     exactly normal to the surface.
     """
+    
+    UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
 
     COORDINATE_TYPE = "spherical"
 
@@ -256,10 +258,71 @@ class Ellipsoid(Surface):
         t = (bsign_sqrtd_div2 - b_div2) / a
         pos = obs + t*los
         pos = self._apply_exclusion(pos)
-
+        
         if derivs:
-            raise NotImplementedError("Ellipsoid.intercept() derivatives are " +
-                                      "not yet supported")
+            # Using step-by-step differentiation of the equations above
+            b_div2 = los_unsquashed.dot(obs_unsquashed)
+            d_div4 = b_div2**2 - a * c
+            bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
+            
+            # da_dlos = 2 * los * self.unsquash_sq
+            # db_dlos = 2 * obs * self.unsquash_sq
+            # db_dobs = 2 * los * self.unsquash_sq
+            # dc_dobs = 2 * obs * self.unsquash_sq
+            
+            da_dlos_div2 = los * self.unsquash_sq
+            db_dlos_div2 = obs * self.unsquash_sq
+            db_dobs_div2 = los * self.unsquash_sq
+            dc_dobs_div2 = obs * self.unsquash_sq
+            
+            # dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
+            # dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
+            
+            dd_dlos_div8 = b_div2 * db_dlos_div2 - c * da_dlos_div2
+            dd_dobs_div8 = b_div2 * db_dobs_div2 - a * dc_dobs_div2
+            
+            # dsqrt = d.sqrt()
+            # d_dsqrt_dd = 0.5 / dsqrt
+            # d_dsqrt_dlos = d_dsqrt_dd * dd_dlos
+            # d_dsqrt_dobs = d_dsqrt_dd * dd_dobs
+            
+            # d[bsign_sqrtd]/d[x] = 1/2 / bsign_sqrtd * d[d]/d[x]
+            #                     = 1/4 / bsign_sqrtd_div2 * d[d]/d[x]
+            
+            d_bsign_sqrtd_dlos_div2 = dd_dlos_div8 / bsign_sqrtd_div2
+            d_bsign_sqrtd_dobs_div2 = dd_dobs_div8 / bsign_sqrtd_div2
+            
+            # inv2a = 0.5/a
+            # d_inv2a_da = -2 * inv2a**2
+            #
+            # dt_dlos = (inv2a * (b.sign()*d_dsqrt_dlos - db_dlos) +
+            #           (b.sign()*dsqrt - b)*d_inv2a_da * da_dlos).as_vectorn()
+            # dt_dobs = (inv2a * (b.sign()*d_dsqrt_dobs - db_dobs)).as_vectorn()
+            #
+            # dpos_dobs = (los.as_column() * dt_dobs.as_row() +
+            #              Spheroid.UNIT_MATRIX)
+            # dpos_dlos = (los.as_column() * dt_dlos.as_row() +
+            #              Spheroid.UNIT_MATRIX * t)
+            
+            dt_dlos = ((d_bsign_sqrtd_dlos_div2
+                        - db_dlos_div2 - 2 * t * da_dlos_div2) / a).as_vectorn()
+            dt_dobs = ((d_bsign_sqrtd_dobs_div2
+                        - db_dobs_div2) / a).as_vectorn()
+            
+            dpos_dobs = (los.as_column() * dt_dobs.as_row() +
+                         Ellipsoid.UNIT_MATRIX)
+            dpos_dlos = (los.as_column() * dt_dlos.as_row() +
+                         Ellipsoid.UNIT_MATRIX * t)
+            
+            los_norm = los.norm()
+            pos.insert_subfield("d_dobs", dpos_dobs)
+            pos.insert_subfield("d_dlos", dpos_dlos * los_norm)
+            t.insert_subfield("d_dobs", dt_dobs.as_row())
+            t.insert_subfield("d_dlos", dt_dlos.as_row() * los_norm)
+        
+        #if derivs:
+        #raise NotImplementedError("Ellipsoid intercept derivatives are " +
+        #                          "not yet supported")
 
         return (pos, t)
 
