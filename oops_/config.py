@@ -90,7 +90,7 @@ class LOGGING(object):
 
     @staticmethod
     def off(): LOGGING.all(False)
-        
+
     @staticmethod
     def on(prefix=""):
         LOGGING.all(True)

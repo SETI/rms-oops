@@ -58,7 +58,7 @@ class Pixel(Observation):
         self.scalar_times = (Scalar(self.time[0]), Scalar(self.time[1]))
 
         assert self.fov.uv_shape == (1,1)
-        self.uv_shape = (1,1)
+        self.uv_shape = [1,1]
 
         self.subfields = {}
         for key in subfields.keys():

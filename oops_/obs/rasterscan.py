@@ -84,11 +84,10 @@ class RasterScan(Observation):
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
+        self.uv_shape = list(self.fov.uv_shape.vals)
         assert len(self.cadence.shape) == 2
-        assert (self.cadence.shape[0] ==
-                self.fov.uv_shape.vals[self.slow_uv_axis])
-        assert (self.cadence.shape[1] ==
-                self.fov.uv_shape.vals[self.fast_uv_axis])
+        assert self.cadence.shape[0] == self.uv_shape[self.slow_uv_axis]
+        assert self.cadence.shape[1] == self.uv_shape[self.fast_uv_axis]
 
         self.uv_size = Pair.as_pair(uv_size)
         self.uv_is_discontinuous = (self.uv_size != Pair.ONES)
@@ -122,7 +121,7 @@ class RasterScan(Observation):
             uv_int = Pair.as_int(uv)
             uv = uv_int + (uv - uv_int) * self.uv_size
 
-        tstep = indices.as_pair((self.slow_axis,self.fast_axis))
+        tstep = indices.as_pair(self.t_axis)
         time = self.cadence.time_at_tstep(tstep)
 
         if fovmask:
@@ -157,7 +156,7 @@ class RasterScan(Observation):
         uv_min = indices.as_pair((self.u_axis,self.v_axis))
         uv_max = uv_min + self.uv_size
 
-        tstep = indices.as_pair((self.slow_axis,self.fast_axis))
+        tstep = indices.as_pair(self.t_axis)
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep)
 
         if fovmask:
@@ -189,7 +188,7 @@ class RasterScan(Observation):
         """
 
         uv_tuple = Pair.as_int(uv_pair).as_tuple()
-        tstep = uv_tuple.as_pair(self.t_axis)
+        tstep = uv_tuple.as_pair((self.slow_uv_axis, self.fast_uv_axis))
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 

@@ -215,7 +215,8 @@ class RasterSlit(Observation):
         """
 
         uv_tuple = Pair.as_int(uv_pair).as_tuple()
-        tstep = uv_tuple.as_pair(self.t_axis)
+        tstep = uv_tuple.as_pair((self.cross_slit_uv_index,
+                                  self.along_slit_uv_index))
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 

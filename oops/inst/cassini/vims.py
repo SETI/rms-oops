@@ -27,6 +27,53 @@ from oops.inst.cassini.cassini_ import Cassini
 EXTRA_INTERSAMPLE_DELAY =  0.000363     # observed empirically in V1555349441
 TIME_CORRECTION         = -0.337505
 
+# From Matt Hedman's IDL program navims.pro
+#
+# vims_params=fltarr(6)
+# vims_params(0)=0.495e-3 ;pixel size of IR channels (rad) ;070910
+# vims_params(1)=0.506e-3 ; pixel size of VIS channels (rad)
+# vims_params(2)=-1.7 ; VIS offset x (in pixels)
+# vims_params(3)=+1.5 ; VIS offset z (in pixels)
+# vims_params(4)=1.98; HI-RES IR
+# vims_params(5)=2.99; HI-RES VIS
+# 
+# xi=(xo-1+i-31.5)*vims_params[0]
+# zi=(zo-1+j-31.5)*vims_params[0]
+# xv=(xo-1+i-31.5+vims_params[2])*vims_params[1]
+# zv=(zo-1+j-31.5+vims_params[3])*vims_params[1]
+# 
+# if hires(0) eq 1 then begin
+#     hrf=vims_params(4)
+#     xi=(xo-1+sq(1)/2./hrf+i/hrf-31.5)*vims_params[0]
+# end
+# 
+# if hires(1) eq 1 then begin
+#     hrf=vims_params(5)
+#     xv=(xo-1+sq(1)/hrf+i/hrf-31.5 +vims_params[2])*vims_params[1]
+#     zv=(zo-1-0+sq(3)/hrf+j/hrf-31.5 +vims_params[3])*vims_params[1]
+# end
+# 
+# aimpointi=[xi,zi]
+# aimpointv=[xv,zv]
+
+IR_NORMAL_PIXEL  = 0.495e-3
+VIS_NORMAL_PIXEL = 0.506e-3
+
+IR_HIRES_FACTOR  = 1.98
+VIS_HIRES_FACTOR = 2.99
+
+IR_NORMAL_SCALE  = oops.Pair((IR_NORMAL_PIXEL,  IR_NORMAL_PIXEL))
+VIS_NORMAL_SCALE = oops.Pair((VIS_NORMAL_PIXEL, VIS_NORMAL_PIXEL))
+
+IR_HIRES_SCALE  = oops.Pair((IR_NORMAL_PIXEL/IR_HIRES_FACTOR, IR_NORMAL_PIXEL))
+VIS_HIRES_SCALE = oops.Pair((VIS_NORMAL_PIXEL/VIS_HIRES_FACTOR,
+                             VIS_NORMAL_PIXEL/VIS_HIRES_FACTOR))
+
+IR_OVER_VIS = IR_NORMAL_PIXEL / VIS_NORMAL_PIXEL
+
+IR_FULL_FOV  = oops.fov.Flat(IR_NORMAL_SCALE,  oops.Pair((64,64)))
+VIS_FULL_FOV = oops.fov.Flat(VIS_NORMAL_SCALE, oops.Pair((64,64)))
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -44,7 +91,14 @@ def from_file(filespec, parameters={}):
 
     # Load the VICAR label
     label = pdsparser.PdsLabel.from_file(filespec).as_dict()
-    info = label["QUBE"]
+
+    is_isis_file = "QUBE" in label.keys()
+    if is_isis_file:                # If this is an ISIS file...
+        info = label["QUBE"]        # ... the info is in the QUBE object
+    else:                           # Otherwise, this is a .LBL file
+        info = label                # ... and the info is at the top level
+        info["CORE_ITEMS"] = label["SPECTRAL_QUBE"]["CORE_ITEMS"]
+        info["BAND_SUFFIX_NAME"] = label["SPECTRAL_QUBE"]["BAND_SUFFIX_NAME"]
 
     # Load any needed SPICE kernels
     tstart = julian.tdb_from_tai(julian.tai_from_iso(info["START_TIME"]))
@@ -59,57 +113,65 @@ def from_file(filespec, parameters={}):
     # Load the data array
     ########################################
 
-    (data, times) = _load_data_and_times(filespec, label)
-
-    vis_data = data[:,:,:96]    # index order is [line, sample, band]
-    ir_data  = data[:,:,96:]
-
     (samples, bands, lines) = info["CORE_ITEMS"]
-    assert data.shape == (lines, samples, bands)
     assert bands == 352
+
+    if is_isis_file:
+        (data, times) = _load_data_and_times(filespec, label)
+        assert data.shape == (lines, samples, bands)
+
+        vis_data = data[:,:,:96]    # index order is [line, sample, band]
+        ir_data  = data[:,:,96:]
+
+    else:
+        vis_data = None
+        ir_data = None
+        times = None
 
     ########################################
     # Define the FOVs
     ########################################
 
-    swath_width = info["SWATH_WIDTH"]       # aka samples (along the u-axis)
-    swath_length = info["SWATH_LENGTH"]     # aka lines (along the v-axis)
+    swath_width = info["SWATH_WIDTH"]
+    swath_length = info["SWATH_LENGTH"]
+    uv_shape = (swath_width, swath_length)
 
-    x_offset = info["X_OFFSET"]             # aka sample offset == u-offset
-    z_offset = info["Z_OFFSET"]             # aka line offset == v-offset
+    x_offset = info["X_OFFSET"]
+    z_offset = info["Z_OFFSET"]
+    uv_los = (33. - x_offset, 33. - z_offset)
 
     vis_sampling = info["SAMPLING_MODE_ID"][1]
     ir_sampling  = info["SAMPLING_MODE_ID"][0]
 
-    vis_fov = VIMS.fovs[("VIS", vis_sampling)]
-    ir_fov  = VIMS.fovs[("IR",  ir_sampling)]
-
-    shape = (swath_width, swath_length)
-
+    # VIS FOV
     if vis_sampling == "HI-RES":
-        # left_edge = x_offset - 1
-        # right_edge = left_edge + swath_width
-        # x_center = (left_edge + right_edge)/2
-        # x_origin = x_center - swath_width/2/3
-        # x_origin_x3 = int(3 * x_origin)
-        x_origin_x3 = 3*(x_offset-1) + swath_width
-        z_origin_x3 = 3*(z_offset-1) + swath_length
-        vis_fov = oops.fov.SliceFOV(vis_fov, (x_origin_x3, z_origin_x3), shape)
+        vis_fov = oops.fov.Flat(VIS_HIRES_SCALE, uv_shape,
+                    (VIS_HIRES_FACTOR * uv_los[0] - uv_shape[0],
+                     VIS_HIRES_FACTOR * uv_los[1] - uv_shape[1]))
 
-    elif shape != (64,64):
-        vis_fov = oops.fov.SliceFOV(vis_fov, (x_offset-1, z_offset-1), shape)
+    elif uv_shape == (64,64):
+        vis_fov = VIS_FULL_FOV
 
-    if ir_sampling in ("HI-RES","UNDER"):
-        # left_edge = x_offset - 1
-        # right_edge = left_edge + swath_width
-        # x_center = (left_edge + right_edge)/2
-        # x_origin = x_center - swath_width/2/2
-        # x_origin_x2 = int(2 * x_origin)
-        x_origin_x2 = 2*(x_offset-1) + swath_width//2
-        ir_fov = oops.fov.SliceFOV(ir_fov, (x_origin_x2, z_offset-1), shape)
+    else:
+        vis_fov = oops.fov.Flat(VIS_NORMAL_SCALE, uv_shape,
+                    (IR_OVER_VIS * uv_los[0], IR_OVER_VIS * uv_los[1]))
 
-    elif shape != (64,64):
-        ir_fov = oops.fov.SliceFOV(ir_fov, (x_offset-1, z_offset-1), shape)
+    # IR FOV
+    if info["INSTRUMENT_MODE_ID"] == "OCCULTATION":
+        if ir_sampling == "NORMAL":
+            ir_fov = oops.fov.Flat(IR_NORMAL_SCALE, uv_shape, uv_los)
+        else:
+            ir_fov = oops.fov.Flat(IR_HIRES_SCALE, uv_shape, uv_los)
+
+    elif ir_sampling in ("HI-RES","UNDER"):
+        ir_fov = oops.fov.Flat(IR_HIRES_SCALE, uv_shape,
+                    (IR_HIRES_FACTOR * uv_los[0] - uv_shape[0]/2., uv_los[1]))
+
+    elif uv_shape == (64,64):
+        ir_fov = IR_FULL_FOV
+
+    else:
+        ir_fov = oops.fov.Flat(IR_NORMAL_SCALE, uv_shape, uv_los)
 
     if ir_sampling == "UNDER":
         ir_det_size = 2.
@@ -215,59 +277,53 @@ def from_file(filespec, parameters={}):
         ir_data = ir_data.reshape((frames, 256))
         ir_obs = oops.obs.Pixel(("t","b"),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id,
-                                data=ir_data, dict=label)
+                                "CASSINI", ir_frame_id, dict=label)
 
     # Single LINE case
     elif swath_length == 1 and frames == 1:
         if not vis_is_off:
-            vis_data = vis_data.reshape((samples, 96))
+            if vis_data is not None: vis_data = vis_data.reshape((samples, 96))
 
             vis_obs = oops.obs.Slit1D(("u","b"), 1.,
                                 tstart, vis_texp, vis_fov,
-                                "CASSINI", vis_frame_id,
-                                data=vis_data, dict=label)
+                                "CASSINI", vis_frame_id, dict=label)
 
         if not ir_is_off:
-            ir_data = ir_data.reshape((samples, 256))
+            if ir_data is not None: ir_data = ir_data.reshape((samples, 256))
 
             if backplane_cadence is not None:
                 ir_fast_cadence = backplane_cadence
 
             ir_obs = oops.obs.RasterSlit1D(("ut","b"), ir_det_size,
                                 ir_fast_cadence, ir_fov,
-                                "CASSINI", ir_frame_id,
-                                data=ir_data, dict=label)
+                                "CASSINI", ir_frame_id, dict=label)
 
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
             vis_obs = oops.obs.Pushbroom(("vt","u","b"), (1.,1.),
                                 vis_header_cadence, vis_fov,
-                                "CASSINI", vis_frame_id,
-                                data=vis_data, dict=label)
+                                "CASSINI", vis_frame_id, dict=label)
 
         if not ir_is_off:
             if backplane_cadence is None:
                 ir_cadence = oops.cadence.DualCadence(vis_header_cadence,
-                                                      ir_fast_cadence)
+                                ir_fast_cadence)
             else:
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
-                                                          (lines,samples))
+                                (lines,samples))
 
             ir_obs = oops.obs.RasterScan(("vslow","ufast","b"),
                                 (1., ir_det_size),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id,
-                                data=ir_data, dict=label)
+                                "CASSINI", ir_frame_id, dict=label)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
             vis_obs = oops.obs.Slit(("vt","u","b"), 1.,
                                 frame_cadence, vis_fov,
-                                "CASSINI", vis_frame_id,
-                                data=vis_data, dict=label)
+                                "CASSINI", vis_frame_id, dict=label)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -279,15 +335,16 @@ def from_file(filespec, parameters={}):
 
             ir_obs = oops.obs.RasterSlit(("vslow","ufast","b"), ir_det_size,
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id,
-                                data=ir_data, dict=label)
+                                "CASSINI", ir_frame_id, dict=label)
 
     # Multiple 2-D IMAGE case
     elif lines == frames and samples == swath_width * swath_length:
         if not vis_is_off:
 
             # Reshape the data array
-            vis_data = vis_data.reshape(frames, swath_length, swath_width, 96)
+            if vis_data is not None:
+                vis_data = vis_data.reshape(frames, swath_length, swath_width,
+                                vis_data.shape[-1])
 
             # Define the first 2-D pushbroom observation
             vis_first_obs = oops.obs.Pushbroom(("t", "vt","u","b"), (1.,1.),
@@ -298,16 +355,18 @@ def from_file(filespec, parameters={}):
             movie_cadence = oops.cadence.DualCadence(frame_cadence,
                                 vis_header_cadence)
 
-            vis_obs = oops.obs.Movie(("t","vt","u","b"), movie_cadence,
-                                data=vis_data, dict=label)
+            vis_obs = oops.obs.Movie(("t","vt","u","b"), vis_first_obs,
+                                movie_cadence, dict=label)
 
         if not vis_is_off:
 
             # Reshape the data array
-            ir_data = ir_data.reshape(frames, swath_length, swath_width, 256)
+            if ir_data is not None:
+                ir_data = ir_data.reshape(frames, swath_length, swath_width,
+                                          ir_data.shape[-1])
 
             # Define the first 2-D raster-scan observation
-            ir_obs = oops.obs.RasterScan(("vslow","ufast","b"),
+            ir_first_obs = oops.obs.RasterScan(("vslow","ufast","b"),
                                 (1., ir_det_size),
                                 ir_first_cadence, ir_fov,
                                 "CASSINI", ir_frame_id)
@@ -324,11 +383,18 @@ def from_file(filespec, parameters={}):
                                 (frames,lines,samples))
 
             # Define the movie
-            ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_cadence,
-                                data=ir_data, dict=label)
+            ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
+                                ir_cadence, dict=label)
 
     else:
         raise ValueError("unsupported VIMS format in file " + filespec)
+
+    # Insert the data array
+    if vis_obs is not None and vis_data is not None:
+        vis_obs.insert_subfield("data", vis_data)
+
+    if ir_obs is not None and ir_data is not None:
+        ir_obs.insert_subfield("data", ir_data)
 
     return (vis_obs, ir_obs)
 
