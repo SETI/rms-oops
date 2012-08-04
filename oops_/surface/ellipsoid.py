@@ -5,6 +5,8 @@
 # 3/4/12  MRS - cleaned up comments, added NotImplementedErrors for features
 #   still TBD.
 # 6/26/12 MRS - updated for current Surface API, added unit tests.
+# 8/4/12 MRS - implemented derivatives for intercept(), added new unit tests for
+#   intercept derivatives.
 ################################################################################
 
 import numpy as np
@@ -34,8 +36,6 @@ class Ellipsoid(Surface):
     that with this definition, the gradient of the elevation value is not
     exactly normal to the surface.
     """
-    
-    UNIT_MATRIX = MatrixN([(1,0,0),(0,1,0),(0,0,1)])
 
     COORDINATE_TYPE = "spherical"
 
@@ -44,7 +44,6 @@ class Ellipsoid(Surface):
     # Class constants to override where derivs are undefined
     coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
     vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
-    intercept_DERIVS_ARE_IMPLEMENTED = False
     normal_DERIVS_ARE_IMPLEMENTED = False
     intercept_with_normal_DERIVS_ARE_IMPLEMENTED = False
     intercept_normal_to_DERIVS_ARE_IMPLEMENTED = False
@@ -82,7 +81,7 @@ class Ellipsoid(Surface):
         self.squash_z   = self.radii[2] / self.radii[0]
         self.unsquash_z = self.radii[0] / self.radii[2]
 
-        self.squash    = Vector3((1., self.squash_y,   self.squash_z))
+        self.squash    = Vector3((1., self.squash_y, self.squash_z))
         self.squash_sq = self.squash**2
         self.unsquash  = 1. / self.squash
         self.unsquash_sq = self.unsquash**2
@@ -258,71 +257,60 @@ class Ellipsoid(Surface):
         t = (bsign_sqrtd_div2 - b_div2) / a
         pos = obs + t*los
         pos = self._apply_exclusion(pos)
-        
+
         if derivs:
             # Using step-by-step differentiation of the equations above
-            b_div2 = los_unsquashed.dot(obs_unsquashed)
-            d_div4 = b_div2**2 - a * c
-            bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
-            
+
             # da_dlos = 2 * los * self.unsquash_sq
             # db_dlos = 2 * obs * self.unsquash_sq
             # db_dobs = 2 * los * self.unsquash_sq
             # dc_dobs = 2 * obs * self.unsquash_sq
-            
+
             da_dlos_div2 = los * self.unsquash_sq
             db_dlos_div2 = obs * self.unsquash_sq
             db_dobs_div2 = los * self.unsquash_sq
             dc_dobs_div2 = obs * self.unsquash_sq
-            
+
             # dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
             # dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
-            
+
             dd_dlos_div8 = b_div2 * db_dlos_div2 - c * da_dlos_div2
             dd_dobs_div8 = b_div2 * db_dobs_div2 - a * dc_dobs_div2
-            
+
             # dsqrt = d.sqrt()
             # d_dsqrt_dd = 0.5 / dsqrt
             # d_dsqrt_dlos = d_dsqrt_dd * dd_dlos
             # d_dsqrt_dobs = d_dsqrt_dd * dd_dobs
-            
+
             # d[bsign_sqrtd]/d[x] = 1/2 / bsign_sqrtd * d[d]/d[x]
             #                     = 1/4 / bsign_sqrtd_div2 * d[d]/d[x]
-            
+
             d_bsign_sqrtd_dlos_div2 = dd_dlos_div8 / bsign_sqrtd_div2
             d_bsign_sqrtd_dobs_div2 = dd_dobs_div8 / bsign_sqrtd_div2
-            
+
             # inv2a = 0.5/a
             # d_inv2a_da = -2 * inv2a**2
-            #
+            # 
             # dt_dlos = (inv2a * (b.sign()*d_dsqrt_dlos - db_dlos) +
             #           (b.sign()*dsqrt - b)*d_inv2a_da * da_dlos).as_vectorn()
             # dt_dobs = (inv2a * (b.sign()*d_dsqrt_dobs - db_dobs)).as_vectorn()
-            #
-            # dpos_dobs = (los.as_column() * dt_dobs.as_row() +
-            #              Spheroid.UNIT_MATRIX)
-            # dpos_dlos = (los.as_column() * dt_dlos.as_row() +
-            #              Spheroid.UNIT_MATRIX * t)
-            
+            # 
+            # dpos_dobs = los.as_column() * dt_dobs.as_row() + MatrixN.UNIT33
+            # dpos_dlos = los.as_column() * dt_dlos.as_row() + MatrixN.UNIT33*t
+
             dt_dlos = ((d_bsign_sqrtd_dlos_div2
                         - db_dlos_div2 - 2 * t * da_dlos_div2) / a).as_vectorn()
             dt_dobs = ((d_bsign_sqrtd_dobs_div2
                         - db_dobs_div2) / a).as_vectorn()
-            
-            dpos_dobs = (los.as_column() * dt_dobs.as_row() +
-                         Ellipsoid.UNIT_MATRIX)
-            dpos_dlos = (los.as_column() * dt_dlos.as_row() +
-                         Ellipsoid.UNIT_MATRIX * t)
-            
+
+            dpos_dobs = los.as_column() * dt_dobs.as_row() + MatrixN.UNIT33
+            dpos_dlos = los.as_column() * dt_dlos.as_row() + MatrixN.UNIT33 * t
+
             los_norm = los.norm()
             pos.insert_subfield("d_dobs", dpos_dobs)
             pos.insert_subfield("d_dlos", dpos_dlos * los_norm)
             t.insert_subfield("d_dobs", dt_dobs.as_row())
             t.insert_subfield("d_dlos", dt_dlos.as_row() * los_norm)
-        
-        #if derivs:
-        #raise NotImplementedError("Ellipsoid intercept derivatives are " +
-        #                          "not yet supported")
 
         return (pos, t)
 
@@ -667,19 +655,19 @@ class Test_Ellipsoid(unittest.TestCase):
 
         # Coordinate/vector conversions
         NPTS = 10000
-        obs = (2 * np.random.rand(NPTS,3) - 1.) * REQ
+        pos = (2 * np.random.rand(NPTS,3) - 1.) * REQ   # range is -REQ to REQ
 
-        (lon,lat,elev) = planet.coords_from_vector3(obs,axes=3)
+        (lon,lat,elev) = planet.coords_from_vector3(pos, axes=3)
         test = planet.vector3_from_coords((lon,lat,elev))
-        self.assertTrue(abs(test - obs) < 1.e-8)
+        self.assertTrue(abs(test - pos) < 1.e-8)
 
         # Make sure longitudes are planetocentric
-        test_lon = np.arctan2(obs[...,1], obs[...,0]) % (2.*np.pi)
+        test_lon = np.arctan2(pos[...,1], pos[...,0]) % (2.*np.pi)
         self.assertTrue(abs(lon - test_lon) < 1.e-8)
 
         # Ellipsoid intercepts & normals
-        obs[...,0] = np.abs(obs[...,0])
-        obs[...,0] += REQ
+        obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
+        los = -np.random.rand(NPTS,3)                   # range is -1 to 0
 
         los = (2 * np.random.rand(NPTS,3) - 1.)
         los[...,0] = -np.abs(los[...,0])
@@ -700,6 +688,63 @@ class Test_Ellipsoid(unittest.TestCase):
         normals.vals[...,1] *= RMID/REQ
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
+
+        # Intercept derivatives
+
+        # Lines of sight with grazing incidence can have large numerical errors,
+        # but this is not to be considered an error in the analytic calculation.
+        # As a unit test, we ignore the largest 3% of the errors, but require
+        # that the rest of the errors be very small.
+        eps = 1.
+        frac = 0.97     # Ignore errors above this cutoff
+        dobs = ((eps,0,0), (0,eps,0), (0,0,eps))
+        for i in range(3):
+            (cept,t) = planet.intercept(obs, los, derivs=True)
+            (cept1,t1) = planet.intercept(obs + dobs[i], los, derivs=False)
+            (cept2,t2) = planet.intercept(obs - dobs[i], los, derivs=False)
+
+            dcept_dobs = (cept1 - cept2) / (2*eps)
+            ref = cept.d_dobs.as_column(i).as_vector3()
+
+            errors = abs(dcept_dobs - ref) / abs(ref)
+            sorted = np.sort(errors.vals[~errors.mask])
+                        # mask=True where the line of sight missed the surface
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
+
+            dt_dobs = (t1 - t2) / (2*eps)
+            ref = t.d_dobs.vals[...,0,i]
+
+            errors = abs(dt_dobs/ref - 1)
+            sorted = np.sort(errors.vals[~errors.mask])
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
+
+        eps = 1.e-6
+        frac = 0.97
+        dlos = ((eps,0,0), (0,eps,0), (0,0,eps))
+        norms = np.sqrt(los[...,0]**2 + los[...,1]**2 + los[...,2]**2)
+        los /= norms[..., np.newaxis]
+        for i in range(3):
+            (cept,t) = planet.intercept(obs, los, derivs=True)
+            (cept1,t1) = planet.intercept(obs, los + dlos[i], derivs=False)
+            (cept2,t2) = planet.intercept(obs, los - dlos[i], derivs=False)
+
+            dcept_dlos = (cept1 - cept2) / (2*eps)
+            ref = cept.d_dlos.as_column(i).as_vector3()
+
+            errors = abs(dcept_dlos - ref) / abs(ref)
+            sorted = np.sort(errors.vals[~errors.mask])
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
+
+            dt_dlos = (t1 - t2) / (2*eps)
+            ref = t.d_dlos.vals[...,0,i]
+
+            errors = abs(dt_dlos/ref - 1)
+            sorted = np.sort(errors.vals[~errors.mask])
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
 
         # Test normal()
         cept = Vector3(np.random.random((100,3))).unit() * planet.radii

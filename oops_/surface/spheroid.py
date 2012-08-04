@@ -9,6 +9,7 @@
 #   TBD.
 # 3/29/12 MRS: added derivatives to intercept_normal_to() and support for new
 #   Limb surface. Lots of new unit tests.
+# 8/4/12 MRS - added new unit tests for intercept derivatives.
 ################################################################################
 
 import numpy as np
@@ -630,18 +631,15 @@ class Test_Spheroid(unittest.TestCase):
 
         # Coordinate/vector conversions
         NPTS = 10000
-        obs = (2 * np.random.rand(NPTS,3) - 1.) * REQ
+        pos = (2 * np.random.rand(NPTS,3) - 1.) * REQ   # range is -REQ to REQ
 
-        (lon,lat,elev) = planet.coords_from_vector3(obs,axes=3)
+        (lon,lat,elev) = planet.coords_from_vector3(pos, axes=3)
         test = planet.vector3_from_coords((lon,lat,elev))
-        self.assertTrue(abs(test - obs) < 1.e-8)
+        self.assertTrue(abs(test - pos) < 1.e-8)
 
         # Spheroid intercepts & normals
-        obs[...,0] = np.abs(obs[...,0])
-        obs[...,0] += REQ
-
-        los = (2 * np.random.rand(NPTS,3) - 1.)
-        los[...,0] = -np.abs(los[...,0])
+        obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
+        los = -np.random.rand(NPTS,3)                   # range is -1 to 0
 
         (pts, t) = planet.intercept(obs, los)
         test = t * Vector3(los) + Vector3(obs)
@@ -657,6 +655,63 @@ class Test_Spheroid(unittest.TestCase):
 
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
+
+        # Intercept derivatives
+
+        # Lines of sight with grazing incidence can have large numerical errors,
+        # but this is not to be considered an error in the analytic calculation.
+        # As a unit test, we ignore the largest 3% of the errors, but require
+        # that the rest of the errors be very small.
+        eps = 1.
+        frac = 0.97     # Ignore errors above this cutoff
+        dobs = ((eps,0,0), (0,eps,0), (0,0,eps))
+        for i in range(3):
+            (cept,t) = planet.intercept(obs, los, derivs=True)
+            (cept1,t1) = planet.intercept(obs + dobs[i], los, derivs=False)
+            (cept2,t2) = planet.intercept(obs - dobs[i], los, derivs=False)
+
+            dcept_dobs = (cept1 - cept2) / (2*eps)
+            ref = cept.d_dobs.as_column(i).as_vector3()
+
+            errors = abs(dcept_dobs - ref) / abs(ref)
+            sorted = np.sort(errors.vals[~errors.mask])
+                        # mask=True where the line of sight missed the surface
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
+
+            dt_dobs = (t1 - t2) / (2*eps)
+            ref = t.d_dobs.vals[...,0,i]
+
+            errors = abs(dt_dobs/ref - 1)
+            sorted = np.sort(errors.vals[~errors.mask])
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
+
+        eps = 1.e-6
+        frac = 0.97
+        dlos = ((eps,0,0), (0,eps,0), (0,0,eps))
+        norms = np.sqrt(los[...,0]**2 + los[...,1]**2 + los[...,2]**2)
+        los /= norms[..., np.newaxis]
+        for i in range(3):
+            (cept,t) = planet.intercept(obs, los, derivs=True)
+            (cept1,t1) = planet.intercept(obs, los + dlos[i], derivs=False)
+            (cept2,t2) = planet.intercept(obs, los - dlos[i], derivs=False)
+
+            dcept_dlos = (cept1 - cept2) / (2*eps)
+            ref = cept.d_dlos.as_column(i).as_vector3()
+
+            errors = abs(dcept_dlos - ref) / abs(ref)
+            sorted = np.sort(errors.vals[~errors.mask])
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
+
+            dt_dlos = (t1 - t2) / (2*eps)
+            ref = t.d_dlos.vals[...,0,i]
+
+            errors = abs(dt_dlos/ref - 1)
+            sorted = np.sort(errors.vals[~errors.mask])
+            selected_error = sorted[int(sorted.size * frac)]
+            self.assertTrue(selected_error < 1.e-5)
 
         # Test normal()
         cept = Vector3(np.random.random((100,3))).unit() * planet.radii
