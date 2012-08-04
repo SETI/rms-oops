@@ -389,11 +389,6 @@ class Backplane(object):
         event = self.get_gridless_event_with_arr(event_key)
         arr = -event.aberrated_arr()
 
-        if type(event.surface) == surface_.Spheroid or type(event.surface) == surface_.Ellipsoid:
-            assert lat_type in {"centric", "graphic"}
-        else:
-            assert lat_type == "centric"
-
         if lat_type == "graphic": arr *= event.surface.unsquash_sq
 
         return (arr.as_scalar(2) / arr.norm()).arcsin()
@@ -401,11 +396,6 @@ class Backplane(object):
     def sub_observer_latitude(self, event_key, lat_type="centric"):
         event = self.get_gridless_event(event_key)
         dep = event.aberrated_dep()
-
-        if type(event.surface) == surface_.Spheroid or type(event.surface) == surface_.Ellipsoid:
-            assert lat_type in {"centric", "graphic"}
-        else:
-            assert lat_type == "centric"
 
         if lat_type == "graphic": dep *= event.surface.unsquash_sq
 
