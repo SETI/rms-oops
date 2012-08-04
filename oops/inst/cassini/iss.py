@@ -57,8 +57,7 @@ def from_index(filespec, parameters={}):
     ISS.initialize()    # Define everything the first time through
 
     # Read the index file
-    COLUMNS = ["START_TIME", "EXPOSURE_DURATION", "INSTRUMENT_MODE_ID",
-               "INSTRUMENT_NAME", "IMAGE_NUMBER", "TARGET_NAME"]
+    COLUMNS = []        # Return all columns
     TIMES = ["START_TIME"]
     table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
