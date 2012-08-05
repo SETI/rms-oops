@@ -1104,7 +1104,7 @@ class Array(object):
         elif np.all(self.mask):
             raise ValueError("the truth value of an entirely masked object " +
                              "is undefined.")
-        return bool(np.all(self.vals[~self.mask]))
+        return bool(np.all(self.vals[np.logical_not(self.mask)]))
 
     ####################################
     # Indexing operators

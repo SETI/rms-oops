@@ -1398,7 +1398,7 @@ class Backplane(object):
         key = ("where_intercepted", event_key)
         if key not in self.backplanes.keys():
             event = self.get_surface_event(event_key)
-            mask = self.mask_as_scalar(~event.mask)
+            mask = self.mask_as_scalar(np.logical_not(event.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1413,7 +1413,8 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
-            mask = self.mask_as_scalar(~event.mask & ~shadow_event.mask)
+            mask = self.mask_as_scalar(np.logical_not(event.mask) &
+                                       np.logical_not(shadow_event.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1428,7 +1429,8 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
-            mask = self.mask_as_scalar(~event.mask & shadow_event.mask)
+            mask = self.mask_as_scalar(np.logical_not(event.mask) &
+                                       shadow_event.mask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1444,8 +1446,9 @@ class Backplane(object):
 
             # A surface is in front if it is unmasked and the second surface is
             # either masked or further away.
-            front_unmasked = ~self.get_surface_event(event_key).mask
-            back_masked    =  self.get_surface_event(back_body).mask
+            front_unmasked = np.logical_not(
+                                    self.get_surface_event(event_key).mask)
+            back_masked = self.get_surface_event(back_body).mask
             mask = self.mask_as_scalar(front_unmasked & (back_masked |
                                             (self.distance(event_key).vals <
                                              self.distance(back_body).vals)))
@@ -1465,11 +1468,13 @@ class Backplane(object):
 
             # A surface is in back if it is unmasked and the second surface is
             # both unmasked and closer.
-            back_unmasked  = ~self.get_surface_event(event_key).mask
-            front_unmasked = ~self.get_surface_event(front_body).mask
+            back_unmasked  = np.logical_not(
+                                    self.get_surface_event(event_key).mask)
+            front_unmasked = np.logical_not(
+                                    self.get_surface_event(front_body).mask)
             mask = self.mask_as_scalar(back_unmasked & front_unmasked &
-                                            (self.distance(event_key).vals >
-                                             self.distance(front_body).vals))
+                                    (self.distance(event_key).vals >
+                                     self.distance(front_body).vals))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1483,7 +1488,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_scalar((incidence.vals <= np.pi/2) &
-                                       ~incidence.mask)
+                                       np.logical_not(incidence.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1497,7 +1502,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_scalar((incidence.vals > np.pi/2) &
-                                       ~incidence.mask)
+                                       np.logical_not(incidence.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1514,7 +1519,7 @@ class Backplane(object):
         key = ("where_below", backplane_key, value)
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
-            mask = (backplane.vals <= value) & ~backplane.mask
+            mask = (backplane.vals <= value) & np.logical_not(backplane.mask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1527,7 +1532,7 @@ class Backplane(object):
         key = ("where_above", backplane_key, value)
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
-            mask = (backplane.vals >= value) & ~backplane.mask
+            mask = (backplane.vals >= value) & np.logical_not(backplane.mask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1541,7 +1546,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
             mask = ((backplane.vals >= low) &
-                    (backplane.vals <= high) & ~backplane.mask)
+                    (backplane.vals <= high) & np.logical_not(backplane.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1576,7 +1581,8 @@ class Backplane(object):
                 xborder[1:]  |= ((xbackplane[1:].vals  >= 0) &
                                  (xbackplane[:-1].vals < 0))
 
-            self.register_backplane(key, Scalar(border & ~backplane.mask))
+            self.register_backplane(key, Scalar(border &
+                                                np.logical_not(backplane.mask)))
 
         return self.backplanes[key]
 
@@ -1635,7 +1641,7 @@ class Backplane(object):
             key = ("border_outside", backplane_key)
 
         if key not in self.backplanes.keys():
-            backplane = self.evaluate(backplane_key) ^ (~value)
+            backplane = self.evaluate(backplane_key) ^ np.logical_not(value)
             # Reverses the backplane if value is False
             border = np.zeros(backplane.shape, dtype="bool")
 

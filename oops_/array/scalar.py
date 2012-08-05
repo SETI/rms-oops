@@ -342,7 +342,8 @@ class Scalar(Array):
 
     # (~) operator
     def __invert__(self):
-        return Scalar._scalar_unless_shapeless(~self.vals, self.mask)
+        return Scalar._scalar_unless_shapeless(np.logical_not(self.vals),
+                                               self.mask)
 
     # (&) operator
     def __and__(self, arg):

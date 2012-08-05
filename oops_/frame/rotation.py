@@ -56,8 +56,7 @@ class Rotation(Frame):
 
         self.register()
 
-        self.transform = Transform(Matrix3(mat, self.angle.mask),
-                                   Vector3((0,0,0)),
+        self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
                                    self.reference_id, self.origin_id)
 
 ########################################

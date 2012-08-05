@@ -84,7 +84,7 @@ class Sequence(Cadence):
         if mask:
             is_inside = (tstep.vals >= 0) & (tstep.vals <= self.steps)
             if not np.all(is_inside):
-                time.mask = time.mask | ~is_inside
+                time.mask = time.mask | np.logical_not(is_inside)
 
         return time
 
@@ -111,7 +111,7 @@ class Sequence(Cadence):
         if mask:
             is_inside = (tstep.vals >= 0) & (tstep.vals <= self.steps)
             if not np.all(is_inside):
-                time_mask = tstep.mask | ~is_inside
+                time_mask = tstep.mask | np.logical_not(is_inside)
                 time_min.mask = time_mask
                 time_max.mask = time_mask
 
@@ -262,7 +262,8 @@ class Test_Sequence(unittest.TestCase):
         test = cadence.tstep_at_time(time, mask=True)
         self.assertTrue(abs(tstep - test.vals) < 1.e-14)
         self.assertTrue(np.all(test.mask == mask))
-        self.assertTrue(np.all(cadence.time_is_inside(time) == ~mask))
+        self.assertTrue(np.all(cadence.time_is_inside(time) ==
+                               np.logical_not(mask)))
 
         # time_range_at_tstep()
         (time0, time1) = cadence.time_range_at_tstep(tstep)
@@ -271,13 +272,14 @@ class Test_Sequence(unittest.TestCase):
 
         self.assertTrue(np.all(np.abs(time1.vals - time0.vals - 10.) < 1.e-14))
 
-        self.assertTrue(np.all(time0.vals[~mask] >= cadence.time[0]))
-        self.assertTrue(np.all(time1.vals[~mask] >= cadence.time[0]))
-        self.assertTrue(np.all(time0.vals[~mask] <= cadence.time[1]))
-        self.assertTrue(np.all(time1.vals[~mask] <= cadence.time[1]))
+        unmasked = np.logical_not(mask)
+        self.assertTrue(np.all(time0.vals[unmasked] >= cadence.time[0]))
+        self.assertTrue(np.all(time1.vals[unmasked] >= cadence.time[0]))
+        self.assertTrue(np.all(time0.vals[unmasked] <= cadence.time[1]))
+        self.assertTrue(np.all(time1.vals[unmasked] <= cadence.time[1]))
 
-        self.assertTrue(np.all(time0.vals[~mask] <= time.vals[~mask]))
-        self.assertTrue(np.all(time1.vals[~mask] >= time.vals[~mask]))
+        self.assertTrue(np.all(time0.vals[unmasked] <= time.vals[unmasked]))
+        self.assertTrue(np.all(time1.vals[unmasked] >= time.vals[unmasked]))
 
         # time_shift()
         shifted = cadence.time_shift(1.)
@@ -330,20 +332,22 @@ class Test_Sequence(unittest.TestCase):
         test = cadence.tstep_at_time(time, mask=True)
         self.assertTrue(abs(tstep - test.vals) < 1.e-14)
         self.assertTrue(np.all(test.mask == mask))
-        self.assertTrue(np.all(cadence.time_is_inside(time) == ~mask))
+        self.assertTrue(np.all(cadence.time_is_inside(time) ==
+                               np.logical_not(mask)))
 
         # time_range_at_tstep()
         (time0, time1) = cadence.time_range_at_tstep(tstep)
         self.assertTrue(np.all(time0.vals == 10*((time0/10).int()).vals))
         self.assertTrue(np.all(time1.vals == time0.vals + texp))
 
-        self.assertTrue(np.all(time0.vals[~mask] >= cadence.time[0]))
-        self.assertTrue(np.all(time1.vals[~mask] >= cadence.time[0]))
-        self.assertTrue(np.all(time0.vals[~mask] <= cadence.time[1]))
-        self.assertTrue(np.all(time1.vals[~mask] <= cadence.time[1]))
+        unmasked = np.logical_not(mask)
+        self.assertTrue(np.all(time0.vals[unmasked] >= cadence.time[0]))
+        self.assertTrue(np.all(time1.vals[unmasked] >= cadence.time[0]))
+        self.assertTrue(np.all(time0.vals[unmasked] <= cadence.time[1]))
+        self.assertTrue(np.all(time1.vals[unmasked] <= cadence.time[1]))
 
-        self.assertTrue(np.all(time0.vals[~mask] <= time.vals[~mask]))
-        self.assertTrue(np.all(time1.vals[~mask] >= time.vals[~mask]))
+        self.assertTrue(np.all(time0.vals[unmasked] <= time.vals[unmasked]))
+        self.assertTrue(np.all(time1.vals[unmasked] >= time.vals[unmasked]))
 
         # time_shift()
         shifted = cadence.time_shift(1.)

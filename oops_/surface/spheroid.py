@@ -651,7 +651,7 @@ class Test_Spheroid(unittest.TestCase):
         normals = planet.normal(pts)
 
         pts.vals[...,2] *= REQ/RPOL
-        self.assertTrue(abs(pts.norm()[~pts.mask] - REQ) < 1.e-8)
+        self.assertTrue(abs(pts.norm()[np.logical_not(pts.mask)] - REQ) < 1.e-8)
 
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
@@ -674,7 +674,7 @@ class Test_Spheroid(unittest.TestCase):
             ref = cept.d_dobs.as_column(i).as_vector3()
 
             errors = abs(dcept_dobs - ref) / abs(ref)
-            sorted = np.sort(errors.vals[~errors.mask])
+            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
                         # mask=True where the line of sight missed the surface
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
@@ -683,7 +683,7 @@ class Test_Spheroid(unittest.TestCase):
             ref = t.d_dobs.vals[...,0,i]
 
             errors = abs(dt_dobs/ref - 1)
-            sorted = np.sort(errors.vals[~errors.mask])
+            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
 
@@ -701,7 +701,7 @@ class Test_Spheroid(unittest.TestCase):
             ref = cept.d_dlos.as_column(i).as_vector3()
 
             errors = abs(dcept_dlos - ref) / abs(ref)
-            sorted = np.sort(errors.vals[~errors.mask])
+            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
 
@@ -709,7 +709,7 @@ class Test_Spheroid(unittest.TestCase):
             ref = t.d_dlos.vals[...,0,i]
 
             errors = abs(dt_dlos/ref - 1)
-            sorted = np.sort(errors.vals[~errors.mask])
+            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
 

@@ -277,7 +277,7 @@ def vims_test_suite(filespec, derivs, info, display):
     print "ring_event.pos: ", ring_event.pos
     
     # This mask is True inside the rings, False outside
-    ring_mask = ~ring_event.mask
+    ring_mask = np.logical_not(ring_event.mask)
     
     # Get the range
     ring_range = ring_event.dep.norm()
@@ -332,7 +332,7 @@ def vims_test_suite(filespec, derivs, info, display):
     saturn_event = saturn_event_w_derivs.plain()
     
     # This mask is True on the planet, False off the planet
-    saturn_mask = ~saturn_event.mask
+    saturn_mask = np.logical_not(saturn_event.mask)
     
     # Get the range
     saturn_range = saturn_event.dep.norm()
@@ -393,10 +393,10 @@ def vims_test_suite(filespec, derivs, info, display):
                                  ring_event.dep.norm()).vals
     
     ring_unobscured_mask = (ring_would_be_closer_mask |
-                            ~saturn_mask) & ring_mask
+                            np.logical_not(saturn_mask)) & ring_mask
     
-    saturn_unobscured_mask = (~ring_would_be_closer_mask |
-                              ~ring_mask) & saturn_mask
+    saturn_unobscured_mask = (np.logical_not(ring_would_be_closer_mask) |
+                              np.logical_not(ring_mask)) & saturn_mask
     
     show_info("Rings in front mask", ring_unobscured_mask)
     show_info("Saturn in front mask", saturn_unobscured_mask)

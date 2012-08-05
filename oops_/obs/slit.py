@@ -133,7 +133,7 @@ class Slit(Observation):
                          (u_index <= self.uv_shape[0]) &
                          (v_index <= self.uv_shape[1]))
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv.mask = mask
                 time.mask = mask
 
@@ -178,7 +178,7 @@ class Slit(Observation):
                          (u_index < self.uv_shape[0]) &
                          (v_index < self.uv_shape[1]))
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv_min.mask = mask
                 uv_max.mask = mask
                 time_min.mask = mask
@@ -215,7 +215,7 @@ class Slit(Observation):
                          (u_index <= self.uv_shape[0]) &
                          (v_index <= self.uv_shape[1]))
             if not np.all(is_inside):
-                mask = uv_pair.mask | ~is_inside
+                mask = uv_pair.mask | np.logical_not(is_inside)
                 time0.mask = mask
                 time1.mask = mask
 

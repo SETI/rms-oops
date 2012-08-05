@@ -128,7 +128,7 @@ class Pushbroom(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv, inclusive=True)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv.mask = mask
                 time.mask = mask
 
@@ -163,7 +163,7 @@ class Pushbroom(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv_min, inclusive=False)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv_min.mask = mask
                 uv_max.mask = mask
                 time_min.mask = mask
@@ -195,7 +195,7 @@ class Pushbroom(Observation):
         if fovmask:
             is_inside = self.fov.uv_is_inside(uv_pair, inclusive=True)
             if not np.all(is_inside):
-                mask = uv_pair.mask | ~is_inside
+                mask = uv_pair.mask | np.logical_not(is_inside)
                 time0.mask = mask
                 time1.mask = mask
 

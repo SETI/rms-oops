@@ -1,9 +1,5 @@
 NOTES and REQUESTS
 
-4/18 MRS needs to...
-Check scalar comparisons __gt__, etc. to make sure they are valid for scalar values and masks.
-Track down failure in fov/subarray.py unit tests.
-
 3/25 from Rob
 
 You might consider using os.path.join throughout your code to combine directories and filenames.  That avoids problems with, for example, not having a trailing "/" on directories.  Currently you require the HST_IDC_PATH environment variable to end with "/", but not the SPICE_PATH one.  That might be confusing for users.

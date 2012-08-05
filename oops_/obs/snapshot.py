@@ -91,7 +91,7 @@ class Snapshot(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv, inclusive=True)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv.mask = mask
 
                 time_vals = np.empty(indices.shape)
@@ -129,7 +129,7 @@ class Snapshot(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv_min, inclusive=False)
             if not np.all(is_inside):
-                uv_min.mask = uv_min.mask | ~is_inside
+                uv_min.mask = uv_min.mask | np.logical_not(is_inside)
                 uv_max.mask = uv_min.mask
 
                 time_min_vals = np.empty(is_inside.shape)
@@ -138,7 +138,7 @@ class Snapshot(Observation):
                 time_min_vals[...] = self.time[0]
                 time_max_vals[...] = self.time[1]
 
-                mask = ~is_inside
+                mask = np.logical_not(is_inside)
                 time_min = Scalar(time_min_vals, mask)
                 time_max = Scalar(time_max_vals, mask)
 
@@ -177,7 +177,7 @@ class Snapshot(Observation):
 #             is_inside = ((self.uv_is_inside(uv_pair, inclusive=True) &
 #                          (time >= self.time[0]) & (time <= self.time[1]))
 #             if not np.all(is_inside):
-#                 mask = uv_pair.mask | ~is_inside
+#                 mask = uv_pair.mask | np.logical_not(is_inside)
 #             else:
 #                 mask = uv_pair.mask
 # 
@@ -209,7 +209,7 @@ class Snapshot(Observation):
                 time_min_vals[...] = self.time[0]
                 time_max_vals[...] = self.time[1]
 
-                mask = ~is_inside
+                mask = np.logical_not(is_inside)
                 time_min = Scalar(time_min_vals, mask)
                 time_max = Scalar(time_max_vals, mask)
 
@@ -249,7 +249,8 @@ class Snapshot(Observation):
 #                 uv_max_vals[...,0] = self.uv_shape[0]
 #                 uv_max_vals[...,1] = self.uv_shape[1]
 # 
-#                 uv_min = Pair(uv_min_vals, time.mask | ~is_inside)
+#                 uv_min = Pair(uv_min_vals, time.mask |
+#                                            np.logical_not(is_inside))
 #                 uv_max = Pair(uv_max_vals, mask)
 # 
 #         return (uv_min, uv_max)

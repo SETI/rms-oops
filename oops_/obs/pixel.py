@@ -91,7 +91,7 @@ class Pixel(Observation):
         if fovmask:
             is_inside = self.cadence.time_is_inside(time, inclusive=True)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 time.mask = mask
 
                 uv_vals = np.empty(indices.shape + [2])
@@ -159,7 +159,7 @@ class Pixel(Observation):
         uv_pair = Pair.as_pair(uv_pair)
         is_inside = self.uv_is_inside(uv_pair, inclusive=True)
         if not np.all(is_inside):
-            mask = uv_pair.mask | ~is_inside
+            mask = uv_pair.mask | np.logical_not(is_inside)
 
             time0_vals = np.empty(uv_pair.shape)
             time1_vals = np.empty(uv_pair.shape)

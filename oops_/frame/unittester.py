@@ -8,6 +8,7 @@ import cspice
 from oops_.frame.frame_         import Test_Frame
 from oops_.frame.cmatrix        import Test_Cmatrix
 from oops_.frame.inclinedframe  import Test_InclinedFrame
+from oops_.frame.postarg        import Test_PosTarg
 from oops_.frame.ringframe      import Test_RingFrame
 from oops_.frame.spiceframe     import Test_SpiceFrame
 from oops_.frame.spinframe      import Test_SpinFrame

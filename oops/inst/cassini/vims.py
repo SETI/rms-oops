@@ -416,7 +416,7 @@ def _load_data_and_times(filespec, label):
                         None if no time backplane is found in the file.
 
     Note: This procedure is absurdly complicated but it has been rather
-    carefully debugged --MRS 7/4/12.
+    carefully debugged. --MRS 7/4/12.
     """
 
     info = label["QUBE"]

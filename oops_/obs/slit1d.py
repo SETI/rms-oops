@@ -121,7 +121,7 @@ class Slit1D(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv, inclusive=True)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv.mask = mask
 
                 time_vals = np.empty(indices.shape)
@@ -164,7 +164,7 @@ class Slit1D(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv_min, inclusive=False)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv_min.mask = mask
                 uv_max.mask = mask
 
@@ -174,7 +174,7 @@ class Slit1D(Observation):
                 time_min_vals[...] = self.time[0]
                 time_max_vals[...] = self.time[1]
 
-                mask = ~is_inside
+                mask = np.logical_not(is_inside)
                 time_min = Scalar(time_min_vals, mask)
                 time_max = Scalar(time_max_vals, mask)
 
@@ -206,7 +206,7 @@ class Slit1D(Observation):
                 time_min_vals[...] = self.time[0]
                 time_max_vals[...] = self.time[1]
 
-                mask = ~is_inside
+                mask = np.logical_not(is_inside)
                 time_min = Scalar(time_min_vals, mask)
                 time_max = Scalar(time_max_vals, mask)
 

@@ -127,7 +127,7 @@ class RasterScan(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv, inclusive=True)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv.mask = mask
                 time.mask = mask
 
@@ -162,7 +162,7 @@ class RasterScan(Observation):
         if fovmask:
             is_inside = self.uv_is_inside(uv_min, inclusive=False)
             if not np.all(is_inside):
-                mask = indices.mask | ~is_inside
+                mask = indices.mask | np.logical_not(is_inside)
                 uv_min.mask = mask
                 uv_max.mask = mask
                 time_min.mask = mask
