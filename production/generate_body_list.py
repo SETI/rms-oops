@@ -106,7 +106,6 @@ def image_code_name(snapshot, file_type):
             else:
                 res = 'L'
         image_code = number_code + '/' + wave + '/' + res
-        print "image_code: ", image_code
     return image_code
 
 def index_file_type(file_name):
@@ -173,7 +172,6 @@ def mask_targets(snapshot, file_type):
     
     intercepted = bp.where_intercepted("saturn")
     target = snapshot.index_dict["TARGET_NAME"].lower()
-    print "target = ", target
     if target is not "saturn":
         t_intercepted = bp.where_intercepted(target)
         mask = intercepted | t_intercepted
