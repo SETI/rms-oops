@@ -148,10 +148,19 @@ class HST(object):
 
     def pos_targ(self, hst_file, **parameters):
         """Returns a tuple containing the POS TARG values (x,y) used for this
-        observation, and as specified in the observation's coordinate frame.
+        observation, and as specified in the observation's coordinate frame. It
+        returns None if the POS TARG values are not found in the file and are
+        not specified in the parameter dictionary via an argument "pos_targ".
         """
 
-        return (hst_file[0].header["POSTARG1"], hst_file[0].header["POSTARG2"])
+        if "pos_targ" in parameters.keys():
+            return parameters["pos_targ"]
+
+        if "POSTARG1" in hst_file[0].header.keys():
+            return (hst_file[0].header["POSTARG1"],
+                    hst_file[0].header["POSTARG2"])
+
+        return None
 
     def register_frame(self, hst_file, fov, index=1, suffix="", **parameters):
         """Returns the ID of a frame that rotates from J2000 coordinates into
@@ -248,6 +257,7 @@ class HST(object):
         assert self.detector_name(hst_file) == reference.detector
 
         new_pos_targ = self.pos_targ(hst_file)
+        assert new_pos_targ is not None
 
         if reference.pos_targ == new_pos_targ:
             return reference.frame_id
@@ -392,7 +402,7 @@ class HST(object):
                         instrument = self.instrument_name(hst_file),
                         detector = self.detector_name(hst_file),
                         filter = self.filter_name(hst_file),
-                        pos_targ = self.pos_targ(hst_file),
+                        pos_targ = self.pos_targ(hst_file, **parameters),
                         point_calib = point_calib,
                         extended_calib = extended_calib,
                         headers = headers)
