@@ -212,8 +212,14 @@ class WFPC2(HST):
         if filtnam2 == "": filtnam2 = "CLEAR"
         idc_key = (filtnam1, filtnam2, layer)
 
+        # Define the FOV
+        fov = super(WFPC2,self).construct_fov(IDC_DICT[idc_key], hst_file)
 
-        return self.construct_fov(IDC_DICT[idc_key], hst_file)
+        # Handle AREA mode
+        if hst_file[0].header["MODE"] == "AREA":
+            fov = oops.fov.Subsampled(fov, 2)
+
+        return fov
 
     def select_syn_files(self, hst_file, **parameters):
         """Returns the list of SYN files containing profiles that are to be
