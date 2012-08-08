@@ -640,11 +640,11 @@ class HST(object):
 
         # Extract all size and offset parameters from the header
         header1 = hst_file[1].header
-        crpix   = oops.Pair((header1["CRPIX1"],   header1["CRPIX2"]  ))
+        crpix   = oops.Pair((header1["CRPIX1"], header1["CRPIX2"]))
+        naxis   = oops.Pair((header1["NAXIS1"], header1["NAXIS2"]))
 
         try:
             centera = oops.Pair((header1["CENTERA1"], header1["CENTERA2"]))
-            sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS2"]))
             binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS2"]))
 
         # If subarrays are unsupported...
@@ -653,7 +653,7 @@ class HST(object):
 
         # Apply the subarray correction
         subarray_fov = oops.fov.Subarray(fov, centera,              # new_los
-                                              sizaxis * binaxis,    # uv_shape
+                                              naxis,                # uv_shape
                                               crpix * binaxis)      # uv_los
 
         # Apply the subsampling if necessary

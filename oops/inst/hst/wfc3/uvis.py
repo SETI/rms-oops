@@ -60,8 +60,8 @@ class UVIS(WFC3):
 
     # The IDC dictionaries for WFC3/IR are all keyed by (FILTER,).
     def define_fov(self, hst_file, **parameters):
-        """Returns an FOV object defining the field of view of the given image
-        file.
+        """Returns an FOV object defining the full field of view (ignoring any
+        subarray) for the given image file.
         """
 
         global IDC_DICT
