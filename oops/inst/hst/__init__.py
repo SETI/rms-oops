@@ -17,6 +17,7 @@ import re
 import pyfits
 import glob
 import unittest
+import warnings
 
 import julian
 import solar
@@ -645,11 +646,18 @@ class HST(object):
 
         try:
             centera = oops.Pair((header1["CENTERA1"], header1["CENTERA2"]))
+            sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS2"]))
             binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS2"]))
 
         # If subarrays are unsupported...
         except KeyError:
             return fov
+
+        if (sizaxis != naxis):
+            warnings.warn("FITS header warning: SIZAXIS " +
+                          str((sizaxis.vals[0], sizaxis.vals[1])) +
+                          " != NAXIS " +
+                          str((naxis.vals[1], naxis.vals[1])))
 
         # Apply the subarray correction
         subarray_fov = oops.fov.Subarray(fov, centera,              # new_los
