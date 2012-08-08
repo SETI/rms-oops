@@ -268,7 +268,6 @@ def single_body_table(file_name, fortran_list, omit_range):
               registry.body_lookup("CALYPSO")]
     
     snapshots_bodies = {}
-    print "processing observation ", start_file_index
     image_code = image_code_name(snapshot, file_type)
     if start_file_index not in omit_range:
         snapshot_bodies = []

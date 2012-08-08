@@ -1567,8 +1567,8 @@ def generate_process_metadata(obs, resolution, file_type):
     except:
         return None
     intercept_mask = intercepted.vals
-    pylab.imsave("/Users/bwells/tempImage.png",
-                 intercept_mask, vmin=0, vmax=1, cmap=pylab.cm.gray)
+    #pylab.imsave("/Users/bwells/tempImage.png",
+    #             intercept_mask, vmin=0, vmax=1, cmap=pylab.cm.gray)
 
 
     obs_id = get_observation_id(file_type, obs)
@@ -1583,19 +1583,7 @@ def generate_process_metadata(obs, resolution, file_type):
         geometry.set_image_id(obs)
 
         result = bp.latitude(body_name)                      # geocentric latitude
-        """if np.all(result.mvals):
-            print "geocentric latitude entirely masked"
-        else:
-            print "geocentric latitude: ", result
-        print "result.vals[511][11]:", result.vals[511][11]
-        print "result.mvals[511][11]:", result.mvals[511][11]
-        print "result.mask[511][11]:", result.mask[511][11]
-        print "result.vals[311][111]:", result.vals[311][111]"""
-        #pylab.imsave("/Users/bwells/enceladus_lat.png",
-        #             result.mask, vmin=0, vmax=1, cmap=pylab.cm.gray)
         result.mask |= intercept_mask
-        #pylab.imsave("/Users/bwells/enceladus_lat_plus.png",
-        #             result.mask, vmin=0, vmax=1, cmap=pylab.cm.gray)
 
         # we need to not only set the data, but also, since this is our first mask
         # create the BodySurfaceDetails
