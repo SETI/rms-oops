@@ -68,6 +68,9 @@ def from_index(filespec, parameters={}):
 
         tstart = julian.tdb_from_tai(dict["START_TIME"])
         texp = dict["EXPOSURE_DURATION"] / 1000.
+        # correct for zero exposure time to avoid divide by zero in Metronome
+        if texp == 0.:
+            texp = 0.001
         mode = dict["INSTRUMENT_MODE_ID"]
 
         name = dict["INSTRUMENT_NAME"]

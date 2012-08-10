@@ -243,7 +243,11 @@ class Limb(Surface):
             if LOGGING.surface_iterations or Limb.DEBUG:
                 print LOGGING.prefix, "Surface.limb.intercept", iter, max_dt
 
-            if (max_dt <= SURFACE_PHOTONS.dlt_precision or
+            do_break = False
+            if max_dt.shape != ():
+                if np.all(max_dt.mask):
+                    do_break = True
+            if ((do_break) or max_dt <= SURFACE_PHOTONS.dlt_precision or
                 max_dt >= prev_max_dt * 0.5): break
 
         pos = obs + t * los

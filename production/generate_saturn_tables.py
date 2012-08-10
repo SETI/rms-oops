@@ -816,7 +816,7 @@ class ProcessedBodySurfaceSummary(BodySurface):
         """output to a string line"""
         lline = []
         lline.append(self.owner.obs_id)
-        lline.append(self.owner.body_name)
+        lline.append(',' + self.owner.body_name)
         lline.append(self.output_pair(self.geocentric_latitude))
         lline.append(self.output_pair(self.geographic_latitude))
         lline.append(self.output_pair(self.iau_longitude))
@@ -1265,18 +1265,18 @@ class ProcessedFileGeometry(object):
             else:
                 self.obs_id += '/N"'
         else:
-            file_name = obs.index_dict['FILE_NAME']
+            file_name = obs.index_dict['PRODUCT_ID']
             #strip letter off of front and extension off of end
-            number_code = file_name.split('.')[0][1:]
+            number_code = file_name.split('.')[0][2:]
             if "_IR" in obs.path_id:
                 wave = 'I'
-                if 'NORMAL' in obs.index_dict['IR_SAMPLING_MODE_ID']:
+                if 'NORMAL' in obs.index_dict['SAMPLING_MODE_ID'][1]:
                     res = 'N'
                 else:
                     res = 'L'
             else:
                 wave = 'V'
-                if 'NORMAL' in obs.index_dict['VIS_SAMPLING_MODE_ID']:
+                if 'NORMAL' in obs.index_dict['SAMPLING_MODE_ID'][0]:
                     res = 'N'
                 else:
                     res = 'L'
@@ -1346,7 +1346,7 @@ def get_error_buffer_size(snapshot, file_type):
         if "WIDE" in name:
             error_buffer = 6
     elif file_type is VIMS_TYPE:
-        if 'NORMAL' not in snapshot.index_dict['VIS_SAMPLING_MODE_ID']:
+        if 'NORMAL' not in snapshot.index_dict['SAMPLING_MODE_ID'][0]:
             error_buffer = 6
     return error_buffer
 
@@ -1508,18 +1508,18 @@ def get_observation_id(file_type, obs):
         else:
             obs_id += '/N'
     else:
-        file_name = obs.index_dict['FILE_NAME']
+        file_name = obs.index_dict['PRODUCT_ID']
         #strip letter off of front and extension off of end
-        number_code = file_name.split('.')[0][1:]
+        number_code = file_name.split('.')[0][2:]
         if "_IR" in obs.path_id:
             wave = 'I'
-            if 'NORMAL' in obs.index_dict['IR_SAMPLING_MODE_ID']:
+            if 'NORMAL' in obs.index_dict['SAMPLING_MODE_ID'][1]:
                 res = 'N'
             else:
                 res = 'L'
         else:
             wave = 'V'
-            if 'NORMAL' in obs.index_dict['VIS_SAMPLING_MODE_ID']:
+            if 'NORMAL' in obs.index_dict['SAMPLING_MODE_ID'][0]:
                 res = 'N'
             else:
                 res = 'L'
@@ -1773,6 +1773,28 @@ def append_to_file(file_name, geometries, stop):
     f.write(output_buf)
     f.close()
 
+def count_em(valid_path):
+    x = 0
+    for root, dirs, files in os.walk(valid_path):
+        for f in files:
+            x = x+1
+    return x
+
+def load_vims_observations(valid_path):
+    obs = []
+    i = 0
+    break_the_loop = False
+    for root, dirs, files in os.walk(valid_path):
+        for name in files:
+            if ("DATA" in root) and (".LBL" in name):
+                fname = os.path.join(root,name)
+                ob = cassini_vims.from_file(fname)
+                obs.append(ob)
+                i += 1
+                if i >= stop_file_index:
+                    return obs
+    return obs
+
 ################################################################################
 # generate the geometries                                                      #
 ################################################################################
@@ -1792,11 +1814,16 @@ def generate_geometries_for_index(file_name):
     
     # note that "obs" is used for the array of observations, and "ob" is used as
     # a single observation
-    file_type = index_file_type(file_name)
+    print "number of files = ", count_em(file_name)
+    file_type = ISS_TYPE
+    if os.path.isdir(file_name):
+        file_type = VIMS_TYPE
+    #file_type = index_file_type(file_name)
     if file_type is ISS_TYPE:
         obs = cassini_iss.from_index(file_name)
     elif file_type is VIMS_TYPE:
-        obs = cassini_vims.from_index(file_name)
+        obs = load_vims_observations(file_name)
+        #obs = cassini_vims.from_index(file_name)
     else:
         print "unsupported file type for index file."
         return None
