@@ -1814,7 +1814,7 @@ def generate_geometries_for_index(file_name):
     
     # note that "obs" is used for the array of observations, and "ob" is used as
     # a single observation
-    print "number of files = ", count_em(file_name)
+    #print "number of files = ", count_em(file_name)
     file_type = ISS_TYPE
     if os.path.isdir(file_name):
         file_type = VIMS_TYPE
