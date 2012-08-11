@@ -299,6 +299,23 @@ class FOV(object):
             return ((uv_pair.vals >= 0) &
                     (uv_pair.vals < self.uv_shape.vals[uv_index]))
 
+    def nearest_uv(self, uv_pair):
+        """Returns a Pair of (u,v) coordinates that fall inside the FOV and lie
+        as close as possible to the given points.
+
+        Input:
+            uv_pair     a Pair of (u,v) coordinates.
+
+        Return:         a new Pair of (u,v) coordinates.
+        """
+
+        uv_pair = Pair.as_pair(uv_pair).copy()
+
+        uv_pair.vals[...,0] = uv_pair.vals[...,0].clip(0,self.uv_shape.vals[0])
+        uv_pair.vals[...,1] = uv_pair.vals[...,1].clip(0,self.uv_shape.vals[1])
+
+        return uv_pair
+
     def xy_is_inside(self, xy_pair, extras=()):
         """Returns a boolean NumPy array indicating True for (x,y) coordinates
         that fall inside the FOV, False otherwise."""

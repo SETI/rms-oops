@@ -78,18 +78,23 @@ VIS_FULL_FOV = oops.fov.Flat(VIS_NORMAL_SCALE, oops.Pair((64,64)))
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, parameters={}):
-    """A general, static method to return a list of objects based on a given
-    Cassini VIMS image file.
+def from_file(filespec):
+    """A general, static method to return a pair of Observation objects based on
+    a given Cassini VIMS data file or label file.
 
-    The method returns a list of tuples, where each tuple consists of the VIS
-    observation followed by the IR observation. Most of the time, the list will
-    contain only one tuple, but packed arrays and observations done in LINE mode
-    are split apart into their constituent objects."""
+    Input:
+        filespec        the full path to a VIMS cube file or its PDS label.
+
+    Return:             (vis,ir)
+        vis             the VIS observation, or None if the VIS channel was
+                        inactive.
+        ir              the IR observation, or None if the IR channel was
+                        inactive.
+    """
 
     VIMS.initialize()   # Define everything the first time through
 
-    # Load the VICAR label
+    # Load the ISS file or the PDS label
     label = pdsparser.PdsLabel.from_file(filespec).as_dict()
 
     is_isis_file = "QUBE" in label.keys()
@@ -390,11 +395,21 @@ def from_file(filespec, parameters={}):
         raise ValueError("unsupported VIMS format in file " + filespec)
 
     # Insert the data array
-    if vis_obs is not None and vis_data is not None:
-        vis_obs.insert_subfield("data", vis_data)
+    if vis_obs is not None:
+        vis_obs.insert_subfield("instrument", "VIMS")
+        vis_obs.insert_subfield("detector", "VIS")
+        vis_obs.insert_subfield("sampling", vis_sampling)
 
-    if ir_obs is not None and ir_data is not None:
-        ir_obs.insert_subfield("data", ir_data)
+        if vis_data is not None:
+            vis_obs.insert_subfield("data", vis_data)
+
+    if ir_obs is not None:
+        ir_obs.insert_subfield("instrument", "VIMS")
+        ir_obs.insert_subfield("detector", "IR")
+        ir_obs.insert_subfield("sampling", ir_sampling)
+
+        if ir_data is not None:
+            ir_obs.insert_subfield("data", ir_data)
 
     return (vis_obs, ir_obs)
 
@@ -576,113 +591,61 @@ def _load_data_and_times(filespec, label):
 
 ########################################
 
-# def from_index(filespec, parameters={}):
-#     """A static method to return a list of Snapshot objects, one for each row
-#     in an VIMS index file. The filespec refers to the label of the index file.
-#     """
-# 
-#     def _vims_repair_line(line):
-#         if "KM/SECOND" not in line:
-#             return line.replace("KM/", "KM\"")
-#         return line
-# 
-#     def _is_vims_comment(line):
-#         if "DESCRIPTION             =" in line:
-#             return True
-#         elif "=" in line:
-#             return False
-#         elif "END" == line:
-#             return False
-#         return True
-# 
-#     def _vims_from_index(filespec):
-#         core_lines = pdsparser.PdsLabel.load_file(filespec)
-# 
-#         # Deal with corrupt syntax
-#         newlines = []
-#         for line in core_lines:
-#             if not _is_vims_comment(line):
-#                 newlines.append(_vims_repair_line(line))
-# 
-#         table = pdstable.PdsTable(filespec, ["START_TIME", "STOP_TIME"],
-#                                   newlines)
-#         return table
-# 
-#     VIMS.initialize()    # Define everything the first time through
-# 
-#     # Read the index file
-#     table = _vims_from_index(filespec)
-#     row_qubes = table.dicts_by_row()
-# 
-#     # Create a list of Snapshot objects
-#     observations = []
-#     for dict in row_dicts:
-#         time = dict["START_TIME"].value
-#         if time[-1] == "Z": time = time[:-1]
-#         tdb0 = cspice.str2et(time)
-# 
-#         time = dict["STOP_TIME"].value
-#         if time[-1] == "Z": time = time[:-1]
-#         tdb1 = cspice.str2et(time)
-# 
-#         inter_frame_delay = dict["INTERFRAME_DELAY_DURATION"] * 0.001
-#         inter_line_delay = dict["INTERLINE_DELAY_DURATION"] * 0.001
-#         swath_width = int(dict["SWATH_WIDTH"])
-#         swath_length = int(dict["SWATH_LENGTH"])
-#         x_offset = dict["X_OFFSET"]
-#         z_offset = dict["Z_OFFSET"]
-# 
-#         exposure_duration = dict["EXPOSURE_DURATION"]
-#         ir_exposure = exposure_duration[0] * 0.001
-#         vis_exposure = exposure_duration[1] * 0.001
-# 
-#         total_row_time = inter_line_delay + max(ir_exposure * swath_width,
-#                                                 vis_exposure)
-# 
-#         target_name = dict["TARGET_NAME"]
-# 
-#         # both the following two core_lines seem to produce the string "IMAGE"
-#         instrument_mode = dict["INSTRUMENT_MODE_ID"]
-#         instrument_mode_id = dict["INSTRUMENT_MODE_ID"]
-# 
-#         ir_pb = oops.obs.Pushbroom(0, total_row_time, swath_width * ir_exposure,
-#                                    target_name, (tdb0, tdb1), VIMS.fovs["IR"],
-#                                    "CASSINI", "CASSINI_VIMS_IR")
-# 
-#         vis_pb = oops.obs.Pushbroom(0, total_row_time, vis_exposure,
-#                                     target_name, (tdb0, tdb1), VIMS.fovs["V"],
-#                                     "CASSINI", "CASSINI_VIMS_V")
-# 
-#         observations.append((ir_pb, vis_pb))
-# 
-#     # Make sure all the SPICE kernels are loaded
-#     tdb0 = row_dicts[0]["START_TIME"]
-#     tdb1 = row_dicts[-1]["STOP_TIME"]
-# 
-#     Cassini.load_cks( tdb0, tdb1)
-#     Cassini.load_spks(tdb0, tdb1)
-# 
-#     return observations
-# 
-# # Internal function to return the sum of elements as an int
-# def _sumover(item):
-#     try:
-#         return sum(item)
-#     except TypeError:
-#         return int(item)
+def meshgrid_and_times(obs, oversample=6, extend=1.5):
+    """Returns a meshgrid object and time array that oversamples and extends the
+    dimensions of the field of view of a VIMS observation.
+
+    Input:
+        obs             the VIMS observation object to for which to generate a
+                        meshgrid and a time array.
+        oversample      the factor by which to oversample the field of view, in
+                        units of the full-resolution VIMS pixel size.
+        extend          the number of pixels by which to extend the field of
+                        view, in units of the oversampled pixel.
+
+    Return:             (mesgrid, time)
+    """
+
+    shrinkage = {("IR",  "NORMAL"): (1,1),
+                 ("IR",  "HI-RES"): (2,1),
+                 ("IR",  "UNDER" ): (2,1),
+                 ("VIS", "NORMAL"): (1,1),
+                 ("VIS", "HI-RES"): (3,3)}
+
+    assert obs.instrument == "VIMS"
+
+    (ushrink,vshrink) = shrinkage[(obs.detector, obs.sampling)]
+
+    oversample = float(oversample)
+    undersample = (ushrink, vshrink)
+
+    ustep = ushrink / oversample
+    vstep = vshrink / oversample
+
+    origin = (-extend * ustep, -extend * vstep)
+
+    limit = (obs.fov.uv_shape.vals[0] + extend * ustep,
+             obs.fov.uv_shape.vals[1] + extend * vstep)
+
+    meshgrid = oops.Meshgrid.for_fov(obs.fov, origin, undersample, oversample,
+                                     limit, swap=True)
+
+    time = obs.uvt(obs.fov.nearest_uv(meshgrid.uv).swapxy())[1]
+
+    return (meshgrid, time)
 
 ################################################################################
 
 class VIMS(object):
     """A instance-free class to hold Cassini VIMS instrument parameters."""
 
-    instrument_kernel = None
-    fovs = {}
     initialized = False
+    instrument_kernel = None
 
     @staticmethod
     def initialize():
-        """Fills in key information about the WAC and NAC. Must be called first.
+        """Fills in key information about the VIS and IR channels. Must be
+        called first.
         """
 
         # Quick exit after first call
@@ -693,37 +656,6 @@ class VIMS(object):
 
         # Load the instrument kernel
         VIMS.instrument_kernel = Cassini.spice_instrument_kernel("VIMS")[0]
-
-        # Construct a flat FOV for each camera
-        # Tuple is (SPK abbrev, my abbrev, hi-res factor)
-        for det in {("V","VIS",3,3), ("IR","IR",2,1)}:
-            info = VIMS.instrument_kernel["INS"]["CASSINI_VIMS_" + det[0]]
-
-            # Full field of view
-            core_lines = info["PIXEL_LINES"]
-            core_samples = info["PIXEL_SAMPLES"]
-            assert core_lines == 64
-            assert core_samples == 64
-
-            xfov = info["FOV_REF_ANGLE"]
-            yfov = info["FOV_CROSS_ANGLE"]
-            assert info["FOV_ANGLE_UNITS"] == "DEGREES"
-
-            uscale = np.arctan(np.tan(xfov * oops.RPD) / 32.)
-            vscale = np.arctan(np.tan(yfov * oops.RPD) / 32.)
-
-            # Display directions: [u,v] = [right,down]
-            normal_fov = oops.fov.Flat((uscale,vscale), (64,64))
-            hires_fov  = oops.fov.Flat((uscale / det[2], vscale / det[3]),
-                                       (64 * det[2], 64 * det[3]))
-
-            # Load the dictionary
-            VIMS.fovs[(det[1],"NORMAL")] = normal_fov
-            VIMS.fovs[(det[1],"HI-RES")] = hires_fov
-            VIMS.fovs[(det[1],"N/A")] = normal_fov      # just prevents KeyError
-
-        # Create a usable Nyquist FOV for the IR channel
-        VIMS.fovs[("IR","UNDER" )] = VIMS.fovs[("IR","HI-RES")]
 
         # Construct a SpiceFrame for each detector
         ignore = oops.frame.SpiceFrame("CASSINI_VIMS_V")
