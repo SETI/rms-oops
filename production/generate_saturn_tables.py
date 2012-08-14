@@ -18,6 +18,8 @@ ISS_TYPE = "ISS"
 VIMS_TYPE = "VIMS"
 UVIS_TYPE = "UVIS"
 
+#TIME_DEBUG = True
+
 ################################################################################
 # Hanlde command line arguments for generate_tables.py
 ################################################################################
@@ -155,7 +157,7 @@ class BodySurface(object):
         #find the histogram for the angles
         bins = np.arange(361)
         m_arr = angles.mvals
-        h,b = np.histogram(m_arr[~m_arr.mask], bins)    # hist doesn't support masks
+        h,b = np.histogram(m_arr[~m_arr.mask], bins) # hist doesn't support masks
 
         #find all of the sections without values (where the histogram is zero)
         empty_sections = []
@@ -166,7 +168,7 @@ class BodySurface(object):
         min_zero = 5
         current_value_start = 0.
         current_value_stop = 0.
-        sorted_angles = m_arr.copy().reshape(m_arr.size)    # to get actual values
+        sorted_angles = m_arr.copy().reshape(m_arr.size)  # to get actual values
         sorted_angles.sort()
         samples = 0
         while i < 360:
@@ -206,6 +208,8 @@ class BodySurface(object):
         # if we have a a gap that starts at zero and ends at 360, we need to
         # combine them
 
+        if len(empty_sections) == 0:
+            return (0, 360)
         first_section = empty_sections[0]
         if first_section[0] == 0:
             last_section = empty_sections[-1]
@@ -596,14 +600,14 @@ class FileGeometry(object):
     def set_image_id(self, obs):
         """output to string the image/camera label"""
         if self.file_type is ISS_TYPE:
-            self.obs_id = '"S/IMG/CO/ISS/'
+            self.obs_id = 'S/IMG/CO/ISS/'
             
             self.obs_id += obs.index_dict['IMAGE_NUMBER']
             name = obs.index_dict["INSTRUMENT_NAME"]
             if "WIDE" in name:
-                self.obs_id += '/W"'
+                self.obs_id += '/W'
             else:
-                self.obs_id += '/N"'
+                self.obs_id += '/N'
         else:
             file_name = obs.index_dict['FILE_NAME']
             #strip letter off of front and extension off of end
@@ -831,14 +835,15 @@ class ProcessedBodySurfaceSummary(BodySurface):
         lline.append(self.output_pair(self.night_side_flag))
         lline.append(self.output_pair(self.behind_rings_flag))
         lline.append(self.output_pair(self.in_ring_shadow_flag))
-        lline.append(self.output_singleton(self.sub_solar_geocentric_latitude))
-        lline.append(self.output_singleton(self.sub_solar_geographic_latitude))
-        lline.append(self.output_singleton(self.sub_solar_iau_longitude))
-        lline.append(self.output_singleton(self.solar_distance_to_body_center))
-        lline.append(self.output_singleton(self.sub_obs_geocentric_latitude))
-        lline.append(self.output_singleton(self.sub_obs_geographic_latitude))
-        lline.append(self.output_singleton(self.sub_obs_iau_longitude))
-        lline.append(self.output_singleton(self.obs_distance_to_body_center))
+        if self.owner.file_type is ISS_TYPE:
+            lline.append(self.output_singleton(self.sub_solar_geocentric_latitude))
+            lline.append(self.output_singleton(self.sub_solar_geographic_latitude))
+            lline.append(self.output_singleton(self.sub_solar_iau_longitude))
+            lline.append(self.output_singleton(self.solar_distance_to_body_center))
+            lline.append(self.output_singleton(self.sub_obs_geocentric_latitude))
+            lline.append(self.output_singleton(self.sub_obs_geographic_latitude))
+            lline.append(self.output_singleton(self.sub_obs_iau_longitude))
+            lline.append(self.output_singleton(self.obs_distance_to_body_center))
         line = ' '.join(lline)
         line += '\n'
         """
@@ -1236,7 +1241,6 @@ class ProcessedFileGeometry(object):
         self.obs_id = parent.obs_id
         self.body_name = parent.body_name
         
-        self.file_type = parent.file_type
         self.summary.copy(parent.summary)
         self.details.empty()
         for body_detail in parent.details:
@@ -1249,21 +1253,21 @@ class ProcessedFileGeometry(object):
         lines = str(self.summary)
         for detail in self.details:
             lines += str(detail)
-        if self.body_name == 'SATURN':
+        if self.file_type is ISS_TYPE and self.body_name == 'SATURN':
             lines += str(self.limb)
         return lines
     
     def set_image_id(self, obs):
         """output to string the image/camera label"""
         if self.file_type is ISS_TYPE:
-            self.obs_id = '"S/IMG/CO/ISS/'
+            self.obs_id = 'S/IMG/CO/ISS/'
             
             self.obs_id += obs.index_dict['IMAGE_NUMBER']
             name = obs.index_dict["INSTRUMENT_NAME"]
             if "WIDE" in name:
-                self.obs_id += '/W"'
+                self.obs_id += '/W'
             else:
-                self.obs_id += '/N"'
+                self.obs_id += '/N'
         else:
             file_name = obs.index_dict['PRODUCT_ID']
             #strip letter off of front and extension off of end
@@ -1346,6 +1350,8 @@ def get_error_buffer_size(snapshot, file_type):
         if "WIDE" in name:
             error_buffer = 6
     elif file_type is VIMS_TYPE:
+        for key in snapshot.index_dict.keys():
+            "snapshot.index_dict.key = ", key
         if 'NORMAL' not in snapshot.index_dict['SAMPLING_MODE_ID'][0]:
             error_buffer = 6
     return error_buffer
@@ -1499,8 +1505,6 @@ def get_observation_id(file_type, obs):
     """output to string the image/camera label"""
     obs_id = ""
     if file_type is ISS_TYPE:
-        #obs_id = '"S/IMG/CO/ISS/'
-        
         obs_id += obs.index_dict['IMAGE_NUMBER']
         name = obs.index_dict["INSTRUMENT_NAME"]
         if "WIDE" in name:
@@ -1546,33 +1550,41 @@ def bodies_for_observation(obs_id):
                 return body_list
     return body_list
 
-
-################################################################################
-# Actual generation and processing of the data                                 #
-################################################################################
-def generate_process_metadata(obs, resolution, file_type):
-
+def backplane_for_file_type(obs, resolution, file_type):
     # deal with possible pointing errors - up to 3 pixels in any
     # direction for WAC and 30 pixels for NAC
     error_buffer = get_error_buffer_size(obs, file_type)
     limit = obs.fov.uv_shape + oops.Pair(np.array([error_buffer,
                                                    error_buffer]))
-    
-    meshgrid = Meshgrid.for_fov(obs.fov, undersample=resolution,
-                                limit=limit, swap=True)
-    
-    bp = oops.Backplane(obs, meshgrid)
+    if file_type is ISS_TYPE:
+        meshgrid = Meshgrid.for_fov(obs.fov, undersample=resolution,
+                                    limit=limit, swap=True)
+        bp = oops.Backplane(obs, meshgrid)
+    else:
+        (meshgrid, times) = cassini_vims.meshgrid_and_times(obs)
+        bp = oops.Backplane(obs, meshgrid, times)
+    return bp
+
+def generate_bp_metadata(bp, obs, file_type):
+    """if TIME_DEBUG:
+        then = datetime.datetime.now()"""
     try:
         intercepted = bp.where_intercepted("saturn_main_rings")
     except:
         return None
     intercept_mask = intercepted.vals
-    #pylab.imsave("/Users/bwells/tempImage.png",
-    #             intercept_mask, vmin=0, vmax=1, cmap=pylab.cm.gray)
+    """if TIME_DEBUG:
+        now = datetime.datetime.now()
+        duration = now - then
+        print "where_intercepted took:", duration
+        then = now"""
 
-
-    obs_id = get_observation_id(file_type, obs)
-    body_list = bodies_for_observation(obs_id)
+    body_list = bodies_for_observation(get_observation_id(file_type, obs))
+    """if TIME_DEBUG:
+        now = datetime.datetime.now()
+        duration = now - then
+        print "bodies_for_observation took:", duration
+        then = now"""
 
     geometries = []
 
@@ -1581,139 +1593,199 @@ def generate_process_metadata(obs, resolution, file_type):
         geometry = ProcessedFileGeometry(body_name)
         geometry.file_type = file_type
         geometry.set_image_id(obs)
+        """if TIME_DEBUG:
+            now = datetime.datetime.now()
+            duration = now - then
+            print "geometry object setup took:", duration
+            then = now"""
 
         result = bp.latitude(body_name)                      # geocentric latitude
         result.mask |= intercept_mask
+        geometry.summary.set_geocentric_latitude(result)
+        """if TIME_DEBUG:
+            now = datetime.datetime.now()
+            duration = now - then
+            print "set_geocentric_latitude took:", duration
+            then = now"""
 
         # we need to not only set the data, but also, since this is our first mask
         # create the BodySurfaceDetails
-        geometry.summary.set_geocentric_latitude(result)
         geometry.create_details(result)
         geometry.set_detail_geocentric_latitude(result)
+        """if TIME_DEBUG:
+            now = datetime.datetime.now()
+            duration = now - then
+            print "create_details and set_detail_geocentric_latitude took:", duration
+            then = now"""
 
-        
         result = bp.latitude(body_name, "graphic")           # geographic latitude
         result.mask |= intercept_mask
         geometry.summary.set_geographic_latitude(result)
         geometry.set_detail_geographic_latitude(result)
-        
+        """if TIME_DEBUG:
+            now = datetime.datetime.now()
+            duration = now - then
+            print "set_geographic_latitude took:", duration
+            then = now"""
+
         result = bp.longitude(body_name)                     # iau longitude
         result.mask |= intercept_mask
         geometry.summary.set_iau_longitude(result)
         geometry.set_detail_iau_longitude(result)
-        
+
         result1 = bp.longitude(body_name, "sha")              # sha longitude
         result1.mask |= intercept_mask
         geometry.summary.set_sha_longitude(result1)
         geometry.set_detail_sha_longitude(result1)
-        
+
         result = bp.longitude(body_name, "obs")              # obs longitude
         result.mask |= intercept_mask
         geometry.summary.set_obs_longitude(result)
         geometry.set_detail_obs_longitude(result)
-        
+
         result = bp.finest_resolution(body_name)             # finest resolution
         result.mask |= intercept_mask
         geometry.summary.set_finest_resolution(result)
         geometry.set_detail_finest_resolution(result)
-        
+
         result = bp.coarsest_resolution(body_name)           # coarsest resolution
         result.mask |= intercept_mask
         geometry.summary.set_coarsest_resolution(result)
         geometry.set_detail_coarsest_resolution(result)
-        
+
         result = bp.phase_angle(body_name)                   # phase angle
         result.mask |= intercept_mask
         geometry.summary.set_phase(result)
         geometry.set_detail_phase(result)
-        
+
         result = bp.incidence_angle(body_name)               # incidence angle
         result.mask |= intercept_mask
         geometry.summary.set_incidence(result)
         geometry.set_detail_incidence(result)
-        
+
         result = bp.emission_angle(body_name)                # emission angle
         result.mask |= intercept_mask
         geometry.summary.set_emission(result)
         geometry.set_detail_emission(result)
-        
+
         result = bp.distance(body_name)                      # distance to body
         if result.shape != []:
             result.mask |= intercept_mask
         geometry.summary.set_range_to_body(result)
         geometry.set_detail_range_to_body(result)
-        
+
         result = bp.where_sunward(body_name)                 # night side flag
         geometry.summary.set_night_side_flag(result)
         geometry.set_detail_nightside_flag(result)
-        
+
         result = bp.where_in_back(body_name, "saturn_main_rings")#where behind rings
         geometry.summary.set_behind_rings_flag(result)
         geometry.set_detail_behind_rings_flag(result)
-        
+
         result = bp.where_inside_shadow(body_name, "saturn_main_rings")  # in shadow
         geometry.summary.set_in_ring_shadow_flag(result)
         geometry.set_detail_in_ring_shadow_flag(result)
-        
-        result = bp.sub_solar_latitude(body_name)            # subsolar centric lat
-        geometry.summary.set_sub_solar_geocentric_latitude(result)
-        
-        result = bp.sub_solar_latitude(body_name, "graphic") # subsolar graphic lat
-        geometry.summary.set_sub_solar_geographic_latitude(result)
-        
-        result = bp.sub_solar_longitude(body_name)# subsolar long
-        geometry.summary.set_sub_solar_iau_longitude(result)
-        
-        result = bp.solar_distance_to_center(body_name) # solar distance to body
-        geometry.summary.set_solar_distance_to_body_center(result)
-        
-        result = bp.sub_observer_latitude(body_name)            # obs centric lat
-        geometry.summary.set_sub_obs_geocentric_latitude(result)
-        
-        result = bp.sub_observer_latitude(body_name, "graphic")  # obs centric lat
-        geometry.summary.set_sub_obs_geographic_latitude(result)
-        
-        result = bp.sub_observer_longitude(body_name)#sub obs long
-        geometry.summary.set_sub_obs_iau_longitude(result)
-        
-        result = bp.observer_distance_to_center(body_name)
-        geometry.summary.set_obs_distance_to_body_center(result)
-        
-        if body_name == 'saturn':
-            #onto the Limb
-            limb_body = body_name + ":limb"
-            body_intercepted = bp.where_intercepted(limb_body)
-            limb_mask = ~body_intercepted.vals
-            
-            result = bp.elevation(limb_body)
-            result.mask |= limb_mask
-            geometry.limb.set_elevation(result)
-            
-            result = bp.latitude(limb_body)
-            result.mask |= limb_mask
-            geometry.limb.set_geocentric_latitude(result)
-            
-            result = bp.latitude(limb_body, "graphic")
-            result.mask |= limb_mask
-            geometry.limb.set_geographic_latitude(result)
-            
-            result = bp.resolution(limb_body)
-            result.mask |= limb_mask
-            geometry.limb.set_resolution(result)
-            
-            result = bp.phase_angle(limb_body)
-            result.mask |= limb_mask
-            geometry.limb.set_phase(result)
-            
-            result = bp.incidence_angle(limb_body)
-            result.mask |= limb_mask
-            geometry.limb.set_incidence(result)
-            
-            result = bp.distance(limb_body)
-            result.mask |= limb_mask
-            geometry.limb.set_range_to_limb(result)
+        """if TIME_DEBUG:
+            now = datetime.datetime.now()
+            duration = now - then
+            print "after flags took:", duration
+            then = now"""
+
+        if file_type is ISS_TYPE:
+            result = bp.sub_solar_latitude(body_name)            # subsolar centric lat
+            geometry.summary.set_sub_solar_geocentric_latitude(result)
+
+            result = bp.sub_solar_latitude(body_name, "graphic") # subsolar graphic lat
+            geometry.summary.set_sub_solar_geographic_latitude(result)
+
+            result = bp.sub_solar_longitude(body_name)# subsolar long
+            geometry.summary.set_sub_solar_iau_longitude(result)
+
+            result = bp.solar_distance_to_center(body_name) # solar distance to body
+            geometry.summary.set_solar_distance_to_body_center(result)
+
+            result = bp.sub_observer_latitude(body_name)            # obs centric lat
+            geometry.summary.set_sub_obs_geocentric_latitude(result)
+
+            result = bp.sub_observer_latitude(body_name, "graphic")  # obs centric lat
+            geometry.summary.set_sub_obs_geographic_latitude(result)
+
+            result = bp.sub_observer_longitude(body_name)#sub obs long
+            geometry.summary.set_sub_obs_iau_longitude(result)
+
+            result = bp.observer_distance_to_center(body_name)
+            geometry.summary.set_obs_distance_to_body_center(result)
+            """if TIME_DEBUG:
+                now = datetime.datetime.now()
+                duration = now - then
+                print "after singletons took:", duration
+                then = now"""
+
+            if body_name == 'saturn':
+                #onto the Limb
+                limb_body = body_name + ":limb"
+                body_intercepted = bp.where_intercepted(limb_body)
+                limb_mask = ~body_intercepted.vals
+                
+                result = bp.elevation(limb_body)
+                result.mask |= limb_mask
+                geometry.limb.set_elevation(result)
+                
+                result = bp.latitude(limb_body)
+                result.mask |= limb_mask
+                geometry.limb.set_geocentric_latitude(result)
+                
+                result = bp.latitude(limb_body, "graphic")
+                result.mask |= limb_mask
+                geometry.limb.set_geographic_latitude(result)
+                
+                result = bp.resolution(limb_body)
+                result.mask |= limb_mask
+                geometry.limb.set_resolution(result)
+                
+                result = bp.phase_angle(limb_body)
+                result.mask |= limb_mask
+                geometry.limb.set_phase(result)
+                
+                result = bp.incidence_angle(limb_body)
+                result.mask |= limb_mask
+                geometry.limb.set_incidence(result)
+                
+                result = bp.distance(limb_body)
+                result.mask |= limb_mask
+                geometry.limb.set_range_to_limb(result)
+                """if TIME_DEBUG:
+                    now = datetime.datetime.now()
+                    duration = now - then
+                    print "after limb took:", duration
+                    then = now"""
 
         geometries.append(geometry)
+
+    return geometries
+
+
+
+################################################################################
+# Actual generation and processing of the data                                 #
+################################################################################
+def generate_process_metadata(obs, resolution, file_type):
+
+    if file_type is ISS_TYPE:
+        bp = backplane_for_file_type(obs, resolution, file_type)
+        geometries = generate_bp_metadata(bp, obs, file_type)
+    elif file_type is VIMS_TYPE:
+        geometries = []
+        if obs[0] is not None:
+            bp = backplane_for_file_type(obs[0], resolution, file_type)
+            geoms = generate_bp_metadata(bp, obs[0], file_type)
+            if geoms is not None:
+                geometries += geoms
+        if obs[1] is not None:
+            bp = backplane_for_file_type(obs[1], resolution, file_type)
+            geoms = generate_bp_metadata(bp, obs[1], file_type)
+            if geoms is not None:
+                geometries += geoms
     
     return geometries
 
@@ -1765,13 +1837,56 @@ def index_file_type(file_name):
     fd.close()
     return ISS_TYPE
 
+def append_to_path(basename, specific_name):
+    pre_ext = basename.split('.')
+    fullname = pre_ext[0] + '_' + specific_name + '.' + pre_ext[1]
+    return fullname
+
+def summary_name(basename):
+    return append_to_path(basename, "summary")
+
+def detail_name(basename):
+    return append_to_path(basename, "detail")
+
+def limb_name(basename):
+    return append_to_path(basename, "limb")
+
+def append_to_summary_file(file_name, geometries, stop):
+    f = open(summary_name(file_name), 'a')
+    output_buf = ""
+    for i in range(stop):
+        output_buf += str(geometries[i].summary)
+    f.write(output_buf)
+    f.close()
+
+def append_to_detail_file(file_name, geometries, stop):
+    f = open(detail_name(file_name), 'a')
+    output_buf = ""
+    for i in range(stop):
+        for detail in geometries[i].details:
+            output_buf += str(detail)
+        #output_buf += str(geometries[i].detail)
+    f.write(output_buf)
+    f.close()
+
+def append_to_limb_file(file_name, geometries, stop):
+    f = open(limb_name(file_name), 'a')
+    output_buf = ""
+    for i in range(stop):
+        output_buf += str(geometries[i].limb)
+    f.write(output_buf)
+    f.close()
+
 def append_to_file(file_name, geometries, stop):
-    f = open(file_name, 'a')
+    append_to_summary_file(file_name, geometries, stop)
+    append_to_detail_file(file_name, geometries, stop)
+    append_to_limb_file(file_name, geometries, stop)
+    """f = open(file_name, 'a')
     output_buf = ""
     for i in range(stop):
         output_buf += str(geometries[i])
     f.write(output_buf)
-    f.close()
+    f.close()"""
 
 def count_em(valid_path):
     x = 0
@@ -1843,16 +1958,25 @@ def generate_geometries_for_index(file_name):
     
     # remove file if it already exists from previous run
     try:
-        os.remove(geom_file_name)
+        os.remove(summary_name(geom_file_name))
     except OSError as e:
         pass
-    
+    try:
+        os.remove(detail_name(geom_file_name))
+    except OSError as e:
+        pass
+    try:
+        os.remove(limb_name(geom_file_name))
+    except OSError as e:
+        pass
+
     #for body_name in body_name_list:
     for i in range(start, nObs):
-        if file_type is ISS_TYPE:
+        ob = obs[i]
+        """if file_type is ISS_TYPE:
             ob = obs[i]
         else:
-            ob = obs[i][1]
+            ob = obs[i][1]"""
     
         info_len = len(info_str)
         i1 = i + 1
