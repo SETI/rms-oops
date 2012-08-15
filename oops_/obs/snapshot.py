@@ -63,6 +63,10 @@ class Snapshot(Observation):
         self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
         self.scalar_midtime = Scalar(self.midtime)
 
+        self.shape = len(axes) * [0]
+        self.shape[self.u_axis] = self.uv_shape[0]
+        self.shape[self.v_axis] = self.uv_shape[1]
+
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])

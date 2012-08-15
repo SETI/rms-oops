@@ -406,10 +406,11 @@ PLUTO_REGULAR = range(902,905)
 JUPITER_MAIN_RING_LIMIT = 128940.
 
 SATURN_MAIN_RINGS = (74658., 136780.)
-SATURN_A_RING = ( 74658.,  91975.)
+SATURN_C_RING = ( 74658.,  91975.)
 SATURN_B_RING = ( 91975., 117507.)
-SATURN_C_RING = (122340., 136780.)
+SATURN_A_RING = (122340., 136780.)
 SATURN_F_RING_LIMIT = 140612.
+SATURN_RINGS  = ((SATURN_MAIN_RINGS[0], SATURN_F_RING_LIMIT)
 
 URANUS_EPSILON_LIMIT = 51604.
 URANUS_MU_LIMIT = [97700. - 17000./2, 97700. + 17700./2]
@@ -539,6 +540,7 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_bodies(SATURN_IRREGULAR, "SATURN", "SATURN BARYCENTER",
                   ["SATELLITE", "IRREGULAR"])
     define_ring("SATURN", "SATURN_RING_PLANE", SATURN_F_RING_LIMIT, [])
+    define_ring("SATURN", "SATURN_RINGS", SATURN_RINGS, [])
     define_ring("SATURN", "SATURN_MAIN_RINGS", SATURN_MAIN_RINGS, [])
     define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [])
     define_ring("SATURN", "SATURN_B_RING", SATURN_B_RING, [])
@@ -649,6 +651,23 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     """Defines the path, frame, surface and body for a given ring, given its
     inner and outer radii. A single radius value is used to define the outer
     limit of rings, but the ring plane itself has no boundaries.
+
+    Input:
+        parent_name     the name of the central planet for the ring surface.
+        ring_name       the name of the surface.
+        radii           if this is a tuple with two values, these are the radial
+                        limits of the ring; if it is a scalar, then the ring
+                        plane has no defined radial limits, but the radius
+                        attribute of the body will be set to this value; if
+                        None, then the radius attribute of the body will be set
+                        to zero.
+        keywords        the list of keywords under which this surface is to be 
+                        registered. Every ring is also registered under its own
+                        name and under the keyword "RING".
+        retrograde      True if the ring is retrograde relative to the central
+                        planet's IAU-defined pole.
+        barycenter_name the name of the ring's barycenter if this is not the
+                        same as the name of the central planet.
     """
 
     parent = registry.body_lookup(parent_name)

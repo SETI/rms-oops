@@ -60,6 +60,8 @@ class Pixel(Observation):
         assert self.fov.uv_shape == (1,1)
         self.uv_shape = [1,1]
 
+        self.shape = len(axes) * [0]
+
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])

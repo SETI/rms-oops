@@ -56,6 +56,9 @@ class Observation(object):
                         that break down time into finer and finer divisions,
                         ordered from left to right. Use -1 if the observation
                         has no time-dependence.
+        shape           a list or tuple defining the overall shape of the
+                        observation data. Where the size of an axis is unknown
+                        (e.g., for a wavelength axis), the value can be zero.
         path_id         the registered ID of a path co-located with the
                         instrument.
         frame_id        the registered ID of a coordinate frame fixed to the

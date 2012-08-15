@@ -56,18 +56,22 @@ class Slit1D(Observation):
         assert (("u" in self.axes and "v" not in self.axes) or
                 ("v" in self.axes and "u" not in self.axes))
 
+        self.shape = len(axes) * [0]
+
         if "u" in self.axes:
             self.u_axis = self.axes.index("u")
             self.v_axis = -1
             self.along_slit_index = self.u_axis
             self.along_slit_uv_index = 0
             self.cross_slit_uv_index = 1
+            self.shape[self.u_axis] = self.fov.uv_shape.vals[0]
         else:
             self.u_axis = -1
             self.v_axis = self.axes.index("v")
             self.along_slit_index = self.v_axis
             self.along_slit_uv_index = 1
             self.cross_slit_uv_index = 0
+            self.shape[self.v_axis] = self.fov.uv_shape.vals[1]
 
         self.uv_shape = self.fov.uv_shape.vals
         assert self.fov.uv_shape.vals[self.cross_slit_uv_index] == 1

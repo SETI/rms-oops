@@ -59,18 +59,22 @@ class RasterSlit1D(Observation):
         assert (("ut" in self.axes and "vt" not in self.axes) or
                 ("vt" in self.axes and "ut" not in self.axes))
 
+        self.shape = len(axes) * [0]
+
         if "ut" in self.axes:
             self.u_axis = self.axes.index("ut")
             self.v_axis = -1
             self.t_axis = self.u_axis
             self.along_slit_uv_index = 0
             self.cross_slit_uv_index = 1
+            self.shape[self.u_axis] = self.fov.uv_shape.vals[0]
         else:
             self.u_axis = -1
             self.v_axis = self.axes.index("vt")
             self.t_axis = self.v_axis
             self.along_slit_uv_index = 1
             self.cross_slit_uv_index = 0
+            self.shape[self.v_axis] = self.fov.uv_shape.vals[1]
 
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size != 1)

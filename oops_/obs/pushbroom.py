@@ -93,6 +93,10 @@ class Pushbroom(Observation):
         duv_dt_basis_vals[self.cross_slit_uv_index] = 1.
         self.duv_dt_basis = Pair(duv_dt_basis_vals)
 
+        self.shape = len(axes) * [0]
+        self.shape[self.u_axis] = self.uv_shape[0]
+        self.shape[self.v_axis] = self.uv_shape[1]
+
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])

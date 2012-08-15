@@ -92,6 +92,10 @@ class RasterScan(Observation):
         self.uv_size = Pair.as_pair(uv_size)
         self.uv_is_discontinuous = (self.uv_size != Pair.ONES)
 
+        self.shape = len(axes) * [0]
+        self.shape[self.u_axis] = self.uv_shape[0]
+        self.shape[self.v_axis] = self.uv_shape[1]
+
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])

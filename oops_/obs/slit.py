@@ -88,6 +88,10 @@ class Slit(Observation):
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size < 1)
 
+        self.shape = len(axes) * [0]
+        self.shape[self.u_axis] = self.uv_shape[0]
+        self.shape[self.v_axis] = self.uv_shape[1]
+
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
