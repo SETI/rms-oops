@@ -282,7 +282,7 @@ def from_file(filespec):
         ir_data = ir_data.reshape((frames, 256))
         ir_obs = oops.obs.Pixel(("t","b"),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, dict=label)
+                                "CASSINI", ir_frame_id, index_dict=label)
 
     # Single LINE case
     elif swath_length == 1 and frames == 1:
@@ -291,7 +291,7 @@ def from_file(filespec):
 
             vis_obs = oops.obs.Slit1D(("u","b"), 1.,
                                 tstart, vis_texp, vis_fov,
-                                "CASSINI", vis_frame_id, dict=label)
+                                "CASSINI", vis_frame_id, index_dict=label)
 
         if not ir_is_off:
             if ir_data is not None: ir_data = ir_data.reshape((samples, 256))
@@ -301,14 +301,14 @@ def from_file(filespec):
 
             ir_obs = oops.obs.RasterSlit1D(("ut","b"), ir_det_size,
                                 ir_fast_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, dict=label)
+                                "CASSINI", ir_frame_id, index_dict=label)
 
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
             vis_obs = oops.obs.Pushbroom(("vt","u","b"), (1.,1.),
                                 vis_header_cadence, vis_fov,
-                                "CASSINI", vis_frame_id, dict=label)
+                                "CASSINI", vis_frame_id, index_dict=label)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -321,14 +321,14 @@ def from_file(filespec):
             ir_obs = oops.obs.RasterScan(("vslow","ufast","b"),
                                 (1., ir_det_size),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, dict=label)
+                                "CASSINI", ir_frame_id, index_dict=label)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
             vis_obs = oops.obs.Slit(("vt","u","b"), 1.,
                                 frame_cadence, vis_fov,
-                                "CASSINI", vis_frame_id, dict=label)
+                                "CASSINI", vis_frame_id, index_dict=label)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -340,7 +340,7 @@ def from_file(filespec):
 
             ir_obs = oops.obs.RasterSlit(("vslow","ufast","b"), ir_det_size,
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, dict=label)
+                                "CASSINI", ir_frame_id, index_dict=label)
 
     # Multiple 2-D IMAGE case
     elif lines == frames and samples == swath_width * swath_length:
@@ -361,7 +361,7 @@ def from_file(filespec):
                                 vis_header_cadence)
 
             vis_obs = oops.obs.Movie(("t","vt","u","b"), vis_first_obs,
-                                movie_cadence, dict=label)
+                                movie_cadence, index_dict=label)
 
         if not vis_is_off:
 
@@ -389,7 +389,7 @@ def from_file(filespec):
 
             # Define the movie
             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
-                                ir_cadence, dict=label)
+                                ir_cadence, index_dict=label)
 
     else:
         raise ValueError("unsupported VIMS format in file " + filespec)

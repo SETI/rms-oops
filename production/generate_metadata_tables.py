@@ -504,8 +504,8 @@ spacer = '    ,   '
 radii_ranges = []
 geom_file_name = ""
 
-PRINT = True
-DISPLAY = True
+PRINT = False
+DISPLAY = False
 OBJC_DISPLAY = False
 
 def add_info(array, minmax=None):
@@ -728,7 +728,7 @@ def snapshot_has_partial_intercept(snapshot, resolution, file_type):
                                 limit=limit, swap=True)
     bp = oops.Backplane(snapshot, meshgrid)
     
-    intercepted = bp.where_intercepted("saturn_main_rings")
+    intercepted = bp.where_intercepted("saturn_rings")
     
     if np.all(intercepted.vals):
         return 1
@@ -764,13 +764,13 @@ def generate_metadata(snapshot, resolution, file_type):
     bp = oops.Backplane(snapshot, meshgrid)
 
     try:
-        intercepted = bp.where_intercepted("saturn_main_rings")
+        intercepted = bp.where_intercepted("saturn_rings")
     except:
         return None
     
     #show_info("Intercepted:", intercepted.vals)
     
-    saturn_in_front = bp.where_in_front("saturn", "saturn_main_rings")
+    saturn_in_front = bp.where_in_front("saturn", "saturn_rings")
     saturn_intercepted = bp.where_intercepted("saturn")
     """
     show_info("saturn_intercepted:", saturn_intercepted.vals)
@@ -789,7 +789,7 @@ def generate_metadata(snapshot, resolution, file_type):
     else:
         print "RINGS CLAIM PARTIAL VIEW"
     """
-    rings_not_in_shadow = bp.where_outside_shadow("saturn_main_rings", "saturn")
+    rings_not_in_shadow = bp.where_outside_shadow("saturn_rings", "saturn")
     vis_rings_not_shadow = rings_in_view & rings_not_in_shadow
 	#show_info("Visible Rings not in shadow:", vis_rings_not_shadow.vals)
 
@@ -804,7 +804,7 @@ def generate_metadata(snapshot, resolution, file_type):
     geometry.dec = test.copy()
 
 	#print "Doing ring radius:"
-    test = bp.ring_radius("saturn_main_rings")
+    test = bp.ring_radius("saturn_ring_plane")
     """
     print "###################################################################"
     if np.all(test.mask):
@@ -819,36 +819,36 @@ def generate_metadata(snapshot, resolution, file_type):
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ring_radius = test.copy()
 
-    test = bp.ring_radial_resolution("saturn_main_rings")
+    test = bp.ring_radial_resolution("saturn_rings")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.radial_resolution = test.copy()
 
-    test = bp.ring_longitude("saturn_main_rings",reference="j2000")
+    test = bp.ring_longitude("saturn_rings",reference="j2000")
 	#show_info("Ring longitude:", test.vals)
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.longitude_j2000 = test.copy()
     
-    test = bp.ring_longitude("saturn_main_rings", reference="obs")
+    test = bp.ring_longitude("saturn_rings", reference="obs")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.longitude_obs = test.copy()
 
-    test = bp.ring_longitude("saturn_main_rings", reference="sha")
+    test = bp.ring_longitude("saturn_rings", reference="sha")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.longitude_sha = test.copy()
         
-    test = bp.phase_angle("saturn_main_rings")
+    test = bp.phase_angle("saturn_rings")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.phase = test.copy()
 
-    test = bp.incidence_angle("saturn_main_rings")
+    test = bp.incidence_angle("saturn_rings")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.incidence = test.copy()
     
-    test = bp.emission_angle("saturn_main_rings")
+    test = bp.emission_angle("saturn_rings")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.emission = test.copy()
 
-    test = bp.distance("saturn_main_rings")
+    test = bp.distance("saturn_rings")
 	#print "distance: ", test
     test.mask |= ~vis_rings_not_shadow.vals
     range_test = test.rebroadcast(test.mask.shape)
@@ -858,7 +858,7 @@ def generate_metadata(snapshot, resolution, file_type):
 
     geometry.planet_behind_rings = rings_in_view.copy()
 
-    test = bp.where_sunward("saturn_main_rings")
+    test = bp.where_sunward("saturn_rings")
     geometry.backlit_rings = test.copy()
 
     #####################################################
@@ -896,28 +896,28 @@ def generate_metadata(snapshot, resolution, file_type):
 	#####################################################
 	# new backplanes and other values
 	#####################################################
-    test = bp.ring_azimuth("saturn_main_rings",reference="sun")
+    test = bp.ring_azimuth("saturn_rings",reference="sun")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.az_sun = test.copy()
 
-    test = bp.ring_elevation("saturn_main_rings",reference="sun")
+    test = bp.ring_elevation("saturn_rings",reference="sun")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.el_sun = test.copy()
 
-    test = bp.ring_azimuth("saturn_main_rings",reference="obs")
+    test = bp.ring_azimuth("saturn_rings",reference="obs")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.az_obs = test.copy()
         
-    test = bp.ring_elevation("saturn_main_rings",reference="obs")
+    test = bp.ring_elevation("saturn_rings",reference="obs")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.el_obs = test.copy()
 
-    geometry.sub_solar_long = bp.sub_solar_longitude("saturn_main_rings")
-    geometry.sub_solar_lat = bp.sub_solar_latitude("saturn_main_rings")
-    geometry.solar_dist = bp.solar_distance_to_center("saturn_main_rings")
-    geometry.sub_obs_long = bp.sub_observer_longitude("saturn_main_rings")
-    geometry.sub_obs_lat = bp.sub_observer_latitude("saturn_main_rings")
-    geometry.obs_dist = bp.observer_distance_to_center("saturn_main_rings")
+    geometry.sub_solar_long = bp.sub_solar_longitude("saturn_rings")
+    geometry.sub_solar_lat = bp.sub_solar_latitude("saturn_rings")
+    geometry.solar_dist = bp.solar_distance_to_center("saturn_rings")
+    geometry.sub_obs_long = bp.sub_observer_longitude("saturn_rings")
+    geometry.sub_obs_lat = bp.sub_observer_latitude("saturn_rings")
+    geometry.obs_dist = bp.observer_distance_to_center("saturn_rings")
 
     return geometry
 
@@ -945,7 +945,7 @@ def append_opus1_file(file_name, geometries, start, stop, omit_range):
     output_buf = ""
     for i in range(start, stop):
         if i not in omit_range:
-            output_buf += geometries[i].output_single_line()
+            output_buf += geometries[i-start].output_single_line()
     f.write(output_buf)
     f.close()
 
@@ -958,7 +958,7 @@ def append_opus2_file(file_name, geometries, radii_ranges, start, stop,
     output_buf = ""
     for i in range(start, stop):
         if i not in omit_range:
-            output_buf += geometries[i].output_opus2(radii_ranges)
+            output_buf += geometries[i-start].output_opus2(radii_ranges)
     f.write(output_buf)
     f.close()
 
