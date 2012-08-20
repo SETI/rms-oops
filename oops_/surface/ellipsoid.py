@@ -478,11 +478,8 @@ class Ellipsoid(Surface):
                 print LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
                 print iter, max_dt
 
-            do_break = False
-            if max_dt.shape != ():
-                if np.all(max_dt.mask):
-                    do_break = True
-            if ((do_break) or max_dt <= SURFACE_PHOTONS.dlt_precision or
+            if (np.all(Scalar.as_scalar(max_dt).mask) or
+                max_dt <= SURFACE_PHOTONS.dlt_precision or
                 max_dt >= prev_max_dt * 0.5): break
 
         denom = Vector3.ONES + t * self.unsquash_sq

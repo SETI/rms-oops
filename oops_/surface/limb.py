@@ -43,16 +43,15 @@ class Limb(Surface):
     intercept_DERIVS_ARE_IMPLEMENTED = False
     normal_DERIVS_ARE_IMPLEMENTED = False
 
-    def __init__(self, ground, exclusion=0.95):
+    def __init__(self, ground, limits=None):
         """Constructor for a Limb surface.
 
         Input:
             ground      the Surface object relative to which limb points are to
                         be defined. It should be a Spheroid or Ellipsoid.
-            exclusion   the fraction of the polar radius within which
-                        calculations of the surface are suppressed. Values of
-                        less than 0.9 are not recommended because the problem
-                        becomes numerically unstable.
+            limits      an optional single value or tuple defining the absolute
+                        numerical limit(s) placed on the limb; values outside
+                        this range are masked.
         """
 
         assert ground.COORDINATE_TYPE == "spherical"
@@ -65,9 +64,14 @@ class Limb(Surface):
         self.ground_guess = None
         self.ground_shape = None
 
+        if limits is None:
+            self.limits = None
+        else:
+            self.limits = (limits[0], limits[1])
+
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts position vectors in the internal frame into the surface
-        coordinate system. 
+        coordinate system.
 
         Input:
             pos         a Vector3 of positions at or near the surface, with
@@ -112,6 +116,14 @@ class Limb(Surface):
         (lon, lat) = self.ground.coords_from_vector3(groundtrack, derivs)
         z = (pos - groundtrack).norm()
         z *= (pos.norm() - groundtrack.norm()).sign()
+
+        # Mask based on elevation limits if necessary
+        if self.limits is not None:
+            mask = (lon.mask | (z.vals < self.limits[0]) |
+                               (z.vals > self.limits[1]))
+            lon.mask = mask
+            lat.mask = mask
+            z.mask = mask
 
         if axes == 2:
             return (lon, lat)
@@ -243,11 +255,7 @@ class Limb(Surface):
             if LOGGING.surface_iterations or Limb.DEBUG:
                 print LOGGING.prefix, "Surface.limb.intercept", iter, max_dt
 
-            do_break = False
-            if max_dt.shape != ():
-                if np.all(max_dt.mask):
-                    do_break = True
-            if ((do_break) or max_dt <= SURFACE_PHOTONS.dlt_precision or
+            if (max_dt <= SURFACE_PHOTONS.dlt_precision or
                 max_dt >= prev_max_dt * 0.5): break
 
         pos = obs + t * los
@@ -359,7 +367,7 @@ class Test_Limb(unittest.TestCase):
         REQ  = 60268.
         RPOL = 50000.
         ground = Spheroid("SSB", "J2000", (REQ, RPOL))
-        limb = Limb(ground, exclusion=1)
+        limb = Limb(ground)
 
         obs = Vector3(np.random.random((1000,3)) * 4.*REQ + REQ)
         los = Vector3(np.random.random((1000,3)))

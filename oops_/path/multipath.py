@@ -1,5 +1,8 @@
 ################################################################################
 # oops_/path/multipath.py: Subclass MultiPath of class Path
+#
+# 8/19/12 MRS - changed call to register() to reregister(), so a newly defined
+#   MultiPath replaces the old definition.
 ################################################################################
 
 import numpy as np
@@ -51,7 +54,7 @@ class MultiPath(Path):
         else:
             self.path_id = id
 
-        self.register()
+        self.reregister()
 
 ########################################
 

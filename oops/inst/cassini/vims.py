@@ -2,7 +2,7 @@
 # oops/inst/cassini/vims.py
 #
 # 7/24/12 MRS -- First working version
-
+#
 # Known shortcomings:
 #
 # For SAMPLING_MODE_ID == "UNDER" (aka Nyquist sampling), the FOV boundary will
@@ -282,7 +282,7 @@ def from_file(filespec):
         ir_data = ir_data.reshape((frames, 256))
         ir_obs = oops.obs.Pixel(("t","b"),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, index_dict=label)
+                                "CASSINI", ir_frame_id)
 
     # Single LINE case
     elif swath_length == 1 and frames == 1:
@@ -291,7 +291,7 @@ def from_file(filespec):
 
             vis_obs = oops.obs.Slit1D(("u","b"), 1.,
                                 tstart, vis_texp, vis_fov,
-                                "CASSINI", vis_frame_id, index_dict=label)
+                                "CASSINI", vis_frame_id)
 
         if not ir_is_off:
             if ir_data is not None: ir_data = ir_data.reshape((samples, 256))
@@ -301,14 +301,14 @@ def from_file(filespec):
 
             ir_obs = oops.obs.RasterSlit1D(("ut","b"), ir_det_size,
                                 ir_fast_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, index_dict=label)
+                                "CASSINI", ir_frame_id)
 
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
             vis_obs = oops.obs.Pushbroom(("vt","u","b"), (1.,1.),
                                 vis_header_cadence, vis_fov,
-                                "CASSINI", vis_frame_id, index_dict=label)
+                                "CASSINI", vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -321,14 +321,14 @@ def from_file(filespec):
             ir_obs = oops.obs.RasterScan(("vslow","ufast","b"),
                                 (1., ir_det_size),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, index_dict=label)
+                                "CASSINI", ir_frame_id)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
             vis_obs = oops.obs.Slit(("vt","u","b"), 1.,
                                 frame_cadence, vis_fov,
-                                "CASSINI", vis_frame_id, index_dict=label)
+                                "CASSINI", vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -340,7 +340,7 @@ def from_file(filespec):
 
             ir_obs = oops.obs.RasterSlit(("vslow","ufast","b"), ir_det_size,
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id, index_dict=label)
+                                "CASSINI", ir_frame_id)
 
     # Multiple 2-D IMAGE case
     elif lines == frames and samples == swath_width * swath_length:
@@ -361,7 +361,7 @@ def from_file(filespec):
                                 vis_header_cadence)
 
             vis_obs = oops.obs.Movie(("t","vt","u","b"), vis_first_obs,
-                                movie_cadence, index_dict=label)
+                                movie_cadence)
 
         if not vis_is_off:
 
@@ -389,7 +389,7 @@ def from_file(filespec):
 
             # Define the movie
             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
-                                ir_cadence, index_dict=label)
+                                ir_cadence)
 
     else:
         raise ValueError("unsupported VIMS format in file " + filespec)
@@ -399,6 +399,8 @@ def from_file(filespec):
         vis_obs.insert_subfield("instrument", "VIMS")
         vis_obs.insert_subfield("detector", "VIS")
         vis_obs.insert_subfield("sampling", vis_sampling)
+        vis_obs.insert_subfield("dict", label)
+        vis_obs.insert_subfield("index_dict", label)# for backward compatibility
 
         if vis_data is not None:
             vis_obs.insert_subfield("data", vis_data)
@@ -407,6 +409,8 @@ def from_file(filespec):
         ir_obs.insert_subfield("instrument", "VIMS")
         ir_obs.insert_subfield("detector", "IR")
         ir_obs.insert_subfield("sampling", ir_sampling)
+        ir_obs.insert_subfield("dict", label)
+        ir_obs.insert_subfield("index_dict", label)# for backward compatibility
 
         if ir_data is not None:
             ir_obs.insert_subfield("data", ir_data)

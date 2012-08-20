@@ -15,6 +15,22 @@
 # 6/6/12 MRS - Added limb geometry.
 # 7/29/12 MRS - Revised the calling sequence to support observation subclasses
 #   other than images.
+# 8/19/12 MRS - Added where_not(), where_any() and where_all(), misc.
+#   reorganization to support more path events, misc. bug fixes.
+#
+# TBD...
+#   position(self, event_key, axis="x", apparent=True, frame="j2000")
+#       returns an arbitrary position vector in an arbitrary frame
+#   velocity(self, event_key, axis="x", apparent=True, frame="j2000")
+#       returns an arbitrary velocity vector in an arbitrary frame
+#   pole_clock_angle(self, event_key)
+#       returns the projected angle of a body's pole vector on the sky
+#   projected_radius(self, event_key, radius="long")
+#       returns the projected angular radius of the body along its long or
+#       short axis.
+#   orbital_longitude(self, event_key, reference="j2000")
+#       returns the orbital longitude of the body's path relative to the
+#       barycenter of its motion.
 ################################################################################
 
 import numpy as np
@@ -32,6 +48,9 @@ class Backplane(object):
     sets of backplanes associated with a particular observation. It caches
     intermediate results to speed up calculations."""
 
+    HALFPI = np.pi / 2.
+    TWOPI  = np.pi * 2.
+
     def __init__(self, obs, meshgrid=None, time=None):
         """The constructor.
 
@@ -47,7 +66,7 @@ class Backplane(object):
 
         self.obs = obs
 
-        if meshgrid is None:
+        if meshgrid is None and obs.fov is not None:
             swap = obs.u_axis > obs.v_axis or obs.u_axis == -1
             self.meshgrid = Meshgrid.for_fov(obs.fov, swap=swap)
         else:
@@ -70,7 +89,7 @@ class Backplane(object):
         # for the event of intercept points on Saturn that fall in the path of
         # the photons arriving at Saturn's rings from the Sun.
         #
-        # Note that body names in event keys are converted to lower case.
+        # Note that body names in event keys are case-insensitive.
 
         self.surface_events_w_derivs = {(): self.obs_event}
         self.surface_events = {(): self.obs_event.plain()}
@@ -85,7 +104,7 @@ class Backplane(object):
 
         # The gridless_events dictionary keeps track of photon events at the
         # origin point of each defined surface. It uses the same keys as the
-        # surface_events dictionary. 
+        # surface_events dictionary.
 
         self.gridless_events = {(): self.obs_gridless_event}
 
@@ -120,6 +139,8 @@ class Backplane(object):
 
         if type(event_key) == type(""):
             return (event_key,)
+        elif isinstance(event_key, basestring):
+            return (str(event_key),)
         elif type(event_key) == type(()):
             return event_key
         else:
@@ -128,11 +149,12 @@ class Backplane(object):
     @staticmethod
     def standardize_backplane_key(backplane_key):
         """Repairs the given backplane key to make it suitable as an index into
-        the backplane dictionary. A string is turned into a tuple. If the
-        argument is a backplane already, the key is extracted from it."""
+        the backplane dictionary. A string is turned into a tuple. Strings are
+        converted to lower case. If the argument is a backplane already, the key
+        is extracted from it."""
 
         if type(backplane_key) == type(""):
-            return (backplane_key,)
+            return (backplane_key.lower(),)
         elif type(backplane_key) == type(()):
             return backplane_key
         elif isinstance(backplane_key, Array):
@@ -144,44 +166,46 @@ class Backplane(object):
     @staticmethod
     def get_surface(surface_id):
         """Interprets the string identifying the surface and returns the
-        associated surface. The string is normally a registered body ID in
-        lower case, but it can be modified to indicate an surface or other
-        associated surface."""
+        associated surface. The string is normally a registered body ID (case
+        insensitive), but it can be modified with ":ansa", ":ring" or ":limb"
+        to indicate an associated surface."""
+
+        surface_id = surface_id.upper()
 
         modifier = None
-        if surface_id.endswith(":ansa"):
-            modifier = "ansa"
+        if surface_id.endswith(":ANSA"):
+            modifier = "ANSA"
             body_id = surface_id[:-5]
 
-        elif surface_id.endswith(":ring"):
-            modifier = "ring"
+        elif surface_id.endswith(":RING"):
+            modifier = "RING"
             body_id = surface_id[:-5]
 
-        elif surface_id.endswith(":limb"):
-            modifier = "limb"
+        elif surface_id.endswith(":LIMB"):
+            modifier = "LIMB"
             body_id = surface_id[:-5]
 
         else:
             modifier = None
             body_id = surface_id
 
-        body = registry.body_lookup(body_id.upper())
+        body = registry.body_lookup(body_id)
 
         if modifier is None:
             return body.surface
 
-        if modifier == "ring":
+        if modifier == "RING":
             return surface_.RingPlane(body.path_id, body.ring_frame_id,
                                       gravity=body.gravity)
 
-        if modifier == "ansa":
+        if modifier == "ANSA":
             if body.surface.COORDINATE_TYPE == "polar":     # if it's a ring
                 return surface_.Ansa.for_ringplane(body.surface)
             else:                                           # if it's a planet
                 return surface_.Ansa(body.path_id, body.ring_frame_id)
 
-        if modifier == "limb":
-            return surface_.Limb(body.surface, exclusion=1.)
+        if modifier == "LIMB":
+            return surface_.Limb(body.surface, limits=(0.,np.inf))
 
     @staticmethod
     def get_path(path_id):
@@ -350,7 +374,28 @@ class Backplane(object):
             return Scalar(np.zeros(self.meshgrid.shape, dtype="bool"))
 
     def register_backplane(self, key, backplane):
-        """Inserts this backplane into the dictionary."""
+        """Inserts this backplane into the dictionary. If the backplane contains
+        just a single value, it is expanded to the overall shape of the
+        backplane."""
+
+        if isinstance(backplane, np.ndarray):
+            backplane = Scalar(backplane)
+
+        # Under some circumstances a derived backplane can be a scalar
+        if backplane.shape == [] and self.shape != []:
+            vals = np.empty(self.shape)
+            vals[...] = backplane.vals
+            backplane = Scalar(vals, backplane.mask)
+
+        # For reference, we add the key as an attribute of each backplane object
+        backplane = backplane.plain()
+        backplane.key = key
+
+        self.backplanes[key] = backplane
+
+    def register_gridless_backplane(self, key, backplane):
+        """Inserts this backplane into the dictionary. Same as
+        register_backplane() but without the expansion of a scalar value."""
 
         if isinstance(backplane, np.ndarray):
             backplane = Scalar(backplane)
@@ -362,164 +407,216 @@ class Backplane(object):
         self.backplanes[key] = backplane
 
     ############################################################################
-    # Scalar quantities
-    #
-    # sub_solar_longitude(event_key)
-    # sub_observer_longitude(event_key)
-    #
-    # sub_solar_latitude(event_key, lat_type="centric")
-    # sub_observer_latitude(event_key, lat_type="centric")
-    #   where lat_type can be "centric" or "graphic"
-    #
-    # solar_distance_to_center(event_key)
-    # observer_distance_to_center(event_key)
+    # Sky geometry, surface intercept versions
+    #   right_ascension()       right ascension of field of view, radians.
+    #   declination()           declination of field of view, radians.
     ############################################################################
 
-    def sub_solar_longitude(self, event_key):
-        event = self.get_gridless_event_with_arr(event_key)
-        arr = -event.aberrated_arr()
-        return arr.as_scalar(1).arctan2(arr.as_scalar(0)) % (np.pi*2)
+    def right_ascension(self, event_key=(), apparent=True, direction="arr"):
+        """Right ascension of the arriving or departing photon, optionally
+        allowing for stellar aberration.
 
-    def sub_observer_longitude(self, event_key):
-        event = self.get_gridless_event(event_key)
-        dep = event.aberrated_dep()
-        return dep.as_scalar(1).arctan2(dep.as_scalar(0)) % (np.pi*2)
-
-    def sub_solar_latitude(self, event_key, lat_type="centric"):
-        event = self.get_gridless_event_with_arr(event_key)
-        arr = -event.aberrated_arr()
-
-        if lat_type == "graphic": arr *= event.surface.unsquash_sq
-
-        return (arr.as_scalar(2) / arr.norm()).arcsin()
-
-    def sub_observer_latitude(self, event_key, lat_type="centric"):
-        event = self.get_gridless_event(event_key)
-        dep = event.aberrated_dep()
-
-        if lat_type == "graphic": dep *= event.surface.unsquash_sq
-
-        return (dep.as_scalar(2) / dep.norm()).arcsin()
-
-    def solar_distance_to_center(self, event_key):
-        event = self.get_gridless_event_with_arr(event_key)
-        return abs(event.arr_lt) * constants.C
-
-    def observer_distance_to_center(self, event_key):
-        event = self.get_gridless_event(event_key)
-        return abs(event.dep_lt) * constants.C
-
-    ############################################################################
-    # Sky geometry
-    #
-    # Right ascension keys are ("right_ascension", event_key, aberration,
-    #                           subfield, frame)
-    # Declination keys are ("declination", event_key, aberration,
-    #                           subfield, frame)
-    # where:
-    #   aberration      False to leave the location of a planetary body fixed
-    #                   with respect to the background stars;
-    #                   True to shift the location based on the motion of the
-    #                   observer relative to the SSB.
-    #   subfield        "arr" to base the direction on an arriving photon;
-    #                   "dep" to base the direction on a departing photon.
-    #   frame           The name of the coordinate frame, typically "j2000" but
-    #                   could be "B1950" for some purposes.
-    ############################################################################
-
-    def _fill_ra_dec(self, event_key, aberration=False, subfield="arr",
-                                           frame="j2000"):
-        """Internal method to fill in right ascension and declination
-        backplanes."""
+        Input:
+            event_key       key defining the surface event, typically () to
+                            refer to the observation.
+            apparent        True to return the apparent direction of photons in
+                            the frame of the event; False to return the purely
+                            geometric directions of the photons.
+            direction       "arr" to return the direction of an arriving photon;
+                            "dep" to return the direction of a departing photon.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
-        extras = (aberration, subfield, frame)
 
-        (ra,
-         dec) = self.get_surface_event_with_arr(event_key).ra_and_dec(*extras)
-        self.register_backplane(("right_ascension", event_key) + extras, ra)
-        self.register_backplane(("declination", event_key) + extras, dec)
+        key = ("right_ascension", event_key, apparent, direction)
+        if key not in self.backplanes.keys():
+            self._fill_ra_dec(event_key, apparent, direction)
 
-    def right_ascension(self, event_key=(), aberration=False, subfield="arr",
-                              frame="j2000"):
+        return self.backplanes[key]
+
+    def declination(self, event_key=(), apparent=True, direction="arr"):
+        """Declination of the arriving or departing photon, optionally
+        allowing for stellar aberration.
+
+        Input:
+            event_key       key defining the surface event, typically () to
+                            refer to the observation.
+            apparent        True to return the apparent direction of photons in
+                            the frame of the event; False to return the purely
+                            geometric directions of the photons.
+            direction       "arr" to base the direction on an arriving photon;
+                            "dep" to base the direction on a departing photon.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        key = ("declination", event_key, apparent, direction)
+        if key not in self.backplanes.keys():
+            self._fill_ra_dec(event_key, apparent, direction)
+
+        return self.backplanes[key]
+
+    def _fill_ra_dec(self, event_key, apparent, direction):
+        """Internal method to fill in right ascension and declination
+        backplanes based on the meshgrid."""
+
+        assert direction in ("arr", "dep")
+
+        event = self.get_surface_event_with_arr(event_key)
+        (ra, dec) = event.ra_and_dec(apparent, direction)
+
+        self.register_backplane(("right_ascension", event_key,
+                                apparent, direction), ra)
+        self.register_backplane(("declination", event_key,
+                                apparent, direction), dec)
+
+    ############################################################################
+    # Sky geometry, path intercept versions
+    #   center_right_ascension()    right ascension of path on sky, radians.
+    #   center_declination()        declination of path on sky, radians.
+    ############################################################################
+
+    def center_right_ascension(self, event_key, apparent=True, direction="arr"):
         """Right ascension of the arriving or departing photon, optionally
         allowing for stellar aberration and for frames other than J2000.
+
+        Input:
+            event_key       key defining the event at the body's path.
+            apparent        True to return the apparent direction of photons in
+                            the frame of the event; False to return the purely
+                            geometric directions of the photons.
+            direction       "arr" to return the direction of an arriving photon;
+                            "dep" to return the direction of a departing photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        extras = (aberration, subfield, frame)
-        key = ("right_ascension", event_key) + extras
 
+        key = ("center_right_ascension", event_key, apparent, direction)
         if key not in self.backplanes.keys():
-            self._fill_ra_dec(event_key, aberration, subfield, frame)
+            self._fill_center_ra_dec(event_key, apparent, direction)
 
         return self.backplanes[key]
 
-    def declination(self, event_key=(), aberration=False, subfield="arr",
-                          frame="j2000"):
+    def center_declination(self, event_key, apparent=True, direction="arr"):
         """Declination of the arriving or departing photon, optionally
         allowing for stellar aberration and for frames other than J2000.
+
+        Input:
+            event_key       key defining the event at the body's path.
+            apparent        True to return the apparent direction of photons in
+                            the frame of the event; False to return the purely
+                            geometric directions of the photons.
+            direction       "arr" to return the direction of an arriving photon;
+                            "dep" to return the direction of a departing photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        extras = (aberration, subfield, frame)
-        key = ("declination", event_key) + extras
 
+        key = ("center_declination", event_key, apparent, direction)
         if key not in self.backplanes.keys():
-            self._fill_ra_dec(event_key, aberration, subfield, frame)
+            self._fill_center_ra_dec(event_key, apparent, direction)
 
         return self.backplanes[key]
 
+    def _fill_center_ra_dec(self, event_key, apparent, direction):
+        """Internal method to fill in right ascension and declination
+        backplanes based on the center of a body's path."""
+
+        assert direction in ("arr", "dep")
+
+        event = self.get_surface_event_with_arr(event_key)
+        (ra, dec) = event.ra_and_dec(apparent, direction)
+
+        self.register_gridless_backplane(
+                ("center_right_ascension", event_key, apparent, direction), ra)
+        self.register_gridless_backplane(
+                ("center_declination", event_key, apparent, direction), dec)
+
     ############################################################################
-    # Basic geometry
-    #
-    # Range keys are ("distance", event_key, direction)
-    # Light time keys are ("light_time", event_key, direction)
-    #   direction is either "arr" for the distance to the lighting source or
-    #   "dep" for the distance to the observer.
-    #
-    # Resolution keys are ("resolution, event_key, axis)
-    #   axis is either 0 for the horizontal axis in the FOC or v for the
-    #   vertical axis in the FOV.
+    # Basic body geometry, surface intercept versions
+    #   distance()          distance traveled by photon, km.
+    #   light_time()        elapsed time from photon departure to arrival, sec.
+    #   resolution()        resolution based on surface distance, as a quantity
+    #                       defined perpendicular to the lines of sight, in
+    #                       km/pixel.
     ############################################################################
 
-    def distance(self, event_key, subfield="dep"):
-        """Range in km between a photon departure event to an arrival event."""
+    def distance(self, event_key, direction="dep"):
+        """Range in km between a photon event and its counterpart at the surface
+        of a body.
+
+        Input:
+            event_key       key defining the surface event.
+            direction       "arr" for distance traveled by the arriving photon;
+                            "dep" for distance traveled by the departing photon.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert subfield in {"dep", "arr"}
+        assert direction in ("dep", "arr")
 
-        key = ("distance", event_key, subfield)
+        key = ("distance", event_key, direction)
         if key not in self.backplanes.keys():
-            self.register_backplane(key,
-                            self.light_time(event_key, subfield) * constants.C)
+            lt = self.light_time(event_key, direction)
+            self.register_backplane(key, lt * constants.C)
 
         return self.backplanes[key]
 
-    def light_time(self, event_key, subfield="dep"):
-        """Time in seconds between a photon departure event and an arrival
-        event."""
+    def light_time(self, event_key, direction="dep"):
+        """Time in seconds between a photon's arrival and its departure.
+
+        Input:
+            event_key       key defining the surface event.
+            direction       "arr" for the travel time of the arriving photon;
+                            "dep" for the travel time of the departing photon.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert subfield in {"dep", "arr"}
+        assert direction in ("dep", "arr")
 
-        key = ("light_time", event_key, subfield)
+        key = ("light_time", event_key, direction)
         if key not in self.backplanes.keys():
-            if subfield == "arr":
+            if direction == "arr":
                 event = self.get_surface_event_with_arr(event_key)
             else:
                 event = self.get_surface_event(event_key)
 
-            self.register_backplane(key, abs(event.subfields[subfield + "_lt"]))
+            lt = event.subfields[direction + "_lt"]
+            self.register_backplane(key, abs(lt))
 
         return self.backplanes[key]
 
-    def resolution(self, event_key, axis=0):
-        """Projected spatial resolution in km/pixel at the intercept point,
-        based on range alone.
+    def event_time(self, event_key):
+        """The absolute time in seconds TDB when the photon intercepted the
+        surface.
+
+        Input:
+            event_key       key defining the surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
+
+        key = ("event_time", event_key)
+        if key not in self.backplanes.keys():
+            event = self.get_surface_event(event_key)
+            self.register_backplane(key, event.time)
+
+        return self.backplanes[key]
+
+    def resolution(self, event_key, axis="u"):
+        """Projected spatial resolution in km/pixel at the surface intercept,
+        defined perpendicular to the line of sight.
+
+        Input:
+            event_key       key defining the surface event.
+            axis            "u" for resolution along the horizontal axis of the
+                                observation;
+                            "v" for resolution along the vertical axis of the
+                                observation.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert axis in ("u","v")
+
         key = ("resolution", event_key, axis)
         if key not in self.backplanes.keys():
             distance = self.distance(event_key)
@@ -528,47 +625,177 @@ class Backplane(object):
             u_resolution = distance * dlos_du.as_vector3().norm()
             v_resolution = distance * dlos_dv.as_vector3().norm()
 
-            self.register_backplane(("resolution", event_key, 0), u_resolution)
-            self.register_backplane(("resolution", event_key, 1), v_resolution)
+            self.register_backplane(key[:-1] + ("u",), u_resolution)
+            self.register_backplane(key[:-1] + ("v",), v_resolution)
 
         return self.backplanes[key]
 
     ############################################################################
-    # Surface lighting geometry
-    #
-    # Indicence keys are ("incidence_angle", event_key)
-    # Emission keys are ("emission_angle", event_key)
-    # Phase angle keys are ("phase_angle", event_key)
-    # Scattering angle keys are ("scattering_angle", event_key)
-    # Lambert law keys are ("lambert_law", event_key)
+    # Basic body, path intercept versions
+    #   center_distance()   distance traveled by photon, km.
+    #   center_light_time() elapsed time from photon departure to arrival, sec.
+    #   center_resolution() resolution based on body center distance, km/pixel.
+    ############################################################################
+
+    def center_distance(self, event_key, direction="obs"):
+        """Range in km between a photon event and its counterpart at the
+        central path of a body.
+
+        Input:
+            event_key       key defining the event at the body's path.
+            direction       "arr" or "sun" to return the distance traveled by an
+                                           arriving photon;
+                            "dep" or "obs" to return the distance traveled by a
+                                           departing photon.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("center_distance", event_key, direction)
+        if key not in self.backplanes.keys():
+            lt = self.center_light_time(event_key, direction)
+            self.register_gridless_backplane(key, lt * constants.C)
+
+        return self.backplanes[key]
+
+    def center_light_time(self, event_key, direction="dep"):
+        """Time in seconds between a photon event and its counterpert at the
+        central path of a body.
+
+        Input:
+            event_key       key defining the event at the body's path.
+            direction       "arr" or "sun" to return the travel time for an
+                                           arriving photon;
+                            "dep" or "obs" to return the travel time for a
+                                           departing photon.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert direction in ("obs", "sun", "dep", "arr")
+
+        key = ("center_light_time", event_key, direction)
+        if key not in self.backplanes.keys():
+            if direction in ("sun", "arr"):
+                event = self.get_gridless_event_with_arr(event_key)
+                lt = event.arr_lt
+            else:
+                event = self.get_gridless_event(event_key)
+                lt = event.dep_lt
+
+            self.register_gridless_backplane(key, abs(lt))
+
+        return self.backplanes[key]
+
+    def center_time(self, event_key):
+        """The absolute time in seconds TDB when the photon intercepted the
+        path.
+
+        Input:
+            event_key       key defining the event at the body's path.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        key = ("center_time", event_key)
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event(event_key)
+            self.register_gridless_backplane(key, event.time)
+
+        return self.backplanes[key]
+
+    def center_resolution(self, event_key, axis="u"):
+        """Directionless projected spatial resolution in km/pixel at the
+        central path of a body, based on range alone.
+
+        Input:
+            event_key       key defining the event at the body's path.
+            axis            "u" for resolution along the horizontal axis of the
+                                observation;
+                            "v" for resolution along the vertical axis of the
+                                observation.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert axis in ("u","v")
+
+        key = ("center_resolution", event_key, axis)
+        if key not in self.backplanes.keys():
+            distance = self.center_distance(event_key)
+
+            (dlos_du, dlos_dv) = self.obs.fov.center_dlos_duv.as_columns()
+            u_resolution = distance * dlos_du.as_vector3().norm()
+            v_resolution = distance * dlos_dv.as_vector3().norm()
+
+            self.register_gridless_backplane(key[:-1] + ("u",), u_resolution)
+            self.register_gridless_backplane(key[:-1] + ("v",), v_resolution)
+
+        return self.backplanes[key]
+
+    ############################################################################
+    # Lighting geometry, surface intercept version
+    #   incidence_angle()   incidence angle at surface, radians.
+    #   emission_angle()    emission angle at surface, radians.
+    #   lambert_law()       Lambert Law model for surface, cos(incidence).
     ############################################################################
 
     def incidence_angle(self, event_key):
         """Incidence angle of the arriving photons at the local surface.
+
+        Input:
+            event_key       key defining the surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("incidence_angle", event_key)
         if key not in self.backplanes.keys():
             event = self.get_surface_event_with_arr(event_key)
-            self.register_backplane(key, event.incidence_angle())
+            incidence = event.incidence_angle()
+
+            # Ring incidence angles are always 0-90 degrees
+            if event.surface.COORDINATE_TYPE == "polar":
+
+                # flip is True wherever incidence angle has to be changed
+                flip = (incidence > Backplane.HALFPI)
+                self.register_backplane(("ring_flip", event_key), flip)
+
+                # Now flip incidence angles where necessary
+                incidence = np.pi * flip + (1. - 2.*flip) * incidence
+
+            self.register_backplane(key, incidence)
 
         return self.backplanes[key]
 
     def emission_angle(self, event_key):
         """Emission angle of the departing photons at the local surface.
+
+        Input:
+            event_key       key defining the surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("emission_angle", event_key)
         if key not in self.backplanes.keys():
             event = self.get_surface_event(event_key)
-            self.register_backplane(key, event.emission_angle())
+            emission = event.emission_angle()
+
+            # Ring emission angles are always measured from the lit side normal
+            if event.surface.COORDINATE_TYPE == "polar":
+
+                # Get the flip flag
+                ignore = self.incidence_angle(event_key)
+                flip = self.backplanes[("ring_flip", event_key)]
+
+                # Flip emission angles where necessary
+                emission = np.pi * flip + (1. - 2.*flip) * emission
+
+            self.register_backplane(key, emission)
 
         return self.backplanes[key]
 
     def phase_angle(self, event_key):
         """Phase angle between the arriving and departing photons.
+
+        Input:
+            event_key       key defining the surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -581,6 +808,9 @@ class Backplane(object):
 
     def scattering_angle(self, event_key):
         """Scattering angle between the arriving and departing photons.
+
+        Input:
+            event_key       key defining the surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -591,7 +821,10 @@ class Backplane(object):
         return self.backplanes[key]
 
     def lambert_law(self, event_key):
-        """Lambert-law model cos(incidence_angle) for the surface.
+        """Lambert law model cos(incidence_angle) for the surface.
+
+        Input:
+            event_key       key defining the surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -599,40 +832,467 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
             lambert_law = incidence.cos()
-            lambert_law.mask |= (incidence.vals >= np.pi/2)
+            lambert_law.mask |= (incidence.vals >= Backplane.HALFPI)
             lambert_law.vals[lambert_law.mask] = 0.
             self.register_backplane(key, lambert_law)
 
         return self.backplanes[key]
 
     ############################################################################
-    # Ring plane geometry
-    #
-    # Radius keys are ("ring_radius", event_key)
-    # Longitude keys are ("ring_longitude", event_key, reference)
-    #   where reference can be "j2000", "obs", "oha", "sun" or "sha".
-    # Azimuth keys are ("ring_azimuth", reference)
-    #   where reference can be "obs", "sun".
-    # Elevation keys are ("ring_elevation", reference)
-    #   where reference can be "obs", "sun".
+    # Lighting geometry, path intercept version
+    #   center_incidence_angle()    incidence angle at path, radians. This uses
+    #                               the z-axis of the target frame to define the
+    #                               normal vector; it is used primarily for
+    #                               rings.
+    #   center_emission_angle()     emission angle at surface, radians. See
+    #                               above.
+    #   center_phase_angle()        phase angle at body's center, radians.
+    #   center_scattering_angle()   scattering angle at body's center, radians.
     ############################################################################
 
-    def _fill_ring_intercepts(self, event_key):
-        """Internal method to fill in the ring intercept geometry backplanes.
+    def center_incidence_angle(self, event_key):
+        """Incidence angle of the arriving photons at the body's central path.
+        This uses the z-axis of the body's frame to define the local normal.
+
+        Input:
+            event_key       key defining the event on the body's path.
         """
 
-        # Get the ring intercept coordinates
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("center_incidence_angle", event_key)
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event_with_arr(event_key)
+
+            # Sign on event.arr is negative because photon is incoming
+            latitude = (-event.arr.as_scalar(2) / event.arr.norm()).arcsin()
+            incidence = Backplane.HALFPI - latitude
+
+            # Ring incidence angles are always 0-90 degrees
+            if event.surface.COORDINATE_TYPE == "polar":
+
+                # The flip is True wherever incidence angle has to be changed
+                flip = (incidence > Backplane.HALFPI)
+                self.register_gridless_backplane(("ring_center_flip",
+                                                  event_key), flip)
+
+                # Now flip incidence angles where necessary
+                if flip.sum() > 0:
+                    incidence = np.pi * flip + (1. - 2.*flip) * incidence
+
+            self.register_gridless_backplane(key, incidence)
+
+        return self.backplanes[key]
+
+    def center_emission_angle(self, event_key):
+        """Emission angle of the departing photons at the body's central path.
+        This uses the z-axis of the body's frame to define the local normal.
+
+        Input:
+            event_key       key defining the event on the body's path.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("center_emission_angle", event_key)
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event(event_key)
+
+            latitude = (event.dep.as_scalar(2) / event.dep.norm()).arcsin()
+            emission = Backplane.HALFPI - latitude
+
+            # Ring emission angles are always measured from the lit side normal
+            if event.surface.COORDINATE_TYPE == "polar":
+
+                # Get the flip flag
+                ignore = self.center_incidence_angle(event_key)
+                flip = self.backplanes[("ring_center_flip", event_key)]
+
+                # Flip emission angles where necessary
+                if flip.sum() > 0:
+                    emission = np.pi * flip + (1. - 2.*flip) * emission
+
+            self.register_gridless_backplane(key, emission)
+
+        return self.backplanes[key]
+
+    def center_phase_angle(self, event_key):
+        """Phase angle as measured at the body's central path.
+
+        Input:
+            event_key       key defining the event on the body's path.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("center_phase_angle", event_key)
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event_with_arr(event_key)
+            self.register_gridless_backplane(key, event.phase_angle())
+
+        return self.backplanes[key]
+
+    def center_scattering_angle(self, event_key):
+        """Scattering angle as measured at the body's central path.
+
+        Input:
+            event_key       key defining the event on the body's path.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("center_scattering_angle", event_key)
+        if key not in self.backplanes.keys():
+            angle = np.pi - self.center_phase_angle(event_key)
+            self.register_gridless_backplane(key, angle)
+
+        return self.backplanes[key]
+
+    ############################################################################
+    # Body surface geometry, surface intercept versions
+    #   longitude()
+    #   latitude()
+    ############################################################################
+
+    def longitude(self, event_key, reference="iau", direction="west",
+                                                    minimum=0):
+        """Longitude at the surface intercept point in the image.
+
+        Input:
+            event_key       key defining the ring surface event.
+            reference       defines the location of zero longitude.
+                            "iau" for the IAU-defined prime meridian;
+                            "obs" for the sub-observer longitude;
+                            "sun" for the sub-solar longitude;
+                            "oha" for the anti-observer longitude;
+                            "sha" for the anti-solar longitude, returning the
+                                  local time on the planet if direction is west.
+            direction       direction on the surface of increasing longitude,
+                            "east" or "west".
+            minimum         the smallest numeric value of longitude, either 0
+                            or -180.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert reference in ("iau", "sun", "sha", "obs", "oha")
+        assert direction in ("east", "west")
+        assert minimum in (0, -180)
+
+        # Look up under the desired reference
+        key0 = ("longitude", event_key)
+        key = key0 + (reference, direction, minimum)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # If it is not found with default keys, fill in those backplanes
+        # Note that longitudes default to eastward for right-handed coordinates
+        key_default = key0 + ("iau", "east", 0)
+        if key_default not in self.backplanes.keys():
+            self._fill_surface_intercepts(event_key)
+
+        # Fill in the values for this key
+        if reference == "iau":
+            ref_lon = 0.
+        elif reference == "sun":
+            ref_lon = self.sub_solar_longitude(event_key)
+        elif reference == "sha":
+            ref_lon = self.sub_solar_longitude(event_key) - np.pi
+        elif reference == "obs":
+            ref_lon = self.sub_observer_longitude(event_key)
+        elif reference == "oha":
+            ref_lon = self.sub_observer_longitude(event_key) - np.pi
+
+        lon = self.backplanes[key_default] - ref_lon
+
+        if direction == "west": lon = -lon
+
+        if minimum == 0:
+            lon = lon % Backplane.TWOPI
+        else:
+            lon = (lon + np.pi) % Backplane.TWOPI - np.pi
+
+        self.register_backplane(key, lon)
+        return self.backplanes[key]
+
+    def latitude(self, event_key, lat_type="centric"):
+        """Latitude at the surface intercept point in the image.
+
+        Input:
+            event_key       key defining the ring surface event.
+            lat_type        defines the type of latitude measurement:
+                            "centric"   for planetocentric;
+                            "graphic"   for planetographic;
+                            "squashed"  for an intermediate latitude type used
+                                        internally.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert lat_type in ("centric", "graphic", "squashed")
+
+        # Look up under the desired reference
+        key0 = ("latitude", event_key)
+        key = key0 + (lat_type,)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # If it is not found with default keys, fill in those backplanes
+        key_default = key0 + ("squashed",)
+        if key_default not in self.backplanes.keys():
+            self._fill_surface_intercepts(event_key)
+
+        # Fill in the values for this key
+        lat = self.backplanes[key_default]
+        if lat_type == "squashed":
+            return lat
+
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE in ("spherical", "limb")
+
+        if lat_type == "centric":
+            lat = event.surface.lat_to_centric(lat)
+        else:
+            lat = event.surface.lat_to_graphic(lat)
+
+        self.register_backplane(key, lat)
+        return self.backplanes[key]
+
+    def _fill_surface_intercepts(self, event_key):
+        """Internal method to fill in the surface intercept geometry backplanes.
+        """
+
+        # Get the surface intercept coordinates
         event_key = Backplane.standardize_event_key(event_key)
         event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == "polar"
 
-        (r,lon) = event.surface.event_as_coords(event, axes=2)
+        # If this is actually a limb event, define the limb backplanes instead
+        if event.surface.COORDINATE_TYPE == "limb":
+            self._fill_limb_intercepts(event_key)
+            return
 
-        self.register_backplane(("ring_radius", event_key), r)
-        self.register_backplane(("ring_longitude", event_key, "j2000"), lon)
+        assert event.surface.COORDINATE_TYPE == "spherical"
+
+        (lon,lat) = event.surface.event_as_coords(event, axes=2, derivs=False)
+
+        self.register_backplane(("longitude", event_key, "iau", "east", 0), lon)
+        self.register_backplane(("latitude", event_key, "squashed"), lat)
+
+    ############################################################################
+    # Surface geometry, path intercept versions
+    #   sub_longitude()
+    #   sub_solar_longitude()
+    #   sub_observer_longitude()
+    #   sub_latitude()
+    #   sub_solar_latitude()
+    #   sub_observer_latitude()
+    ############################################################################
+
+    def sub_longitude(self, event_key, reference="obs", direction="east"):
+        """Sub-solar or sub-observer longitude at the body's path, relative
+        to the x-coordinate of the body's coordinate frame. This is the IAU
+        meridian for planets and moons, and the J2000 ascending node for rings.
+
+        Input:
+            event_key       key defining the event on the body's path.
+            reference       "obs" for the sub-observer longitude;
+                            "sun" for the sub-solar longitude.
+            direction       the direction of increasing longitude, either "east"
+                            or "west".
+        """
+
+        assert reference in ("obs", "sun")
+
+        if reference == "obs":
+            lon = self.sub_observer_longitude(event_key)
+        else:
+            lon = self.sub_solar_longitude(event_key)
+
+        if direction == "west":
+            lon = Backplane.TWOPI - lon
+
+        return lon
+
+    def sub_solar_longitude(self, event_key):
+        """Sub-solar longitude, primarily used internally. Longitudes are
+        measured eastward from the x-axis of the target's coordinate frame.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("sub_solar_longitude", event_key)
+
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event_with_arr(event_key)
+            arr = -event.aberrated_arr()
+            lon = arr.as_scalar(1).arctan2(arr.as_scalar(0)) % Backplane.TWOPI
+
+            self.register_gridless_backplane(key, lon)
+
+        return self.backplanes[key]
+
+    def sub_observer_longitude(self, event_key):
+        """Sub-observer longitude, primarily used internally. Longitudes are
+        measured eastward from the x-axis of the target's coordinate frame.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("sub_observer_longitude", event_key)
+
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event(event_key)
+            dep = event.aberrated_dep()
+            lon = dep.as_scalar(1).arctan2(dep.as_scalar(0)) % Backplane.TWOPI
+
+            self.register_gridless_backplane(key, lon)
+
+        return self.backplanes[key]
+
+    def sub_latitude(self, event_key, reference="obs", lat_type="centric"):
+        """Sub-solar or sub-observer latitude at the body's path.
+
+        Input:
+            event_key       key defining the event on the body's path.
+            reference       "obs" for the sub-observer latitude;
+                            "sun" for the sub-solar latitude.
+            lat_type        "centric" for planetocentric latitude;
+                            "graphic" for planetographic latitude.
+        """
+
+        assert reference in ("obs", "sun")
+
+        if reference == "obs":
+            return self.sub_observer_latitude(event_key, lat_type)
+        else:
+            return self.sub_solar_latitude(event_key, lat_type)
+
+    def sub_solar_latitude(self, event_key, lat_type="centric"):
+        """Sub-solar latitude, primarily used internally."""
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert lat_type in ("centric", "graphic")
+
+        key = ("sub_solar_latitude", event_key, lat_type)
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event_with_arr(event_key)
+            arr = -event.aberrated_arr()
+
+            if lat_type == "graphic":
+                arr = arr * event.surface.unsquash_sq
+
+            lat = (arr.as_scalar(2) / arr.norm()).arcsin()
+            self.register_gridless_backplane(key, lat)
+
+        return self.backplanes[key]
+
+    def sub_observer_latitude(self, event_key, lat_type="centric"):
+        """Sub-observer latitude, primarily used internally."""
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert lat_type in ("centric", "graphic")
+
+        key = ("sub_observer_latitude", event_key, lat_type)
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event(event_key)
+            dep = event.aberrated_dep()
+
+            if lat_type == "graphic":
+                dep = dep * event.surface.unsquash_sq
+
+            lat = (dep.as_scalar(2) / dep.norm()).arcsin()
+            self.register_gridless_backplane(key, lat)
+
+        return self.backplanes[key]
+
+    ############################################################################
+    # Surface resolution, surface intercepts only
+    #   finest_resolution()
+    #   coarsest_resolution()
+    ############################################################################
+
+    def finest_resolution(self, event_key):
+        """Projected spatial resolution in km/pixel in the optimal direction at
+        the intercept point.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("finest_resolution", event_key)
+        if key not in self.backplanes.keys():
+            self._fill_surface_resolution(event_key)
+
+        return self.backplanes[key]
+
+    def coarsest_resolution(self, event_key):
+        """Projected spatial resolution in km/pixel in the worst direction at
+        the intercept point.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("coarsest_resolution", event_key)
+        if key not in self.backplanes.keys():
+            self._fill_surface_resolution(event_key)
+
+        return self.backplanes[key]
+
+    def _fill_surface_resolution(self, event_key):
+        """Internal method to fill in the surface resolution backplanes.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event_w_derivs(event_key)
+
+        dpos_duv = event.pos.d_dlos * self.meshgrid.dlos_duv
+        (minres, maxres) = surface_.Surface.resolution(dpos_duv)
+
+        self.register_backplane(("finest_resolution", event_key), minres)
+        self.register_backplane(("coarsest_resolution", event_key), maxres)
+
+    ############################################################################
+    # Limb geometry, surface intercepts only
+    #   altitude()
+    ############################################################################
+
+    def altitude(self, event_key):
+        """Elevation of a limb point above the body's surface.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("altitude", event_key)
+        if key not in self.backplanes.keys():
+            self._fill_limb_intercepts(event_key)
+
+        return self.backplanes[key]
+
+    def _fill_limb_intercepts(self, event_key):
+        """Internal method to fill in the limb intercept geometry backplanes.
+        """
+
+        # Get the limb intercept coordinates
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == "limb"
+
+        (lon,lat,z) = event.surface.event_as_coords(event, axes=3)
+
+        self.register_backplane(("longitude", event_key, "iau", "east", 0), lon)
+        self.register_backplane(("latitude", event_key, "squashed"), lat)
+        self.register_backplane(("altitude", event_key), z)
+
+    ############################################################################
+    # Ring plane geometry, surface intercept version
+    #   ring_radius()
+    #   ring_longitude()
+    #   ring_azimuth()
+    #   ring_elevation()
+    ############################################################################
 
     def ring_radius(self, event_key):
-        """Radius of the ring intercept point in the image.
+        """Radius of the ring intercept point in the observation.
+
+        Input:
+            event_key       key defining the ring surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -644,6 +1304,19 @@ class Backplane(object):
 
     def ring_longitude(self, event_key, reference="j2000"):
         """Longitude of the ring intercept point in the image.
+
+        Input:
+            event_key       key defining the ring surface event.
+            reference       defines the location of zero longitude.
+                            "j2000" for the J2000 ascending node;
+                            "obs"   for the sub-observer longitude;
+                            "sun"   for the sub-solar longitude;
+                            "oha"   for the anti-observer longitude;
+                            "sha"   for the anti-solar longitude, returning the
+                                    solar hour angle.
+                            Put "old-" in front of the last four for deprecated
+                            definitions, which are slower but infinitesimally
+                            more accurate.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -652,13 +1325,12 @@ class Backplane(object):
                             # The last four are deprecated but not deleted
 
         # Look up under the desired reference
-        key0 = ("ring_longitude", event_key)
-        key = key0 + (reference,)
+        key = ("ring_longitude", event_key, reference)
         if key in self.backplanes.keys():
             return self.backplanes[key]
 
         # If it is not found with reference J2000, fill in those backplanes
-        key_j2000 = key0 + ("j2000",)
+        key_j2000 = key[:-1] + ("j2000",)
         if key_j2000 not in self.backplanes.keys():
             self._fill_ring_intercepts(event_key)
 
@@ -686,10 +1358,110 @@ class Backplane(object):
         elif reference == "old-oha":
             ref_lon = self._sub_observer_ring_longitude(event_key) - np.pi
 
-        lon = (self.backplanes[key0 + ("j2000",)] - ref_lon) % (2*np.pi)
-        self.register_backplane(key0 + (reference,), lon)
+        lon = (self.backplanes[key_j2000] - ref_lon) % Backplane.TWOPI
+        self.register_backplane(key, lon)
 
         return self.backplanes[key]
+
+    def ring_azimuth(self, event_key, reference="obs"):
+        """The angle measured in the prograde direction from a reference
+        direction to the local radial direction, as measured at the ring
+        intercept point and projected into the ring plane. This value is 90 at
+        the left ansa and 270 at the right ansa."
+
+        The reference direction can be "obs" for the apparent departing
+        direction of the photon, or "sun" for the (negative) apparent direction
+        of the arriving photon.
+
+        Input:
+            event_key       key defining the ring surface event.
+            reference       "obs" or "sun"; see discussion above.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert reference in ("obs", "sun")
+
+        # Look up under the desired reference
+        key = ("ring_azimuth", event_key, reference)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # If not found, fill in the ring events if necessary
+        if ("ring_radius", event_key) not in self.backplanes.keys():
+            self._fill_ring_intercepts(event_key)
+
+        # reference = "obs"
+        if reference == "obs":
+            event = self.get_surface_event(event_key)
+            ref = event.aberrated_dep()
+
+        # reference = "sun"
+        else:
+            event = self.get_surface_event_with_arr(event_key)
+            ref = -event.aberrated_arr()
+
+        ref_angle = ref.as_scalar(1).arctan2(ref.as_scalar(0))
+        rad_angle = event.pos.as_scalar(1).arctan2(event.pos.as_scalar(0))
+        az = (rad_angle - ref_angle) % Backplane.TWOPI
+        self.register_backplane(key, az)
+
+        return self.backplanes[key]
+
+    def ring_elevation(self, event_key, reference="obs"):
+        """The angle between the the ring plane and the direction of a photon
+        arriving or departing from the ring intercept point. The angle is
+        positive on the side of the ring plane where rotation is prograde;
+        negative on the opposite side.
+
+        The reference direction can be "obs" for the apparent departing
+        direction of the photon, or "sun" for the (negative) apparent direction
+        of the arriving photon.
+
+        Input:
+            event_key       key defining the ring surface event.
+            reference       "obs" or "sun"; see discussion above.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        assert reference in ("obs", "sun")
+
+        # Look up under the desired reference
+        key = ("ring_elevation", event_key, reference)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # If not found, fill in the ring events if necessary
+        if ("ring_radius", event_key) not in self.backplanes.keys():
+            self._fill_ring_intercepts(event_key)
+
+        # reference = "obs"
+        if reference == "obs":
+            event = self.get_surface_event(event_key)
+            dir = event.aberrated_dep()
+
+        # reference = "sun"
+        else:
+            event = self.get_surface_event_with_arr(event_key)
+            dir = -event.aberrated_arr()
+
+        el = Backplane.HALFPI - event.perp.sep(dir)
+        self.register_backplane(key, el)
+
+        return self.backplanes[key]
+
+    def _fill_ring_intercepts(self, event_key):
+        """Internal method to fill in the ring intercept geometry backplanes.
+        """
+
+        # Get the ring intercept coordinates
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == "polar"
+
+        (r,lon) = event.surface.event_as_coords(event, axes=2)
+
+        self.register_backplane(("ring_radius", event_key), r)
+        self.register_backplane(("ring_longitude", event_key, "j2000"), lon)
 
     # Deprecated...
     def _sub_observer_ring_longitude(self, event_key):
@@ -705,7 +1477,7 @@ class Backplane(object):
         # At each intercept time, determine the outgoing direction to the
         # observer from the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (0,0,0), (0,0,0),
+        center_event = Event(event.time, Vector3.ZERO, Vector3.ZERO,
                                          event.origin_id, event.frame_id)
         obs_path = path_.Waypoint(self.obs_event.origin_id)
         ignore = obs_path.photon_from_event(center_event)
@@ -732,7 +1504,7 @@ class Backplane(object):
         # At each intercept time, determine the incoming direction from the Sun
         # to the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (0,0,0), (0,0,0),
+        center_event = Event(event.time, Vector3.ZERO, Vector3.ZERO,
                                          event.origin_id, event.frame_id)
         ignore = path_.Waypoint("SUN").photon_to_event(center_event)
 
@@ -744,95 +1516,34 @@ class Backplane(object):
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
-    def ring_azimuth(self, event_key, reference="obs"):
-        """The angle measured in the prograde direction from a reference
-        direction to the local radial direction, as measured at the ring
-        intercept point and projected into the ring plane. This value is 90 at
-        the left ansa and 270 at the right ansa."
-
-        The reference direction can be "obs" for the apparent departing
-        direction of the photon, or "sun" for the (negative) apparent direction
-        of the arriving photon.
+    def ring_incidence_angle(self, event_key):
+        """Incidence_angle angle of the arriving photons at the local ring
+        surface. According to the standard convention for rings, this must be
+        <= pi/2. DEPRECATED; use incidence_angle() instead.
         """
 
-        event_key = Backplane.standardize_event_key(event_key)
-        assert reference in {"obs", "sun"}
+        return self.incidence_angle(event_key)
 
-        # Look up under the desired reference
-        key0 = ("ring_azimuth", event_key)
-        key = key0 + (reference,)
-        if key in self.backplanes.keys():
-            return self.backplanes[key]
-
-        # If not found, fill in the ring events if necessary
-        if ("ring_radius", event_key) not in self.backplanes.keys():
-            self._fill_ring_intercepts(event_key)
-
-        # reference = "obs"
-        if reference == "obs":
-            event = self.get_surface_event(event_key)
-            ref = event.aberrated_dep()
-
-        # reference = "sun"
-        else:
-            event = self.get_surface_event_with_arr(event_key)
-            ref = -event.aberrated_arr()
-
-        ref_angle = ref.as_scalar(1).arctan2(ref.as_scalar(0))
-        rad_angle = event.pos.as_scalar(1).arctan2(event.pos.as_scalar(0))
-        az = (rad_angle - ref_angle) % (2.*np.pi)
-        self.register_backplane(key, az)
-
-        return self.backplanes[key]
-
-    def ring_elevation(self, event_key, reference="obs"):
-        """The angle between the the ring plane and the direction of a photon
-        arriving or departing from the ring intercept point. The angle is
-        positive on the side of the ring plane where rotation is prograde;
-        negative on the opposite side.
-
-        The reference direction can be "obs" for the apparent departing
-        direction of the photon, or "sun" for the (negative) apparent direction
-        of the arriving photon.
+    def ring_emission_angle(self, event_key):
+        """Emission angle of the departing photons at the local ring surface.
+        According to the standard convention for rings, this must be < pi/2 on
+        the sunlit side of the rings and > pi/2 on the dark side. DEPRECATED;
+        use emission_angle() instead.
         """
 
-        event_key = Backplane.standardize_event_key(event_key)
-        assert reference in {"obs", "sun"}
-
-        # Look up under the desired reference
-        key0 = ("ring_elevation", event_key)
-        key = key0 + (reference,)
-        if key in self.backplanes.keys():
-            return self.backplanes[key]
-
-        # If not found, fill in the ring events if necessary
-        if ("ring_radius", event_key) not in self.backplanes.keys():
-            self._fill_ring_intercepts(event_key)
-
-        # reference = "obs"
-        if reference == "obs":
-            event = self.get_surface_event(event_key)
-            dir = event.aberrated_dep()
-
-        # reference = "sun"
-        else:
-            event = self.get_surface_event_with_arr(event_key)
-            dir = -event.aberrated_arr()
-
-        el = np.pi/2 - event.perp.sep(dir)
-        self.register_backplane(key, el)
-
-        return self.backplanes[key]
+        return self.emission_angle(event_key)
 
     ############################################################################
-    # Ring plane resolution
-    #
-    # Radius keys: ("ring_radial_resolution", event_key)
-    # Longitude keys: ("ring_angular_resolution", event_key)
+    # Ring plane geometry, surface intercept only
+    #   ring_radial_resolution()
+    #   ring_angular_resolution()
     ############################################################################
 
     def ring_radial_resolution(self, event_key):
         """Projected radial resolution in km/pixel at the ring intercept point.
+
+        Input:
+            event_key       key defining the ring surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -856,6 +1567,9 @@ class Backplane(object):
     def ring_angular_resolution(self, event_key):
         """Projected angular resolution in radians/pixel at the ring intercept
         point.
+
+        Input:
+            event_key       key defining the ring surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -877,71 +1591,17 @@ class Backplane(object):
         return self.backplanes[key]
 
     ############################################################################
-    # Ring lighting geometry
-    #
-    # Indicence keys are ("incidence_angle", event_key)
-    # Emission keys are ("emission_angle", event_key)
+    # Ring ansa geometry, surface intercept only
+    #   ansa_radius()
+    #   ansa_altitude()
+    #   ansa_longitude()
     ############################################################################
-
-    def ring_incidence_angle(self, event_key):
-        """Incidence_angle angle of the arriving photons at the local ring
-        surface. According to the standard convention for rings, this must be
-        <= pi/2.
-        """
-
-        key = ("ring_incidence_angle", event_key)
-        if key not in self.backplanes.keys():
-            incidence = bp.incidence_angle(event_key)
-
-            if bp.sub_solar_latitude(event_key) < 0.:
-                incidence = np.pi - incidence
-
-            self.register_backplane(key, incidence)
-
-        return self.backplanes[key]
-
-    def ring_emission_angle(self, event_key):
-        """Emission angle of the departing photons at the local ring surface.
-        According to the standard convention for rings, this must be < pi/2 on
-        the sunlit side of the rings and > pi/2 on the dark side.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ("ring_emission_angle", event_key)
-        if key not in self.backplanes.keys():
-            emission = bp.emission_angle(event_key)
-
-            if bp.sub_solar_latitude(event_key) < 0.:
-                emission = np.pi - emission
-
-            self.register_backplane(key, emission)
-
-        return self.backplanes[key]
-
-    ############################################################################
-    # Ring ansa geometry
-    #
-    # Radius keys are ("ansa_radius", ring_event_key, radius_type)
-    #   where radius_type = "right", "left" or "positive"
-    # Elevation keys are ("ansa_elevation", ring_event_key)
-    ############################################################################
-
-    def _fill_ansa_intercepts(self, event_key):
-        """Internal method to fill in the ansa intercept geometry backplanes.
-        """
-
-        # Get the ansa intercept coordinates
-        event_key = Backplane.standardize_event_key(event_key)
-        event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == "cylindrical"
-
-        (r,z) = event.surface.event_as_coords(event, axes=2)
-
-        self.register_backplane(("ansa_radius", event_key, "right"), r)
-        self.register_backplane(("ansa_elevation", event_key), z)
 
     def ansa_radius(self, event_key, radius_type="right"):
         """Radius of the ring ansa intercept point in the image.
+
+        Input:
+            event_key       key defining the ring surface event.
         """
 
         # Look up under the desired radius type
@@ -952,7 +1612,7 @@ class Backplane(object):
             return self.backplanes[key]
 
         # If not found, look up the default "right"
-        assert radius_type in {"right", "left", "positive"}
+        assert radius_type in ("right", "left", "positive")
 
         key_default = key0 + ("right",)
         if key_default not in self.backplanes.keys():
@@ -968,41 +1628,35 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def ansa_elevation(self, event_key):
+    def ansa_altitude(self, event_key):
         """Elevation of the ring ansa intercept point in the image.
+
+        Input:
+            event_key       key defining the ring surface event.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        key = ("ansa_elevation", event_key)
+        key = ("ansa_altitude", event_key)
         if key not in self.backplanes.keys():
             self._fill_ansa_intercepts(event_key)
 
         return self.backplanes[key]
 
-    ############################################################################
-    # Ring ansa longitude
-    #
-    # Longitude keys are ("ansa_longitude", event_key, reference)
-    #   where reference can be "j2000", "obs", "oha", "sun" or "sha".
-    ############################################################################
-
-    def _fill_ansa_longitudes(self, event_key):
-        """Internal method to fill in the ansa intercept longitude backplane
-        in J2000 coordinates.
-        """
-
-        # Get the ansa intercept event
-        event_key = Backplane.standardize_event_key(event_key)
-        event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == "cylindrical"
-
-        # Get the longitude in the associated ring plane
-        (r,lon) = event.surface.ringplane.event_as_coords(event, axes=2)
-
-        self.register_backplane(("ansa_longitude", event_key, "j2000"), lon)
-
     def ansa_longitude(self, event_key, reference="j2000"):
         """Longitude of the ansa intercept point in the image.
+
+        Input:
+            event_key       key defining the ring surface event.
+            reference       defines the location of zero longitude.
+                            "j2000" for the J2000 ascending node;
+                            "obs"   for the sub-observer longitude;
+                            "sun"   for the sub-solar longitude;
+                            "oha"   for the anti-observer longitude;
+                            "sha"   for the anti-solar longitude, returning the
+                                    solar hour angle.
+                            Put "old-" in front of the last four for deprecated
+                            definitions, which are slower but infinitesimally
+                            more accurate.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -1045,10 +1699,39 @@ class Backplane(object):
         elif reference == "old-oha":
             ref_lon = self._sub_observer_ansa_longitude(event_key) - np.pi
 
-        lon = (self.backplanes[key0 + ("j2000",)] - ref_lon) % (2*np.pi)
-        self.register_backplane(key0 + (reference,), lon)
+        lon = (self.backplanes[key_j2000] - ref_lon) % Backplane.TWOPI
+        self.register_backplane(key, lon)
 
         return self.backplanes[key]
+
+    def _fill_ansa_intercepts(self, event_key):
+        """Internal method to fill in the ansa intercept geometry backplanes.
+        """
+
+        # Get the ansa intercept coordinates
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == "cylindrical"
+
+        (r,z) = event.surface.event_as_coords(event, axes=2)
+
+        self.register_backplane(("ansa_radius", event_key, "right"), r)
+        self.register_backplane(("ansa_altitude", event_key), z)
+
+    def _fill_ansa_longitudes(self, event_key):
+        """Internal method to fill in the ansa intercept longitude backplane
+        in J2000 coordinates.
+        """
+
+        # Get the ansa intercept event
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == "cylindrical"
+
+        # Get the longitude in the associated ring plane
+        (r,lon) = event.surface.ringplane.event_as_coords(event, axes=2)
+
+        self.register_backplane(("ansa_longitude", event_key, "j2000"), lon)
 
     # Deprecated
     def _sub_observer_ansa_longitude(self, event_key):
@@ -1064,7 +1747,7 @@ class Backplane(object):
         # At each intercept time, determine the outgoing direction to the
         # observer from the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (0,0,0), (0,0,0),
+        center_event = Event(event.time, Vector3.ZERO, Vector3.ZERO,
                                          event.origin_id, event.frame_id)
         obs_path = path_.Waypoint(self.obs_event.origin_id)
         ignore = obs_path.photon_from_event(center_event)
@@ -1090,7 +1773,7 @@ class Backplane(object):
         # At each intercept time, determine the incoming direction from the Sun
         # to the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (0,0,0), (0,0,0),
+        center_event = Event(event.time, Vector3.ZERO, Vector3.ZERO,
                                          event.origin_id, event.frame_id)
         ignore = path_.Waypoint("SUN").photon_to_event(center_event)
 
@@ -1102,7 +1785,7 @@ class Backplane(object):
         return self.backplanes[key]
 
     ############################################################################
-    # Ansa resolution
+    # Ansa resolution, surface intercepts only
     #
     # Radius keys: ("ansa_radial_resolution", event_key)
     # Elevation keys: ("ansa_vertical_resolution", event_key)
@@ -1110,7 +1793,11 @@ class Backplane(object):
 
     def ansa_radial_resolution(self, event_key):
         """Projected radial resolution in km/pixel at the ring ansa intercept
-        point."""
+        point.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("ansa_radial_resolution", event_key)
@@ -1132,7 +1819,11 @@ class Backplane(object):
 
     def ansa_vertical_resolution(self, event_key):
         """Projected radial resolution in km/pixel at the ring ansa intercept
-        point."""
+        point.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("ansa_vertical_resolution", event_key)
@@ -1150,240 +1841,6 @@ class Backplane(object):
         res = dz_duv.as_pair().norm()
 
         self.register_backplane(key, res)
-        return self.backplanes[key]
-
-    ############################################################################
-    # Body surface geometry
-    #
-    # Longitude keys are ("longitude", event_key, reference, direction, minimum)
-    #   reference can be "iau", "sun", "sha", "obs" or "oha"
-    #   where direction can be "east", "west"
-    #   minimum can be 0 or -180
-    #
-    # Latitude keys are ("surface_intercept_latitude", event_key, lat_type)
-    #   where lat_type can be "squashed", "centric" or "graphic"
-    ############################################################################
-
-    def _fill_surface_intercepts(self, event_key):
-        """Internal method to fill in the surface intercept geometry backplanes.
-        """
-
-        # Get the surface intercept coordinates
-        event_key = Backplane.standardize_event_key(event_key)
-        event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == "spherical"
-
-        (lon,lat) = event.surface.event_as_coords(event, axes=2, derivs=False)
-
-        self.register_backplane(("longitude", event_key, "iau", "east", 0), lon)
-        self.register_backplane(("latitude", event_key, "squashed"), lat)
-
-    def longitude(self, event_key, reference="iau", direction="east",
-                                                    minimum=0, ):
-        """Longitude at the surface intercept point in the image.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        assert reference in {"iau", "sun", "sha", "obs", "oha"}
-        assert direction in {"east", "west"}
-        assert minimum in {0, -180}
-
-        # Look up under the desired reference
-        key0 = ("longitude", event_key)
-        key = key0 + (reference, direction, minimum)
-        if key in self.backplanes.keys():
-            return self.backplanes[key]
-
-        # If it is not found with default keys, fill in those backplanes
-        key_default = key0 + ("iau", "east", 0)
-        if key_default not in self.backplanes.keys():
-            self._fill_surface_intercepts(event_key)
-
-        # Fill in the values for this key
-        if reference == "iau":
-            ref_lon = 0.
-        elif reference == "sun":
-            ref_lon = self._sub_solar_surface_longitude(event_key)
-        elif reference == "sha":
-            ref_lon = self._sub_solar_surface_longitude(event_key) - np.pi
-        elif reference == "obs":
-            ref_lon = self._sub_observer_surface_longitude(event_key)
-        elif reference == "oha":
-            ref_lon = self._sub_observer_surface_longitude(event_key) - np.pi
-
-        lon = self.backplanes[key_default] - ref_lon
-
-        if direction == "west": lon = -lon
-
-        if minimum == 0:
-            lon %= (2.*np.pi)
-        else:
-            lon = (lon + np.pi) % (2.*np.pi) - np.pi
-
-        self.register_backplane(key, lon)
-        return self.backplanes[key]
-
-    def latitude(self, event_key, lat_type="centric"):
-        """Latitude at the surface intercept point in the image.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        assert lat_type in {"centric", "graphic", "squashed"}
-
-        # Look up under the desired reference
-        key0 = ("latitude", event_key)
-        key = key0 + (lat_type,)
-        if key in self.backplanes.keys():
-            return self.backplanes[key]
-
-        # If it is not found with default keys, fill in those backplanes
-        key_default = key0 + ("squashed",)
-        if key_default not in self.backplanes.keys():
-            self._fill_surface_intercepts(event_key)
-
-        # Fill in the values for this key
-        lat = self.backplanes[key_default]
-        if lat_type == "squashed":
-            return lat
-
-        event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE in {"spherical", "limb"}
-
-        if lat_type == "centric":
-            lat = event.surface.lat_to_centric(lat)
-        else:
-            lat = event.surface.lat_to_graphic(lat)
-
-        self.register_backplane(key, lat)
-        return self.backplanes[key]
-
-    def _sub_observer_surface_longitude(self, event_key):
-        """Sub-observer longitude at the surface center, but evaluated at the
-        surface intercept time. Used only internally.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ("_sub_observer_surface_longitude", event_key)
-        if key in self.backplanes.keys():
-            return self.backplanes[key]
-
-        # At each intercept time, determine the outgoing direction to the
-        # observer from the center of the planet
-        event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (0,0,0), (0,0,0),
-                                         event.origin_id, event.frame_id)
-        obs_path = path_.Waypoint(self.obs_event.origin_id)
-        ignore = obs_path.photon_from_event(center_event)
-
-        assert event.surface.COORDINATE_TYPE in {"spherical", "limb"}
-        (lon,
-        lat) = event.surface.coords_from_vector3(center_event.aberrated_dep(),
-                                                 axes=2)
-
-        self.register_backplane(key, lon.unmasked())
-        return self.backplanes[key]
-
-    def _sub_solar_surface_longitude(self, event_key):
-        """Sub-solar longitude at the surface center, but evaluated at the
-        surface intercept time. Used only internally.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ("_sub_solar_surface_longitude", event_key)
-        if key in self.backplanes.keys():
-            return self.backplanes[key]
-
-        # At each intercept time, determine the incoming direction from the Sun
-        # to the center of the planet
-        event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (0,0,0), (0,0,0),
-                                         event.origin_id, event.frame_id)
-        ignore = path_.Waypoint("SUN").photon_to_event(center_event)
-
-        assert event.surface.COORDINATE_TYPE in {"spherical", "limb"}
-        (lon,
-        lat) = event.surface.coords_from_vector3(-center_event.aberrated_arr(),
-                                                 axes=2)
-
-        self.register_backplane(key, lon.unmasked())
-        return self.backplanes[key]
-
-    ############################################################################
-    # Surface resolution
-    #
-    # Radius keys: ("surface_intercept_finest_resolution", event_key)
-    # Longitude keys: ("surface_intercept_coarsest_resolution", event_key)
-    ############################################################################
-
-    def _fill_surface_resolution(self, event_key):
-        """Internal method to fill in the surface resolution backplanes.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        event = self.get_surface_event_w_derivs(event_key)
-
-        dpos_duv = event.pos.d_dlos * self.meshgrid.dlos_duv
-        (minres, maxres) = surface_.Surface.resolution(dpos_duv)
-
-        self.register_backplane(("finest_resolution", event_key), minres)
-        self.register_backplane(("coarsest_resolution", event_key), maxres)
-
-    def finest_resolution(self, event_key):
-        """Projected spatial resolution in km/pixel in the optimal direction at
-        the intercept point.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ("finest_resolution", event_key)
-        if key not in self.backplanes.keys():
-            self._fill_surface_resolution(event_key)
-
-        return self.backplanes[key]
-
-    def coarsest_resolution(self, event_key):
-        """Projected spatial resolution in km/pixel in the worst direction at
-        the intercept point.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ("coarsest_resolution", event_key)
-        if key not in self.backplanes.keys():
-            self._fill_surface_resolution(event_key)
-
-        return self.backplanes[key]
-
-    ############################################################################
-    # Limb geometry
-    #
-    # Elevation keys are ("elevation", limb_event_key).
-    # Limb_resolution keys are ("lim_resolution, limb_event_key).
-    # Longitude and latitude keys are the same as for body surface geometry.
-    ############################################################################
-
-    def _fill_limb_intercepts(self, event_key):
-        """Internal method to fill in the limb intercept geometry backplanes.
-        """
-
-        # Get the limb intercept coordinates
-        event_key = Backplane.standardize_event_key(event_key)
-        event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == "limb"
-
-        (lon,lat,z) = event.surface.event_as_coords(event, axes=3)
-
-        self.register_backplane(("longitude", event_key, "iau", "east", 0), lon)
-        self.register_backplane(("latitude", event_key, "squashed"), lat)
-        self.register_backplane(("elevation", event_key), z)
-
-    def elevation(self, event_key):
-        """Elevation of a limb point above the body's surface.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ("elevation", event_key)
-        if key not in self.backplanes.keys():
-            self._fill_limb_intercepts(event_key)
-
         return self.backplanes[key]
 
     ############################################################################
@@ -1437,7 +1894,8 @@ class Backplane(object):
 
     def where_in_front(self, event_key, back_body):
         """Returns a mask containing True wherever the first surface is in front
-        of the second surface."""
+        of the second surface. This is also True where the back_body is not
+        behind the front body at all."""
 
         event_key = Backplane.standardize_event_key(event_key)
         back_body  = Backplane.standardize_event_key(back_body)
@@ -1487,7 +1945,7 @@ class Backplane(object):
         key = ("where_sunward",) + event_key
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
-            mask = self.mask_as_scalar((incidence.vals <= np.pi/2) &
+            mask = self.mask_as_scalar((incidence.vals <= Backplane.HALFPI) &
                                        np.logical_not(incidence.mask))
             self.register_backplane(key, mask)
 
@@ -1501,7 +1959,7 @@ class Backplane(object):
         key = ("where_antisunward",) + event_key
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
-            mask = self.mask_as_scalar((incidence.vals > np.pi/2) &
+            mask = self.mask_as_scalar((incidence.vals > Backplane.HALFPI) &
                                        np.logical_not(incidence.mask))
             self.register_backplane(key, mask)
 
@@ -1519,7 +1977,8 @@ class Backplane(object):
         key = ("where_below", backplane_key, value)
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
-            mask = (backplane.vals <= value) & np.logical_not(backplane.mask)
+            mask = self.mask_as_scalar((backplane.vals <= value) &
+                                       np.logical_not(backplane.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1532,7 +1991,8 @@ class Backplane(object):
         key = ("where_above", backplane_key, value)
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
-            mask = (backplane.vals >= value) & np.logical_not(backplane.mask)
+            mask = self.mask_as_scalar((backplane.vals >= value) &
+                                       np.logical_not(backplane.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -1545,9 +2005,50 @@ class Backplane(object):
         key = ("where_between", backplane_key, low, high)
         if key not in self.backplanes.keys():
             backplane = self.evaluate(backplane_key)
-            mask = ((backplane.vals >= low) &
-                    (backplane.vals <= high) & np.logical_not(backplane.mask))
+            mask = self.mask_as_scalar((backplane.vals >= low) &
+                                       (backplane.vals <= high) &
+                                       np.logical_not(backplane.mask))
             self.register_backplane(key, mask)
+
+        return self.backplanes[key]
+
+    def where_not(self, backplane_key):
+        """Returns a mask that contains True wherever the value of the given
+        backplane is False."""
+
+        backplane_key = Backplane.standardize_backplane_key(backplane_key)
+        key = ("where_not", backplane_key)
+        if key not in self.backplanes.keys():
+            backplane = self.evaluate(backplane_key)
+            self.register_backplane(key, ~backplane)
+
+        return self.backplanes[key]
+
+    def where_any(self, *backplane_keys):
+        """Returns a mask that contains True wherever any of the given
+        backplanes is True."""
+
+        key = ("where_any",) + backplane_keys
+        if key not in self.backplanes.keys():
+            backplane = self.evaluate(backplane_keys[0])
+            for next_mask in backplane_keys[1:]:
+                backplane |= self.evaluate(next_mask)
+
+            self.register_backplane(key, backplane)
+
+        return self.backplanes[key]
+
+    def where_all(self, *backplane_keys):
+        """Returns a mask that contains True wherever all of the given
+        backplanes are True."""
+
+        key = ("where_all",) + backplane_keys
+        if key not in self.backplanes.keys():
+            backplane = self.evaluate(backplane_keys[0])
+            for next_mask in backplane_keys[1:]:
+                backplane &= self.evaluate(next_mask)
+
+            self.register_backplane(key, backplane)
 
         return self.backplanes[key]
 
@@ -1685,21 +2186,34 @@ class Backplane(object):
 
     CALLABLES = {
         "right_ascension", "declination",
-        "distance", "light_time", "resolution",
-        "incidence_angle", "emission_angle", "phase_angle", "scattering_angle",
-        "lambert_law",
+        "center_right_ascension", "center_declination",
+
+        "distance", "light_time", "event_time", "resolution",
+        "center_distance", "center_light_time", "center_time",
+            "center_resolution",
+
+        "incidence_angle", "emission_angle", "phase_angle",
+            "scattering_angle", "lambert_law",
+        "center_incidence_angle", "center_emission_angle", "center_phase_angle",
+            "center_scattering_angle",
+
+        "longitude", "latitude",
+        "sub_longitude", "sub_latitude",
+        "finest_resolution", "coarsest_resolution",
+        "altitude",
+
         "ring_radius", "ring_longitude", "ring_azimuth", "ring_elevation",
         "ring_radial_resolution", "ring_angular_resolution",
-        "ansa_radius", "ansa_elevation", "ansa_longitude",
+        "ansa_radius", "ansa_altitude", "ansa_longitude",
         "ansa_radial_resolution", "ansa_vertical_resolution",
-        "longitude", "latitude",
-        "finest_resolution", "coarsest_resolution",
-        "elevation",
+
         "where_intercepted",
         "where_inside_shadow", "where_outside_shadow",
         "where_in_front", "where_in_back",
         "where_sunward", "where_antisunward",
         "where_below", "where_above", "where_between",
+        "where_not", "where_any", "where_all",
+
         "border_below", "border_above", "border_atop",
         "border_inside", "border_outside"}
 
@@ -1746,24 +2260,24 @@ def show_info(title, array):
 
     # Unmasked backplane summary
     elif array.mask is False:
-            minval = np.min(array.vals)
-            maxval = np.max(array.vals)
-            if minval == maxval:
-                print "  ", minval
-            else:
-                print "  ", (minval, maxval), "(min, max)"
+        minval = np.min(array.vals)
+        maxval = np.max(array.vals)
+        if minval == maxval:
+            print "  ", minval
+        else:
+            print "  ", (minval, maxval), "(min, max)"
 
     # Masked backplane summary
     else:
-            print "  ", (np.min(array.vals),
-                           np.max(array.vals)), "(unmasked min, max)"
-            print "  ", (array.min(),
-                           array.max()), "(masked min, max)"
-            total = np.size(array.mask)
-            masked = np.sum(array.mask)
-            percent = int(masked / float(total) * 100. + 0.5)
-            print "  ", (masked, total-masked),
-            print         (percent, 100-percent),"(masked, unmasked pixels)"
+        print "  ", (np.min(array.vals),
+                       np.max(array.vals)), "(unmasked min, max)"
+        print "  ", (array.min(),
+                       array.max()), "(masked min, max)"
+        total = np.size(array.mask)
+        masked = np.sum(array.mask)
+        percent = int(masked / float(total) * 100. + 0.5)
+        print "  ", (masked, total-masked),
+        print         (percent, 100-percent),"(masked, unmasked pixels)"
 
 ####################################################
 # TestCase begins here
@@ -1791,16 +2305,14 @@ class Test_Backplane(unittest.TestCase):
         test = bp.right_ascension()
         show_info("Right ascension (deg)", test * constants.DPR)
 
-        test = bp.right_ascension(aberration=True)
-        show_info("Right ascension with aberration (deg)",
-                                                    test * constants.DPR)
+        test = bp.right_ascension(apparent=True)
+        show_info("Right ascension (deg, apparent)", test * constants.DPR)
 
         test = bp.declination()
         show_info("Declination (deg)", test * constants.DPR)
 
-        test = bp.declination(aberration=True)
-        show_info("Declination with aberration (deg)",
-                                                    test * constants.DPR)
+        test = bp.declination(apparent=True)
+        show_info("Declination (deg, apparent)", test * constants.DPR)
 
         test = bp.distance("saturn")
         show_info("Range to Saturn (km)", test)
@@ -1968,16 +2480,17 @@ class Test_Backplane(unittest.TestCase):
         test = bp.evaluate(("where_sunward", "saturn"))
         show_info("Saturn sunward via evaluate()", test)
 
-        test = bp.where_below(("incidence_angle", "saturn"), np.pi/2)
+        test = bp.where_below(("incidence_angle", "saturn"), Backplane.HALFPI)
         show_info("Saturn sunward via where_below()", test)
 
         test = bp.evaluate(("where_antisunward", "saturn"))
         show_info("Saturn antisunward via evaluate()", test)
 
-        test = bp.where_above(("incidence_angle", "saturn"), np.pi/2)
+        test = bp.where_above(("incidence_angle", "saturn"), Backplane.HALFPI)
         show_info("Saturn antisunward via where_above()", test)
 
-        test = bp.where_between(("incidence_angle", "saturn"), np.pi/2, 3.2)
+        test = bp.where_between(("incidence_angle", "saturn"), Backplane.HALFPI,
+                                                               3.2)
         show_info("Saturn antisunward via where_between()", test)
 
         test = bp.where_intercepted("saturn")
@@ -2021,8 +2534,8 @@ class Test_Backplane(unittest.TestCase):
         test = bp.ansa_radius("saturn:ansa")
         show_info("Saturn:ansa radius (km)", test)
 
-        test = bp.ansa_elevation("saturn:ansa")
-        show_info("Saturn:ansa elevation (km)", test)
+        test = bp.ansa_altitude("saturn:ansa")
+        show_info("Saturn:ansa altitude (km)", test)
 
         test = bp.ansa_radial_resolution("saturn:ansa")
         show_info("Saturn:ansa radial resolution (km)", test)
@@ -2103,7 +2616,7 @@ class Test_Backplane(unittest.TestCase):
             print bp.sub_solar_longitude("saturn").vals * constants.DPR
 
             print "Solar distance to Saturn center (km) =",
-            print bp.solar_distance_to_center("saturn").vals
+            print bp.center_distance("saturn", "sun").vals
 
             print
             print "Sub-observer Saturn planetocentric latitude (deg) =",
@@ -2127,7 +2640,7 @@ class Test_Backplane(unittest.TestCase):
             print bp.sub_solar_longitude("saturn:ring").vals * constants.DPR
 
             print "Solar distance to ring center (km) =",
-            print bp.solar_distance_to_center("saturn:ring").vals
+            print bp.center_distance("saturn:ring", "sun").vals
 
             print "Sub-observer ring latitude (deg) =",
             print bp.sub_observer_latitude("saturn:ring").vals * constants.DPR
@@ -2192,8 +2705,8 @@ class Test_Backplane(unittest.TestCase):
         ########################
         # Limb and resolution, 6/6/12
 
-        test = bp.elevation("saturn:limb")
-        show_info("Limb elevation (km)", test)
+        test = bp.altitude("saturn:limb")
+        show_info("Limb altitude (km)", test)
 
         test = bp.longitude("saturn:limb")
         show_info("Limb longitude (deg)", test * constants.DPR)
@@ -2211,10 +2724,10 @@ class Test_Backplane(unittest.TestCase):
         test = bp.latitude("saturn:limb", lat_type="centric")
         show_info("Limb planetocentric latitude (deg)", test * constants.DPR)
 
-        test = bp.resolution("saturn:limb", 0)
+        test = bp.resolution("saturn:limb", "u")
         show_info("Limb resolution horizontal (km/pixel)", test)
 
-        test = bp.resolution("saturn:limb", 1)
+        test = bp.resolution("saturn:limb", "v")
         show_info("Limb resolution vertical (km/pixel)", test)
 
         ########################

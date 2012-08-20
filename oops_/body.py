@@ -1,7 +1,8 @@
 ################################################################################
 # oops_/body.py: Body class
 #
-# 2/18/12 Created (MRS)
+# 2/18/12 Created (MRS).
+# 8/8/12 MRS - Added inner_radius attribute.
 ################################################################################
 
 import numpy as np
@@ -46,6 +47,9 @@ class Body(object):
         radius          a single value in km, defining the radius of a sphere
                         that encloses the entire body. Zero for bodies that have
                         no surface.
+        inner_radius    a single value in km, defining the radius of a sphere
+                        that is entirely enclosed by the body. Zero for bodies
+                        that have no surface.
         gravity         the gravity field of the body; None if the gravity field
                         is undefined or negligible.
         keywords        a list of keywords associated with the body. Typical
@@ -83,7 +87,8 @@ class Body(object):
             self.barycenter = barycenter
 
         self.surface = None
-        self.radius  = 0.
+        self.radius = 0.
+        self.inner_radius = 0.
         self.gravity = None
         self.keywords = [self.name]
 
@@ -103,11 +108,12 @@ class Body(object):
 
 ########################################
 
-    def apply_surface(self, surface, radius):
-        """Adds the and surface attribute to a Body."""
+    def apply_surface(self, surface, radius, inner_radius=0.):
+        """Adds the surface attribute to a Body."""
 
         self.surface = surface
-        self.radius  = radius
+        self.radius = radius
+        self.inner_radius = inner_radius
         # assert self.surface.origin_id == self.path_id
         # This assertion is not strictly necessary
 
@@ -385,7 +391,7 @@ SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan
 SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus
 SATURN_CLASSICAL_IRREG = [609]              # Phoebe
 SATURN_REGULAR   = range(610,619) + range(632,636) + [649,653]
-SATURN_IRREGULAR = (range(636,649) + range(650,653) +
+SATURN_IRREGULAR = (range(619,632) + range(636,649) + range(650,653) +
                     [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
 
 URANUS_CLASSICAL  = range(701,706)
@@ -635,7 +641,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         # Add the surface object if shape information is available
         try:
             shape = surface.spice_body(spice_id)
-            body.apply_surface(shape, shape.req)
+            body.apply_surface(shape, shape.req, shape.rpol)
         except RuntimeError: pass
         except LookupError: pass
 
@@ -696,7 +702,7 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     shape = surface.RingPlane(barycenter.path_id, parent.ring_frame_id,
                               radii, gravity=parent.gravity)
 
-    body.apply_surface(shape, rmax)
+    body.apply_surface(shape, rmax, 0.)
 
     body.add_keywords([parent, "RING", ring_name])
     body.add_keywords(keywords)
@@ -713,7 +719,7 @@ def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
 
     body = Body(ring_name, orbit.internal_origin_id, orbit.internal_frame_id,
                 parent, parent)
-    body.apply_surface(orbit, elements[9])
+    body.apply_surface(orbit, elements[9], 0.)
 
     body.add_keywords([parent, "RING", "ORBIT", ring_name])
     body.add_keywords(keywords)
@@ -759,7 +765,7 @@ class Test_Body(unittest.TestCase):
         self.assertEqual(len(moons), 8)     # Mimas-Iapetus
 
         rings = saturn.select_children(include_any=("RING"))
-        self.assertEqual(len(rings), 5)     # A, B, C, Main rings, plane
+        self.assertEqual(len(rings), 6)     # A, B, C, Main, Saturn all, plane
 
         moons = saturn.select_children(include_all="SATELLITE",
                                        exclude=("IRREGULAR"), radius=1000)

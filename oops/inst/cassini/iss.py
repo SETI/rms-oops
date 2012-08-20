@@ -42,8 +42,11 @@ def from_file(filespec, parameters={}):
     # Create a Snapshot
     result = oops.obs.Snapshot(("v","u"), tstart, texp, ISS.fovs[camera,mode],
                                "CASSINI", "CASSINI_ISS_" + camera,
-                               dict=dict,               # Add the VICAR dict
-                               data=vic.get_2d_array()) # Add the data array
+                               dict = dict,               # Add the VICAR dict
+                               data = vic.get_2d_array(), # Add the data array
+                               instrument = "ISS",
+                               detector = camera,
+                               sampling = mode)
 
     return result
 
@@ -68,9 +71,6 @@ def from_index(filespec, parameters={}):
 
         tstart = julian.tdb_from_tai(dict["START_TIME"])
         texp = dict["EXPOSURE_DURATION"] / 1000.
-        # correct for zero exposure time to avoid divide by zero in Metronome
-        if texp == 0.:
-            texp = 0.001
         mode = dict["INSTRUMENT_MODE_ID"]
 
         name = dict["INSTRUMENT_NAME"]
@@ -81,7 +81,11 @@ def from_index(filespec, parameters={}):
 
         item = oops.obs.Snapshot(("v","u"), tstart, texp, ISS.fovs[camera,mode],
                                  "CASSINI", "CASSINI_ISS_" + camera,
-                                 index_dict=dict)        # Add index dictionary
+                                 dict = dict,       # Add index dictionary
+                                 index_dict = dict, # Old name
+                                 instrument = "ISS",
+                                 detector = camera,
+                                 sampling = mode)
 
         snapshots.append(item)
 

@@ -2,6 +2,7 @@
 # oops_/meshgrid.py: Class Meshgrid
 #
 # 3/13/12 MRS - Created
+# 8/18/12 MRS - Minor bug fix.
 ################################################################################
 
 import numpy as np
@@ -121,11 +122,12 @@ class Meshgrid(object):
     def los(self):
         if self.filled_los is None:
             self.filled_los = self.los_w_derivs.plain()
+
         return self.filled_los
 
     @property
     def dlos_duv(self):
-        return self.filled_los_w_derivs.d_duv
+        return self.los_w_derivs.d_duv
 
     @property
     def uv_w_derivs(self):
@@ -134,11 +136,12 @@ class Meshgrid(object):
             self.filled_uv_w_derivs = self.uv
             self.filled_uv_w_derivs.insert_subfield("d_dlos", uv.d_dlos)
             self.uv = self.filled_uv_w_derivs.plain()
+
         return self.filled_uv_w_derivs
 
     @property
     def duv_dlos(self):
-        return self.filled_uv_w_derivs.d_dlos
+        return self.uv_w_derivs.d_dlos
 
 ################################################################################
 # UNIT TESTS

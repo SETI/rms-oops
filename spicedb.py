@@ -71,7 +71,7 @@ JUPITER_ALL_MOONS = range(501,550) + [55062, 55063]
 
 SATURN_CLASSICAL  = range(601,610)      # Mimas through Phoebe
 SATURN_REGULAR    = range(601,619) + range(632,636) + [649,653] # with Phoebe
-SATURN_IRREGULAR  = (range(636,649) + range(650,653) +
+SATURN_IRREGULAR  = (range(619,632) + range(636,649) + range(650,653) +
                      [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
 SATURN_ALL_MOONS  = (range(601,654) + 
                      [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])

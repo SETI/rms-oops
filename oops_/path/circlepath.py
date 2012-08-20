@@ -1,5 +1,8 @@
 ################################################################################
 # oops_/path/orbit.py: Subclass CirclePath of class Path
+#
+# 8/19/12 MRS - changed call to register() to reregister(), so a newly defined
+#   CirclePath replaces the old definition.
 ################################################################################
 
 import numpy as np
@@ -53,7 +56,7 @@ class CirclePath(Path):
         self.lon    = Scalar.as_standard(lon)
         self.rate   = Scalar.as_standard(rate)
 
-        self.register()
+        self.reregister()
 
 ########################################
 

@@ -1,5 +1,5 @@
 ################################################################################
-# oops/inst/cassini/utils.py
+# oops/inst/cassini/cassini_.py
 #
 # Utility functions for managing SPICE kernels while working with Cassini data
 # sets.

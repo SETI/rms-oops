@@ -4,7 +4,8 @@
 # 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
 # 2/22/12 MRS - Revised the handling of derivatives.
 # 3/9/12 MRS - Added the "extras" argument to support additional Observation
-#   subclasses
+#   subclasses.
+# 8/17/12 MRS - Added inventory support methods including sphere_is_inside().
 ################################################################################
 
 import numpy as np
@@ -328,6 +329,112 @@ class FOV(object):
         vectors that fall inside the FOV, False otherwise."""
 
         return self.uv_is_inside(self.uv_from_los(los, extras), inclusive=True)
+
+################################################################################
+# Properties and methods to support body inventories
+#
+# These might need to be overridden for FOV subclasses that are not rectangular.
+################################################################################
+
+    @property
+    def center_xy(self):
+        """Property to return the (x,y) coordinate pair at the center of the
+        FOV.
+        """
+
+        if "center_xy_filled" not in self.__dict__.keys():
+            self.center_xy_filled = self.xy_from_uv(self.uv_shape/2.)
+
+        return self.center_xy_filled
+
+    @property
+    def center_los(self):
+        """Property to return the unit line of sight defining the (u,v) center
+        of the FOV.
+        """
+
+        if "center_los_filled" not in self.__dict__.keys():
+            self.center_los_filled = self.los_from_xy(self.center_xy).unit()
+
+        return self.center_los_filled
+
+    @property
+    def center_dlos_duv(self):
+        """Property to return the line of sight derivative matrix dlos/d(u,v) at
+        the center of the FOV.
+        """
+
+        if "center_dlos_duv_filled" not in self.__dict__.keys():
+            los = self.los_from_uv(self.uv_shape/2., derivs=True)
+            self.center_dlos_duv_filled = los.d_duv
+
+        return self.center_dlos_duv_filled
+
+    @property
+    def outer_radius(self):
+        """Property to return the radius in radians of a circle around the
+        center of the FOV that circumscribes the entire FOV.
+        """
+
+        if "outer_radius_saved" not in self.__dict__.keys():
+            umax = self.uv_shape.vals[0]
+            vmax = self.uv_shape.vals[1]
+
+            uv_corners = [(0.,0.), (0.,vmax), (umax,0.), (umax,vmax)]
+
+            seps = self.center_los.sep(self.los_from_uv(uv_corners))
+            self.outer_radius_saved = seps.vals.max()
+
+        return self.outer_radius_saved
+
+    @property
+    def inner_radius(self):
+        """Property to return the radius in radians of a circle around the
+        center of the FOV that is entirely enclosed within the FOV.
+        """
+
+        if "inner_radius_saved" not in self.__dict__.keys():
+            umax = self.uv_shape.vals[0]
+            vmax = self.uv_shape.vals[1]
+            umid = umax / 2.
+            vmid = vmax / 2.
+
+            uv_edges = [(0.,vmid), (umax,vmid), (umid,0.), (umid,vmax)]
+
+            seps = self.center_los.sep(self.los_from_uv(uv_edges))
+            self.inner_radius_saved = seps.vals.min()
+
+        return self.inner_radius_saved
+
+    def sphere_falls_inside(self, center, radius, border=0.):
+        """Returns True if any piece of sphere falls inside a field of view.
+
+        Input:
+            center      the apparent location of the center of the sphere in the
+                        internal coordinate frame of the FOV.
+            radius      the radius of the spheres.
+            border      an optional angular extension to the field of view, in
+                        radians, to allow for pointing uncertainties
+        """
+
+        # Perform quick tests based on the separation angles
+        sphere_center_los = Vector3.as_vector3(center)
+
+        scaled_radius = radius / sphere_center_los.norm()
+        radius_angle = scaled_radius.arcsin()
+        center_sep = self.center_los.sep(sphere_center_los)
+
+        if center_sep > self.outer_radius + border + radius_angle: return False
+        if center_sep < self.inner_radius + border + radius_angle: return True
+
+        # Find the point on the image that falls closest to the center of the
+        # sphere
+        sphere_center_uv = self.uv_from_los(sphere_center_los)
+        nearest_fov_uv  = self.nearest_uv(sphere_center_uv)
+        nearest_fov_los = self.los_from_uv(nearest_fov_uv)
+
+        # Allow for the border region when returning True or False
+        return nearest_fov_los.sep(sphere_center_los) < radius_angle + border
 
 ################################################################################
 # UNIT TESTS

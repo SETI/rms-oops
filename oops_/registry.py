@@ -5,6 +5,7 @@
 #   cleaner way to accomplish the same goal.
 # 3/8/12 MRS - Moved the body registry here from body.py.
 # 3/20/12 MRS - Introduced temporary IDs.
+# 8/17/12 MRS - Introduced body_exists() method.
 ################################################################################
 # Frame Registry
 ################################################################################
@@ -201,6 +202,12 @@ def body_lookup(key):
 
     global BODY_REGSITRY
     return BODY_REGISTRY[key]
+
+def body_exists(key):
+    """Returns True if the body's name exists in the registry."""
+
+    global BODY_REGSITRY
+    return key in BODY_REGISTRY.keys()
 
 def as_body(body):
     """If the argument is a body object, it returns that body. Otherwise, the

@@ -268,10 +268,20 @@ class Scalar(Array):
         else:
             mean = ma.mean(self.mvals)
 
-        if self.units is None and not ma.is_masked(mean):
-            return mean
+        return Scalar(mean, self.units)
+
+    def sum(self):
+        """Returns the sum of the unmasked values."""
+
+        if np.shape(self.mask) == ():
+            if self.mask:
+                return self.masked_version()
+            else:
+                sum = np.sum(self.vals)
         else:
-            return Scalar(mean, self.units)
+            sum = ma.sum(self.mvals)
+
+        return Scalar(sum, self.units)
 
     def is_between(self, range):
         """Returns a scalar of boolean values equal to True where every value

@@ -4,11 +4,12 @@
 # 2/11/12 Modified (MRS) - updated for style
 # 3/9/12 MRS - new methods fleshed out in preparation for additional observation
 #   classes such as pushbrooms and raster scanners.
-# 5/14/12 MRS - addeded gridless_event() method.
+# 5/14/12 MRS - added gridless_event() method.
 # 6/13/12 MRS - updated API with uvt() and uvt_range() to define mapping from
 #   array coordinates to (u,v) coordinates and time value. This decouples the
 #   direct connection between array indices and (u,v), making it possible to
 #   support slit instruments.
+# 8/17/12 MRS - added inventory() method.
 ################################################################################
 
 import numpy as np
@@ -17,6 +18,8 @@ from oops_.array.all import *
 from oops_.config import LOGGING, PATH_PHOTONS
 from oops_.event import Event
 from oops_.meshgrid import Meshgrid
+from oops_.path.multipath import MultiPath
+import oops.registry as registry
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
@@ -273,13 +276,13 @@ class Observation(object):
         (time0, time1) = self.times_at_uv(uv, extras=())
         return 0.5 * (time0 + time1)
 
-    def event_at_grid(self, meshgrid, time=None):
+    def event_at_grid(self, meshgrid=None, time=None):
         """Returns an event object describing the arrival of a photon at a set
         of locations defined by the given meshgrid.
 
         Input:
             meshgrid    a Meshgrid object describing the sampling of the field
-                        of view.
+                        of view; None for a directionless observation.
             time        a Scalar of times; None to use the midtime of each
                         pixel in the meshgrid.
 
@@ -297,15 +300,17 @@ class Observation(object):
 
         return event
 
-    def gridless_event(self, meshgrid, time=None):
+    def gridless_event(self, meshgrid=None, time=None, shapeless=False):
         """Returns an event object describing the arrival of a photon at an
         instrument, irrespective of the direction.
 
         Input:
             meshgrid    a Meshgrid object describing the sampling of the field
-                        of view.
+                        of view; None for a directionless observation.
             time        a Scalar of times; None to use the midtime of each
                         pixel in the meshgrid.
+            shapeless   True to return a shapeless event, referring to the mean
+                        of all the times.
 
         Return:         the corresponding event.
         """
@@ -313,14 +318,13 @@ class Observation(object):
         if time is None:
             time = self.midtime_at_uv(meshgrid.uv, meshgrid.extras)
 
+        if shapeless:
+            time = time.mean()
+
         event = Event(time, Vector3.ZERO, Vector3.ZERO,
                             self.path_id, self.frame_id)
 
         return event
-
-    ####################################################
-    # Photon methods
-    ####################################################
 
     # This procedure assumes that movement along a path is very limited during
     # the exposure time of an individual pixel. It could fail to converge if
@@ -406,6 +410,91 @@ class Observation(object):
             uv.insert_subfield("d_dt", duv_dt)
 
         return uv
+
+    def inventory(self, bodies, expand=0., as_list=False, as_flags=False):
+        """Returns a list of the body names that fall somewhere inside the field
+        of view of the observation, and are not obscured by another.
+
+        Input:
+            bodies      a list of the names of the body objects to be included
+                        in the inventory.
+            expand      an optional angle in radians by which to extend the
+                        limits of the field of view. This can be used to
+                        accommodate pointing uncertainties.
+            as_list     True to return the inventory as a list of names. This is
+                        the default if neither as_list or as_flags is True.
+            as_flags    True to return the inventory as an array of boolean flag
+                        values.
+
+        Return:         list, array, or (list,array)
+
+            If as_list is True, it returns a list of the names of all the body
+            objects that fall at least partially inside the FOV and are not
+            completely obscured by another object in the list.
+
+            If as_flags is True, it returns a boolean array containing True
+            everywhere that the body falls at least partially inside the FOV
+            and is not completely obscured.
+
+            If both as_list and as_flags are True, then the tuple (list,array)
+            is returned.
+
+        Restrictions: All inventory calculations are performed at the
+        observation midtime and all bodies are assumed to be spherical.
+        """
+
+        body_names = [registry.as_body_name(body) for body in bodies]
+        bodies  = [registry.as_body(body) for body in bodies]
+        nbodies = len(bodies)
+
+        path_ids = [body.path_id for body in bodies]
+        multipath = MultiPath(path_ids)
+
+        obs_event = Event(self.midtime, Vector3.ZERO, Vector3.ZERO,
+                          self.path_id, self.frame_id)
+        ignore = multipath.photon_to_event(obs_event)   # insert photon arrivals
+
+        centers = -obs_event.arr
+        ranges = centers.norm()
+        radii = Scalar([body.radius for body in bodies])
+        radius_angles = (radii / ranges).arcsin()
+
+        inner_radii = Scalar([body.inner_radius for body in bodies])
+        inner_angles = (inner_radii / ranges).arcsin()
+
+        # This array equals True for each body falling somewhere inside the FOV
+        falls_inside = np.empty(nbodies, dtype="bool")
+        for i in range(nbodies):
+            falls_inside[i] = self.fov.sphere_falls_inside(centers[i], radii[i])
+
+        # This array equals True for each body completely hidden by another
+        is_hidden = np.zeros(nbodies, dtype="bool")
+        for i in range(nbodies):
+          if not falls_inside[i]: continue
+
+          for j in range(nbodies):
+            if not falls_inside[j]: continue
+
+            if ranges[i] < ranges[j]: continue
+            if radius_angles[i] > inner_angles[j]: continue
+
+            sep = centers[i].sep(centers[j])
+            if sep < inner_angles[j] - radius_angles[i]:
+                is_hidden[i] = True
+
+        flags = falls_inside & ~is_hidden
+
+        if as_flags and not as_list:
+            return flags
+
+        list = []
+        for i in range(nbodies):
+            if flags[i]: list.append(body_names[i])
+
+        if not as_flags:
+            return list
+        else:
+            return (list, flags)
 
 ################################################################################
 # UNIT TESTS
