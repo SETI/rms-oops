@@ -818,40 +818,10 @@ class ProcessedBodySurfaceSummary(BodySurface):
     
     def __str__(self):
         """output to a string line"""
-        lline = []
-        lline.append(self.owner.obs_id)
-        lline.append(',' + self.owner.body_name)
-        lline.append(self.output_pair(self.geocentric_latitude))
-        lline.append(self.output_pair(self.geographic_latitude))
-        lline.append(self.output_pair(self.iau_longitude))
-        lline.append(self.output_pair(self.sha_longitude))
-        lline.append(self.output_pair(self.obs_longitude))
-        lline.append(self.output_pair(self.finest_resolution))
-        lline.append(self.output_pair(self.coarsest_resolution))
-        lline.append(self.output_pair(self.phase))
-        lline.append(self.output_pair(self.incidence))
-        lline.append(self.output_pair(self.emission))
-        lline.append(self.output_pair(self.range_to_body))
-        lline.append(self.output_pair(self.night_side_flag))
-        lline.append(self.output_pair(self.behind_rings_flag))
-        lline.append(self.output_pair(self.in_ring_shadow_flag))
-        if self.owner.file_type is ISS_TYPE:
-            lline.append(self.output_singleton(self.sub_solar_geocentric_latitude))
-            lline.append(self.output_singleton(self.sub_solar_geographic_latitude))
-            lline.append(self.output_singleton(self.sub_solar_iau_longitude))
-            lline.append(self.output_singleton(self.solar_distance_to_body_center))
-            lline.append(self.output_singleton(self.sub_obs_geocentric_latitude))
-            lline.append(self.output_singleton(self.sub_obs_geographic_latitude))
-            lline.append(self.output_singleton(self.sub_obs_iau_longitude))
-            lline.append(self.output_singleton(self.obs_distance_to_body_center))
-        line = ' '.join(lline)
-        line += '\n'
-        """
         line = self.owner.obs_id
         line += ", %s" % self.owner.body_name
         line += self.output_pair(self.geocentric_latitude)
-        line += self.output_singleton(self.geographic_latitude0)
-        line += self.output_singleton(self.geographic_latitude1)
+        line += self.output_pair(self.geographic_latitude)
         line += self.output_pair(self.iau_longitude)
         line += self.output_pair(self.sha_longitude)
         line += self.output_pair(self.obs_longitude)
@@ -872,30 +842,7 @@ class ProcessedBodySurfaceSummary(BodySurface):
         line += self.output_singleton(self.sub_obs_geographic_latitude)
         line += self.output_singleton(self.sub_obs_iau_longitude)
         line += self.output_singleton(self.obs_distance_to_body_center)
-        line += "\n"
-        """
-        """line += ", %f, %f" % (self.geocentric_latitude[0], self.geocentric_latitude[1])
-        line += ", %f, %f" % (self.geographic_latitude[0], self.geographic_latitude[1])
-        line += ", %f, %f" % (self.iau_longitude[0], self.iau_longitude[1])
-        line += ", %f, %f" % (self.sha_longitude[0], self.sha_longitude[1])
-        line += ", %f, %f" % (self.obs_longitude[0], self.obs_longitude[1])
-        line += ", %f, %f" % (self.finest_resolution[0], self.finest_resolution[1])
-        line += ", %f, %f" % (self.coarsest_resolution[0], self.coarsest_resolution[1])
-        line += ", %f, %f" % (self.phase[0], self.phase[1])
-        line += ", %f, %f" % (self.incidence[0], self.incidence[1])
-        line += ", %f, %f" % (self.emission[0], self.emission[1])
-        line += ", %f, %f" % (self.range_to_body[0], self.range_to_body[1])
-        line += ", %f, %f" % (self.night_side_flag[0], self.night_side_flag[1])
-        line += ", %f, %f" % (self.behind_rings_flag[0], self.behind_rings_flag[1])
-        line += ", %f, %f" % (self.in_ring_shadow_flag[0], self.in_ring_shadow_flag[1])
-        line += " %f," % (self.sub_solar_geocentric_latitude.valsR)
-        line += " %f," % (self.sub_solar_geographic_latitude.vals)
-        line += " %f," % (self.sub_solar_iau_longitude.vals)
-        line += " %f," % (self.solar_distance_to_body_center.vals)
-        line += " %f," % (self.sub_obs_geocentric_latitude.vals)
-        line += " %f," % (self.sub_obs_geographic_latitude.vals)
-        line += " %f," % (self.sub_obs_iau_longitude.vals)
-        line += " %f\n" % self.obs_distance_to_body_center.vals"""
+        line += '\n'
         return line
 
 ################################################################################

@@ -792,34 +792,31 @@ class ProcessedBodySurfaceSummary(BodySurface):
         self.obs_distance_to_body_center = bp.vals
     
     def __str__(self):
-        """output to a string line"""
-        lline = []
-        lline.append(self.owner.obs_id)
-        lline.append(',' + self.owner.body_name)
-        lline.append(self.output_pair(self.geocentric_latitude))
-        lline.append(self.output_pair(self.geographic_latitude))
-        lline.append(self.output_pair(self.iau_longitude))
-        lline.append(self.output_pair(self.sha_longitude))
-        lline.append(self.output_pair(self.obs_longitude))
-        lline.append(self.output_pair(self.finest_resolution))
-        lline.append(self.output_pair(self.coarsest_resolution))
-        lline.append(self.output_pair(self.phase))
-        lline.append(self.output_pair(self.incidence))
-        lline.append(self.output_pair(self.emission))
-        lline.append(self.output_pair(self.range_to_body))
-        lline.append(self.output_pair(self.night_side_flag))
-        lline.append(self.output_pair(self.behind_rings_flag))
-        lline.append(self.output_pair(self.in_ring_shadow_flag))
-
-        """lline.append(self.output_singleton(self.sub_solar_geocentric_latitude))
-            lline.append(self.output_singleton(self.sub_solar_geographic_latitude))
-            lline.append(self.output_singleton(self.sub_solar_iau_longitude))
-            lline.append(self.output_singleton(self.solar_distance_to_body_center))
-            lline.append(self.output_singleton(self.sub_obs_geocentric_latitude))
-            lline.append(self.output_singleton(self.sub_obs_geographic_latitude))
-            lline.append(self.output_singleton(self.sub_obs_iau_longitude))
-            lline.append(self.output_singleton(self.obs_distance_to_body_center))"""
-        line = ' '.join(lline)
+        line = self.owner.obs_id
+        line += ", %s" % self.owner.body_name
+        line += self.output_pair(self.geocentric_latitude)
+        line += self.output_pair(self.geographic_latitude)
+        line += self.output_pair(self.iau_longitude)
+        line += self.output_pair(self.sha_longitude)
+        line += self.output_pair(self.obs_longitude)
+        line += self.output_pair(self.finest_resolution)
+        line += self.output_pair(self.coarsest_resolution)
+        line += self.output_pair(self.phase)
+        line += self.output_pair(self.incidence)
+        line += self.output_pair(self.emission)
+        line += self.output_pair(self.range_to_body)
+        line += self.output_pair(self.night_side_flag)
+        line += self.output_pair(self.behind_rings_flag)
+        line += self.output_pair(self.in_ring_shadow_flag)
+        # singletons currently not working
+        """line += self.output_singleton(self.sub_solar_geocentric_latitude)
+        line += self.output_singleton(self.sub_solar_geographic_latitude)
+        line += self.output_singleton(self.sub_solar_iau_longitude)
+        line += self.output_singleton(self.solar_distance_to_body_center)
+        line += self.output_singleton(self.sub_obs_geocentric_latitude)
+        line += self.output_singleton(self.sub_obs_geographic_latitude)
+        line += self.output_singleton(self.sub_obs_iau_longitude)
+        line += self.output_singleton(self.obs_distance_to_body_center)"""
         line += '\n'
         return line
 
@@ -1180,24 +1177,15 @@ class ProcessedFileGeometry(object):
             lines += str(self.limb)
         return lines
     
-    def set_image_id(self, obs):
+    def set_image_id(self, obs, ndx):
         """output to string the image/camera label"""
         file_name = obs.index_dict['PRODUCT_ID']
-        #strip letter off of front and extension off of end
-        number_code = file_name.split('.')[0][2:]
-        if "_IR" in obs.path_id:
-            wave = 'I'
-            if 'NORMAL' in obs.index_dict['SAMPLING_MODE_ID'][1]:
-                res = 'N'
-            else:
-                res = 'L'
+        #number_code = file_name.split('.')[0][2:]
+        if ndx == 1:
+            wave = 'IR'
         else:
-            wave = 'V'
-            if 'NORMAL' in obs.index_dict['SAMPLING_MODE_ID'][0]:
-                res = 'N'
-            else:
-                res = 'L'
-        self.obs_id = number_code + '/' + wave + '/' + res
+            wave = 'VIS'
+        self.obs_id = 'S/CUBE/CO/VIMS/' + file_name + '/' + wave
     
     
     def compute_details(self, freq):
@@ -1267,10 +1255,10 @@ def get_error_buffer_size(snapshot):
 ################################################################################
 # Actual generation of the data                                                #
 ################################################################################
-def generate_metadata(obs, resolution, body_name):
+def generate_metadata(obs, resolution, body_name, ndx):
     
     geometry = FileGeometry(body_name)
-    geometry.set_image_id(obs)
+    geometry.set_image_id(obs, ndx)
     
     # deal with possible pointing errors - up to 3 pixels in any
     # direction for WAC and 30 pixels for NAC
@@ -1459,7 +1447,7 @@ def backplane_for_observation(obs, resolution):
     bp = oops.Backplane(obs, meshgrid, times)
     return bp
 
-def generate_bp_metadata(bp, obs):
+def generate_bp_metadata(bp, obs, ndx):
     """if TIME_DEBUG:
         then = datetime.datetime.now()"""
     try:
@@ -1485,7 +1473,7 @@ def generate_bp_metadata(bp, obs):
     for b_name in body_list:
         body_name = b_name.lower()
         geometry = ProcessedFileGeometry(body_name)
-        geometry.set_image_id(obs)
+        geometry.set_image_id(obs, ndx)
         """if TIME_DEBUG:
             now = datetime.datetime.now()
             duration = now - then
@@ -1666,12 +1654,12 @@ def generate_process_metadata(obs, resolution):
     geometries = []
     if obs[0] is not None:
         bp = backplane_for_observation(obs[0], resolution)
-        geoms = generate_bp_metadata(bp, obs[0])
+        geoms = generate_bp_metadata(bp, obs[0], 0)
         if geoms is not None:
             geometries += geoms
     if obs[1] is not None:
         bp = backplane_for_observation(obs[1], resolution)
-        geoms = generate_bp_metadata(bp, obs[1])
+        geoms = generate_bp_metadata(bp, obs[1], 1)
         if geoms is not None:
             geometries += geoms
     
