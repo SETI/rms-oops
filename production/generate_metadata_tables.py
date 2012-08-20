@@ -871,7 +871,7 @@ def generate_metadata(snapshot, resolution, file_type):
     test.mask |= ~saturn_intercepted.vals
     geometry.ansa_radius = test.copy()
 
-    test = bp.ansa_elevation("saturn:ansa")
+    test = bp.ansa_altitude("saturn:ansa")
     test.mask |= ~saturn_intercepted.vals
     geometry.ansa_elevation = test.copy()
 
@@ -914,10 +914,11 @@ def generate_metadata(snapshot, resolution, file_type):
 
     geometry.sub_solar_long = bp.sub_solar_longitude("saturn_rings")
     geometry.sub_solar_lat = bp.sub_solar_latitude("saturn_rings")
-    geometry.solar_dist = bp.solar_distance_to_center("saturn_rings")
+    #geometry.solar_dist = bp.solar_distance_to_center("saturn_rings")
+    geometry.solar_dist = bp.center_distance("saturn_rings", "sun")
     geometry.sub_obs_long = bp.sub_observer_longitude("saturn_rings")
     geometry.sub_obs_lat = bp.sub_observer_latitude("saturn_rings")
-    geometry.obs_dist = bp.observer_distance_to_center("saturn_rings")
+    geometry.obs_dist = bp.center_distance("saturn_rings")
 
     return geometry
 

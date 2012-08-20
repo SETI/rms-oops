@@ -1340,7 +1340,8 @@ def generate_metadata(obs, resolution, body_name, ndx):
     result = bp.sub_solar_longitude(body_name)# subsolar long
     geometry.summary.sub_solar_iau_longitude = result.copy()
     
-    result = bp.solar_distance_to_center(body_name) # solar distance to body
+    #result = bp.solar_distance_to_center(body_name) # solar distance to body
+    result = bp.center_distance(body_name, "sun")
     geometry.summary.solar_distance_to_body_center = result.copy()
     
     result = bp.sub_observer_latitude(body_name)            # obs centric lat
@@ -1352,7 +1353,8 @@ def generate_metadata(obs, resolution, body_name, ndx):
     result = bp.sub_observer_longitude(body_name)#sub obs long
     geometry.summary.sub_obs_iau_longitude = result.copy()
     
-    result = bp.observer_distance_to_center(body_name)
+    #result = bp.observer_distance_to_center(body_name)
+    result = bp.center_distance(body_name)
     geometry.summary.obs_distance_to_body_center = result.copy()
     
     #onto the body detail
@@ -1363,7 +1365,7 @@ def generate_metadata(obs, resolution, body_name, ndx):
     body_intercepted = bp.where_intercepted(limb_body)
     limb_mask = ~body_intercepted.vals
     
-    result = bp.elevation(limb_body)
+    result = bp.altitude(limb_body)
     result.mask |= limb_mask
     geometry.limb.elevation = result.copy()
     
@@ -1581,7 +1583,8 @@ def generate_bp_metadata(bp, obs, ndx):
             result = bp.sub_solar_longitude(body_name)# subsolar long
             geometry.summary.set_sub_solar_iau_longitude(result)
             
-            result = bp.solar_distance_to_center(body_name) # solar distance to body
+            #result = bp.solar_distance_to_center(body_name) # solar distance to body
+            result = bp.center_distance(body_name, "sun")
             geometry.summary.set_solar_distance_to_body_center(result)
             
             result = bp.sub_observer_latitude(body_name)            # obs centric lat
@@ -1593,7 +1596,8 @@ def generate_bp_metadata(bp, obs, ndx):
             result = bp.sub_observer_longitude(body_name)#sub obs long
             geometry.summary.set_sub_obs_iau_longitude(result)
             
-            result = bp.observer_distance_to_center(body_name)
+            #result = bp.observer_distance_to_center(body_name)
+            result = bp.center_distance(body_name)
             geometry.summary.set_obs_distance_to_body_center(result) """
         """if TIME_DEBUG:
             now = datetime.datetime.now()
@@ -1607,7 +1611,7 @@ def generate_bp_metadata(bp, obs, ndx):
             body_intercepted = bp.where_intercepted(limb_body)
             limb_mask = ~body_intercepted.vals
             
-            result = bp.elevation(limb_body)
+            result = bp.altitude(limb_body)
             result.mask |= limb_mask
             geometry.limb.set_elevation(result)
             
