@@ -1771,7 +1771,7 @@ def load_vims_observations(valid_path):
         for name in files:
             if ("DATA" in root) and (".LBL" in name):
                 fname = os.path.join(root,name)
-                ob = cassini_vims.from_file(fname)
+                ob = cassini_vims.from_file(fname, True)
                 obs.append(ob)
                 i += 1
                 if i >= stop_file_index:

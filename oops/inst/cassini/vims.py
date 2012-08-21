@@ -624,7 +624,40 @@ def _load_data_and_times(filespec, label):
 
     return (data, times)
 
+def finish_of_line(i, lines):
+    rest_of_line = ""
+    while i < len(lines):
+        content = lines[i].strip()
+        rest_of_line += content
+        if content[-1] == ')':
+            return rest_of_line
+        i += 1
+    return rest_of_line
+
 ########################################
+
+def pds_value_from_constants(string_value):
+    """Returns a value or tuple from a string that does not contain quotes and
+        therefore expects a pre-defined constant
+        
+    Input:
+        string_value    a string that is either a pre-defined constant OR a
+                        tuple of pre-defined constants
+        
+    Return:             a string of that constant or a tuple of strings of those
+                        constants.
+    """
+    if string_value[0] == '(' and string_value[-1] == ')':
+        words = string_value[1:-1].split(',')
+        return words
+        """string_list = []
+        for word in words:
+            string_list.append('"' + word + '"')
+        string_tuple = tuple(string_list)
+        return string_tuple"""
+    #if add_quotes:
+    #    return '"' + string_value + '"'
+    return string_value
 
 def fast_dict(lines):
     """Returns a dictionary extracted from the PDS label of a VIMS file,
@@ -657,7 +690,66 @@ def fast_dict(lines):
     """
 
     # TBD
-    pass
+    master_keys = ["BAND_SUFFIX_NAME", "CORE_ITEMS", "EXPOSURE_DURATION",
+                   "INSTRUMENT_MODE_ID", "INTERFRAME_DELAY_DURATION",
+                   "INTERLINE_DELAY_DURATION", "MISSION_PHASE_NAME",
+                   "OVERWRITTEN_CHANNEL_FLAG", "PACKING_FLAG",
+                   "POWER_STATE_FLAG", "SAMPLING_MODE_ID", "START_TIME",
+                   "SWATH_LENGTH", "SWATH_WIDTH", "TARGET_NAME", "X_OFFSET",
+                   "Z_OFFSET", "OBSERVATION_ID", "PRODUCT_ID"]
+    dict = {}
+    for i in range(len(lines)):
+        line = lines[i]
+        for key in master_keys:
+            if key == line.strip()[0:len(key)]:
+                #print "doing key:", key
+                components = line.split('=')
+                dict_key = components[0].strip()
+                data = components[1].strip()
+                if data[0] == '(' and data[-1] != ')':
+                    # we must have a split line and need to append until we find
+                    # a closing bracket
+                    i += 1
+                    data += finish_of_line(i, lines)
+                try:
+                    dict[dict_key] = eval(data)
+                except NameError:
+                    dict[dict_key] = pds_value_from_constants(data)
+                except SyntaxError:
+                    dict[dict_key] = pds_value_from_constants(data)
+                """data = components[1].strip()
+                if data[0] == '(' and data[-1] == ')':
+                    dict[components[0]] = eval(data)
+                print "key %s in line %s" % (key, line)"""
+                #print "%s:" % dict_key
+                #print "\tvalues:", dict[dict_key]
+                master_keys.remove(key)
+                break
+        #print "fast_dict line:", line
+    # because we sometimes have a problem with the SAMPLING_MODE_ID, only check
+    # that for space inside of quotes.
+    try:
+        data = dict["SAMPLING_MODE_ID"]
+        redo_data_without_spaces = False
+        for mode_id in data:
+            if mode_id[0] == ' ':
+                print "first value is space"
+                redo_data_without_spaces = True
+        if redo_data_without_spaces:
+            print "redoing without spaces"
+            data_list = []
+            for mode_id in data:
+                "print adding to sampling mode:", mode_id.strip()
+                data_list.append(mode_id.strip())
+            print "converting data_list to tuple and adding to dict"
+            dict["SAMPLING_MODE_ID"] = tuple(data_list)
+            print "redone dict of sampleing mode:", dict["SAMPLING_MODE_ID"]
+    except:
+        pass
+    print "keys left:"
+    for key in master_keys:
+        print "key:", key
+    return dict
 
 ########################################
 
