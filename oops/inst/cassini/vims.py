@@ -78,12 +78,17 @@ VIS_FULL_FOV = oops.fov.Flat(VIS_NORMAL_SCALE, oops.Pair((64,64)))
 # Standard class methods
 ################################################################################
 
-def from_file(filespec):
+def from_file(filespec, fast=False):
     """A general, static method to return a pair of Observation objects based on
     a given Cassini VIMS data file or label file.
 
     Input:
         filespec        the full path to a VIMS cube file or its PDS label.
+        fast            True to perform a fast load of a label file. A fast load
+                        bypasses the PDS label parser and pulls the minimum
+                        required information out of the label using a much
+                        faster procedure. It works only when the filespec is a
+                        PDS label.
 
     Return:             (vis,ir)
         vis             the VIS observation, or None if the VIS channel was
@@ -94,8 +99,31 @@ def from_file(filespec):
 
     VIMS.initialize()   # Define everything the first time through
 
-    # Load the ISS file or the PDS label
-    label = pdsparser.PdsLabel.from_file(filespec).as_dict()
+    # Load a label via the fast procedure if specified
+    if fast:
+        assert filespec.lower().endswith(".lbl")
+        f = open(filespec)
+        lines = f.readlines()
+        f.close()
+
+        label = fast_dict(lines)
+
+        # Allow label["SPECTRAL_QUBE"] to work properly below
+        label["SPECTRAL_QUBE"] = label
+
+    # Otherwise, use the standard parser
+    else:
+        # Load the ISS file or the PDS label
+        lines = pdsparser.PdsLabel.load_file(filespec)
+
+        # ...handling a known syntax error where N/A is not always quoted in
+        # GAIN_MODE_ID and BACKGROUND_SAMPLING_MODE_ID
+        for i in range(len(lines)):
+            if lines[i][:4] in ("GAIN", "BACK"):
+                lines[i] = lines[i].replace('N/A,', '"N/A",')
+                lines[i] = lines[i].replace(',N/A', ',"N/A"')
+
+        label = pdsparser.PdsLabel.from_string(lines).as_dict()
 
     is_isis_file = "QUBE" in label.keys()
     if is_isis_file:                # If this is an ISIS file...
@@ -104,6 +132,7 @@ def from_file(filespec):
         info = label                # ... and the info is at the top level
         info["CORE_ITEMS"] = label["SPECTRAL_QUBE"]["CORE_ITEMS"]
         info["BAND_SUFFIX_NAME"] = label["SPECTRAL_QUBE"]["BAND_SUFFIX_NAME"]
+        info["PACKING"] = info["PACKING_FLAG"]
 
     # Load any needed SPICE kernels
     tstart = julian.tdb_from_tai(julian.tai_from_iso(info["START_TIME"]))
@@ -279,7 +308,9 @@ def from_file(filespec):
         else:
             ir_cadence = backplane_cadence
 
-        ir_data = ir_data.reshape((frames, 256))
+        if ir_data is not None:
+            ir_data = ir_data.reshape((frames, 256))
+
         ir_obs = oops.obs.Pixel(("t","b"),
                                 ir_cadence, ir_fov,
                                 "CASSINI", ir_frame_id)
@@ -592,6 +623,41 @@ def _load_data_and_times(filespec, label):
                                                    (sclock_max - sclock_min))
 
     return (data, times)
+
+########################################
+
+def fast_dict(lines):
+    """Returns a dictionary extracted from the PDS label of a VIMS file,
+    containing the minimum required set of entries for the observation to be
+    generated and analyzed. This routine is much faster than a call to
+    PdsLabel.from_file(), because it does not use the pyparsing module.
+
+    Input:
+        lines           a list containing all the lines of the file, as read by
+                        file.readlines().
+
+    Return:             a dictionary containing, at minimum, these elements:
+                            "BAND_SUFFIX_NAME" = tuple of strings
+                            "CORE_ITEMS" = tuple of ints
+                            "EXPOSURE_DURATION" = tuple of floats
+                            "INSTRUMENT_MODE_ID" = string
+                            "INTERFRAME_DELAY_DURATION" = float
+                            "INTERLINE_DELAY_DURATION" = float
+                            "MISSION_PHASE_NAME" = string
+                            "OVERWRITTEN_CHANNEL_FLAG" = string
+                            "PACKING_FLAG" = string
+                            "POWER_STATE_FLAG" = tuple of strings
+                            "SAMPLING_MODE_ID" = tuple of strings
+                            "START_TIME" = string
+                            "SWATH_LENGTH" = int
+                            "SWATH_WIDTH" = int
+                            "TARGET_NAME" = string
+                            "X_OFFSET" = int
+                            "Z_OFFSET" = int
+    """
+
+    # TBD
+    pass
 
 ########################################
 
