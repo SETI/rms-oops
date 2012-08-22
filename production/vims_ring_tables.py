@@ -465,13 +465,13 @@ class FileGeometry(object):
         line += self.add_single_minmax_info(self.az_obs * oops.DPR)
         line += self.add_single_minmax_info(self.el_obs * oops.DPR)
         
-        """if start is None:
+        if start is None:
             line += " %f," % self.sub_solar_long.vals
             line += " %f," % self.sub_solar_lat.vals
             line += " %f," % self.solar_dist.vals
             line += " %f," % self.sub_obs_long.vals
             line += " %f," % self.sub_obs_lat.vals
-            line += " %f," % self.obs_dist.vals"""
+            line += " %f," % self.obs_dist.vals
         line += '\n'
         return line
 
@@ -877,14 +877,14 @@ def generate_metadata(obs, resolution, ndx):
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.el_obs = test.copy()
     
-    geometry.sub_solar_long = bp.sub_solar_longitude("saturn_rings")
-    geometry.sub_solar_lat = bp.sub_solar_latitude("saturn_rings")
+    geometry.sub_solar_long = bp.sub_solar_longitude("saturn_rings").mean()
+    geometry.sub_solar_lat = bp.sub_solar_latitude("saturn_rings").mean()
     #geometry.solar_dist = bp.solar_distance_to_center("saturn_rings")
-    geometry.solar_dist = bp.center_distance("saturn_rings", "sun")
-    geometry.sub_obs_long = bp.sub_observer_longitude("saturn_rings")
-    geometry.sub_obs_lat = bp.sub_observer_latitude("saturn_rings")
+    geometry.solar_dist = bp.center_distance("saturn_rings", "sun").mean()
+    geometry.sub_obs_long = bp.sub_observer_longitude("saturn_rings").mean()
+    geometry.sub_obs_lat = bp.sub_observer_latitude("saturn_rings").mean()
     #geometry.obs_dist = bp.observer_distance_to_center("saturn_rings")
-    geometry.obs_dist = bp.center_distance("saturn_rings")
+    geometry.obs_dist = bp.center_distance("saturn_rings").mean()
     
     return geometry
 

@@ -809,14 +809,14 @@ class ProcessedBodySurfaceSummary(BodySurface):
         line += self.output_pair(self.behind_rings_flag)
         line += self.output_pair(self.in_ring_shadow_flag)
         # singletons currently not working
-        """line += self.output_singleton(self.sub_solar_geocentric_latitude)
+        line += self.output_singleton(self.sub_solar_geocentric_latitude)
         line += self.output_singleton(self.sub_solar_geographic_latitude)
         line += self.output_singleton(self.sub_solar_iau_longitude)
         line += self.output_singleton(self.solar_distance_to_body_center)
         line += self.output_singleton(self.sub_obs_geocentric_latitude)
         line += self.output_singleton(self.sub_obs_geographic_latitude)
         line += self.output_singleton(self.sub_obs_iau_longitude)
-        line += self.output_singleton(self.obs_distance_to_body_center)"""
+        line += self.output_singleton(self.obs_distance_to_body_center)
         line += '\n'
         return line
 
@@ -1573,32 +1573,32 @@ def generate_bp_metadata(bp, obs, ndx):
             duration = now - then
             print "after flags took:", duration
             then = now"""
-        """
-            result = bp.sub_solar_latitude(body_name)            # subsolar centric lat
-            geometry.summary.set_sub_solar_geocentric_latitude(result)
-            
-            result = bp.sub_solar_latitude(body_name, "graphic") # subsolar graphic lat
-            geometry.summary.set_sub_solar_geographic_latitude(result)
-            
-            result = bp.sub_solar_longitude(body_name)# subsolar long
-            geometry.summary.set_sub_solar_iau_longitude(result)
-            
-            #result = bp.solar_distance_to_center(body_name) # solar distance to body
-            result = bp.center_distance(body_name, "sun")
-            geometry.summary.set_solar_distance_to_body_center(result)
-            
-            result = bp.sub_observer_latitude(body_name)            # obs centric lat
-            geometry.summary.set_sub_obs_geocentric_latitude(result)
-            
-            result = bp.sub_observer_latitude(body_name, "graphic")  # obs centric lat
-            geometry.summary.set_sub_obs_geographic_latitude(result)
-            
-            result = bp.sub_observer_longitude(body_name)#sub obs long
-            geometry.summary.set_sub_obs_iau_longitude(result)
-            
-            #result = bp.observer_distance_to_center(body_name)
-            result = bp.center_distance(body_name)
-            geometry.summary.set_obs_distance_to_body_center(result) """
+        
+        result = bp.sub_solar_latitude(body_name).mean()  # subsolar centric lat
+        geometry.summary.set_sub_solar_geocentric_latitude(result)
+        
+        result = bp.sub_solar_latitude(body_name, "graphic").mean() # subsolar graphic lat
+        geometry.summary.set_sub_solar_geographic_latitude(result)
+        
+        result = bp.sub_solar_longitude(body_name).mean()# subsolar long
+        geometry.summary.set_sub_solar_iau_longitude(result)
+        
+        #result = bp.solar_distance_to_center(body_name) # solar distance to body
+        result = bp.center_distance(body_name, "sun").mean()
+        geometry.summary.set_solar_distance_to_body_center(result)
+        
+        result = bp.sub_observer_latitude(body_name).mean()   # obs centric lat
+        geometry.summary.set_sub_obs_geocentric_latitude(result)
+        
+        result = bp.sub_observer_latitude(body_name, "graphic").mean() # obs centric lat
+        geometry.summary.set_sub_obs_geographic_latitude(result)
+        
+        result = bp.sub_observer_longitude(body_name).mean() #sub obs long
+        geometry.summary.set_sub_obs_iau_longitude(result)
+        
+        #result = bp.observer_distance_to_center(body_name)
+        result = bp.center_distance(body_name).mean()
+        geometry.summary.set_obs_distance_to_body_center(result)
         """if TIME_DEBUG:
             now = datetime.datetime.now()
             duration = now - then
