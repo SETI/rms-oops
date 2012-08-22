@@ -732,7 +732,6 @@ def generate_metadata(obs, resolution, ndx):
     try:
         intercepted = bp.where_intercepted("saturn_rings")
     except:
-        print "generate_metadata() returning None"
         return None
     #show_info("Intercepted:", intercepted.vals)
     
@@ -948,7 +947,6 @@ def load_vims_observations(valid_path):
         for name in files:
             if ("DATA" in root) and (".LBL" in name):
                 fname = os.path.join(root,name)
-                print "fname:", fname
                 ob = cassini_vims.from_file(fname)
                 obs.append(ob)
                 i += 1
@@ -1053,7 +1051,6 @@ def generate_table_for_index(file_name):
                     write_time = datetime.datetime.now() - write_then
                 iIOs += 1
         except:
-            print "skipping area 2:", i
             continue
     
     #i += 1

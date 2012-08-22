@@ -1417,7 +1417,7 @@ def generate_metadata(obs, resolution, file_type, body_name):
     body_intercepted = bp.where_intercepted(limb_body)
     limb_mask = ~body_intercepted.vals
 
-    result = bp.elevation(limb_body)
+    result = bp.altitude(limb_body)
     result.mask |= limb_mask
     geometry.limb.elevation = result.copy()
 
@@ -1678,7 +1678,7 @@ def generate_bp_metadata(bp, obs, file_type):
                 body_intercepted = bp.where_intercepted(limb_body)
                 limb_mask = ~body_intercepted.vals
                 
-                result = bp.elevation(limb_body)
+                result = bp.altitude(limb_body)
                 result.mask |= limb_mask
                 geometry.limb.set_elevation(result)
                 
