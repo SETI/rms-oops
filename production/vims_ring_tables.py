@@ -714,18 +714,16 @@ def snapshot_has_partial_intercept(snapshot, resolution):
 
 def generate_metadata(obs, resolution, ndx):
     
-    #print the camera field
     geometry = FileGeometry()
     geometry.image_name = image_code_name(obs, ndx)
-    #geometry.set_image_camera(snapshot)
     
     # deal with possible pointing errors - up to 3 pixels in any
     # direction for WAC and 30 pixels for NAC
     error_buffer = get_error_buffer_size(obs)
-    #print "snapshot.fov.uv_shape: ", snapshot.fov.uv_shape
     limit = obs.fov.uv_shape + oops.Pair(np.array([error_buffer,
                                                    error_buffer]))
     (meshgrid, times) = cassini_vims.meshgrid_and_times(obs)
+
     #(meshgrid, times) = cassini_vims.meshgrid_and_times(obs,
     #                                                    undersample=resolution)
     bp = oops.Backplane(obs, meshgrid, times)
@@ -733,53 +731,25 @@ def generate_metadata(obs, resolution, ndx):
         intercepted = bp.where_intercepted("saturn_rings")
     except:
         return None
-    #show_info("Intercepted:", intercepted.vals)
     
     saturn_in_front = bp.where_in_front("saturn", "saturn_rings")
     saturn_intercepted = bp.where_intercepted("saturn")
-    """
-        show_info("saturn_intercepted:", saturn_intercepted.vals)
-        if np.all(saturn_intercepted.vals):
-        print "SATURN INTEREPTED EVERYWHERE"
-        elif np.any(saturn_intercepted.vals):
-        print "SATURN INTERCEPTED SOME PLACES"
-        else:
-        print "SATURN NOT INTERCEPTED"
-        """
+
     rings_blocked = saturn_in_front & saturn_intercepted
     rings_in_view = intercepted & (~rings_blocked)
-    """
-        if np.all(rings_in_view.vals):
-        print "ONLY RINGS CLAIM IN VIEW"
-        else:
-        print "RINGS CLAIM PARTIAL VIEW"
-        """
+
     rings_not_in_shadow = bp.where_outside_shadow("saturn_rings", "saturn")
     vis_rings_not_shadow = rings_in_view & rings_not_in_shadow
-	#show_info("Visible Rings not in shadow:", vis_rings_not_shadow.vals)
     
     test = bp.right_ascension()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ra = test.copy()
     
-	#print "Doing declination:"
     test = bp.declination()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.dec = test.copy()
     
-	#print "Doing ring radius:"
     test = bp.ring_radius("saturn_ring_plane")
-    """
-        print "###################################################################"
-        if np.all(test.mask):
-        print "ring_radius mask entirely true"
-        elif np.any(test.mask):
-        print "ring_radius mask partially true"
-        else:
-        print "ring_radius mask entirely false"
-        print "ring radius: ", test
-        print "###################################################################"
-        """
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ring_radius = test.copy()
     
@@ -788,7 +758,6 @@ def generate_metadata(obs, resolution, ndx):
     geometry.radial_resolution = test.copy()
     
     test = bp.ring_longitude("saturn_rings",reference="j2000")
-	#show_info("Ring longitude:", test.vals)
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.longitude_j2000 = test.copy()
     
@@ -813,7 +782,6 @@ def generate_metadata(obs, resolution, ndx):
     geometry.emission = test.copy()
     
     test = bp.distance("saturn_rings")
-	#print "distance: ", test
     test.mask |= ~vis_rings_not_shadow.vals
     range_test = test.rebroadcast(test.mask.shape)
     geometry.range_to_rings = range_test.copy()
@@ -829,7 +797,6 @@ def generate_metadata(obs, resolution, ndx):
     # ANSA surface values
     #####################################################
     saturn_intercepted = bp.where_intercepted("saturn:ansa")
-    #show_info("ansa intercepted:", saturn_intercepted)
     
     test = bp.ansa_radius("saturn:ansa")
     test.mask |= ~saturn_intercepted.vals
@@ -840,9 +807,7 @@ def generate_metadata(obs, resolution, ndx):
     geometry.ansa_elevation = test.copy()
     
     test = bp.ansa_longitude("saturn:ansa",reference="j2000")
-    #print "test of ansa_longitude before mask: ", test
     test.mask |= ~saturn_intercepted.vals
-    #print "test of ansa_longitude after mask: ", test
     geometry.ansa_longitude_j2000 = test.copy()
     
     test = bp.ansa_longitude("saturn:ansa", reference="sha")
