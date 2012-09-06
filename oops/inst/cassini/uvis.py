@@ -53,6 +53,7 @@ def from_file(filespec, data=False):
 
     # Load the data array
     (bands,lines,samples) = info["CORE_ITEMS"]
+    print "(bands,lines,samples):", (bands,lines,samples)
 
     # Determine the detector
     det = label["PRODUCT_ID"]
@@ -66,8 +67,8 @@ def from_file(filespec, data=False):
 
     # Define the FOV
     uv_shape = (lines, 1)
-    uscale = np.arctan(np.tan(UVIS.xfovs[(det, slit_state)] * oops.RPD) / 32.)
-    vscale = np.arctan(np.tan(UVIS.yfovs[(det, slit_state)] * oops.RPD) / 32.)
+    uscale = np.arctan(np.tan(UVIS.xfovs[(det, slit_state)] * oops.RPD))
+    vscale = np.arctan(np.tan(UVIS.yfovs[(det, slit_state)] * oops.RPD))
     fov = oops.fov.Flat((uscale,vscale), uv_shape)
     print "uv_shape:", uv_shape
 
@@ -155,7 +156,7 @@ def meshgrid_and_times(obs):
     print "\n************\nuv_shape =", uv_shape
     print "meshgrid.uv.vals.shape =", meshgrid.uv.vals.shape
     meshgrid.uv = Pair.as_pair(meshgrid.uv.vals.reshape(uv_shape[0],1,2))
-    #meshgrid.uv.reshape((meshgrid.uv.shape,1))
+    #meshgrid.uv.reshape((meshgrid.uv.shape[0],1))
     print "in UVIS:meshgrid_and_times: meshgrid.uv.shape =", meshgrid.uv.shape
 
     time = Scalar.as_scalar(np.linspace(obs.cadence.tstart,
