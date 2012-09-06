@@ -68,6 +68,10 @@ class FOV(object):
         """A constructor."""
 
         pass
+    
+    def __str__(self):
+        """Returns description of Flat for debugging purposes."""
+        return "FOV:\n\tuv_scale: " + str(self.uv_scale.vals) + "\n\tuv_shape: " + str(self.uv_shape.vals) + "\n"
 
     def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
