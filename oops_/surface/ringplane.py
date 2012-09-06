@@ -352,7 +352,7 @@ class RingPlane(Surface):
             return Vector3(np.zeros(pos.vals.shape), mask)
 
         radius = pos.norm()
-        n = self.gravity.n(radius.vals)
+        n = Scalar(self.gravity.n(radius.vals))
 
         vflat = pos.cross((0,0,-1)) * n
         return Vector3(vflat.vals, mask)

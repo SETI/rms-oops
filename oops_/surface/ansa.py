@@ -279,7 +279,7 @@ class Ansa(Surface):
         obs_dot_los = obs_x * los_x + obs_y * los_y
         t_vals = -obs_dot_los / los_sq
 
-        pos = obs + los * t_vals
+        pos = obs + los * Scalar(t_vals)
         t = Scalar(t_vals, pos.mask)
 
         if derivs:
