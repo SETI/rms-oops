@@ -61,7 +61,7 @@ class PosTarg(Frame):
         self.reference_id = registry.as_frame_id(reference)
         self.origin_id = reference.origin_id
 
-        self.register()
+        self.reregister()
 
         self.transform = Transform(mat, Vector3.ZERO,
                                    self.reference_id, self.origin_id)

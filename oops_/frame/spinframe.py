@@ -60,7 +60,7 @@ class SpinFrame(Frame):
         self.reference_id = registry.as_frame_id(reference)
         self.origin_id = reference.origin_id
 
-        self.register()
+        self.reregister()
 
 ########################################
 

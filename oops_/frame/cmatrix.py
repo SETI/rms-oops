@@ -42,8 +42,8 @@ class Cmatrix(Frame):
         self.shape = cmatrix.shape
         self.frame_id = id
 
-        self.reregister() # We have to register it before we can construct the
-                          # Transform
+        self.reregister()   # We have to register it before we can construct the
+                            # Transform
 
         self.transform = Transform(cmatrix, (0,0,0),
                                    self.frame_id,

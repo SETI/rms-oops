@@ -77,7 +77,7 @@ class InclinedFrame(Frame):
             self.spin2 = SpinFrame(-self.node, -self.rate, self.epoch, axis=2,
                                    reference=self.rotate.frame_id)
 
-        self.register()
+        self.reregister()
 
 ########################################
 

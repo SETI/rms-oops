@@ -70,7 +70,7 @@ class RingFrame(Frame):
         else:
             self.frame_id = id
 
-        self.register()
+        self.reregister()
 
 ########################################
 
