@@ -1457,18 +1457,8 @@ def generate_bp_metadata(bp, obs, ndx):
     except:
         return None
     intercept_mask = intercepted.vals
-    """if TIME_DEBUG:
-        now = datetime.datetime.now()
-        duration = now - then
-        print "where_intercepted took:", duration
-        then = now"""
     
     body_list = bodies_for_observation(get_observation_id(obs))
-    """if TIME_DEBUG:
-        now = datetime.datetime.now()
-        duration = now - then
-        print "bodies_for_observation took:", duration
-        then = now"""
     
     geometries = []
     
@@ -1476,40 +1466,20 @@ def generate_bp_metadata(bp, obs, ndx):
         body_name = b_name.lower()
         geometry = ProcessedFileGeometry(body_name)
         geometry.set_image_id(obs, ndx)
-        """if TIME_DEBUG:
-            now = datetime.datetime.now()
-            duration = now - then
-            print "geometry object setup took:", duration
-            then = now"""
         
         result = bp.latitude(body_name)                      # geocentric latitude
         result.mask |= intercept_mask
         geometry.summary.set_geocentric_latitude(result)
-        """if TIME_DEBUG:
-            now = datetime.datetime.now()
-            duration = now - then
-            print "set_geocentric_latitude took:", duration
-            then = now"""
         
         # we need to not only set the data, but also, since this is our first mask
         # create the BodySurfaceDetails
         geometry.create_details(result)
         geometry.set_detail_geocentric_latitude(result)
-        """if TIME_DEBUG:
-            now = datetime.datetime.now()
-            duration = now - then
-            print "create_details and set_detail_geocentric_latitude took:", duration
-            then = now"""
         
         result = bp.latitude(body_name, "graphic")           # geographic latitude
         result.mask |= intercept_mask
         geometry.summary.set_geographic_latitude(result)
         geometry.set_detail_geographic_latitude(result)
-        """if TIME_DEBUG:
-            now = datetime.datetime.now()
-            duration = now - then
-            print "set_geographic_latitude took:", duration
-            then = now"""
         
         result = bp.longitude(body_name)                     # iau longitude
         result.mask |= intercept_mask

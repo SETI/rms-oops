@@ -768,54 +768,22 @@ def generate_metadata(snapshot, resolution, file_type):
     except:
         return None
     
-    #show_info("Intercepted:", intercepted.vals)
-    
     saturn_in_front = bp.where_in_front("saturn", "saturn_rings")
     saturn_intercepted = bp.where_intercepted("saturn")
-    """
-    show_info("saturn_intercepted:", saturn_intercepted.vals)
-    if np.all(saturn_intercepted.vals):
-        print "SATURN INTEREPTED EVERYWHERE"
-    elif np.any(saturn_intercepted.vals):
-        print "SATURN INTERCEPTED SOME PLACES"
-    else:
-        print "SATURN NOT INTERCEPTED"
-    """
     rings_blocked = saturn_in_front & saturn_intercepted
     rings_in_view = intercepted & (~rings_blocked)
-    """
-    if np.all(rings_in_view.vals):
-        print "ONLY RINGS CLAIM IN VIEW"
-    else:
-        print "RINGS CLAIM PARTIAL VIEW"
-    """
     rings_not_in_shadow = bp.where_outside_shadow("saturn_rings", "saturn")
     vis_rings_not_shadow = rings_in_view & rings_not_in_shadow
-	#show_info("Visible Rings not in shadow:", vis_rings_not_shadow.vals)
 
-	#print "Doing right ascension:"
     test = bp.right_ascension()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ra = test.copy()
 
-	#print "Doing declination:"
     test = bp.declination()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.dec = test.copy()
 
-	#print "Doing ring radius:"
     test = bp.ring_radius("saturn_ring_plane")
-    """
-    print "###################################################################"
-    if np.all(test.mask):
-        print "ring_radius mask entirely true"
-    elif np.any(test.mask):
-        print "ring_radius mask partially true"
-    else:
-        print "ring_radius mask entirely false"
-    print "ring radius: ", test
-    print "###################################################################"
-    """
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ring_radius = test.copy()
 
