@@ -66,9 +66,10 @@ def from_file(filespec, data=False):
         slit_state = ""
 
     # Define the FOV
-    uv_shape = (lines, 1)
+    #uv_shape = (lines, 1)
+    uv_shape = (1, lines)
     uscale = np.arctan(np.tan(UVIS.xfovs[(det, slit_state)] * oops.RPD))
-    vscale = np.arctan(np.tan(UVIS.yfovs[(det, slit_state)] * oops.RPD))
+    vscale = np.arctan(np.tan(UVIS.yfovs[(det, slit_state)] * oops.RPD) / ((lines+1)//2))
     fov = oops.fov.Flat((uscale,vscale), uv_shape)
     print "uv_shape:", uv_shape
 
@@ -124,10 +125,12 @@ def from_file(filespec, data=False):
 
     # Create the Observation
     if lines == 1:
-        obs = oops.obs.Pixel(("t","b"), cadence, fov, "CASSINI", frame_id)
+        obs = oops.obs.Pixel(("b","t"), cadence, fov, "CASSINI", frame_id)
     else:
-        obs = oops.obs.Slit(("vt","u","b"), 1, cadence, fov, "CASSINI",
-                                                             frame_id)
+        obs = oops.obs.Slit(("b","v","ut"), 1, cadence, fov, "CASSINI",
+                            frame_id)
+        #obs = oops.obs.Slit(("vt","u","b"), 1, cadence, fov, "CASSINI",
+        #                    frame_id)
     obs.insert_subfield("dict", label)
     obs.insert_subfield("index_dict", label)# for backward compatibility
     obs.insert_subfield("instrument", "UVIS")
@@ -151,6 +154,7 @@ def meshgrid_and_times(obs):
         """
     
     swap = obs.u_axis > obs.v_axis or obs.u_axis == -1
+    print "swap = ", swap
     meshgrid = Meshgrid.for_fov(obs.fov, swap=swap)
     uv_shape = meshgrid.uv.shape
     print "\n************\nuv_shape =", uv_shape
@@ -162,7 +166,7 @@ def meshgrid_and_times(obs):
     time = Scalar.as_scalar(np.linspace(obs.cadence.tstart,
                                     obs.cadence.tstart +
                                     obs.cadence.steps * obs.cadence.tstride,
-                                    obs.cadence.steps).reshape(1,obs.cadence.steps))
+                                    obs.cadence.steps).reshape(1, obs.cadence.steps))
     
     return (meshgrid, time)
 
