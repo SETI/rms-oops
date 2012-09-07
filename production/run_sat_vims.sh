@@ -1,0 +1,1 @@
+python ./vims_saturn_tables.py -res 1.0 -wfreq 50 -out 1 -start 0 -stop 10 -lf ./g_vims_sat.csv

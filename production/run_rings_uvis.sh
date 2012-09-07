@@ -1,0 +1,1 @@
+python ./uvis_ring_tables.py -res 8.000000 -wfreq 50 -opus1 1 -opus2 1 -start 0 -stop 10 -lf ./g_uvis_list.csv -rf ./geometry_ring_ranges.csv

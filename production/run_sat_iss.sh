@@ -1,0 +1,1 @@
+python ./generate_saturn_tables.py -res 1.0 -wfreq 4 -out 1 -start 786 -stop 787 -lf /Users/bwells/g_saturn_list.csv
