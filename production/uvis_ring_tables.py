@@ -77,14 +77,10 @@ for i in range(nArguments):
 
 
 def image_code_name(ob):
-    print "into image_code_name"
     pid = ob.index_dict['PRODUCT_ID']
-    print "pid = ", pid
     #pieces = re.split('(\d+)',pid)
     pieces = re.split('([0-9_]+)',pid)
-    print "pieces =", pieces
     image_code = 'S/CO/UVIS/' + pieces[1] + '/' + pieces[0]
-    print "full image_code =", image_code
     return image_code
 
 ################################################################################
@@ -357,10 +353,6 @@ class FileGeometry(object):
             if min_angle > max_angle:
                 angle_mask = a | b
             else:
-                #print "empty_section: ", empty_sections[i]
-                #print "min_angle: ", min_angle
-                #print "a: ", a
-                #print "b: ", b
                 angle_mask = a & b
             angle_masks.append(angle_mask)
         return (angle_masks, spans)
@@ -416,7 +408,6 @@ class FileGeometry(object):
         line += self.add_single_minmax_info(self.dec * oops.DPR)
         line += self.add_single_minmax_info(self.ring_radius)
         line += self.add_single_minmax_info(self.radial_resolution)
-        #print "self.longitude_j2000.mask: ", self.longitude_j2000.mask
         if np.all(self.longitude_j2000.mask):
             line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
             line += ", -0.1000000000000000E+31, -0.1000000000000000E+31"
@@ -511,32 +502,24 @@ def show_info(title, array):
     global PRINT, DISPLAY
     if not PRINT:
         if OBJC_DISPLAY:
-            print "printing imsave area 0.3"
             if isinstance(array, np.ndarray):
-                print "printing imsave area 0.5"
                 if array.dtype == np.dtype("bool"):
-                    print "printing imsave area 1", array
                     pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                  array, vmin=0, vmax=1, cmap=pylab.cm.gray)
-                    print "printing imsave area 1.01"
                 else:
                     minval = np.min(array)
                     maxval = np.max(array)
                     if minval != maxval:
-                        print "printing imsave area 2"
                         pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                      array, cmap=pylab.cm.gray)
             elif isinstance(array, oops.Array):
-                print "printing imsave area 2.5"
                 if np.any(array.mask):
-                    print "printing imsave area 3"
                     pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                  array.vals)
                 else:
                     minval = np.min(array.vals)
                     maxval = np.max(array.vals)
                     if minval != maxval:
-                        print "printing imsave area 4"
                         pylab.imsave("/Users/bwells/lsrc/pds-tools/tempImage.png",
                                      array.vals, cmap=pylab.cm.gray)
         return
@@ -544,11 +527,8 @@ def show_info(title, array):
     print ""
     print title
     
-    print "printing imsave area 5"
     if isinstance(array, np.ndarray):
-        print "printing imsave area 5.3"
         if array.dtype == np.dtype("bool"):
-            print "printing imsave area 5.4"
             count = np.sum(array)
             total = np.size(array)
             percent = int(count / float(total) * 100. + 0.5)
@@ -562,7 +542,6 @@ def show_info(title, array):
                              array, vmin=0, vmax=1, cmap=pylab.cm.gray)
         
         else:
-            print "printing imsave area 5.5"
             minval = np.min(array)
             maxval = np.max(array)
             print "minval = ", minval
@@ -580,7 +559,6 @@ def show_info(title, array):
                                  array, cmap=pylab.cm.gray)
     
     elif isinstance(array, oops.Array):
-        print "printing imsave area 6"
         if np.any(array.mask):
             print "    ", (np.min(array.vals),
                            np.max(array.vals)), "(unmasked min, max)"
@@ -713,93 +691,40 @@ def snapshot_has_partial_intercept(snapshot, resolution):
 
 
 def generate_metadata(obs, resolution):
-    print "into generate_metadata"
-    #print the camera field
     geometry = FileGeometry()
     geometry.image_name = image_code_name(obs)
-    print "geometry.image_name =", geometry.image_name
-    #geometry.set_image_camera(snapshot)
     
     # deal with possible pointing errors - up to 3 pixels in any
     # direction for WAC and 30 pixels for NAC
-    error_buffer = get_error_buffer_size(obs)
-    #print "snapshot.fov.uv_shape: ", snapshot.fov.uv_shape
+    #error_buffer = get_error_buffer_size(obs)
     #limit = obs.fov.uv_shape + oops.Pair(np.array([error_buffer,
     #                                               error_buffer]))
     #meshgrid = Meshgrid.for_fov(obs.fov, undersample=resolution,
     #                            limit=limit, swap=True)
     (meshgrid, times) = cassini_uvis.meshgrid_and_times(obs)
-    print "times.shape:", times.shape
-
-    print "meshgrid =", meshgrid
-    
-    #test_bp = oops.Backplane(obs, None, times)
-    #print "test_bp:", test_bp
     
     bp = oops.Backplane(obs, meshgrid, times)
     try:
-        intercepted = bp.where_intercepted("saturn_rings")
+        intercepted = bp.where_intercepted("saturn_main_rings")
     except:
         return None
-    print "intercepted.shape: ", intercepted.shape
-    #show_info("Intercepted:", intercepted.vals)
     
     saturn_in_front = bp.where_in_front("saturn", "saturn_rings")
-    print "saturn_in_front.shape: ", saturn_in_front.shape
     saturn_intercepted = bp.where_intercepted("saturn")
-    print "saturn_intercepted.shape: ", saturn_intercepted.shape
-    """
-        show_info("saturn_intercepted:", saturn_intercepted.vals)
-        if np.all(saturn_intercepted.vals):
-        print "SATURN INTEREPTED EVERYWHERE"
-        elif np.any(saturn_intercepted.vals):
-        print "SATURN INTERCEPTED SOME PLACES"
-        else:
-        print "SATURN NOT INTERCEPTED"
-        """
     rings_blocked = saturn_in_front & saturn_intercepted
-    print "area 1b"
-    print "intercepted: ", intercepted
-    print "rings_blocked: ", rings_blocked
     rings_in_view = intercepted & (~rings_blocked)
-    print "area 1c"
-    """
-        if np.all(rings_in_view.vals):
-        print "ONLY RINGS CLAIM IN VIEW"
-        else:
-        print "RINGS CLAIM PARTIAL VIEW"
-        """
     rings_not_in_shadow = bp.where_outside_shadow("saturn_rings", "saturn")
-    print "area 1d"
-    print "rings_in_view: ", rings_in_view
-    print "rings_not_in_shadow: ", rings_not_in_shadow
     vis_rings_not_shadow = rings_in_view & rings_not_in_shadow
-    print "area 1e"
-	#show_info("Visible Rings not in shadow:", vis_rings_not_shadow.vals)
     
     test = bp.right_ascension()
-    print "area 1f"
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ra = test.copy()
     
-	#print "Doing declination:"
     test = bp.declination()
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.dec = test.copy()
     
-	#print "Doing ring radius:"
     test = bp.ring_radius("saturn_ring_plane")
-    """
-        print "###################################################################"
-        if np.all(test.mask):
-        print "ring_radius mask entirely true"
-        elif np.any(test.mask):
-        print "ring_radius mask partially true"
-        else:
-        print "ring_radius mask entirely false"
-        print "ring radius: ", test
-        print "###################################################################"
-        """
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.ring_radius = test.copy()
     
@@ -808,7 +733,6 @@ def generate_metadata(obs, resolution):
     geometry.radial_resolution = test.copy()
     
     test = bp.ring_longitude("saturn_rings",reference="j2000")
-	#show_info("Ring longitude:", test.vals)
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.longitude_j2000 = test.copy()
     
@@ -823,7 +747,6 @@ def generate_metadata(obs, resolution):
     test = bp.phase_angle("saturn_rings")
     test.mask |= ~vis_rings_not_shadow.vals
     geometry.phase = test.copy()
-    print "area 2"
     
     test = bp.incidence_angle("saturn_rings")
     test.mask |= ~vis_rings_not_shadow.vals
@@ -834,7 +757,6 @@ def generate_metadata(obs, resolution):
     geometry.emission = test.copy()
     
     test = bp.distance("saturn_rings")
-	#print "distance: ", test
     test.mask |= ~vis_rings_not_shadow.vals
     range_test = test.rebroadcast(test.mask.shape)
     geometry.range_to_rings = range_test.copy()
@@ -850,7 +772,6 @@ def generate_metadata(obs, resolution):
     # ANSA surface values
     #####################################################
     saturn_intercepted = bp.where_intercepted("saturn:ansa")
-    #show_info("ansa intercepted:", saturn_intercepted)
     
     test = bp.ansa_radius("saturn:ansa")
     test.mask |= ~saturn_intercepted.vals
@@ -861,9 +782,7 @@ def generate_metadata(obs, resolution):
     geometry.ansa_elevation = test.copy()
     
     test = bp.ansa_longitude("saturn:ansa",reference="j2000")
-    #print "test of ansa_longitude before mask: ", test
     test.mask |= ~saturn_intercepted.vals
-    #print "test of ansa_longitude after mask: ", test
     geometry.ansa_longitude_j2000 = test.copy()
     
     test = bp.ansa_longitude("saturn:ansa", reference="sha")
@@ -905,7 +824,6 @@ def generate_metadata(obs, resolution):
     geometry.sub_obs_lat = bp.sub_observer_latitude("saturn_rings").mean()
     #geometry.obs_dist = bp.observer_distance_to_center("saturn_rings")
     geometry.obs_dist = bp.center_distance("saturn_rings").mean()
-    print "area 3"
     
     return geometry
 
@@ -964,8 +882,8 @@ def look_for_proper_rotation(file_name, omit_range, fortran_list, j):
 def load_uvis_observations(valid_path):
     obs = []
     # for the moment, just add one file (for test)
-    obs.append(cassini_uvis.from_file(valid_path, True))
-    """
+    #obs.append(cassini_uvis.from_file(valid_path, True))
+    
     i = 0
     break_the_loop = False
     for root, dirs, files in os.walk(valid_path):
@@ -976,7 +894,7 @@ def load_uvis_observations(valid_path):
                 obs.append(ob)
                 i += 1
                 if i >= stop_file_index:
-                    return obs """
+                    return obs
     return obs
 
 def generate_table_for_index(file_name):
@@ -1009,7 +927,6 @@ def generate_table_for_index(file_name):
         nIOs += (nObs - start) / write_frequency
     iIOs = 0
     previous_write_end = start
-    print "start, nObs =", start, nObs
     for i in range(start, nObs):
         info_len = len(info_str)
         i1 = i + 1
@@ -1047,9 +964,6 @@ def generate_table_for_index(file_name):
                     sys.stdout.flush()
                     info_len = len(info_str)
                     
-                    #print "\nappending rows %d to %d to OPUS 1 file %s" % (i0,
-                    #                                                       actual_i,
-                    #                                                       geom_file_name)
                     append_opus1_file(geom_file_name, geometries,
                                       previous_write_end, actual_i)
                     previous_write_end = actual_i
@@ -1061,9 +975,6 @@ def generate_table_for_index(file_name):
                     sys.stdout.write(info_str)
                     sys.stdout.flush()
                     info_len = len(info_str)
-                    #print "appending rows %d to %d to OPUS 2 file %s" % (i0,
-                    #                                                     actual_i,
-                    #                                                     geom_file_name2)
                     append_opus2_file(geom_file_name2, geometries, radii_ranges,
                                       previous_write_end, actual_i)
                     previous_write_end = actual_i
