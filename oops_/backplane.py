@@ -369,9 +369,9 @@ class Backplane(object):
 
         if isinstance(mask, np.ndarray): return Scalar(mask)
         if mask:
-            return Scalar(np.ones(self.meshgrid.shape, dtype="bool"))
+            return Scalar(np.ones(self.shape, dtype="bool"))
         else:
-            return Scalar(np.zeros(self.meshgrid.shape, dtype="bool"))
+            return Scalar(np.zeros(self.shape, dtype="bool"))
 
     def register_backplane(self, key, backplane):
         """Inserts this backplane into the dictionary. If the backplane contains
