@@ -26,7 +26,7 @@ def from_file(filespec, parameters={}):
 
     # Get key information from the header
     tstart = julian.tdb_from_tai(julian.tai_from_iso(vic["START_TIME"]))
-    texp = dict["EXPOSURE_DURATION"] / 1000.
+    texp = max(1.e-3, dict["EXPOSURE_DURATION"]) / 1000.
     mode = dict["INSTRUMENT_MODE_ID"]
 
     name = dict["INSTRUMENT_NAME"]
@@ -70,7 +70,7 @@ def from_index(filespec, parameters={}):
     for dict in row_dicts:
 
         tstart = julian.tdb_from_tai(dict["START_TIME"])
-        texp = dict["EXPOSURE_DURATION"] / 1000.
+        texp = max(1.e-3, dict["EXPOSURE_DURATION"]) / 1000.
         mode = dict["INSTRUMENT_MODE_ID"]
 
         name = dict["INSTRUMENT_NAME"]

@@ -68,10 +68,6 @@ class FOV(object):
         """A constructor."""
 
         pass
-    
-    def __str__(self):
-        """Returns description of Flat for debugging purposes."""
-        return "FOV:\n\tuv_scale: " + str(self.uv_scale.vals) + "\n\tuv_shape: " + str(self.uv_shape.vals) + "\n"
 
     def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
@@ -199,13 +195,13 @@ class FOV(object):
             # dy/dlos_x = 0
             # dy/dlos_y = 1 / los_z
             # dy/dlos_z = -los_y / (los_z**2)
-    
+
             dxy_dlos_vals = np.zeros(los.shape + [2,3])
-            dxy_dlos_vals[...,0,0] =  los_vals[...,2]
-            dxy_dlos_vals[...,0,2] = -los_vals[...,0]
-            dxy_dlos_vals[...,1,1] =  los_vals[...,2]
-            dxy_dlos_vals[...,1,2] = -los_vals[...,0]
-            dxy_dlos_vals /= los_vals[...,2]
+            dxy_dlos_vals[...,0,0] =  los.vals[...,2]
+            dxy_dlos_vals[...,0,2] = -los.vals[...,0]
+            dxy_dlos_vals[...,1,1] =  los.vals[...,2]
+            dxy_dlos_vals[...,1,2] = -los.vals[...,1]
+            dxy_dlos_vals /= los.vals[..., 2, np.newaxis, np.newaxis]**2
 
             xy.insert_subfield("d_dlos", MatrixN(dxy_dlos_vals, los.mask))
 

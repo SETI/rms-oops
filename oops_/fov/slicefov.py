@@ -32,6 +32,7 @@ class SliceFOV(FOV):
         self.uv_shape  = Pair.as_int(shape)
 
         # Required fields
+        self.uv_los   = self.fov.uv_los - self.uv_origin
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
 

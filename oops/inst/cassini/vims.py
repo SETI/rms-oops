@@ -116,12 +116,19 @@ def from_file(filespec, fast=False):
         # Load the ISS file or the PDS label
         lines = pdsparser.PdsLabel.load_file(filespec)
 
-        # ...handling a known syntax error where N/A is not always quoted in
-        # GAIN_MODE_ID and BACKGROUND_SAMPLING_MODE_ID
+        # Fix known syntax errors
         for i in range(len(lines)):
-            if lines[i][:4] in ("GAIN", "BACK"):
-                lines[i] = lines[i].replace('N/A,', '"N/A",')
-                lines[i] = lines[i].replace(',N/A', ',"N/A"')
+            line = lines[i]
+
+            # In GAIN_MODE_ID and BACKGROUND_SAMPLING_MODE_ID, sometimes N/A is
+            # not properly quoted
+            if line[:4] in ("GAIN", "BACK"):
+                lines[i] = line.replace('(N/A',  '("N/A"')
+                lines[i] = line.replace('N/A)',  '"N/A")')
+
+            # Sometimes a comment begins on one line and and ends on the next
+            if line.strip().endswith("*/") and "/*" not in line:
+                lines[i] = "\n"
 
         label = pdsparser.PdsLabel.from_string(lines).as_dict()
 
@@ -148,14 +155,21 @@ def from_file(filespec, fast=False):
     ########################################
 
     (samples, bands, lines) = info["CORE_ITEMS"]
-    assert bands == 352
+    assert bands in (352, 256, 96)
 
     if is_isis_file:
         (data, times) = _load_data_and_times(filespec, label)
         assert data.shape == (lines, samples, bands)
 
-        vis_data = data[:,:,:96]    # index order is [line, sample, band]
-        ir_data  = data[:,:,96:]
+        if bands == 352:
+            vis_data = data[:,:,:96]    # index order is [line, sample, band]
+            ir_data  = data[:,:,96:]
+        elif bands == 256:              # only happens in a few early cubes
+            vis_data = None
+            ir_data = data
+        else:
+            vis_data = data
+            ir_data = None
 
     else:
         vis_data = None
@@ -174,8 +188,8 @@ def from_file(filespec, fast=False):
     z_offset = info["Z_OFFSET"]
     uv_los = (33. - x_offset, 33. - z_offset)
 
-    vis_sampling = info["SAMPLING_MODE_ID"][1]
-    ir_sampling  = info["SAMPLING_MODE_ID"][0]
+    vis_sampling = info["SAMPLING_MODE_ID"][1].strip()  # handle " NORMAL"
+    ir_sampling  = info["SAMPLING_MODE_ID"][0].strip()
 
     # VIS FOV
     if vis_sampling == "HI-RES":
@@ -219,6 +233,7 @@ def from_file(filespec, fast=False):
     # Define cadences based on header parameters
     ir_texp  = info["EXPOSURE_DURATION"][0] * 0.001
     vis_texp = info["EXPOSURE_DURATION"][1] * 0.001
+    vis_texp_nonzero = max(vis_texp, 1.e-8) # avoids divide-by-zero in cadences
 
     interframe_delay = info["INTERFRAME_DELAY_DURATION"] * 0.001
     interline_delay  = info["INTERLINE_DELAY_DURATION"]  * 0.001
@@ -256,7 +271,7 @@ def from_file(filespec, fast=False):
         tstart = times[0]
 
     vis_header_cadence = oops.cadence.Metronome(tstart,
-                                length_stride, vis_texp, swath_length)
+                                length_stride, vis_texp_nonzero, swath_length)
     ir_fast_cadence = oops.cadence.Metronome(tstart,
                                 ir_texp, ir_texp, swath_width)
     ir_header_cadence = oops.cadence.DualCadence(vis_header_cadence,
@@ -321,7 +336,7 @@ def from_file(filespec, fast=False):
             if vis_data is not None: vis_data = vis_data.reshape((samples, 96))
 
             vis_obs = oops.obs.Slit1D(("u","b"), 1.,
-                                tstart, vis_texp, vis_fov,
+                                tstart, vis_texp_nonzero, vis_fov,
                                 "CASSINI", vis_frame_id)
 
         if not ir_is_off:
@@ -624,16 +639,6 @@ def _load_data_and_times(filespec, label):
 
     return (data, times)
 
-def finish_of_line(i, lines):
-    rest_of_line = ""
-    while i < len(lines):
-        content = lines[i].strip()
-        rest_of_line += content
-        if content[-1] == ')':
-            return rest_of_line
-        i += 1
-    return rest_of_line
-
 ########################################
 
 def pds_value_from_constants(string_value):
@@ -670,17 +675,17 @@ def fast_dict(lines):
                         file.readlines().
 
     Return:             a dictionary containing, at minimum, these elements:
-                            "BAND_SUFFIX_NAME" = tuple of strings
-                            "CORE_ITEMS" = tuple of ints
-                            "EXPOSURE_DURATION" = tuple of floats
-                            "INSTRUMENT_MODE_ID" = string
+                            "BAND_SUFFIX_NAME" = unparsed string
+                            "CORE_ITEMS" = three ints
+                            "EXPOSURE_DURATION" = two floats
+                            "INSTRUMENT_MODE_ID" = unquoted string
                             "INTERFRAME_DELAY_DURATION" = float
                             "INTERLINE_DELAY_DURATION" = float
                             "MISSION_PHASE_NAME" = string
                             "OVERWRITTEN_CHANNEL_FLAG" = string
                             "PACKING_FLAG" = string
-                            "POWER_STATE_FLAG" = tuple of strings
-                            "SAMPLING_MODE_ID" = tuple of strings
+                            "POWER_STATE_FLAG" = pair of strings
+                            "SAMPLING_MODE_ID" = pair of strings
                             "START_TIME" = string
                             "SWATH_LENGTH" = int
                             "SWATH_WIDTH" = int
@@ -689,50 +694,58 @@ def fast_dict(lines):
                             "Z_OFFSET" = int
     """
 
-    # TBD
-    master_keys = ["BAND_SUFFIX_NAME", "CORE_ITEMS", "EXPOSURE_DURATION",
-                   "INSTRUMENT_MODE_ID", "INTERFRAME_DELAY_DURATION",
-                   "INTERLINE_DELAY_DURATION", "MISSION_PHASE_NAME",
-                   "OVERWRITTEN_CHANNEL_FLAG", "PACKING_FLAG",
-                   "POWER_STATE_FLAG", "SAMPLING_MODE_ID", "START_TIME",
-                   "SWATH_LENGTH", "SWATH_WIDTH", "TARGET_NAME", "X_OFFSET",
-                   "Z_OFFSET", "OBSERVATION_ID", "PRODUCT_ID"]
+    def three_ints(string):
+        string = string.strip()
+        assert string[0] == "(" and string[1] == ")"
+        (a,b,c) = string[1:-1].split(",")
+        return (int(a), int(b), int(c))
+
+    def two_floats(string):
+        string = string.strip()
+        assert string[0] == "(" and string[1] == ")"
+        (a,b) = string[1:-1].split(",")
+        return (float(a), float(b))
+
+    def two_strings(string):
+        string = string.strip()
+        assert string[0] == "(" and string[1] == ")"
+        (a,b) = string[1:-1].split(",")
+        return (unquote(a), unquote(b))
+
+    def unquote(string):
+        string = string.strip()
+        if len(string) >= 2 and string[0] == '"' and string[-1] == '"':
+            return string[1:-1]
+        else:
+            return string
+
+    # Create a quick dictionary using the PDS keyword, equal to the string value
     dict = {}
-    for i in range(len(lines)):
-        line = lines[i]
-        for key in master_keys:
-            if key == line.strip()[0:len(key)]:
-                components = line.split('=')
-                dict_key = components[0].strip()
-                data = components[1].strip()
-                if data[0] == '(' and data[-1] != ')':
-                    # we must have a split line and need to append until we find
-                    # a closing bracket
-                    i += 1
-                    data += finish_of_line(i, lines)
-                try:
-                    dict[dict_key] = eval(data)
-                except NameError:
-                    dict[dict_key] = pds_value_from_constants(data)
-                except SyntaxError:
-                    dict[dict_key] = pds_value_from_constants(data)
-                master_keys.remove(key)
-                break
-    # because we sometimes have a problem with the SAMPLING_MODE_ID, only check
-    # that for space inside of quotes.
-    try:
-        data = dict["SAMPLING_MODE_ID"]
-        redo_data_without_spaces = False
-        for mode_id in data:
-            if mode_id[0] == ' ':
-                redo_data_without_spaces = True
-        if redo_data_without_spaces:
-            data_list = []
-            for mode_id in data:
-                data_list.append(mode_id.strip())
-            dict["SAMPLING_MODE_ID"] = tuple(data_list)
-    except:
-        pass
+    for line in lines:
+        pair = line.split("=")
+        if len(pair) == 2:
+            dict[pair[0].strip()] = pair[1]
+
+    # Re-define the required keywords
+
+    dict["BAND_SUFFIX_NAME"]          = dict["BAND_SUFFIX_NAME"].strip()
+    dict["CORE_ITEMS"]                = three_ints(dict["CORE_ITEMS"])
+    dict["EXPOSURE_DURATION"]         = two_floats(dict["EXPOSURE_DURATION"])
+    dict["INSTRUMENT_MODE_ID"]        = unquote(dict["INSTRUMENT_MODE_ID"])
+    dict["INTERFRAME_DELAY_DURATION"] = float(dict["INTERFRAME_DELAY_DURATION"])
+    dict["INTERLINE_DELAY_DURATION"]  = float(dict["INTERLINE_DELAY_DURATION"])
+    dict["MISSION_PHASE_NAME"]        = unquote(["MISSION_PHASE_NAME"])
+    dict["OVERWRITTEN_CHANNEL_FLAG"]  = unquote(["OVERWRITTEN_CHANNEL_FLAG"])
+    dict["PACKING_FLAG"]              = unquote(dict["PACKING_FLAG"])
+    dict["POWER_STATE_FLAG"]          = two_strings(dict["POWER_STATE_FLAG"])
+    dict["SAMPLING_MODE_ID"]          = two_strings(dict["SAMPLING_MODE_ID"])
+    dict["START_TIME"]                = dict["START_TIME"].strip()
+    dict["SWATH_LENGTH"]              = int(dict["SWATH_LENGTH"])
+    dict["SWATH_WIDTH"]               = int(dict["SWATH_WIDTH"])
+    dict["TARGET_NAME"]               = unquote(dict["TARGET_NAME"])
+    dict["X_OFFSET"]                  = int(dict["X_OFFSET"])
+    dict["Z_OFFSET"]                  = int(dict["Z_OFFSET"])
+
     return dict
 
 ########################################

@@ -308,7 +308,7 @@ class Event(object):
 
         shape = self.shape
         event = Event(Scalar.all_masked(shape),
-                      Vector3.all_masked(),
+                      Vector3.all_masked(shape),
                       Vector3.all_masked(),
                       origin, frame,
                       perp = Vector3.all_masked(),
@@ -324,7 +324,7 @@ class Event(object):
         else:
             event.filled_ssb = Event(
                       Scalar.all_masked(shape),
-                      Vector3.all_masked(),
+                      Vector3.all_masked(shape),
                       Vector3.all_masked(),
                       "SSB", "J2000",
                       perp = Vector3.all_masked(),
