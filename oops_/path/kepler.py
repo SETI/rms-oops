@@ -35,8 +35,7 @@ class Kepler9(Path, Fittable):
     using nine orbital elements.
     """
 
-    def __init__(self, body, epoch, elements=None, observer=None,
-                       id=None):
+    def __init__(self, body, epoch, elements=None, observer=None, id=None):
         """Constructor for a Kepler9 path.
 
         Input:
@@ -64,7 +63,7 @@ class Kepler9(Path, Fittable):
                         and with light travel time from the central planet
                         already accounted for. If None (the default), then the
                         path is defined relative to the central planet in that
-                        planet's ringframe.
+                        planet's ring_frame.
             id          the name under which to register the path.
         """
 
