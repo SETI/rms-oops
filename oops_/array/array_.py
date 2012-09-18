@@ -1029,13 +1029,23 @@ class Array(object):
             compare = np.all(compare, axis=-1)
 
         # Quick test: If both masks are empty, just return the comparison
-        if (not np.any(self.mask)) and (not np.any(arg.mask)):
+        self_mask_all_false = not np.any(self.mask)
+        arg_mask_all_false  = not np.any(arg.mask)
+        if self_mask_all_false and arg_mask_all_false:
             return Array.into_scalar(compare)
 
         # If both masks are all True, the objects are equal
-        if np.all(self.mask) and np.all(arg.mask):
+        self_mask_all_true = np.all(self.mask)
+        arg_mask_all_true  = np.all(arg.mask)
+        if self_mask_all_true and arg_mask_all_true:
             if np.shape(compare) == (): return True
             return Array.into_scalar(np.ones(compare.shape, dtype="bool"))
+
+        # If both masks are constant, the objects are entirely unequal
+        if ((self_mask_all_true and arg_mask_all_false) or
+            (self_mask_all_false and arg_mask_all_true)):
+            if np.shape(compare) == (): return False
+            return Array.into_scalar(np.zeros(compare.shape, dtype="bool"))
 
         # Deal with unmasked scalar case
         if np.shape(compare) == ():
@@ -1079,13 +1089,23 @@ class Array(object):
             compare = np.any(compare, axis=-1)
 
         # Quick test: If both masks are empty, just return the comparison
-        if (not np.any(self.mask) and not np.any(arg.mask)):
+        self_mask_all_false = not np.any(self.mask)
+        arg_mask_all_false  = not np.any(arg.mask)
+        if self_mask_all_false and arg_mask_all_false:
             return Array.into_scalar(compare)
 
         # If both masks are all True, the objects are equal
-        if np.all(self.mask) and np.all(arg.mask):
+        self_mask_all_true = np.all(self.mask)
+        arg_mask_all_true  = np.all(arg.mask)
+        if self_mask_all_true and arg_mask_all_true:
             if np.shape(compare) == (): return False
             return Array.into_scalar(np.zeros(compare.shape, dtype="bool"))
+
+        # If both masks are constant, the objects are entirely unequal
+        if ((self_mask_all_true and arg_mask_all_false) or
+            (self_mask_all_false and arg_mask_all_true)):
+            if np.shape(compare) == (): return True
+            return Array.into_scalar(np.ones(compare.shape, dtype="bool"))
 
         # Deal with unmasked scalar case
         if np.shape(compare) == ():

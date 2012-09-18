@@ -11,21 +11,28 @@ import cspice
 
 from oops.inst.cassini.cassini_ import Cassini
 
+DEBUG = False       # True to assert that the data array must have null
+                    # values outside the active windows
+
 ################################################################################
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, data=False):
+def from_file(filespec, data=False, enclose=False):
     """A general, static method to return one or more Observation subclass
     objects based on a label for a given Cassini UVIS file.
 
     Input:
         filespec        the full path to the PDS label of a UVIS data file.
         data            True to include the data array.
+        enclose         True to return a single observation, regardless of how
+                        many windows are defined. If multiple windows are used,
+                        then the observation (and the optional data array) are
+                        are defined by the enclosing limits in line and band,
+                        and the binning is assumed to be 1. If False and
+                        multiple windows are used, the function returns a tuple
+                        of observations rather than a single observation.
     """
-
-    DEBUG = True        # True to assert that the data array must have null
-                        # values outside the active windows
 
     UVIS.initialize()   # Define everything the first time through
 
@@ -37,7 +44,9 @@ def from_file(filespec, data=False):
         rec = recs[i]
         if "CORE_UNIT" in rec:
             if '"COUNTS/BIN"' not in rec:
-                recs[i] = re.sub( "COUNTS/BIN", '"COUNTS/BIN"', rec)
+                recs[i] = rec.replace('COUNTS/BIN', '"COUNTS/BIN"')
+        if rec.startswith("ODC_ID"):
+            recs[i] = rec.replace(",", "")
 
     # Get the label dictionary and data array dimensions
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
@@ -48,213 +57,345 @@ def from_file(filespec, data=False):
     Cassini.load_cks( tstart, tstop)
     Cassini.load_spks(tstart, tstop)
 
-    # Determine the detector used
-    detector = label["PRODUCT_ID"]
-    detector = detector[:detector.index("2")]   # The year always begins with 2
+    # Figure out the PDS object class and return the observation(s)
+    if "QUBE" in label.keys():
+        return get_qube(filespec, tstart, label, data, enclose)
+    elif "TIME_SERIES" in label.keys():
+        return get_time_series(filespec, tstart, label, data)
+    else:
+        return get_spectrum(filespec, tstart, label, data)
+
+########################################
+
+def get_qube(filespec, tstart, label, data, enclose):
+    """Returns the observation object given that it is a QUBE."""
+
+    global DEBUG
+
+    # Determine the detector and mode
+    detector = label["PRODUCT_ID"][:3]
+    assert detector in ("EUV", "FUV")
+
+    resolution = label["SLIT_STATE"]
 
     # Define the instrument frame
     frame_id = UVIS.frame_ids[detector]
 
-    # Define the full FOV
-    if detector in ("EUV", "FUV"):
-        resolution = label["SLIT_STATE"]
+    # Get array shape
+    info = label["QUBE"]
+    (bands,lines,samples) = info["CORE_ITEMS"]
+    assert lines in (1,64)
+
+    if lines == 1:
+        shape = (samples, bands)
     else:
-        resolution = ""
+        shape = (lines, samples, bands)
 
-    # Get array dimensions
-    if "QUBE" in label.keys():
-        object = "QUBE"
-        info = label[object]
-        (bands,lines,samples) = info["CORE_ITEMS"]
-        assert lines in (1,64)
-        if lines > 1:
-            shape = (lines, samples, bands)
-        else:
-            shape = (samples, bands)
-        texp = label["INTEGRATION_DURATION"]
-    else:
-        object = "TIME_SERIES"
-        info = label[object]
-        samples = info["ROWS"]
-        lines = 1
-        bands = 1
-        shape = (samples,)
-        assert info["COLUMNS"] == 1
-        assert (info["SAMPLING_PARAMETER_UNIT"] == "MILLISECOND" or
-                info["SAMPLING_PARAMETER_UNIT"] == "MILLISECONDS")
-        texp = info["SAMPLING_PARAMETER_INTERVAL"] * 0.001
-
-    info = label[object]
-
-    # Define the FOV and cadence
-    fov = UVIS.fovs[(detector, resolution, lines)]
+    # Define the cadence
+    texp = label["INTEGRATION_DURATION"]
     cadence = oops.cadence.Metronome(tstart, texp, texp, samples)
 
+    # Define the full FOV
+    fov = UVIS.fovs[(detector, label["SLIT_STATE"], lines)]
+
     # Load the data array if necessary
+    info = label["QUBE"]
+    assert info["CORE_ITEM_TYPE"] == "MSB_UNSIGNED_INTEGER"
+    assert info["CORE_ITEM_BYTES"] == 2
+    assert info["SUFFIX_ITEMS"] == [0,0,0]
+
     if data:
-        head = os.path.split(filespec)[0]
-        body = label["^" + object]
-
-        data_filespec = os.path.join(head, body)
-        if not os.path.exists(data_filespec):
-            test_filespec = os.path.join(head, body.lower())
-            if not os.path.exists(test_filespec):
-                f = open(data_filespec,"r") # raise IOError
-
-        # This can be generalized, but it works for the archived volumes...
-        if object == "QUBE":
-            assert info["CORE_ITEM_TYPE"] == "MSB_UNSIGNED_INTEGER"
-            assert info["CORE_ITEM_BYTES"] == 2
-            assert info["SUFFIX_ITEMS"] == [0,0,0]
-            array_null = 65535              # Incorrectly -1 in many labels
-        else:
-            column = info["PHOTOMETER_COUNTS"]
-            assert column["DATA_TYPE"] == "MSB_UNSIGNED_INTEGER"
-            assert column["BYTES"] == 2
-            array_null = None
-
-        array = np.fromfile(data_filespec, sep="", dtype=">u2")
+        array_null = 65535                  # Incorrectly -1 in many labels
+        array = load_data(filespec, ">u2")
 
         # Re-shape into something sensible
         # Note that the axis order in the label is first-index-fastest
         if lines > 1:
             array = array.reshape((samples,lines,bands))
-            array = array.swapaxes(0,1)     # now (lines, samples, bands)
-        elif bands > 1:
-            array = array.reshape((samples,bands))
+            array = array.swapaxes(0,1)
         else:
-            pass                            # no reshape needed
+            array = array.reshape(shape)
+    else:
+        array = None
 
     # Identify the window(s) used
-    # Note that these are either integers or tuples of integers
-    if object == "QUBE":
-        lwindow0 = info["UL_CORNER_LINE"]
-        lwindow1 = info["LR_CORNER_LINE"]
-        lbinning = info["LINE_BIN"]
+    # Note that these are either integers or lists of integers
+    line0 = info["UL_CORNER_LINE"]
+    line1 = info["LR_CORNER_LINE"]
+    line_bin = info["LINE_BIN"]
 
-        bwindow0 = info["UL_CORNER_BAND"]
-        bwindow1 = info["LR_CORNER_BAND"]
-        bbinning = info["BAND_BIN"]
+    band0 = info["UL_CORNER_BAND"]
+    band1 = info["LR_CORNER_BAND"]
+    band_bin = info["BAND_BIN"]
 
-        if type(lwindow0) == type(()):
-            windows = len(lwindow0)
-            assert len(lwindow1) == windows
-            assert len(lbinning) == windows
-            assert len(bwindow0) == windows
-            assert len(bwindow1) == windows
-            assert len(wbinning) == windows
-        else:
-            windows = 1
-            lwindow0 = (lwindow0,)
-            lwindow1 = (lwindow1,)
-            lbinning = (lbinning,)
-            bwindow0 = (bwindow0,)
-            bwindow1 = (bwindow1,)
-            bbinning = (bbinning,)
+    # Check the outer periphery of the data array in DEBUG mode
+    if DEBUG and data:
+        assert np.all(array[:min(line0),    ...] == array_null)
+        assert np.all(array[ max(line1)+1:, ...] == array_null)
 
-        # Check the outer periphery of the data array in DEBUG mode
-        if DEBUG and data:
-            l0 = lwindow0[0]
-            l1 = lwindow1[-1] + 1
-            assert np.all(array[:l0,  ...] == array_null)
-            assert np.all(array[ l1:, ...] == array_null)
+        assert np.all(array[..., :min(band0)   ] == array_null)
+        assert np.all(array[...,  max(band1)+1:] == array_null)
 
-            b0 = bwindow0[0]
-            b1 = bwindow1[-1] + 1
-            assert np.all(array[..., :b0 ] == array_null)
-            assert np.all(array[...,  b1:] == array_null)
+    # One window
+    if type(line0) == type(0):
+        return get_one_qube(label, detector, resolution,
+                            fov, cadence, frame_id,
+                            shape, array, samples,
+                            lines, line0, line1+1, line_bin,
+                            bands, band0, band1+1, band_bin,
+                            rebin=True)
+
+    # Multiple windows combined into one enclosure
+    elif enclose:
+        line0 = min(line0)
+        line1 = max(line1)
+        line_bin = min(line_bin)
+        band0 = min(band0)
+        band1 = max(band1)
+        band_bin = min(band_bin)
+        return get_one_qube(label, detector, resolution,
+                            fov, cadence, frame_id,
+                            shape, array, samples,
+                            lines, line0, line1+1, line_bin,
+                            bands, band0, band1+1, band_bin,
+                            rebin=False)
+
+    # Separate windows
     else:
-        windows = 1         # no windows or resampling in HSP or HDAC
-        lwindow0 = (0,)
-        lwindow1 = (lines-1,)
-        lbinning = (1,)
-        bwindow0 = (0,)
-        bwindow1 = (bands-1,)
-        bbinning = (1,)
+        obslist = []
+        for w in len(line0):
+            obs = get_one_qube(label, detector, resolution,
+                               fov, cadence, frame_id,
+                               shape, array, samples,
+                               lines, line0[w], line1[w]+1, line_bin[w],
+                               bands, band0[w], band1[w]+1, band_bin[w],
+                               rebin=True)
+            obslist.append(obs)
 
-    # For each window...
-    obslist = []
-    for w in range(windows):
+        return tuple(obslist)
 
-        obs_fov = fov
 
-        if data:
-            slice = array
+def get_one_qube(label, detector, resolution,
+                 fov, cadence, frame_id,
+                 shape, array, samples,
+                 lines, line0, line1, line_bin,
+                 bands, band0, band1, band_bin,
+                 rebin):
+    """Returns a single Observation object for the identified window of the
+    UVIS qube."""
 
-        # Trim the lines
-        l0 = lwindow0[w]
-        l1 = lwindow1[w] + 1
-        dl = l1 - l0
+    global DEBUG
 
-        if (l0,l1) != (0,lines):
-            obs_fov = oops.fov.SliceFOV(obs_fov, (0,l0), (1,dl))
-            shape = (dl,) + shape[1:]
+    # Trim the lines
+    dline = line1 - line0
+    if (line0,line1) != (0,lines):
+        fov = oops.fov.SliceFOV(fov, (0,line0), (1,dline))
+        shape = (dline,) + shape[1:]
 
-            if data:
-                slice = slice[l0:l1, :]
+        if array is not None:
+            array = array[line0:line1, :]
 
-        # Trim the bands
-        b0 = bwindow0[w]
-        b1 = bwindow1[w] + 1
-        db = b1 - b0
+    # Trim the bands
+    dband = band1 - band0
+    if (band0,band1) != (0,bands):
+        shape = shape[:-1] + (dband,)
 
-        if (b0,b1) != (0,bands):
-            shape = shape[:-1] + (db,)
+        if array is not None:
+            array = array[..., band0:band1]
 
-            if data:
-                slice = slice[..., b0:b1]
+    # Bin the lines
+    if rebin and line_bin > 1:
+        assert dline % line_bin == 0
+        fov = oops.fov.Subsampled(fov, (1,line_bin))
+        dline_binned = dline / line_bin
+        shape = (dline_binned,) + shape[1:]
 
-        # Bin the lines
-        lbin = lbinning[w]
-        if lbin != 1:
-            assert dl % lbin == 0
-            obs_fov = oops.fov.Subsampled(obs_fov, (1,lbin))
-            dl_scaled = dl / lbin
-            shape = (dl_scaled,) + shape[1:]
+        if array is not None:
+            if DEBUG:
+                assert np.all(array[dline_binned:, ...] == array_null)
 
-            if data:
-                if DEBUG:
-                    assert np.all(slice[dl_scaled:, ...] == array_null)
+            array = array[:dline_binned]
 
-                slice = slice[:dl_scaled]
+    # Bin the bands
+    if rebin and band_bin > 1:
+        if DEBUG:
+            assert dband % band_bin == 0    # seen to fail occasionally
 
-        # Bin the bands
-        bbin = bbinning[w]
-        if bbin != 1:
-            assert db % bbin == 0
-            db_scaled = db / bbin
-            shape = shape[:-1] + (db_scaled,)
+        dband_binned = dband / band_bin
+        shape = shape[:-1] + (dband_binned,)
 
-            if data:
-                if DEBUG:
-                    assert np.all(slice[..., db_scaled:] == array_null)
+        if array is not None:
+            if DEBUG:
+                assert np.all(array[..., dband_binned:] == array_null)
 
-                slice = slice[..., :db_scaled]
+            array = array[..., :dband_binned]
 
-        # Create the Observation
-        if lines == 1:
-            obs = oops.obs.Pixel(("t"), cadence, obs_fov, "CASSINI", frame_id)
-        else:
-            obs = oops.obs.Slit(("v","ut","b"), 1, cadence, obs_fov,
-                                 "CASSINI", frame_id)
+    # Create the Observation
+    if lines == 1:
+        obs = oops.obs.Pixel(("t","b"), cadence, fov, "CASSINI", frame_id)
+    else:
+        obs = oops.obs.Slit(("v","ut","b"), 1, cadence, fov,
+                             "CASSINI", frame_id)
 
-        obs.shape = shape       # Override the band dimension
+    obs.insert_subfield("dict", label)
+    obs.insert_subfield("instrument", "UVIS")
+    obs.insert_subfield("detector", detector)
+    obs.insert_subfield("sampling", resolution)
+    obs.insert_subfield("product_type", "QUBE")
 
-        obs.insert_subfield("dict", label)
-        obs.insert_subfield("instrument", "UVIS")
-        obs.insert_subfield("detector", detector)
-        obs.insert_subfield("sampling", resolution)
-        obs.insert_subfield("line_window", (l0,l1))
-        obs.insert_subfield("band_window", (b0,b1))
-        obs.insert_subfield("line_binning", lbin)
-        obs.insert_subfield("band_binning", bbin)
+    obs.insert_subfield("line_window", (line0,line1))
+    obs.insert_subfield("line_bin", line_bin)
 
-        if data:
-            obs.insert_subfield("data", slice)
+    obs.insert_subfield("band_window", (band0,band1))
+    obs.insert_subfield("band_bin", band_bin)
 
-        obslist.append(obs)
+    obs.insert_subfield("samples", samples)
 
-    return tuple(obslist)
+    if array is not None:
+        obs.insert_subfield("data", array)
+
+    # Update the observation shape
+    obs.shape = shape
+
+    return obs
+
+########################################
+
+def get_time_series(filespec, tstart, label, data):
+    """Returns the observation object given that it is a TIME_SERIES."""
+
+    # Determine the detector
+    detector = label["PRODUCT_ID"]
+    detector = detector[:detector.index("2")]   # Year always begins with 2
+
+    assert detector in ("HSP", "HDAC")
+
+    # Define the instrument frame
+    frame_id = UVIS.frame_ids[detector]
+
+    # Get the array shape
+    info = label["TIME_SERIES"]
+    samples = info["ROWS"]
+
+    # Define the cadence
+    assert info["COLUMNS"] == 1
+    assert (info["SAMPLING_PARAMETER_UNIT"] == "MILLISECOND" or
+            info["SAMPLING_PARAMETER_UNIT"] == "MILLISECONDS")
+    texp = info["SAMPLING_PARAMETER_INTERVAL"] * 0.001
+
+    cadence = oops.cadence.Metronome(tstart, texp, texp, samples)
+
+    # Define the observation
+    fov = UVIS.fovs[(detector, "", 1)]
+    obs = oops.obs.Pixel(("t",), cadence, fov, "CASSINI", frame_id)
+
+    obs.insert_subfield("dict", label)
+    obs.insert_subfield("instrument", "UVIS")
+    obs.insert_subfield("detector", detector)
+    obs.insert_subfield("product_type", "TIME_SERIES")
+
+    obs.insert_subfield("line_window", None)
+    obs.insert_subfield("line_bin", None)
+
+    obs.insert_subfield("band_window", None)
+    obs.insert_subfield("band_bin", None)
+
+    obs.insert_subfield("samples", samples)
+
+    # Load the data array if necessary
+    if data:
+        column = info["PHOTOMETER_COUNTS"]
+        assert column["DATA_TYPE"] == "MSB_UNSIGNED_INTEGER"
+        assert column["BYTES"] == 2
+
+        array = load_data(filespec, ">u2")
+        obs.insert_subfield("data", array)
+
+    # Update the observation shape
+    obs.shape = (samples,)
+
+    return obs
+
+########################################
+
+def get_spectrum(filespec, tstart, label, data):
+    """Returns the observation object given that it is a SPECTRUM."""
+
+    # Determine the detector
+    detector = label["PRODUCT_ID"][:3]
+    assert detector in ("EUV", "FUV")
+
+    # Define the instrument frame
+    frame_id = UVIS.frame_ids[detector]
+
+    # Get array shape
+    info = label["SPECTRUM"]
+    bands = info["ROWS"]
+
+    # Define the cadence (such as it is)
+    assert info["COLUMNS"] == 1
+    texp = label["INTEGRATION_DURATION"]
+    cadence = oops.cadence.Metronome(tstart, texp, texp, 1)
+
+    # Define the FOV
+    resolution = label["SLIT_STATE"]
+    fov = UVIS.fovs[(detector, resolution, 64)]
+
+    line0 = info["UL_CORNER_SPATIAL"]
+    line1 = info["LR_CORNER_SPATIAL"] + 1
+    if (line0,line1) != (0,64):
+        fov = oops.fov.SliceFOV(fov, (0,line0), (1,line1-line0))
+
+    line_bin = info["BIN_SPATIAL"]
+    if line_bin != 1:
+        fov = oops.fov.Subsampled(fov, (1,line_bin))
+
+    # Define the observation
+    obs = oops.obs.Pixel(("b",), cadence, fov, "CASSINI", frame_id)
+
+    obs.insert_subfield("dict", label)
+    obs.insert_subfield("instrument", "UVIS")
+    obs.insert_subfield("detector", detector)
+    obs.insert_subfield("sampling", resolution)
+    obs.insert_subfield("product_type", "SPECTRUM")
+
+    obs.insert_subfield("line_window", (line0,line1))
+    obs.insert_subfield("line_bin", line_bin)
+
+    obs.insert_subfield("band_window", (info["UL_CORNER_SPECTRAL"],
+                                        info["LR_CORNER_SPECTRAL"]+1))
+    obs.insert_subfield("band_bin", info["BIN_SPECTRAL"])
+
+    obs.insert_subfield("samples", 1)
+
+    # Load the data array if necessary
+    if data:
+        column = info["SPECTRUM"]
+        assert column["DATA_TYPE"] == "MSB_UNSIGNED_INTEGER"
+        assert column["BYTES"] == 2
+
+        array = load_data(filespec, ">u2")
+        obs.insert_subfield("data", array)
+
+    # Update the observation shape
+    obs.shape = (bands,)
+
+    return obs
+
+########################################
+
+def load_data(filespec, dtype):
+
+    head = os.path.split(filespec)[0]
+    body = label["^" + object]
+
+    data_filespec = os.path.join(head, body)
+    if not os.path.exists(data_filespec):
+        test_filespec = os.path.join(head, body.lower())
+    if not os.path.exists(test_filespec):
+        f = open(data_filespec,"r")     # raise IOError
+
+    return np.fromfile(data_filespec, sep="", dtype=dtype)
 
 ################################################################################
 

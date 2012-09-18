@@ -2,6 +2,9 @@
 # oops_/obs/pixel.py: Subclass Pixel of class Observation
 #
 # 7/24/12 MRS - Created.
+#
+# 9/11/12 MRS - Updated to handle a missing time axis and to return a more
+#   accurate shape.
 ################################################################################
 
 import numpy as np
@@ -51,7 +54,10 @@ class Pixel(Observation):
         self.axes = list(axes)
         self.u_axis = -1
         self.v_axis = -1
-        self.t_axis = self.axes.index("t")
+        if "t" in self.axes:
+            self.t_axis = self.axes.index("t")
+        else:
+            self.t_axis = -1
 
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
@@ -61,6 +67,8 @@ class Pixel(Observation):
         self.uv_shape = [1,1]
 
         self.shape = len(axes) * [0]
+        if self.t_axis >= 0:
+            self.shape[self.t_axis] = self.cadence.shape[0]
 
         self.subfields = {}
         for key in subfields.keys():
