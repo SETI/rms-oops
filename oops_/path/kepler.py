@@ -1,7 +1,9 @@
 ################################################################################
-# oops_/path/kepler.py: Subclasses Kepler9 and Kepler of class Path.
+# oops_/path/kepler.py: Subclass Kepler of class Path.
 #
 # 5/18/12 MRS - Created.
+# 10/1/12 MRS - Revised to eliminate the Kepler9 subclass and the use of
+#   Constraint objects
 ################################################################################
 
 import numpy as np
@@ -11,11 +13,10 @@ from oops_.path.path_ import Path, Waypoint
 from oops_.array.all import *
 from oops_.config import PATH_PHOTONS
 from oops_.event import Event
-import oops_.registry as registry
-import oops_.body as body
+import oops_.registry as Registry
+import oops_.constants as constants
 
 from oops_.fittable import Fittable
-from oops_.constraint import Constraint
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
 MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians)
@@ -29,14 +30,14 @@ DNODE = 8   # elements[DNODE] = nodal regression rate (radians/s, negative)
 
 NELEMENTS = 9
 
-class Kepler9(Path, Fittable):
-    """Subclass Kepler9 defines a fittable Keplerian orbit, which is accurate to
-    first order in eccentricity and inclination. This version is always defined
-    using nine orbital elements.
+class Kepler(Path, Fittable):
+    """Subclass Kepler defines a fittable Keplerian orbit, which is accurate to
+    first order in eccentricity and inclination. It is defined using nine
+    orbital elements.
     """
 
     def __init__(self, body, epoch, elements=None, observer=None, id=None):
-        """Constructor for a Kepler9 path.
+        """Constructor for a Kepler path.
 
         Input:
             body        a Body object defining the central planet, including its
@@ -49,7 +50,7 @@ class Kepler9(Path, Fittable):
                 lon         mean longitude of orbit at epoch, radians.
                 n           mean motion, radians/sec.
 
-                e           orbital eccentricty.
+                e           orbital eccentricity.
                 peri        longitude of pericenter at epoch, radians.
                 prec        pericenter precession rate, radians/sec.
 
@@ -70,21 +71,28 @@ class Kepler9(Path, Fittable):
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
         global NELEMENTS
 
+        self.nparams = NELEMENTS
+        self.param_name = "elements"
+        self.cache = {}
+
         self.planet = body
+        self.origin_id = body.path_id
+
         self.gravity = self.planet.gravity
 
+        observer = None     # FOR NOW; ALTERNATIVE DOES NOT WORK
         if observer is None:
             self.observer = None
             self.center = self.planet.path
             self.origin_id = self.planet.path_id
             self.frame_id = body.ring_frame_id
-            self.to_j2000 = Matrix3.IDENTITY
+            self.to_j2000 = Matrix3.UNIT
         else:
-            self.observer = registry.as_path(observer)
+            self.observer = Registry.as_path(observer)
             assert self.observer.shape == []
             self.center = Path.connect(self.planet.path_id, observer, "J2000")
             self.frame_id = "J2000"
-            frame = registry.connect_frames("J2000", body.ring_frame_id)
+            frame = Registry.connect_frames("J2000", body.ring_frame_id)
             self.to_j2000 = frame.transform_at_time(epoch).matrix
 
         self.epoch = epoch
@@ -96,19 +104,16 @@ class Kepler9(Path, Fittable):
 
         self.nparams = NELEMENTS
 
-        if id in None:
-            self.path_id = registry.temporary_path_id()
+        if id is None:
+            self.path_id = Registry.temporary_path_id()
         else:
             self.path_id = id
-
-        self.cached_observation_time = None
-        self.cached_planet_event = None
 
         self.reregister()
 
     ########################################
 
-    def set_params(self, elements):
+    def set_params_new(self, elements):
         """Part of the Fittable interface. Re-defines the path given new orbital
         elements.
 
@@ -150,13 +155,9 @@ class Kepler9(Path, Fittable):
 
         self.ae = self.a * self.e
 
-    ########################################
-
-    def get_params(self):
-        """Part of the Fittable interface. Returns the current orbital elements.
-        """
-
-        return self.elements
+        # Empty the cache
+        self.cached_observation_time = None
+        self.cached_planet_event = None
 
     ########################################
 
@@ -164,8 +165,8 @@ class Kepler9(Path, Fittable):
         """Part of the Fittable interface. Returns a deep copy of the object.
         """
 
-        return Kepler9(self.planet, self.epoch, self.get_params().copy(),
-                       self.observer)
+        return Kepler(self.planet, self.epoch, self.get_params().copy(),
+                      self.observer)
 
     ########################################
 
@@ -225,12 +226,12 @@ class Kepler9(Path, Fittable):
         sin_mp = np.sin(mp)
 
         r     = self.a - self.ae * cos_mp
-        theta = mean   - (2. * self.e * sin_mp)
+        theta = mean   + (2. * self.e * sin_mp)
 
         # Time-derivatives...
         d_mp_dt = (self.dmean - self.dperi)
         d_r_dt = self.ae * sin_mp * d_mp_dt
-        d_theta_dt = self.dmean - 2 * self.e * cos_mp * d_mp_dt
+        d_theta_dt = self.dmean + 2 * self.e * cos_mp * d_mp_dt
 
         # Locate body on an inclined orbit, in a frame where X is along the
         # ascending node
@@ -292,7 +293,7 @@ class Kepler9(Path, Fittable):
                     np.sum(d_rotate_dt * asc[...,np.newaxis,:], axis=-1))
 
         # Without a derivative calculation, we're done
-        result = (xyz, d_xyz_dt)
+        result = (Vector3(xyz), Vector3(d_xyz_dt))
         if not partials: return result
 
         # Differentiate this code from above...
@@ -384,7 +385,7 @@ class Kepler9(Path, Fittable):
                         np.sum(d_rotate_d_elem[...,:,:,:] *
                                asc[...,np.newaxis,:,np.newaxis], axis=-2))
 
-        result += (d_xyz_d_elem,)
+        result += (MatrixN(d_xyz_d_elem),)
         return result
 
     ########################################
@@ -455,18 +456,13 @@ class Kepler9(Path, Fittable):
         """
 
         if self.observer is None:
-            (pos, vel) = self.xyz_planet(time)
+            (pos, vel) = self.xyz_planet(time, partials=partials)
             return Event(time, pos, vel, self.origin_id, self.frame_id)
 
-        if time == self.cached_observation_time:
-            planet_event = self.cached_planet_event
-        else:
             observer_event = Event(time, Vector3.ZERO, Vector3.ZERO,
                                    self.observer.path_id, self.frame_id)
             planet_event = self.center.photon_to_event(observer_event,
                                                        quick=quick)
-            self.cached_observation_time = time
-            self.cached_planet_event = planet_event
 
         xyz_observed = self.xyz_observed(time, planet_event, partials)
 
@@ -492,19 +488,18 @@ class Kepler9(Path, Fittable):
         linking event of the photon's arrival. See _solve_photon() for details.
         """
 
-        if self.observation is None:
-            return super(Kepler9,self).photon_to_event(link, quick, derivs,
-                                                       guess, update,
-                                                       iters, precision, limit)
+        if self.observer is None or guess is None:
+            return super(Kepler,self).photon_to_event(link, quick, derivs,
+                                                      guess, update,
+                                                      iters, precision, limit)
 
         # When the observer is pre-defined, photon_to_event() gets an override
         # for quick evaluation, but is only valid at the observer event.
-        event = self.event_at_time(time, quick=quick, partials=partials)
+        # In this case, guess must contain the event time at the planet.
+        event = self.event_at_time(guess, quick=quick, partials=partials)
 
-        light_time = pos.norm() / oops.C
-        event.time = event.time - light_time
         event.dep = -event.pos
-        event.dep_lt = light_time
+        event.dep_lt = event.time - link.time
         event.link = link
 
         link.arr = event.dep
@@ -513,197 +508,6 @@ class Kepler9(Path, Fittable):
         if partials:
             link.arr.insert_subfield("d_dpath", -event.pos.d_dpath)
             link.arr.insert_subfield("d_dt", -event.vel)
-
-        return event
-
-################################################################################
-# Class Kepler
-################################################################################
-
-def FUNC_A_FROM_N(obj, n, derivs=False):
-    a = obj.gravity.solve_a(n, (1,0,0))
-    if not derivs: return a
-    return (a, 1. / obj.gravity.d_dmean_dt_da(a))
-
-def FUNC_N_FROM_A(obj, a, derivs=False):
-    n = obj.gravity.n(a)
-    if not derivs: return n
-    return (n, obj.gravity.d_dmean_dt_da(a))
-
-def FUNC_DPERI_FROM_A(obj, a, derivs=False):
-    dperi = obj.gravity.dperi_dt(a)
-    if not derivs: return dperi
-    return (dperi, obj.gravity.d_dperi_dt_da(a))
-
-def FUNC_DPERI_FROM_N(obj, n, derivs=False):
-    a = obj.gravity.solve_a(n, (1,0,0))
-    dperi = obj.gravity.dperi_dt(a)
-    if not derivs: return dperi
-    return (dperi, obj.gravity.d_dperi_dt_da(a) / obj.gravity.d_dmean_dt_da(a))
-
-def FUNC_DNODE_FROM_A(obj, a, derivs=False):
-    dnode = obj.gravity.dnode_dt(a)
-    if not derivs: return dnode
-    return (dnode, obj.gravity.d_dnode_dt_da(a))
-
-def FUNC_DNODE_FROM_N(obj, n, derivs=False):
-    a = obj.gravity.solve_a(n, (1,0,0))
-    dnode = obj.gravity.dnode_dt(a)
-    if not derivs: return dnode
-    return (dnode, obj.gravity.d_dnode_dt_da(a) / obj.gravity.d_dmean_dt_da(a))
-
-class Kepler(Kepler9, Fittable):
-    """Subclass Kepler defines a fittable Keplerian orbit, which is accurate to
-    first order in eccentricity and inclination. This is similar to subclass
-    Kepler9 but allows for coupled orbital elements.
-    """
-
-    def __init__(self, body, epoch, elements, observer=None, id=None):
-        """Constructor for a Kepler path.
-
-        Input:
-            body        a Body object defining the central planet, including its
-                        gravity and its ring_frame.
-            epoch       the time TDB relative to which all orbital elements are
-                        defined.
-            elements    a tuple, list or Numpy array containing the nine orbital
-                        elements:
-                a           mean radius of orbit, km; "N" to derive it from n.
-                lon         mean longitude of orbit at epoch, radians.
-                n           mean motion, radians/sec; "A" to derive it from a.
-
-                e           orbital eccentricity.
-                peri        longitude of pericenter at epoch, radians.
-                prec        pericenter precession rate, radians/sec; "A" or "N"
-                            to derive it from a or n.
-
-                i           inclination, radians.
-                node        longitude of ascending node at epoch, radians.
-                regr        nodal regression rate, radians/sec, NEGATIVE!; "A"
-                            or "N" to derive it from a or n.
-
-            observer    an optional Path object or ID defining the observation
-                        point. Used for astrometry. If provided, the path is
-                        returned relative to the observer, in J2000 coordinates,
-                        and with light travel time from the central planet
-                        already accounted for. If None (the default), then the
-                        path is defined relative to the central planet in that
-                        planet's ringframe.
-            id          the name under which to register the path.
-        """
-
-        global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
-        global NELEMENTS
-
-        assert ("A" not in elements) or ("N" not in elements)
-        assert (elements[SEMIM] != "N") or (elements[DMEAN] != "A")
-
-        # Create an un-initialized Kepler9 object
-        if id is None:
-            self.path_id = registry.temporary_path_id()
-        else:
-            self.path_id = id
-
-        self.kepler9 = Kepler9(body, epoch, None, observer,
-                               self.path_id + "_KEPLER9")
-
-        # Interpret the constraints
-        constraints = NELEMENTS * [None]
-
-        if elements[SEMIM] == "N":
-            constraints[SEMIM] = (FUNC_A_FROM_N, DMEAN)
-
-        if elements[DMEAN] == "A":
-            constraints[DMEAN] = (FUNC_N_FROM_A, SEMIM)
-
-        if elements[DPERI] == "A":
-            constraints[DPERI] = (FUNC_DPERI_FROM_A, SEMIM)
-        elif elements[DPERI] == "N":
-            constraints[DPERI] = (FUNC_DPERI_FROM_N, DMEAN)
-
-        if elements[DNODE] == "A":
-            constraints[DNODE] = (FUNC_DNODE_FROM_A, SEMIM)
-        elif elements[DNODE] == "N":
-            constraints[DNODE] = (FUNC_DNODE_FROM_N, DMEAN)
-
-        self.initial_elements = elements
-        self.constraint = Constraint(self.kepler9, constraints)
-        self.params = self.constraint.new_params(elements)
-        self.nparams = self.constraint.nparams
-        self.kepler9.set_params(self.constraint.old_params(self.params))
-
-        # Complete and register
-        self.gravity = body.gravity
-
-        self.origin_id = self.kepler9.origin_id
-        self.frame_id = "J2000"
-        self.reregister()
-
-    ########################################
-
-    def unregister(self):
-        """Override of the standard Path method."""
-
-        self.kepler9.unregister()
-        super(Kepler,self).unregister()
-
-    ########################################
-
-    def set_params(self, params):
-        """Part of the Fittable interface. Re-defines the path given new
-        parameters."""
-
-        self.params = params
-        self.kepler9.set_params(self.constraint.old_params(params))
-
-    ########################################
-
-    def get_params(self):
-        """Part of the Fittable interface. Re-defines the path given new
-        parameters."""
-
-        return self.params
-
-    ########################################
-
-    def copy(self):
-        """Part of the Fittable interface. Returns a deep copy of the object.
-        """
-
-        kep = Kepler(self.kepler9.planet, self.kepler9.epoch,
-                     self.initial_elements, self.kepler9.observer)
-        kep.set_params(self.get_params())
-        return kep
-
-    ########################################
-
-    def get_elements(self):
-        """Returns the complete set of nine orbital elements.
-        """
-
-        return self.kepler9.get_elements()
-
-    ########################################
-
-    def event_at_time(self, time, quick=None,
-                            planet_event=None, partials=False):
-        """Returns an Event object corresponding to a specified Scalar time on
-        this path.
-
-        Input:
-            time        a time Scalar at which to evaluate the path.
-
-        Return:         an Event object containing (at least) the time, position
-                        and velocity of the path.
-        """
-
-        event = self.kepler9.event_at_time(time, quick, planet_event, partials)
-
-        # Update the partials if necessary
-        if partials:
-            dpos_dpath = self.constraint.partials_wrt_new(self.params,
-                                                    event.pos.d_dpath.vals)
-            event.pos.insert_subfield("d_dpath", MatrixN(dpos_dpath))
 
         return event
 
@@ -857,6 +661,7 @@ class Test_Kepler(unittest.TestCase):
         # NODE0 = 7    elements[NODE0] = longitude of ascending node at epoch
         # DNODE = 8    elements[DNODE] = nodal regression rate (radians/s)
 
+        import oops_.body as body
         body.define_solar_system("1999-01-01", "2002-01-01")
 
         a = 140000.
@@ -869,9 +674,9 @@ class Test_Kepler(unittest.TestCase):
         TIMESTEPS = 500
         time = 3600. * np.arange(TIMESTEPS)
 
-        kep9 = Kepler9(registry.body_lookup("SATURN"), 0.,
+        kep9 = Kepler(Registry.body_lookup("SATURN"), 0.,
                        (a, 1., dmean, 0.2, 2., dperi, 4., 0., dnode),
-                       registry.path_lookup("EARTH"))
+                       Registry.path_lookup("EARTH"))
 
         errors = _xyz_planet_derivative_test(kep9, time)[2]
         self.assertTrue(np.all(np.abs(errors) < 1.e-4))
@@ -879,31 +684,31 @@ class Test_Kepler(unittest.TestCase):
         errors = _pos_derivative_test(kep9, time)[2]
         self.assertTrue(np.all(np.abs(errors) < 1.e-4))
 
-        kep = Kepler(registry.body_lookup("SATURN"), 0.,
-                     (a, 1., "A", 0.2, 2., "A", 4., 0., "A"),
-                     registry.path_lookup("EARTH"))
-        self.assertEqual(kep.nparams, 6)
-        self.assertEqual(kep.kepler9.nparams, 9)
-        self.assertEqual(kep.constraint.fittable, kep.kepler9)
-        self.assertEqual(kep.constraint.nparams, kep.nparams)
+#         kep = Kepler(Registry.body_lookup("SATURN"), 0.,
+#                      (a, 1., "A", 0.2, 2., "A", 4., 0., "A"),
+#                      Registry.path_lookup("EARTH"))
+#         self.assertEqual(kep.nparams, 6)
+#         self.assertEqual(kep.kepler9.nparams, 9)
+#         self.assertEqual(kep.constraint.fittable, kep.kepler9)
+#         self.assertEqual(kep.constraint.nparams, kep.nparams)
+# 
+#         errors = _pos_derivative_test(kep, time)[2]
+#         self.assertTrue(np.all(np.abs(errors) < 1.e-4))
+# 
+#         kep = Kepler(Registry.body_lookup("SATURN"), 0.,
+#                       ("N", 1., dmean, 0.2, 2., "N", 4., 0., "N"),
+#                      Registry.path_lookup("EARTH"))
+#         self.assertEqual(kep.nparams, 6)
+#         self.assertEqual(kep.kepler9.nparams, 9)
+#         self.assertEqual(kep.constraint.fittable, kep.kepler9)
+#         self.assertEqual(kep.constraint.nparams, kep.nparams)
+# 
+#         errors = _pos_derivative_test(kep, time)[2]
+#         self.assertTrue(np.all(np.abs(errors) < 1.e-4))
 
-        errors = _pos_derivative_test(kep, time)[2]
-        self.assertTrue(np.all(np.abs(errors) < 1.e-4))
-
-        kep = Kepler(registry.body_lookup("SATURN"), 0.,
-                      ("N", 1., dmean, 0.2, 2., "N", 4., 0., "N"),
-                     registry.path_lookup("EARTH"))
-        self.assertEqual(kep.nparams, 6)
-        self.assertEqual(kep.kepler9.nparams, 9)
-        self.assertEqual(kep.constraint.fittable, kep.kepler9)
-        self.assertEqual(kep.constraint.nparams, kep.nparams)
-
-        errors = _pos_derivative_test(kep, time)[2]
-        self.assertTrue(np.all(np.abs(errors) < 1.e-4))
-
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
-        registry.initialize_body_registry()
+        Registry.initialize_frame_registry()
+        Registry.initialize_path_registry()
+        Registry.initialize_body_registry()
 
 ########################################
 if __name__ == '__main__':

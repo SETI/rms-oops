@@ -4,7 +4,7 @@
 
 import unittest
 
-from navigation  import Test_Navigation
+from navigation_ import Test_Navigation
 from nullnav     import Test_NullNav
 from platescale  import Test_PlateScale
 from repointing  import Test_Repointing

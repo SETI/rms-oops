@@ -161,7 +161,6 @@ class Observation(object):
 
         raise NotImplementedException("times_at_uv() is not implemented")
 
-
     def uv_at_time(self, time, fovmask=False, extras=None):
         """Returns the (u,v) ranges of spatial pixel observed at the specified
         time.
@@ -371,7 +370,7 @@ class Observation(object):
 
             # Locate the object in the field of view
             obs_event = Event(obs_time, Vector3.ZERO, Vector3.ZERO,
-                              self.origin_id, self.frame_id)
+                              self.path_id, self.frame_id)
             path_event = path.photon_to_event(obs_event, quick=quick,
                                               guess=path_event_guesses,
                                               derivs=False)
@@ -394,19 +393,19 @@ class Observation(object):
 
         # Return the results at the best mid-time
         obs_event = Event(obs_time, Vector3.ZERO, Vector3.ZERO,
-                          self.origin_id, self.frame_id)
+                          self.path_id, self.frame_id)
 
         ignore = path.photon_to_event(obs_event, quick=quick,
                                       guess=path_event_guesses,
                                       derivs=derivs)
         # If derivs is True, then event.arr.d_dt is now defined
 
-        uv = self.fov.uv_from_los(-event.arr, derivs=derivs)
+        uv = self.fov.uv_from_los(-obs_event.arr, derivs=derivs)
         # If derivs is True, then uv.d_dlos is defined
 
         # Combine the derivatives if necessary
         if derivs:
-            duv_dt = event.arr.d_dt/event.arr.plain().norm() * uv.d_dlos
+            duv_dt = obs_event.arr.d_dt/obs_event.arr.plain().norm() * uv.d_dlos
             uv.insert_subfield("d_dt", duv_dt)
 
         return uv

@@ -3,6 +3,7 @@
 #
 # 2/18/12 Created (MRS).
 # 8/8/12 MRS - Added inner_radius attribute.
+# 1/4/13 MRS - Added ring_is_retrograde attribute.
 ################################################################################
 
 import numpy as np
@@ -32,6 +33,8 @@ class Body(object):
         ring_frame_id   the ID of a "despun" frame relevant to a ring that might
                         orbit this body. None if not (yet) defined.
         ring_frame      a RingFrame for the body.
+        ring_is_retrograde  True if the ring frame is retrograde relative to
+                            IAU-defined north.
 
         parent          the physical body (not necessarily the barycenter) about
                         which this body orbits. If a string is given, the parent
@@ -130,6 +133,7 @@ class Body(object):
         self.ring_frame = frame_.RingFrame(self.frame_id, epoch=epoch,
                                            retrograde=retrograde)
         self.ring_frame_id = self.ring_frame.frame_id
+        self.ring_is_retrograde = retrograde
 
     def apply_gravity(self, gravity):
         """Adds the gravity attribute to a Body."""
@@ -379,6 +383,9 @@ class Body(object):
 
 ################################################################################
 # Definitions of satellite systems using SPICE body IDs
+# These are disjoint sets, organized based on the keywords to be applied.
+# They are also separated into groups based on whether they orbit the planet
+# or the barycenter.
 ################################################################################
 
 MARS_ALL_MOONS = range(401,403)
@@ -387,23 +394,24 @@ JUPITER_CLASSICAL = range(501,505)
 JUPITER_REGULAR   = [505] + range(514,517)
 JUPITER_IRREGULAR = range(506,514) + range(517,550) + [55062, 55063]
 
-SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan
-SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus
+SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan orbit Saturn
+SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus orbit barycenter
 SATURN_CLASSICAL_IRREG = [609]              # Phoebe
 SATURN_REGULAR   = range(610,619) + range(632,636) + [649,653]
 SATURN_IRREGULAR = (range(619,632) + range(636,649) + range(650,653) +
                     [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
 
 URANUS_CLASSICAL  = range(701,706)
-URANUS_INNER      = range(706,716) + [726,727]
+URANUS_INNER      = range(706,716) + [725,726,727]
 URANUS_IRREGULAR  = range(716,726)
 
-NEPTUNE_CLASSICAL = range(801,803)
-NEPTUNE_INNER     = range(803,809)
+NEPTUNE_CLASSICAL_INNER = [801]             # Triton
+NEPTUNE_CLASSICAL_OUTER = [802]             # Nereid orbits barycenter
+NEPTUNE_REGULAR   = range(803,809)
 NEPTUNE_IRREGULAR = range(809,814)
 
 CHARON        = [901]
-PLUTO_REGULAR = range(902,905)
+PLUTO_REGULAR = range(902,906)
 
 ################################################################################
 # Definitions of ring systems
@@ -531,6 +539,7 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "REGULAR"])
     define_bodies(JUPITER_IRREGULAR, "JUPITER", "JUPITER BARYCENTER",
                   ["SATELLITE", "IRREGULAR"])
+
     define_ring("JUPITER", "JUPITER_RING_PLANE", JUPITER_MAIN_RING_LIMIT, [])
 
     # Moons and rings of Saturn
@@ -542,9 +551,9 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "CLASSICAL", "IRREGULAR"])
     define_bodies(SATURN_REGULAR, "SATURN", "SATURN",
                   ["SATELLITE", "REGULAR"])
-
     define_bodies(SATURN_IRREGULAR, "SATURN", "SATURN BARYCENTER",
                   ["SATELLITE", "IRREGULAR"])
+
     define_ring("SATURN", "SATURN_RING_PLANE", SATURN_F_RING_LIMIT, [])
     define_ring("SATURN", "SATURN_RINGS", SATURN_RINGS, [])
     define_ring("SATURN", "SATURN_MAIN_RINGS", SATURN_MAIN_RINGS, [])
@@ -559,6 +568,7 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "REGULAR"])
     define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
                   ["SATELLITE", "IRREGULAR"])
+
     define_ring("URANUS", "URANUS_RING_PLANE", URANUS_EPSILON_LIMIT, [],
                                                           retrograde=True)
     define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [], retrograde=True)
@@ -591,12 +601,15 @@ def define_solar_system(start_time, stop_time, asof=None):
                            URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
 
     # Moons and rings of Neptune
-    define_bodies(NEPTUNE_CLASSICAL, "NEPTUNE", "NEPTUNE",
+    define_bodies(NEPTUNE_CLASSICAL_INNER, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
-    define_bodies(NEPTUNE_INNER, "NEPTUNE", "NEPTUNE",
+    define_bodies(NEPTUNE_CLASSICAL_OUTER, "NEPTUNE", "NEPTUNE BARYCENTER",
+                  ["SATELLITE", "CLASSICAL", "IRREGULAR"])
+    define_bodies(NEPTUNE_REGULAR, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "REGULAR"])
-    define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE",
+    define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
                   ["SATELLITE", "IRREGULAR"])
+
     define_ring("NEPTUNE", "NEPTUNE_RING_PLANE", NEPTUNE_ADAMS_LIMIT, [])
 
     # Moons and rings of Pluto
@@ -604,10 +617,14 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(PLUTO_REGULAR, "PLUTO", "PLUTO BARYCENTER",
                   ["SATELLITE", "REGULAR"])
+
     define_ring("PLUTO", "PLUTO_RING_PLANE", None, [],
                 barycenter_name="PLUTO BARYCENTER")
     define_ring("PLUTO", "PLUTO_INNER_RING_PLANE", None, [],
                 barycenter_name="PLUTO")
+
+    barycenter = registry.BODY_REGISTRY["PLUTO BARYCENTER"]
+    barycenter.ring_frame_id = registry.BODY_REGISTRY["PLUTO"].ring_frame_id
 
 def define_bodies(spice_ids, parent, barycenter, keywords):
     """Defines the path, frame, surface and body for a given list of bodies

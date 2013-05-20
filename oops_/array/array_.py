@@ -6,7 +6,7 @@
 #
 # Modified 12/12/2011 (BSW) - added help comments to most methods
 #
-# Modified 1/2/11 (MRS) -- Refactored Scalar.py to eliminate circular loading
+# Modified 1/2/12 (MRS) -- Refactored Scalar.py to eliminate circular loading
 #   dependencies with Array and Empty classes. Array.py, Scalar.py and Empty.py
 #   are now separate files.
 # Modified 2/8/12 (MRS) -- Supports array masks and units; uses a cleaner set of

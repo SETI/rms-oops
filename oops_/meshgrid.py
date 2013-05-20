@@ -48,12 +48,6 @@ class Meshgrid(object):
         self.filled_los = None
         self.filled_uv_w_derivs = None
 
-    def __str__(self):
-        """show overview of Meshgrid for debugging purposes."""
-        s = "Meshgrid\n\tshape = " + str(self.shape) + "\n"
-        s += "\tfov.uv_los: " + str(self.fov.uv_los.vals) + "\n"
-        return s
-
     @staticmethod
     def for_fov(fov, origin=0.5, undersample=1, oversample=1, limit=None,
                      swap=False, extras=()):
@@ -93,7 +87,7 @@ class Meshgrid(object):
         oversample  = Pair.as_float(oversample).vals
 
         step = undersample/oversample
-        limit += step * 1.e-12  # Allow a little slop at the upper end
+        limit += step * 1.e-10  # Allow a little slop at the upper end
 
         urange = np.arange(origin[0], limit[0], step[0])
         vrange = np.arange(origin[1], limit[1], step[1])

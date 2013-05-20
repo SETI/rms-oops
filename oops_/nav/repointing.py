@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/nav/navigation.py: Subclass Repointing of class Navigation
+# oops_/nav/repointing.py: Subclass Repointing of class Navigation
 #
 # 5/20/12 MRS - Created.
 ################################################################################
@@ -7,7 +7,7 @@
 import numpy as np
 
 from oops_.array.all import *
-from oops_.nav.navigation import Navigation
+from oops_.nav.navigation_ import Navigation
 
 class Repointing(Navigation):
     """A Repointing is a Navigation subclass that describes a pointing

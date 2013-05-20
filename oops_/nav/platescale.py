@@ -7,7 +7,7 @@
 import numpy as np
 
 from oops_.array.all import *
-from oops_.nav.navigation import Navigation
+from oops_.nav.navigation_ import Navigation
 
 class PlateScale(Navigation):
     """A PlateScale is a Navigation subclass that expands or contracts the x-

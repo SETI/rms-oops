@@ -17,6 +17,10 @@
 #   other than images.
 # 8/19/12 MRS - Added where_not(), where_any() and where_all(), misc.
 #   reorganization to support more path events, misc. bug fixes.
+# 1/4/12 MRS - Added new pole options for ring_incidence_angle() and
+#   ring_emission_angle(). These functions are no longer deprecated. Renamed the
+#   "j2000" reference option in ring_longitude as "node", and added the "aries"
+#   option for compatibility with the Rings Node longitude definition.
 #
 # TBD...
 #   position(self, event_key, axis="x", apparent=True, frame="j2000")
@@ -43,13 +47,13 @@ from oops_.array.all import *
 from oops_.event import Event
 from oops_.meshgrid import Meshgrid
 
+HALFPI = np.pi / 2.
+TWOPI  = np.pi * 2.
+
 class Backplane(object):
     """Backplane is a class that supports the generation and manipulation of
     sets of backplanes associated with a particular observation. It caches
     intermediate results to speed up calculations."""
-
-    HALFPI = np.pi / 2.
-    TWOPI  = np.pi * 2.
 
     def __init__(self, obs, meshgrid=None, time=None):
         """The constructor.
@@ -397,8 +401,7 @@ class Backplane(object):
         """Inserts this backplane into the dictionary. Same as
         register_backplane() but without the expansion of a scalar value."""
 
-        if isinstance(backplane, np.ndarray):
-            backplane = Scalar(backplane)
+        backplane = Scalar.as_scalar(backplane)
 
         # For reference, we add the key as an attribute of each backplane object
         backplane = backplane.plain()
@@ -754,7 +757,7 @@ class Backplane(object):
             if event.surface.COORDINATE_TYPE == "polar":
 
                 # flip is True wherever incidence angle has to be changed
-                flip = (incidence > Backplane.HALFPI)
+                flip = (incidence > HALFPI)
                 self.register_backplane(("ring_flip", event_key), flip)
 
                 # Now flip incidence angles where necessary
@@ -832,7 +835,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
             lambert_law = incidence.cos()
-            lambert_law.mask |= (incidence.vals >= Backplane.HALFPI)
+            lambert_law.mask |= (incidence.vals >= HALFPI)
             lambert_law.vals[lambert_law.mask] = 0.
             self.register_backplane(key, lambert_law)
 
@@ -865,13 +868,13 @@ class Backplane(object):
 
             # Sign on event.arr is negative because photon is incoming
             latitude = (-event.arr.as_scalar(2) / event.arr.norm()).arcsin()
-            incidence = Backplane.HALFPI - latitude
+            incidence = HALFPI - latitude
 
             # Ring incidence angles are always 0-90 degrees
             if event.surface.COORDINATE_TYPE == "polar":
 
                 # The flip is True wherever incidence angle has to be changed
-                flip = (incidence > Backplane.HALFPI)
+                flip = (incidence > HALFPI)
                 self.register_gridless_backplane(("ring_center_flip",
                                                   event_key), flip)
 
@@ -897,7 +900,7 @@ class Backplane(object):
             event = self.get_gridless_event(event_key)
 
             latitude = (event.dep.as_scalar(2) / event.dep.norm()).arcsin()
-            emission = Backplane.HALFPI - latitude
+            emission = HALFPI - latitude
 
             # Ring emission angles are always measured from the lit side normal
             if event.surface.COORDINATE_TYPE == "polar":
@@ -1003,9 +1006,9 @@ class Backplane(object):
         if direction == "west": lon = -lon
 
         if minimum == 0:
-            lon = lon % Backplane.TWOPI
+            lon = lon % TWOPI
         else:
-            lon = (lon + np.pi) % Backplane.TWOPI - np.pi
+            lon = (lon + np.pi) % TWOPI - np.pi
 
         self.register_backplane(key, lon)
         return self.backplanes[key]
@@ -1103,7 +1106,7 @@ class Backplane(object):
             lon = self.sub_solar_longitude(event_key)
 
         if direction == "west":
-            lon = Backplane.TWOPI - lon
+            lon = TWOPI - lon
 
         return lon
 
@@ -1118,7 +1121,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             event = self.get_gridless_event_with_arr(event_key)
             arr = -event.aberrated_arr()
-            lon = arr.as_scalar(1).arctan2(arr.as_scalar(0)) % Backplane.TWOPI
+            lon = arr.as_scalar(1).arctan2(arr.as_scalar(0)) % TWOPI
 
             self.register_gridless_backplane(key, lon)
 
@@ -1135,7 +1138,7 @@ class Backplane(object):
         if key not in self.backplanes.keys():
             event = self.get_gridless_event(event_key)
             dep = event.aberrated_dep()
-            lon = dep.as_scalar(1).arctan2(dep.as_scalar(0)) % Backplane.TWOPI
+            lon = dep.as_scalar(1).arctan2(dep.as_scalar(0)) % TWOPI
 
             self.register_gridless_backplane(key, lon)
 
@@ -1302,13 +1305,14 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def ring_longitude(self, event_key, reference="j2000"):
+    def ring_longitude(self, event_key, reference="node"):
         """Longitude of the ring intercept point in the image.
 
         Input:
             event_key       key defining the ring surface event.
             reference       defines the location of zero longitude.
-                            "j2000" for the J2000 ascending node;
+                            "aries" for the First point of Aries;
+                            "node"  for the J2000 ascending node;
                             "obs"   for the sub-observer longitude;
                             "sun"   for the sub-solar longitude;
                             "oha"   for the anti-observer longitude;
@@ -1320,7 +1324,7 @@ class Backplane(object):
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert reference in {"j2000", "obs", "oha", "sun", "sha",
+        assert reference in {"aries", "node", "obs", "oha", "sun", "sha",
                              "old-obs", "old-oha", "old-sun", "old-sha"}
                             # The last four are deprecated but not deleted
 
@@ -1329,16 +1333,18 @@ class Backplane(object):
         if key in self.backplanes.keys():
             return self.backplanes[key]
 
-        # If it is not found with reference J2000, fill in those backplanes
-        key_j2000 = key[:-1] + ("j2000",)
-        if key_j2000 not in self.backplanes.keys():
+        # If it is not found with reference="node", fill in those backplanes
+        key_node = key[:-1] + ("node",)
+        if key_node not in self.backplanes.keys():
             self._fill_ring_intercepts(event_key)
 
         # Now apply the reference longitude
-        if reference == "j2000":
+        if reference == "node":
             return self.backplanes[key]
 
-        if reference == "sun":
+        if reference == "aries":
+            ref_lon = self._aries_ring_longitude(event_key)
+        elif reference == "sun":
             ref_lon = self.sub_solar_longitude(event_key)
         elif reference == "sha":
             ref_lon = self.sub_solar_longitude(event_key) - np.pi
@@ -1358,8 +1364,26 @@ class Backplane(object):
         elif reference == "old-oha":
             ref_lon = self._sub_observer_ring_longitude(event_key) - np.pi
 
-        lon = (self.backplanes[key_j2000] - ref_lon) % Backplane.TWOPI
+        lon = (self.backplanes[key_node] - ref_lon) % TWOPI
         self.register_backplane(key, lon)
+
+        return self.backplanes[key]
+
+    def _aries_ring_longitude(self, event_key):
+        """Longitude of the First Point of Aries relative to the ring plane
+        ascending node, primarily used internally. Longitudes are measured
+        in the eastward (prograde) direction.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("_aries_ring_longitude", event_key)
+
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event(event_key)
+            frame = registry.frame_lookup(event.frame_id)
+            lon = (-frame.node_at_time(event.time)) % TWOPI
+
+            self.register_gridless_backplane(key, lon)
 
         return self.backplanes[key]
 
@@ -1402,7 +1426,7 @@ class Backplane(object):
 
         ref_angle = ref.as_scalar(1).arctan2(ref.as_scalar(0))
         rad_angle = event.pos.as_scalar(1).arctan2(event.pos.as_scalar(0))
-        az = (rad_angle - ref_angle) % Backplane.TWOPI
+        az = (rad_angle - ref_angle) % TWOPI
         self.register_backplane(key, az)
 
         return self.backplanes[key]
@@ -1444,7 +1468,7 @@ class Backplane(object):
             event = self.get_surface_event_with_arr(event_key)
             dir = -event.aberrated_arr()
 
-        el = Backplane.HALFPI - event.perp.sep(dir)
+        el = HALFPI - event.perp.sep(dir)
         self.register_backplane(key, el)
 
         return self.backplanes[key]
@@ -1461,7 +1485,7 @@ class Backplane(object):
         (r,lon) = event.surface.event_as_coords(event, axes=2)
 
         self.register_backplane(("ring_radius", event_key), r)
-        self.register_backplane(("ring_longitude", event_key, "j2000"), lon)
+        self.register_backplane(("ring_longitude", event_key, "node"), lon)
 
     # Deprecated...
     def _sub_observer_ring_longitude(self, event_key):
@@ -1516,22 +1540,264 @@ class Backplane(object):
         self.register_backplane(key, lon.unmasked())
         return self.backplanes[key]
 
-    def ring_incidence_angle(self, event_key):
+    ############################################################################
+    # Ring plane lighting geometry, surface intercept version
+    #   ring_incidence_angle()
+    #   ring_emission_angle()
+    ############################################################################
+
+    def ring_incidence_angle(self, event_key, pole="sunward"):
         """Incidence_angle angle of the arriving photons at the local ring
-        surface. According to the standard convention for rings, this must be
-        <= pi/2. DEPRECATED; use incidence_angle() instead.
+        surface.
+
+        By default, angles are measured from the sunward pole and should always
+        be <= pi/2. However, calculations for values relative to the IAU-defined
+        north pole and relative to the prograde pole are also supported.
+
+        Input:
+            event_key       key defining the ring surface event.
+            pole            "sunward" for the ring pole on the illuminated face;
+                            "north" for the pole on the IAU-defined north face;
+                            "prograde" for the pole defined by the direction of
+                                positive angular momentum.
         """
 
-        return self.incidence_angle(event_key)
+        assert pole in {"sunward", "north", "prograde"}
 
-    def ring_emission_angle(self, event_key):
+        # The sunward pole uses the standard definition of incidence angle
+        if pole == "sunward":
+            return self.incidence_angle(event_key)
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        # Return the cached copy if it exists
+        key = ("ring_incidence_angle", event_key, pole)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # Derive the prograde incidence angle if necessary
+        key_prograde = key[:-1] + ("prograde",)
+        if key_prograde not in self.backplanes.keys():
+            event = self.get_surface_event_with_arr(event_key)
+            incidence = event.incidence_angle()
+            self.register_backplane(key_prograde, incidence)
+
+        if pole == "prograde":
+            return self.backplanes[key_prograde]
+
+        # If the ring is prograde, "north" and "prograde" are the same
+        body = registry.body_lookup(event_key[0])
+        if not body.ring_is_retrograde:
+            return self.backplanes[prograde_key]
+
+        # Otherwise, flip the incidence angles and return a new backplane
+        incidence = np.pi - self.backplanes[key_prograde]
+        self.register_backplane(key, incidence)
+        return self.backplanes[key]
+
+    def ring_emission_angle(self, event_key, pole="sunward"):
         """Emission angle of the departing photons at the local ring surface.
-        According to the standard convention for rings, this must be < pi/2 on
-        the sunlit side of the rings and > pi/2 on the dark side. DEPRECATED;
-        use emission_angle() instead.
+
+        By default, angles are measured from the sunward pole, so the emission
+        angle should be < pi/2 on the sunlit side and > pi/2 on the dark side
+        of the rings. However, calculations for values relative to the
+        IAU-defined north pole and relative to the prograde pole are also
+        supported.
+
+        Input:
+            event_key       key defining the ring surface event.
+            pole            "sunward" for the ring pole on the illuminated face;
+                            "north" for the pole on the IAU-defined north face;
+                            "prograde" for the pole defined by the direction of
+                                positive angular momentum.
         """
 
-        return self.emission_angle(event_key)
+        assert pole in {"sunward", "north", "prograde"}
+
+        # The sunward pole uses the standard definition of emission angle
+        if pole == "sunward":
+            return self.emission_angle(event_key)
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        # Return the cached copy if it exists
+        key = ("ring_emission_angle", event_key, pole)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # Derive the prograde emission angle if necessary
+        key_prograde = key[:-1] + ("prograde",)
+        if key_prograde not in self.backplanes.keys():
+            event = self.get_surface_event(event_key)
+            emission = event.emission_angle()
+            self.register_backplane(key_prograde, emission)
+
+        if pole == "prograde" :
+            return self.backplanes[key_prograde]
+
+        # If the ring is prograde, "north" and "prograde" are the same
+        body = registry.body_lookup(event_key[0])
+        if not body.ring_is_retrograde:
+            return self.backplanes[key_prograde]
+
+        # Otherwise, flip the emission angles and return a new backplane
+        emission = np.pi - self.backplanes[key_prograde]
+        self.register_backplane(key, emission)
+        return self.backplanes[key]
+
+    ############################################################################
+    # Ring plane geometry, path intercept versions
+    #   sub_ring_longitude()
+    #   ring_center_incidence_angle()
+    #   ring_center_emission_angle()
+    ############################################################################
+
+    def sub_ring_longitude(self, event_key, reference="obs", origin="node"):
+        """Sub-solar or sub-observer longitude in the ring plane. It can be
+        defined relative to the ring plane's J2000 ascending node or the First
+        Point of Aries.
+
+        Input:
+            event_key       key defining the event on the center of the ring's
+                            path.
+            reference       "obs" for the sub-observer longitude;
+                            "sun" for the sub-solar longitude.
+            origin          "node" for the longitude relative to the J2000
+                            ascending node of the ring plane; "aries" for the
+                            longitude relative to the First Point of Aries.
+        """
+
+        assert reference in ("obs", "sun")
+        assert origin in ("node", "aries")
+
+        # Longitudes relative to the node use the standard definition
+        if reference == "obs":
+            lon = self.sub_observer_longitude(event_key)
+        else:
+            lon = self.sub_solar_longitude(event_key)
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        # Return a cached backplane if it exists
+        key = ("sub_ring_longitude", event_key, reference, origin)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # Otherwise, create the backplane
+        if origin == "aries":
+            lon = (lon - self._aries_ring_longitude(event_key)) % TWOPI
+            self.register_gridless_backplane(key, lon)
+
+        return lon
+
+    def ring_center_incidence_angle(self, event_key, pole="sunward"):
+        """Incidence_angle angle of the arriving photons at the center of the
+        ring system.
+
+        By default, angles are measured from the sunward pole and should always
+        be <= pi/2. However, calculations for values relative to the IAU-defined
+        north pole and relative to the prograde pole are also supported.
+
+        Input:
+            event_key       key defining the ring surface event.
+            pole            "sunward" for the ring pole on the illuminated face;
+                            "north" for the pole on the IAU-defined north face;
+                            "prograde" for the pole defined by the direction of
+                                positive angular momentum.
+        """
+
+        assert pole in {"sunward", "north", "prograde"}
+
+        # The sunward pole uses the standard definition of incidence angle
+        if pole == "sunward":
+            return self.center_incidence_angle(event_key)
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        # Return the cached copy if it exists
+        key = ("ring_center_incidence_angle", event_key, pole)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # Derive the prograde incidence angle if necessary
+        key_prograde = key[:-1] + ("prograde",)
+        if key_prograde not in self.backplanes.keys():
+            event = self.get_gridless_event_with_arr(event_key)
+
+            # Sign on event.arr is negative because photon is incoming
+            latitude = (-event.arr.as_scalar(2) / event.arr.norm()).arcsin()
+            incidence = HALFPI - latitude
+
+            self.register_gridless_backplane(key, incidence)
+
+        if pole == "prograde":
+            return self.backplanes[key_prograde]
+
+        # If the ring is prograde, "north" and "prograde" are the same
+        body = registry.body_lookup(event_key[0])
+        if not body.ring_is_retrograde:
+            return self.backplanes[prograde_key]
+
+        # Otherwise, flip the incidence angle and return a new backplane
+        incidence = np.pi - self.backplanes[key_prograde]
+        self.register_gridless_backplane(key, incidence)
+
+        return self.backplanes[key]
+
+    def ring_center_emission_angle(self, event_key, pole="sunward"):
+        """Emission angle of the departing photons at the center of the ring
+        system.
+
+        By default, angles are measured from the sunward pole, so the emission
+        angle should be < pi/2 on the sunlit side and > pi/2 on the dark side
+        of the rings. However, calculations for values relative to the
+        IAU-defined north pole and relative to the prograde pole are also
+        supported.
+
+        Input:
+            event_key       key defining the ring surface event.
+            pole            "sunward" for the ring pole on the illuminated face;
+                            "north" for the pole on the IAU-defined north face;
+                            "prograde" for the pole defined by the direction of
+                                positive angular momentum.
+        """
+
+        assert pole in {"sunward", "north", "prograde"}
+
+        # The sunward pole uses the standard definition of emission angle
+        if pole == "sunward":
+            return self.center_emission_angle(event_key)
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        # Return the cached copy if it exists
+        key = ("ring_center_emission_angle", event_key, pole)
+        if key in self.backplanes.keys():
+            return self.backplanes[key]
+
+        # Derive the prograde emission angle if necessary
+        key_prograde = key[:-1] + ("prograde",)
+        if key_prograde not in self.backplanes.keys():
+            event = self.get_gridless_event(event_key)
+
+            latitude = (event.dep.as_scalar(2) / event.dep.norm()).arcsin()
+            emission = HALFPI - latitude
+
+            self.register_gridless_backplane(key, emission)
+
+        if pole == "prograde":
+            return self.backplanes[key_prograde]
+
+        # If the ring is prograde, "north" and "prograde" are the same
+        body = registry.body_lookup(event_key[0])
+        if not body.ring_is_retrograde:
+            return self.backplanes[prograde_key]
+
+        # Otherwise, flip the emission angle and return a new backplane
+        emission = np.pi - self.backplanes[key_prograde]
+        self.register_backplane(key, emission)
+
+        return self.backplanes[key]
 
     ############################################################################
     # Ring plane geometry, surface intercept only
@@ -1642,13 +1908,14 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def ansa_longitude(self, event_key, reference="j2000"):
+    def ansa_longitude(self, event_key, reference="node"):
         """Longitude of the ansa intercept point in the image.
 
         Input:
             event_key       key defining the ring surface event.
             reference       defines the location of zero longitude.
-                            "j2000" for the J2000 ascending node;
+                            "aries" for the First point of Aries;
+                            "node"  for the J2000 ascending node;
                             "obs"   for the sub-observer longitude;
                             "sun"   for the sub-solar longitude;
                             "oha"   for the anti-observer longitude;
@@ -1660,7 +1927,7 @@ class Backplane(object):
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert reference in {"j2000", "obs", "oha", "sun", "sha",
+        assert reference in {"aries", "node", "obs", "oha", "sun", "sha",
                              "old-obs", "old-oha", "old-sun", "old-sha"}
                             # The last four are deprecated but not deleted
 
@@ -1671,15 +1938,17 @@ class Backplane(object):
             return self.backplanes[key]
 
         # If it is not found with reference J2000, fill in those backplanes
-        key_j2000 = key0 + ("j2000",)
-        if key_j2000 not in self.backplanes.keys():
+        key_node = key0 + ("node",)
+        if key_node not in self.backplanes.keys():
             self._fill_ansa_longitudes(event_key)
 
         # Now apply the reference longitude
-        if reference == "j2000":
+        if reference == "node":
             return self.backplanes[key]
 
-        if reference == "sun":
+        if reference == "aries":
+            ref_lon = self._aries_ring_longitude(event_key)
+        elif reference == "sun":
             ref_lon = self.sub_solar_longitude(event_key)
         elif reference == "sha":
             ref_lon = self.sub_solar_longitude(event_key) - np.pi
@@ -1699,7 +1968,7 @@ class Backplane(object):
         elif reference == "old-oha":
             ref_lon = self._sub_observer_ansa_longitude(event_key) - np.pi
 
-        lon = (self.backplanes[key_j2000] - ref_lon) % Backplane.TWOPI
+        lon = (self.backplanes[key_node] - ref_lon) % TWOPI
         self.register_backplane(key, lon)
 
         return self.backplanes[key]
@@ -1731,7 +2000,7 @@ class Backplane(object):
         # Get the longitude in the associated ring plane
         (r,lon) = event.surface.ringplane.event_as_coords(event, axes=2)
 
-        self.register_backplane(("ansa_longitude", event_key, "j2000"), lon)
+        self.register_backplane(("ansa_longitude", event_key, "node"), lon)
 
     # Deprecated
     def _sub_observer_ansa_longitude(self, event_key):
@@ -1945,7 +2214,7 @@ class Backplane(object):
         key = ("where_sunward",) + event_key
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
-            mask = self.mask_as_scalar((incidence.vals <= Backplane.HALFPI) &
+            mask = self.mask_as_scalar((incidence.vals <= HALFPI) &
                                        np.logical_not(incidence.mask))
             self.register_backplane(key, mask)
 
@@ -1959,7 +2228,7 @@ class Backplane(object):
         key = ("where_antisunward",) + event_key
         if key not in self.backplanes.keys():
             incidence = self.incidence_angle(event_key)
-            mask = self.mask_as_scalar((incidence.vals > Backplane.HALFPI) &
+            mask = self.mask_as_scalar((incidence.vals > HALFPI) &
                                        np.logical_not(incidence.mask))
             self.register_backplane(key, mask)
 
@@ -2204,6 +2473,10 @@ class Backplane(object):
 
         "ring_radius", "ring_longitude", "ring_azimuth", "ring_elevation",
         "ring_radial_resolution", "ring_angular_resolution",
+        "ring_incidence_angle", "ring_emission_angle",
+        "sub_ring_longitude",
+        "ring_center_incidence_angle", "ring_center_emission_angle",
+
         "ansa_radius", "ansa_altitude", "ansa_longitude",
         "ansa_radial_resolution", "ansa_vertical_resolution",
 
@@ -2380,8 +2653,8 @@ class Test_Backplane(unittest.TestCase):
         test = bp.ring_radius("saturn_main_rings").unmasked()
         show_info("Ring radius unmasked (km)", test)
 
-        test = bp.ring_longitude("saturn_main_rings",reference="j2000")
-        show_info("Ring longitude wrt J2000 (deg)", test * constants.DPR)
+        test = bp.ring_longitude("saturn_main_rings",reference="node")
+        show_info("Ring longitude wrt node (deg)", test * constants.DPR)
 
         test = bp.ring_longitude("saturn_main_rings", reference="sun")
         show_info("Ring longitude wrt Sun (deg)", test * constants.DPR)
@@ -2480,17 +2753,16 @@ class Test_Backplane(unittest.TestCase):
         test = bp.evaluate(("where_sunward", "saturn"))
         show_info("Saturn sunward via evaluate()", test)
 
-        test = bp.where_below(("incidence_angle", "saturn"), Backplane.HALFPI)
+        test = bp.where_below(("incidence_angle", "saturn"), HALFPI)
         show_info("Saturn sunward via where_below()", test)
 
         test = bp.evaluate(("where_antisunward", "saturn"))
         show_info("Saturn antisunward via evaluate()", test)
 
-        test = bp.where_above(("incidence_angle", "saturn"), Backplane.HALFPI)
+        test = bp.where_above(("incidence_angle", "saturn"), HALFPI)
         show_info("Saturn antisunward via where_above()", test)
 
-        test = bp.where_between(("incidence_angle", "saturn"), Backplane.HALFPI,
-                                                               3.2)
+        test = bp.where_between(("incidence_angle", "saturn"), HALFPI, 3.2)
         show_info("Saturn antisunward via where_between()", test)
 
         test = bp.where_intercepted("saturn")
@@ -2556,7 +2828,7 @@ class Test_Backplane(unittest.TestCase):
         # Testing ansa longitudes
 
         test = bp.ansa_longitude("saturn:ansa")
-        show_info("Saturn ansa longitude wrt J2000 (deg)", test * constants.DPR)
+        show_info("Saturn ansa longitude wrt node (deg)", test * constants.DPR)
 
         test = bp.ansa_longitude("saturn:ansa", "obs")
         show_info("Saturn ansa longitude wrt observer (deg)",
@@ -2636,7 +2908,7 @@ class Test_Backplane(unittest.TestCase):
             print "Sub-solar ring latitude (deg) =",
             print bp.sub_solar_latitude("saturn:ring").vals * constants.DPR
 
-            print "Sub-solar ring longitude wrt J2000 (deg) =",
+            print "Sub-solar ring longitude wrt node (deg) =",
             print bp.sub_solar_longitude("saturn:ring").vals * constants.DPR
 
             print "Solar distance to ring center (km) =",
@@ -2645,7 +2917,7 @@ class Test_Backplane(unittest.TestCase):
             print "Sub-observer ring latitude (deg) =",
             print bp.sub_observer_latitude("saturn:ring").vals * constants.DPR
 
-            print "Sub-observer ring longitude wrt J2000 (deg) =",
+            print "Sub-observer ring longitude wrt node (deg) =",
             print bp.sub_observer_longitude("saturn:ring").vals * constants.DPR
 
             print "Observer distance to ring center (km) =",

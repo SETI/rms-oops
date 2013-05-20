@@ -2,6 +2,7 @@
 # oops_/frame/ringframe.py: Subclass RingFrame of class Frame
 #
 # 2/8/12 Modified (MRS) - Update for consistent style.
+# 1/4/12 MRS: Added attribute "node" and function node_at_time().
 ################################################################################
 
 import numpy as np
@@ -11,6 +12,8 @@ from oops_.array.all import *
 from oops_.transform import Transform
 
 import oops_.registry as registry
+
+TWOPI  = np.pi * 2.
 
 class RingFrame(Frame):
     """RingFrame is a Frame subclass describing a non-rotating frame centered on
@@ -55,11 +58,14 @@ class RingFrame(Frame):
         self.planet_frame = frame
         self.epoch = epoch
         self.retrograde = retrograde
-        self.transform = None
 
         # For a fixed epoch, derive the inertial tranform now
+        self.transform = None
+        self.node = None
+
         if epoch is not None:
             self.transform = self.transform_at_time(self.epoch)
+            self.node = self.node_at_time(self.epoch)
 
         # Fill in the frame name
         if id is None:
@@ -104,8 +110,34 @@ class RingFrame(Frame):
         # Replace the Y-axis of the matrix using Y = Z cross X
         matrix[...,1,:] = utils.cross3d(z_axis, matrix[...,0,:])
 
-        return Transform(Matrix3(matrix, xform.matrix.mask), Vector3([0,0,0]),
+        return Transform(Matrix3(matrix, xform.matrix.mask), Vector3.ZERO,
                          self.frame_id, self.reference_id, None)
+
+########################################
+
+    def node_at_time(self, time, quick=None):
+        """Returns the rotation angle from the X-axis of the original reference
+        frame to the ascending node of the ring plane, which serves as the
+        X-axis of this frame."""
+
+        # For a fixed epoch, return the fixed node
+        if self.transform is not None:
+            return self.transform
+
+        # Otherwise, calculate it for the current time
+        xform = self.planet_frame.transform_at_time(time, quick)
+        matrix = xform.matrix.vals
+
+        # The bottom row of the matrix is the pole
+        z_axis = matrix[...,2,:]
+
+        if self.retrograde:
+            z_axis = -z_axis
+
+        # The ascending node is 90 degrees ahead of the pole
+        angle = np.arctan2(z_axis[...,0], -z_axis[...,1])
+
+        return Scalar(angle % TWOPI)
 
 ################################################################################
 # UNIT TESTS
@@ -141,13 +173,13 @@ class Test_RingFrame(unittest.TestCase):
         self.assertTrue(np.all(np.abs(diff.vals < 1.e-14)))
 
         # Confirm X-axis is always in the J2000 equator
-        xaxis = Event(time, Vector3([1,0,0]),
-                            Vector3([0,0,0]), "SSB", rings.frame_id)
+        xaxis = Event(time, Vector3.XAXIS,
+                            Vector3.ZERO, "SSB", rings.frame_id)
         test = xaxis.wrt_frame("J2000")
         self.assertTrue(np.all(np.abs(test.pos.as_scalar(2).vals < 1.e-14)))
 
         # Confirm it's at the ascending node
-        xaxis = Event(time, (1,1.e-13,0), (0,0,0), "SSB", rings.frame_id)
+        xaxis = Event(time, (1,1.e-13,0), Vector3.ZERO, "SSB", rings.frame_id)
         test = xaxis.wrt_frame("J2000")
         self.assertTrue(np.all(test.pos.as_scalar(1).vals > 0.))
 

@@ -66,10 +66,14 @@ MARS_ALL_MOONS = range(401,403)
 
 JUPITER_CLASSICAL = range(501,505)
 JUPITER_REGULAR   = range(501,506) + range(514,517)
+JUPITER_INNER     = [505] + range(514,517)
 JUPITER_IRREGULAR = range(506,514) + range(517,550) + [55062, 55063]
 JUPITER_ALL_MOONS = range(501,550) + [55062, 55063]
 
-SATURN_CLASSICAL  = range(601,610)      # Mimas through Phoebe
+SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan
+SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus
+SATURN_CLASSICAL_IRREG = [609]              # Phoebe
+SATURN_CLASSICAL  = range(601,610)          # Mimas through Phoebe
 SATURN_REGULAR    = range(601,619) + range(632,636) + [649,653] # with Phoebe
 SATURN_IRREGULAR  = (range(619,632) + range(636,649) + range(650,653) +
                      [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
@@ -77,18 +81,21 @@ SATURN_ALL_MOONS  = (range(601,654) +
                      [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
 
 URANUS_CLASSICAL  = range(701,706)
-URANUS_REGULAR    = range(701,716) + [726,727]
-URANUS_IRREGULAR  = range(716,726)
+URANUS_INNER      = range(706,716) + [725,726,727]
+URANUS_REGULAR    = range(701,716) + [725,726,727]
+URANUS_IRREGULAR  = range(716,725)
 URANUS_ALL_MOONS  = range(701,728)
 
 NEPTUNE_CLASSICAL = range(801,803)
-NEPTUNE_REGULAR   = range(801,809)
-NEPTUNE_IRREGULAR = range(809,814)
+NEPTUNE_INNER     = range(803,809)
+NEPTUNE_REGULAR   = [801] + NEPTUNE_INNER
+NEPTUNE_IRREGULAR = [802] + range(809,814)
 NEPTUNE_ALL_MOONS = range(801,814)
 
 PLUTO_CLASSICAL   = [901]
-PLUTO_REGULAR     = range(901,905)
-PLUTO_ALL_MOONS   = range(901,905)
+PLUTO_REGULAR     = range(901,906)
+PLUTO_OUTER       = range(902,906)
+PLUTO_ALL_MOONS   = range(901,906)
 
 ################################################################################
 # SPICE file directory tree support

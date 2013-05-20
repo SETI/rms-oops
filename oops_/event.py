@@ -716,7 +716,7 @@ class Event(object):
 
     def ra_and_dec(self, aberration=False, subfield="arr", frame="J2000",
                          quick=None):
-        """Returns the J2000 right ascension amd declination in the path and
+        """Returns the J2000 right ascension and declination in the path and
         frame of the event, as a tuple of two scalars.
 
         Input:

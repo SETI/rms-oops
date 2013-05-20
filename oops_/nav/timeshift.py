@@ -7,7 +7,7 @@
 import numpy as np
 
 from oops_.array.all import *
-from oops_.nav.navigation import Navigation
+from oops_.nav.navigation_ import Navigation
 
 class TimeShift(Navigation):
     """A TimeShift is a Navigation subclass that shifts all of the times

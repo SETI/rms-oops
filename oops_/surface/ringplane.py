@@ -57,14 +57,6 @@ class RingPlane(Surface):
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
 
-    def __str__(self):
-        """show overview of Event for debugging purposes."""
-        s = "Ringplane\n\torigin_id: " + self.origin_id + "\n"
-        s += "\tframe_id: " + self.frame_id + "\n"
-        s += "\tradii: " + str(self.radii) + "\n"
-        s += "\televation: " + str(self.elevation) + "\n"
-        return s
-
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Converts from position vectors in the internal frame to the surface
         coordinate system.

@@ -10,6 +10,7 @@ import numpy as np
 from oops_.path.path_ import Path
 from oops_.array.all import *
 from oops_.event import Event
+import oops_.registry as registry
 
 class FixedPath(Path):
     """Subclass FixedPath of class Path remains at fixed coordinates relative to
@@ -54,7 +55,8 @@ class FixedPath(Path):
                         and velocity of the path.
         """
 
-        return Event(time, pos, Vector3.ZERO, self.origin_id, self.frame_id)
+        return Event(time, self.pos, Vector3.ZERO,
+                           self.origin_id, self.frame_id)
 
 ################################################################################
 # UNIT TESTS
