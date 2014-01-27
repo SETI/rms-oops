@@ -244,6 +244,16 @@ class WFPC2(HST):
 
         return syn_filenames
 
+    def dn_per_sec_factor(self, hst_file):
+        """Returns a factor that converts a pixel value to DN per second.
+        
+        Input:
+            hst_file        the object returned by pyfits.open()            
+        
+        Return              the factor to multiply a pixel value by to get DN/sec
+        """
+        return 1. / hst_file[0].header["EXPTIME"]
+
     @staticmethod
     def from_opened_fitsfile(hst_file, **parameters):
         """A general, static method to return an Observation object based on an
