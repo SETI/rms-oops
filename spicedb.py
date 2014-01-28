@@ -743,6 +743,7 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
         query_list += ["AND RELEASE_DATE >= '", after, "'\n"]
 
     if path is not None:
+        path = path.replace('\\', '/') # Must change Windows file separator
         query_list += ["AND FILESPEC LIKE '%", path, "%'\n"]
 
     if asof == "redo":
