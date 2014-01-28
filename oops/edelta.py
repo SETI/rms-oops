@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/edelta.py: Event-delta class
+# oops/edelta.py: Event-delta class
 #
 # 3/2/12 Created (MRS).
 ################################################################################
@@ -7,10 +7,10 @@
 import numpy as np
 import unittest
 
-from oops_.event import Event
-from oops_.array.all import *
-import oops_.registry as registry
-import oops_.constants as constants
+from oops.event import Event
+from oops.array_ import *
+import oops.registry as registry
+import oops.constants as constants
 
 class Edelta(object):
     """An Edelta object is defined by a time, position and velocity as offsets

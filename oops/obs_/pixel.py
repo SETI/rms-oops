@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/obs/pixel.py: Subclass Pixel of class Observation
+# oops/obs_/pixel.py: Subclass Pixel of class Observation
 #
 # 7/24/12 MRS - Created.
 #
@@ -9,9 +9,9 @@
 
 import numpy as np
 
-from oops_.array.all import *
-from oops_.obs.observation_ import Observation
-from oops_.event import Event
+from oops.array_ import *
+from oops.obs_.observation import Observation
+from oops.event import Event
 
 class Pixel(Observation):
     """A Pixel is a subclass of Observation consisting of one or more
@@ -283,13 +283,13 @@ class Pixel(Observation):
 ################################################################################
 
 import unittest
-from oops_.cadence.metronome import Metronome
+from oops.cadence_.metronome import Metronome
 
 class Test_Pixel(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.fov.flat import Flat
+        from oops.fov_.flat import Flat
 
         fov = Flat((0.001,0.001), (1,1))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)

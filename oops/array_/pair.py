@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/pair.py: Pair subclass of class Array
+# oops/array_/pair.py: Pair subclass of class Array
 #
 # Modified 12/12/2011 (BSW) - removed redundant floor calls on astype('int')
 #                           - added some comments
@@ -13,11 +13,11 @@
 import numpy as np
 import numpy.ma as ma
 
-from oops_.array.array_  import Array
-from oops_.array.scalar  import Scalar
-from oops_.array.vectorn import VectorN
-from oops_.units import Units
-import oops_.array.utils as utils
+from oops.array_.array   import Array
+from oops.array_.scalar  import Scalar
+from oops.array_.vectorn import VectorN
+from oops.array_.utils   import dot, norm, unit, cross2d, sep
+from oops.units import Units
 
 class Pair(Array):
     """An arbitrary Array of coordinate pairs or 2-vectors.
@@ -199,7 +199,7 @@ class Pair(Array):
         """
 
         arg = Pair.as_pair(arg)
-        return Scalar(utils.dot(self.vals, arg.vals),
+        return Scalar(dot(self.vals, arg.vals),
                       self.mask | arg.mask,
                       Units.mul_units(self.units, arg.units))
 
@@ -207,7 +207,7 @@ class Pair(Array):
         """Returns the length of the Pair as a Scalar.
         """
 
-        return Scalar(utils.norm(self.vals), self.mask, self.units)
+        return Scalar(norm(self.vals), self.mask, self.units)
 
     def __abs__(self): return self.norm()
 
@@ -215,7 +215,7 @@ class Pair(Array):
         """Returns a the Pair converted to unit length as a new Pair.
         """
 
-        return Pair(utils.unit(self.vals), self.mask)
+        return Pair(unit(self.vals), self.mask)
 
     def cross(self, arg):
         """Returns the magnitude of the cross products of the Pairs as a new
@@ -223,7 +223,7 @@ class Pair(Array):
         """
 
         arg = Pair.as_pair(arg)
-        return Scalar(utils.cross2d(self.vals, arg.vals),
+        return Scalar(cross2d(self.vals, arg.vals),
                       self.mask | arg.mask,
                       Units.mul_units(self.units, arg.units))
 
@@ -233,7 +233,7 @@ class Pair(Array):
         """
 
         arg = Pair.as_pair(arg)
-        return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
+        return Scalar(sep(self.vals, arg.vals), self.mask | arg.mask)
 
     @staticmethod
     def meshgrid(arg1, arg2):

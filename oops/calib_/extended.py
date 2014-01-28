@@ -1,12 +1,12 @@
 ################################################################################
-# oops/calib/extended.py: ExtendedSource subclass of class Calibration
+# oops/calib_/extended.py: ExtendedSource subclass of class Calibration
 #
 # 2/11/12 Modified (MRS) - revised for style.
 # 3/20/12 MRS - New and better class name ExtendedSource.
 ################################################################################
 
-from oops_.calib.calibration_ import Calibration
-from oops_.array.all import *
+from oops.calib_.calibration import Calibration
+from oops.array_ import *
 
 class ExtendedSource(Calibration):
     """A Scaling is a Calibration object in which every pixel is multiplied by a

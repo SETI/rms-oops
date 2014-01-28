@@ -1,13 +1,13 @@
 ################################################################################
-# oops_/obs/rasterslit.py: Subclass RasterSlit of class Observation
+# oops/obs_/rasterslit.py: Subclass RasterSlit of class Observation
 #
 # 6/13/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops_.obs.observation_ import Observation
-from oops_.array.all import *
+from oops.obs_.observation import Observation
+from oops.array_ import *
 
 class RasterSlit(Observation):
     """A RasterSlit is subclass of Observation consisting of a 2-D image in
@@ -268,14 +268,14 @@ class RasterSlit(Observation):
 ################################################################################
 
 import unittest
-from oops_.cadence.metronome import Metronome
-from oops_.cadence.dual import DualCadence
+from oops.cadence_.metronome import Metronome
+from oops.cadence_.dual import DualCadence
 
 class Test_RasterSlit(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.fov.flat import Flat
+        from oops.fov_.flat import Flat
 
         fov = Flat((0.001,0.001), (10,1))
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)

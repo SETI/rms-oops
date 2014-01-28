@@ -1,13 +1,13 @@
 ################################################################################
-# oops_/obs/slit.py: Subclass Slit of class Observation
+# oops/obs_/slit.py: Subclass Slit of class Observation
 #
 # 6/13/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops_.obs.observation_ import Observation
-from oops_.array.all import *
+from oops.obs_.observation import Observation
+from oops.array_ import *
 
 class Slit(Observation):
     """A Slit is subclass of Observation consisting of a 2-D image constructed
@@ -266,13 +266,13 @@ class Slit(Observation):
 ################################################################################
 
 import unittest
-from oops_.cadence.metronome import Metronome
+from oops.cadence_.metronome import Metronome
 
 class Test_Slit(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.fov.flat import Flat
+        from oops.fov_.flat import Flat
 
         fov = Flat((0.001,0.001), (10,1))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)

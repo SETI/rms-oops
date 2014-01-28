@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/surface/ellipsoid.py: Ellipsoid subclass of class Surface
+# oops/surface_/ellipsoid.py: Ellipsoid subclass of class Surface
 #
 # 2/17/12 MRS - Created
 # 3/4/12  MRS - cleaned up comments, added NotImplementedErrors for features
@@ -11,10 +11,10 @@
 
 import numpy as np
 
-from oops_.surface.surface_ import Surface
-from oops_.array.all import *
-from oops_.config import SURFACE_PHOTONS, LOGGING
-import oops_.registry as registry
+from oops.surface_.surface import Surface
+from oops.array_ import *
+from oops.config import SURFACE_PHOTONS, LOGGING
+import oops.registry as registry
 
 class Ellipsoid(Surface):
     """Ellipsoid defines a ellipsoidal surface centered on the given path and
@@ -646,8 +646,8 @@ class Test_Ellipsoid(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.frame.frame_ import Frame
-        from oops_.path.path_ import Path
+        from oops.frame_.frame import Frame
+        from oops.path_.path import Path
 
         REQ  = 60268.
         RMID = 54364.

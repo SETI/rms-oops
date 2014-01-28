@@ -1,19 +1,19 @@
 ################################################################################
-# oops_/frame/tracker.py: Subclass Tracker of class Frame
+# oops/frame_/tracker.py: Subclass Tracker of class Frame
 #
 # 5/19/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops_.frame.frame_ import Frame
-from oops_.path.path_ import Path, QuickPath, Waypoint
-from oops_.array.all import *
-from oops_.transform import Transform
-from oops_.event import Event
+from oops.frame_.frame import Frame
+from oops.path_.path   import Path, QuickPath, Waypoint
+from oops.array_       import *
+from oops.transform    import Transform
+from oops.event        import Event
 
-import oops_.registry as registry
-import oops_.config as config
+import oops.registry as registry
+import oops.config as config
 
 class Tracker(Frame):
     """Tracker is a Frame subclass that ensures, via a small rotation, that a
@@ -114,8 +114,8 @@ class Test_Tracker(unittest.TestCase):
 
     def runTest(self):
 
-        import oops_.body as body
-        import oops_.spice_support as spice
+        import oops.body as body
+        import oops.spice_support as spice
 
         registry.initialize()
         spice.initialize()

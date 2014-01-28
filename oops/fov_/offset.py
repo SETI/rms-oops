@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/fov/offset.py: Offset subclass of FOV
+# oops/fov_/offset.py: Offset subclass of FOV
 #
 # 3/21/12 MRS - New.
 # 10/28/12 MRS - Complete update to accommodate the Fittable interface.
@@ -7,9 +7,9 @@
 
 import numpy as np
 
-from oops_.fov.fov_ import FOV
-from oops.fittable  import Fittable
-from oops_.array.all import *
+from oops.fov_.fov import FOV
+from oops.fittable import Fittable
+from oops.array_   import *
 
 class Offset(FOV, Fittable):
 

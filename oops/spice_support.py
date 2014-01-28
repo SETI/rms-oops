@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/spice_support.py
+# oops/spice_support.py
 #
 # 2/6/12 Created (MRS) - Based on parts of oops.py.
 # 2/18/12 Modified (MRS) - Moved define_solar_system to body.py.
@@ -10,7 +10,7 @@
 import spicedb, cspice, julian
 import os
 
-import oops_.registry as registry
+import oops.registry as registry
 
 # Maintain dictionaries that translates names in SPICE toolkit into their
 # corresponding names in the Frame and Path registries.

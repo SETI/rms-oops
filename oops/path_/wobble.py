@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/path/wobble.py: Subclass Wobble of class Path.
+# oops/path_/wobble.py: Subclass Wobble of class Path.
 #
 # 10/30/12 MRS - Defined. NOTE: For now, partial derivatives do not work. Also,
 #                the wobble is in the (x,y) plane, neglecting any orbital
@@ -10,15 +10,15 @@
 import numpy as np
 import gravity
 
-from oops_.path.path_ import Path, Waypoint
-from oops_.path.kepler import Kepler
-from oops_.array.all import *
-from oops_.config import PATH_PHOTONS
-from oops_.event import Event
-import oops_.registry as Registry
-import oops_.constants as constants
+from oops.path_.path   import Path, Waypoint
+from oops.path_.kepler import Kepler
+from oops.array_       import *
+from oops.config       import PATH_PHOTONS
+from oops.event        import Event
+import oops.registry as Registry
+import oops.constants as constants
 
-from oops_.fittable import Fittable
+from oops.fittable import Fittable
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km).
 MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians).

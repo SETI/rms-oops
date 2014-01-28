@@ -6,8 +6,8 @@
 
 import numpy as np
 
-from oops_.array.all import *
-from oops_.nav.navigation_ import Navigation
+from oops.array_ import *
+from oops.nav_.navigation import Navigation
 
 class NullNav(Navigation):
     """This defines a null navigation. It is a subclass of Fittable but has no

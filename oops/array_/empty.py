@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/empty.py: Empty subclass of class Array
+# oops/array_/empty.py: Empty subclass of class Array
 #
 # Modified 1/2/11 (MRS) -- Refactored Scalar.py to eliminate circular loading
 #   dependencies with Array and Empty classes. Array.py, Scalar.py and Empty.py
@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from oops_.array.array_ import Array
+from oops.array_.array import Array
 
 class Empty(Array):
     """An empty array, needed in some situations so the moral equivalent of a
@@ -91,7 +91,7 @@ class Test_Empty(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.array.scalar import Scalar
+        from oops.array_.scalar import Scalar
 
         empty = Empty()
         self.assertEqual(empty, Empty())

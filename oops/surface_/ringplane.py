@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/surface/ringplane.py: RingPlane subclass of class Surface
+# oops/surface_/ringplane.py: RingPlane subclass of class Surface
 #
 # 2/8/12 Modified (MRS) - Updated for style; added elevation parameter; added
 #   mask tracking.
@@ -12,9 +12,9 @@
 import numpy as np
 import gravity
 
-from oops_.surface.surface_ import Surface
-from oops_.array.all import *
-import oops_.registry as registry
+from oops.surface_.surface import Surface
+from oops.array_ import *
+import oops.registry as registry
 
 class RingPlane(Surface):
     """RingPlane is a subclass of Surface describing a flat surface in the (x,y)

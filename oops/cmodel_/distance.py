@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/cmodel/distance.py: Subclass Distance of class CoordinateModel
+# oops/cmodel_/distance.py: Subclass Distance of class CoordinateModel
 #
 # 1/24/12 Added (MRS)
 # 2/8/12 Modified (MRS) - supports new class heirarchy.
@@ -7,8 +7,8 @@
 
 import numpy as np
 
-from oops_.cmodel.cmodel_ import CoordinateModel
-from oops_.units import Units
+from oops.cmodel_.cmodel import CoordinateModel
+from oops.units import Units
 
 class Distance(CoordinateModel):
     """Distance is a subclass of CoordinateModel used to describe one component

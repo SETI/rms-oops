@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/frame/cmatrix.py: Subclass Cmatrix of class Frame
+# oops/frame_/cmatrix.py: Subclass Cmatrix of class Frame
 #
 # 1/17/12 (BSW) - id and reference, declared as arguments to __init__, were not
 #   refereced (instead frane_id and referece_id were refereced, which did not
@@ -10,11 +10,11 @@
 
 import numpy as np
 
-from oops_.frame.frame_ import Frame
-from oops_.array.all import *
-from oops_.transform import Transform
-import oops_.constants as constants
-import oops_.registry as registry
+from oops.frame_.frame import Frame
+from oops.array_       import *
+from oops.transform    import Transform
+import oops.constants as constants
+import oops.registry as registry
 
 class Cmatrix(Frame):
     """Cmatrix is a Frame subclass in which the frame is defined by a fixed
@@ -127,9 +127,9 @@ class Test_Cmatrix(unittest.TestCase):
     def runTest(self):
 
         # Imports are here to avoid conflicts
-        from oops_.frame.spiceframe import SpiceFrame
-        from oops_.path.spicepath import SpicePath
-        from oops_.event import Event
+        from oops.frame_.spiceframe import SpiceFrame
+        from oops.path_.spicepath import SpicePath
+        from oops.event import Event
 
         registry.initialize()
 

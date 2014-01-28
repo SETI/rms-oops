@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/format/baseclass.py: Abstract class Format
+# oops/format_/format.py: Abstract class Format
 #
 # 1/24/12 (MRS) - Drafted.
 ################################################################################

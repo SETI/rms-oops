@@ -1,12 +1,12 @@
 ################################################################################
-# oops_/calib/unittester.py
+# oops/calib_/unittester.py
 ################################################################################
 
 import unittest
 
-from oops_.calib.calibration_ import Test_Calibration
-from oops_.calib.extended     import Test_ExtendedSource
-from oops_.calib.point        import Test_PointSource
+from oops.calib_.calibration  import Test_Calibration
+from oops.calib_.extended     import Test_ExtendedSource
+from oops.calib_.point        import Test_PointSource
 
 ########################################
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/surface/spheroid.py: Spheroid subclass of class Surface
+# oops/surface_/spheroid.py: Spheroid subclass of class Surface
 #
 # 2/15/12 Checked in (BSW)
 # 2/17/12 Modified (MRS) - Inserted coordinate definitions; added use of trig
@@ -14,10 +14,10 @@
 
 import numpy as np
 
-from oops_.surface.surface_ import Surface
-from oops_.array.all import *
-from oops_.config import SURFACE_PHOTONS, LOGGING
-import oops_.registry as registry
+from oops.surface_.surface import Surface
+from oops.array_ import *
+from oops.config import SURFACE_PHOTONS, LOGGING
+import oops.registry as registry
 
 class Spheroid(Surface):
     """Spheroid defines a spheroidal surface centered on the given path and
@@ -622,8 +622,8 @@ class Test_Spheroid(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.frame.frame_ import Frame
-        from oops_.path.path_ import Path
+        from oops.frame_.frame import Frame
+        from oops.path_.path import Path
 
         REQ  = 60268.
         #RPOL = 54364.

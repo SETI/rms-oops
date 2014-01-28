@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/units.py: Class Units
+# oops/units.py: Class Units
 #
 # 1/24/12 (MRS): Initial version.
 # 2/2/12 (MRS): Creates betterunits units strings; performs more arithmetic

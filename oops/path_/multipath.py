@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/path/multipath.py: Subclass MultiPath of class Path
+# oops/path_/multipath.py: Subclass MultiPath of class Path
 #
 # 8/19/12 MRS - changed call to register() to reregister(), so a newly defined
 #   MultiPath replaces the old definition.
@@ -8,12 +8,12 @@
 import numpy as np
 import cspice
 
-from oops_.path.path_ import Path
-from oops_.array.all import *
-from oops_.event import Event
+from oops.path_.path import Path
+from oops.array_     import *
+from oops.event      import Event
 
-import oops_.registry as registry
-import oops_.spice_support as spice
+import oops.registry as registry
+import oops.spice_support as spice
 
 class MultiPath(Path):
     """A MultiPath gathers a set of paths into a single N-dimensional Path

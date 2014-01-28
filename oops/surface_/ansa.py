@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/surface/ansa.py: Ansa subclass of class Surface
+# oops/surface_/ansa.py: Ansa subclass of class Surface
 #
 # 2/27/12 Checked in (BSW)
 # 3/24/12 MRS - revised for new surface API.
@@ -8,10 +8,10 @@
 
 import numpy as np
 
-from oops_.surface.surface_  import Surface
-from oops_.surface.ringplane import RingPlane
-from oops_.array.all import *
-import oops_.registry as registry
+from oops.surface_.surface  import Surface
+from oops.surface_.ringplane import RingPlane
+from oops.array_ import *
+import oops.registry as registry
 
 class Ansa(Surface):
     """The Ansa surface is defined as the locus of points where a radius vector

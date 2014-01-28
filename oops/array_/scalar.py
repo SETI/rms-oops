@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/scalar.py: Scalar subclass of class Array
+# oops/array_/scalar.py: Scalar subclass of class Array
 #
 # Modified 1/2/12 (MRS) -- Refactored Scalar.py to eliminate circular loading
 #   dependencies with Array and Empty classes. Array.py, Scalar.py and Empty.py
@@ -12,9 +12,9 @@
 import numpy as np
 import numpy.ma as ma
 
-from oops_.array.array_ import Array
-from oops_.array.empty  import Empty
-from oops_.units import Units
+from oops.array_.array  import Array
+from oops.array_.empty  import Empty
+from oops.units import Units
 
 class Scalar(Array):
     """An arbitrary Array of scalars."""

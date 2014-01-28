@@ -1,10 +1,10 @@
 ################################################################################
-# oops_/nav/unittester.py
+# oops/nav_/unittester.py
 ################################################################################
 
 import unittest
 
-from navigation_ import Test_Navigation
+from navigation  import Test_Navigation
 from nullnav     import Test_NullNav
 from platescale  import Test_PlateScale
 from repointing  import Test_Repointing

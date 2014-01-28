@@ -1,12 +1,12 @@
 ################################################################################
-# oops_/cadence/metronome.py: Metronome subclass of class Cadence
+# oops/cadence_/metronome.py: Metronome subclass of class Cadence
 #
 # 7/2/12 MRS - created
 ################################################################################
 
 import numpy as np
-from oops_.array.all import *
-from oops_.cadence.cadence_ import Cadence
+from oops.array_ import *
+from oops.cadence_.cadence import Cadence
 
 class Metronome(Cadence):
     """Metronome is a Cadence subclass in which time steps occur at uniform

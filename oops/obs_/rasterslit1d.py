@@ -1,13 +1,13 @@
 ################################################################################
-# oops_/obs/rasterslit1d.py: Subclass RasterSlit1D of class Observation
+# oops/obs_/rasterslit1d.py: Subclass RasterSlit1D of class Observation
 #
 # 6/13/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops_.obs.observation_ import Observation
-from oops_.array.all import *
+from oops.obs_.observation import Observation
+from oops.array_ import *
 
 class RasterSlit1D(Observation):
     """A RasterSlit is subclass of Observation consisting of a 1-D observation
@@ -244,8 +244,8 @@ class RasterSlit1D(Observation):
 ################################################################################
 
 import unittest
-from oops_.cadence.metronome import Metronome
-from oops_.cadence.dual import DualCadence
+from oops.cadence_.metronome import Metronome
+from oops.cadence_.dual import DualCadence
 
 class Test_RasterSlit1D(unittest.TestCase):
 

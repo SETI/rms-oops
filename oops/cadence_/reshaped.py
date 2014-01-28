@@ -1,12 +1,12 @@
 ################################################################################
-# oops_/cadence/reshaped.py: ReshapedCadence subclass of class Cadence
+# oops/cadence_/reshaped.py: ReshapedCadence subclass of class Cadence
 #
 # 7/28/12 MRS - created and unit-tested.
 ################################################################################
 
 import numpy as np
-from oops_.array.all import *
-from oops_.cadence.cadence_ import Cadence
+from oops.array_ import *
+from oops.cadence_.cadence import Cadence
 
 class ReshapedCadence(Cadence):
     """ReshapedCadence is a Cadence subclass in which time steps are defined by

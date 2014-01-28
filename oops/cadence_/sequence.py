@@ -1,12 +1,12 @@
 ################################################################################
-# oops_/cadence/sequence.py: Sequence subclass of class Cadence
+# oops/cadence_/sequence.py: Sequence subclass of class Cadence
 #
 # 7/2/12 MRS - created
 ################################################################################
 
 import numpy as np
-from oops_.array.all import *
-from oops_.cadence.cadence_ import Cadence
+from oops.array_ import *
+from oops.cadence_.cadence import Cadence
 
 class Sequence(Cadence):
     """Sequence is a Cadence subclass in which time steps are defined by a

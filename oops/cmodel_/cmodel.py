@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/cmodel/cmodel_.py: Abstract class CoordinateModel
+# oops/cmodel_/cmodel.py: Abstract class CoordinateModel
 #
 # 1/24/12 Added (MRS)
 # 2/8/12 Modified (MRS) - supports new class heirarchy.
@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from oops_.array.all import *
+from oops.array_ import *
 
 class CoordinateModel(object):
     """CoordinateModel is an abstract class used to describe the default

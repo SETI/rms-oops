@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/obs/snapshot.py: Subclass Snapshot of class Observation
+# oops/obs_/snapshot.py: Subclass Snapshot of class Observation
 #
 # 6/13/12 MRS - updated with revised constructor and to support new API, added
 #   a full suite of unit tests.
@@ -8,9 +8,9 @@
 
 import numpy as np
 
-from oops_.obs.observation_ import Observation
-from oops_.cadence.metronome import Metronome
-from oops_.array.all import *
+from oops.obs_.observation import Observation
+from oops.cadence_.metronome import Metronome
+from oops.array_ import *
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
@@ -329,7 +329,7 @@ class Test_Snapshot(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.fov.flat import Flat
+        from oops.fov_.flat import Flat
 
         fov = Flat((0.001,0.001), (10,20))
         obs = Snapshot(axes=("u","v"), texp=2.,

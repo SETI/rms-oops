@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/registry.py: Global Frame and Path Registry
+# oops/registry.py: Global Frame and Path Registry
 #
 # 2/20/12 MRS - Adapted from frame/registry.py and path/registry.py. This is a
 #   cleaner way to accomplish the same goal.

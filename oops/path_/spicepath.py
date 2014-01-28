@@ -1,16 +1,16 @@
 ################################################################################
-# oops_/path/spicepath.py: Subclass SpicePath of class Path
+# oops/path_/spicepath.py: Subclass SpicePath of class Path
 ################################################################################
 
 import numpy as np
 import cspice
 
-from oops_.path.path_ import Path, Waypoint, RotatedPath
-from oops_.array.all import *
-from oops_.config import QUICK
-from oops_.event import Event
-import oops_.registry as registry
-import oops_.spice_support as spice
+from oops.path_.path import Path, Waypoint, RotatedPath
+from oops.array_     import *
+from oops.config     import QUICK
+from oops.event      import Event
+import oops.registry as registry
+import oops.spice_support as spice
 
 class SpicePath(Path):
     """Subclass SpicePath of class Path returns a path based on an SP kernel in
@@ -219,10 +219,10 @@ class Test_SpicePath(unittest.TestCase):
     def runTest(self):
 
       # Imports are here to avoid conflicts
-      from oops_.edelta import Edelta
-      from oops_.frame.frame_ import Frame
-      from oops_.frame.spiceframe import SpiceFrame
-      import oops_.constants as constants
+      from oops.edelta import Edelta
+      from oops.frame_.frame import Frame
+      from oops.frame_.spiceframe import SpiceFrame
+      import oops.constants as constants
 
       Path.USE_QUICKPATHS = False
       Frame.USE_QUICKFRAMES = False

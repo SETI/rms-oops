@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/fitting/fittable.py: Fittable interface
+# oops/fittable.py: Fittable interface
 #
 # 6/11/12 MRS - Created.
 # 9/29/12 MRS - Implemented caching.

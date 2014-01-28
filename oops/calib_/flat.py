@@ -1,11 +1,11 @@
 ################################################################################
-# oops_/calib/flat.py: Subclass Flat of class Calibration
+# oops/calib_/flat.py: Subclass Flat of class Calibration
 #
 # 3/20/12 MRS - New.
 ################################################################################
 
-from oops_.calib.extended import ExtendedSource
-from oops_.array.all import *
+from oops.calib_.extended import ExtendedSource
+from oops.array_ import *
 
 class Flat(ExtendedSource):
     """Subclass Flat of class Calibration is an alternative name for subclass

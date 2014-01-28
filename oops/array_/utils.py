@@ -1,5 +1,5 @@
 ################################################################################
-# utils.py
+# oops/array_/utils.py
 #
 # Low-level operations on numpy arrays, mimicking CSPICE routines but fully
 # supporting broadcasted shapes.

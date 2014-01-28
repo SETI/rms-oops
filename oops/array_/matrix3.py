@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/matrix3.py: Matrix3 subclass of class Array
+# oops/array_/matrix3.py: Matrix3 subclass of class Array
 #
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 # Modified 2/8/12 (MRS) -- Supports array masks; no unit tests added.
@@ -10,13 +10,13 @@
 import numpy as np
 import numpy.ma as ma
 
-from oops_.array.array_  import Array
-from oops_.array.empty   import Empty
-from oops_.array.scalar  import Scalar
-from oops_.array.vector3 import Vector3
-from oops_.array.vectorn import VectorN
-from oops_.array.matrixn import MatrixN
-import oops_.array.utils as utils
+from oops.array_.array   import Array
+from oops.array_.empty   import Empty
+from oops.array_.scalar  import Scalar
+from oops.array_.vector3 import Vector3
+from oops.array_.vectorn import VectorN
+from oops.array_.matrixn import MatrixN
+from oops.array_.utils   import mtxm, twovec
 
 class Matrix3(Array):
     """An arbitrary Array of 3x3 rotation matrices."""
@@ -119,7 +119,7 @@ class Matrix3(Array):
 
         v1vals = np.asfarray(Vector3(v1).vals)
         v2vals = np.asfarray(Vector3(v2).vals)
-        return Matrix3(utils.twovec(v1vals, axis1, v2vals, axis2))
+        return Matrix3(twovec(v1vals, axis1, v2vals, axis2))
 
     ############################
 
@@ -346,7 +346,7 @@ class Test_Matrix3(unittest.TestCase):
         self.assertTrue(np.all(axb.vals - test.vals <  eps))
 
         atxb = a.unrotate_matrix3(b)
-        test = Matrix3(utils.mtxm(a.vals, b.vals))
+        test = Matrix3(mtxm(a.vals, b.vals))
         self.assertTrue(np.all(atxb.vals - test.vals > -eps))
         self.assertTrue(np.all(atxb.vals - test.vals <  eps))
 

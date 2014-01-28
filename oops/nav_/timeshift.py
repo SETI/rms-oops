@@ -1,13 +1,13 @@
 ################################################################################
-# oops_/nav/timeshift.py: Subclass TimeShift of class Navigation.
+# oops/nav_/timeshift.py: Subclass TimeShift of class Navigation.
 #
 # 5/21/12 MRS - Created but untested.
 ################################################################################
 
 import numpy as np
 
-from oops_.array.all import *
-from oops_.nav.navigation_ import Navigation
+from oops.array_ import *
+from oops.nav_.navigation import Navigation
 
 class TimeShift(Navigation):
     """A TimeShift is a Navigation subclass that shifts all of the times

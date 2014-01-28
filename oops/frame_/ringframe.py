@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/frame/ringframe.py: Subclass RingFrame of class Frame
+# oops/frame_/ringframe.py: Subclass RingFrame of class Frame
 #
 # 2/8/12 Modified (MRS) - Update for consistent style.
 # 1/4/12 MRS: Added attribute "node" and function node_at_time().
@@ -7,11 +7,11 @@
 
 import numpy as np
 
-from oops_.frame.frame_ import Frame
-from oops_.array.all import *
-from oops_.transform import Transform
+from oops.frame_.frame import Frame
+from oops.array_       import *
+from oops.transform    import Transform
 
-import oops_.registry as registry
+import oops.registry as registry
 
 TWOPI  = np.pi * 2.
 
@@ -150,9 +150,9 @@ class Test_RingFrame(unittest.TestCase):
     def runTest(self):
 
         # Imports are here to reduce conflicts
-        from oops_.frame.spiceframe import SpiceFrame
-        from oops_.path.spicepath import SpicePath
-        from oops_.event import Event
+        from oops.frame_.spiceframe import SpiceFrame
+        from oops.path_.spicepath import SpicePath
+        from oops.event import Event
 
         registry.initialize()
 

@@ -526,6 +526,7 @@ def uvis_test_suite(filespec, derivs, info, display):
 ################################################################################
 
 import unittest
+import os.path
 
 UNITTEST_PRINTING = True
 UNITTEST_LOGGING = True
@@ -535,9 +536,11 @@ class Test_Cassini_UVIS_Suite(unittest.TestCase):
     
     def runTest(self):
         
+        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
         
-        filespec = "test_data/cassini/UVIS/COUVIS_0034/DATA/D2011_090/EUV2011_090_23_13.LBL"
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/UVIS/COUVIS_0034/DATA/D2011_090/EUV2011_090_23_13.LBL")
         pushbroom = uvis_test_suite(filespec, UNITTEST_DERIVS,
                                   UNITTEST_PRINTING, False)
         

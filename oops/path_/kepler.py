@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/path/kepler.py: Subclass Kepler of class Path.
+# oops/path_/kepler.py: Subclass Kepler of class Path.
 #
 # 5/18/12 MRS - Created.
 # 10/1/12 MRS - Revised to eliminate the Kepler9 subclass and the use of
@@ -9,14 +9,14 @@
 import numpy as np
 import gravity
 
-from oops_.path.path_ import Path, Waypoint
-from oops_.array.all import *
-from oops_.config import PATH_PHOTONS
-from oops_.event import Event
-import oops_.registry as Registry
-import oops_.constants as constants
+from oops.path_.path import Path, Waypoint
+from oops.array_     import *
+from oops.config     import PATH_PHOTONS
+from oops.event      import Event
+import oops.registry as Registry
+import oops.constants as constants
 
-from oops_.fittable import Fittable
+from oops.fittable   import Fittable
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
 MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians)

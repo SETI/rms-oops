@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/tuple.py: Tuple subclass of class Array
+# oops/array_/tuple.py: Tuple subclass of class Array
 #
 # Created 1/12/12 (MRS)
 # Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
@@ -9,11 +9,10 @@
 import numpy as np
 import numpy.ma as ma
 
-from oops_.array.array_  import Array
-from oops_.array.scalar  import Scalar
-from oops_.array.pair    import Pair
-from oops_.units import Units
-import oops_.array.utils
+from oops.array_.array   import Array
+from oops.array_.scalar  import Scalar
+from oops.array_.pair    import Pair
+from oops.units import Units
 
 class Tuple(Array):
     """An arbitrary Array of tuples, all of the same length. Tuples and VectorN

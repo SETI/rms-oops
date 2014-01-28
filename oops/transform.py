@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/transform.py: Class Transform
+# oops/transform.py: Class Transform
 #
 # 2/5/12 Modified (MRS): Revised for consistent style.
 # 3/12/12 MRS - Implemented derivative support.
@@ -7,8 +7,8 @@
 
 import numpy as np
 
-from oops_.array.all import *
-import oops_.registry as registry
+from oops.array_ import *
+import oops.registry as registry
 
 class Transform(object):
     """An object describing a coordinate transformation, defined by a rotation
@@ -357,8 +357,8 @@ class Test_Transform(unittest.TestCase):
     def runTest(self):
 
         # Additional imports needed for testing
-        from oops_.frame.frame_ import Frame, Wayframe
-        from oops_.frame.spinframe import SpinFrame
+        from oops.frame_.frame import Frame, Wayframe
+        from oops.frame_.spinframe import SpinFrame
 
         # Fake out the FRAME REGISTRY with something that has .shape = []
         registry.FRAME_REGISTRY["TEST"] = Wayframe("J2000")

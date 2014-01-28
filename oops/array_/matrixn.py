@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/matrixn.py: MatrixN subclass of class Array
+# oops/array_/matrixn.py: MatrixN subclass of class Array
 #
 # 3/2/12 Created (MRS)
 ################################################################################
@@ -8,11 +8,11 @@ import numpy as np
 import numpy.ma as ma
 from numpy import matrix
 
-from oops_.array.array_  import Array
-from oops_.array.pair    import Pair
-from oops_.array.scalar  import Scalar
-from oops_.array.vector3 import Vector3
-from oops_.array.vectorn import VectorN
+from oops.array_.array   import Array
+from oops.array_.pair    import Pair
+from oops.array_.scalar  import Scalar
+from oops.array_.vector3 import Vector3
+from oops.array_.vectorn import VectorN
 
 # For 3x3 matrix multiply
 # From http://www.dr-lex.be/random/matrix_inv.html

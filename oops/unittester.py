@@ -1,27 +1,27 @@
 ################################################################################
-# oops_/unittester.py: Global unit-tester
+# oops/unittester.py: Global unit-tester
 ################################################################################
 
 import oops
 
-from oops_.array.unittester   import *
-from oops_.cadence.unittester import *
-from oops_.calib.unittester   import *
-from oops_.cmodel.unittester  import *
-from oops_.format.unittester  import *
-from oops_.fov.unittester     import *
-from oops_.frame.unittester   import *
-from oops_.nav.unittester     import *
-from oops_.path.unittester    import *
-from oops_.surface.unittester import *
+from oops.array_.unittester   import *
+from oops.cadence_.unittester import *
+from oops.calib_.unittester   import *
+from oops.cmodel_.unittester  import *
+from oops.format_.unittester  import *
+from oops.fov_.unittester     import *
+from oops.frame_.unittester   import *
+from oops.nav_.unittester     import *
+from oops.path_.unittester    import *
+from oops.surface_.unittester import *
 
-from oops_.backplane  import Test_Backplane
-from oops_.body       import Test_Body
-from oops_.event      import Test_Event
-from oops_.transform  import Test_Transform
-from oops_.units      import Test_Units
+from oops.backplane  import Test_Backplane
+from oops.body       import Test_Body
+from oops.event      import Test_Event
+from oops.transform  import Test_Transform
+from oops.units      import Test_Units
 
-from obs.unittester           import *
+from obs_.unittester           import *
 
 ################################################################################
 # To run all unittests...

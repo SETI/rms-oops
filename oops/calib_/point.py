@@ -1,13 +1,13 @@
 ################################################################################
-# oops_/calib/point.py: Subclass PointSource of class Calibration
+# oops/calib_/point.py: Subclass PointSource of class Calibration
 #
 # 2/8/12 Modified (MRS) - Changed name from AreaScaling; revised for new class
 #   heirarchy.
 # 3/20/12 MRS - New and better name is PointSource.
 ################################################################################
 
-from oops_.calib.calibration_ import Calibration
-from oops_.array.all import *
+from oops.calib_.calibration import Calibration
+from oops.array_ import *
 
 class PointSource(Calibration):
     """PointSource is a Calibration subclass in which every pixel is multiplied

@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/frame/frame_.py: Abstract class Frame and its required subclasses
+# oops/frame_/frame.py: Abstract class Frame and its required subclasses
 #
 # 2/13/12 Modified (MRS) - implemented and tested QuickFrame.
 # 3/1/12 Modified (MRS) - revised and implified connect() and connect_to();
@@ -9,10 +9,10 @@
 import numpy as np
 import scipy.interpolate as interp
 
-import oops_.registry as registry
-from oops_.array.all import *
-from oops_.config import QUICK, LOGGING
-from oops_.transform import Transform
+import oops.registry as registry
+from oops.array_     import *
+from oops.config     import QUICK, LOGGING
+from oops.transform  import Transform
 
 class Frame(object):
     """A Frame is an abstract class that returns a Transform (rotation matrix
@@ -744,7 +744,7 @@ class Test_Frame(unittest.TestCase):
 
         # Imports are here to avoid conflicts
         from spiceframe import SpiceFrame
-        from oops_.path.spicepath import SpicePath
+        from oops.path_.spicepath import SpicePath
 
         registry.initialize()
 

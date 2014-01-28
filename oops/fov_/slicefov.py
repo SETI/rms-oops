@@ -1,13 +1,13 @@
 ################################################################################
-# oops_/fov/slicefov.py: SliceFOV subclass of FOV
+# oops/fov_/slicefov.py: SliceFOV subclass of FOV
 #
 # 6/16/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops_.fov.fov_ import FOV
-from oops_.array.all import *
+from oops.fov_.fov import FOV
+from oops.array_   import *
 
 class SliceFOV(FOV):
 

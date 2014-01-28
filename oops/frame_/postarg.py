@@ -1,16 +1,16 @@
 ################################################################################
-# oops_/frame/postarg.py: Subclass PosTarg of class Frame
+# oops/frame_/postarg.py: Subclass PosTarg of class Frame
 #
 # 8/4/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops_.frame.frame_ import Frame
-from oops_.array.all import *
-from oops_.transform import Transform
+from oops.frame_.frame import Frame
+from oops.array_       import *
+from oops.transform    import Transform
 
-import oops_.registry as registry
+import oops.registry as registry
 
 class PosTarg(Frame):
     """PosTarg is a Frame subclass describing a fixed rotation about the X and

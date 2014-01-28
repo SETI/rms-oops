@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/path/path_.py: Abstract class Path and its required subclasses
+# oops/path_/path.py: Abstract class Path and its required subclasses
 #
 # 2/13/12 Modified (MRS) - implemented and tested QuickPath.
 # 3/1/12 Modified (MRS) - revised and implified connect() and connect_to();
@@ -11,11 +11,11 @@
 import numpy as np
 import scipy.interpolate as interp
 
-import oops_.constants as constants
-import oops_.registry as registry
-from oops_.array.all import *
-from oops_.config import QUICK, PATH_PHOTONS, LOGGING
-from oops_.event import Event
+import oops.constants as constants
+import oops.registry as registry
+from oops.array_ import *
+from oops.config import QUICK, PATH_PHOTONS, LOGGING
+from oops.event  import Event
 
 class Path(object):
     """A Path is an abstract class that returns an Event (time, position and
@@ -1133,8 +1133,8 @@ class Test_Path(unittest.TestCase):
         Path.USE_QUICKPATHS = False
 
         # Imports are here to avoid conflicts
-        from oops_.path.spicepath import SpicePath
-        from oops_.frame.spiceframe import SpiceFrame
+        from oops.path_.spicepath import SpicePath
+        from oops.frame_.spiceframe import SpiceFrame
 
         # Registry tests
         registry.initialize_path_registry()

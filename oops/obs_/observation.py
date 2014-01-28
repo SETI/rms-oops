@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/obs/observation.py: Abstract class Observation
+# oops/obs_/observation.py: Abstract class Observation
 #
 # 2/11/12 Modified (MRS) - updated for style
 # 3/9/12 MRS - new methods fleshed out in preparation for additional observation
@@ -14,11 +14,11 @@
 
 import numpy as np
 
-from oops_.array.all import *
-from oops_.config import LOGGING, PATH_PHOTONS
-from oops_.event import Event
-from oops_.meshgrid import Meshgrid
-from oops_.path.multipath import MultiPath
+from oops.array_ import *
+from oops.config import LOGGING, PATH_PHOTONS
+from oops.event import Event
+from oops.meshgrid import Meshgrid
+from oops.path_.multipath import MultiPath
 import oops.registry as registry
 
 class Observation(object):

@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/vectorn.py: VectorN subclass of class Array
+# oops/array_/vectorn.py: VectorN subclass of class Array
 #
 # Created 3/2/12 (MRS)
 ################################################################################
@@ -7,10 +7,10 @@
 import numpy as np
 import numpy.ma as ma
 
-from oops_.array.array_  import Array
-from oops_.array.scalar  import Scalar
-from oops_.units import Units
-import oops_.array.utils as utils
+from oops.array_.array   import Array
+from oops.array_.scalar  import Scalar
+from oops.array_.utils   import cross2d, cross3d
+from oops.units import Units
 
 class VectorN(Array):
     """An arbitrary Array of 1-D vectors, all of the same length. Tuples and
@@ -105,11 +105,11 @@ class VectorN(Array):
         assert self.item[0] in (2,3)
 
         if self.item == [3]:
-            return VectorN(utils.cross3d(self.vals, arg.vals),
+            return VectorN(cross3d(self.vals, arg.vals),
                            self.mask | arg.mask,
                            Units.mul_units(self.units, arg.units))
         else:
-            return VectorN(utils.cross2d(self.vals, arg.vals),
+            return VectorN(cross2d(self.vals, arg.vals),
                            self.mask | arg.mask,
                            Units.mul_units(self.units, arg.units))
 

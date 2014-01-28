@@ -1,12 +1,12 @@
 ################################################################################
-# oops_/cadence/dual.py: DualCadence subclass of class Cadence
+# oops/cadence_/dual.py: DualCadence subclass of class Cadence
 #
 # 7/2/12 MRS - created
 ################################################################################
 
 import numpy as np
-from oops_.array.all import *
-from oops_.cadence.cadence_ import Cadence
+from oops.array_ import *
+from oops.cadence_.cadence import Cadence
 
 class DualCadence(Cadence):
     """DualCadence is a Cadence subclass in which time steps are defined by a
@@ -132,7 +132,7 @@ class DualCadence(Cadence):
 
 import unittest
 import numpy.random as random
-from oops_.cadence.metronome import Metronome
+from oops.cadence_.metronome import Metronome
 
 class Test_DualCadence(unittest.TestCase):
 

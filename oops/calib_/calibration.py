@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/calib/calibration_.py: Abstract class Calibration
+# oops/calib_/calibration.py: Abstract class Calibration
 #
 # 2/11/12 Modified (MRS) - revised for style
 ################################################################################

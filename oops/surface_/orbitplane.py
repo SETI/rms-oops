@@ -1,18 +1,18 @@
 ################################################################################
-# oops_/surface/orbitplane.py: OrbitPlane subclass of class Surface
+# oops/surface_/orbitplane.py: OrbitPlane subclass of class Surface
 #
 # 3/ 18/12 MRS: Adapted from class RingPlane.
 ################################################################################
 
 import numpy as np
 
-from oops_.array.all import *
-from oops_.event import Event
-from oops_.surface.surface_ import Surface
-from oops_.surface.ringplane import RingPlane
-import oops_.frame.all as frame_
-import oops_.path.all as path_
-import oops_.registry as registry
+from oops.array_ import *
+from oops.event import Event
+from oops.surface_.surface import Surface
+from oops.surface_.ringplane import RingPlane
+import oops.frame_ as frame_
+import oops.path_ as path_
+import oops.registry as registry
 
 class OrbitPlane(Surface):
     """OrbitPlane is a subclass of the Surface class describing a flat surface

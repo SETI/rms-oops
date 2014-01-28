@@ -5,6 +5,7 @@
 import numpy as np
 import scipy.ndimage.filters as filters
 import pylab
+import os.path
 
 # Load oops
 import oops
@@ -15,6 +16,8 @@ import oops.inst.hst as hst
 # At this point, a Body class object has been created for every planet and moon
 # (including Pluto). If you don't believe me...
 print oops.registry.BODY_REGISTRY.keys()
+
+from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
 # Below is just a handy routine for illustrative purposes. Cut, paste, ignore.
 
@@ -68,7 +71,7 @@ def show_info(title, array):
 
 # Pick a file, any file
 # filespec = "test_data/hst/ibht02v4q_flt.fits"
-filespec = "test_data/hst/ibht02v5q_flt.fits"
+filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/hst/ibht02v5q_flt.fits")
 # filespec = "test_data/hst/ibht02v6q_flt.fits"
 
 # Create the snapshot object. It contains everything you need to know.

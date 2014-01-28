@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/event.py: Event class
+# oops/event.py: Event class
 #
 # 2/2/12 Modified (MRS) - import and class naming hierarchy revised.
 # 3/12/12 MRS - Implemented support for derivatives.
@@ -8,10 +8,10 @@
 import numpy as np
 import unittest
 
-from oops_.array.all import *
-from oops_.config import EVENT_CONFIG, LOGGING
-import oops_.registry as registry
-import oops_.constants as constants
+from oops.array_ import *
+from oops.config import EVENT_CONFIG, LOGGING
+import oops.registry as registry
+import oops.constants as constants
 
 class Event(object):
     """An Event object is defined by a time, position and velocity. Times are

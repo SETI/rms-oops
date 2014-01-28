@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/config.py: General configuration parameters
+# oops/config.py: General configuration parameters
 #
 # 2/29/12 Created (MRS)
 ################################################################################

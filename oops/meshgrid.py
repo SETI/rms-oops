@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/meshgrid.py: Class Meshgrid
+# oops/meshgrid.py: Class Meshgrid
 #
 # 3/13/12 MRS - Created
 # 8/18/12 MRS - Minor bug fix.
@@ -7,8 +7,8 @@
 
 import numpy as np
 
-from oops_.array.all import *
-from oops_.fov.fov_ import FOV
+from oops.array_ import *
+from oops.fov_.fov import FOV
 
 class Meshgrid(object):
     """A Meshgrid object defines a arbitrary array of coordinate pairs within

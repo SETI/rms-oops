@@ -1,12 +1,12 @@
 ################################################################################
-# oops_/format/unittester.py
+# oops/format_/unittester.py
 ################################################################################
 
 import unittest
 
-from oops_.format.format_    import Test_Format
-from oops_.format.hms        import Test_HMS
-from oops_.format.pythonfmt  import Test_PythonFmt
+from oops.format_.format     import Test_Format
+from oops.format_.hms        import Test_HMS
+from oops.format_.pythonfmt  import Test_PythonFmt
 
 ########################################
 if __name__ == '__main__':

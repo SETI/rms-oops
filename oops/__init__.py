@@ -46,31 +46,31 @@ import cspice       # This is CRITICAL to avoid the MKL error in calls to
                     # dpstrf(). Somehow, this ensures that the cspice function
                     # overrides the MKL function of the same name.
 
-from oops_.array.all import *
+from oops.array_ import *
 
-import oops_.cadence.all  as cadence
-import oops_.calib.all    as calib
-import oops_.cmodel.all   as cmodel
-import oops_.format.all   as format
-import oops_.fov.all      as fov
-import oops_.frame.all    as frame
-import oops_.obs.all      as obs
-import oops_.nav.all      as nav
-import oops_.path.all     as path
-import oops_.surface.all  as surface
+import oops.cadence_  as cadence
+import oops.calib_    as calib
+import oops.cmodel_   as cmodel
+import oops.format_   as format
+import oops.fov_      as fov
+import oops.frame_    as frame
+import oops.obs_      as obs
+import oops.nav_      as nav
+import oops.path_     as path
+import oops.surface_  as surface
 
-from oops_.backplane  import *
-from oops_.body       import *
-from oops_.constants  import *
-from oops_.edelta     import *
-from oops_.event      import *
-from oops_.fittable   import *
-from oops_.meshgrid   import *
-from oops_.registry   import *
-from oops_.transform  import *
-from oops_.units      import *
+from oops.backplane   import *
+from oops.body        import *
+from oops.constants   import *
+from oops.edelta      import *
+from oops.event       import *
+from oops.fittable    import *
+from oops.meshgrid    import *
+from oops.registry    import *
+from oops.transform   import *
+from oops.units       import *
 
-import oops_.spice_support as spice
-import oops_.config as config
+import oops.spice_support as spice
+import oops.config as config
 
 ################################################################################

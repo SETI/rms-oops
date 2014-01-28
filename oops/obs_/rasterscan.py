@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/obs/rasterscan.py: Subclass RasterScan of class Observation
+# oops/obs_/rasterscan.py: Subclass RasterScan of class Observation
 #
 # 4/3/12 BSW & MRS
 # 6/13/12 MRS - updated with revised constructor and to support new API.
@@ -8,8 +8,8 @@
 
 import numpy as np
 
-from oops_.obs.observation_ import Observation
-from oops_.array.all import *
+from oops.obs_.observation import Observation
+from oops.array_ import *
 
 class RasterScan(Observation):
     """A RasterScan is subclass of Observation consisting of a 2-D image
@@ -240,14 +240,14 @@ class RasterScan(Observation):
 ################################################################################
 
 import unittest
-from oops_.cadence.metronome import Metronome
-from oops_.cadence.dual import DualCadence
+from oops.cadence_.metronome import Metronome
+from oops.cadence_.dual import DualCadence
 
 class Test_RasterScan(unittest.TestCase):
 
     def runTest(self):
 
-        from oops_.fov.flat import Flat
+        from oops.fov_.flat import Flat
 
         fov = Flat((0.001,0.001), (10,20))
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)

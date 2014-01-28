@@ -1,14 +1,14 @@
 ################################################################################
-# oops_/coord/unittester.py
+# oops/coord_/unittester.py
 ################################################################################
 
 import unittest
 
-from oops_.cmodel.cmodel_    import Test_CoordinateModel
-from oops_.cmodel.distance   import Test_Distance
-from oops_.cmodel.latitude   import Test_Latitude
-from oops_.cmodel.longitude  import Test_Longitude
-from oops_.cmodel.radius     import Test_Radius
+from oops.cmodel_.cmodel     import Test_CoordinateModel
+from oops.cmodel_.distance   import Test_Distance
+from oops.cmodel_.latitude   import Test_Latitude
+from oops.cmodel_.longitude  import Test_Longitude
+from oops.cmodel_.radius     import Test_Radius
 
 ########################################
 if __name__ == '__main__':

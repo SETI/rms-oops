@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/fov/fov.py: Abstract class FOV (Field-of-View)
+# oops/fov_/fov.py: Abstract class FOV (Field-of-View)
 #
 # 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
 # 2/22/12 MRS - Revised the handling of derivatives.
@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from oops_.array.all import *
+from oops.array_ import *
 
 class FOV(object):
     """The FOV (Field of View) abstract class provides a description of the

@@ -1,10 +1,10 @@
 ################################################################################
-# oops_/format/pythonfmt.py: PythonFmt subclass of class Format
+# oops/format_/pythonfmt.py: PythonFmt subclass of class Format
 #
 # 1/24/12 (MRS) - Drafted.
 ################################################################################
 
-from oops_.format.format_ import Format
+from oops.format_.format import Format
 
 class PythonFmt(Format):
     """A PythonFormat is a format string defined using the default formatting

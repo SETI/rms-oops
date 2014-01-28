@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/path/fixedpath.py: Subclass FixedPath of class Path
+# oops/path_/fixedpath.py: Subclass FixedPath of class Path
 #
 # 8/19/12 MRS - changed call to register() to reregister(), so a newly defined
 #   multipath replaces the old definition.
@@ -7,10 +7,10 @@
 
 import numpy as np
 
-from oops_.path.path_ import Path
-from oops_.array.all import *
-from oops_.event import Event
-import oops_.registry as registry
+from oops.path_.path import Path
+from oops.array_     import *
+from oops.event      import Event
+import oops.registry as registry
 
 class FixedPath(Path):
     """Subclass FixedPath of class Path remains at fixed coordinates relative to

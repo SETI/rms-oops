@@ -4,12 +4,12 @@
 
 import unittest
 
-from oops_.fov.fov_       import Test_FOV
-from oops_.fov.flat       import Test_Flat
-from oops_.fov.polynomial import Test_Polynomial
-from oops_.fov.slicefov   import Test_SliceFOV
-from oops_.fov.subarray   import Test_Subarray
-from oops_.fov.subsampled import Test_Subsampled
+from oops.fov_.fov        import Test_FOV
+from oops.fov_.flat       import Test_Flat
+from oops.fov_.polynomial import Test_Polynomial
+from oops.fov_.slicefov   import Test_SliceFOV
+from oops.fov_.subarray   import Test_Subarray
+from oops.fov_.subsampled import Test_Subsampled
 
 ########################################
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/body.py: Body class
+# oops/body.py: Body class
 #
 # 2/18/12 Created (MRS).
 # 8/8/12 MRS - Added inner_radius attribute.
@@ -13,12 +13,12 @@ import julian
 import gravity
 import cspice
 
-import oops_.path.all as path_
-import oops_.frame.all as frame_
-import oops_.surface.all as surface
-import oops_.spice_support as spice
-import oops_.registry as registry
-import oops_.constants as constants
+import oops.path_ as path_
+import oops.frame_ as frame_
+import oops.surface_ as surface
+import oops.spice_support as spice
+import oops.registry as registry
+import oops.constants as constants
 
 class Body(object):
     """Body is a class that defines the properties of, and relationships
@@ -758,7 +758,7 @@ class Test_Body(unittest.TestCase):
     def runTest(self):
 
         # Imports are here to avoid conflicts
-        import oops_.registry as registry
+        import oops.registry as registry
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
         registry.initialize_body_registry()

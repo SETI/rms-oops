@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/surface/spicebody.py: Handles bodys shaped defined in the SPICE toolkit.
+# oops/surface_/spicebody.py: Handles bodys shaped defined in the SPICE toolkit.
 #
 # Note: This is not a Surface subclass. Instead, it is a function to return a
 # surface (either a Spheroid or an Ellipsoid) using information found in the
@@ -10,12 +10,13 @@
 
 import cspice
 
-from oops_.surface.spheroid import Spheroid
-from oops_.surface.ellipsoid import Ellipsoid
-from oops_.path.spicepath import SpicePath
-from oops_.frame.spiceframe import SpiceFrame
-import oops_.registry as registry
-import oops_.spice_support as spice
+from oops.surface_.spheroid import Spheroid
+from oops.surface_.ellipsoid import Ellipsoid
+from oops.path_.spicepath import SpicePath
+from oops.frame_.spiceframe import SpiceFrame
+import oops.registry as registry
+import oops.spice_support as spice
+import os.path
 
 def spice_body(spice_id):
     """Returns a Spheroid or Ellipsoid defining the path, orientation and shape
@@ -51,9 +52,11 @@ class Test_spice_body(unittest.TestCase):
     
     def runTest(self):
 
-        cspice.furnsh("test_data/spice/naif0009.tls")
-        cspice.furnsh("test_data/spice/pck00010.tpc")
-        cspice.furnsh("test_data/spice/de421.bsp")
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "naif0009.tls"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "pck00010.tpc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "de421.bsp"))
 
         ignore = SpicePath("VENUS", "SSB", "J2000", "APHRODITE")
         ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")

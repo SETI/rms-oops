@@ -1,10 +1,10 @@
 ################################################################################
-# oops_/format/hms.py: HMS subclass of class Format
+# oops/format_/hms.py: HMS subclass of class Format
 #
 # 1/24/12 (MRS) - Drafted.
 ################################################################################
 
-from oops_.format.format_ import Format
+from oops.format_.format import Format
 
 class HMS(Format):
     """An HmsFormat is a Format object that handles a numeric value in

@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/backplane.py: Backplane class
+# oops/backplane.py: Backplane class
 #
 # 3/14/12 Created (MRS)
 # 3/24/12 MRS - Revised handling of keys into the backplane dictionary, added
@@ -38,14 +38,15 @@
 ################################################################################
 
 import numpy as np
-import oops_.config as config
-import oops_.constants as constants
-import oops_.registry as registry
-import oops_.surface.all as surface_
-import oops_.path.all as path_
-from oops_.array.all import *
-from oops_.event import Event
-from oops_.meshgrid import Meshgrid
+import oops.config as config
+import oops.constants as constants
+import oops.registry as registry
+import oops.surface_ as surface_
+import oops.path_ as path_
+from oops.array_ import *
+from oops.event import Event
+from oops.meshgrid import Meshgrid
+import os.path
 
 HALFPI = np.pi / 2.
 TWOPI  = np.pi * 2.
@@ -2508,10 +2509,11 @@ class Backplane(object):
 ################################################################################
 
 import unittest
+from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
 UNITTEST_PRINT = False
 UNITTEST_LOGGING = False
-UNITTEST_FILESPEC = "test_data/cassini/ISS/W1573721822_1.IMG"
+UNITTEST_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/ISS/W1573721822_1.IMG")
 UNITTEST_UNDERSAMPLE = 16
 
 def show_info(title, array):
@@ -2560,7 +2562,7 @@ class Test_Backplane(unittest.TestCase):
 
     def runTest(self):
 
-        import oops_.registry as registry
+        import oops.registry as registry
         registry.initialize_frame_registry()
         registry.initialize_path_registry()
         registry.initialize_body_registry()

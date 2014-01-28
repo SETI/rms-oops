@@ -1,13 +1,13 @@
 ################################################################################
-# oops_/nav/navigation.py: Class Navigation
+# oops/nav_/navigation.py: Class Navigation
 #
 # 5/21/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops_.array.all import *
-from oops_.fittable import Fittable
+from oops.array_   import *
+from oops.fittable import Fittable
 
 class Navigation(Fittable):
     """The Navigation class defines various possible modifications of the

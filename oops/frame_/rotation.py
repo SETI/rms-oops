@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/frame/rotation.py: Subclass Rotation of class Frame
+# oops/frame_/rotation.py: Subclass Rotation of class Frame
 #
 # 3/17/12 MRS - Created.
 # 9/28/12 MRS - Implemented the Fittable interface.
@@ -7,12 +7,12 @@
 
 import numpy as np
 
-from oops_.frame.frame_ import Frame
-from oops_.fittable  import Fittable
-from oops_.array.all import *
-from oops_.transform import Transform
+from oops.frame_.frame import Frame
+from oops.fittable     import Fittable
+from oops.array_       import *
+from oops.transform    import Transform
 
-import oops_.registry as registry
+import oops.registry as registry
 
 class Rotation(Frame, Fittable):
     """Rotation is a Frame subclass describing a fixed rotation about one axis

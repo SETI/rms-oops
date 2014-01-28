@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array_/vector3.py: Vector3 subclass of class Array
+# oops/array_/vector3.py: Vector3 subclass of class Array
 #
 # Modified 1/2/11 (MRS) -- Uses a cleaner style of imports.
 # Modified 2/8/12 (MRS) -- Supports array masks; includes new unit tests.
@@ -10,12 +10,12 @@
 import numpy as np
 import numpy.ma as ma
 
-from oops_.array.array_  import Array
-from oops_.array.scalar  import Scalar
-from oops_.array.pair    import Pair
-from oops_.array.vectorn import VectorN
-from oops_.units import Units
-import oops_.array.utils as utils
+from oops.array_.array   import Array
+from oops.array_.scalar  import Scalar
+from oops.array_.pair    import Pair
+from oops.array_.vectorn import VectorN
+from oops.array_.utils import dot, norm, unit, cross3d, ucross3d, perp, proj, sep
+from oops.units import Units
 
 class Vector3(Array):
     """An arbitrary Array of 3-vectors."""
@@ -84,26 +84,26 @@ class Vector3(Array):
         """Returns the dot products of the vectors as a Scalar."""
 
         arg = Vector3.as_vector3(arg)
-        return Scalar(utils.dot(self.vals, arg.vals), self.mask | arg.mask,
+        return Scalar(dot(self.vals, arg.vals), self.mask | arg.mask,
                                 Units.mul_units(self.units, arg.units))
 
     def norm(self):
         """Returns the length of the Vector3 as a Scalar."""
 
-        return Scalar(utils.norm(self.vals), self.mask, self.units)
+        return Scalar(norm(self.vals), self.mask, self.units)
 
     def __abs__(self): return self.norm()
 
     def unit(self):
         """Returns a the vector converted to unit length as a Vector3."""
 
-        return Vector3(utils.unit(self.vals), self.mask)
+        return Vector3(unit(self.vals), self.mask)
 
     def cross(self, arg):
         """Returns the cross products of the vectors as a Vector3."""
 
         arg = Vector3.as_vector3(arg)
-        return Vector3(utils.cross3d(self.vals, arg.vals),
+        return Vector3(cross3d(self.vals, arg.vals),
                        self.mask | arg.mask,
                        Units.mul_units(self.units, arg.units))
 
@@ -112,7 +112,7 @@ class Vector3(Array):
         vectors as a Vector3."""
 
         arg = Vector3.as_vector3(arg)
-        return Vector3(utils.ucross3d(self.vals, arg.vals),
+        return Vector3(ucross3d(self.vals, arg.vals),
                        self.mask | arg.mask)
 
     def perp(self, arg):
@@ -120,14 +120,14 @@ class Vector3(Array):
         """
 
         arg = Vector3.as_vector3(arg)
-        return Vector3(utils.perp(self.vals, arg.vals), self.mask | arg.mask,
+        return Vector3(perp(self.vals, arg.vals), self.mask | arg.mask,
                                                         self.units)
 
     def proj(self, arg):
         """Returns the component of a Vector3 projected into another Vector3."""
 
         arg = Vector3.as_vector3(arg)
-        return Vector3(utils.proj(self.vals, arg.vals), self.mask | arg.mask,
+        return Vector3(proj(self.vals, arg.vals), self.mask | arg.mask,
                                                         self.units)
 
     def sep(self, arg, reversed=False):
@@ -136,7 +136,7 @@ class Vector3(Array):
         arg = Vector3.as_vector3(arg)
         if reversed: arg.vals = -arg.vals
 
-        return Scalar(utils.sep(self.vals, arg.vals), self.mask | arg.mask)
+        return Scalar(sep(self.vals, arg.vals), self.mask | arg.mask)
 
     def spin(self, pole, angle=None):
         """Returns the result of rotating this Vector3 around the given pole

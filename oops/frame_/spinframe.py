@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/frame/spinframe.py: Subclass SpinFrame of class Frame
+# oops/frame_/spinframe.py: Subclass SpinFrame of class Frame
 #
 # 2/8/12 Created (MRS)
 # 3/17/12 MRS - removed the requirement that it be given a unique ID and
@@ -8,10 +8,10 @@
 
 import numpy as np
 
-from oops_.frame.frame_ import Frame
-from oops_.array.all import *
-from oops_.transform import Transform
-import oops_.registry as registry
+from oops.frame_.frame import Frame
+from oops.array_       import *
+from oops.transform    import Transform
+import oops.registry as registry
 
 class SpinFrame(Frame):
     """SpinFrame is a Frame subclass describing a frame in uniform rotation
@@ -92,8 +92,8 @@ class Test_SpinFrame(unittest.TestCase):
     def runTest(self):
 
         # Import here to avoid conflicts
-        from oops_.event import Event
-        from oops_.transform import Transform
+        from oops.event import Event
+        from oops.transform import Transform
 
         registry.initialize()
 

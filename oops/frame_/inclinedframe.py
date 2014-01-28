@@ -1,18 +1,18 @@
 ################################################################################
-# oops_/frame/inclinedframe.py: Subclass InclinedFrame of class Frame
+# oops/frame_/inclinedframe.py: Subclass InclinedFrame of class Frame
 #
 # 3/17/12 MRS - created.
 ################################################################################
 
 import numpy as np
 
-from oops_.frame.frame_ import Frame
-from oops_.frame.spinframe import SpinFrame
-from oops_.frame.rotation import Rotation
-from oops_.array.all import *
-from oops_.transform import Transform
+from oops.frame_.frame     import Frame
+from oops.frame_.spinframe import SpinFrame
+from oops.frame_.rotation  import Rotation
+from oops.array_           import *
+from oops.transform        import Transform
 
-import oops_.registry as registry
+import oops.registry as registry
 
 class InclinedFrame(Frame):
     """InclinedFrame is a Frame subclass describing a frame that is inclined to

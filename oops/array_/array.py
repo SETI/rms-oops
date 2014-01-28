@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/array/array_.py: Abstract class Array
+# oops/array_/array.py: Abstract class Array
 #
 # Superclass of Empty, Scalar, Pair, Vector3, Matrix3 and Tuple. All represent
 # N-dimensional arrays of intrinsically dimensional objects.

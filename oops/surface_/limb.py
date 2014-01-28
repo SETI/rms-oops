@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/surface/limb.py: Limb subclass of class Surface
+# oops/surface_/limb.py: Limb subclass of class Surface
 #
 # 3/29/12 MRS: New, with initial unit tests of intercept().
 # 6/6/12 MRS: Defined coordinates, updated constructor, improved speed.
@@ -7,12 +7,12 @@
 
 import numpy as np
 
-from oops_.surface.surface_ import Surface
-from oops_.surface.spheroid import Spheroid
-from oops_.surface.ellipsoid import Ellipsoid
-from oops_.array.all import *
-from oops_.config import SURFACE_PHOTONS, LOGGING
-import oops_.registry as registry
+from oops.surface_.surface import Surface
+from oops.surface_.spheroid import Spheroid
+from oops.surface_.ellipsoid import Ellipsoid
+from oops.array_ import *
+from oops.config import SURFACE_PHOTONS, LOGGING
+import oops.registry as registry
 
 class Limb(Surface):
     """The Limb surface is defined as the locus of points where a surface normal
@@ -361,8 +361,8 @@ class Test_Limb(unittest.TestCase):
         save_dlt_precision = SURFACE_PHOTONS.dlt_precision
         SURFACE_PHOTONS.dlt_precision = 0
 
-        from oops_.frame.frame_ import Frame
-        from oops_.path.path_ import Path
+        from oops.frame_.frame import Frame
+        from oops.path_.path import Path
 
         REQ  = 60268.
         RPOL = 50000.

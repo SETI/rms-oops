@@ -1,5 +1,5 @@
 ################################################################################
-# oops_/surface/surface.py: Abstract class Surface
+# oops/surface_/surface.py: Abstract class Surface
 #
 # 2/5/12 Modified (MRS) - Minor updates for style
 # 3/1/12 MRS: Modified convergence criteria in _solve_photons(), added quick
@@ -20,12 +20,12 @@
 
 import numpy as np
 
-import oops_.registry as registry
-import oops_.constants as constants
-from oops_.array.all import *
-from oops_.config import QUICK, SURFACE_PHOTONS, LOGGING
-from oops_.event import Event
-from oops_.path.all import *
+import oops.registry as registry
+import oops.constants as constants
+from oops.array_ import *
+from oops.config import QUICK, SURFACE_PHOTONS, LOGGING
+from oops.event import Event
+from oops.path_ import *
 
 class Surface(object):
     """Surface is an abstract class describing a 2-D object that moves and
