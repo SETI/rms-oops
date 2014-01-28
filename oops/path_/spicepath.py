@@ -256,7 +256,7 @@ class Test_SpicePath(unittest.TestCase):
         saturn_event = saturn.photon_to_event(ssb_event, iters=99)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(6,times[i],"J2000","CN",0)
-            self.assertTrue(abs(lt + saturn_event.dep_lt[i]) < 1.e-11)
+            self.assertTrue(abs(lt - saturn_event.dep_lt[i]) < 1.e-11)
             self.assertTrue(abs(saturn_event.time[i] + lt - ssb_event.time[i])
                                                                        < 1.e-11)
             self.assertTrue(abs(ssb_event.arr[i] + state[0:3]) < 1.e-8)
@@ -267,7 +267,7 @@ class Test_SpicePath(unittest.TestCase):
         saturn_event = saturn.photon_from_event(ssb_event, iters=99)
         for i in range(len(times)):
             (state, lt) = cspice.spkez(6,times[i],"J2000","XCN",0)
-            self.assertTrue(abs(lt - saturn_event.arr_lt[i]) < 1.e-11)
+            self.assertTrue(abs(lt + saturn_event.arr_lt[i]) < 1.e-11)
             self.assertTrue(abs(ssb_event.time[i] + lt - saturn_event.time[i])
                                                                        < 1.e-11)
             self.assertTrue(abs(ssb_event.dep[i] - state[0:3]) < 1.e-8)
@@ -535,7 +535,7 @@ class Test_SpicePath(unittest.TestCase):
           earth_event = Waypoint("EARTH", frame).event_at_time(times)
           pluto_event = pluto.photon_to_event(earth_event)
 
-          self.assertTrue(abs(earth_event.arr_lt - pluto_event.dep_lt) < 1.e-12)
+          self.assertTrue(abs(earth_event.arr_lt + pluto_event.dep_lt) < 1.e-12)
           self.assertTrue(abs(earth_event.wrt_ssb().arr -
                               pluto_event.wrt_ssb().dep) < 1.e-5)
 
@@ -582,7 +582,7 @@ class Test_SpicePath(unittest.TestCase):
           earth_event = Waypoint("EARTH", frame).event_at_time(times)
           pluto_event = pluto.photon_from_event(earth_event)
 
-          self.assertTrue(abs(earth_event.dep_lt - pluto_event.arr_lt) < 1.e-12)
+          self.assertTrue(abs(earth_event.dep_lt + pluto_event.arr_lt) < 1.e-12)
           self.assertTrue(abs(earth_event.wrt_ssb().dep -
                               pluto_event.wrt_ssb().arr) < 1.e-5)
 

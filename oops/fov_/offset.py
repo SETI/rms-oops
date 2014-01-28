@@ -51,6 +51,7 @@ class Offset(FOV, Fittable):
         shape [2,2].
         """
 
+        old_xy = self.fov.xy_from_uv(uv_pair, extras, derivs)
         new_xy = self.fov.xy_from_uv(uv_pair - self.uv_offset, extras, derivs)
 
         if derivs:
@@ -70,6 +71,7 @@ class Offset(FOV, Fittable):
         shape [2,2].
         """
 
+        old_uv = self.fov.uv_from_xy(xy_pair, extras, derivs)
         new_uv = self.fov.uv_from_xy(xy_pair, extras, derivs) + self.uv_offset
 
         if derivs:
