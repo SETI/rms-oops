@@ -43,7 +43,7 @@ def from_file(filespec, parameters={}):
     result = oops.obs.Snapshot(("v","u"), tstart, texp, ISS.fovs[camera,mode],
                                "CASSINI", "CASSINI_ISS_" + camera,
                                dict = dict,               # Add the VICAR dict
-                               data = vic.get_2d_array(), # Add the data array
+                               data = vic.data_2d,      # Add the data array
                                instrument = "ISS",
                                detector = camera,
                                sampling = mode)

@@ -168,14 +168,14 @@ class HST(object):
         not specified in the parameter dictionary via an argument "pos_targ".
         """
 
-        if "pos_targ" in parameters.keys():
+        if "pos_targ" in parameters:
             return parameters["pos_targ"]
 
-        if "POSTARG1" in hst_file[0].header.keys():
+        if "POSTARG1" in hst_file[0].header:
             return (hst_file[0].header["POSTARG1"],
                     hst_file[0].header["POSTARG2"])
 
-        return None
+        return (0.,0.)
 
     def register_frame(self, hst_file, fov, index=1, suffix="", **parameters):
         """Returns the ID of a frame that rotates from J2000 coordinates into

@@ -87,7 +87,7 @@ class Subarray(FOV):
         new_uv = old_uv - self.new_origin_in_old_uv
 
         if derivs:
-            new_uv.insert_subfield("d_dxy", old_uv.d_duv)
+            new_uv.insert_subfield("d_dxy", old_uv.d_dxy)
 
         return new_uv
 

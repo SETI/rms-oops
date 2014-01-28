@@ -38,6 +38,7 @@ class Ellipsoid(Surface):
     """
 
     COORDINATE_TYPE = "spherical"
+    IS_VIRTUAL = False
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
 

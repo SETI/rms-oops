@@ -39,6 +39,7 @@ class Spheroid(Surface):
     """
 
     COORDINATE_TYPE = "spherical"
+    IS_VIRTUAL = False
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
 
@@ -133,8 +134,6 @@ class Spheroid(Surface):
         lat = (z/r).arcsin()
         lon = y.arctan2(x) % (2.*np.pi)
 
-        if derivs is False: derivs = (False, False, False)
-        if derivs is True: derivs = (True, True, True)
 
         if np.any(derivs):
             raise NotImplementedError("Spheroid.coords_from_vector3() " +

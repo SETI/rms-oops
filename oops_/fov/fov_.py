@@ -161,8 +161,7 @@ class FOV(object):
             dlos_dxy_vals[...,1,1] = 1 + x**2
             dlos_dxy_vals[...,2,:] = -xy_pair.vals[...,:]
 
-            normalize = ((dlos_dxy_vals[...,0,0] +
-                          dlos_dxy_vals[...,1,1] - 1)**(-1.5))
+            normalize = (dlos_dxy_vals[...,0,0] + x**2)**(-1.5)
             dlos_dxy_vals *= normalize[..., np.newaxis, np.newaxis]
 
             los.insert_subfield("d_dxy", MatrixN(dlos_dxy_vals, xy_pair.mask))
@@ -197,11 +196,14 @@ class FOV(object):
             # dy/dlos_z = -los_y / (los_z**2)
 
             dxy_dlos_vals = np.zeros(los.shape + [2,3])
-            dxy_dlos_vals[...,0,0] =  los.vals[...,2]
-            dxy_dlos_vals[...,0,2] = -los.vals[...,0]
-            dxy_dlos_vals[...,1,1] =  los.vals[...,2]
-            dxy_dlos_vals[...,1,2] = -los.vals[...,1]
-            dxy_dlos_vals /= los.vals[..., 2, np.newaxis, np.newaxis]**2
+            x = los.vals[...,0]
+            y = los.vals[...,1]
+            z = los.vals[...,2]
+            dxy_dlos_vals[...,0,0] =  z
+            dxy_dlos_vals[...,0,2] = -x
+            dxy_dlos_vals[...,1,1] =  z
+            dxy_dlos_vals[...,1,2] = -y
+            dxy_dlos_vals /= z[..., np.newaxis, np.newaxis]**2
 
             xy.insert_subfield("d_dlos", MatrixN(dxy_dlos_vals, los.mask))
 

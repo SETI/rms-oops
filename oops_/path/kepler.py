@@ -109,6 +109,7 @@ class Kepler(Path, Fittable):
         else:
             self.path_id = id
 
+        self.shape = []
         self.reregister()
 
     ########################################

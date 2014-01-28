@@ -30,6 +30,7 @@ class OrbitPlane(Surface):
     """
 
     COORDINATE_TYPE = "polar"
+    IS_VIRTUAL = False
 
     def __init__(self, elements, epoch, origin, frame, id=None):
         """Constructor for an OffsetPlane surface.

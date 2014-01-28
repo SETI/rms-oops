@@ -33,6 +33,7 @@ class Limb(Surface):
     """
 
     COORDINATE_TYPE = "limb"
+    IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
     SPEEDUP = True  # True to retain history of the most recent guess. This will
                     # fail if oops ever becomes multithreaded
@@ -84,7 +85,7 @@ class Limb(Surface):
                         partial derivatives of each coordinate with respect to
                         surface position and observer position are returned as
                         well. Using a tuple, you can indicate whether to return
-                        partial derivatives on an coordinate-by-coordinate
+                        partial derivatives on a coordinate-by-coordinate
                         basis.
 
         Return:         coordinate values packaged as a tuple containing two or

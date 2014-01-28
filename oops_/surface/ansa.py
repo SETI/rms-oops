@@ -26,6 +26,7 @@ class Ansa(Surface):
     """
 
     COORDINATE_TYPE = "cylindrical"
+    IS_VIRTUAL = True
 
     # Class constants to override where derivs are undefined
     coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False

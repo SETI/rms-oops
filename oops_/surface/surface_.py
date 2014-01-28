@@ -16,6 +16,10 @@
 #   _solve_photon() to take advantage of it; added class constants
 #   *_DERIVS_ARE_IMPLEMENTED that can inform the calling program immediately if
 #   if derivs are implemented, avoiding the need to catch a NotImplementedError.
+# 9/8/13 MRS - added methods photon_to_event_by_coords() and
+#   photon_from_event_by_coords(). These have been tested successfully for
+#   HST Uranus images using the Ansa surface; however, I did not write unit
+#   tests.
 ################################################################################
 
 import numpy as np
@@ -23,7 +27,7 @@ import numpy as np
 import oops_.registry as registry
 import oops_.constants as constants
 from oops_.array.all import *
-from oops_.config import QUICK, SURFACE_PHOTONS, LOGGING
+from oops_.config import QUICK, SURFACE_PHOTONS, PATH_PHOTONS, LOGGING
 from oops_.event import Event
 from oops_.path.all import *
 
@@ -32,7 +36,12 @@ class Surface(object):
     rotates in space. A surface employs an internal coordinate system, not
     necessarily rectangular, in which two primary coordinates define locations
     on the surface, and an optional third coordinate can define points above or
-    below that surface. The shape is always fixed."""
+    below that surface. The shape is always fixed.
+
+    Required attributes:
+        origin_id       the ID of the path defining the surface's center.
+        frame_id        the ID of the frame in which the surface is defined.
+    """
 
     # Class constants to override where derivs are undefined
     coords_from_vector3_DERIVS_ARE_IMPLEMENTED = True
@@ -225,7 +234,7 @@ class Surface(object):
         Return:         a unitless Vector3 of velocities, in units of km/s.
         """
 
-        return Vector3((0,0,0))
+        return Vector3.ZERO
 
     ############################################################################
     # Generally should not require overrides
@@ -351,14 +360,15 @@ class Surface(object):
         return Event(time, pos, vel, self.origin_id, self.frame_id)
 
 ################################################################################
-# Photon Solver
+# Photon Solver based on event line of sight
 ################################################################################
 
     def photon_from_event(self, link, quick=None, derivs=False,
                                 iters=None, precision=None, limit=None):
         """Returns the photon arrival event at the body's surface, for photons
-        departing earlier from the specified linking event. See _solve_photon()
-        for details. """
+        departing earlier from the specified linking event. Defined by the
+        photon departure line of sight at the linking event. See _solve_photon()
+        for details."""
 
         return self._solve_photon(link, +1, quick, derivs,
                                         iters, precision, limit)
@@ -366,8 +376,9 @@ class Surface(object):
     def photon_to_event(self, link, quick=None, derivs=False,
                         iters=None, precision=None, limit=None):
         """Returns the photon departure event at the body's surface, for photons
-        arriving later at the specified linking event. See _solve_photon() for
-        details. """
+        arriving later at the specified linking event. Defined by the photon
+        arrival line of sight at the linking event. See _solve_photon() for
+        details."""
 
         return self._solve_photon(link, -1, quick, derivs,
                                   iters, precision, limit)
@@ -376,16 +387,19 @@ class Surface(object):
                       iters=None, precision=None, limit=None):
         """Solve for the event object located on the body's surface that falls
         at the other end of the photon's path to or from a linking event.
+        Defined by the photon line of sight at the linking event.
 
         Input:
             link        the linking event of a photon's arrival or departure.
 
             sign        -1 to return earlier events, corresponding to photons
                            departing from the surface and arriving later at the
-                           linking event.
+                           linking event. The solution is defined by the vector
+                           of arriving photons at the link event.
                         +1 to return later events, corresponding to photons
                            departing from the linking event and arriving later
-                           at the surface.
+                           at the surface. The solution is defined by the
+                           vector of departing photons at the link event.
 
             quick       False to disable QuickPaths and QuickFrames, True to use
                         default parameters; a dictionary to override selected
@@ -417,8 +431,9 @@ class Surface(object):
 
                         If derivs is True, then these subfields are included:
                         time.d_dlos, pos.d_dlos, time.d_dt, and pos.d_dt. All
-                        partial derivative of the surface event with respect to
-                        the time and line of sight of the linking event.
+                        partial derivative of the surface event are given with
+                        respect to the time and line of sight of the linking
+                        event.
         """
 
         # Interpret args
@@ -538,7 +553,7 @@ class Surface(object):
         los_wrt_surface = surface_xform.rotate(los_wrt_ssb)
 
         # Create the surface event in its own frame
-        surface_event = Event(surface_time, pos_wrt_surface, (0,0,0),
+        surface_event = Event(surface_time, pos_wrt_surface, Vector3.ZERO,
                               self.origin_id, self.frame_id,
                               link = link, sign = sign)
         surface_event.collapse_time()
@@ -600,6 +615,263 @@ class Surface(object):
                                         MatrixN.all_masked(shape, item=[3,1]))
             surface_event.pos.insert_subfield( "d_dlos",
                                         MatrixN.all_masked(shape, item=[3,3]))
+
+        return surface_event
+
+################################################################################
+# Photon Solver based on coordinates at the surface
+################################################################################
+
+    def photon_from_event_by_coords(self, link, coords,
+                                    quick=None, derivs=False, update=True,
+                                    iters=None, precision=None, limit=None):
+        """Returns the photon arrival event at the body's surface, for photons
+        departing earlier from the specified linking event and arriving at the
+        specified coordinates. See _solve_photon_by_coords() for details."""
+
+        return self._solve_photon_by_coords(link, coords, +1,
+                                            quick, derivs, update,
+                                            iters, precision, limit)
+
+    def photon_to_event_by_coords(self, link, coords,
+                                  quick=None, derivs=False, update=True,
+                                  iters=None, precision=None, limit=None):
+        """Returns the photon departure event at the body's surface, for photons
+        arriving later at the specified linking event and departing at the
+        specified coordinates. See _solve_photon_by_coords() for details."""
+
+        return self._solve_photon_by_coords(link, coords, -1,
+                                            quick, derivs, update,
+                                            iters, precision, limit)
+
+    def _solve_photon_by_coords(self, link, coords, sign,
+                                      quick=None, derivs=False, update=True,
+                                      iters=None, precision=None, limit=None):
+        """Solve for the event object located on the body's surface that falls
+        at the other end of the photon's path to or from a linking event.
+        Defined by the coordinates at the surface.
+
+        Input:
+            link        the linking event of a photon's arrival or departure.
+
+            coords      a tuple of two or three coordinate values defining the
+                        photon's departure or arrival at or near the surface.
+
+            sign        -1 to return earlier events, corresponding to photons
+                           departing from the specified surface coordinates and
+                           arriving later at the linking event.
+                        +1 to return later events, corresponding to photons
+                           departing from the linking event and arriving later
+                           at the specified surface coordinates.
+
+            quick       False to disable QuickPaths and QuickFrames, True to use
+                        default parameters; a dictionary to override selected
+                        default parameters.
+
+            derivs      True to include subfields containing the partial
+                        derivatives with respect to the time and line of sight
+                        of the linking event.
+
+            update      True to update the photon arrival or departure event in
+                        the linking event; False to leave the linking event
+                        unchanged.
+
+            The following input parameters have default defined in file
+            oops_.config.SURFACE_PHOTONS:
+
+            iters       the maximum number of iterations of Newton's method to
+                        perform. It should almost never need to be > 5.
+            precision   iteration stops when the largest change in light travel
+                        time between one iteration and the next falls below this
+                        threshold (in seconds).
+            limit       the maximum allowed absolute value of the change in
+                        light travel time from the nominal range calculated
+                        initially. Changes in light travel with absolute values
+                        larger than this limit are clipped. Can be used to
+                        limit divergence of the solution in some rare cases.
+
+        Return:         Returns the surface event describing the arrival or
+                        departure of the photon. The surface normal and velocity
+                        field subfields "perp" and "vflat" are always filled in.
+                        The subfields (arr, arr_lt) or (dep, dep_lt) are filled
+                        in for arriving or departing photons, respectively.
+
+                        If derivs is True, then these subfields are included:
+                        time.d_dt, time.d_dpos, pos.d_dt, and pos.d_dpos. These
+                        partial derivatives of the surface vent are given with
+                        respect to the time and position of the linking event.
+        """
+
+        # Interpret args
+        if iters is None:
+            iters = SURFACE_PHOTONS.max_iterations
+        if precision is None:
+            precision = SURFACE_PHOTONS.dlt_precision
+        if limit is None:
+            limit = SURFACE_PHOTONS.dlt_limit
+
+        # Interpret the sign
+        signed_c = sign * constants.C
+        if sign < 0.:
+            surface_key = "dep"
+            link_key = "arr"
+        else:
+            link_key = "dep"
+            surface_key = "arr" 
+
+        # Define the surface path and frame relative to the SSB in J2000
+        origin_wrt_ssb  = registry.connect_paths(self.origin_id, "SSB", "J2000")
+        frame_wrt_j2000 = registry.connect_frames(self.frame_id, "J2000")
+
+        # Define the observer in the SSB frame
+        link_wrt_ssb = link.wrt_ssb(quick)
+        obs_wrt_ssb = link_wrt_ssb.pos
+
+        # Make an initial guess at the light travel time using the range to the
+        # surface's origin
+        lt = (obs_wrt_ssb -
+              origin_wrt_ssb.event_at_time(link.time).pos).norm() / signed_c
+        lt_min = lt.min()
+        lt_max = lt.max()
+
+        # If the link is entirely masked...
+        if lt_min == lt_max:
+          if np.all(link.mask):
+            return self._masked_link(link, sign, derivs)
+
+        # Expand the interval
+        lt_min -= limit
+        lt_max += limit
+
+        # Interpret the quick parameters
+        if quick is False:
+            quick_dict = False
+        else:
+            if type(quick) == type({}):
+                quickdict = dict(QUICK.dictionary, **quick)
+            else:
+                quickdict = QUICK.dictionary
+            quickdict = dict(quickdict, **{"path_extension": limit,
+                                           "frame_extension": limit})
+
+        # Iterate. Convergence is rapid because all speeds are non-relativistic
+        max_dlt = np.inf
+        new_lt = None
+
+        # For a non-virtual surface, pos_wrt_origin is fixed
+        if not self.IS_VIRTUAL:
+            pos_wrt_origin = self.vector3_from_coords(coords)
+
+        for iter in range(iters):
+
+            # Evaluate the current time
+            surface_time = link.time + lt
+
+            # Quicken the surface path and frame when needed
+            origin_wrt_ssb = origin_wrt_ssb.quick_path(surface_time,
+                                                       quick=quickdict)
+            frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
+                                                          quick=quickdict)
+
+            # Evaluate the observer position relative to the current surface
+            origin_wrt_ssb_now = origin_wrt_ssb.event_at_time(surface_time).pos
+            obs_wrt_origin_j2000 = obs_wrt_ssb - origin_wrt_ssb_now
+
+            surface_xform = frame_wrt_j2000.transform_at_time(surface_time)
+            obs_wrt_origin = surface_xform.rotate(obs_wrt_origin_j2000)
+
+            # Locate the coordinate position relative to the current surface,
+            # if necessary
+            if self.IS_VIRTUAL:
+                pos_wrt_origin = self.vector3_from_coords(coords,
+                                                          obs_wrt_origin)
+
+            # Update the intercept times
+            pos_wrt_origin_j2000 = surface_xform.unrotate(pos_wrt_origin)
+            new_lt = (pos_wrt_origin_j2000 + origin_wrt_ssb_now -
+                      obs_wrt_ssb).norm() / signed_c
+
+            new_lt = new_lt.clip(lt_min, lt_max)
+            dlt = new_lt - lt
+            lt = new_lt
+
+            # Test for convergence
+            prev_max_dlt = max_dlt
+            max_dlt = abs(dlt).max()
+
+            if LOGGING.surface_iterations:
+                print LOGGING.prefix, "Surface._solve_photon_by_coords",
+                print iter, max_dlt
+
+            if type(max_dlt) == Scalar and np.all(max_dlt.mask):
+                return self._masked_link(link, sign, derivs)
+
+            if max_dlt <= precision or max_dlt >= prev_max_dlt: break
+
+        # Update the mask on light time to hide intercepts outside the defined
+        # limits
+        lt.mask = (link.mask | lt.mask | (lt.vals * sign < 0.) |
+                   (lt.vals == lt_min) | (lt.vals == lt_max))
+        if not np.any(lt.mask): lt.mask = False
+
+        # Evaluate the current time
+        surface_time = link.time + lt
+
+        # Quicken the surface path and frame when needed
+        origin_wrt_ssb = origin_wrt_ssb.quick_path(surface_time,
+                                                   quick=quickdict)
+        frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
+                                                      quick=quickdict)
+
+        # Evaluate the observer position relative to the current surface
+        origin_wrt_ssb_now = origin_wrt_ssb.event_at_time(surface_time).pos
+        obs_wrt_origin_j2000 = obs_wrt_ssb - origin_wrt_ssb_now
+
+        surface_xform = frame_wrt_j2000.transform_at_time(surface_time)
+        obs_wrt_origin = surface_xform.rotate(obs_wrt_origin_j2000)
+
+        # Locate the coordinate position relative to the current surface,
+        # if necessary
+        if self.IS_VIRTUAL:
+            pos_wrt_origin = self.vector3_from_coords(coords, obs_wrt_origin)
+
+        # Determine the line of sight vector in J2000
+        pos_wrt_origin_j2000 = surface_xform.unrotate(pos_wrt_origin)
+        los_in_j2000 = sign * (pos_wrt_origin_j2000 + origin_wrt_ssb_now -
+                               obs_wrt_ssb)
+
+        # Create the surface event in its own frame
+        surface_event = Event(surface_time, pos_wrt_origin, Vector3.ZERO,
+                              self.origin_id, self.frame_id,
+                              link = link, sign = sign)
+        surface_event.collapse_time()
+
+        surface_event.insert_subfield("perp",  self.normal(pos_wrt_origin))
+        surface_event.insert_subfield("vflat", self.velocity(pos_wrt_origin))
+
+        los_wrt_surface = surface_xform.rotate(los_in_j2000)
+        surface_event.insert_subfield(surface_key, los_wrt_surface)
+        surface_event.insert_subfield(surface_key + "_lt", -lt)
+
+        # Fill in derivatives if necessary
+        if derivs:
+            raise NotImplementedException("Derivatives are not implemented " +
+                                          "for _solve_photon_by_coords()")
+
+        # Update the linking event if necessary
+        if update:
+            link_frame = registry.connect_frames(link.frame_id, "J2000")
+            link_xform = link_frame.transform_at_time(link.time, quick)
+
+            los_wrt_link = link_xform.rotate(los_in_j2000)
+
+            link.insert_subfield(link_key, los_wrt_link)
+            link.insert_subfield(link_key + "_lt", lt)
+
+            # The event is already determined wrt SSB, so just save it
+            link_wrt_ssb.insert_subfield(link_key, los_in_j2000)
+            link_wrt_ssb.insert_subfield(link_key + "_lt", lt)
+            link.filled_ssb = link_wrt_ssb
 
         return surface_event
 

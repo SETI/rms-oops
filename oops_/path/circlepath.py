@@ -40,10 +40,7 @@ class CirclePath(Path):
         together the shapes of all the orbital elements plus the epoch.
         """
 
-        if id is None:
-            self.path_id = registry.temporary_path_id()
-        else:
-            self.path_id = id
+        self.path_id = id or registry.temporary_path_id()
 
         self.origin_id = registry.as_path_id(origin)
         self.frame_id = registry.as_frame_id(frame)

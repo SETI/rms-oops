@@ -540,7 +540,8 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_bodies(JUPITER_IRREGULAR, "JUPITER", "JUPITER BARYCENTER",
                   ["SATELLITE", "IRREGULAR"])
 
-    define_ring("JUPITER", "JUPITER_RING_PLANE", JUPITER_MAIN_RING_LIMIT, [])
+    define_ring("JUPITER", "JUPITER_RING_PLANE", None, [])
+    define_ring("JUPITER", "JUPITER_RING_SYSTEM", JUPITER_MAIN_RING_LIMIT, [])
 
     # Moons and rings of Saturn
     define_bodies(SATURN_CLASSICAL_INNER, "SATURN", "SATURN",
@@ -554,7 +555,8 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_bodies(SATURN_IRREGULAR, "SATURN", "SATURN BARYCENTER",
                   ["SATELLITE", "IRREGULAR"])
 
-    define_ring("SATURN", "SATURN_RING_PLANE", SATURN_F_RING_LIMIT, [])
+    define_ring("SATURN", "SATURN_RING_PLANE", None, [])
+    define_ring("SATURN", "SATURN_RING_SYSTEM", SATURN_F_RING_LIMIT, [])
     define_ring("SATURN", "SATURN_RINGS", SATURN_RINGS, [])
     define_ring("SATURN", "SATURN_MAIN_RINGS", SATURN_MAIN_RINGS, [])
     define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [])
@@ -569,7 +571,8 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
                   ["SATELLITE", "IRREGULAR"])
 
-    define_ring("URANUS", "URANUS_RING_PLANE", URANUS_EPSILON_LIMIT, [],
+    define_ring("URANUS", "URANUS_RING_PLANE", None,  [], retrograde=True)
+    define_ring("URANUS", "URANUS_RING_SYSTEM", URANUS_EPSILON_LIMIT, [],
                                                           retrograde=True)
     define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [], retrograde=True)
     define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [], retrograde=True)
@@ -610,7 +613,8 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
                   ["SATELLITE", "IRREGULAR"])
 
-    define_ring("NEPTUNE", "NEPTUNE_RING_PLANE", NEPTUNE_ADAMS_LIMIT, [])
+    define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [])
+    define_ring("NEPTUNE", "NEPTUNE_RING_SYSTEM", NEPTUNE_ADAMS_LIMIT, [])
 
     # Moons and rings of Pluto
     define_bodies(CHARON, "PLUTO", "PLUTO",
@@ -659,8 +663,12 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         try:
             shape = surface.spice_body(spice_id)
             body.apply_surface(shape, shape.req, shape.rpol)
-        except RuntimeError: pass
-        except LookupError: pass
+        except RuntimeError:
+            shape = surface.NullSurface(path, frame)
+            body.apply_surface(shape, 0., 0.)
+        except LookupError:
+            shape = surface.NullSurface(path, frame)
+            body.apply_surface(shape, 0., 0.)
 
         # Add a planet name to any satellite or barycenter
         if "SATELLITE" in body.keywords and parent is not None:

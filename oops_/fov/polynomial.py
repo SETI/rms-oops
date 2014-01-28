@@ -119,7 +119,7 @@ class Polynomial(FOV):
 
     ########################################
 
-    def uv_from_xy(self, xy_pair, extras=(), derivs=False, iters=2):
+    def uv_from_xy(self, xy_pair, extras=(), derivs=False, iters=3):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
         coordinates in radians.
 

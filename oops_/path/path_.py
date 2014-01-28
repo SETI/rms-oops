@@ -6,6 +6,8 @@
 #   added convergence testing to _solve_photon; added quick parameter dictionary
 #   and config file.
 # 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
+# 9/7/13 MRS - the value of attribute arr_lt or dep_lt in the event returned by
+#   _solve_photon() had the wrong sign. This was fixed.
 ################################################################################
 
 import numpy as np
@@ -370,8 +372,10 @@ class Path(object):
                                         positive.
 
                         If derivs is True, then the path event has these
-                        subfields: time.d_dt, arr or los.d_dt.
+                        subfields: time.d_dt, plus arr.d_dt or los.d_dt.
         """
+
+        if self.shape != []: quick = False
 
         if iters is None:
             iters = PATH_PHOTONS.max_iterations
@@ -434,7 +438,7 @@ class Path(object):
         # Speed up the path and frame evaluations if requested
         # Interpret the quick parameters
         if quick is False:
-            quick_dict = False
+            quickdict = False
         else:
             if type(quick) == type({}):
                 quickdict = dict(QUICK.dictionary, **quick)
@@ -510,7 +514,7 @@ class Path(object):
         # Update the photon info in the path event WRT SSB
         signed_los_ssb = sign * delta_pos_ssb
         path_event_ssb.insert_subfield(path_key, signed_los_ssb)
-        path_event_ssb.insert_subfield(path_key + "_lt", lt)
+        path_event_ssb.insert_subfield(path_key + "_lt", -lt)
 
         # Update the linking event
         if update:

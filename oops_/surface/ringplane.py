@@ -24,6 +24,7 @@ class RingPlane(Surface):
     equatorial (z=0) plane."""
 
     COORDINATE_TYPE = "polar"
+    IS_VIRTUAL = False
 
     def __init__(self, origin, frame, radii=None, gravity=None,
                        elevation=0.):
