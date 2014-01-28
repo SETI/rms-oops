@@ -504,6 +504,7 @@ def iss_test_suite(filespec, derivs, info, display):
 ################################################################################
 
 import unittest
+import os.path
 
 UNITTEST_PRINTING = True
 UNITTEST_LOGGING = True
@@ -513,9 +514,11 @@ class Test_Cassini_ISS_Suite(unittest.TestCase):
 
     def runTest(self):
 
+        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+        
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
 
-        filespec = "test_data/cassini/ISS/W1573721822_1.IMG"
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/ISS/W1573721822_1.IMG")
         snapshot = iss_test_suite(filespec, UNITTEST_DERIVS,
                                   UNITTEST_PRINTING, DISPLAY)
 
