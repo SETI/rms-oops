@@ -1,11 +1,11 @@
 ################################################################################
-# oops_/cadence/cadence_.py: Abstract class Cadence
+# oops/cadence_/cadence.py: Abstract class Cadence
 #
 # 7/2/12 MRS - created
 ################################################################################
 
 import numpy as np
-from oops_.array.all import *
+from oops.array_ import *
 
 class Cadence(object):
     """Cadence is an abstract class that defines the timing of an observation.

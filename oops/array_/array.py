@@ -17,7 +17,7 @@
 import numpy as np
 import numpy.ma as ma
 
-from oops_.units import Units
+from oops.units import Units
 
 class Array(object):
     """A class defining an arbitrary Array of possibly multidimensional items.
