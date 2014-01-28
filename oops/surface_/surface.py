@@ -24,21 +24,12 @@
 
 import numpy as np
 
-<<<<<<< HEAD:oops_/surface/surface_.py
-import oops_.registry as registry
-import oops_.constants as constants
-from oops_.array.all import *
-from oops_.config import QUICK, SURFACE_PHOTONS, PATH_PHOTONS, LOGGING
-from oops_.event import Event
-from oops_.path.all import *
-=======
 import oops.registry as registry
 import oops.constants as constants
 from oops.array_ import *
 from oops.config import QUICK, SURFACE_PHOTONS, LOGGING
 from oops.event import Event
 from oops.path_ import *
->>>>>>> reorg:oops/surface_/surface.py
 
 class Surface(object):
     """Surface is an abstract class describing a 2-D object that moves and

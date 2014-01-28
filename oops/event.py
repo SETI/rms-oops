@@ -358,7 +358,9 @@ class Event(object):
         result = Event(time, pos, vel, self.origin_id, self.frame_id)
 
         for key in self.subfields.keys():
-            subfield = self.subfields[key].rebroadcast(self.shape)[i]
+            subfield = self.subfields[key]
+            if type(subfield) == oops.Array:
+                subfield = subfield.rebroadcast(self.shape)[i]
             result.insert_subfield(key, subfield)
 
         return result
@@ -715,7 +717,7 @@ class Event(object):
                                                  reversed=True)
 
     def ra_and_dec(self, aberration=False, subfield="arr", frame="J2000",
-                         quick=None):
+                         quick=None, derivs=False):
         """Returns the J2000 right ascension and declination in the path and
         frame of the event, as a tuple of two scalars.
 
@@ -731,6 +733,9 @@ class Event(object):
                         circumstances.
             quick       False to disable QuickPaths; True for the default
                         options; a dictionary to override specific options.
+            derivs      If True, then the derivatives of the right ascension
+                        and declination with respect to the line of sight are
+                        returned as subfields named "d_dlos".
         """
 
         # Locate arrival ray in the SSB/J2000 frame
@@ -750,7 +755,58 @@ class Event(object):
         # Convert to RA and dec
         (x,y,z) = ray.as_scalars()
         ra = y.arctan2(x) % (2*np.pi)
-        dec = (z/ray.norm()).arcsin()
+
+        r = ray.norm()
+        dec = (z/r).arcsin()
+
+        # Generate derivatives if necessary
+        if derivs:
+
+            x2_y2 = x.vals**2 + y.vals**2
+            r2 = x2_y2 + z.vals**2
+
+            # Declination = arcsin(z/r)
+            #
+            # dr/dx = x/r; similar for y and z.
+            #
+            # d(z/r)/dx = z (-1) r**(-2) dr/dx
+            #           = -x z / r**3
+            # d(z/r)/dy = -y z / r**3
+            # d(z/r)/dz = 1/r - z**2 / r**3
+            #           = (x**2 + y**2) / r**3
+            #
+            # d(arcsin(_))/d_ = (1 - _**2)**(-1/2)
+            #
+            # ddec/d_ = (1 - (z/r)**2)**(-1/2) * d(z/r)/d_
+            #         = r / (x**2 + y**2)**(1/2) * d(z/r)/d_
+            #
+            # ddec/dx = -x z / [(x**2 + y**2)**(1/2) r**2]
+            # ddec/dy = -y z / [(x**2 + y**2)**(1/2) r**2]
+            # ddec/dz = (x**2 + y**2) / [(x**2 + y**2)**(1/2) r**2]
+
+            denom = r2 * np.sqrt(x2_y2)
+
+            ddec_dxyz_vals = np.empty(ray.shape + [1,3])
+            ddec_dxyz_vals[...,0,0] = -x.vals * z.vals
+            ddec_dxyz_vals[...,0,1] = -y.vals * z.vals
+            ddec_dxyz_vals[...,0,2] = x2_y2
+            ddec_dxyz_vals /= denom[..., np.newaxis, np.newaxis]
+
+            dec.insert_subfield("d_dlos", MatrixN(ddec_dxyz_vals, ray.mask))
+
+            # Right ascension = arctan2(y,x)
+            #
+            # Note: The derivatives of arctan2(y,x) are always the same as the
+            # derivatives of arctan(y/x), because the values can only differ by
+
+            denom = x2_y2.copy()
+            denom[denom == 0.] = 1.
+
+            dra_dxyz_vals = np.zeros(ray.shape + [1,3])
+            dra_dxyz_vals[...,0,0] = -y.vals / denom
+            dra_dxyz_vals[...,0,1] =  x.vals / denom
+
+            ra.insert_subfield( "d_dlos", MatrixN(dra_dxyz_vals, ray.mask))
 
         return (ra, dec)
 

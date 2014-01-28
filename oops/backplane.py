@@ -474,6 +474,108 @@ class Backplane(object):
         self.register_backplane(("declination", event_key,
                                 apparent, direction), dec)
 
+    def celestial_north_angle(self, event_key=()):
+        """Direction of celestial north at each pixel in the image, measured
+        from the U-axis toward the V-axis. This varies across the field of
+        view due to spherical distortion and also any distortion in the FOV.
+
+        Input:
+            event_key       key defining the surface event, typically () to
+                            refer to the observation.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("celestial_north_angle", event_key)
+        try:
+            return self.backplanes[key]
+        except KeyError: pass
+
+        temp_key = ("dlos_ddec", event_key)
+        if temp_key not in self.backplanes.keys():
+            self._fill_dlos_dradec(event_key)
+
+        dlos_ddec = self.backplanes[temp_key]
+        duv_ddec = self.meshgrid.duv_dlos * dlos_ddec
+
+        du_ddec_vals = duv_ddec.vals[...,0,0]
+        dv_ddec_vals = duv_ddec.vals[...,1,0]
+        clock = np.arctan2(dv_ddec_vals, du_ddec_vals)
+        self.register_backplane(key, Scalar(clock, duv_ddec.mask))
+
+        return self.backplanes[key]
+
+    def celestial_east_angle(self, event_key=()):
+        """Direction of celestial north at each pixel in the image, measured
+        from the U-axis toward the V-axis. This varies across the field of
+        view due to spherical distortion and also any distortion in the FOV.
+
+        Input:
+            event_key       key defining the surface event, typically () to
+                            refer to the observation.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ("celestial_east_angle", event_key)
+        try:
+            return self.backplanes[key]
+        except KeyError: pass
+
+        temp_key = ("dlos_dra", event_key)
+        if temp_key not in self.backplanes.keys():
+            self._fill_dlos_dradec(event_key)
+
+        dlos_dra = self.backplanes[temp_key]
+        duv_dra = self.meshgrid.duv_dlos * dlos_dra
+
+        du_dra_vals = duv_dra.vals[...,0,0]
+        dv_dra_vals = duv_dra.vals[...,1,0]
+        clock = np.arctan2(dv_dra_vals, du_dra_vals)
+        self.register_backplane(key, Scalar(clock, duv_dra.mask))
+
+        return self.backplanes[key]
+
+    def _fill_dlos_dradec(self, event_key):
+        """Internal method to fill in backplanes containing the derivatives of
+        the line of sight with respect to right ascension and declination."""
+
+        ra = self.right_ascension(event_key)
+        dec = self.declination(event_key)
+
+        # Derivatives of...
+        #   los[0] = cos(dec) * cos(ra)
+        #   los[1] = cos(dec) * sin(ra)
+        #   los[2] = sin(dec)
+
+        cos_dec = np.cos(dec.vals)
+        sin_dec = np.sin(dec.vals)
+
+        cos_ra = np.cos(ra.vals)
+        sin_ra = np.sin(ra.vals)
+
+        dlos_dra_vals = np.zeros(ra.shape + [3])
+        dlos_dra_vals[...,0] = -sin_ra * cos_dec
+        dlos_dra_vals[...,1] =  cos_ra * cos_dec
+
+        dlos_j2000_dra = Vector3(dlos_dra_vals, ra.mask)
+
+        dlos_ddec_vals = np.zeros(ra.shape + [3])
+        dlos_ddec_vals[...,0] = -sin_dec * cos_ra
+        dlos_ddec_vals[...,1] = -sin_dec * sin_ra
+        dlos_ddec_vals[...,2] =  cos_dec
+
+        dlos_j2000_ddec = Vector3(dlos_ddec_vals, ra.mask)
+
+        # Rotate dlos from the J2000 frame to the image coordinate frame
+        frame = registry.connect_frames(self.obs.frame_id, "J2000")
+        xform = frame.transform_at_time(self.obs_event.time)
+
+        dlos_dra  = xform.rotate(dlos_j2000_dra)
+        dlos_ddec = xform.rotate(dlos_j2000_ddec)
+
+        # Convert to a column matrix and save
+        self.register_backplane(("dlos_dra",  event_key), dlos_dra.as_column())
+        self.register_backplane(("dlos_ddec", event_key), dlos_ddec.as_column())
+
     ############################################################################
     # Sky geometry, path intercept versions
     #   center_right_ascension()    right ascension of path on sky, radians.
@@ -1198,6 +1300,58 @@ class Backplane(object):
 
             lat = (dep.as_scalar(2) / dep.norm()).arcsin()
             self.register_gridless_backplane(key, lat)
+
+        return self.backplanes[key]
+
+    ############################################################################
+
+    def pole_clock_angle(self, event_key):
+        """Projected angle of a body's pole vector on the sky, measured from
+        celestial north toward celestial west (i.e., clockwise on the sky)."""
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        key = ("pole_clock_angle", event_key)
+        if key not in self.backplanes.keys():
+            event = self.get_gridless_event(event_key)
+
+            # Get the body frame's Z-axis in J2000 coordinates
+            frame = registry.connect_frames("J2000", event.frame_id)
+            xform = frame.transform_at_time(event.time)
+            pole_j2000 = xform.rotate(Vector3.ZAXIS)
+
+            # Define the vector to the observer in the J2000 frame
+            dep = event.aberrated_dep_ssb()
+
+            # Construct a rotation matrix from J2000 to a frame in which the
+            # Z-axis points along -dep and the J2000 pole is in the X-Z plane.
+            # As it appears to the observer, the Z-axis points toward the body,
+            # the X-axis points toward celestial north as projected on the sky,
+            # and the Y-axis points toward celestial west (not east!).
+            rotmat = Matrix3.twovec(-dep, 2, Vector3.ZAXIS, 0)
+
+            # Rotate the body frame's Z-axis to this frame.
+            pole = rotmat * pole_j2000
+
+            # Convert the X and Y components of the rotated pole into an angle
+            coords = pole.as_scalars()
+            clock_angle = coords[1].arctan2(coords[0]) % TWOPI
+
+            self.register_gridless_backplane(key, clock_angle)
+
+        return self.backplanes[key]
+
+    def pole_position_angle(self, event_key):
+        """Projected angle of a body's pole vector on the sky, measured from
+        celestial north toward celestial east (i.e., counterclockwise on the
+        sky)."""
+
+        event_key = Backplane.standardize_event_key(event_key)
+
+        key = ("pole_position_angle", event_key)
+        if key not in self.backplanes.keys():
+            self.register_gridless_backplane(key,
+                                TWOPI - self.pole_clock_angle(event_key))
 
         return self.backplanes[key]
 
@@ -2456,6 +2610,7 @@ class Backplane(object):
 
     CALLABLES = {
         "right_ascension", "declination",
+        "celestial_north_angle", "celestial_east_angle",
         "center_right_ascension", "center_declination",
 
         "distance", "light_time", "event_time", "resolution",
@@ -2469,6 +2624,9 @@ class Backplane(object):
 
         "longitude", "latitude",
         "sub_longitude", "sub_latitude",
+        "sub_solar_longitude", "sub_observer_longitude",
+        "sub_solar_latitude", "sub_observer_latitude",
+        "pole_clock_angle", "pole_position_angle",
         "finest_resolution", "coarsest_resolution",
         "altitude",
 
