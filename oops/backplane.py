@@ -2671,7 +2671,7 @@ from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
 UNITTEST_PRINT = False
 UNITTEST_LOGGING = False
-UNITTEST_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/ISS/W1573721822_1.IMG")
+UNITTEST_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/W1573721822_1.IMG")
 UNITTEST_UNDERSAMPLE = 16
 
 def show_info(title, array):

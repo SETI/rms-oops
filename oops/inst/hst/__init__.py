@@ -903,7 +903,7 @@ class Test_HST(unittest.TestCase):
 
         APR = 180./np.pi * 3600.
 
-        prefix = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/hst")
+        prefix = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst")
         snapshot = from_file(os.path.join(prefix, "ibht07svq_drz.fits"))
         self.assertEqual(snapshot.instrument, "WFC3")
         self.assertEqual(snapshot.detector, "IR")
@@ -948,7 +948,7 @@ class Test_HST(unittest.TestCase):
         self.assertRaises(IOError, from_file, os.path.join(prefix, "a.b.c.d"))
 
         # Raw ACS/HRC, full-frame with overscan pixels
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/hst/j9dh35h7q_raw.fits")
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/j9dh35h7q_raw.fits")
         snapshot = from_file(filespec)
         hst_file = pyfits.open(filespec)
         self.assertEqual(snapshot.filter, "F475W")

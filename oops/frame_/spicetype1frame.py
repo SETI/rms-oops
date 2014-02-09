@@ -176,7 +176,7 @@ class SpiceType1Frame(Frame):
 
 import unittest
 
-class Test_SpiceFrame(unittest.TestCase):
+class Test_SpiceType1Frame(unittest.TestCase):
 
     def runTest(self):
         pass                # TBD

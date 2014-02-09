@@ -70,9 +70,9 @@ def show_info(title, array):
                 if PAUSE: ignore = raw_input(title + ": ")
 
 # Pick a file, any file
-# filespec = "test_data/hst/ibht02v4q_flt.fits"
-filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/hst/ibht02v5q_flt.fits")
-# filespec = "test_data/hst/ibht02v6q_flt.fits"
+# filespec = "hst/ibht02v4q_flt.fits"
+filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/ibht02v5q_flt.fits")
+# filespec = "hst/ibht02v6q_flt.fits"
 
 # Create the snapshot object. It contains everything you need to know.
 snapshot = hst.from_file(filespec)

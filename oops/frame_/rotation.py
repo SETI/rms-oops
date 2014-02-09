@@ -119,7 +119,7 @@ class Rotation(Frame, Fittable):
 
 import unittest
 
-class Test_Rotate(unittest.TestCase):
+class Test_Rotation(unittest.TestCase):
 
     def runTest(self):
 

@@ -397,8 +397,8 @@ class Test_Ansa(unittest.TestCase):
     
     def runTest(self):
 
-        import oops_.frame.all
-        import oops_.path.all
+        import oops.frame_ as frame
+        import oops.path_ as path
 
         surface = Ansa("SSB", "J2000")
 

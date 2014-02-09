@@ -540,7 +540,7 @@ class Test_Cassini_UVIS_Suite(unittest.TestCase):
 
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
         
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/UVIS/COUVIS_0034/DATA/D2011_090/EUV2011_090_23_13.LBL")
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/UVIS/COUVIS_0034/DATA/D2011_090/EUV2011_090_23_13.LBL")
         pushbroom = uvis_test_suite(filespec, UNITTEST_DERIVS,
                                   UNITTEST_PRINTING, False)
         

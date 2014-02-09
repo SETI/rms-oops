@@ -125,6 +125,10 @@ class Test_SpiceFrame(unittest.TestCase):
         from oops.event import Event
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
 
@@ -237,21 +241,21 @@ class Test_SpiceFrame(unittest.TestCase):
         ########################################
 
         # Load all the required kernels for Cassini ISS on 2007-312
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "naif0009.tls"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "cas00149.tsc"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "cas_v40.tf"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "cas_status_v04.tf"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "cas_iss_v10.ti"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "pck00010.tpc"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "cpck14Oct2011.tpc"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "de421.bsp"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "sat052.bsp"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "sat083.bsp"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "sat125.bsp"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "sat128.bsp"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "sat164.bsp"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "07312_07317ra.bc"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "080123R_SCPSE_07309_07329.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "naif0009.tls"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "cas00149.tsc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "cas_v40.tf"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "cas_status_v04.tf"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "cas_iss_v10.ti"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "cpck14Oct2011.tpc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "sat052.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "sat083.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "sat125.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "sat128.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "sat164.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "07312_07317ra.bc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "080123R_SCPSE_07309_07329.bsp"))
 
         ignore = SpicePath("CASSINI", "SSB")
         ignore = SpiceFrame("CASSINI_ISS_NAC")

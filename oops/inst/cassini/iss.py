@@ -190,8 +190,8 @@ class Test_Cassini_ISS(unittest.TestCase):
 
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
-        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/ISS/index.lbl"))
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/ISS/W1575634136_1.IMG"))
+        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/index.lbl"))
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/W1575634136_1.IMG"))
         snapshot3940 = snapshots[3940]  #should be same as snapshot
     
         self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)

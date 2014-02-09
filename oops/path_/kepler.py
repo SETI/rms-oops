@@ -662,7 +662,7 @@ class Test_Kepler(unittest.TestCase):
         # NODE0 = 7    elements[NODE0] = longitude of ascending node at epoch
         # DNODE = 8    elements[DNODE] = nodal regression rate (radians/s)
 
-        import oops_.body as body
+        import oops.body as body
         body.define_solar_system("1999-01-01", "2002-01-01")
 
         a = 140000.

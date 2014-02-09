@@ -54,9 +54,9 @@ class Test_spice_body(unittest.TestCase):
 
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "naif0009.tls"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "pck00010.tpc"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/SPICE", "de421.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "naif0009.tls"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
 
         ignore = SpicePath("VENUS", "SSB", "J2000", "APHRODITE")
         ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")

@@ -4,4 +4,6 @@
 # 1/27/14 - Created by RSF
 ################################################################################
 
-TESTDATA_PARENT_DIRECTORY = "p:/SETI/devel/src/pds-tools"
+import os
+
+TESTDATA_PARENT_DIRECTORY = os.environ["OOPS_TEST_DATA"]

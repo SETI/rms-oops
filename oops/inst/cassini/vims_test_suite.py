@@ -511,8 +511,8 @@ class Test_Cassini_VIMS_Suite(unittest.TestCase):
 
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
         
-        #filespec = "test_data/cassini/VIMS/V1546355804_1.QUB"
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/VIMS/V1463282505_1.QUB")
+        #filespec = "cassini/VIMS/V1546355804_1.QUB"
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/VIMS/V1463282505_1.QUB")
         pushbrooms = vims_test_suite(filespec, UNITTEST_DERIVS,
                                      UNITTEST_PRINTING, DISPLAY)
         

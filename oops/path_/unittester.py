@@ -14,9 +14,9 @@ from oops.path_.fixedpath  import Test_FixedPath
 from oops.path_.multipath  import Test_MultiPath
 from oops.path_.spicepath  import Test_SpicePath
 
-cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/spice/naif0009.tls"))
-cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/spice/pck00010.tpc"))
-cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/spice/de421.bsp"))
+cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
+cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
+cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
 ########################################
 if __name__ == '__main__':

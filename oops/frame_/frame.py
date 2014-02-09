@@ -745,6 +745,13 @@ class Test_Frame(unittest.TestCase):
         # Imports are here to avoid conflicts
         from spiceframe import SpiceFrame
         from oops.path_.spicepath import SpicePath
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+        import cspice
+        import os
+        
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
         registry.initialize()
 

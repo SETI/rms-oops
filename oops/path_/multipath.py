@@ -130,6 +130,12 @@ class Test_MultiPath(unittest.TestCase):
     def runTest(self):
 
         from spicepath import SpicePath
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+        import os
+        
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "naif0009.tls"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
 
         registry.initialize()
 

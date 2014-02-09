@@ -518,7 +518,7 @@ class Test_Cassini_ISS_Suite(unittest.TestCase):
         
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
 
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/cassini/ISS/W1573721822_1.IMG")
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/W1573721822_1.IMG")
         snapshot = iss_test_suite(filespec, UNITTEST_DERIVS,
                                   UNITTEST_PRINTING, DISPLAY)
 

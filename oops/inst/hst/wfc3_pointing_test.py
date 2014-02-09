@@ -20,7 +20,7 @@ def correlate2d(image, model, normalize=False):
     return corr
 
 # Create the snapshot object
-filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "test_data/hst/ibht02v5q_flt.fits")
+filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/ibht02v5q_flt.fits")
 snapshot = hst.from_file(filespec)
 pylab.imshow(snapshot.data)
 

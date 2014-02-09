@@ -12,6 +12,7 @@ from oops.format_.unittester  import *
 from oops.fov_.unittester     import *
 from oops.frame_.unittester   import *
 from oops.nav_.unittester     import *
+from oops.obs_.unittester     import *
 from oops.path_.unittester    import *
 from oops.surface_.unittester import *
 
