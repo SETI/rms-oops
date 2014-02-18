@@ -14,7 +14,7 @@ from oops.inst.nh.nh_ import NewHorizons
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, parameters={}):
+def from_file(filespec, use_fits_geom=False, parameters={}):
     """A general, static method to return a Snapshot object based on a given
     NewHorizons LORRI image file."""
 
@@ -33,10 +33,33 @@ def from_file(filespec, parameters={}):
     NewHorizons.load_cks( tstart, tstart + texp)
     NewHorizons.load_spks(tstart, tstart + texp)
 
+    path_id = "NEW HORIZONS"
+    frame_id = "NH_LORRI_"+binning_mode
+    data = nh_file[0].data
+    
+    if use_fits_geom:
+        # We first need to construct a path from the Sun to NH
+        vecx = -nh_file[0].header["SPCSSCX"]
+        vecy = -nh_file[0].header["SPCSSCY"]
+        vecz = -nh_file[0].header["SPCSSCZ"]
+        ra = nh_file[0].header["SPCBRRA"]
+        dec = nh_file[0].header["SPCBRDEC"]
+        north_clk = nh_file[0].header["SPCEMEN"]
+        scet = nh_file[0].header["SPCSCET"]
+        path_id = "NH_LORRI_PATH_"+str(scet)
+        frame_id = "NH_LORRI_FRAME_"+str(scet)
+        sc_path = oops.path.FixedPath(oops.Vector3([vecx, vecy, vecz]), "SUN", "J2000", path_id)
+        oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk, frame_id+"_FLIPPED", "J2000")
+        # We have to flip the X/Y axes
+        flipxy = oops.Matrix3([[0,1,0],
+                               [1,0,0],
+                               [0,0,1]])
+        ignore = oops.frame.Cmatrix(flipxy, frame_id, frame_id+"_FLIPPED")
+        
     # Create a Snapshot
     result = oops.obs.Snapshot(("v","u"), tstart, texp, LORRI.fovs[binning_mode],
-                               "NEW HORIZONS", "NH_LORRI_"+binning_mode,
-                               data = nh_file[0].data,      # Add the data array
+                               path_id, frame_id,
+                               data = data,      # Add the data array
                                instrument = "LORRI")
                                
     return result
@@ -101,7 +124,7 @@ class LORRI(object):
 
     @staticmethod
     def initialize():
-        """Fills in key information about the WAC and NAC. Must be called first.
+        """Fills in key information about LORRI. Must be called first.
         """
 
         # Quick exit after first call
@@ -138,11 +161,15 @@ class LORRI(object):
         ignore = oops.frame.SpiceFrame("NH_LORRI_1x1", id='NH_LORRI_1X1_FLIPPED')
         ignore = oops.frame.SpiceFrame("NH_LORRI_4x4", id='NH_LORRI_4X4_FLIPPED')
 
-        rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,-1]])
-        ignore = oops.frame.Cmatrix(rot180, "NH_LORRI_1X1",
-                                            "NH_LORRI_1X1_FLIPPED")
-        ignore = oops.frame.Cmatrix(rot180, "NH_LORRI_4X4",
-                                            "NH_LORRI_4X4_FLIPPED")
+        # For some reason the SPICE IK gives the boresight along -Z instead of +Z,
+        # so we have to flip all axes.
+        flipxyz = oops.Matrix3([[-1, 0, 0],
+                                [ 0,-1, 0],
+                                [ 0, 0,-1]])
+        oops.frame.Cmatrix(flipxyz, "NH_LORRI_1X1",
+                           "NH_LORRI_1X1_FLIPPED")
+        oops.frame.Cmatrix(flipxyz, "NH_LORRI_4X4",
+                           "NH_LORRI_4X4_FLIPPED")
 
         LORRI.initialized = True
 
@@ -174,6 +201,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
 
     def runTest(self):
 
+        assert False
+        
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
         snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/index.lbl"))

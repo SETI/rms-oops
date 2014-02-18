@@ -75,7 +75,7 @@ class NewHorizons(object):
         NewHorizons.initialize_kernels(kernels, NewHorizons.CK_LIST, NewHorizons.CK_DICT)
 
         kernels = spicedb.select_kernels("SPK", path=NewHorizons.SPK_SUBPATH,
-                                          time=("1000-01-01", "2999-12-31"))
+                                         time=("1000-01-01", "2999-12-31"))
         NewHorizons.initialize_kernels(kernels, NewHorizons.SPK_LIST, NewHorizons.SPK_DICT)
 
         spicedb.close_db()
@@ -110,7 +110,7 @@ class NewHorizons(object):
         been furnished. The time can be tai or tdb."""
 
         NewHorizons.load_kernels(t, t, NewHorizons.CK_LOADED, NewHorizons.CK_LIST,
-                                   NewHorizons.CK_DICT)
+                                 NewHorizons.CK_DICT)
 
     @staticmethod
     def load_cks(t0, t1):
@@ -119,7 +119,7 @@ class NewHorizons(object):
         """
 
         NewHorizons.load_kernels(t0, t1, NewHorizons.CK_LOADED, NewHorizons.CK_LIST,
-                                     NewHorizons.CK_DICT)
+                                 NewHorizons.CK_DICT)
 
     @staticmethod
     def load_spk(t):
@@ -127,7 +127,7 @@ class NewHorizons(object):
         been furnished. The time can be tai or tdb."""
 
         NewHorizons.load_kernels(t, t, NewHorizons.SPK_LOADED, NewHorizons.SPK_LIST,
-                                   NewHorizons.SPK_DICT)
+                                 NewHorizons.SPK_DICT)
 
     @staticmethod
     def load_spks(t0, t1):
@@ -135,7 +135,7 @@ class NewHorizons(object):
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb."""
 
         NewHorizons.load_kernels(t0, t1, NewHorizons.SPK_LOADED, NewHorizons.SPK_LIST,
-                                     NewHorizons.SPK_DICT)
+                                 NewHorizons.SPK_DICT)
 
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, dict):
@@ -210,7 +210,7 @@ class NewHorizons(object):
 
         # Check the formatting of the "as of" date
         if asof is not None:
-            (day, sec) = julian.day_sec_from_iso(AS_OF)
+            (day, sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()
