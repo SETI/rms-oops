@@ -18,7 +18,7 @@ DEBUG = False       # True to assert that the data array must have null
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, data=False, enclose=False):
+def from_file(filespec, data=False, enclose=False, **parameters):
     """A general, static method to return one or more Observation subclass
     objects based on a label for a given Cassini UVIS file.
 

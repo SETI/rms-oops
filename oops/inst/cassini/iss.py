@@ -14,7 +14,7 @@ from oops.inst.cassini.cassini_ import Cassini
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, parameters={}):
+def from_file(filespec, **parameters):
     """A general, static method to return a Snapshot object based on a given
     Cassini ISS image file."""
 
@@ -52,7 +52,7 @@ def from_file(filespec, parameters={}):
 
 ################################################################################
 
-def from_index(filespec, parameters={}):
+def from_index(filespec, **parameters):
     """A static method to return a list of Snapshot objects, one for each row
     in an ISS index file. The filespec refers to the label of the index file.
     """
