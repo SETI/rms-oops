@@ -211,7 +211,7 @@ class Cassini(object):
 
         # Check the formatting of the "as of" date
         if asof is not None:
-            (day, sec) = julian.day_sec_from_iso(AS_OF)
+            (day, sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()

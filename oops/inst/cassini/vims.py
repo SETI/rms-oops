@@ -78,7 +78,7 @@ VIS_FULL_FOV = oops.fov.Flat(VIS_NORMAL_SCALE, oops.Pair((64,64)))
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, fast=False):
+def from_file(filespec, fast=False, **parameters):
     """A general, static method to return a pair of Observation objects based on
     a given Cassini VIMS data file or label file.
 
