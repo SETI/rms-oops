@@ -149,7 +149,7 @@ class Frame(object):
 
         # If the ID is unregistered, insert this as the primary definition
         key = self.frame_id
-        if key not in registry.FRAME_REGISTRY.keys():
+        if not registry.FRAME_REGISTRY.has_key(key):
             registry.FRAME_REGISTRY[key] = self
 
             # Fill in the ancestry too
@@ -365,7 +365,7 @@ class Frame(object):
         steps = (tmax - tmin)/dt + 2*extras
 
         # If QuickFrames already exists...
-        if "quickframes" in self.__dict__.keys():
+        if self.__dict__.has_key("quickframes"):
             existing_quickframes = self.quickframes
         else:
             existing_quickframes = []

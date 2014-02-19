@@ -152,7 +152,7 @@ class Edelta(object):
         if key in ("arr","dep"):
             self.subfields[key] = Empty()
             self.__dict__[key] = self.subfields[key]
-        elif key in self.subfields.keys():
+        elif self.subfields.has_key(key):
             del self.subfields[key]
             del self.__dict__[key]
 
@@ -168,7 +168,7 @@ class Edelta(object):
         """Adds to an existing subfield of the same name, or else inserts a new
         subfield with this value."""
 
-        if key in self.subfields.keys():
+        if self.subfields.has_key(key):
             self.subfields[key] = self.subfields[key] + value 
             self.__dict__[key] = self.subfields[key]
             return

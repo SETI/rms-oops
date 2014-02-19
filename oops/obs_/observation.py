@@ -227,7 +227,7 @@ class Observation(object):
         if key in ("arr","dep"):
             self.subfields[key] = Empty()
             self.__dict__[key] = self.subfields[key]
-        elif key in self.subfields.keys():
+        elif self.subfields.has_key(key):
             del self.subfields[key]
             del self.__dict__[key]
 

@@ -30,7 +30,7 @@ class Fittable(object):
         """
 
         key = tuple(params)
-        if key in self.cache.keys():
+        if self.cache.has_key(key):
             return self.cache[key]
 
         result = self.set_params_new(params)

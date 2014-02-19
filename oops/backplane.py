@@ -433,7 +433,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("right_ascension", event_key, apparent, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_ra_dec(event_key, apparent, direction)
 
         return self.backplanes[key]
@@ -455,7 +455,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("declination", event_key, apparent, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_ra_dec(event_key, apparent, direction)
 
         return self.backplanes[key]
@@ -491,7 +491,7 @@ class Backplane(object):
         except KeyError: pass
 
         temp_key = ("dlos_ddec", event_key)
-        if temp_key not in self.backplanes.keys():
+        if not self.backplanes.has_key(temp_key):
             self._fill_dlos_dradec(event_key)
 
         dlos_ddec = self.backplanes[temp_key]
@@ -521,7 +521,7 @@ class Backplane(object):
         except KeyError: pass
 
         temp_key = ("dlos_dra", event_key)
-        if temp_key not in self.backplanes.keys():
+        if not self.backplanes.has_key(temp_key):
             self._fill_dlos_dradec(event_key)
 
         dlos_dra = self.backplanes[temp_key]
@@ -598,7 +598,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("center_right_ascension", event_key, apparent, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_center_ra_dec(event_key, apparent, direction)
 
         return self.backplanes[key]
@@ -619,7 +619,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("center_declination", event_key, apparent, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_center_ra_dec(event_key, apparent, direction)
 
         return self.backplanes[key]
@@ -661,7 +661,7 @@ class Backplane(object):
         assert direction in ("dep", "arr")
 
         key = ("distance", event_key, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             lt = self.light_time(event_key, direction)
             self.register_backplane(key, lt * constants.C)
 
@@ -680,7 +680,7 @@ class Backplane(object):
         assert direction in ("dep", "arr")
 
         key = ("light_time", event_key, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             if direction == "arr":
                 event = self.get_surface_event_with_arr(event_key)
             else:
@@ -702,7 +702,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("event_time", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_surface_event(event_key)
             self.register_backplane(key, event.time)
 
@@ -724,7 +724,7 @@ class Backplane(object):
         assert axis in ("u","v")
 
         key = ("resolution", event_key, axis)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             distance = self.distance(event_key)
 
             (dlos_du, dlos_dv) = self.meshgrid.dlos_duv.as_columns()
@@ -757,7 +757,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("center_distance", event_key, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             lt = self.center_light_time(event_key, direction)
             self.register_gridless_backplane(key, lt * constants.C)
 
@@ -779,7 +779,7 @@ class Backplane(object):
         assert direction in ("obs", "sun", "dep", "arr")
 
         key = ("center_light_time", event_key, direction)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             if direction in ("sun", "arr"):
                 event = self.get_gridless_event_with_arr(event_key)
                 lt = event.arr_lt
@@ -802,7 +802,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("center_time", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
             self.register_gridless_backplane(key, event.time)
 
@@ -824,7 +824,7 @@ class Backplane(object):
         assert axis in ("u","v")
 
         key = ("center_resolution", event_key, axis)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             distance = self.center_distance(event_key)
 
             (dlos_du, dlos_dv) = self.obs.fov.center_dlos_duv.as_columns()
@@ -852,7 +852,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("incidence_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_surface_event_with_arr(event_key)
             incidence = event.incidence_angle()
 
@@ -879,7 +879,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("emission_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_surface_event(event_key)
             emission = event.emission_angle()
 
@@ -906,7 +906,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("phase_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_surface_event_with_arr(event_key)
             self.register_backplane(key, event.phase_angle())
 
@@ -921,7 +921,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("scattering_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self.register_backplane(key, np.pi - self.phase_angle(event_key))
 
         return self.backplanes[key]
@@ -935,7 +935,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("lambert_law", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             incidence = self.incidence_angle(event_key)
             lambert_law = incidence.cos()
             lambert_law.mask |= (incidence.vals >= HALFPI)
@@ -966,7 +966,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("center_incidence_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event_with_arr(event_key)
 
             # Sign on event.arr is negative because photon is incoming
@@ -999,7 +999,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("center_emission_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
 
             latitude = (event.dep.as_scalar(2) / event.dep.norm()).arcsin()
@@ -1029,7 +1029,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("center_phase_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event_with_arr(event_key)
             self.register_gridless_backplane(key, event.phase_angle())
 
@@ -1044,7 +1044,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("center_scattering_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             angle = np.pi - self.center_phase_angle(event_key)
             self.register_gridless_backplane(key, angle)
 
@@ -1083,13 +1083,13 @@ class Backplane(object):
         # Look up under the desired reference
         key0 = ("longitude", event_key)
         key = key0 + (reference, direction, minimum)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # If it is not found with default keys, fill in those backplanes
         # Note that longitudes default to eastward for right-handed coordinates
         key_default = key0 + ("iau", "east", 0)
-        if key_default not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_default):
             self._fill_surface_intercepts(event_key)
 
         # Fill in the values for this key
@@ -1134,12 +1134,12 @@ class Backplane(object):
         # Look up under the desired reference
         key0 = ("latitude", event_key)
         key = key0 + (lat_type,)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # If it is not found with default keys, fill in those backplanes
         key_default = key0 + ("squashed",)
-        if key_default not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_default):
             self._fill_surface_intercepts(event_key)
 
         # Fill in the values for this key
@@ -1221,7 +1221,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         key = ("sub_solar_longitude", event_key)
 
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event_with_arr(event_key)
             arr = -event.aberrated_arr()
             lon = arr.as_scalar(1).arctan2(arr.as_scalar(0)) % TWOPI
@@ -1238,7 +1238,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         key = ("sub_observer_longitude", event_key)
 
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
             dep = event.aberrated_dep()
             lon = dep.as_scalar(1).arctan2(dep.as_scalar(0)) % TWOPI
@@ -1272,7 +1272,7 @@ class Backplane(object):
         assert lat_type in ("centric", "graphic")
 
         key = ("sub_solar_latitude", event_key, lat_type)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event_with_arr(event_key)
             arr = -event.aberrated_arr()
 
@@ -1291,7 +1291,7 @@ class Backplane(object):
         assert lat_type in ("centric", "graphic")
 
         key = ("sub_observer_latitude", event_key, lat_type)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
             dep = event.aberrated_dep()
 
@@ -1312,7 +1312,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("pole_clock_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
 
             # Get the body frame's Z-axis in J2000 coordinates
@@ -1349,7 +1349,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         key = ("pole_position_angle", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self.register_gridless_backplane(key,
                                 TWOPI - self.pole_clock_angle(event_key))
 
@@ -1371,7 +1371,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("finest_resolution", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_surface_resolution(event_key)
 
         return self.backplanes[key]
@@ -1386,7 +1386,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("coarsest_resolution", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_surface_resolution(event_key)
 
         return self.backplanes[key]
@@ -1418,7 +1418,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("altitude", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_limb_intercepts(event_key)
 
         return self.backplanes[key]
@@ -1455,7 +1455,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("ring_radius", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_ring_intercepts(event_key)
 
         return self.backplanes[key]
@@ -1485,12 +1485,12 @@ class Backplane(object):
 
         # Look up under the desired reference
         key = ("ring_longitude", event_key, reference)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # If it is not found with reference="node", fill in those backplanes
         key_node = key[:-1] + ("node",)
-        if key_node not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_node):
             self._fill_ring_intercepts(event_key)
 
         # Now apply the reference longitude
@@ -1533,7 +1533,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         key = ("_aries_ring_longitude", event_key)
 
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
             frame = registry.frame_lookup(event.frame_id)
             lon = (-frame.node_at_time(event.time)) % TWOPI
@@ -1562,11 +1562,11 @@ class Backplane(object):
 
         # Look up under the desired reference
         key = ("ring_azimuth", event_key, reference)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # If not found, fill in the ring events if necessary
-        if ("ring_radius", event_key) not in self.backplanes.keys():
+        if not self.backplanes.has_key(("ring_radius", event_key)):
             self._fill_ring_intercepts(event_key)
 
         # reference = "obs"
@@ -1606,11 +1606,11 @@ class Backplane(object):
 
         # Look up under the desired reference
         key = ("ring_elevation", event_key, reference)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # If not found, fill in the ring events if necessary
-        if ("ring_radius", event_key) not in self.backplanes.keys():
+        if not self.backplanes.has_key(("ring_radius", event_key)):
             self._fill_ring_intercepts(event_key)
 
         # reference = "obs"
@@ -1650,7 +1650,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("_sub_observer_ring_longitude", event_key)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # At each intercept time, determine the outgoing direction to the
@@ -1677,7 +1677,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("_sub_solar_ring_longitude", event_key)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # At each intercept time, determine the incoming direction from the Sun
@@ -1727,12 +1727,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ("ring_incidence_angle", event_key, pole)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # Derive the prograde incidence angle if necessary
         key_prograde = key[:-1] + ("prograde",)
-        if key_prograde not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_prograde):
             event = self.get_surface_event_with_arr(event_key)
             incidence = event.incidence_angle()
             self.register_backplane(key_prograde, incidence)
@@ -1777,12 +1777,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ("ring_emission_angle", event_key, pole)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # Derive the prograde emission angle if necessary
         key_prograde = key[:-1] + ("prograde",)
-        if key_prograde not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_prograde):
             event = self.get_surface_event(event_key)
             emission = event.emission_angle()
             self.register_backplane(key_prograde, emission)
@@ -1835,7 +1835,7 @@ class Backplane(object):
 
         # Return a cached backplane if it exists
         key = ("sub_ring_longitude", event_key, reference, origin)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # Otherwise, create the backplane
@@ -1871,12 +1871,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ("ring_center_incidence_angle", event_key, pole)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # Derive the prograde incidence angle if necessary
         key_prograde = key[:-1] + ("prograde",)
-        if key_prograde not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_prograde):
             event = self.get_gridless_event_with_arr(event_key)
 
             # Sign on event.arr is negative because photon is incoming
@@ -1927,12 +1927,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ("ring_center_emission_angle", event_key, pole)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # Derive the prograde emission angle if necessary
         key_prograde = key[:-1] + ("prograde",)
-        if key_prograde not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_prograde):
             event = self.get_gridless_event(event_key)
 
             latitude = (event.dep.as_scalar(2) / event.dep.norm()).arcsin()
@@ -2029,14 +2029,14 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         key0 = ("ansa_radius", event_key)
         key = key0 + (radius_type,)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # If not found, look up the default "right"
         assert radius_type in ("right", "left", "positive")
 
         key_default = key0 + ("right",)
-        if key_default not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_default):
             self._fill_ansa_intercepts(event_key)
 
             backplane = self.backplanes[key_default]
@@ -2058,7 +2058,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("ansa_altitude", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             self._fill_ansa_intercepts(event_key)
 
         return self.backplanes[key]
@@ -2089,12 +2089,12 @@ class Backplane(object):
         # Look up under the desired reference
         key0 = ("ansa_longitude", event_key)
         key = key0 + (reference,)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # If it is not found with reference J2000, fill in those backplanes
         key_node = key0 + ("node",)
-        if key_node not in self.backplanes.keys():
+        if not self.backplanes.has_key(key_node):
             self._fill_ansa_longitudes(event_key)
 
         # Now apply the reference longitude
@@ -2165,7 +2165,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("_sub_observer_ansa_longitude", event_key)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # At each intercept time, determine the outgoing direction to the
@@ -2191,7 +2191,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("_sub_solar_ansa_longitude", event_key)
-        if key in self.backplanes.keys():
+        if self.backplanes.has_key(key):
             return self.backplanes[key]
 
         # At each intercept time, determine the incoming direction from the Sun
@@ -2277,7 +2277,7 @@ class Backplane(object):
 
         event_key  = Backplane.standardize_event_key(event_key)
         key = ("where_intercepted", event_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_surface_event(event_key)
             mask = self.mask_as_scalar(np.logical_not(event.mask))
             self.register_backplane(key, mask)
@@ -2291,7 +2291,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         shadow_body = Backplane.standardize_event_key(shadow_body)
         key = ("where_inside_shadow", event_key, shadow_body[0])
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
             mask = self.mask_as_scalar(np.logical_not(event.mask) &
@@ -2307,7 +2307,7 @@ class Backplane(object):
         event_key  = Backplane.standardize_event_key(event_key)
         shadow_body = Backplane.standardize_event_key(shadow_body)
         key = ("where_outside_shadow", event_key, shadow_body[0])
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
             mask = self.mask_as_scalar(np.logical_not(event.mask) &
@@ -2324,7 +2324,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         back_body  = Backplane.standardize_event_key(back_body)
         key = ("where_in_front", event_key, back_body[0])
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
 
             # A surface is in front if it is unmasked and the second surface is
             # either masked or further away.
@@ -2346,7 +2346,7 @@ class Backplane(object):
         front_body = Backplane.standardize_event_key(front_body)
 
         key = ("where_in_back", event_key, front_body[0])
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
 
             # A surface is in back if it is unmasked and the second surface is
             # both unmasked and closer.
@@ -2367,7 +2367,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("where_sunward",) + event_key
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_scalar((incidence.vals <= HALFPI) &
                                        np.logical_not(incidence.mask))
@@ -2381,7 +2381,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ("where_antisunward",) + event_key
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_scalar((incidence.vals > HALFPI) &
                                        np.logical_not(incidence.mask))
@@ -2399,7 +2399,7 @@ class Backplane(object):
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
         key = ("where_below", backplane_key, value)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = self.evaluate(backplane_key)
             mask = self.mask_as_scalar((backplane.vals <= value) &
                                        np.logical_not(backplane.mask))
@@ -2413,7 +2413,7 @@ class Backplane(object):
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
         key = ("where_above", backplane_key, value)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = self.evaluate(backplane_key)
             mask = self.mask_as_scalar((backplane.vals >= value) &
                                        np.logical_not(backplane.mask))
@@ -2427,7 +2427,7 @@ class Backplane(object):
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
         key = ("where_between", backplane_key, low, high)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = self.evaluate(backplane_key)
             mask = self.mask_as_scalar((backplane.vals >= low) &
                                        (backplane.vals <= high) &
@@ -2442,7 +2442,7 @@ class Backplane(object):
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
         key = ("where_not", backplane_key)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = self.evaluate(backplane_key)
             self.register_backplane(key, ~backplane)
 
@@ -2453,7 +2453,7 @@ class Backplane(object):
         backplanes is True."""
 
         key = ("where_any",) + backplane_keys
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = self.evaluate(backplane_keys[0])
             for next_mask in backplane_keys[1:]:
                 backplane |= self.evaluate(next_mask)
@@ -2467,7 +2467,7 @@ class Backplane(object):
         backplanes are True."""
 
         key = ("where_all",) + backplane_keys
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = self.evaluate(backplane_keys[0])
             for next_mask in backplane_keys[1:]:
                 backplane &= self.evaluate(next_mask)
@@ -2492,7 +2492,7 @@ class Backplane(object):
         else:
             key = ("border_below", backplane_key, value)
 
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = sign * (self.evaluate(backplane_key) - value)
             border = np.zeros(self.meshgrid.shape, dtype="bool")
 
@@ -2530,7 +2530,7 @@ class Backplane(object):
 
         backplane_key = Backplane.standardize_backplane_key(backplane_key)
         key = ("border_atop", backplane_key, value)
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             absval = self.evaluate(backplane_key) - value
             sign = absval.sign()
             absval *= sign
@@ -2565,7 +2565,7 @@ class Backplane(object):
         else:
             key = ("border_outside", backplane_key)
 
-        if key not in self.backplanes.keys():
+        if not self.backplanes.has_key(key):
             backplane = self.evaluate(backplane_key) ^ np.logical_not(value)
             # Reverses the backplane if value is False
             border = np.zeros(backplane.shape, dtype="bool")
