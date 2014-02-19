@@ -1,5 +1,7 @@
 ################################################################################
 # oops/inst/nh/lorri.py
+#
+# 2/9/14 Created (RSF)
 ################################################################################
 
 import numpy as np
@@ -28,12 +30,6 @@ def from_file(filespec, use_fits_geom=False, **parameters):
     If parameters["astrometry"] is True, this is equivalent to data=False,
     calibration=False, headers=False.
 
-    If parameters["calib_body"] is specified, it overrides the spectral type of
-    the target body. Valid body names are found in the LORRI documentation and
-    are currently: SOLAR, PLUTO, PHOLUS, CHARON, and JUPITER. The default
-    is based on the target body. If the target body is not a valid spectral type,
-    an exception is raised.
-    
     If parameters["solar_range"] is specified, it overrides the distance from the
     Sun to the target body (in AU) for calibration purposes.
     """
@@ -66,7 +62,7 @@ def from_file(filespec, use_fits_geom=False, **parameters):
         vecx = -nh_file[0].header["SPCSSCX"]
         vecy = -nh_file[0].header["SPCSSCY"]
         vecz = -nh_file[0].header["SPCSSCZ"]
-        path_id = "NH_LORRI_PATH_"+str(scet) # The path_id has to be unique to this observation
+        path_id = "NH_LORRI_PATH_"+str(tstart) # The path_id has to be unique to this observation
         sc_path = oops.path.FixedPath(oops.Vector3([vecx, vecy, vecz]), "SUN", "J2000", path_id)
 
         # Next create a frame based on the boresight
@@ -74,7 +70,7 @@ def from_file(filespec, use_fits_geom=False, **parameters):
         dec = nh_file[0].header["SPCBRDEC"]
         north_clk = nh_file[0].header["SPCEMEN"]
         scet = nh_file[0].header["SPCSCET"]
-        frame_id = "NH_LORRI_FRAME_"+str(scet) # The frame_id has to be unique to this observation
+        frame_id = "NH_LORRI_FRAME_"+str(tstart) # The frame_id has to be unique to this observation
         oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk, frame_id+"_FLIPPED", "J2000")
 
         # We have to flip the X/Y axes because the LORRI standard has X vertical and Y horizontal
@@ -117,17 +113,6 @@ def from_file(filespec, use_fits_geom=False, **parameters):
         if parameters.has_key("calib_body"):
             spectral_name = parameters["calib_body"]
     
-        # Extended source
-        try:
-            spectral_radiance = nh_file[0].header["R"+spectral_name]
-        except KeyError:
-            raise IOError("Unknown calibration spectral body "+spectral_name+" in file "+filespec)
-        # Point source
-        try:
-            spectral_irradiance = nh_file[0].header["P"+spectral_name]
-        except KeyError:
-            raise IOError("Unknown calibration spectral body "+spectral_name+" in file "+filespec)
-    
         # Look up the solar range...
         try:
             solar_range = parameters["solar_range"]
@@ -146,12 +131,19 @@ def from_file(filespec, use_fits_geom=False, **parameters):
         if solar_range is None:
             raise IOError("Calibration can't figure out range from Sun to target body "+target_name+" in file "+filespec)
 
-        F_solar = 176 # pivot 6076.2 A at 1 AU
-        extended_factor = 1/texp/spectral_radiance * np.pi * solar_range**2 / F_solar # Conversion to I/F
-        point_factor = 1/texp/spectral_irradiance
+        extended_calib = {}
+        point_calib = {}
+
+        for spectral_name in ["SOLAR", "PLUTO", "PHOLUS", "CHARON", "JUPITER"]:        
+            spectral_radiance = nh_file[0].header["R"+spectral_name] # Extended source
+            spectral_irradiance = nh_file[0].header["P"+spectral_name] # Point source
     
-        extended_calib = oops.calib.ExtendedSource("I/F", extended_factor)
-        point_calib = oops.calib.PointSource("I/F", point_factor, fov)
+            F_solar = 176 # pivot 6076.2 A at 1 AU
+            extended_factor = 1/texp/spectral_radiance * np.pi * solar_range**2 / F_solar # Conversion to I/F
+            point_factor = 1/texp/spectral_irradiance
+        
+            extended_calib[spectral_name] = oops.calib.ExtendedSource("I/F", extended_factor)
+            point_calib[spectral_name] = oops.calib.PointSource("I/F", point_factor, fov)
         
         snapshot.insert_subfield("point_calib", point_calib)
         snapshot.insert_subfield("extended_calib", extended_calib)
@@ -303,17 +295,103 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
 
     def runTest(self):
 
-        assert False
-        
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+        import cspice
+        
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                             astrometry=True)
+        self.assertFalse(snapshot.__dict__.has_key("data"))
+        self.assertFalse(snapshot.__dict__.has_key("quality"))
+        self.assertFalse(snapshot.__dict__.has_key("error"))
+        self.assertFalse(snapshot.__dict__.has_key("point_calib"))
+        self.assertFalse(snapshot.__dict__.has_key("extended_calib"))
+        self.assertFalse(snapshot.__dict__.has_key("headers"))
 
-        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/index.lbl"))
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/W1575634136_1.IMG"))
-        snapshot3940 = snapshots[3940]  #should be same as snapshot
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                             data=False, calibration=True)
+        self.assertFalse(snapshot.__dict__.has_key("data"))
+        self.assertFalse(snapshot.__dict__.has_key("quality"))
+        self.assertFalse(snapshot.__dict__.has_key("error"))
+        self.assertTrue(snapshot.__dict__.has_key("point_calib"))
+        self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
+        self.assertTrue(snapshot.__dict__.has_key("headers"))
     
-        self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
-        self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                             data=True, calibration=False)
+        self.assertTrue(snapshot.__dict__.has_key("data"))
+        self.assertTrue(snapshot.__dict__.has_key("quality"))
+        self.assertTrue(snapshot.__dict__.has_key("error"))
+        self.assertFalse(snapshot.__dict__.has_key("point_calib"))
+        self.assertFalse(snapshot.__dict__.has_key("extended_calib"))
+        self.assertTrue(snapshot.__dict__.has_key("headers"))
 
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                             headers=False)
+        self.assertTrue(snapshot.__dict__.has_key("data"))
+        self.assertTrue(snapshot.__dict__.has_key("quality"))
+        self.assertTrue(snapshot.__dict__.has_key("error"))
+        self.assertTrue(snapshot.__dict__.has_key("point_calib"))
+        self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
+        self.assertFalse(snapshot.__dict__.has_key("headers"))
+
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"))
+        self.assertTrue(snapshot.__dict__.has_key("data"))
+        self.assertTrue(snapshot.__dict__.has_key("quality"))
+        self.assertTrue(snapshot.__dict__.has_key("error"))
+        self.assertTrue(snapshot.__dict__.has_key("point_calib"))
+        self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
+        self.assertTrue(snapshot.__dict__.has_key("headers"))
+
+        self.assertTrue(snapshot.data.shape == (1024,1024))
+        self.assertTrue(snapshot.quality.shape == (1024,1024))
+        self.assertTrue(snapshot.error.shape == (1024,1024))
+        
+        self.assertAlmostEqual(snapshot.time[1]-snapshot.time[0], snapshot.texp)
+        self.assertAlmostEqual(snapshot.time[0]+snapshot.texp/2,
+                               cspice.utc2et(snapshot.headers[0]["SPCUTCID"]),
+                               places=3)
+        self.assertEqual(snapshot.target, "EUROPA")
+
+        snapshot_fits = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                                  use_fits_geom=True)
+        
+        self.assertEqual(snapshot.time, snapshot_fits.time)
+        self.assertEqual(snapshot.texp, snapshot_fits.texp)
+
+        meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (0,0), limit=(1,1))
+        bp = oops.Backplane(snapshot, meshgrid=meshgrid)
+        bp_fits = oops.Backplane(snapshot_fits, meshgrid=meshgrid)
+        ra =          bp.right_ascension().vals.astype('float')
+        ra_fits =     bp_fits.right_ascension().vals.astype('float')
+        dec =         bp.declination().vals.astype('float')
+        dec_fits =    bp_fits.declination().vals.astype('float')
+        europa =      bp.where_intercepted("europa").vals.astype('float')
+        europa_fits = bp_fits.where_intercepted("europa").vals.astype('float')
+
+        self.assertAlmostEqual(ra, ra_fits, places=3)
+        self.assertAlmostEqual(dec, dec_fits, places=3)
+        self.assertEqual(europa, 0.0)
+        self.assertEqual(europa_fits, 0.0)
+
+        meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (642,451), limit=(643,452))
+        bp = oops.Backplane(snapshot, meshgrid=meshgrid)
+        bp_fits = oops.Backplane(snapshot_fits, meshgrid=meshgrid)
+        long =        bp.longitude("europa").vals.astype('float')
+        long_fits =   bp_fits.longitude("europa").vals.astype('float')
+        lat =         bp.latitude("europa").vals.astype('float')
+        lat_fits =    bp_fits.latitude("europa").vals.astype('float')
+        europa =      bp.where_intercepted("europa").vals.astype('float')
+        europa_fits = bp_fits.where_intercepted("europa").vals.astype('float')
+        
+        self.assertAlmostEqual(long, long_fits, places=1)
+        self.assertAlmostEqual(lat, lat_fits, places=1)
+        self.assertEqual(europa, 1.0)
+        self.assertEqual(europa_fits, 1.0)
+
+        europa_iof = snapshot.extended_calib["CHARON"].value_from_dn(snapshot.data[451,642])
+        self.assertGreater(europa_iof, 0.4)
+        self.assertLess(europa_iof, 0.6)
+        
 ############################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
