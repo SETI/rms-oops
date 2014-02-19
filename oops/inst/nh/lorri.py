@@ -7,16 +7,36 @@ import julian
 import pyfits
 import pdstable
 import oops
+import oops.registry as registry
+import solar
 
 from oops.inst.nh.nh_ import NewHorizons
+
 
 ################################################################################
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, use_fits_geom=False, parameters={}):
+def from_file(filespec, use_fits_geom=False, **parameters):
     """A general, static method to return a Snapshot object based on a given
-    NewHorizons LORRI image file."""
+    NewHorizons LORRI image file.
+    
+    If parameters["data"] is False, no data or associated arrays are loaded.
+    If parameters["calibration"] is False, no calibration objects are created.
+    If parameters["headers"] is False, no header dictionary is returned.
+
+    If parameters["astrometry"] is True, this is equivalent to data=False,
+    calibration=False, headers=False.
+
+    If parameters["calib_body"] is specified, it overrides the spectral type of
+    the target body. Valid body names are found in the LORRI documentation and
+    are currently: SOLAR, PLUTO, PHOLUS, CHARON, and JUPITER. The default
+    is based on the target body. If the target body is not a valid spectral type,
+    an exception is raised.
+    
+    If parameters["solar_range"] is specified, it overrides the distance from the
+    Sun to the target body (in AU) for calibration purposes.
+    """
 
     LORRI.initialize()    # Define everything the first time through
 
@@ -28,6 +48,11 @@ def from_file(filespec, use_fits_geom=False, parameters={}):
     tdb_midtime = nh_file[0].header["SPCSCET"]
     tstart = tdb_midtime-texp/2
     binning_mode = nh_file[0].header["SFORMAT"]
+    fov = LORRI.fovs[binning_mode]
+    target_name = nh_file[0].header["SPCCBTNM"]
+    target_body = None
+    if registry.body_exists(target_name):
+        target_body = registry.body_lookup(target_name)
     
     # Make sure the SPICE kernels are loaded
     NewHorizons.load_cks( tstart, tstart + texp)
@@ -35,34 +60,110 @@ def from_file(filespec, use_fits_geom=False, parameters={}):
 
     path_id = "NEW HORIZONS"
     frame_id = "NH_LORRI_"+binning_mode
-    data = nh_file[0].data
     
-    if use_fits_geom:
-        # We first need to construct a path from the Sun to NH
+    if use_fits_geom: # Don't use the SPICE information to figure out where we're looking
+        # First construct a path from the Sun to NH
         vecx = -nh_file[0].header["SPCSSCX"]
         vecy = -nh_file[0].header["SPCSSCY"]
         vecz = -nh_file[0].header["SPCSSCZ"]
+        path_id = "NH_LORRI_PATH_"+str(scet) # The path_id has to be unique to this observation
+        sc_path = oops.path.FixedPath(oops.Vector3([vecx, vecy, vecz]), "SUN", "J2000", path_id)
+
+        # Next create a frame based on the boresight
         ra = nh_file[0].header["SPCBRRA"]
         dec = nh_file[0].header["SPCBRDEC"]
         north_clk = nh_file[0].header["SPCEMEN"]
         scet = nh_file[0].header["SPCSCET"]
-        path_id = "NH_LORRI_PATH_"+str(scet)
-        frame_id = "NH_LORRI_FRAME_"+str(scet)
-        sc_path = oops.path.FixedPath(oops.Vector3([vecx, vecy, vecz]), "SUN", "J2000", path_id)
+        frame_id = "NH_LORRI_FRAME_"+str(scet) # The frame_id has to be unique to this observation
         oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk, frame_id+"_FLIPPED", "J2000")
-        # We have to flip the X/Y axes
+
+        # We have to flip the X/Y axes because the LORRI standard has X vertical and Y horizontal
         flipxy = oops.Matrix3([[0,1,0],
                                [1,0,0],
                                [0,0,1]])
-        ignore = oops.frame.Cmatrix(flipxy, frame_id, frame_id+"_FLIPPED")
-        
+        oops.frame.Cmatrix(flipxy, frame_id, frame_id+"_FLIPPED")
+    
     # Create a Snapshot
-    result = oops.obs.Snapshot(("v","u"), tstart, texp, LORRI.fovs[binning_mode],
-                               path_id, frame_id,
-                               data = data,      # Add the data array
-                               instrument = "LORRI")
+    snapshot = oops.obs.Snapshot(("v","u"), tstart, texp, fov,
+                                 path_id, frame_id,
+                                 target = target_name,
+                                 instrument = "LORRI")
+
+    # Interpret loader options
+    if parameters.has_key("astrometry") and parameters["astrometry"]:
+        include_data = False
+        include_calibration = False
+        include_headers = False
+
+    else:
+        include_data = (not parameters.has_key("data") or
+                        parameters["data"])
+        include_calibration = (not parameters.has_key("calibration") or
+                        parameters["calibration"])
+        include_headers = (not parameters.has_key("headers") or
+                        parameters["headers"])
+
+    if include_data:
+        data = nh_file[0].data
+        error = nh_file[1].data
+        quality = nh_file[2].data
+
+        snapshot.insert_subfield("data", data)
+        snapshot.insert_subfield("error", error)
+        snapshot.insert_subfield("quality", quality)
+
+    if include_calibration:
+        spectral_name = target_name
+        if parameters.has_key("calib_body"):
+            spectral_name = parameters["calib_body"]
+    
+        # Extended source
+        try:
+            spectral_radiance = nh_file[0].header["R"+spectral_name]
+        except KeyError:
+            raise IOError("Unknown calibration spectral body "+spectral_name+" in file "+filespec)
+        # Point source
+        try:
+            spectral_irradiance = nh_file[0].header["P"+spectral_name]
+        except KeyError:
+            raise IOError("Unknown calibration spectral body "+spectral_name+" in file "+filespec)
+    
+        # Look up the solar range...
+        try:
+            solar_range = parameters["solar_range"]
+        except KeyError:
+            solar_range = None
+    
+        # If necessary, get the solar range from the target name
+        if solar_range is None and target_body is not None:
+            target_sun_path = oops.registry.connect_paths(target_body.path_id,
+                                                          "SUN")
+            # Paths of the relevant bodies need to be defined in advance!
+    
+            sun_event = target_sun_path.event_at_time(tdb_midtime)
+            solar_range = sun_event.pos.norm().vals / solar.AU
+    
+        if solar_range is None:
+            raise IOError("Calibration can't figure out range from Sun to target body "+target_name+" in file "+filespec)
+
+        F_solar = 176 # pivot 6076.2 A at 1 AU
+        extended_factor = 1/texp/spectral_radiance * np.pi * solar_range**2 / F_solar # Conversion to I/F
+        point_factor = 1/texp/spectral_irradiance
+    
+        extended_calib = oops.calib.ExtendedSource("I/F", extended_factor)
+        point_calib = oops.calib.PointSource("I/F", point_factor, fov)
+        
+        snapshot.insert_subfield("point_calib", point_calib)
+        snapshot.insert_subfield("extended_calib", extended_calib)
+
+    if include_headers:
+        headers = []
+        for objects in nh_file:
+            headers.append(objects.header)
+
+        snapshot.insert_subfield("headers", headers)
                                
-    return result
+    return snapshot
 
 ################################################################################
 
@@ -71,47 +172,48 @@ def from_index(filespec, parameters={}):
     in an LORRI index file. The filespec refers to the label of the index file.
     """
 
-    assert False # XXX
-    LORRI.initialize()    # Define everything the first time through
+    assert False # Not implemented
 
-    # Read the index file
-    COLUMNS = []        # Return all columns
-    TIMES = ["START_TIME"]
-    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
-    row_dicts = table.dicts_by_row()
-
-    # Create a list of Snapshot objects
-    snapshots = []
-    for dict in row_dicts:
-
-        tstart = julian.tdb_from_tai(dict["START_TIME"])
-        texp = max(1.e-3, dict["EXPOSURE_DURATION"]) / 1000.
-        mode = dict["INSTRUMENT_MODE_ID"]
-
-        name = dict["INSTRUMENT_NAME"]
-        if "WIDE" in name:
-            camera = "WAC"
-        else:
-            camera = "NAC"
-
-        item = oops.obs.Snapshot(("v","u"), tstart, texp, LORRI.fovs[camera,mode],
-                                 "NEWHORIZONS", "NEWHORIZONS_LORRI_" + camera,
-                                 dict = dict,       # Add index dictionary
-                                 index_dict = dict, # Old name
-                                 instrument = "LORRI",
-                                 detector = camera,
-                                 sampling = mode)
-
-        snapshots.append(item)
-
-    # Make sure all the SPICE kernels are loaded
-    tdb0 = row_dicts[ 0]["START_TIME"]
-    tdb1 = row_dicts[-1]["START_TIME"]
-
-    NewHorizons.load_cks( tdb0, tdb1)
-    NewHorizons.load_spks(tdb0, tdb1)
-
-    return snapshots
+#    LORRI.initialize()    # Define everything the first time through
+#
+#    # Read the index file
+#    COLUMNS = []        # Return all columns
+#    TIMES = ["START_TIME"]
+#    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+#    row_dicts = table.dicts_by_row()
+#
+#    # Create a list of Snapshot objects
+#    snapshots = []
+#    for dict in row_dicts:
+#
+#        tstart = julian.tdb_from_tai(dict["START_TIME"])
+#        texp = max(1.e-3, dict["EXPOSURE_DURATION"]) / 1000.
+#        mode = dict["INSTRUMENT_MODE_ID"]
+#
+#        name = dict["INSTRUMENT_NAME"]
+#        if "WIDE" in name:
+#            camera = "WAC"
+#        else:
+#            camera = "NAC"
+#
+#        item = oops.obs.Snapshot(("v","u"), tstart, texp, LORRI.fovs[camera,mode],
+#                                 "NEWHORIZONS", "NEWHORIZONS_LORRI_" + camera,
+#                                 dict = dict,       # Add index dictionary
+#                                 index_dict = dict, # Old name
+#                                 instrument = "LORRI",
+#                                 detector = camera,
+#                                 sampling = mode)
+#
+#        snapshots.append(item)
+#
+#    # Make sure all the SPICE kernels are loaded
+#    tdb0 = row_dicts[ 0]["START_TIME"]
+#    tdb1 = row_dicts[-1]["START_TIME"]
+#
+#    NewHorizons.load_cks( tdb0, tdb1)
+#    NewHorizons.load_spks(tdb0, tdb1)
+#
+#    return snapshots
 
 ################################################################################
 
