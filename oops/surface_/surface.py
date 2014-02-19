@@ -293,12 +293,12 @@ class Surface(object):
         vel = wrt_surface.vel.rebroadcast(wrt_surface.shape)
 
         for coord in coords:
-            if "d_dpos" in coord.subfields.keys():
+            if coord.subfields.has_key("d_dpos"):
                 coord.add_to_subfield("d_dt", (coord.d_dpos *
                                                vel.as_column()).as_scalar())
 
            # This part not yet tested but I think it should work. 3/23 MRS
-            if "d_dobs" in coord.subfields.keys() and event.link is not None:
+            if coord.subfields.has_key("d_dobs") and event.link is not None:
                 vlink = event.link.vel
                 coord.add_to_subfield("d_dt", (coord.d_dobs *
                                                vlink.as_column()).as_scalar())

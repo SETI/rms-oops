@@ -299,7 +299,7 @@ class Limb(Surface):
 
         pos = Vector3.as_vector3(pos)
 
-        if "groundtrack" in pos.subfields.keys():
+        if pos.subfields.has_key("groundtrack"):
             groundtrack = pos.groundtrack
         else:
 

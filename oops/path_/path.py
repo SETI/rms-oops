@@ -149,7 +149,7 @@ class Path(object):
         origin = registry.PATH_REGISTRY[self.origin_id]
 
         # If the ID is unregistered, insert this as a primary definition
-        if self.path_id not in registry.PATH_REGISTRY.keys():
+        if not registry.PATH_REGISTRY.has_key(self.path_id):
             registry.PATH_REGISTRY[self.path_id] = self
 
             # Fill in the ancestry too
@@ -174,19 +174,19 @@ class Path(object):
                 registry.PATH_REGISTRY[key] = self.wrt_ssb
 
                 key = (self.path_id, "SSB")
-                if key not in registry.PATH_REGISTRY.keys():
+                if not registry.PATH_REGISTRY.has_key(key):
                     registry.PATH_REGISTRY[key] = self.wrt_ssb
 
         # If the tuple (self.frame_id, self.origin_id) is unregistered, insert
         # this as a secondary definition
         key = (self.path_id, self.origin_id)
-        if key not in registry.PATH_REGISTRY.keys():
+        if not registry.PATH_REGISTRY.has_key(key):
             registry.PATH_REGISTRY[key] = self
 
         # If the triple (self.frame_id, self.origin_id, self.frame_id) is
         # unregistered, insert this as a tertiary definition
         key = (self.path_id, self.origin_id, self.frame_id)
-        if key not in registry.PATH_REGISTRY.keys():
+        if not registry.PATH_REGISTRY.has_key(key):
             registry.PATH_REGISTRY[key] = self
 
     def unregister(self):
@@ -730,7 +730,7 @@ class Path(object):
         steps = (tmax - tmin)//dt + 2*extras
 
         # If QuickPaths already exists...
-        if "quickpaths" in self.__dict__.keys():
+        if self.__dict__.has_key("quickpaths"):
             existing_quickpaths = self.quickpaths
         else:
             existing_quickpaths = []

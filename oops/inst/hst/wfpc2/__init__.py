@@ -89,7 +89,7 @@ class WFPC2(HST):
         WF3 and WF4."""
 
         # Figure out the layer; otherwise use PC1
-        if "layer" in parameters.keys():
+        if parameters.has_key("layer"):
             layer = parameters["layer"]
         else:
             layer = 1
@@ -110,7 +110,7 @@ class WFPC2(HST):
         # Quality masks for raw files ("*d0m.fits") end in "q0m.fits".
         # Quality masks for calibrated files ("*c0m.fits") end in "c1m.fits".
 
-        if "mask" in parameters.keys():
+        if parameters.has_key("mask"):
             mask_option = parameters["mask"]
         else:
             mask_option = "optional"
@@ -139,7 +139,7 @@ class WFPC2(HST):
                               data_filespec)
 
         # Figure out the layer; otherwise use PC1
-        if "layer" in parameters.keys():
+        if parameters.has_key("layer"):
             layer = parameters["layer"]
         else:
             layer = 1
@@ -168,7 +168,7 @@ class WFPC2(HST):
         global CHIPS
 
         # Figure out the layer; otherwise use PC1
-        if "layer" in parameters.keys():
+        if parameters.has_key("layer"):
             layer = parameters["layer"]
         else:
             layer = 1
@@ -200,7 +200,7 @@ class WFPC2(HST):
                         dict[key] *= scale
 
         # Figure out the layer; otherwise use PC1
-        if "layer" in parameters.keys():
+        if parameters.has_key("layer"):
             layer = parameters["layer"]
         else:
             layer = 1
@@ -263,7 +263,7 @@ class WFPC2(HST):
         this = WFPC2()
 
         # Figure out the layer; otherwise use PC1
-        if "layer" in parameters.keys():
+        if parameters.has_key("layer"):
             layer = parameters["layer"]
         else:
             layer = 1

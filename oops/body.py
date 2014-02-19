@@ -487,7 +487,7 @@ def define_solar_system(start_time, stop_time, asof=None):
     """
 
     # If the solar system was already loaded, just return
-    if "SUN" in registry.BODY_REGISTRY.keys(): return
+    if registry.BODY_REGISTRY.has_key("SUN"): return
 
     # Always load the most recent Leap Seconds kernel, but only once
     spice.load_leap_seconds()

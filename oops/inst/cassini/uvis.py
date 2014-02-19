@@ -58,9 +58,9 @@ def from_file(filespec, data=False, enclose=False, **parameters):
     Cassini.load_spks(tstart, tstop)
 
     # Figure out the PDS object class and return the observation(s)
-    if "QUBE" in label.keys():
+    if label.has_key("QUBE"):
         return get_qube(filespec, tstart, label, data, enclose)
-    elif "TIME_SERIES" in label.keys():
+    elif label.has_key("TIME_SERIES"):
         return get_time_series(filespec, tstart, label, data)
     else:
         return get_spectrum(filespec, tstart, label, data)

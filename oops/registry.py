@@ -67,7 +67,7 @@ def temporary_frame_id():
 
     while True:
         frame_id = "TEMPORARY_" + str(TEMPORARY_FRAME_ID)
-        if frame_id not in FRAME_REGISTRY.keys():
+        if not FRAME_REGISTRY.has_key(frame_id):
             return frame_id
         TEMPORARY_FRAME_ID += 1
 
@@ -158,7 +158,7 @@ def temporary_path_id():
 
     while True:
         path_id = "TEMPORARY_" + str(TEMPORARY_PATH_ID)
-        if path_id not in PATH_REGISTRY.keys():
+        if not PATH_REGISTRY.has_key(path_id):
             return path_id
         TEMPORARY_PATH_ID += 1
 
@@ -207,7 +207,7 @@ def body_exists(key):
     """Returns True if the body's name exists in the registry."""
 
     global BODY_REGSITRY
-    return key in BODY_REGISTRY.keys()
+    return BODY_REGISTRY.has_key(key)
 
 def as_body(body):
     """If the argument is a body object, it returns that body. Otherwise, the

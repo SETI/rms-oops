@@ -209,8 +209,8 @@ class Event(object):
             self.filled_ssb = self.wrt("SSB", "J2000", quick, derivs=derivs)
             self.filled_ssb.filled_ssb = self.filled_ssb
 
-        has_derivs = ("d_dpos" in self.filled_ssb.pos.subfields.keys() and
-                      "d_dt"   in self.filled_ssb.pos.subfields.keys())
+        has_derivs = (self.filled_ssb.pos.subfields.has_key("d_dpos") and
+                      self.filled_ssb.pos.subfields.has_key("d_dt"))
 
         if derivs and not has_derivs:
             self.filled_ssb = self.wrt("SSB", "J2000", quick, derivs=derivs)
@@ -397,7 +397,7 @@ class Event(object):
         if key in ("arr","dep"):
             self.subfields[key] = Empty()
             self.__dict__[key] = self.subfields[key]
-        elif key in self.subfields.keys():
+        elif self.subfields.has_key(key):
             del self.subfields[key]
             del self.__dict__[key]
 

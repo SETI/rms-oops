@@ -90,6 +90,9 @@ def from_file(filespec, **parameters):
 
     If parameters["reference"] is specified, then the frame of the returned
     observation will employ the same frame as that of the reference observation.
+
+    If parameters["solar_range"] is specified, it overrides the distance from the
+    Sun to the target body for calibration purposes.
     """
 
     hst_file = pyfits.open(filespec)
@@ -196,7 +199,7 @@ class HST(object):
         behavior.
         """
 
-        if "reference" in parameters.keys():
+        if parameters.has_key("reference"):
             return self.register_postarg_frame(hst_file, fov, index, suffix,
                                                               **parameters)
 
@@ -438,17 +441,17 @@ class HST(object):
                         pos_targ = self.pos_targ(hst_file, **parameters))
 
         # Interpret loader options
-        if "astrometry" in parameters.keys() and parameters["astrometry"]:
+        if parameters.has_key("astrometry") and parameters["astrometry"]:
             include_data = False
             include_calibration = False
             include_headers = False
 
         else:
-            include_data = ("data" not in parameters.keys() or
+            include_data = (not parameters.has_key("data") or
                             parameters["data"])
-            include_calibration = ("calibration" not in parameters.keys() or
+            include_calibration = (not parameters.has_key("calibration") or
                             parameters["calibration"])
-            include_headers = ("headers" not in parameters.keys() or
+            include_headers = (not parameters.has_key("headers") or
                             parameters["headers"])
 
         if include_data:

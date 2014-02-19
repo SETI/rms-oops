@@ -344,7 +344,7 @@ class FOV(object):
         FOV.
         """
 
-        if "center_xy_filled" not in self.__dict__.keys():
+        if not self.__dict__.has_key("center_xy_filled"):
             self.center_xy_filled = self.xy_from_uv(self.uv_shape/2.)
 
         return self.center_xy_filled
@@ -355,7 +355,7 @@ class FOV(object):
         of the FOV.
         """
 
-        if "center_los_filled" not in self.__dict__.keys():
+        if not self.__dict__.has_key("center_los_filled"):
             self.center_los_filled = self.los_from_xy(self.center_xy).unit()
 
         return self.center_los_filled
@@ -366,7 +366,7 @@ class FOV(object):
         the center of the FOV.
         """
 
-        if "center_dlos_duv_filled" not in self.__dict__.keys():
+        if not self.__dict__.has_key("center_dlos_duv_filled"):
             los = self.los_from_uv(self.uv_shape/2., derivs=True)
             self.center_dlos_duv_filled = los.d_duv
 
@@ -378,7 +378,7 @@ class FOV(object):
         center of the FOV that circumscribes the entire FOV.
         """
 
-        if "outer_radius_saved" not in self.__dict__.keys():
+        if not self.__dict__.has_key("outer_radius_saved"):
             umax = self.uv_shape.vals[0]
             vmax = self.uv_shape.vals[1]
 
@@ -395,7 +395,7 @@ class FOV(object):
         center of the FOV that is entirely enclosed within the FOV.
         """
 
-        if "inner_radius_saved" not in self.__dict__.keys():
+        if not self.__dict__.has_key("inner_radius_saved"):
             umax = self.uv_shape.vals[0]
             vmax = self.uv_shape.vals[1]
             umid = umax / 2.
