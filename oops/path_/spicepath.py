@@ -223,9 +223,14 @@ class Test_SpicePath(unittest.TestCase):
       from oops.frame_.frame import Frame
       from oops.frame_.spiceframe import SpiceFrame
       import oops.constants as constants
+      import os
+      from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
       Path.USE_QUICKPATHS = False
       Frame.USE_QUICKFRAMES = False
+
+      cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
+      cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
       # Repeat the tests without and then with shortcuts
       for SpicePath.USE_SPICEPATH_SHORTCUTS in (False, True):

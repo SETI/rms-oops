@@ -21,26 +21,6 @@
 # >>> from oops import *
 #   This imports all the oops components without the "oops" prefix. It can fill
 #   up the default name space but there is nothing wrong with it.
-#
-# >>> import oops.array
-#   This statement imports the entire object tree, not just the requested
-#   component. This may be counterintuitive, although importing only selected
-#   components of oops would seem to be of little value.
-#
-# >>> import oops.array as arr
-#   This statement imports Array and its subclasses with the given alias, e.g.,
-#   arr.Array, arr.Scalar, etc. It does NOT import the rest of oops. This can
-#   be a handy way to assign an alias to components of oops, but one should
-#   also import the remaining components in a separate import statement.
-#
-# >>> from oops.array import *
-#   This statement imports the selected component of oops with the "oops"
-#   prefix, e.g., Array, Scalar, Empty. Does not import the remainder of oops.
-#
-# >>> from oops import surface, path
-#   This statement imports the selected components of oops without the "oops"
-#   prefix, e.g., surface.Spheroid and path.SpicePath. It does not import the
-#   remainder of oops.
 
 import cspice       # This is CRITICAL to avoid the MKL error in calls to
                     # dpstrf(). Somehow, this ensures that the cspice function

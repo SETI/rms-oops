@@ -1134,18 +1134,32 @@ class Test_Path(unittest.TestCase):
 
     def runTest(self):
 
+        # NOTE: THIS UNIT TEST IS KNOWN TO NOT WORK STANDALONE BECAUSE THE
+        # PATH CLASS IN THIS FILE ENDS UP BEING A DIFFERENT CLASS FROM
+        # OOPS.PATH_.PATH.PATH. EVERYTHING IS FINE AS LONG AS YOU RUN FROM
+        # ONE OF THE HIGHER-LEVEL UNITTESTER PROGRAMS.
+        
         Path.USE_QUICKPATHS = False
 
         # Imports are here to avoid conflicts
         from oops.path_.spicepath import SpicePath
         from oops.frame_.spiceframe import SpiceFrame
+        import os
+        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+        import cspice
+        
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
+        registry.SSB = None
+        Path.initialize_registry()
+        
         # Registry tests
         registry.initialize_path_registry()
         registry.initialize_frame_registry()
 
         self.assertEquals(registry.PATH_REGISTRY["SSB"], registry.SSB)
-
+        self.assertEquals(registry.PATH_CLASS, Path)
+        
         # LinkedPath tests
         sun = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SUN")
