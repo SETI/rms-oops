@@ -520,7 +520,7 @@ class HST(object):
                            re.IGNORECASE)
 
         # Read the key:value pairs and make sure they are clean
-        f = open(HST_IDC_PATH + "IDC_FILE_NAME_DICT.txt")
+        f = open(os.path.join(HST_IDC_PATH, "IDC_FILE_NAME_DICT.txt"))
         lines = []
         for line in f:
             if regex.match(line) is False:
