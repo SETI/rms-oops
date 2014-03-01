@@ -352,6 +352,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
                                places=3)
         self.assertEqual(snapshot.target, "EUROPA")
 
+        fov_1024 = snapshot.fov
+        
         snapshot_fits = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                                   use_fits_geom=True)
         
@@ -391,7 +393,18 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         europa_iof = snapshot.extended_calib["CHARON"].value_from_dn(snapshot.data[451,642])
         self.assertGreater(europa_iof, 0.4)
         self.assertLess(europa_iof, 0.6)
+
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "nh/LORRI/LOR_0030710290_0x633_SCI_1.FIT"),
+                             calibration=False)
+        self.assertTrue(snapshot.data.shape == (256,256))
+        self.assertTrue(snapshot.quality.shape == (256,256))
+        self.assertTrue(snapshot.error.shape == (256,256))
         
+        fov_256 = snapshot.fov
+        
+        self.assertAlmostEqual(fov_256.uv_scale.vals[0]/4, fov_1024.uv_scale.vals[0])
+        self.assertAlmostEqual(fov_256.uv_scale.vals[1]/4, fov_1024.uv_scale.vals[1])
+
 ############################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
