@@ -2139,7 +2139,7 @@ class Qube(object):
         if self.__nrank_ == 0:
             return arg.mul_by_scalar(self)
 
-        # Maultiply by matrix...
+        # Multiply by matrix...
         if self.__nrank_ == 2 and arg.__nrank_ in (1,2):
             return Qube.dot(self, arg, -1, 0, (type(arg), type(self)),
                             recursive=True)
@@ -3751,7 +3751,7 @@ class Qube(object):
         """
 
         shape = tuple(shape)
-        if shape == self.__shape_: return
+        if shape == self.__shape_: return self
 
         new_values = self.__values_.reshape(shape + self.item)
 

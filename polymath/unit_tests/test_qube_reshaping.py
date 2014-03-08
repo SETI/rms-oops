@@ -22,6 +22,16 @@ class Test_qube_reshaping(unittest.TestCase):
     # reshape(self, shape, recursive=True)
     ############################################################################
 
+    a = Vector(np.ones((3,4,5,2)))
+    b = a.reshape((3,4,5))
+    self.assertEqual(a.shape, (3,4,5))
+    self.assertEqual(b.shape, (3,4,5))
+    self.assertEqual(a.numer, (2,))
+    self.assertEqual(b.numer, (2,))
+    self.assertEqual(a.denom, ())
+    self.assertEqual(b.denom, ())
+    self.assertEqual(type(b), Vector)
+    
     a = Vector(np.ones((2,3,4,5,6,3,2)), drank=1)
     b = a.reshape((6,5,4,3,2))
     self.assertEqual(a.shape, (2,3,4,5,6))

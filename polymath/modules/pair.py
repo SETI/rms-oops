@@ -76,6 +76,7 @@ class Pair(Vector):
 # A useful class constant
 
 Pair.ZERO   = Pair((0.,0.)).as_readonly()
+Pair.ONES   = Pair((1.,1.)).as_readonly()
 Pair.XAXIS  = Pair((1.,0.)).as_readonly()
 Pair.YAXIS  = Pair((0.,1.)).as_readonly()
 Pair.MASKED = Pair((1,1), True).as_readonly()

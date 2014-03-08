@@ -452,6 +452,19 @@ Matrix.IDENTITY3 = Matrix([[1,0,0],[0,1,0],[0,0,1]]).as_readonly()
 Matrix.MASKED2 = Matrix([[1,1],[1,1]], True).as_readonly()
 Matrix.MASKED3 = Matrix([[1,1,1],[1,1,1],[1,1,1]], True).as_readonly()
 
+Matrix.ZERO33 = Matrix([[0,0,0],[0,0,0],[0,0,0]]).as_readonly()
+Matrix.UNIT33 = Matrix([[1,0,0],[0,1,0],[0,0,1]]).as_readonly()
+
+Matrix.ZERO3_ROW = Matrix([[0,0,0]]).as_readonly()
+Matrix.XAXIS_ROW = Matrix([[1,0,0]]).as_readonly()
+Matrix.YAXIS_ROW = Matrix([[0,1,0]]).as_readonly()
+Matrix.ZAXIS_ROW = Matrix([[0,0,1]]).as_readonly()
+
+Matrix.ZERO3_COL = Matrix([[0],[0],[0]]).as_readonly()
+Matrix.XAXIS_COL = Matrix([[1],[0],[0]]).as_readonly()
+Matrix.YAXIS_COL = Matrix([[0],[1],[0]]).as_readonly()
+Matrix.ZAXIS_COL = Matrix([[0],[0],[1]]).as_readonly()
+
 ################################################################################
 # Once defined, register with base class
 ################################################################################

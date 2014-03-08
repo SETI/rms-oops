@@ -22,7 +22,7 @@ class Test_Qube_readonly(unittest.TestCase):
     a = a.as_readonly()
     self.assertEqual(a.readonly, True)
 
-    self.assertRaises(ValueError, a.values.__setitem__, (0,0,0,0,0), 1.)
+    self.assertRaises((ValueError,RuntimeError), a.values.__setitem__, (0,0,0,0,0), 1.)
 
     ####
     a = Vector(np.random.randn(4,5,6,3,2), drank=1).as_readonly()

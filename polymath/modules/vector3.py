@@ -46,8 +46,8 @@ class Vector3(Vector):
         """
 
         x = Scalar.as_scalar(x)
-        y = Scalar.as_scalar(y).confirm_units(x.units)
-        z = Scalar.as_scalar(z).confirm_units(x.units)
+        y = Scalar.as_scalar(y) #.confirm_units(x.units)
+        z = Scalar.as_scalar(z) #.confirm_units(x.units)
 
         if x.denom or y.denom or z.denom:
             raise NotImplementedError('denominator axes are disallowed')
