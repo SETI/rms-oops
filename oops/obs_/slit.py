@@ -1,13 +1,11 @@
 ################################################################################
 # oops/obs_/slit.py: Subclass Slit of class Observation
-#
-# 6/13/12 MRS - Created.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.obs_.observation import Observation
-from oops.array_ import *
 
 class Slit(Observation):
     """A Slit is subclass of Observation consisting of a 2-D image constructed
@@ -116,7 +114,7 @@ class Slit(Observation):
 
         indices = Tuple.as_tuple(indices)
 
-        slit_coord = indices.as_scalar(self.along_slit_index)
+        slit_coord = indices.to_scalar(self.along_slit_index)
         if self.slit_is_discontinuous:
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
@@ -126,7 +124,7 @@ class Slit(Observation):
         uv_vals[..., self.cross_slit_uv_index] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
-        tstep = indices.as_scalar(self.t_axis)
+        tstep = indices.to_scalar(self.t_axis)
         time = self.cadence.time_at_tstep(tstep)
 
         if fovmask:
@@ -163,7 +161,7 @@ class Slit(Observation):
 
         indices = Tuple.as_int(indices)
 
-        slit_coord = indices.as_scalar(self.along_slit_index)
+        slit_coord = indices.to_scalar(self.along_slit_index)
 
         uv_vals = np.empty(indices.shape + [2], dtype="int")
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
@@ -171,7 +169,7 @@ class Slit(Observation):
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
-        tstep = indices.as_scalar(self.t_axis)
+        tstep = indices.to_scalar(self.t_axis)
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep)
 
         if fovmask:
@@ -208,7 +206,7 @@ class Slit(Observation):
         """
 
         uv_pair = Pair.as_int(uv_pair)
-        tstep = uv_pair.as_scalar(self.cross_slit_uv_index)
+        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
         (time0, time1) = self.cadence.time_range_at_tstep(tstep)
 
         if fovmask:
@@ -266,15 +264,15 @@ class Slit(Observation):
 ################################################################################
 
 import unittest
-from oops.cadence_.metronome import Metronome
 
 class Test_Slit(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.fov_.flat import Flat
+        from oops.cadence_.metronome import Metronome
+        from oops.fov_.flatfov import FlatFOV
 
-        fov = Flat((0.001,0.001), (10,1))
+        fov = FlatFOV((0.001,0.001), (10,1))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         obs = Slit(axes=("u","vt"), det_size=1,
                    cadence=cadence, fov=fov, path_id="SSB", frame_id="J2000")
@@ -286,18 +284,18 @@ class Test_Slit(unittest.TestCase):
 
         self.assertFalse(uv.mask)
         self.assertFalse(time.mask)
-        self.assertEqual(time, cadence.tstride * indices.as_scalar(1))
-        self.assertEqual(uv.as_scalar(0), indices.as_scalar(0))
-        self.assertEqual(uv.as_scalar(1), 0.5)
+        self.assertEqual(time, cadence.tstride * indices.to_scalar(1))
+        self.assertEqual(uv.to_scalar(0), indices.to_scalar(0))
+        self.assertEqual(uv.to_scalar(1), 0.5)
 
         # uvt() with fovmask == True
         (uv,time) = obs.uvt(indices, fovmask=True)
 
         self.assertTrue(np.all(uv.mask == np.array(6*[False] + [True])))
         self.assertTrue(np.all(time.mask == uv.mask))
-        self.assertEqual(time[:6], cadence.tstride * indices.as_scalar(1)[:6])
-        self.assertEqual(uv[:6].as_scalar(0), indices[:6].as_scalar(0))
-        self.assertEqual(uv[:6].as_scalar(1), 0.5)
+        self.assertEqual(time[:6], cadence.tstride * indices.to_scalar(1)[:6])
+        self.assertEqual(uv[:6].to_scalar(0), indices[:6].to_scalar(0))
+        self.assertEqual(uv[:6].to_scalar(1), 0.5)
 
         # uvt_range() with fovmask == False
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
@@ -307,11 +305,11 @@ class Test_Slit(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min.as_scalar(0), indices.as_scalar(0))
-        self.assertEqual(uv_min.as_scalar(1), 0)
-        self.assertEqual(uv_max.as_scalar(0), indices.as_scalar(0) + 1)
-        self.assertEqual(uv_max.as_scalar(1), 1)
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(uv_min.to_scalar(0), indices.to_scalar(0))
+        self.assertEqual(uv_min.to_scalar(1), 0)
+        self.assertEqual(uv_max.to_scalar(0), indices.to_scalar(0) + 1)
+        self.assertEqual(uv_max.to_scalar(1), 1)
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == False, new indices
@@ -322,11 +320,11 @@ class Test_Slit(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min.as_scalar(0), indices.as_scalar(0))
-        self.assertEqual(uv_min.as_scalar(1), 0)
-        self.assertEqual(uv_max.as_scalar(0), indices.as_scalar(0) + 1)
-        self.assertEqual(uv_max.as_scalar(1), 1)
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(uv_min.to_scalar(0), indices.to_scalar(0))
+        self.assertEqual(uv_min.to_scalar(1), 0)
+        self.assertEqual(uv_max.to_scalar(0), indices.to_scalar(0) + 1)
+        self.assertEqual(uv_max.to_scalar(1), 1)
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == True, new indices
@@ -338,12 +336,12 @@ class Test_Slit(unittest.TestCase):
         self.assertTrue(np.all(time_min.mask == uv_min.mask))
         self.assertTrue(np.all(time_max.mask == uv_min.mask))
 
-        self.assertEqual(uv_min.as_scalar(0)[:2], indices.as_scalar(0)[:2])
-        self.assertEqual(uv_min.as_scalar(1)[:2], 0)
-        self.assertEqual(uv_max.as_scalar(0)[:2], indices.as_scalar(0)[:2] + 1)
-        self.assertEqual(uv_max.as_scalar(1)[:2], 1)
+        self.assertEqual(uv_min.to_scalar(0)[:2], indices.to_scalar(0)[:2])
+        self.assertEqual(uv_min.to_scalar(1)[:2], 0)
+        self.assertEqual(uv_max.to_scalar(0)[:2], indices.to_scalar(0)[:2] + 1)
+        self.assertEqual(uv_max.to_scalar(1)[:2], 1)
         self.assertEqual(time_min[:2], cadence.tstride *
-                                       indices.as_scalar(1)[:2])
+                                       indices.to_scalar(1)[:2])
         self.assertEqual(time_max[:2], time_min[:2] + cadence.texp)
 
         # times_at_uv() with fovmask == False
@@ -351,7 +349,7 @@ class Test_Slit(unittest.TestCase):
 
         (time0, time1) = obs.times_at_uv(uv)
 
-        self.assertEqual(time0, cadence.tstride * uv.as_scalar(1))
+        self.assertEqual(time0, cadence.tstride * uv.to_scalar(1))
         self.assertEqual(time1, time0 + cadence.texp)
 
         # times_at_uv() with fovmask == True
@@ -359,7 +357,7 @@ class Test_Slit(unittest.TestCase):
 
         self.assertTrue(np.all(time0.mask == 6*[False] + [True]))
         self.assertTrue(np.all(time1.mask == time0.mask))
-        self.assertEqual(time0[:6], cadence.tstride * uv.as_scalar(1)[:6])
+        self.assertEqual(time0[:6], cadence.tstride * uv.to_scalar(1)[:6])
         self.assertEqual(time1[:6], time0[:6] + cadence.texp)
 
         ####################################
@@ -374,17 +372,17 @@ class Test_Slit(unittest.TestCase):
 
         (uv,time) = obs.uvt(indices)
 
-        self.assertEqual(uv.as_scalar(0), 0.5)
-        self.assertEqual(uv.as_scalar(1), indices.as_scalar(1))
-        self.assertEqual(time, cadence.tstride * indices.as_scalar(0))
+        self.assertEqual(uv.to_scalar(0), 0.5)
+        self.assertEqual(uv.to_scalar(1), indices.to_scalar(1))
+        self.assertEqual(time, cadence.tstride * indices.to_scalar(0))
 
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
-        self.assertEqual(uv_min.as_scalar(0), 0)
-        self.assertEqual(uv_min.as_scalar(1), indices.as_scalar(1))
-        self.assertEqual(uv_max.as_scalar(0), 1)
-        self.assertEqual(uv_max.as_scalar(1), indices.as_scalar(1) + 1)
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(0))
+        self.assertEqual(uv_min.to_scalar(0), 0)
+        self.assertEqual(uv_min.to_scalar(1), indices.to_scalar(1))
+        self.assertEqual(uv_max.to_scalar(0), 1)
+        self.assertEqual(uv_max.to_scalar(1), indices.to_scalar(1) + 1)
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(0))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         ####################################

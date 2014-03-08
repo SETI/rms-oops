@@ -1,16 +1,14 @@
 ################################################################################
 # oops/event.py: Event class
-#
-# 2/2/12 Modified (MRS) - import and class naming hierarchy revised.
-# 3/12/12 MRS - Implemented support for derivatives.
 ################################################################################
 
 import numpy as np
+from polymath import *
 import unittest
 
-from oops.array_ import *
 from oops.config import EVENT_CONFIG, LOGGING
-import oops.registry as registry
+
+import oops.registry  as registry
 import oops.constants as constants
 
 class Event(object):
@@ -102,11 +100,11 @@ class Event(object):
     @property
     def shape(self):
         if self.filled_shape is None:
-            self.filled_shape = Array.broadcast_shape([self.time,
+            self.filled_shape = Qube.broadcasted_shape(self.time,
                                             self.pos, self.vel,
                                             registry.as_path(self.origin_id),
                                             registry.as_frame(self.frame_id),
-                                            self.arr, self.dep])
+                                            self.arr, self.dep)
         return self.filled_shape
 
     @property
@@ -245,7 +243,7 @@ class Event(object):
     def copy_subfields_from(self, source, derivs=True):
         for key in source.subfields.keys():
             subfield = source.subfields[key]
-            if isinstance(subfield, Array):
+            if isinstance(subfield, Qube):
                 self.insert_subfield(key, subfield.copy(derivs))
             else:
                 self.insert_subfield(key, subfield)
@@ -608,7 +606,7 @@ class Event(object):
 
         for key in self.subfields:
             subfield = self.subfields[key]
-            if isinstance(subfield, Array) and subfield.rank > 0:
+            if isinstance(subfield, Qube) and subfield.rank > 0:
                 result.insert_subfield(key, transform.rotate(subfield,
                                                              derivs=derivs))
             else:
@@ -753,7 +751,7 @@ class Event(object):
                 ray = self.wrt_ssb(quick).dep
 
         # Convert to RA and dec
-        (x,y,z) = ray.as_scalars()
+        (x,y,z) = ray.to_scalars()
         ra = y.arctan2(x) % (2*np.pi)
 
         r = ray.norm()

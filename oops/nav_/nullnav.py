@@ -1,12 +1,10 @@
 ################################################################################
 # oops_/nav/nullnav.py: Subclass NullNav of class Navigation
-#
-# 5/21/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops.array_ import *
+from polymath             import *
 from oops.nav_.navigation import Navigation
 
 class NullNav(Navigation):

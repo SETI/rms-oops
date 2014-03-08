@@ -1,14 +1,11 @@
 ################################################################################
 # oops/format_/hms.py: HMS subclass of class Format
-#
-# 1/24/12 (MRS) - Drafted.
 ################################################################################
 
 from oops.format_.format import Format
 
 class HMS(Format):
-    """An HmsFormat is a Format object that handles a numeric value in
-    hour-minute-second format.
+    """A Format object that handles a numeric value in hour-minute-second format.
     """
 
     def __init__(self, hchar="h ", mchar="m ", schar="s", digits=0, pos=" "):
@@ -56,7 +53,6 @@ class HMS(Format):
         seconds_pad = ''
         if fseconds < 10.:
             seconds_pad = '0'
-        # print fseconds
         leading_s = self.pos
         if value < 0.:
             leading_s = '-'
@@ -70,7 +66,7 @@ class HMS(Format):
 
         hs = string.split(self.hchar)
         hours = int(hs[0])
-        #the hchar and mchar may or may not be the same, so check
+        # the hchar and mchar may or may not be the same, so check
         if self.hchar == self.mchar:
             minutes = int(hs[1])
             if len(self.schar) > 0:
@@ -91,8 +87,7 @@ class HMS(Format):
         return time
 
     def int_from_component(self, component):
-        """Returns an int for the string, dealing with leading zeroes that the
-            default python formatter does not handle"""
+        """Returns an int for the string, dealing with leading zeroes properly."""
         s = component
         if len(component) > 1 and component[0] == '0':
             s = component[1:]
@@ -105,8 +100,6 @@ class HMS(Format):
 # UNIT TESTS
 ################################################################################
 
-ERROR_ALLOTMENT = 1e-6
-
 import unittest
 
 class Test_HMS(unittest.TestCase):
@@ -116,11 +109,13 @@ class Test_HMS(unittest.TestCase):
         t1 = 2.384141
         fmt = HMS(':',':','')
         s1 = fmt.str(2.384141)
+        self.assertEqual(s1, "  2:23:02.907600")
         t1a = fmt.parse(s1)
         self.assertTrue(t1 == t1a)
                         
         fmt = HMS('h ','m ','s')
         s2 = fmt.str(2.384141)
+        self.assertEqual(s2, "  2h 23m 02.907600s")
         t2a = fmt.parse(s2)
         self.assertTrue(t1 == t2a)
 

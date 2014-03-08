@@ -1,16 +1,13 @@
 ################################################################################
 # oops/frame_/spinframe.py: Subclass SpinFrame of class Frame
-#
-# 2/8/12 Created (MRS)
-# 3/17/12 MRS - removed the requirement that it be given a unique ID and
-#   registered.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.frame_.frame import Frame
-from oops.array_       import *
 from oops.transform    import Transform
+
 import oops.registry as registry
 
 class SpinFrame(Frame):
@@ -41,13 +38,13 @@ class SpinFrame(Frame):
         self.rate = Scalar.as_scalar(rate)
         self.epoch = Scalar.as_scalar(epoch)
 
-        self.shape = Array.broadcast_shape((self.rate, self.offset, self.epoch))
-
+        self.shape = Qube.broadcasted_shape(self.rate, self.offset, self.epoch)
+        
         self.axis2 = axis           # Most often, the Z-axis
         self.axis0 = (self.axis2 + 1) % 3
         self.axis1 = (self.axis2 + 2) % 3
 
-        omega_vals = np.zeros(self.shape + [3])
+        omega_vals = np.zeros(list(self.shape) + [3])
         omega_vals[..., self.axis2] = self.rate.vals
         self.omega = Vector3(omega_vals, self.rate.mask)
 
@@ -71,7 +68,7 @@ class SpinFrame(Frame):
         time = Scalar.as_scalar(time)
         angle = (time - self.epoch) * self.rate + self.offset
 
-        mat = np.zeros(angle.shape + [3,3])
+        mat = np.zeros(list(angle.shape) + [3,3])
         mat[..., self.axis2, self.axis2] = 1.
         mat[..., self.axis0, self.axis0] = np.cos(angle.vals)
         mat[..., self.axis1, self.axis1] = mat[..., self.axis0, self.axis0]
@@ -160,22 +157,22 @@ class Test_SpinFrame(unittest.TestCase):
         (pos0, vel0) = tr0.rotate_pos_vel(pos, vel)
         (pos1, vel1) = tr1.rotate_pos_vel(pos + vel*dt, vel)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(abs(dpos_dt_test - vel0) < 1.e-5)
+        self.assertTrue(((dpos_dt_test - vel0).norm() < 1.e-5).all())
 
         (pos0, vel0) = tr0.unrotate_pos_vel(pos, vel)
         (pos1, vel1) = tr1.unrotate_pos_vel(pos + vel*dt, vel)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(abs(dpos_dt_test - vel0) < 1.e-5)
+        self.assertTrue(((dpos_dt_test - vel0).norm() < 1.e-5).all())
 
         pos0 = tr0.rotate(pos, derivs=True)
         pos1 = tr1.rotate(pos, derivs=False)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
+        self.assertTrue(((dpos_dt_test - pos0.d_dt.as_vector3()).norm() < 1.e-5).all())
 
         pos0 = tr0.unrotate(pos, derivs=True)
         pos1 = tr1.unrotate(pos, derivs=False)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(abs(dpos_dt_test - pos0.d_dt.as_vector3()) < 1.e-5)
+        self.assertTrue(((dpos_dt_test - pos0.d_dt.as_vector3()).norm() < 1.e-5).all())
 
         registry.initialize()
 

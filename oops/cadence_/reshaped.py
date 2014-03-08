@@ -1,11 +1,9 @@
 ################################################################################
 # oops/cadence_/reshaped.py: ReshapedCadence subclass of class Cadence
-#
-# 7/28/12 MRS - created and unit-tested.
 ################################################################################
 
 import numpy as np
-from oops.array_ import *
+from polymath import *
 from oops.cadence_.cadence import Cadence
 
 class ReshapedCadence(Cadence):
@@ -47,13 +45,13 @@ class ReshapedCadence(Cadence):
         if oldrank == 1:
             tstep = Scalar.as_scalar(tstep)
         else:
-            tstep = Tuple.as_tuple(tstep)
+            tstep = Vector.as_vector(tstep)
 
-        is_floating = tstep.is_floating()
+        is_floating = tstep.is_float()
 
         # Convert to integers if necessary
         if is_floating:
-            tstep_int = tstep.int()
+            tstep_int = tstep.as_int()
             if oldrank == 1:
                 frac = tstep.vals - tstep_int.vals
             else:
@@ -82,11 +80,11 @@ class ReshapedCadence(Cadence):
         if newrank == 2:
             returned_tstep = Pair(indices, tstep.mask)
         else:
-            returned_tstep = Tuple(indices, tstep.mask)
+            returned_tstep = Vector(indices, tstep.mask)
 
         # Add the fractional part if necessary
         if is_floating:
-            returned_tstep = returned_tstep.float()
+            returned_tstep = returned_tstep.as_float()
             returned_tstep.vals[...,-1] += frac
 
         return returned_tstep
@@ -107,7 +105,7 @@ class ReshapedCadence(Cadence):
                                    self.oldshape, self.oldstride, self.oldrank,
                                    self.shape, self.stride, self.rank)
 
-    def time_at_tstep(self, tstep, mask=False):
+    def time_at_tstep(self, tstep, mask=True):
         """Returns the time associated with the given time step. This method
         supports non-integer step values.
 
@@ -120,7 +118,7 @@ class ReshapedCadence(Cadence):
 
         return self.cadence.time_at_tstep(self._old_tstep_from_new(tstep), mask)
 
-    def time_range_at_tstep(self, tstep, mask=False):
+    def time_range_at_tstep(self, tstep, mask=True):
         """Returns the range of time associated with the given integer time
         step index.
 
@@ -137,7 +135,7 @@ class ReshapedCadence(Cadence):
         return self.cadence.time_range_at_tstep(self._old_tstep_from_new(tstep),
                                                 mask)
 
-    def tstep_at_time(self, time, mask=False):
+    def tstep_at_time(self, time, mask=True):
         """Returns a the Scalar time step index or a Pair or Tuple of indices
         associated with a time in seconds TDB.
 
@@ -209,13 +207,14 @@ class Test_ReshapedCadence(unittest.TestCase):
 
         self.assertEqual(type(arg), type(arg2))
 
-        if arg.is_integer():
-            self.assertTrue(arg2.is_integer())
+        if arg.is_int():
+            self.assertTrue(arg2.is_int())
         else:
-            self.assertTrue(arg2.is_floating())
+            self.assertTrue(arg2.is_float())
 
     def runTest(self):
 
+        self.TEST((10,), (10,), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1.5))
         self.TEST((10,), (2,5), Scalar(np.arange(10)))
@@ -223,13 +222,13 @@ class Test_ReshapedCadence(unittest.TestCase):
         self.TEST((10,), (2,5), Scalar(np.arange(10).reshape(5,2)))
         self.TEST((10,), (2,5), Scalar((np.arange(20)/2.).reshape(2,5,2)))
 
-        self.TEST((2,3,4), (24,), Tuple((1,2,3)))
-        self.TEST((2,3,4), (24,), Tuple((1,2,3.5)))
-        self.TEST((2,3,4), (24,), Tuple([(1,2,3),(1,2,3.5),(0,0,0.25)]))
+        self.TEST((2,3,4), (24,), Vector((1,2,3)))
+        self.TEST((2,3,4), (24,), Vector((1,2,3.5)))
+        self.TEST((2,3,4), (24,), Vector([(1,2,3),(1,2,3.5),(0,0,0.25)]))
 
-        self.TEST((2,3,4), (4,6), Tuple((1,2,3)))
-        self.TEST((2,3,4), (4,6), Tuple((1,2,3.5)))
-        self.TEST((2,3,4), (4,6), Tuple([(1,2,3),(1,2,3.5),(0,0,0.25)]))
+        self.TEST((2,3,4), (4,6), Vector((1,2,3)))
+        self.TEST((2,3,4), (4,6), Vector((1,2,3.5)))
+        self.TEST((2,3,4), (4,6), Vector([(1,2,3),(1,2,3.5),(0,0,0.25)]))
 
 ########################################
 if __name__ == '__main__':

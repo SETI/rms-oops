@@ -1,16 +1,10 @@
 ################################################################################
 # oops/fov_/fov.py: Abstract class FOV (Field-of-View)
-#
-# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
-# 2/22/12 MRS - Revised the handling of derivatives.
-# 3/9/12 MRS - Added the "extras" argument to support additional Observation
-#   subclasses.
-# 8/17/12 MRS - Added inventory support methods including sphere_is_inside().
 ################################################################################
 
 import numpy as np
 
-from oops.array_ import *
+from polymath import *
 
 class FOV(object):
     """The FOV (Field of View) abstract class provides a description of the
@@ -314,8 +308,8 @@ class FOV(object):
 
         uv_pair = Pair.as_pair(uv_pair).copy()
 
-        uv_pair.vals[...,0] = uv_pair.vals[...,0].clip(0,self.uv_shape.vals[0])
-        uv_pair.vals[...,1] = uv_pair.vals[...,1].clip(0,self.uv_shape.vals[1])
+        uv_pair.vals[...,0] = uv_pair.vals[...,0].clip(0,self.uv_shape.vals[0],False)
+        uv_pair.vals[...,1] = uv_pair.vals[...,1].clip(0,self.uv_shape.vals[1],False)
 
         return uv_pair
 

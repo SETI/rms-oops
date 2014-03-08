@@ -1,17 +1,15 @@
 ################################################################################
 # oops/frame_/ringframe.py: Subclass RingFrame of class Frame
-#
-# 2/8/12 Modified (MRS) - Update for consistent style.
-# 1/4/12 MRS: Added attribute "node" and function node_at_time().
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.frame_.frame import Frame
-from oops.array_       import *
 from oops.transform    import Transform
 
 import oops.registry as registry
+import oops.utils as utils
 
 TWOPI  = np.pi * 2.
 
@@ -176,26 +174,26 @@ class Test_RingFrame(unittest.TestCase):
         fixed   = event.wrt_frame("IAU_MARS_DESPUN")
 
         # Confirm Z axis is tied to planet's pole
-        diff = rotated.pos.as_scalar(2) - fixed.pos.as_scalar(2)
+        diff = Scalar(rotated.pos.mvals[...,2]) - Scalar(fixed.pos.mvals[...,2])
         self.assertTrue(np.all(np.abs(diff.vals < 1.e-14)))
 
         # Confirm X-axis is always in the J2000 equator
         xaxis = Event(time, Vector3.XAXIS,
                             Vector3.ZERO, "SSB", rings.frame_id)
         test = xaxis.wrt_frame("J2000")
-        self.assertTrue(np.all(np.abs(test.pos.as_scalar(2).vals < 1.e-14)))
+        self.assertTrue(np.all(np.abs(test.pos.mvals[...,2] < 1.e-14)))
 
         # Confirm it's at the ascending node
         xaxis = Event(time, (1,1.e-13,0), Vector3.ZERO, "SSB", rings.frame_id)
         test = xaxis.wrt_frame("J2000")
-        self.assertTrue(np.all(test.pos.as_scalar(1).vals > 0.))
+        self.assertTrue(np.all(test.pos.mvals[...,1] > 0.))
 
         # Check that pole wanders when epoch is fixed
         rings2 = RingFrame(planet, 0.)
         self.assertEqual(registry.frame_lookup("IAU_MARS_INERTIAL"), rings2)
         inertial = event.wrt_frame("IAU_MARS_INERTIAL")
 
-        diff = rotated.pos.as_scalar(2) - inertial.pos.as_scalar(2)
+        diff = Scalar(rotated.pos.mvals[...,2]) - Scalar(inertial.pos.mvals[...,2])
         self.assertTrue(np.all(np.abs(diff.vals) < 1.e-4))
         self.assertTrue(np.mean(np.abs(diff.vals) > 1.e-8))
 

@@ -1,15 +1,11 @@
 ################################################################################
 # oops/fov_/subarray.py: Subarray subclass of FOV
-#
-# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
-# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
-# 2/23/12 MRS - Gave each method the option to return partial derivatives.
 ################################################################################
 
 import numpy as np
 
 from oops.fov_.fov import FOV
-from oops.array_   import *
+from polymath import *
 
 class Subarray(FOV):
 
@@ -33,15 +29,21 @@ class Subarray(FOV):
         """
 
         self.fov = fov
-        self.new_los_in_old_uv  = Pair.as_float(new_los)
+        self.new_los_in_old_uv  = Pair.as_pair(new_los).as_float()
         self.new_los_wrt_old_xy = fov.xy_from_uv(self.new_los_in_old_uv)
 
-        self.uv_shape = Pair.as_pair(uv_shape).copy()
+        if np.shape(uv_shape) == () or len(np.asarray(uv_shape)) == 1:
+            self.uv_shape = Pair.as_pair((uv_shape, uv_shape)).copy()
+        else:
+            self.uv_shape = Pair.as_pair(uv_shape).copy()
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = Pair.as_float(uv_los, copy=True)
+            if np.shape(uv_los) == () or len(np.asarray(uv_los)) == 1:
+                self.uv_los = Pair.as_pair((uv_los, uv_los)).copy()
+            else:
+                self.uv_los = Pair.as_pair(uv_los).copy()
 
         self.new_origin_in_old_uv = self.new_los_in_old_uv - self.uv_los
 
@@ -66,7 +68,7 @@ class Subarray(FOV):
         new_xy = old_xy - self.new_los_wrt_old_xy
 
         if derivs:
-            new_xy.insert_subfield("d_uv", old_xy.d_duv)
+            new_xy.insert_deriv("uv", old_xy.d_duv)
 
         return new_xy
 
@@ -87,7 +89,7 @@ class Subarray(FOV):
         new_uv = old_uv - self.new_origin_in_old_uv
 
         if derivs:
-            new_uv.insert_subfield("d_dxy", old_uv.d_dxy)
+            new_uv.insert_deriv("xy", old_uv.d_dxy)
 
         return new_uv
 
@@ -102,9 +104,9 @@ class Test_Subarray(unittest.TestCase):
     def runTest(self):
 
         # Imports just required for unit testing
-        from flat import Flat
+        from oops.fov_.flatfov import FlatFOV
 
-        flat = Flat((1/2048.,-1/2048.), 101, (50,75))
+        flat = FlatFOV((1/2048.,-1/2048.), 101, (50,75))
 
         test = Subarray(flat, (50,75), 101, (50,75))
         buffer = np.empty((101,101,2))

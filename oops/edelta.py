@@ -1,15 +1,14 @@
 ################################################################################
 # oops/edelta.py: Event-delta class
-#
-# 3/2/12 Created (MRS).
 ################################################################################
 
 import numpy as np
+from polymath import *
 import unittest
 
 from oops.event import Event
-from oops.array_ import *
-import oops.registry as registry
+
+import oops.registry  as registry
 import oops.constants as constants
 
 class Edelta(object):

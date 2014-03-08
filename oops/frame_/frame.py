@@ -1,16 +1,13 @@
 ################################################################################
 # oops/frame_/frame.py: Abstract class Frame and its required subclasses
-#
-# 2/13/12 Modified (MRS) - implemented and tested QuickFrame.
-# 3/1/12 Modified (MRS) - revised and implified connect() and connect_to();
-#   added quick parameter dictionary and config file.
 ################################################################################
 
 import numpy as np
 import scipy.interpolate as interp
 
 import oops.registry as registry
-from oops.array_     import *
+import oops.utils as utils
+from polymath import *
 from oops.config     import QUICK, LOGGING
 from oops.transform  import Transform
 
@@ -464,7 +461,7 @@ class LinkedFrame(Frame):
         # Required fields
         self.frame_id     = self.frame.frame_id
         self.reference_id = self.parent.reference_id
-        self.shape = Array.broadcast_shape((self.frame, self.parent))
+        self.shape = Qube.broadcasted_shape((self.frame, self.parent))
 
         if self.frame.origin_id is None:
             self.origin_id = self.parent.origin_id
@@ -588,11 +585,11 @@ class QuickFrame(Frame):
             true_transform = self.frame.transform_at_time(t)
             (matrix, omega) = self._interpolate_matrix_omega(t)
 
-            dmatrix = abs(true_transform.matrix - matrix)
+            dmatrix = (true_transform.matrix - matrix).rms()
 
-            domega = abs(true_transform.omega - omega)
-            if abs(true_transform.omega) != 0.:
-                domega /= abs(true_transform.omega)
+            domega = (true_transform.omega - omega).rms()
+            if true_transform.omega.rms() != 0.:
+                domega /= true_transform.omega.rms()
 
             error = max(np.max(dmatrix.vals), np.max(domega.vals))
             if error > precision_self_check:
@@ -638,8 +635,8 @@ class QuickFrame(Frame):
 
         # time can only be a 1-D array in the splines
         tflat = Scalar.as_scalar(time).flatten()
-        matrix = np.empty(tflat.shape + [3,3])
-        omega  = np.zeros(tflat.shape + [3])
+        matrix = np.empty(list(tflat.shape) + [3,3])
+        omega  = np.zeros(list(tflat.shape) + [3])
 
         # Evaluate the matrix and rotation vector
         matrix[...,0,0] = self.matrix[0,0](tflat.vals)

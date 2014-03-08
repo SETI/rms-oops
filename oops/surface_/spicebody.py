@@ -1,22 +1,16 @@
 ################################################################################
 # oops/surface_/spicebody.py: Handles bodys shaped defined in the SPICE toolkit.
-#
-# Note: This is not a Surface subclass. Instead, it is a function to return a
-# surface (either a Spheroid or an Ellipsoid) using information found in the
-# SPICE toolkit.
-#
-# 2/17/12 Created (MRS)
 ################################################################################
 
 import cspice
 
-from oops.surface_.spheroid import Spheroid
+from oops.surface_.spheroid  import Spheroid
 from oops.surface_.ellipsoid import Ellipsoid
-from oops.path_.spicepath import SpicePath
-from oops.frame_.spiceframe import SpiceFrame
-import oops.registry as registry
+from oops.path_.spicepath    import SpicePath
+from oops.frame_.spiceframe  import SpiceFrame
+
+import oops.registry      as registry
 import oops.spice_support as spice
-import os.path
 
 def spice_body(spice_id):
     """Returns a Spheroid or Ellipsoid defining the path, orientation and shape
@@ -53,6 +47,7 @@ class Test_spice_body(unittest.TestCase):
     def runTest(self):
 
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+        import os.path
 
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))

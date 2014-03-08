@@ -1,7 +1,5 @@
 ################################################################################
 # oops/calib_/calibration.py: Abstract class Calibration
-#
-# 2/11/12 Modified (MRS) - revised for style
 ################################################################################
 
 class Calibration(object):
@@ -67,7 +65,7 @@ class Test_Calibration(unittest.TestCase):
 
     def runTest(self):
 
-        # TBD
+        # No tests here - this is just an abstract superclass
 
         pass
 

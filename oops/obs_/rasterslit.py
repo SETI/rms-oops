@@ -1,13 +1,11 @@
 ################################################################################
 # oops/obs_/rasterslit.py: Subclass RasterSlit of class Observation
-#
-# 6/13/12 MRS - Created.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.obs_.observation import Observation
-from oops.array_ import *
 
 class RasterSlit(Observation):
     """A RasterSlit is subclass of Observation consisting of a 2-D image in
@@ -127,7 +125,7 @@ class RasterSlit(Observation):
 
         indices = Tuple.as_tuple(indices)
 
-        slit_coord = indices.as_scalar(self.fast_axis)
+        slit_coord = indices.to_scalar(self.fast_axis)
         if self.slit_is_discontinuous:
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
@@ -174,7 +172,7 @@ class RasterSlit(Observation):
 
         indices = Tuple.as_int(indices)
 
-        slit_coord = indices.as_scalar(self.fast_axis)
+        slit_coord = indices.to_scalar(self.fast_axis)
 
         uv_vals = np.empty(indices.shape + [2], dtype="int")
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
@@ -239,7 +237,7 @@ class RasterSlit(Observation):
         """
 
         uv_pair = Pair.as_pair(uv_pair)
-        tstep = uv_pair.as_scalar(self.cross_slit_uv_index)
+        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
 
         return self.duv_dt_basis / self.cadence.tstride_at_tstep(tstep)
 
@@ -268,16 +266,16 @@ class RasterSlit(Observation):
 ################################################################################
 
 import unittest
-from oops.cadence_.metronome import Metronome
-from oops.cadence_.dual import DualCadence
 
 class Test_RasterSlit(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.fov_.flat import Flat
+        from oops.cadence_.metronome import Metronome
+        from oops.cadence_.dual import DualCadence
+        from oops.fov_.flatfov import FlatFOV
 
-        fov = Flat((0.001,0.001), (10,1))
+        fov = FlatFOV((0.001,0.001), (10,1))
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=1., steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
@@ -292,10 +290,10 @@ class Test_RasterSlit(unittest.TestCase):
 
         self.assertFalse(uv.mask)
         self.assertFalse(time.mask)
-        self.assertEqual(time, slow_cadence.tstride * indices.as_scalar(1) +
-                               fast_cadence.tstride * indices.as_scalar(0))
-        self.assertEqual(uv.as_scalar(0), indices.as_scalar(0))
-        self.assertEqual(uv.as_scalar(1), 0.5)
+        self.assertEqual(time, slow_cadence.tstride * indices.to_scalar(1) +
+                               fast_cadence.tstride * indices.to_scalar(0))
+        self.assertEqual(uv.to_scalar(0), indices.to_scalar(0))
+        self.assertEqual(uv.to_scalar(1), 0.5)
 
         # uvt() with fovmask == True
         (uv,time) = obs.uvt(indices, fovmask=True)
@@ -303,10 +301,10 @@ class Test_RasterSlit(unittest.TestCase):
         self.assertTrue(np.all(uv.mask == np.array(6*[False] + [True])))
         self.assertTrue(np.all(time.mask == uv.mask))
         self.assertEqual(time[:6],
-                         (slow_cadence.tstride * indices.as_scalar(1) +
-                          fast_cadence.tstride * indices.as_scalar(0))[:6])
-        self.assertEqual(uv[:6].as_scalar(0), indices[:6].as_scalar(0))
-        self.assertEqual(uv[:6].as_scalar(1), 0.5)
+                         (slow_cadence.tstride * indices.to_scalar(1) +
+                          fast_cadence.tstride * indices.to_scalar(0))[:6])
+        self.assertEqual(uv[:6].to_scalar(0), indices[:6].to_scalar(0))
+        self.assertEqual(uv[:6].to_scalar(1), 0.5)
 
         # uvt_range() with fovmask == False
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
@@ -316,13 +314,13 @@ class Test_RasterSlit(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min.as_scalar(0), indices.as_scalar(0))
-        self.assertEqual(uv_min.as_scalar(1), 0)
-        self.assertEqual(uv_max.as_scalar(0), indices.as_scalar(0) + 1)
-        self.assertEqual(uv_max.as_scalar(1), 1)
+        self.assertEqual(uv_min.to_scalar(0), indices.to_scalar(0))
+        self.assertEqual(uv_min.to_scalar(1), 0)
+        self.assertEqual(uv_max.to_scalar(0), indices.to_scalar(0) + 1)
+        self.assertEqual(uv_max.to_scalar(1), 1)
         self.assertEqual(time_min,
-                         slow_cadence.tstride * indices.as_scalar(1) +
-                         fast_cadence.tstride * indices.as_scalar(0))
+                         slow_cadence.tstride * indices.to_scalar(1) +
+                         fast_cadence.tstride * indices.to_scalar(0))
         self.assertEqual(time_max, time_min + fast_cadence.texp)
 
         # uvt_range() with fovmask == False, new indices
@@ -333,12 +331,12 @@ class Test_RasterSlit(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min.as_scalar(0), indices.as_scalar(0))
-        self.assertEqual(uv_min.as_scalar(1), 0)
-        self.assertEqual(uv_max.as_scalar(0), indices.as_scalar(0) + 1)
-        self.assertEqual(uv_max.as_scalar(1), 1)
-        self.assertEqual(time_min, slow_cadence.tstride * indices.as_scalar(1) +
-                                   fast_cadence.tstride * indices.as_scalar(0))
+        self.assertEqual(uv_min.to_scalar(0), indices.to_scalar(0))
+        self.assertEqual(uv_min.to_scalar(1), 0)
+        self.assertEqual(uv_max.to_scalar(0), indices.to_scalar(0) + 1)
+        self.assertEqual(uv_max.to_scalar(1), 1)
+        self.assertEqual(time_min, slow_cadence.tstride * indices.to_scalar(1) +
+                                   fast_cadence.tstride * indices.to_scalar(0))
         self.assertEqual(time_max, time_min + fast_cadence.texp)
 
         # uvt_range() with fovmask == True, new indices
@@ -350,13 +348,13 @@ class Test_RasterSlit(unittest.TestCase):
         self.assertTrue(np.all(time_min.mask == uv_min.mask))
         self.assertTrue(np.all(time_max.mask == uv_min.mask))
 
-        self.assertEqual(uv_min.as_scalar(0)[:2], indices.as_scalar(0)[:2])
-        self.assertEqual(uv_min.as_scalar(1)[:2], 0)
-        self.assertEqual(uv_max.as_scalar(0)[:2], indices.as_scalar(0)[:2] + 1)
-        self.assertEqual(uv_max.as_scalar(1)[:2], 1)
+        self.assertEqual(uv_min.to_scalar(0)[:2], indices.to_scalar(0)[:2])
+        self.assertEqual(uv_min.to_scalar(1)[:2], 0)
+        self.assertEqual(uv_max.to_scalar(0)[:2], indices.to_scalar(0)[:2] + 1)
+        self.assertEqual(uv_max.to_scalar(1)[:2], 1)
         self.assertEqual(time_min[:2],
-                         (slow_cadence.tstride * indices.as_scalar(1) +
-                          fast_cadence.tstride * indices.as_scalar(0))[:2])
+                         (slow_cadence.tstride * indices.to_scalar(1) +
+                          fast_cadence.tstride * indices.to_scalar(0))[:2])
         self.assertEqual(time_max[:2], time_min[:2] + fast_cadence.texp)
 
         # times_at_uv() with fovmask == False
@@ -364,8 +362,8 @@ class Test_RasterSlit(unittest.TestCase):
 
         (time0, time1) = obs.times_at_uv(uv)
 
-        self.assertEqual(time0, slow_cadence.tstride * uv.as_scalar(1) +
-                                fast_cadence.tstride * uv.as_scalar(0))
+        self.assertEqual(time0, slow_cadence.tstride * uv.to_scalar(1) +
+                                fast_cadence.tstride * uv.to_scalar(0))
         self.assertEqual(time1, time0 + fast_cadence.texp)
 
         # times_at_uv() with fovmask == True
@@ -374,8 +372,8 @@ class Test_RasterSlit(unittest.TestCase):
         self.assertTrue(np.all(time0.mask == 4*[False] + [True]))
         self.assertTrue(np.all(time1.mask == 4*[False] + [True]))
         self.assertEqual(time0[:4],
-                         (slow_cadence.tstride * uv.as_scalar(1) +
-                          fast_cadence.tstride * uv.as_scalar(0))[:4])
+                         (slow_cadence.tstride * uv.to_scalar(1) +
+                          fast_cadence.tstride * uv.to_scalar(0))[:4])
         self.assertEqual(time1[:4], time0[:4] + fast_cadence.texp)
 
         ####################################
@@ -393,25 +391,25 @@ class Test_RasterSlit(unittest.TestCase):
 
         (uv,time) = obs.uvt(indices)
 
-        self.assertEqual(uv.as_scalar(0), 0.5)
-        self.assertEqual(uv.as_scalar(1), indices.as_scalar(1))
-        self.assertEqual(time, slow_cadence.tstride * indices.as_scalar(0) +
-                               fast_cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(uv.to_scalar(0), 0.5)
+        self.assertEqual(uv.to_scalar(1), indices.to_scalar(1))
+        self.assertEqual(time, slow_cadence.tstride * indices.to_scalar(0) +
+                               fast_cadence.tstride * indices.to_scalar(1))
 
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
-        self.assertEqual(uv_min.as_scalar(0), 0)
-        self.assertEqual(uv_min.as_scalar(1), indices.as_scalar(1))
-        self.assertEqual(uv_max.as_scalar(0), 1)
-        self.assertEqual(uv_max.as_scalar(1), indices.as_scalar(1) + 1)
-        self.assertEqual(time_min, slow_cadence.tstride * indices.as_scalar(0) +
-                                   fast_cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(uv_min.to_scalar(0), 0)
+        self.assertEqual(uv_min.to_scalar(1), indices.to_scalar(1))
+        self.assertEqual(uv_max.to_scalar(0), 1)
+        self.assertEqual(uv_max.to_scalar(1), indices.to_scalar(1) + 1)
+        self.assertEqual(time_min, slow_cadence.tstride * indices.to_scalar(0) +
+                                   fast_cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + fast_cadence.texp)
 
         (time0,time1) = obs.times_at_uv(indices)
 
-        self.assertEqual(time0, slow_cadence.tstride * indices.as_scalar(0) +
-                                fast_cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(time0, slow_cadence.tstride * indices.to_scalar(0) +
+                                fast_cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time1, time0 + fast_cadence.texp)
 
         ####################################

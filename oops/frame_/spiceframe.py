@@ -3,11 +3,11 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 import cspice
 import os.path
 
 from oops.frame_.frame import Frame
-from oops.array_       import *
 from oops.config       import QUICK
 from oops.transform    import Transform
 
@@ -94,8 +94,8 @@ class SpiceFrame(Frame):
             return self.quick_frame(time, quick).transform_at_time(time, False)
 
         # Create the buffers
-        matrix = np.empty(time.shape + [3,3])
-        omega  = np.empty(time.shape + [3])
+        matrix = np.empty(time.shape + (3,3))
+        omega  = np.empty(time.shape + (3,))
 
         # Fill in the matrix and omega using CSPICE
         for i,t in np.ndenumerate(time.vals):
@@ -188,7 +188,7 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = registry.connect_frames("IAU_EARTH","J2000")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = cspice.sxform("J2000", "IAU_EARTH", times[i])
+            matrix6 = cspice.sxform("J2000", "IAU_EARTH", times[i].vals)
             (matrix, omega) = cspice.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
@@ -200,7 +200,7 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = registry.connect_frames("J2000","IAU_EARTH")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = cspice.sxform("IAU_EARTH", "J2000", times[i])
+            matrix6 = cspice.sxform("IAU_EARTH", "J2000", times[i].vals)
             (matrix, omega) = cspice.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
@@ -212,7 +212,7 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = registry.connect_frames("B1950","J2000")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = cspice.sxform("J2000", "B1950", times[i])
+            matrix6 = cspice.sxform("J2000", "B1950", times[i].vals)
             (matrix, omega) = cspice.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
@@ -224,7 +224,7 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = registry.connect_frames("J2000","B1950")
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = cspice.sxform("B1950", "J2000", times[i])
+            matrix6 = cspice.sxform("B1950", "J2000", times[i].vals)
             (matrix, omega) = cspice.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
@@ -267,7 +267,7 @@ class Test_SpiceFrame(unittest.TestCase):
 
         nacframe = registry.connect_frames("J2000", "CASSINI_ISS_NAC")
         matrix = nacframe.transform_at_time(tdb).matrix
-        optic_axis = (matrix * (0,0,1)).vals
+        optic_axis = (matrix * Vector3((0,0,1))).vals
 
         test_ra  = (np.arctan2(optic_axis[1], optic_axis[0]) *
                     180./np.pi) % 360
@@ -276,8 +276,8 @@ class Test_SpiceFrame(unittest.TestCase):
         right_ascension = 194.30861     # from the index table
         declination = 3.142808
 
-        self.assertTrue(np.abs(test_ra - right_ascension) < 0.5)
-        self.assertTrue(np.abs(test_dec - declination) < 0.5)
+        self.assertTrue(np.all(np.abs(test_ra - right_ascension) < 0.5))
+        self.assertTrue(np.all(np.abs(test_dec - declination) < 0.5))
 
         registry.initialize()
         spice.initialize()

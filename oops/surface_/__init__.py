@@ -12,7 +12,6 @@ from oops.surface_.nullsurface  import NullSurface
 from oops.surface_.orbitplane   import OrbitPlane
 from oops.surface_.ringplane    import RingPlane
 from oops.surface_.spheroid     import Spheroid
-
 from oops.surface_.spicebody    import *
 
 ################################################################################

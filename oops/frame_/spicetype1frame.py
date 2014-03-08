@@ -3,14 +3,14 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 import cspice
 
 from oops.frame_.frame import Frame
-from oops.array_ import *
-from oops.config import QUICK
-from oops.transform import Transform
+from oops.config       import QUICK
+from oops.transform    import Transform
 
-import oops.registry as registry
+import oops.registry      as registry
 import oops.spice_support as spice
 
 class SpiceType1Frame(Frame):

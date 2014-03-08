@@ -1,13 +1,10 @@
 ################################################################################
 # oops/cmodel_/cmodel.py: Abstract class CoordinateModel
-#
-# 1/24/12 Added (MRS)
-# 2/8/12 Modified (MRS) - supports new class heirarchy.
 ################################################################################
 
 import numpy as np
 
-from oops.array_ import *
+from polymath import *
 
 class CoordinateModel(object):
     """CoordinateModel is an abstract class used to describe the default
@@ -83,7 +80,7 @@ class Test_CoordinateModel(unittest.TestCase):
 
     def runTest(self):
 
-        # TBD
+        # No tests here - this is just an abstract superclass
 
         pass
 

@@ -1,15 +1,13 @@
 ################################################################################
 # oops/frame_/inclinedframe.py: Subclass InclinedFrame of class Frame
-#
-# 3/17/12 MRS - created.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.frame_.frame     import Frame
 from oops.frame_.spinframe import SpinFrame
 from oops.frame_.rotation  import Rotation
-from oops.array_           import *
 from oops.transform        import Transform
 
 import oops.registry as registry

@@ -1,12 +1,9 @@
 ################################################################################
 # oops/format_/format.py: Abstract class Format
-#
-# 1/24/12 (MRS) - Drafted.
 ################################################################################
 
 class Format(object):
-    """Format is a generic class that defines a mechanism for converting a
-    numeric value to a string and a string to a numeric value.
+    """A generic class for converting numeric values to/from strings.
     """
 
     OOPS_CLASS = "Format"
@@ -17,8 +14,7 @@ class Format(object):
         pass
 
     def str(self, value):
-        """Returns a character string indicating the value of a numeric quantity
-        such as a coordinate.
+        """Returns a character string indicating the value of a numeric quantity.
         """
 
         pass
@@ -38,7 +34,8 @@ class Test_Format(unittest.TestCase):
     
     def runTest(self):
 
-        # TBD
+        # No tests here - this is just an abstract superclass
+
         pass
 
 ########################################

@@ -1,13 +1,10 @@
 ################################################################################
 # oops/transform.py: Class Transform
-#
-# 2/5/12 Modified (MRS): Revised for consistent style.
-# 3/12/12 MRS - Implemented derivative support.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.array_ import *
 import oops.registry as registry
 
 class Transform(object):
@@ -55,7 +52,7 @@ class Transform(object):
         shape           the intrinsic shape of the transform.
     """
 
-    ZERO_MATRIXN = VectorN([0,0,0]).as_column()
+    ZERO_MATRIXN = Vector([0,0,0]).as_column()
     ZERO_VECTOR3 = Vector3([0,0,0])
 
     def __init__(self, matrix, omega, frame_id, reference_id, origin_id=None):
@@ -76,7 +73,7 @@ class Transform(object):
         self.omega  = Vector3.as_vector3(omega)
 
         self.is_fixed = (self.omega == Transform.ZERO_VECTOR3)
-        self.matrixn = MatrixN(self.matrix)
+        self.matrixn = Matrix(self.matrix)
 
         self.frame_id     = frame_id
         self.reference_id = reference_id
@@ -162,7 +159,7 @@ class Transform(object):
         if pos is None: return None
         if pos == Empty(): return pos
 
-        if not isinstance(pos, Array):
+        if not isinstance(pos, Qube):
             pos = Vector3.as_vector3(pos)
 
         self.matrix.subfield_math = derivs
@@ -237,7 +234,7 @@ class Transform(object):
         if pos is None: return None
         if pos == Empty(): return pos
 
-        if not isinstance(pos, Array):
+        if not isinstance(pos, Qube):
             pos = Vector3.as_vector3(pos)
 
         self.matrix.subfield_math = derivs
@@ -295,7 +292,7 @@ class Transform(object):
     def invert(self):
         """Returns the inverse transformation."""
 
-        return Transform(self.matrix.invert(), self.omega1,
+        return Transform(self.matrix.reciprocal(), self.omega1,
                          self.reference_id, self.frame_id, self.origin_id)
 
     @staticmethod
@@ -332,8 +329,8 @@ class Transform(object):
             origin_id = self.origin_id
             # assert self.origin_id == arg.origin_id
 
-        return Transform(self.matrix.rotate_matrix3(arg.matrix),
-                         arg.matrix.unrotate_vector3(self.omega) + arg.omega,
+        return Transform(self.matrix.rotate(arg.matrix),
+                         arg.matrix.unrotate(self.omega) + arg.omega,
                          self.frame_id, arg.reference_id, origin_id)
 
     def unrotate_transform(self, arg):
@@ -388,20 +385,20 @@ class Test_Transform(unittest.TestCase):
                        Vector3([0,0,1]), "SPIN", "J2000")
 
         self.assertEqual(tr.unrotate_pos_vel(p,v)[0], p)
-        self.assertEqual(tr.rotate_pos_vel(p,v)[1].as_scalar(2), v.as_scalar(2))
-        self.assertEqual(tr.rotate_pos_vel(p,v)[1].as_scalar(0),
-                                                v.as_scalar(0) + p.as_scalar(1))
-        self.assertEqual(tr.rotate_pos_vel(p,v)[1].as_scalar(1),
-                                                v.as_scalar(1) - p.as_scalar(0))
+        self.assertEqual(Scalar(tr.rotate_pos_vel(p,v)[1].mvals[...,2]), Scalar(v.mvals[...,2]))
+        self.assertEqual(Scalar(tr.rotate_pos_vel(p,v)[1].mvals[...,0]),
+                                                Scalar(v.mvals[...,0]) + Scalar(p.mvals[...,1]))
+        self.assertEqual(Scalar(tr.rotate_pos_vel(p,v)[1].mvals[...,1]),
+                                                Scalar(v.mvals[...,1]) - Scalar(p.mvals[...,0]))
 
         tr = tr.invert()
 
         self.assertEqual(tr.rotate(p), p)
-        self.assertEqual(tr.rotate_pos_vel(p,v)[1].as_scalar(2), v.as_scalar(2))
-        self.assertEqual(tr.rotate_pos_vel(p,v)[1].as_scalar(0),
-                                                v.as_scalar(0) - p.as_scalar(1))
-        self.assertEqual(tr.rotate_pos_vel(p,v)[1].as_scalar(1),
-                                                v.as_scalar(1) + p.as_scalar(0))
+        self.assertEqual(Scalar(tr.rotate_pos_vel(p,v)[1].mvals[...,2]), Scalar(v.mvals[...,2]))
+        self.assertEqual(Scalar(tr.rotate_pos_vel(p,v)[1].mvals[...,0]),
+                                                Scalar(v.mvals[...,0]) - Scalar(p.mvals[...,1]))
+        self.assertEqual(Scalar(tr.rotate_pos_vel(p,v)[1].mvals[...,1]),
+                                                Scalar(v.mvals[...,1]) + Scalar(p.mvals[...,0]))
 
         a = Vector3(np.random.rand(3,1,3))
         b = Vector3(np.random.rand(1,1,3))

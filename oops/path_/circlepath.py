@@ -1,17 +1,15 @@
 ################################################################################
 # oops/path_/circlepath.py: Subclass CirclePath of class Path
-#
-# 8/19/12 MRS - changed call to register() to reregister(), so a newly defined
-#   CirclePath replaces the old definition.
 ################################################################################
 
 import numpy as np
+from polymath import *
 import cspice
 
 from oops.path_.path import Path, Waypoint, RotatedPath
-from oops.array_     import *
 from oops.event      import Event
-import oops.registry as registry
+
+import oops.registry      as registry
 import oops.spice_support as spice
 
 class CirclePath(Path):

@@ -1,13 +1,9 @@
 ################################################################################
 # oops/calib_/point.py: Subclass PointSource of class Calibration
-#
-# 2/8/12 Modified (MRS) - Changed name from AreaScaling; revised for new class
-#   heirarchy.
-# 3/20/12 MRS - New and better name is PointSource.
 ################################################################################
 
 from oops.calib_.calibration import Calibration
-from oops.array_ import *
+from polymath import *
 
 class PointSource(Calibration):
     """PointSource is a Calibration subclass in which every pixel is multiplied
@@ -48,12 +44,9 @@ class PointSource(Calibration):
                         containing the calibrated values.
         """
 
-        value = (self.factor / self.fov.area_factor(uv_pair)) * dn
+        return (self.factor / self.fov.area_factor(uv_pair)) * dn
 
-        if isinstance(dn, Array): return value
-        return value.vals
-
-    def dn_from_value(self, value, uv_pair=None):
+    def dn_from_value(self, value, uv_pair):
         """Returns uncalibrated image values ("dn") based on calibrated values
         and image coordinates.
 
@@ -66,10 +59,7 @@ class PointSource(Calibration):
                         containing the uncalibrated DN values.
         """
 
-        dn = (self.fov.area_factor(uv_pair) / self.factor) * value
-
-        if isinstance(value, Array): return dn
-        return dn.vals
+        return (self.fov.area_factor(uv_pair) / self.factor) * value
 
 ################################################################################
 # UNIT TESTS
@@ -81,9 +71,27 @@ class Test_PointSource(unittest.TestCase):
 
     def runTest(self):
 
-        # TBD
+        import numpy as np
+        from oops.fov_.flatfov import FlatFOV
+        
+        flat_fov = FlatFOV((np.pi/180/3600.,np.pi/180/3600.), (1024,1024)) 
+        ps = PointSource("TEST", 5., flat_fov)
+        self.assertEqual(ps.value_from_dn(0., (512,512)), 0.)
+        self.assertEqual(ps.value_from_dn(0., (10,10)), 0.)
+        self.assertEqual(ps.value_from_dn(5., (512,512)), 25.)
+        self.assertEqual(ps.value_from_dn(5., (10,10)), 25.)
+        self.assertEqual(ps.value_from_dn(.5, (512,512)), 2.5)
+        self.assertEqual(ps.value_from_dn(.5, (10,10)), 2.5)
 
-        pass
+        self.assertEqual(ps.dn_from_value(0., (512,512)), 0.)
+        self.assertEqual(ps.dn_from_value(0., (10,10)), 0.)
+        self.assertEqual(ps.dn_from_value(25., (512,512)), 5.)
+        self.assertEqual(ps.dn_from_value(25., (10,10)), 5.)
+        self.assertEqual(ps.dn_from_value(2.5, (512,512)), .5)
+        self.assertEqual(ps.dn_from_value(2.5, (10,10)), .5)
+
+        a = Scalar(np.arange(10000).reshape((100,100)))
+        self.assertEqual(a, ps.dn_from_value(ps.value_from_dn(a, (10,10)), (10,10)))
 
 ########################################
 if __name__ == '__main__':

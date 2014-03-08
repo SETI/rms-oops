@@ -1,27 +1,6 @@
 ################################################################################
 # oops/backplane.py: Backplane class
 #
-# 3/14/12 Created (MRS)
-# 3/24/12 MRS - Revised handling of keys into the backplane dictionary, added
-#   support for ansa surfaces; an entirely masked backplane no longer causes
-#   problems.
-# 5/4/12 MRS - Updated ansa backplanes and added ansa longitude backplanes.
-# 5/14/12 MRS - Added ring azimuth and elevation backplanes; introduced
-#   "gridless" events and scalar quantitities, renamed "range" to "distance" to
-#   avoid potential confusion with the Python "range" object; introduced
-#   ring_emission_angle() and ring_incidence_angle() to support the standard
-#   conventions for rings; set up faster/better evaluations of ring and ansa
-#   longitudes.
-# 6/6/12 MRS - Added limb geometry.
-# 7/29/12 MRS - Revised the calling sequence to support observation subclasses
-#   other than images.
-# 8/19/12 MRS - Added where_not(), where_any() and where_all(), misc.
-#   reorganization to support more path events, misc. bug fixes.
-# 1/4/12 MRS - Added new pole options for ring_incidence_angle() and
-#   ring_emission_angle(). These functions are no longer deprecated. Renamed the
-#   "j2000" reference option in ring_longitude as "node", and added the "aries"
-#   option for compatibility with the Rings Node longitude definition.
-#
 # TBD...
 #   position(self, event_key, axis="x", apparent=True, frame="j2000")
 #       returns an arbitrary position vector in an arbitrary frame
@@ -38,15 +17,17 @@
 ################################################################################
 
 import numpy as np
-import oops.config as config
-import oops.constants as constants
-import oops.registry as registry
-import oops.surface_ as surface_
-import oops.path_ as path_
-from oops.array_ import *
-from oops.event import Event
-from oops.meshgrid import Meshgrid
 import os.path
+
+import oops.config     as config
+import oops.constants  as constants
+import oops.registry   as registry
+import oops.surface_   as surface_
+import oops.path_      as path_
+
+from polymath              import *
+from oops.event    import Event
+from oops.meshgrid import Meshgrid
 
 HALFPI = np.pi / 2.
 TWOPI  = np.pi * 2.
@@ -402,7 +383,7 @@ class Backplane(object):
         """Inserts this backplane into the dictionary. Same as
         register_backplane() but without the expansion of a scalar value."""
 
-        backplane = Scalar.as_scalar(backplane)
+        backplane = Scalar.to_scalar(backplane)
 
         # For reference, we add the key as an attribute of each backplane object
         backplane = backplane.plain()
@@ -970,7 +951,7 @@ class Backplane(object):
             event = self.get_gridless_event_with_arr(event_key)
 
             # Sign on event.arr is negative because photon is incoming
-            latitude = (-event.arr.as_scalar(2) / event.arr.norm()).arcsin()
+            latitude = (-event.arr.to_scalar(2) / event.arr.norm()).arcsin()
             incidence = HALFPI - latitude
 
             # Ring incidence angles are always 0-90 degrees
@@ -1002,7 +983,7 @@ class Backplane(object):
         if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
 
-            latitude = (event.dep.as_scalar(2) / event.dep.norm()).arcsin()
+            latitude = (event.dep.to_scalar(2) / event.dep.norm()).arcsin()
             emission = HALFPI - latitude
 
             # Ring emission angles are always measured from the lit side normal
@@ -1224,7 +1205,7 @@ class Backplane(object):
         if not self.backplanes.has_key(key):
             event = self.get_gridless_event_with_arr(event_key)
             arr = -event.aberrated_arr()
-            lon = arr.as_scalar(1).arctan2(arr.as_scalar(0)) % TWOPI
+            lon = arr.to_scalar(1).arctan2(arr.to_scalar(0)) % TWOPI
 
             self.register_gridless_backplane(key, lon)
 
@@ -1241,7 +1222,7 @@ class Backplane(object):
         if not self.backplanes.has_key(key):
             event = self.get_gridless_event(event_key)
             dep = event.aberrated_dep()
-            lon = dep.as_scalar(1).arctan2(dep.as_scalar(0)) % TWOPI
+            lon = dep.to_scalar(1).arctan2(dep.to_scalar(0)) % TWOPI
 
             self.register_gridless_backplane(key, lon)
 
@@ -1279,7 +1260,7 @@ class Backplane(object):
             if lat_type == "graphic":
                 arr = arr * event.surface.unsquash_sq
 
-            lat = (arr.as_scalar(2) / arr.norm()).arcsin()
+            lat = (arr.to_scalar(2) / arr.norm()).arcsin()
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
@@ -1298,7 +1279,7 @@ class Backplane(object):
             if lat_type == "graphic":
                 dep = dep * event.surface.unsquash_sq
 
-            lat = (dep.as_scalar(2) / dep.norm()).arcsin()
+            lat = (dep.to_scalar(2) / dep.norm()).arcsin()
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
@@ -1334,7 +1315,7 @@ class Backplane(object):
             pole = rotmat * pole_j2000
 
             # Convert the X and Y components of the rotated pole into an angle
-            coords = pole.as_scalars()
+            coords = pole.to_scalars()
             clock_angle = coords[1].arctan2(coords[0]) % TWOPI
 
             self.register_gridless_backplane(key, clock_angle)
@@ -1579,8 +1560,8 @@ class Backplane(object):
             event = self.get_surface_event_with_arr(event_key)
             ref = -event.aberrated_arr()
 
-        ref_angle = ref.as_scalar(1).arctan2(ref.as_scalar(0))
-        rad_angle = event.pos.as_scalar(1).arctan2(event.pos.as_scalar(0))
+        ref_angle = ref.to_scalar(1).arctan2(ref.to_scalar(0))
+        rad_angle = event.pos.to_scalar(1).arctan2(event.pos.to_scalar(0))
         az = (rad_angle - ref_angle) % TWOPI
         self.register_backplane(key, az)
 
@@ -1880,7 +1861,7 @@ class Backplane(object):
             event = self.get_gridless_event_with_arr(event_key)
 
             # Sign on event.arr is negative because photon is incoming
-            latitude = (-event.arr.as_scalar(2) / event.arr.norm()).arcsin()
+            latitude = (-event.arr.to_scalar(2) / event.arr.norm()).arcsin()
             incidence = HALFPI - latitude
 
             self.register_gridless_backplane(key, incidence)
@@ -1935,7 +1916,7 @@ class Backplane(object):
         if not self.backplanes.has_key(key_prograde):
             event = self.get_gridless_event(event_key)
 
-            latitude = (event.dep.as_scalar(2) / event.dep.norm()).arcsin()
+            latitude = (event.dep.to_scalar(2) / event.dep.norm()).arcsin()
             emission = HALFPI - latitude
 
             self.register_gridless_backplane(key, emission)

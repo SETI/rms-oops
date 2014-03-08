@@ -1,14 +1,11 @@
 ################################################################################
 # oops/cmodel_/longitude.py: Subclass Longitude of class CoordinateModel
-#
-# 1/24/12 Added (MRS)
-# 2/8/12 Modified (MRS) - supports new class heirarchy.
 ################################################################################
 
 import numpy as np
 
 from oops.cmodel_.cmodel import CoordinateModel
-from oops.units import Units
+from polymath import Units
 
 class Longitude(CoordinateModel):
     """Longitude is a subclass of CoordinateModel used to describe a rotation
@@ -52,8 +49,6 @@ import unittest
 class Test_Longitude(unittest.TestCase):
 
     def runTest(self):
-
-        # TBD
 
         pass
 

@@ -1,23 +1,16 @@
 ################################################################################
-# oops/path_/path.py: Abstract class Path and its required subclasses
-#
-# 2/13/12 Modified (MRS) - implemented and tested QuickPath.
-# 3/1/12 Modified (MRS) - revised and implified connect() and connect_to();
-#   added convergence testing to _solve_photon; added quick parameter dictionary
-#   and config file.
-# 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
-# 9/7/13 MRS - the value of attribute arr_lt or dep_lt in the event returned by
-#   _solve_photon() had the wrong sign. This was fixed.
+# oops/path_/path_.py: Abstract class Path and its required subclasses
 ################################################################################
 
 import numpy as np
 import scipy.interpolate as interp
+from polymath import *
 
-import oops.constants as constants
-import oops.registry as registry
-from oops.array_ import *
 from oops.config import QUICK, PATH_PHOTONS, LOGGING
 from oops.event  import Event
+
+import oops.constants as constants
+import oops.registry  as registry
 
 class Path(object):
     """A Path is an abstract class that returns an Event (time, position and
@@ -467,11 +460,11 @@ class Path(object):
 
             dlt = ((delta_pos_ssb.norm() - lt * signed_c) /
                    (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
-            new_lt = (lt - dlt).clip(lt_min, lt_max)
+            new_lt = (lt - dlt).clip(lt_min, lt_max, False)
             dlt = lt - new_lt 
             lt = new_lt
 
-            path_time = (link.time + lt).clip(path_time_min, path_time_max)
+            path_time = (link.time + lt).clip(path_time_min, path_time_max, False)
 
             # Test for convergence
             prev_max_dlt = max_dlt
@@ -817,7 +810,7 @@ class LinkedPath(Path):
         self.path_id   = self.path.path_id
         self.origin_id = self.parent.origin_id
         self.frame_id  = self.parent.frame_id
-        self.shape     = Array.broadcast_shape((self.path, self.parent))
+        self.shape     = Qube.broadcasted_shape(self.path, self.parent)
 
     def event_at_time(self, time, quick=None):
         event = self.path.event_at_time(time, quick)
@@ -855,7 +848,7 @@ class RelativePath(Path):
         self.path_id   = self.path.path_id
         self.origin_id = self.origin.path_id
         self.frame_id  = self.origin.frame_id
-        self.shape     = Array.broadcast_shape((self.path, self.origin))
+        self.shape     = Qube.broadcasted_shape(self.path, self.origin)
 
         if self.path.frame_id == self.origin.frame_id:
             self.frame = None
@@ -1004,8 +997,8 @@ class QuickPath(Path):
             true_event = self.path.event_at_time(t)
             (pos, vel) = self._interpolate_pos_vel(t)
 
-            dpos = abs(true_event.pos - pos) / abs(true_event.pos)
-            dvel = abs(true_event.vel - vel) / abs(true_event.vel)
+            dpos = (true_event.pos - pos).norm() / (true_event.pos).norm()
+            dvel = (true_event.vel - vel).norm() / (true_event.vel).norm()
             error = max(np.max(dpos.vals), np.max(dvel.vals))
             if error > precision_self_check:
                 raise ValueError("precision tolerance not achieved: " +
@@ -1043,8 +1036,8 @@ class QuickPath(Path):
 
         # time can only be a 1-D array in the splines
         tflat = Scalar.as_scalar(time).flatten()
-        pos = np.empty(tflat.shape + [3])
-        vel = np.empty(tflat.shape + [3])
+        pos = np.empty(tflat.shape + (3,))
+        vel = np.empty(tflat.shape + (3,))
 
         # Evaluate the positions and velocities
         pos[...,0] = self.pos_x(tflat.vals)
@@ -1136,7 +1129,7 @@ class Test_Path(unittest.TestCase):
 
         # NOTE: THIS UNIT TEST IS KNOWN TO NOT WORK STANDALONE BECAUSE THE
         # PATH CLASS IN THIS FILE ENDS UP BEING A DIFFERENT CLASS FROM
-        # OOPS.PATH_.PATH.PATH. EVERYTHING IS FINE AS LONG AS YOU RUN FROM
+        # oops.PATH_.PATH.PATH. EVERYTHING IS FINE AS LONG AS YOU RUN FROM
         # ONE OF THE HIGHER-LEVEL UNITTESTER PROGRAMS.
         
         Path.USE_QUICKPATHS = False
@@ -1174,8 +1167,8 @@ class Test_Path(unittest.TestCase):
         linked_event = linked.event_at_time(times)
 
         eps = 1.e-6
-        self.assertTrue(abs(linked_event.pos - direct_event.pos) <= eps)
-        self.assertTrue(abs(linked_event.vel - direct_event.vel) <= eps)
+        self.assertTrue(((linked_event.pos - direct_event.pos).norm() <= eps).all())
+        self.assertTrue(((linked_event.vel - direct_event.vel).norm() <= eps).all())
 
         # RelativePath
         relative = RelativePath(linked, SpicePath("MARS", "SUN"))
@@ -1185,8 +1178,8 @@ class Test_Path(unittest.TestCase):
         relative_event = relative.event_at_time(times)
 
         eps = 1.e-6
-        self.assertTrue(abs(relative_event.pos - direct_event.pos) <= eps)
-        self.assertTrue(abs(relative_event.vel - direct_event.vel) <= eps)
+        self.assertTrue(((relative_event.pos - direct_event.pos).norm() <= eps).all())
+        self.assertTrue(((relative_event.vel - direct_event.vel).norm() <= eps).all())
 
         # ReversedPath
         reversed = ReversedPath(relative)
@@ -1196,8 +1189,8 @@ class Test_Path(unittest.TestCase):
         reversed_event = reversed.event_at_time(times)
 
         eps = 1.e-6
-        self.assertTrue(abs(reversed_event.pos - direct_event.pos) <= eps)
-        self.assertTrue(abs(reversed_event.vel - direct_event.vel) <= eps)
+        self.assertTrue(((reversed_event.pos - direct_event.pos).norm() <= eps).all())
+        self.assertTrue(((reversed_event.vel - direct_event.vel).norm() <= eps).all())
 
         # RotatedPath
         rotated = RotatedPath(reversed, SpiceFrame("B1950"))
@@ -1207,8 +1200,8 @@ class Test_Path(unittest.TestCase):
         rotated_event = rotated.event_at_time(times)
 
         eps = 1.e-6
-        self.assertTrue(abs(rotated_event.pos - direct_event.pos) <= eps)
-        self.assertTrue(abs(rotated_event.vel - direct_event.vel) <= eps)
+        self.assertTrue(((rotated_event.pos - direct_event.pos).norm() <= eps).all())
+        self.assertTrue(((rotated_event.vel - direct_event.vel).norm() <= eps).all())
 
         # QuickPath tests
         moon = SpicePath("MOON", "EARTH")

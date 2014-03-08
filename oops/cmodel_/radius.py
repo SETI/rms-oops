@@ -1,14 +1,11 @@
 ################################################################################
 # oops/cmodel_/radius.py: Subclass Radius of class CoordinateModel
-#
-# 1/24/12 Added (MRS)
-# 2/8/12 Modified (MRS) - supports new class heirarchy.
 ################################################################################
 
 import numpy as np
 
 from oops.cmodel_.cmodel import CoordinateModel
-from oops.units import Units
+from polymath import Units
 
 class Radius(CoordinateModel):
     """Radius is a subclass of CoordinateModel used to describe the length of a
@@ -50,8 +47,6 @@ import unittest
 class Test_Radius(unittest.TestCase):
 
     def runTest(self):
-
-        # TBD
 
         pass
 

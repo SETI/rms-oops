@@ -1,13 +1,11 @@
 ################################################################################
 # oops/fov_/slicefov.py: SliceFOV subclass of FOV
-#
-# 6/16/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
 from oops.fov_.fov import FOV
-from oops.array_   import *
+from polymath import *
 
 class SliceFOV(FOV):
 
@@ -44,8 +42,7 @@ class SliceFOV(FOV):
         in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(x,y)/d(u,v).
         """
 
         return self.fov.xy_from_uv(uv_pair + self.uv_origin, derivs=derivs)
@@ -58,8 +55,7 @@ class SliceFOV(FOV):
         in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(u,v)/d(x,y).
         """
 
         return self.fov.uv_from_xy(xy_pair, extras=extras,

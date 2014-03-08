@@ -1,19 +1,13 @@
 ################################################################################
 # oops/surface_/ringplane.py: RingPlane subclass of class Surface
-#
-# 2/8/12 Modified (MRS) - Updated for style; added elevation parameter; added
-#   mask tracking.
-# 2/17/12 Modified (MRS) - Added optional radial limits to the definition of a
-#   RingPlane.
-# 3/2/12 MRS: Completed implementation of all the derivatives; updated the
-#   comments.
 ################################################################################
 
 import numpy as np
+from polymath import *
 import gravity
 
 from oops.surface_.surface import Surface
-from oops.array_ import *
+
 import oops.registry as registry
 
 class RingPlane(Surface):
@@ -85,12 +79,12 @@ class RingPlane(Surface):
                         objects with item shape [1,3].
         """
 
-        # Convert to a Vector3 and strip units, if any
-        pos = Vector3.as_standard(pos)
+        # Convert to a Vector3
+        pos = Vector3.as_vector3(pos)
         mask = pos.mask
 
         # Generate cylindrical coordinates
-        x = pos.vals[...,0]
+        x = pos.vals[...,0] # to_scalars XXX
         y = pos.vals[...,1]
 
         r     = Scalar(np.sqrt(x**2 + y**2), mask)
@@ -146,22 +140,21 @@ class RingPlane(Surface):
                         [3,3].
         """
 
-        # Convert to Scalars and strip units, if any
-        r     = Scalar.as_standard(coords[0])
-        theta = Scalar.as_standard(coords[1])
+        r     = coords[0]
+        theta = coords[1]
 
         if len(coords) == 2:
             z = Scalar(0.)
         else:
-            z = Scalar.as_standard(coords[2])
+            z = coords[2]
 
         # Convert to vectors
-        shape = Array.broadcast_shape((r, theta, z))
-        vals = np.empty(shape + [3])
+        shape = Qube.broadcasted_shape(r, theta, z)
+        vals = np.empty(shape + (3,))
 
         cos_theta = np.cos(theta.vals)
         sin_theta = np.sin(theta.vals)
-        vals[...,0] = cos_theta * r.vals
+        vals[...,0] = cos_theta * r.vals # from_scalars XXX
         vals[...,1] = sin_theta * r.vals
         vals[...,2] = z.vals + self.elevation
 
@@ -209,11 +202,11 @@ class RingPlane(Surface):
 
         # Solve for obs + factor * los for scalar t, such that the z-component
         # equals zero.
-        obs = Vector3.as_standard(obs)
-        los = Vector3.as_standard(los)
+        obs = Vector3.as_vector3(obs)
+        los = Vector3.as_vector3(los)
 
-        obs_z = obs.as_scalar(axis=2)
-        los_z = los.as_scalar(axis=2)
+        obs_z = obs.to_scalar(axis=2)
+        los_z = los.to_scalar(axis=2)
 
         t = (self.elevation - obs_z)/los_z
         pos = obs + t * los
@@ -366,9 +359,9 @@ class Test_RingPlane(unittest.TestCase):
         obs = np.random.rand(2,4,3,3)
 
         (r,theta,z) = plane.coords_from_vector3(obs,axes=3)
-        self.assertTrue(theta >= 0.)
-        self.assertTrue(theta < 2.*np.pi)
-        self.assertTrue(r >= 0.)
+        self.assertTrue((theta >= 0.).all())
+        self.assertTrue((theta < 2.*np.pi).all())
+        self.assertTrue((r >= 0.).all())
 
         test = plane.vector3_from_coords((r,theta,z))
         self.assertTrue(np.all(np.abs(test.vals - obs) < 1.e-15))
@@ -379,11 +372,11 @@ class Test_RingPlane(unittest.TestCase):
         los[...,2] = -np.abs(los[...,2])
 
         (pts, factors) = plane.intercept(obs, los)
-        self.assertTrue(pts.as_scalar(2) == 0.)
+        self.assertTrue(pts.to_scalar(2) == 0.)
 
         angles = pts - obs
-        self.assertTrue(angles.sep(los) > -1.e-12)
-        self.assertTrue(angles.sep(los) <  1.e-12)
+        self.assertTrue((angles.sep(los) > -1.e-12).all())
+        self.assertTrue((angles.sep(los) <  1.e-12).all())
 
         # Intercepts that point away from the ring plane
         self.assertTrue(np.all(factors.vals > 0.))

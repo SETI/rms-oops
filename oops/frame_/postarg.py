@@ -1,13 +1,11 @@
 ################################################################################
 # oops/frame_/postarg.py: Subclass PosTarg of class Frame
-#
-# 8/4/12 MRS - Created.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.frame_.frame import Frame
-from oops.array_       import *
 from oops.transform    import Transform
 
 import oops.registry as registry

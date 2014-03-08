@@ -6,7 +6,7 @@
 
 from oops.calib_.calibration  import Calibration
 from oops.calib_.extended     import ExtendedSource
-from oops.calib_.flat         import Flat
+from oops.calib_.flatcalib    import FlatCalib
 from oops.calib_.point        import PointSource
 
 ################################################################################

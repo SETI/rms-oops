@@ -1,16 +1,13 @@
 ################################################################################
 # oops/surface_/ansa.py: Ansa subclass of class Surface
-#
-# 2/27/12 Checked in (BSW)
-# 3/24/12 MRS - revised for new surface API.
-# 5/4/12 MRS - added associated RingPlane surfaces to the Ansa class.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.surface_.surface  import Surface
+from oops.surface_.surface   import Surface
 from oops.surface_.ringplane import RingPlane
-from oops.array_ import *
+
 import oops.registry as registry
 
 class Ansa(Surface):
@@ -97,10 +94,8 @@ class Ansa(Surface):
                         MatrixN objects with item shape [1,3].
         """
 
-        pos = Vector3.as_standard(pos)
-        obs = Vector3.as_standard(obs)
-        (pos_x, pos_y, pos_z) = pos.as_scalars()
-        (obs_x, obs_y, obs_z) = obs.as_scalars()
+        (pos_x, pos_y, pos_z) = pos.to_scalars()
+        (obs_x, obs_y, obs_z) = obs.to_scalars()
 
         rabs   = (pos_x**2 + pos_y**2).sqrt()
         obs_xy = (obs_x**2 + obs_y**2).sqrt()
@@ -207,8 +202,8 @@ class Ansa(Surface):
 
         assert len(coords) in {2,3}
 
-        r = Scalar.as_standard(coords[0])
-        z = Scalar.as_standard(coords[1])
+        r = coords[0]
+        z = coords[1]
 
         sign = r.sign()
         rabs = r * sign
@@ -216,9 +211,9 @@ class Ansa(Surface):
         if len(coords) == 2:
             theta = Scalar(0.)
         else:
-            theta = Scalar.as_standard(coords[2])
+            theta = coords[2]
 
-        (obs_x, obs_y, obs_z) = Vector3.as_standard(obs).as_scalars()
+        (obs_x, obs_y, obs_z) = Vector3.as_vector(obs).to_scalars()
         obs_xy = (obs_x**2 + obs_y**2).sqrt()
 
         phi = (rabs / obs_xy).arccos()
@@ -265,13 +260,10 @@ class Ansa(Surface):
         # t = -(obs_xy dot los_xy) / (los_xy dot los_xy)
         # pos = obs + t * los
 
-        obs = Vector3.as_standard(obs)
-        los = Vector3.as_standard(los)
-
-        obs_x = obs.as_scalar(0).vals
-        obs_y = obs.as_scalar(1).vals
-        los_x = los.as_scalar(0).vals
-        los_y = los.as_scalar(1).vals
+        obs_x = obs.to_scalar(0).vals
+        obs_y = obs.to_scalar(1).vals
+        los_x = los.to_scalar(0).vals
+        los_y = los.to_scalar(1).vals
 
         los_x_sq = los_x**2
         los_y_sq = los_y**2
@@ -302,13 +294,13 @@ class Ansa(Surface):
             #                 = -los[x] los[z] / |los|**2
             # dpos[z]/dobs[z] = 1
 
-            los_z = los.as_scalar(2).vals
+            los_z = los.to_scalar(2).vals
 
-            dt_dobs_vals = np.zeros(obs.shape + [1,3])
+            dt_dobs_vals = np.zeros(obs.shape + (1,3))
             dt_dobs_vals[...,0,0] = -los_x / los_sq
             dt_dobs_vals[...,0,1] = -los_y / los_sq
 
-            dpos_dobs_vals = np.zeros(obs.shape + [3,3])
+            dpos_dobs_vals = np.zeros(obs.shape + (3,3))
             dpos_dobs_vals[...,0,0] = los_y_sq
             dpos_dobs_vals[...,0,1] = -los_x * los_y
             dpos_dobs_vals[...,1,0] = dpos_dobs_vals[...,0,1]
@@ -332,12 +324,12 @@ class Ansa(Surface):
             # dpos[z]/dlos[y] = los[z] dt/dlos[y]
             # dpos[z]/dlos[z] = t
 
-            dt_dlos_vals = np.zeros(obs.shape + [1,3])
+            dt_dlos_vals = np.zeros(obs.shape + (1,3))
             dt_dlos_vals[...,0,0] = 2 * los_x * obs_dot_los - obs_x * los_sq
             dt_dlos_vals[...,0,1] = 2 * los_y * obs_dot_los - obs_y * los_sq
             dt_dlos_vals /= (los_sq**2)[...,np.newaxis,np.newaxis]
 
-            dpos_dlos_vals = np.zeros(obs.shape + [3,3])
+            dpos_dlos_vals = np.zeros(obs.shape + (3,3))
             dpos_dlos_vals[...,0,0] = los_x * dt_dlos_vals[...,0,0] + t_vals
             dpos_dlos_vals[...,0,1] = los_x * dt_dlos_vals[...,0,1]
             dpos_dlos_vals[...,1,0] = los_y * dt_dlos_vals[...,0,0]
@@ -351,10 +343,10 @@ class Ansa(Surface):
             dt_dlos_vals *= los_norm_vals
             dpos_dlos_vals *= los_norm_vals
 
-            pos.d_dobs = MatrixN(dpos_dobs_vals, pos.mask)
-            pos.d_dlos = MatrixN(dpos_dlos_vals, pos.mask)
-            t.d_dobs = MatrixN(dt_dobs_vals, pos.mask)
-            t.d_dlos = MatrixN(dt_dlos_vals, pos.mask)
+            pos.d_dobs = Matrix(dpos_dobs_vals, pos.mask)
+            pos.d_dlos = Matrix(dpos_dlos_vals, pos.mask)
+            t.d_dobs = Matrix(dt_dobs_vals, pos.mask)
+            t.d_dlos = Matrix(dt_dlos_vals, pos.mask)
 
         return (pos, t)
 
@@ -407,11 +399,11 @@ class Test_Ansa(unittest.TestCase):
         los = Vector3(np.random.rand(100,3))
 
         (pos,t) = surface.intercept(obs, los)
-        pos_xy = pos * (1,1,0)
-        los_xy = los * (1,1,0)
+        pos_xy = pos.element_mul((1,1,0))
+        los_xy = los.element_mul((1,1,0))
 
-        self.assertTrue(abs(pos_xy.sep(los_xy) - np.pi/2) < 1.e-8)
-        self.assertTrue(abs(obs + t * los - pos) < 1.e-8)
+        self.assertTrue(((pos_xy.sep(los_xy) - np.pi/2).rms() < 1.e-8).all())
+        self.assertTrue(((obs + t * los - pos).rms() < 1.e-8).all())
 
         # coords_from_vector3()
         obs = Vector3(np.random.rand(100,3) * 1.e6)
@@ -419,18 +411,18 @@ class Test_Ansa(unittest.TestCase):
 
         (r,z) = surface.coords_from_vector3(pos, obs, axes=2)
 
-        pos_xy = pos * (1,1,0)
-        pos_z  = pos.as_scalar(2)
-        self.assertTrue(abs(pos_xy.norm() - abs(r)) < 1.e-8)
-        self.assertTrue(abs(pos_z - z) < 1.e-8)
+        pos_xy = pos.element_mul(Vector3((1,1,0)))
+        pos_z  = pos.to_scalar(2)
+        self.assertTrue((abs(pos_xy.norm() - abs(r)) < 1.e-8).all())
+        self.assertTrue((abs(pos_z - z) < 1.e-8).all())
 
         (r,z,theta) = surface.coords_from_vector3(pos, obs, axes=3)
 
-        pos_xy = pos * (1,1,0)
-        pos_z  = pos.as_scalar(2)
-        self.assertTrue(abs(pos_xy.norm() - abs(r)) < 1.e-8)
-        self.assertTrue(abs(pos_z - z) < 1.e-8)
-        self.assertTrue(abs(theta) <= np.pi)
+        pos_xy = pos.element_mul(Vector3((1,1,0)))
+        pos_z  = pos.to_scalar(2)
+        self.assertTrue(((pos_xy.norm() - abs(r)).rms() < 1.e-8).all())
+        self.assertTrue(((pos_z - z).rms() < 1.e-8).all())
+        self.assertTrue((abs(theta).mvals <= np.pi).all())
 
         # vector3_from_coords()
         obs = Vector3(1.e-5 + np.random.rand(100,3) * 1.e6)
@@ -440,32 +432,32 @@ class Test_Ansa(unittest.TestCase):
 
         pos = surface.vector3_from_coords((r,z), obs)
 
-        pos_xy = pos * (1,1,0)
-        pos_z  = pos.as_scalar(2)
-        self.assertTrue(abs(pos_xy.norm() - abs(r)) < 1.e-8)
-        self.assertTrue(abs(pos_z - z) < 1.e-8)
+        pos_xy = pos.element_mul(Vector3((1,1,0)))
+        pos_z  = pos.to_scalar(2)
+        self.assertTrue((abs(pos_xy.norm() - abs(r)) < 1.e-8).all())
+        self.assertTrue((abs(pos_z - z) < 1.e-8).all())
 
-        obs_xy = obs * (1,1,0)
-        self.assertTrue(abs(pos_xy.sep(obs_xy - pos_xy) - np.pi/2) < 1.e-5)
+        obs_xy = obs.element_mul(Vector3((1,1,0)))
+        self.assertTrue((abs(pos_xy.sep(obs_xy - pos_xy) - np.pi/2) < 1.e-5).all())
 
         pos1 = surface.vector3_from_coords((r,z,theta), obs)
-        pos1_xy = pos1 * (1,1,0)
-        self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
+        pos1_xy = pos1.element_mul(Vector3((1,1,0)))
+        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
 
         pos1 = surface.vector3_from_coords((r,z,-theta), obs)
-        pos1_xy = pos1 * (1,1,0)
-        self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
+        pos1_xy = pos1.element_mul(Vector3((1,1,0)))
+        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
 
         pos = surface.vector3_from_coords((-r,z), obs)
-        pos_xy = pos * (1,1,0)
+        pos_xy = pos.element_mul(Vector3((1,1,0)))
 
         pos1 = surface.vector3_from_coords((-r,z,-theta), obs)
-        pos1_xy = pos1 * (1,1,0)
-        self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
+        pos1_xy = pos1.element_mul(Vector3((1,1,0)))
+        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
 
         pos1 = surface.vector3_from_coords((-r,z,theta), obs)
-        pos1_xy = pos1 * (1,1,0)
-        self.assertTrue(pos1_xy.sep(pos_xy) - theta < 1.e-5)
+        pos1_xy = pos1.element_mul(Vector3((1,1,0)))
+        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
 
         # vector3_from_coords() & coords_from_vector3()
         obs = Vector3((1.e6,0,0))
@@ -476,39 +468,39 @@ class Test_Ansa(unittest.TestCase):
 
         pos = surface.vector3_from_coords((r,z,theta), obs)
         coords = surface.coords_from_vector3(pos, obs, axes=3)
-        self.assertTrue(abs(r - coords[0]) < 1.e-5)
-        self.assertTrue(abs(z - coords[1]) < 1.e-5)
-        self.assertTrue(abs(theta - coords[2]) < 1.e-8)
+        self.assertTrue((abs(r - coords[0]) < 1.e-5).all())
+        self.assertTrue((abs(z - coords[1]) < 1.e-5).all())
+        self.assertTrue((abs(theta - coords[2]) < 1.e-8).all())
 
         obs = Vector3(np.random.rand(100,3) * 1.e6)
         pos = Vector3(np.random.rand(100,3) * 1.e5)
         coords = surface.coords_from_vector3(pos, obs, axes=3)
         test_pos = surface.vector3_from_coords(coords, obs)
-        self.assertTrue(abs(test_pos - pos) < 1.e-5)
+        self.assertTrue(((test_pos - pos).rms().mvals < 1.e-5).all())
 
         # intercept() derivatives
-        obs = Vector3(np.random.rand(100,3))
-        los = Vector3(np.random.rand(100,3))
+        obs = Vector3(np.random.rand(10000,3))
+        los = Vector3(np.random.rand(10000,3))
         (pos0,t0) = surface.intercept(obs, los, derivs=True)
 
         eps = 1e-6
         (pos1,t1) = surface.intercept(obs + (eps,0,0), los, derivs=False)
         dpos_dobs_test = (pos1 - pos0) / eps
         dt_dobs_test = (t1 - t0) / eps
-        self.assertTrue(abs(dpos_dobs_test - pos0.d_dobs.vals[...,0]) < 1.e-6)
-        self.assertTrue(abs(dt_dobs_test - t0.d_dobs.vals[...,0,0]) < 1.e-6)
+        self.assertTrue(((dpos_dobs_test - pos0.d_dobs.vals[...,0]).rms() < 1.e-6).all())
+        self.assertTrue(((dt_dobs_test - t0.d_dobs.vals[...,0,0]).rms() < 1.e-6).all())
 
         (pos1,t1) = surface.intercept(obs + (0,eps,0), los, derivs=False)
         dpos_dobs_test = (pos1 - pos0) / eps
         dt_dobs_test = (t1 - t0) / eps
-        self.assertTrue(abs(dpos_dobs_test - pos0.d_dobs.vals[...,1]) < 1.e-5)
-        self.assertTrue(abs(dt_dobs_test - t0.d_dobs.vals[...,0,1]) < 1.e-6)
+        self.assertTrue(((dpos_dobs_test - pos0.d_dobs.vals[...,1]).rms() < 1.e-5).all())
+        self.assertTrue(((dt_dobs_test - t0.d_dobs.vals[...,0,1]).rms() < 1.e-6).all())
 
         (pos1,t1) = surface.intercept(obs + (0,0,eps), los, derivs=False)
         dpos_dobs_test = (pos1 - pos0) / eps
         dt_dobs_test = (t1 - t0) / eps
-        self.assertTrue(abs(dpos_dobs_test - pos0.d_dobs.vals[...,2]) < 1.e-5)
-        self.assertTrue(abs(dt_dobs_test - t0.d_dobs.vals[...,0,2]) < 1.e-6)
+        self.assertTrue(((dpos_dobs_test - pos0.d_dobs.vals[...,2]).rms() < 1.e-5).all())
+        self.assertTrue(((dt_dobs_test - t0.d_dobs.vals[...,0,2]).rms() < 1.e-6).all())
 
         eps = 1e-6
         los_norm = los.norm()
@@ -516,20 +508,21 @@ class Test_Ansa(unittest.TestCase):
         (pos1,t1) = surface.intercept(obs, los + (eps,0,0), derivs=False)
         dpos_dlos_test = (pos1 - pos0) / eps * los_norm
         dt_dlos_test = (t1 - t0) / eps * los_norm
-        self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,0]) < 3.e-3)
-        self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,0,0]) < 3.e-3)
+        print np.max((dpos_dlos_test - pos0.d_dlos.vals[...,0]).rms().mvals)
+        self.assertTrue(((dpos_dlos_test - pos0.d_dlos.vals[...,0]).rms().mvals < 1.e-2).all())
+        self.assertTrue(((dt_dlos_test - t0.d_dlos.vals[...,0,0]).rms().mvals < 1.e-2).all())
 
         (pos1,t1) = surface.intercept(obs, los + (0,eps,0), derivs=False)
         dpos_dlos_test = (pos1 - pos0) / eps * los_norm
         dt_dlos_test = (t1 - t0) / eps * los_norm
-        self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,1]) < 3.e-3)
-        self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,0,1]) < 3.e-3)
+        self.assertTrue(((dpos_dlos_test - pos0.d_dlos.vals[...,1]).rms().mvals < 1.e-2).all())
+        self.assertTrue(((dt_dlos_test - t0.d_dlos.vals[...,0,1]).rms().mvals < 1.e-2).all())
 
         (pos1,t1) = surface.intercept(obs, los + (0,0,eps), derivs=False)
         dpos_dlos_test = (pos1 - pos0) / eps * los_norm
         dt_dlos_test = (t1 - t0) / eps * los_norm
-        self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,2]) < 3.e-3)
-        self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,0,2]) < 3.e-3)
+        self.assertTrue(((dpos_dlos_test - pos0.d_dlos.vals[...,2]).rms().mvals < 1.e-2).all())
+        self.assertTrue(((dt_dlos_test - t0.d_dlos.vals[...,0,2]).rms().mvals < 1.e-2).all())
 
         registry.initialize()
 

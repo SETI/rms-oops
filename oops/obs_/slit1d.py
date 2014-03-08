@@ -1,14 +1,12 @@
 ################################################################################
 # oops/obs_/slit1d.py: Subclass Slit1D of class Observation
-#
-# 7/30/12 MRS - Created.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.array_ import *
 from oops.cadence_.metronome import Metronome
-from oops.obs_.observation import Observation
+from oops.obs_.observation   import Observation
 
 class Slit1D(Observation):
     """A Slit1D is subclass of Observation consisting of a 1-D slit measurement

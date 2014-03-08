@@ -1,12 +1,10 @@
 ################################################################################
 # oops/nav_/repointing.py: Subclass Repointing of class Navigation
-#
-# 5/20/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops.array_ import *
+from polymath             import *
 from oops.nav_.navigation import Navigation
 
 class Repointing(Navigation):

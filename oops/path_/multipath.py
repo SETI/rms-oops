@@ -1,18 +1,15 @@
 ################################################################################
 # oops/path_/multipath.py: Subclass MultiPath of class Path
-#
-# 8/19/12 MRS - changed call to register() to reregister(), so a newly defined
-#   MultiPath replaces the old definition.
 ################################################################################
 
 import numpy as np
+from polymath import *
 import cspice
 
 from oops.path_.path import Path
-from oops.array_     import *
 from oops.event      import Event
 
-import oops.registry as registry
+import oops.registry      as registry
 import oops.spice_support as spice
 
 class MultiPath(Path):
@@ -150,11 +147,11 @@ class Test_MultiPath(unittest.TestCase):
 
         # Single time
         event0 = test.event_at_time(0.)
-        self.assertEqual(event0.shape, [3])
+        self.assertEqual(event0.shape, (3,))
 
         # Triple of times, shape = [3]
         event012 = test.event_at_time((0., 1.e5, 2.e5))
-        self.assertEqual(event012.shape, [3])
+        self.assertEqual(event012.shape, (3,))
 
         self.assertTrue(event012.pos[0] == event0.pos[0])
         self.assertTrue(event012.vel[0] == event0.vel[0])
@@ -165,7 +162,7 @@ class Test_MultiPath(unittest.TestCase):
 
         # Times shaped [2,1]
         event01x = test.event_at_time([[0.], [1.e5]])
-        self.assertEqual(event01x.shape, [2,3])
+        self.assertEqual(event01x.shape, (2,3))
 
         self.assertTrue(event01x.pos[0,0] == event0.pos[0])
         self.assertTrue(event01x.vel[0,0] == event0.vel[0])
@@ -181,7 +178,7 @@ class Test_MultiPath(unittest.TestCase):
 
         # Triple of times, at all times, shape [3,1]
         event012a = test.event_at_time([[0.], [1.e5], [2.e5]])
-        self.assertEqual(event012a.shape, [3,3])
+        self.assertEqual(event012a.shape, (3,3))
 
         self.assertTrue(event012a.pos[0,:] == event0.pos)
         self.assertTrue(event012a.vel[0,:] == event0.vel)

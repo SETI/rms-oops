@@ -1,17 +1,15 @@
 ################################################################################
 # oops/surface_/limb.py: Limb subclass of class Surface
-#
-# 3/29/12 MRS: New, with initial unit tests of intercept().
-# 6/6/12 MRS: Defined coordinates, updated constructor, improved speed.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.surface_.surface import Surface
-from oops.surface_.spheroid import Spheroid
+from oops.surface_.surface   import Surface
+from oops.surface_.spheroid  import Spheroid
 from oops.surface_.ellipsoid import Ellipsoid
-from oops.array_ import *
-from oops.config import SURFACE_PHOTONS, LOGGING
+from oops.config             import SURFACE_PHOTONS, LOGGING
+
 import oops.registry as registry
 
 class Limb(Surface):

@@ -1,14 +1,12 @@
 ################################################################################
 # oops/surface_/nullsurface.py: NullSurface subclass of class Surface
-#
-# 7/24/13 MRS - Created to serve as the surface object for bodies that have no
-#   surfaces, such as barycenters.
 ################################################################################
 
 import numpy as np
 
 from oops.surface_.surface import Surface
-from oops.array_ import *
+from polymath import *
+
 import oops.registry as registry
 
 class NullSurface(Surface):

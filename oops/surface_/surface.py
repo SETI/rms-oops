@@ -1,35 +1,16 @@
 ################################################################################
 # oops/surface_/surface.py: Abstract class Surface
-#
-# 2/5/12 Modified (MRS) - Minor updates for style
-# 3/1/12 MRS: Modified convergence criteria in _solve_photons(), added quick
-#   dictionary and config file.
-# 3/5/12 MRS: Added class function resolution(), which calculates spatial
-#   resolution on a surface based on derivatives with respect to pixel
-#   coordinates (u,v).
-# 3/23/12 MRS - Introduced event_as_coords() and coords_as_event() as
-#   alternatives to coords_from_vector3() and vector3_from_coords(). They help
-#   to address the problems with virtual surfaces such as Ansa.
-# 3/24/12 MRS - _solve_photon() now properly handles an entirely masked event.
-# 5/2/12 MRS - fixed bug in event_as_coords().
-# 6/6/12 MRS - added t_guess as a standard argument to intercept(), revised
-#   _solve_photon() to take advantage of it; added class constants
-#   *_DERIVS_ARE_IMPLEMENTED that can inform the calling program immediately if
-#   if derivs are implemented, avoiding the need to catch a NotImplementedError.
-# 9/8/13 MRS - added methods photon_to_event_by_coords() and
-#   photon_from_event_by_coords(). These have been tested successfully for
-#   HST Uranus images using the Ansa surface; however, I did not write unit
-#   tests.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-import oops.registry as registry
+from oops.config  import QUICK, SURFACE_PHOTONS, LOGGING
+from oops.event   import Event
+from oops.path_   import *
+
+import oops.registry  as registry
 import oops.constants as constants
-from oops.array_ import *
-from oops.config import QUICK, SURFACE_PHOTONS, LOGGING
-from oops.event import Event
-from oops.path_ import *
 
 class Surface(object):
     """Surface is an abstract class describing a 2-D object that moves and
@@ -518,7 +499,7 @@ class Surface(object):
                                                        los_wrt_surface,
                                                        t_guess = new_lt)
 
-            new_lt = new_lt.clip(lt_min, lt_max)
+            new_lt = new_lt.clip(lt_min, lt_max, False)
             dlt = new_lt - lt
             lt = new_lt
 
@@ -791,7 +772,7 @@ class Surface(object):
             new_lt = (pos_wrt_origin_j2000 + origin_wrt_ssb_now -
                       obs_wrt_ssb).norm() / signed_c
 
-            new_lt = new_lt.clip(lt_min, lt_max)
+            new_lt = new_lt.clip(lt_min, lt_max, False)
             dlt = new_lt - lt
             lt = new_lt
 

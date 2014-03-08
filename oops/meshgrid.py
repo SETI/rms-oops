@@ -1,13 +1,10 @@
 ################################################################################
 # oops/meshgrid.py: Class Meshgrid
-#
-# 3/13/12 MRS - Created
-# 8/18/12 MRS - Minor bug fix.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.array_ import *
 from oops.fov_.fov import FOV
 
 class Meshgrid(object):

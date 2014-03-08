@@ -1,12 +1,10 @@
 ################################################################################
 # oops/nav_/navigation.py: Class Navigation
-#
-# 5/21/12 MRS - Created.
 ################################################################################
 
 import numpy as np
 
-from oops.array_   import *
+from polymath      import *
 from oops.fittable import Fittable
 
 class Navigation(Fittable):

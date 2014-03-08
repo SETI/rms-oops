@@ -1,15 +1,11 @@
 ################################################################################
 # oops/fov_/subsampled.py: Subsampled subclass of FOV
-#
-# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
-# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
-# 2/23/12 MRS - Gave each method the option to return partial derivatives.
 ################################################################################
 
 import numpy as np
 
 from oops.fov_.fov import FOV
-from oops.array_   import *
+from polymath import *
 
 class Subsampled(FOV):
 
@@ -26,21 +22,24 @@ class Subsampled(FOV):
         """
 
         self.fov = fov
-        self.rescale  = Pair.as_pair(rescale).copy()
+        if np.shape(rescale) == ():
+            self.rescale = Pair.as_pair((rescale,rescale))
+        else:
+            self.rescale  = Pair.as_pair(rescale)
         self.rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
-        self.rescale_mat = MatrixN([[self.rescale.vals[0], 0.],
-                                    [0., self.rescale.vals[1]]])
-        self.rescale_inv = MatrixN([[1./self.rescale.vals[0], 0.],
-                                    [0., 1./self.rescale.vals[1]]])
+        self.rescale_mat = Matrix([[self.rescale.vals[0], 0.],
+                                   [0., self.rescale.vals[1]]])
+        self.rescale_inv = Matrix([[1./self.rescale.vals[0], 0.],
+                                   [0., 1./self.rescale.vals[1]]])
 
         # Required fields
-        self.uv_scale = self.fov.uv_scale / self.rescale
-        self.uv_los   = self.fov.uv_los   / self.rescale
+        self.uv_scale = self.fov.uv_scale.element_div(self.rescale)
+        self.uv_los   = self.fov.uv_los.element_div(self.rescale)
         self.uv_area  = self.fov.uv_area  * self.rescale2
 
-        self.uv_shape = (self.fov.uv_shape / self.rescale).int()
+        self.uv_shape = (self.fov.uv_shape.element_div(self.rescale)).as_int()
 
-        assert self.rescale * self.uv_shape == self.fov.uv_shape
+        assert self.rescale.element_mul(self.uv_shape) == self.fov.uv_shape
 
     def xy_from_uv(self, uv_pair, extras=(), derivs=False):
         """Returns a Pair of (x,y) spatial coordinates in units of radians,
@@ -50,16 +49,15 @@ class Subsampled(FOV):
         in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(x,y)/d(u,v).
         """
 
         uv_pair = Pair.as_pair(uv_pair)
-        xy_new = self.fov.xy_from_uv(self.rescale * uv_pair, extras,
+        xy_new = self.fov.xy_from_uv(self.rescale.element_mul(uv_pair), extras,
                                      derivs=derivs)
 
         if derivs:
-            xy_new.d_duv *= self.rescale_mat
+            xy_new.d_duv = self.rescale_mat * xy_new.d_duv
 
         return xy_new
 
@@ -71,15 +69,14 @@ class Subsampled(FOV):
         in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(u,v)/d(x,y).
         """
 
         uv_old = self.fov.uv_from_xy(xy_pair, extras, derivs=derivs)
-        uv_new = uv_old / self.rescale
+        uv_new = uv_old.element_div(self.rescale)
 
         if derivs is True:
-            uv_new.insert_subfield("d_dxy", uv_old.d_dxy * self.rescale_inv)
+            uv_new.insert_deriv("xy", uv_old.d_dxy * self.rescale_inv)
 
         return uv_new
 
@@ -94,11 +91,11 @@ class Test_Subsampled(unittest.TestCase):
     def runTest(self):
 
         # Imports just required for unit testing
-        from flat import Flat
+        from oops.fov_.flatfov import FlatFOV
 
         # Centered sub-sampling...
 
-        flat = Flat((1/2048.,-1/2048.), 64)
+        flat = FlatFOV((1/2048.,-1/2048.), 64)
         test = Subsampled(flat, 2)
 
         self.assertEqual(flat.xy_from_uv(( 0, 0)), test.xy_from_uv(( 0, 0)))
@@ -125,7 +122,7 @@ class Test_Subsampled(unittest.TestCase):
 
         # Off-center sub-sampling...
 
-        flat = Flat((1/2048.,-1/2048.), 64, uv_los=(0,32))
+        flat = FlatFOV((1/2048.,-1/2048.), 64, uv_los=(0,32))
         test = Subsampled(flat, 2)
 
         self.assertEqual(flat.xy_from_uv(( 0, 0)), test.xy_from_uv(( 0, 0)))

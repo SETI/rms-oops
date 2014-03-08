@@ -6,8 +6,6 @@ import unittest
 import cspice
 import os.path
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
- 
 from oops.frame_.cmatrix         import Test_Cmatrix
 from oops.frame_.frame           import Test_Frame
 from oops.frame_.inclinedframe   import Test_InclinedFrame

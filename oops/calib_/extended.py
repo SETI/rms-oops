@@ -1,12 +1,9 @@
 ################################################################################
 # oops/calib_/extended.py: ExtendedSource subclass of class Calibration
-#
-# 2/11/12 Modified (MRS) - revised for style.
-# 3/20/12 MRS - New and better class name ExtendedSource.
 ################################################################################
 
 from oops.calib_.calibration import Calibration
-from oops.array_ import *
+from polymath import *
 
 class ExtendedSource(Calibration):
     """A Scaling is a Calibration object in which every pixel is multiplied by a
@@ -59,7 +56,7 @@ class ExtendedSource(Calibration):
                         containing the uncalibrated DN values.
         """
 
-        return dn / self.factor
+        return value / self.factor
 
 ################################################################################
 # UNIT TESTS
@@ -71,10 +68,26 @@ class Test_ExtendedSource(unittest.TestCase):
 
     def runTest(self):
 
-        # TBD
+        import numpy as np
+        
+        es = ExtendedSource("TEST", 5.)
+        self.assertEqual(es.value_from_dn(0.), 0.)
+        self.assertEqual(es.value_from_dn(0., (10,10)), 0.)
+        self.assertEqual(es.value_from_dn(5.), 25.)
+        self.assertEqual(es.value_from_dn(5., (10,10)), 25.)
+        self.assertEqual(es.value_from_dn(.5), 2.5)
+        self.assertEqual(es.value_from_dn(.5, (10,10)), 2.5)
 
-        pass
+        self.assertEqual(es.dn_from_value(0.), 0.)
+        self.assertEqual(es.dn_from_value(0., (10,10)), 0.)
+        self.assertEqual(es.dn_from_value(25.), 5.)
+        self.assertEqual(es.dn_from_value(25., (10,10)), 5.)
+        self.assertEqual(es.dn_from_value(2.5), .5)
+        self.assertEqual(es.dn_from_value(2.5, (10,10)), .5)
 
+        a = Scalar(np.arange(10000).reshape((100,100)))
+        self.assertEqual(a, es.dn_from_value(es.value_from_dn(a)))
+        
 #########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

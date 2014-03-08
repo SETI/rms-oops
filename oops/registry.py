@@ -1,11 +1,7 @@
 ################################################################################
 # oops/registry.py: Global Frame and Path Registry
-#
-# 2/20/12 MRS - Adapted from frame/registry.py and path/registry.py. This is a
-#   cleaner way to accomplish the same goal.
-# 3/8/12 MRS - Moved the body registry here from body.py.
-# 3/20/12 MRS - Introduced temporary IDs.
-# 8/17/12 MRS - Introduced body_exists() method.
+################################################################################
+
 ################################################################################
 # Frame Registry
 ################################################################################

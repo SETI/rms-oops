@@ -1,19 +1,13 @@
 ################################################################################
 # oops/surface_/ellipsoid.py: Ellipsoid subclass of class Surface
-#
-# 2/17/12 MRS - Created
-# 3/4/12  MRS - cleaned up comments, added NotImplementedErrors for features
-#   still TBD.
-# 6/26/12 MRS - updated for current Surface API, added unit tests.
-# 8/4/12 MRS - implemented derivatives for intercept(), added new unit tests for
-#   intercept derivatives.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.surface_.surface import Surface
-from oops.array_ import *
-from oops.config import SURFACE_PHOTONS, LOGGING
+from oops.config           import SURFACE_PHOTONS, LOGGING
+
 import oops.registry as registry
 
 class Ellipsoid(Surface):
@@ -83,13 +77,13 @@ class Ellipsoid(Surface):
         self.unsquash_z = self.radii[0] / self.radii[2]
 
         self.squash    = Vector3((1., self.squash_y, self.squash_z))
-        self.squash_sq = self.squash**2
-        self.unsquash  = 1. / self.squash
-        self.unsquash_sq = self.unsquash**2
+        self.squash_sq = self.squash.element_mul(self.squash)
+        self.unsquash  = Vector3((1.,1.,1.)).element_div(self.squash)
+        self.unsquash_sq = self.unsquash.element_mul(self.unsquash)
 
-        self.unsquash_sq_2d = MatrixN(([1,0,0],
-                                       [0,self.unsquash_y**2,0],
-                                       [0,0,self.unsquash_z**2]))
+        self.unsquash_sq_2d = Matrix(([1,0,0],
+                                      [0,self.unsquash_y**2,0],
+                                      [0,0,self.unsquash_z**2]))
 
         # This is the exclusion zone radius, within which calculations of
         # intercept_normal_to() are automatically masked due to the ill-defined
@@ -126,10 +120,10 @@ class Ellipsoid(Surface):
                         objects with item shape [1,3].
         """
 
-        unsquashed = Vector3.as_standard(pos) * self.unsquash
+        unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
 
         r = unsquashed.norm()
-        (x,y,z) = unsquashed.as_scalars()
+        (x,y,z) = unsquashed.to_scalars()
         lat = (z/r).arcsin()
         lon_unsquashed = y.arctan2(x) % (2.*np.pi)
 
@@ -174,8 +168,8 @@ class Ellipsoid(Surface):
         """
 
         # Convert to Scalars in standard units
-        lon = Scalar.as_standard(coords[0]) % (2.*np.pi)
-        lat = Scalar.as_standard(coords[1])
+        lon = coords[0] % (2.*np.pi)
+        lat = coords[1]
 
         # Convert longitude from planetocentric to "unsquashed"
         lon_unsquashed = (lon.tan() * self.unsquash_y).arctan()
@@ -184,7 +178,7 @@ class Ellipsoid(Surface):
         if len(coords) == 2:
             r = Scalar(self.req)
         else:
-            r = Scalar.as_standard(coords[2]) + self.req
+            r = coords[2] + self.req
 
         r_coslat = r * lat.cos()
         x = r_coslat * lon_unsquashed.cos()
@@ -226,12 +220,11 @@ class Ellipsoid(Surface):
                         is assumed to have unit length.
         """
 
-        # Convert to standard units and un-squash
-        obs = Vector3.as_standard(obs)
-        los = Vector3.as_standard(los)
-
-        obs_unsquashed = Vector3.as_standard(obs) * self.unsquash
-        los_unsquashed = Vector3.as_standard(los) * self.unsquash
+        obs = Vector3.as_vector3(obs)
+        los = Vector3.as_vector3(los)
+        
+        obs_unsquashed = obs.element_mul(self.unsquash)
+        los_unsquashed = los.element_mul(self.unsquash)
 
         # Solve for the intercept distance, masking lines of sight that miss
 
@@ -256,7 +249,7 @@ class Ellipsoid(Surface):
 
         bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
         t = (bsign_sqrtd_div2 - b_div2) / a
-        pos = obs + t*los
+        pos = obs + los*t
         pos = self._apply_exclusion(pos)
 
         if derivs:
@@ -267,10 +260,10 @@ class Ellipsoid(Surface):
             # db_dobs = 2 * los * self.unsquash_sq
             # dc_dobs = 2 * obs * self.unsquash_sq
 
-            da_dlos_div2 = los * self.unsquash_sq
-            db_dlos_div2 = obs * self.unsquash_sq
-            db_dobs_div2 = los * self.unsquash_sq
-            dc_dobs_div2 = obs * self.unsquash_sq
+            da_dlos_div2 = los.element_mul(self.unsquash_sq)
+            db_dlos_div2 = obs.element_mul(self.unsquash_sq)
+            db_dobs_div2 = los.element_mul(self.unsquash_sq)
+            dc_dobs_div2 = obs.element_mul(self.unsquash_sq)
 
             # dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
             # dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
@@ -300,18 +293,20 @@ class Ellipsoid(Surface):
             # dpos_dlos = los.as_column() * dt_dlos.as_row() + MatrixN.UNIT33*t
 
             dt_dlos = ((d_bsign_sqrtd_dlos_div2
-                        - db_dlos_div2 - 2 * t * da_dlos_div2) / a).as_vectorn()
+                        - db_dlos_div2 - 2 * t * da_dlos_div2) / a)
             dt_dobs = ((d_bsign_sqrtd_dobs_div2
-                        - db_dobs_div2) / a).as_vectorn()
+                        - db_dobs_div2) / a)
 
-            dpos_dobs = los.as_column() * dt_dobs.as_row() + MatrixN.UNIT33
-            dpos_dlos = los.as_column() * dt_dlos.as_row() + MatrixN.UNIT33 * t
+            dpos_dobs = los.as_column() * dt_dobs.as_row() + Matrix.UNIT33
+            dpos_dlos = los.as_column() * dt_dlos.as_row() + Matrix.UNIT33 * t
 
             los_norm = los.norm()
-            pos.insert_subfield("d_dobs", dpos_dobs)
-            pos.insert_subfield("d_dlos", dpos_dlos * los_norm)
-            t.insert_subfield("d_dobs", dt_dobs.as_row())
-            t.insert_subfield("d_dlos", dt_dlos.as_row() * los_norm)
+            print pos
+            print dpos_dobs
+            pos.insert_deriv("obs", dpos_dobs)
+            pos.insert_deriv("los", dpos_dlos * los_norm)
+            t.insert_deriv("obs", dt_dobs.as_row())
+            t.insert_deriv("los", dt_dlos.as_row() * los_norm)
 
         return (pos, t)
 
@@ -334,7 +329,7 @@ class Ellipsoid(Surface):
                         [3,3].
         """
 
-        perp = Vector3.as_standard(pos) * self.unsquash_sq
+        perp = Vector3.as_vector3(pos).element_mul(self.unsquash_sq)
 
         if derivs:
             perp.insert_subfield("d_dpos", self.unsquash_sq_2d)
@@ -581,7 +576,7 @@ class Ellipsoid(Surface):
         # Define the exclusion zone
         pos.vals[np.isnan(pos.vals)] = 0.
 
-        pos_unsquashed = pos * self.unsquash
+        pos_unsquashed = pos.element_mul(self.unsquash)
         pos_sq_vals = pos_unsquashed.dot(pos_unsquashed).vals
         mask = (pos_sq_vals <= self.exclusion**2)
 
@@ -661,11 +656,11 @@ class Test_Ellipsoid(unittest.TestCase):
 
         (lon,lat,elev) = planet.coords_from_vector3(pos, axes=3)
         test = planet.vector3_from_coords((lon,lat,elev))
-        self.assertTrue(abs(test - pos) < 1.e-8)
+        self.assertTrue(((test - pos).rms() < 1.e-8).all())
 
         # Make sure longitudes are planetocentric
         test_lon = np.arctan2(pos[...,1], pos[...,0]) % (2.*np.pi)
-        self.assertTrue(abs(lon - test_lon) < 1.e-8)
+        self.assertTrue(((lon - test_lon).rms() < 1.e-8).all())
 
         # Ellipsoid intercepts & normals
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
@@ -676,7 +671,7 @@ class Test_Ellipsoid(unittest.TestCase):
 
         (pts, t) = planet.intercept(obs, los)
         test = t * Vector3(los) + Vector3(obs)
-        self.assertTrue(abs(test - pts) < 1.e-9)
+        self.assertTrue(((test - pts).rms().mvals < 1.e-9).all())
 
         self.assertTrue(np.all(t.mask == pts.mask))
         self.assertTrue(np.all(pts.mask[t.vals < 0.]))
@@ -685,11 +680,11 @@ class Test_Ellipsoid(unittest.TestCase):
 
         pts.vals[...,1] *= REQ/RMID
         pts.vals[...,2] *= REQ/RPOL
-        self.assertTrue(abs(pts.norm()[np.logical_not(pts.mask)] - REQ) < 1.e-8)
+        self.assertTrue(((pts.norm()[np.logical_not(pts.mask)] - REQ).rms() < 1.e-8).all())
 
         normals.vals[...,1] *= RMID/REQ
         normals.vals[...,2] *= RPOL/REQ
-        self.assertTrue(abs(normals.unit() - pts.unit()) < 1.e-14)
+        self.assertTrue(((normals.unit() - pts.unit()).rms().mvals < 1.e-14).all())
 
         # Intercept derivatives
 

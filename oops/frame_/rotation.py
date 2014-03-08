@@ -1,15 +1,12 @@
 ################################################################################
 # oops/frame_/rotation.py: Subclass Rotation of class Frame
-#
-# 3/17/12 MRS - Created.
-# 9/28/12 MRS - Implemented the Fittable interface.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.frame_.frame import Frame
 from oops.fittable     import Fittable
-from oops.array_       import *
 from oops.transform    import Transform
 
 import oops.registry as registry

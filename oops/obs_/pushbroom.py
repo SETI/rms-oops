@@ -1,15 +1,11 @@
 ################################################################################
 # oops/obs_/pushbroom.py: Subclass Pushbroom of class Observation
-#
-# 6/13/12 MRS - updated with revised constructor and to support new API, added
-#   a full suite of unit tests.
-# 7/7/12 MRS - revised to use new Cadence class for timing information.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.obs_.observation import Observation
-from oops.array_ import *
 
 class Pushbroom(Observation):
     """A Pushbroom is subclass of Observation consisting of a 2-D image
@@ -126,7 +122,7 @@ class Pushbroom(Observation):
             uv_int = Pair.as_int(uv)
             uv = uv_int + (uv - uv_int) * self.uv_size
 
-        tstep = indices.as_scalar(self.t_axis)
+        tstep = indices.to_scalar(self.t_axis)
         time = self.cadence.time_at_tstep(tstep)
 
         if fovmask:
@@ -161,7 +157,7 @@ class Pushbroom(Observation):
         uv_min = indices.as_pair((self.u_axis,self.v_axis))
         uv_max = uv_min + self.uv_size
 
-        tstep = indices.as_scalar(self.t_axis)
+        tstep = indices.to_scalar(self.t_axis)
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep)
 
         if fovmask:
@@ -193,7 +189,7 @@ class Pushbroom(Observation):
         """
 
         uv_pair = Pair.as_int(uv_pair)
-        tstep = uv_pair.as_scalar(self.cross_slit_uv_index)
+        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
         (time0, time1) = self.cadence.time_range_at_tstep(tstep)
 
         if fovmask:
@@ -220,7 +216,7 @@ class Pushbroom(Observation):
         """
 
         uv_pair = Pair.as_pair(uv_pair)
-        tstep = uv_pair.as_scalar(self.cross_slit_uv_index)
+        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
 
         return self.duv_dt_basis / self.cadence.tstride_at_tstep(tstep)
 
@@ -249,15 +245,15 @@ class Pushbroom(Observation):
 ################################################################################
 
 import unittest
-from oops.cadence_.metronome import Metronome
 
 class Test_Pushbroom(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.fov_.flat import Flat
+        from oops.cadence_.metronome import Metronome
+        from oops.fov_.flatfov import FlatFOV
 
-        flatfov = Flat((0.001,0.001), (10,20))
+        flatfov = FlatFOV((0.001,0.001), (10,20))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         obs = Pushbroom(axes=("u","vt"), uv_size=(1,1),
                         cadence=cadence, fov=flatfov,
@@ -270,7 +266,7 @@ class Test_Pushbroom(unittest.TestCase):
 
         self.assertFalse(uv.mask)
         self.assertFalse(time.mask)
-        self.assertEqual(time, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(time, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(uv, indices.as_pair())
 
         # uvt() with fovmask == True
@@ -278,7 +274,7 @@ class Test_Pushbroom(unittest.TestCase):
 
         self.assertTrue(np.all(uv.mask == np.array(6*[False] + [True])))
         self.assertTrue(np.all(time.mask == uv.mask))
-        self.assertEqual(time[:6], cadence.tstride * indices.as_scalar(1)[:6])
+        self.assertEqual(time[:6], cadence.tstride * indices.to_scalar(1)[:6])
         self.assertEqual(uv[:6], indices.as_pair()[:6])
 
         # uvt_range() with fovmask == False
@@ -291,7 +287,7 @@ class Test_Pushbroom(unittest.TestCase):
 
         self.assertEqual(uv_min, indices.as_pair())
         self.assertEqual(uv_max, indices.as_pair() + (1,1))
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == False, new indices
@@ -304,7 +300,7 @@ class Test_Pushbroom(unittest.TestCase):
 
         self.assertEqual(uv_min, indices.as_pair())
         self.assertEqual(uv_max, indices.as_pair() + (1,1))
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == True, new indices
@@ -319,7 +315,7 @@ class Test_Pushbroom(unittest.TestCase):
         self.assertEqual(uv_min[:2], indices.as_pair()[:2])
         self.assertEqual(uv_max[:2], indices.as_pair()[:2] + (1,1))
         self.assertEqual(time_min[:2], cadence.tstride *
-                                       indices.as_scalar(1)[:2])
+                                       indices.to_scalar(1)[:2])
         self.assertEqual(time_max[:2], time_min[:2] + cadence.texp)
 
         # times_at_uv() with fovmask == False
@@ -327,7 +323,7 @@ class Test_Pushbroom(unittest.TestCase):
 
         (time0, time1) = obs.times_at_uv(uv)
 
-        self.assertEqual(time0, cadence.tstride * uv.as_scalar(1))
+        self.assertEqual(time0, cadence.tstride * uv.to_scalar(1))
         self.assertEqual(time1, time0 + cadence.texp)
 
         # times_at_uv() with fovmask == True
@@ -335,7 +331,7 @@ class Test_Pushbroom(unittest.TestCase):
 
         self.assertTrue(np.all(time0.mask == 4*[False] + [True]))
         self.assertTrue(np.all(time1.mask == 4*[False] + [True]))
-        self.assertEqual(time0[:4], cadence.tstride * uv.as_scalar(1)[:4])
+        self.assertEqual(time0[:4], cadence.tstride * uv.to_scalar(1)[:4])
         self.assertEqual(time1[:4], time0[:4] + cadence.texp)
 
         # Alternative axis order ("ut","v")
@@ -349,18 +345,18 @@ class Test_Pushbroom(unittest.TestCase):
         (uv,time) = obs.uvt(indices)
 
         self.assertEqual(uv, indices.as_pair())
-        self.assertEqual(time, cadence.tstride * indices.as_scalar(0))
+        self.assertEqual(time, cadence.tstride * indices.to_scalar(0))
 
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
         self.assertEqual(uv_min, indices.as_pair())
         self.assertEqual(uv_max, indices.as_pair() + (1,1))
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(0))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(0))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         (time0,time1) = obs.times_at_uv(indices)
 
-        self.assertEqual(time0, cadence.tstride * uv.as_scalar(0))
+        self.assertEqual(time0, cadence.tstride * uv.to_scalar(0))
         self.assertEqual(time1, time0 + cadence.texp)
 
         # Alternative uv_size and texp for discontinuous indices

@@ -3,13 +3,14 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 import cspice
 
 from oops.path_.path import Path, Waypoint, RotatedPath
-from oops.array_     import *
 from oops.config     import QUICK
 from oops.event      import Event
-import oops.registry as registry
+
+import oops.registry      as registry
 import oops.spice_support as spice
 
 class SpicePath(Path):
@@ -125,8 +126,8 @@ class SpicePath(Path):
                                               self.spice_frame_name,
                                               "NONE", # no aberration/light time
                                               self.spice_origin_id)
-            pos = state[:,0:3].reshape(time.shape + [3])
-            vel = state[:,3:6].reshape(time.shape + [3])
+            pos = state[:,0:3].reshape(time.shape + (3,))
+            vel = state[:,3:6].reshape(time.shape + (3,))
 
             # Convert to an Event and return
             return Event(time, pos, vel, self.origin_id, self.frame_id)

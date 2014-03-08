@@ -1,7 +1,5 @@
 ################################################################################
 # oops/format_/pythonfmt.py: PythonFmt subclass of class Format
-#
-# 1/24/12 (MRS) - Drafted.
 ################################################################################
 
 from oops.format_.format import Format

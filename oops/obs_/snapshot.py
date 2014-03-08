@@ -1,16 +1,12 @@
 ################################################################################
 # oops/obs_/snapshot.py: Subclass Snapshot of class Observation
-#
-# 6/13/12 MRS - updated with revised constructor and to support new API, added
-#   a full suite of unit tests.
-# 7/7/12 MRS - added cadence attribute.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.obs_.observation import Observation
+from oops.obs_.observation   import Observation
 from oops.cadence_.metronome import Metronome
-from oops.array_ import *
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
@@ -171,7 +167,7 @@ class Snapshot(Observation):
 #         time = Scalar.as_scalar(time)
 #         (uv_pair, time) = Array_.broadcast_arrays(uv_pair, time)
 # 
-#         (u,v) = uv_pair.as_scalars()
+#         (u,v) = uv_pair.to_scalars()
 # 
 #         index_vals = np.zeros(uv_pair.shape + [len(self.axes)])
 #         index_vals[..., self.u_axis] = u.vals
@@ -329,9 +325,9 @@ class Test_Snapshot(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.fov_.flat import Flat
+        from oops.fov_.flatfov import FlatFOV
 
-        fov = Flat((0.001,0.001), (10,20))
+        fov = FlatFOV((0.001,0.001), (10,20))
         obs = Snapshot(axes=("u","v"), texp=2.,
                        tstart=98., fov=fov, path_id="SSB", frame_id="J2000")
 

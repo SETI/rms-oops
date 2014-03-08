@@ -1,8 +1,6 @@
 ################################################################################
 # oops/fov_/offset.py: Offset subclass of FOV
 #
-# 3/21/12 MRS - New.
-# 10/28/12 MRS - Complete update to accommodate the Fittable interface.
 # 1/28/13 MRS - The previous version was found to be mathematically incorrect,
 #   in that offsets should be applied to the un-distorted (x,y) coordinates
 #   rather than to the (possibly distorted) (u,v) coordinates. The code was
@@ -16,9 +14,9 @@
 import numpy as np
 import warnings
 
-from oops.fov_.fov import FOV
-from oops.fittable import Fittable
-from oops.array_   import *
+from oops.fov_.fov  import FOV
+from oops.fittable  import Fittable
+from polymath import *
 
 class Offset(FOV, Fittable):
 
@@ -97,8 +95,7 @@ class Offset(FOV, Fittable):
         in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(x,y)/d(u,v).
         """
 
         if self.deprecated_behavior:
@@ -107,14 +104,14 @@ class Offset(FOV, Fittable):
 
             if derivs:
                 old_xy = self.fov.xy_from_uv(uv_pair, extras, derivs)
-                new_xy.insert_subfield("d_uv", old_xy.d_duv)
+                new_xy.insert_deriv("uv", old_xy.d_duv)
 
         else:
             old_xy = self.fov.xy_from_uv(uv_pair, extras, derivs)
             new_xy = old_xy - self.xy_offset
 
             if derivs:
-                new_xy.insert_subfield("d_uv", old_xy.d_duv)
+                new_xy.insert_deriv("uv", old_xy.d_duv)
 
         return new_xy
 
@@ -126,8 +123,7 @@ class Offset(FOV, Fittable):
         in the extras argument.
 
         If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(u,v)/d(x,y).
         """
 
         if self.deprecated_behavior:
@@ -135,7 +131,7 @@ class Offset(FOV, Fittable):
             new_uv = old_uv + self.uv_offset
 
             if derivs:
-                new_uv.insert_subfield("d_dxy", old_uv.d_duv)
+                new_uv.insert_deriv("xy", old_uv.d_duv)
 
         else:
             new_uv = self.fov.uv_from_xy(xy_pair + self.xy_offset, extras,

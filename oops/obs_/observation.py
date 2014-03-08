@@ -1,24 +1,15 @@
 ################################################################################
 # oops/obs_/observation.py: Abstract class Observation
-#
-# 2/11/12 Modified (MRS) - updated for style
-# 3/9/12 MRS - new methods fleshed out in preparation for additional observation
-#   classes such as pushbrooms and raster scanners.
-# 5/14/12 MRS - added gridless_event() method.
-# 6/13/12 MRS - updated API with uvt() and uvt_range() to define mapping from
-#   array coordinates to (u,v) coordinates and time value. This decouples the
-#   direct connection between array indices and (u,v), making it possible to
-#   support slit instruments.
-# 8/17/12 MRS - added inventory() method.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.array_ import *
-from oops.config import LOGGING, PATH_PHOTONS
-from oops.event import Event
-from oops.meshgrid import Meshgrid
+from oops.config          import LOGGING, PATH_PHOTONS
+from oops.event           import Event
+from oops.meshgrid        import Meshgrid
 from oops.path_.multipath import MultiPath
+
 import oops.registry as registry
 
 class Observation(object):

@@ -8,17 +8,17 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 import gravity
 
 from oops.path_.path   import Path, Waypoint
 from oops.path_.kepler import Kepler
-from oops.array_       import *
 from oops.config       import PATH_PHOTONS
 from oops.event        import Event
-import oops.registry as Registry
-import oops.constants as constants
+from oops.fittable     import Fittable
 
-from oops.fittable import Fittable
+import oops.registry  as registry
+import oops.constants as constants
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km).
 MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians).
@@ -100,7 +100,7 @@ class Wobble(Path, Fittable):
         self.param_name = "elements"
         self.cache = {}
 
-        self.path_id = id or Registry.temporary_path_id()
+        self.path_id = id or registry.temporary_path_id()
 
         self.kepler = Kepler(body, epoch, elements[:9], observer,
                              self.path_id + "_KEPLER")
@@ -117,11 +117,11 @@ class Wobble(Path, Fittable):
             self.frame_id = body.ring_frame_id
             self.to_j2000 = Matrix3.UNIT
         else:
-            self.observer = Registry.as_path(observer)
+            self.observer = registry.as_path(observer)
             assert self.observer.shape == []
             self.center = Path.connect(self.planet.path_id, observer, "J2000")
             self.frame_id = "J2000"
-            frame = Registry.connect_frames("J2000", body.ring_frame_id)
+            frame = registry.connect_frames("J2000", body.ring_frame_id)
             self.to_j2000 = frame.transform_at_time(epoch).matrix
 
         self.epoch = epoch

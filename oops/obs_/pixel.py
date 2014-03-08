@@ -1,17 +1,12 @@
 ################################################################################
 # oops/obs_/pixel.py: Subclass Pixel of class Observation
-#
-# 7/24/12 MRS - Created.
-#
-# 9/11/12 MRS - Updated to handle a missing time axis and to return a more
-#   accurate shape.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.array_ import *
 from oops.obs_.observation import Observation
-from oops.event import Event
+from oops.event            import Event
 
 class Pixel(Observation):
     """A Pixel is a subclass of Observation consisting of one or more
@@ -92,8 +87,8 @@ class Pixel(Observation):
                         with the array indices.
         """
 
-        indices = Tuple.as_tuple(indices)
-        tstep = indices.as_scalar(self.t_axis)
+        indices = Vector(indices)
+        tstep = indices.mvals[...,self.t_axis]
 
         time = self.cadence.time_at_tstep(tstep)
         uv = Pair((0.5,0.5))
@@ -102,9 +97,9 @@ class Pixel(Observation):
             is_inside = self.cadence.time_is_inside(time, inclusive=True)
             if not np.all(is_inside):
                 mask = indices.mask | np.logical_not(is_inside)
-                time.mask = mask
+                time = Scalar(time, mask)
 
-                uv_vals = np.empty(indices.shape + [2])
+                uv_vals = np.empty(list(indices.shape) + [2])
                 uv_vals[...] = 0.5
                 uv = Pair(uv_vals, mask)
 
@@ -128,8 +123,8 @@ class Pixel(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Tuple.as_int(indices)
-        tstep = indices.as_scalar(self.t_axis)
+        indices = Vector.as_vector(indices).as_int()
+        tstep = indices.to_scalar(self.t_axis)
 
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep,
                                                                 mask=fovmask)
@@ -139,8 +134,8 @@ class Pixel(Observation):
         if fovmask:
             mask = time_min.mask
             if np.any(mask):
-                uv_min_vals = np.zeros(indices.shape + [2])
-                uv_max_vals = np.ones(indices.shape  + [2])
+                uv_min_vals = np.zeros(list(indices.shape) + [2])
+                uv_max_vals = np.ones(list(indices.shape)  + [2])
 
                 uv_min = Pair(uv_min_vals, mask)
                 uv_max = Pair(uv_max_vals, mask)
@@ -283,27 +278,27 @@ class Pixel(Observation):
 ################################################################################
 
 import unittest
-from oops.cadence_.metronome import Metronome
 
 class Test_Pixel(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.fov_.flat import Flat
+        from oops.cadence_.metronome import Metronome
+        from oops.fov_.flatfov import FlatFOV
 
-        fov = Flat((0.001,0.001), (1,1))
+        fov = FlatFOV((0.001,0.001), (1,1))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         obs = Pixel(axes=("t"),
                     cadence=cadence, fov=fov, path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,),(1,),(20,),(21,)])
+        indices = Vector([(0,),(1,),(20,),(21,)])
 
         # uvt() with fovmask == False
         (uv,time) = obs.uvt(indices)
 
         self.assertFalse(uv.mask)
         self.assertFalse(time.mask)
-        self.assertEqual(time, cadence.tstride * indices.as_scalar())
+        self.assertEqual(time, cadence.tstride * indices.to_scalar(0))
         self.assertEqual(uv, (0.5,0.5))
 
         # uvt() with fovmask == True
@@ -311,7 +306,7 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertTrue(np.all(uv.mask == np.array(3*[False] + [True])))
         self.assertTrue(np.all(time.mask == uv.mask))
-        self.assertEqual(time[:3], cadence.tstride * indices.as_scalar()[:3])
+        self.assertEqual(time[:3], cadence.tstride * indices.to_scalar(0)[:3])
         self.assertEqual(uv[:3], (0.5,0.5))
 
         # uvt_range() with fovmask == False
@@ -324,7 +319,7 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertEqual(uv_min, (0,0))
         self.assertEqual(uv_max, (1,1))
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar())
+        self.assertEqual(time_min, indices.to_scalars()[0] * cadence.tstride)
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == False, new indices
@@ -337,7 +332,7 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertEqual(uv_min, (0,0))
         self.assertEqual(uv_max, (1,1))
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar())
+        self.assertEqual(time_min, indices.to_scalars()[0] * cadence.tstride)
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == True, new indices
@@ -351,8 +346,8 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertEqual(uv_min[:2], (0,0))
         self.assertEqual(uv_max[:2], (1,1))
-        self.assertEqual(time_min[:2], cadence.tstride *
-                                       indices.as_scalar()[:2])
+        self.assertEqual(time_min[:2], indices.to_scalars()[0][:2] *
+                                       cadence.tstride)
         self.assertEqual(time_max[:2], time_min[:2] + cadence.texp)
 
         # times_at_uv() with fovmask == False
@@ -374,19 +369,19 @@ class Test_Pixel(unittest.TestCase):
         ####################################
         # Alternative axis order ("a","t")
 
-        fov = Flat((0.001,0.001), (1,1))
+        fov = FlatFOV((0.001,0.001), (1,1))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         obs = Pixel(axes=("a","t"),
                     cadence=cadence, fov=fov, path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,0),(1,1),(0,20,),(1,21)])
+        indices = Vector([(0,0),(1,1),(0,20,),(1,21)])
 
         # uvt() with fovmask == False
         (uv,time) = obs.uvt(indices)
 
         self.assertFalse(uv.mask)
         self.assertFalse(time.mask)
-        self.assertEqual(time, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(time, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(uv, (0.5,0.5))
 
         # uvt() with fovmask == True
@@ -394,7 +389,7 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertTrue(np.all(uv.mask == np.array(3*[False] + [True])))
         self.assertTrue(np.all(time.mask == uv.mask))
-        self.assertEqual(time[:3], cadence.tstride * indices[:3].as_scalar(1))
+        self.assertEqual(time[:3], cadence.tstride * indices[:3].to_scalar(1))
         self.assertEqual(uv[:3], (0.5,0.5))
 
         # uvt_range() with fovmask == False
@@ -407,7 +402,7 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertEqual(uv_min, (0,0))
         self.assertEqual(uv_max, (1,1))
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == False, new indices
@@ -420,11 +415,11 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertEqual(uv_min, (0,0))
         self.assertEqual(uv_max, (1,1))
-        self.assertEqual(time_min, cadence.tstride * indices.as_scalar(1))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with fovmask == True, new indices
-        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices + (0.2,),
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices + (0.2,0.2),
                                                              fovmask=True)
 
         self.assertTrue(np.all(uv_min.mask == np.array(3*[False] + [True])))
@@ -435,7 +430,7 @@ class Test_Pixel(unittest.TestCase):
         self.assertEqual(uv_min[:3], (0,0))
         self.assertEqual(uv_max[:3], (1,1))
         self.assertEqual(time_min[:3], cadence.tstride *
-                                       indices.as_scalar(1)[:3])
+                                       indices.to_scalar(1)[:3])
         self.assertEqual(time_max[:3], time_min[:3] + cadence.texp)
 
         # times_at_uv() with fovmask == False

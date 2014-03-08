@@ -1,9 +1,5 @@
 ################################################################################
 # oops/body.py: Body class
-#
-# 2/18/12 Created (MRS).
-# 8/8/12 MRS - Added inner_radius attribute.
-# 1/4/13 MRS - Added ring_is_retrograde attribute.
 ################################################################################
 
 import numpy as np
@@ -13,12 +9,12 @@ import julian
 import gravity
 import cspice
 
-import oops.path_ as path_
-import oops.frame_ as frame_
-import oops.surface_ as surface
-import oops.spice_support as spice
-import oops.registry as registry
-import oops.constants as constants
+import oops.path_          as path_
+import oops.frame_         as frame_
+import oops.surface_       as surface
+import oops.spice_support  as spice
+import oops.registry       as registry
+import oops.constants      as constants
 
 class Body(object):
     """Body is a class that defines the properties of, and relationships

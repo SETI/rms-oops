@@ -1,15 +1,11 @@
 ################################################################################
 # oops/fov_/polynomial.py: Polynomial subclass of FOV
-#
-# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
-# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
-# 2/23/12 MRS - Gave each method the option to return partial derivatives.
 ################################################################################
 
 import numpy as np
 
 from oops.fov_.fov import FOV
-from oops.array_   import *
+from polymath import *
 
 class Polynomial(FOV):
     """The Polynomial subclass of FOV describes a field of view in which the
@@ -70,13 +66,12 @@ class Polynomial(FOV):
         given a Pair of coordinates (u,v).
 
         If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(x,y)/d(u,v).
         """
 
         # Subtract off the center of the field of view
         uv_pair = Pair.as_pair(uv_pair) - self.uv_los
-        (du,dv) = uv_pair.as_scalars()
+        (du,dv) = uv_pair.to_scalars()
         du = du.vals[..., np.newaxis]
         dv = dv.vals[..., np.newaxis]
 
@@ -113,7 +108,7 @@ class Polynomial(FOV):
                 dxy_duv_vals[...,:,1] += (self.uv_coefft[i,j,:] *
                                           du_powers[i] * j*dv_powers[j-1])
 
-            xy.insert_subfield("d_duv", MatrixN(dxy_duv_vals, xy.mask))
+            xy.insert_deriv("uv", MatrixN(dxy_duv_vals, xy.mask)) # XXX
 
         return xy
 
@@ -124,8 +119,7 @@ class Polynomial(FOV):
         coordinates in radians.
 
         If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
-        shape [2,2].
+        contains the partial derivatives d(u,v)/d(x,y).
         """
 
         # Make a rough initial guess
@@ -148,7 +142,7 @@ class Polynomial(FOV):
             # print iter, max(np.max(np.abs(du)),np.max(np.abs(dv)))
 
         if derivs:
-            uv_test.insert_subfield("d_dxy", duv_dxy)
+            uv_test.insert_deriv("xy", duv_dxy)
 
         return uv_test
 

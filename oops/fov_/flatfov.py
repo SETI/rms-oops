@@ -1,17 +1,13 @@
 ################################################################################
-# oops/fov_/flat.py: Flat subclass of class FOV
-#
-# 2/1/12 Modified (MRS) - copy() added to as_pair() calls.
-# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
-# 2/23/12 MRS - Gave each method the option to return partial derivatives.
+# oops/fov_/flatfov.py: Flat subclass of class FOV
 ################################################################################
 
 import numpy as np
 
 from oops.fov_.fov import FOV
-from oops.array_   import *
+from polymath import *
 
-class Flat(FOV):
+class FlatFOV(FOV):
     """Flat is a subclass of FOV that describes a field of view that is free of
     distortion, implementing an exact pinhole camera model.
     """
@@ -44,13 +40,16 @@ class Flat(FOV):
                         based on the area of the central pixel.
         """
 
-        self.uv_scale = Pair.as_float(uv_scale, copy=True)
-        self.uv_shape = Pair.as_pair(uv_shape).copy()
+        self.uv_scale = Pair(uv_scale).as_float().copy()
+        if np.shape(uv_shape) == ():
+            self.uv_shape = Pair((uv_shape,uv_shape))
+        else:
+            self.uv_shape = Pair.as_pair(uv_shape)
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = Pair.as_float(uv_los, copy=True)
+            self.uv_los = Pair.as_pair(uv_los).as_float()
 
         if uv_area is None:
             self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
@@ -59,8 +58,8 @@ class Flat(FOV):
 
         scale = Pair.as_pair(uv_scale)
 
-        self.dxy_duv = MatrixN([[  scale.vals[0], 0.], [0.,   scale.vals[1]]])
-        self.duv_dxy = MatrixN([[1/scale.vals[0], 0.], [0., 1/scale.vals[1]]])
+        self.dxy_duv = Pair([[  scale.vals[0], 0.], [0.,   scale.vals[1]]], drank=1).as_readonly()
+        self.duv_dxy = Pair([[1/scale.vals[0], 0.], [0., 1/scale.vals[1]]], drank=1).as_readonly()
 
     def uv_from_xy(self, xy_pair, extras=(), derivs=False):
         """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
@@ -71,10 +70,10 @@ class Flat(FOV):
         shape [2,2].
         """
 
-        uv = Pair.as_pair(xy_pair)/self.uv_scale + self.uv_los
+        uv = Pair.as_pair(xy_pair).element_div(self.uv_scale) + self.uv_los
 
         if derivs:
-            uv.insert_subfield("d_dxy", self.duv_dxy)
+            uv.insert_deriv("xy", self.duv_dxy)
 
         return uv
 
@@ -87,10 +86,10 @@ class Flat(FOV):
         shape [2,2].
         """
 
-        xy = (Pair.as_pair(uv_pair) - self.uv_los) * self.uv_scale
-
+        xy = (Pair.as_pair(uv_pair) - self.uv_los).element_mul(self.uv_scale)
+        
         if derivs:
-            xy.insert_subfield("d_duv", self.dxy_duv)
+            xy.insert_deriv("uv", self.dxy_duv)
 
         return xy
 
@@ -104,14 +103,14 @@ class Test_Flat(unittest.TestCase):
 
     def runTest(self):
 
-        test = Flat((1/2048.,-1/2048.), 101, (50,75))
+        test = FlatFOV((1/2048.,-1/2048.), 101, (50,75))
 
         buffer = np.empty((101,101,2))
         buffer[:,:,0] = np.arange(101).reshape(101,1)
         buffer[:,:,1] = np.arange(101)
 
         xy = test.xy_from_uv(buffer)
-        (x,y) = xy.as_scalars()
+        (x,y) = xy.to_scalars()
 
         self.assertEqual(xy[  0,  0], (-50./2048., 75./2048.))
         self.assertEqual(xy[100,  0], ( 50./2048., 75./2048.))
@@ -123,7 +122,7 @@ class Test_Flat(unittest.TestCase):
 
         self.assertEqual(test.area_factor(buffer), 1.)
 
-        test2 = Flat((1/2048.,-1/2048.), 101, (50,75), uv_area = test.uv_area*2)
+        test2 = FlatFOV((1/2048.,-1/2048.), 101, (50,75), uv_area = test.uv_area*2)
         self.assertEqual(test2.area_factor(buffer), 0.5)
 
 ########################################

@@ -1,20 +1,14 @@
 ################################################################################
 # oops/frame_/cmatrix.py: Subclass Cmatrix of class Frame
-#
-# 1/17/12 (BSW) - id and reference, declared as arguments to __init__, were not
-#   refereced (instead frane_id and referece_id were refereced, which did not
-#   exist, so replaced frame_id with id and reference_id with reference in body
-#   of __init__.
-# 2/2/12 Modified (MRS) - converted to new class names and hierarchy.
 ################################################################################
 
 import numpy as np
 
 from oops.frame_.frame import Frame
-from oops.array_       import *
 from oops.transform    import Transform
-import oops.constants as constants
-import oops.registry as registry
+import oops.constants  as constants
+import oops.registry   as registry
+from polymath import *
 
 class Cmatrix(Frame):
     """Cmatrix is a Frame subclass in which the frame is defined by a fixed
@@ -155,13 +149,13 @@ class Test_Cmatrix(unittest.TestCase):
         wrt_mars180 = event.wrt_frame("MARS180")
 
         # Confirm that the components are related as expected
-        self.assertTrue(np.all(wrt_mars.pos.x == -wrt_mars180.pos.x))
-        self.assertTrue(np.all(wrt_mars.pos.y == -wrt_mars180.pos.y))
-        self.assertTrue(np.all(wrt_mars.pos.z ==  wrt_mars180.pos.z))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,0] == -wrt_mars180.pos.vals[...,0]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,1] == -wrt_mars180.pos.vals[...,1]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,2] ==  wrt_mars180.pos.vals[...,2]))
 
-        self.assertTrue(np.all(wrt_mars.vel.x == -wrt_mars180.vel.x))
-        self.assertTrue(np.all(wrt_mars.vel.y == -wrt_mars180.vel.y))
-        self.assertTrue(np.all(wrt_mars.vel.z ==  wrt_mars180.vel.z))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,0] == -wrt_mars180.vel.vals[...,0]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,1] == -wrt_mars180.vel.vals[...,1]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,2] ==  wrt_mars180.vel.vals[...,2]))
 
         # Define a version of the IAU Mars frame containing four 90-degree
         # rotations
@@ -179,33 +173,33 @@ class Test_Cmatrix(unittest.TestCase):
         wrt_mars = event.wrt_frame("IAU_MARS")
         wrt_mars90s = event.wrt_frame("MARS90S")
 
-        self.assertEqual(wrt_mars.shape, [100,1])
-        self.assertEqual(wrt_mars90s.shape, [100,4])
+        self.assertEqual(wrt_mars.shape, (100,1))
+        self.assertEqual(wrt_mars90s.shape, (100,4))
 
         # Confirm that the components are related as expected
         self.assertTrue(wrt_mars.pos[:,0] == wrt_mars90s.pos[:,0])
         self.assertTrue(wrt_mars.vel[:,0] == wrt_mars90s.vel[:,0])
 
-        self.assertTrue(np.all(wrt_mars.pos.x[:,0] == -wrt_mars90s.pos.x[:,2]))
-        self.assertTrue(np.all(wrt_mars.pos.y[:,0] == -wrt_mars90s.pos.y[:,2]))
-        self.assertTrue(np.all(wrt_mars.pos.z[:,0] ==  wrt_mars90s.pos.z[:,2]))
-        self.assertTrue(np.all(wrt_mars.vel.x[:,0] == -wrt_mars90s.vel.x[:,2]))
-        self.assertTrue(np.all(wrt_mars.vel.y[:,0] == -wrt_mars90s.vel.y[:,2]))
-        self.assertTrue(np.all(wrt_mars.vel.z[:,0] ==  wrt_mars90s.vel.z[:,2]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,0][:,0] == -wrt_mars90s.pos.vals[...,0][:,2]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,1][:,0] == -wrt_mars90s.pos.vals[...,1][:,2]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,2]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,0][:,0] == -wrt_mars90s.vel.vals[...,0][:,2]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,1][:,2]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,2]))
 
-        self.assertTrue(np.all(wrt_mars.pos.x[:,0] == -wrt_mars90s.pos.y[:,1]))
-        self.assertTrue(np.all(wrt_mars.pos.y[:,0] ==  wrt_mars90s.pos.x[:,1]))
-        self.assertTrue(np.all(wrt_mars.pos.z[:,0] ==  wrt_mars90s.pos.z[:,1]))
-        self.assertTrue(np.all(wrt_mars.vel.x[:,0] == -wrt_mars90s.vel.y[:,1]))
-        self.assertTrue(np.all(wrt_mars.vel.y[:,0] ==  wrt_mars90s.vel.x[:,1]))
-        self.assertTrue(np.all(wrt_mars.vel.z[:,0] ==  wrt_mars90s.vel.z[:,1]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,0][:,0] == -wrt_mars90s.pos.vals[...,1][:,1]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,1][:,0] ==  wrt_mars90s.pos.vals[...,0][:,1]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,1]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,0][:,0] == -wrt_mars90s.vel.vals[...,1][:,1]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] ==  wrt_mars90s.vel.vals[...,0][:,1]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,1]))
 
-        self.assertTrue(np.all(wrt_mars.pos.x[:,0] ==  wrt_mars90s.pos.y[:,3]))
-        self.assertTrue(np.all(wrt_mars.pos.y[:,0] == -wrt_mars90s.pos.x[:,3]))
-        self.assertTrue(np.all(wrt_mars.pos.z[:,0] ==  wrt_mars90s.pos.z[:,3]))
-        self.assertTrue(np.all(wrt_mars.vel.x[:,0] ==  wrt_mars90s.vel.y[:,3]))
-        self.assertTrue(np.all(wrt_mars.vel.y[:,0] == -wrt_mars90s.vel.x[:,3]))
-        self.assertTrue(np.all(wrt_mars.vel.z[:,0] ==  wrt_mars90s.vel.z[:,3]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,0][:,0] ==  wrt_mars90s.pos.vals[...,1][:,3]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,1][:,0] == -wrt_mars90s.pos.vals[...,0][:,3]))
+        self.assertTrue(np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,3]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,0][:,0] ==  wrt_mars90s.vel.vals[...,1][:,3]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,0][:,3]))
+        self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,3]))
 
         registry.initialize()
 

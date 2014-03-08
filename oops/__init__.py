@@ -1,9 +1,5 @@
 ################################################################################
 # oops/__init__.py
-#
-# 3/8/12 Created by MRS.
-# 6/28/12 MRS - Added "import cspice" to solve the conflict between cspice and
-#   MKL functions inconveniently both named dpstrf_().
 ################################################################################
 
 # Examples of import statements and how they work:
@@ -26,7 +22,7 @@ import cspice       # This is CRITICAL to avoid the MKL error in calls to
                     # dpstrf(). Somehow, this ensures that the cspice function
                     # overrides the MKL function of the same name.
 
-from oops.array_ import *
+from polymath import *
 
 import oops.cadence_  as cadence
 import oops.calib_    as calib
@@ -35,7 +31,6 @@ import oops.format_   as format
 import oops.fov_      as fov
 import oops.frame_    as frame
 import oops.obs_      as obs
-import oops.nav_      as nav
 import oops.path_     as path
 import oops.surface_  as surface
 
@@ -48,7 +43,6 @@ from oops.fittable    import *
 from oops.meshgrid    import *
 from oops.registry    import *
 from oops.transform   import *
-from oops.units       import *
 
 import oops.spice_support as spice
 import oops.config as config

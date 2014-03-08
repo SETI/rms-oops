@@ -1,11 +1,9 @@
 ################################################################################
 # oops/cadence_/cadence.py: Abstract class Cadence
-#
-# 7/2/12 MRS - created
 ################################################################################
 
 import numpy as np
-from oops.array_ import *
+from polymath import *
 
 class Cadence(object):
     """Cadence is an abstract class that defines the timing of an observation.
@@ -29,12 +27,12 @@ class Cadence(object):
 
         pass
 
-    def time_at_tstep(self, tstep, mask=False):
+    def time_at_tstep(self, tstep, mask=True):
         """Returns the time associated with the given time step. This method
         supports non-integer step values.
 
         Input:
-            tstep       a Scalar time step index or a Pair or Tuple of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         a Scalar of times in seconds TDB.
@@ -42,12 +40,12 @@ class Cadence(object):
 
         raise NotImplementedException("time_at_tstep() is not implemented")
 
-    def time_range_at_tstep(self, tstep, mask=False):
+    def time_range_at_tstep(self, tstep, mask=True):
         """Returns the range of time associated with the given integer time
         step index.
 
         Input:
-            indices     a Scalar time step index or a Pair or Tuple of indices.
+            indices     a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -59,15 +57,15 @@ class Cadence(object):
         raise NotImplementedException("time_range_at_tstep() " +
                                       "is not implemented")
 
-    def tstep_at_time(self, time, mask=False):
-        """Returns a the Scalar time step index or a Pair or Tuple of indices
+    def tstep_at_time(self, time, mask=True):
+        """Returns a the Scalar time step index or a Pair of indices
         associated with a time in seconds TDB.
 
         Input:
             time        a Scalar of times in seconds TDB.
             mask        True to mask time values not sampled within the cadence.
 
-        Return:         a Scalar, Pair or Tuple of time step indices.
+        Return:         a Scalar or Pair of time step indices.
         """
 
         raise NotImplementedException("tstep_at_time() is not implemented")
@@ -112,25 +110,28 @@ class Cadence(object):
         else:
             return (time.vals >= self.time[0]) & (time.vals < self.time[1])
 
-    def tstride_at_tstep(self, tstep, mask=False):
-        """Returns a Scalar, Pair or Tuple containing the time interval(s)
+    def tstride_at_tstep(self, tstep, mask=True):
+        """Returns a Scalar or Pair containing the time interval(s)
         between the start of a given time step and the start of adjacent time
         step(s).
 
         Input:
-            tstep       a Scalar time step index or a Pair or Tuple of time step
+            tstep       a Scalar time step index or a Pair of time step
                         indices.
             mask        True to mask values outside the time limits.
 
-        Return:         a Scalar, Pair or Tuple of strides in seconds.
+        Return:         a Scalar or Pair of strides in seconds.
         """
 
         if len(self.shape) == 1:
-            return self.time_at_tstep(tstep + 1) - self.time_at_tstep(tstep)
+            return (self.time_at_tstep(tstep + 1, mask=mask) -
+                    self.time_at_tstep(tstep, mask=mask))
         elif len(self.shape) == 2:
             now = self.time_at_tstep(tstep)
-            return Pair.from_scalars(self.time_at_tstep(tstep + (1,0)) - now,
-                                     self.time_at_tstep(tstep + (0,1)) - now)
+            return Pair.from_scalars(self.time_at_tstep(tstep + (1,0),
+                                                        mask=mask) - now,
+                                     self.time_at_tstep(tstep + (0,1),
+                                                        mask=mask) - now)
         else:
             raise NotImplementedException("tstride_at_tstep() is not " +
                                     "implemented for cadences larger than 2-D")
@@ -145,7 +146,8 @@ class Test_Cadence(unittest.TestCase):
 
     def runTest(self):
 
-        # TBD
+        # No tests here - this is just an abstract superclass
+
         pass
 
 ########################################

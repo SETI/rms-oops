@@ -1,19 +1,17 @@
 ################################################################################
 # oops/frame_/tracker.py: Subclass Tracker of class Frame
-#
-# 5/19/12 MRS - Created.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.frame_.frame import Frame
 from oops.path_.path   import Path, QuickPath, Waypoint
-from oops.array_       import *
 from oops.transform    import Transform
 from oops.event        import Event
 
 import oops.registry as registry
-import oops.config as config
+import oops.config   as config
 
 class Tracker(Frame):
     """Tracker is a Frame subclass that ensures, via a small rotation, that a

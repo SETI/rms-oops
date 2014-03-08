@@ -1,12 +1,10 @@
 ################################################################################
 # oops/nav_/platescale.py: Subclass PlateScale of class Navigation.
-#
-# 5/21/12 MRS - Created but untested.
 ################################################################################
 
 import numpy as np
 
-from oops.array_ import *
+from polymath             import *
 from oops.nav_.navigation import Navigation
 
 class PlateScale(Navigation):

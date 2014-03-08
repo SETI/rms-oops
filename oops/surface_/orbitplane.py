@@ -1,18 +1,17 @@
 ################################################################################
 # oops/surface_/orbitplane.py: OrbitPlane subclass of class Surface
-#
-# 3/ 18/12 MRS: Adapted from class RingPlane.
 ################################################################################
 
 import numpy as np
+from polymath import *
 
-from oops.array_ import *
-from oops.event import Event
-from oops.surface_.surface import Surface
+from oops.event              import Event
+from oops.surface_.surface   import Surface
 from oops.surface_.ringplane import RingPlane
-import oops.frame_ as frame_
-import oops.path_ as path_
-import oops.registry as registry
+
+import oops.frame_    as frame_
+import oops.path_     as path_
+import oops.registry  as registry
 
 class OrbitPlane(Surface):
     """OrbitPlane is a subclass of the Surface class describing a flat surface
@@ -318,7 +317,7 @@ class OrbitPlane(Surface):
             # dx/dt = dr/dt * cos(lon) - r sin(lon) dlon/dt
             # dy/dy = dr/dt * sin(lon) + r cos(lon) dlon/dt
 
-            (x,y,z) = pos.as_scalars()
+            (x,y,z) = pos.to_scalars()
             x = x + self.ae        # shift origin to center of planet
 
             r = (x**2 + y**2).sqrt()
