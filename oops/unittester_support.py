@@ -4,4 +4,7 @@
 
 import os
 
-TESTDATA_PARENT_DIRECTORY = os.environ["OOPS_TEST_DATA"]
+try:
+    TESTDATA_PARENT_DIRECTORY = os.environ["OOPS_TEST_DATA"]
+except KeyError:
+    TESTDATA_PARENT_DIRECTORY = ''
