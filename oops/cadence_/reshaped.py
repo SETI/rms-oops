@@ -26,6 +26,8 @@ class ReshapedCadence(Cadence):
 
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
+        self.lasttime = self.cadence.lasttime
+        self.is_continuous = self.is_continuous
 
         self.stride = np.cumproduct((self.shape + (1,))[::-1])[-2::-1]
                                                         # trust me, it works!

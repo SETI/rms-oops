@@ -30,7 +30,7 @@ class DualCadence(Cadence):
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         
         # These are arbitrary definitions and may need to be changed in the future
-        self.is_continuous = self.long.is_continuous and self.short.is_continuous
+        self.is_continuous = self.short.is_continuous
         self.lasttime = self.long.lasttime
         
         return
