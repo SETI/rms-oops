@@ -2,7 +2,6 @@
 # oops/cadence_/dual.py: DualCadence subclass of class Cadence
 ################################################################################
 
-import numpy as np
 from polymath import *
 from oops.cadence_.cadence import Cadence
 
@@ -36,11 +35,12 @@ class DualCadence(Cadence):
         return
 
     def time_at_tstep(self, tstep, mask=True):
-        """Returns the time associated with the given time step. This method
-        supports non-integer step values.
+        """Return the time(s) associated with the given time step(s).
+        
+        This method supports non-integer step values.
 
         Input:
-            tstep       a Pair or Vector of pairs of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         a Scalar of times in seconds TDB.
@@ -53,11 +53,10 @@ class DualCadence(Cadence):
                 self.short.time[0])
 
     def time_range_at_tstep(self, tstep, mask=True):
-        """Returns the range of time associated with the given integer time
-        step index.
+        """Return the range of time(s) for the given integer time step(s).
 
         Input:
-            tstep       a Pair or Vector of pairs of indices.
+            indices     a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -75,14 +74,15 @@ class DualCadence(Cadence):
         return (long_ref + short0, long_ref + short1)
 
     def tstep_at_time(self, time, mask=True):
-        """Returns a the Scalar time step index or a Pair or Tuple of indices
-        associated with a time in seconds TDB.
+        """Return the time step(s) for given time(s).
+
+        This method supports non-integer time values.
 
         Input:
             time        a Scalar of times in seconds TDB.
             mask        True to mask time values not sampled within the cadence.
 
-        Return:         a Pair of time step indices.
+        Return:         a Scalar or Pair of time step indices.
         """
 
         tstep0 = self.long.tstep_at_time(time, mask=mask).int()
@@ -94,15 +94,14 @@ class DualCadence(Cadence):
         return Pair.from_scalars(tstep0,tstep1)
 
     def time_is_inside(self, time, inclusive=True):
-        """Returns a boolean Numpy array indicating which elements in a given
-        Scalar of times fall inside the cadence.
+        """Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
             inclusive   True to include the end moment of a time interval;
                         False to exclude.
 
-        Return:         a boolean Numpy array indicating which time values are
+        Return:         a Boolean array indicating which time values are
                         sampled by the cadence.
         """
 
@@ -114,8 +113,7 @@ class DualCadence(Cadence):
                 self.short.time_is_inside(time1, inclusive=inclusive))
 
     def time_shift(self, secs):
-        """Returns a duplicate of the given cadence, with all times shifted by
-        a specified number of seconds."
+        """Return a duplicate with all times shifted by given amount."
 
         Input:
             secs        the number of seconds to shift the time later.
@@ -124,8 +122,10 @@ class DualCadence(Cadence):
         return DualCadence(self.long.time_shift(secs), self.short)
 
     def as_continuous(self):
-        """Returns a shallow copy of the given cadence, with equivalent strides
-        but with the property that the cadence is continuous.
+        """Return a shallow copy forced to be continuous.
+        
+        For DualCadence, this is accomplished by forcing the stride of
+        the short cadence to be continuous.
         """
 
         return DualCadence(self.long, self.short.as_continuous())
@@ -135,13 +135,18 @@ class DualCadence(Cadence):
 ################################################################################
 
 import unittest
+import numpy as np
 
 class Test_DualCadence(unittest.TestCase):
 
-    def meshgrid(self, *args):
+    @staticmethod
+    def meshgrid(*args):
         """Returns a new Vector constructed by combining every possible set of
         components provided as a list of scalars. The returned Vector will have
         a shape defined by concatenating the shapes of all the arguments.
+        
+        This routine was stolen from the old array_ module and is not optimized
+        for use with polymath.
         """
 
         scalars = []
@@ -191,7 +196,7 @@ class Test_DualCadence(unittest.TestCase):
         self.assertEqual(cad1d.shape, (50,))
         self.assertEqual(cad2d.shape, (10,5))
 
-        grid2d = self.meshgrid(np.arange(10),np.arange(5))
+        grid2d = Test_DualCadence.meshgrid(np.arange(10),np.arange(5))
         grid1d = 5. * grid2d.to_scalar(0) + grid2d.to_scalar(1)
 
         times1d = cad1d.time_at_tstep(grid1d, mask=False)
@@ -236,12 +241,12 @@ class Test_DualCadence(unittest.TestCase):
         test1d = cad1d.time_is_inside(time_seq)
         test2d = cad2d.time_is_inside(time_seq)
 
-        self.assertTrue(np.all(test1d == test2d))
+        self.assertTrue(test1d == test2d)
 
         # Random tsteps
         values = np.random.rand(10,10,10,10,2)
         values[...,0] *= 12
-        values[...,0] *= 7
+        values[...,1] *= 7
         values -= 1
         random2d = Vector(values)
         random1d = 5. * random2d.to_scalar(0).int() + random2d.to_scalar(1)
@@ -261,7 +266,7 @@ class Test_DualCadence(unittest.TestCase):
         self.assertTrue((abs(test1d % 5 - test2d.to_scalar(1)) < 1.e-12).all())
 
         # Make sure everything works with scalars
-        for iter in range(100):
+        for iter in range(1000):
             random1d = np.random.random()
             random2d = Vector((random1d//5, random1d%5))
 

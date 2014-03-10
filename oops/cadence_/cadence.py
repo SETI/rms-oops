@@ -2,7 +2,6 @@
 # oops/cadence_/cadence.py: Abstract class Cadence
 ################################################################################
 
-import numpy as np
 from polymath import *
 
 class Cadence(object):
@@ -28,8 +27,9 @@ class Cadence(object):
         pass
 
     def time_at_tstep(self, tstep, mask=True):
-        """Returns the time associated with the given time step. This method
-        supports non-integer step values.
+        """Return the time(s) associated with the given time step(s).
+        
+        This method supports non-integer step values.
 
         Input:
             tstep       a Scalar time step index or a Pair of indices.
@@ -41,8 +41,7 @@ class Cadence(object):
         raise NotImplementedException("time_at_tstep() is not implemented")
 
     def time_range_at_tstep(self, tstep, mask=True):
-        """Returns the range of time associated with the given integer time
-        step index.
+        """Return the range of time(s) for the given integer time step(s).
 
         Input:
             indices     a Scalar time step index or a Pair of indices.
@@ -58,8 +57,9 @@ class Cadence(object):
                                       "is not implemented")
 
     def tstep_at_time(self, time, mask=True):
-        """Returns a the Scalar time step index or a Pair of indices
-        associated with a time in seconds TDB.
+        """Return the time step(s) for given time(s).
+
+        This method supports non-integer time values.
 
         Input:
             time        a Scalar of times in seconds TDB.
@@ -71,8 +71,7 @@ class Cadence(object):
         raise NotImplementedException("tstep_at_time() is not implemented")
 
     def time_shift(self, secs):
-        """Returns a duplicate of the given cadence, with all times shifted by
-        a specified number of seconds."
+        """Return a duplicate with all times shifted by given amount."
 
         Input:
             secs        the number of seconds to shift the time later.
@@ -81,8 +80,7 @@ class Cadence(object):
         raise NotImplementedException("time_shift() is not implemented")
 
     def as_continuous(self):
-        """Returns a shallow copy of the given cadence, with equivalent strides
-        but with the property that the cadence is continuous.
+        """Return a shallow copy forced to be continuous.
         """
 
         raise NotImplementedException("as_continuous() is not implemented")
@@ -92,29 +90,26 @@ class Cadence(object):
     ####################################################
 
     def time_is_inside(self, time, inclusive=True):
-        """Returns a boolean Numpy array indicating which elements in a given
-        Scalar of times fall inside the cadence.
+        """Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
             inclusive   True to include the end moment of a time interval;
                         False to exclude.
 
-        Return:         a boolean Numpy array indicating which time values are
+        Return:         a Boolean array indicating which time values are
                         sampled by the cadence.
         """
 
         # Default behavior is to include all times between start and stop
         if inclusive:
-            return (time.vals >= self.time[0]) & (time.vals <= self.time[1])
+            return (time >= self.time[0]) & (time <= self.time[1])
         else:
-            return (time.vals >= self.time[0]) & (time.vals < self.time[1])
+            return (time >= self.time[0]) & (time < self.time[1])
 
     def tstride_at_tstep(self, tstep, mask=True):
-        """Returns a Scalar or Pair containing the time interval(s)
-        between the start of a given time step and the start of adjacent time
-        step(s).
-
+        """Return the time interval(s) for the given time step(s). 
+        
         Input:
             tstep       a Scalar time step index or a Pair of time step
                         indices.

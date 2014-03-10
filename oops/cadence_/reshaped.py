@@ -7,9 +7,11 @@ from polymath import *
 from oops.cadence_.cadence import Cadence
 
 class ReshapedCadence(Cadence):
-    """ReshapedCadence is a Cadence subclass in which time steps are defined by
-    another cadence with a different shape. This can be used, for example, to
-    convert a 1-D cadence into an N-D cadence."""
+    """ReshapedCadence is a Cadence that has been reshaped.
+    
+    The time steps are defined by another cadence with a different shape.
+    This can be used, for example, to convert a 1-D cadence into an N-D cadence.
+    """
 
     def __init__(self, cadence, shape):
         """Constructor for a ReshapedCadence.
@@ -27,7 +29,7 @@ class ReshapedCadence(Cadence):
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
         self.lasttime = self.cadence.lasttime
-        self.is_continuous = self.is_continuous
+        self.is_continuous = cadence.is_continuous
 
         self.stride = np.cumproduct((self.shape + (1,))[::-1])[-2::-1]
                                                         # trust me, it works!
@@ -108,11 +110,12 @@ class ReshapedCadence(Cadence):
                                    self.shape, self.stride, self.rank)
 
     def time_at_tstep(self, tstep, mask=True):
-        """Returns the time associated with the given time step. This method
-        supports non-integer step values.
+        """Return the time(s) associated with the given time step(s).
+        
+        This method supports non-integer step values.
 
         Input:
-            tstep       a Scalar time step index or a Pair or Tuple of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         a Scalar of times in seconds TDB.
@@ -121,11 +124,10 @@ class ReshapedCadence(Cadence):
         return self.cadence.time_at_tstep(self._old_tstep_from_new(tstep), mask)
 
     def time_range_at_tstep(self, tstep, mask=True):
-        """Returns the range of time associated with the given integer time
-        step index.
+        """Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair or Tuple of indices.
+            indices     a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -138,36 +140,35 @@ class ReshapedCadence(Cadence):
                                                 mask)
 
     def tstep_at_time(self, time, mask=True):
-        """Returns a the Scalar time step index or a Pair or Tuple of indices
-        associated with a time in seconds TDB.
+        """Return the time step(s) for given time(s).
+
+        This method supports non-integer time values.
 
         Input:
             time        a Scalar of times in seconds TDB.
             mask        True to mask time values not sampled within the cadence.
 
-        Return:         a Scalar, Pair or Tuple of time step indices.
+        Return:         a Scalar or Pair of time step indices.
         """
 
         return self._new_tstep_from_old(self.cadence.tstep_at_time(time, mask))
 
     def time_is_inside(self, time, inclusive=True):
-        """Returns a boolean Numpy array indicating which elements in a given
-        Scalar of times fall inside the cadence.
+        """Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
             inclusive   True to include the end moment of a time interval;
                         False to exclude.
 
-        Return:         a boolean Numpy array indicating which time values are
+        Return:         a Boolean array indicating which time values are
                         sampled by the cadence.
         """
 
         return self.cadence.time_is_inside(time, inclusive)
 
     def time_shift(self, secs):
-        """Returns a duplicate of the given cadence, with all times shifted by
-        a specified number of seconds."
+        """Return a duplicate with all times shifted by given amount."
 
         Input:
             secs        the number of seconds to shift the time later.
@@ -176,11 +177,13 @@ class ReshapedCadence(Cadence):
         return ReshapedCadence(self.cadence.time_shift(secs), self.shape)
 
     def as_continuous(self):
-        """Returns a shallow copy of the given cadence, with equivalent strides
-        but with the property that the cadence is continuous.
+        """Return a shallow copy forced to be continuous.
+        
+        For Sequence this is accomplished by forcing the exposure times to
+        be equal to the stride for each step.
         """
 
-        return ReshapedCadence(self.cadence.time_shift(secs), self.shape)
+        return ReshapedCadence(self.cadence.as_continuous(), self.shape)
 
 ################################################################################
 # UNIT TESTS
@@ -216,6 +219,8 @@ class Test_ReshapedCadence(unittest.TestCase):
 
     def runTest(self):
 
+        from oops.cadence_.metronome import Metronome
+    
         self.TEST((10,), (10,), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1.5))
@@ -232,6 +237,32 @@ class Test_ReshapedCadence(unittest.TestCase):
         self.TEST((2,3,4), (4,6), Vector((1,2,3.5)))
         self.TEST((2,3,4), (4,6), Vector([(1,2,3),(1,2,3.5),(0,0,0.25)]))
 
+        cadence = Metronome(100., 10., 10., 100)
+        reshaped = ReshapedCadence(cadence, (25,4))
+        self.assertTrue(reshaped.is_continuous)
+        self.assertEqual(reshaped.time_at_tstep((0,0)), 100.)
+        self.assertEqual(reshaped.time_at_tstep((0,1)), 110.)
+        self.assertEqual(reshaped.time_at_tstep((1,0)), 140.)
+        self.assertEqual(reshaped.time_at_tstep((1,1)), 150.)
+        self.assertEqual(reshaped.time_at_tstep((1,1.5)), 155.)
+
+        cadence = Metronome(100., 15., 10., 100)
+        reshaped = ReshapedCadence(cadence, (25,4))
+        self.assertFalse(reshaped.is_continuous)
+        self.assertEqual(reshaped.time_at_tstep((0,0)), 100.)
+        self.assertEqual(reshaped.time_at_tstep((0,1)), 115.)
+        self.assertEqual(reshaped.time_at_tstep((1,0)), 160.)
+        self.assertEqual(reshaped.time_at_tstep((1,1)), 175.)
+        self.assertEqual(reshaped.time_at_tstep((1,1.5)), 180.)
+
+        new_cadence = reshaped.as_continuous()
+        self.assertTrue(new_cadence.is_continuous)
+        self.assertEqual(new_cadence.time_at_tstep((0,0)), 100.)
+        self.assertEqual(new_cadence.time_at_tstep((0,1)), 115.)
+        self.assertEqual(new_cadence.time_at_tstep((1,0)), 160.)
+        self.assertEqual(new_cadence.time_at_tstep((1,1)), 175.)
+        self.assertEqual(new_cadence.time_at_tstep((1,1.5)), 182.5)
+        
 ########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
