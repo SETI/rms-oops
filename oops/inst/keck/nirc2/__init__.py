@@ -104,7 +104,7 @@ class NIRC2(Keck):
 #        ra = ra_w_off - raoff
 #        dec = dec_w_off - decoff
 #        
-#        nparang = - keck_file[0].header["PARANG"] * np.pi/180.
+#        nparang = - keck_file[0].header["PARANG"] * oops.RPD
 #        az_off = ra*np.cos(nparang) + dec*np.sin(nparang)
 #        el_off = -ra*np.sin(nparang) + dec*np.cos(nparang)
 #        

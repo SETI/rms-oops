@@ -33,7 +33,7 @@ import oops
 ########################################
 
 # A handy constant
-RADIANS_PER_ARCSEC = np.pi / 180. / 3600.
+RADIANS_PER_ARCSEC = oops.RPD / 3600.
 
 # After a call to set_idc_path(), these global variables will be defined:
 
@@ -904,7 +904,7 @@ class Test_HST(unittest.TestCase):
         import cspice
         from oops.inst.hst.acs.hrc import HRC
 
-        APR = 180./np.pi * 3600.
+        APR = oops.DPR * 3600.
 
         prefix = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst")
         snapshot = from_file(os.path.join(prefix, "ibht07svq_drz.fits"))

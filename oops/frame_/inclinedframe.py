@@ -11,6 +11,7 @@ from oops.frame_.rotation  import Rotation
 from oops.transform        import Transform
 
 import oops.registry as registry
+from oops.constants import *
 
 class InclinedFrame(Frame):
     """InclinedFrame is a Frame subclass describing a frame that is inclined to
@@ -97,7 +98,7 @@ class InclinedFrame(Frame):
         """Returns the longitude of ascending node at the specified time."""
 
         # Locate the ascending nodes in the reference frame
-        return (self.node + rate * (time - self.epoch)) & (2*np.pi)
+        return (self.node + rate * (time - self.epoch)) & TWOPI
 
 ################################################################################
 # UNIT TESTS

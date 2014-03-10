@@ -15,7 +15,9 @@ SPD = 86400.                    # seconds per day
 
 AU = 149597870.7                # Astronomical Unit in km
 
+PI = np.pi
 TWOPI = 2. * np.pi
+HALFPI = np.pi / 2.
 
 ################################################################################
 

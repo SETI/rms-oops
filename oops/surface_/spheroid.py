@@ -10,6 +10,8 @@ from oops.config           import SURFACE_PHOTONS, LOGGING
 
 import oops.registry as registry
 
+from oops.constants import *
+
 class Spheroid(Surface):
     """Spheroid defines a spheroidal surface centered on the given path and
     fixed with respect to the given frame. The short radius of the spheroid is
@@ -123,7 +125,7 @@ class Spheroid(Surface):
         r = unsquashed.norm()
         (x,y,z) = unsquashed.to_scalars()
         lat = (z/r).arcsin()
-        lon = y.arctan2(x) % (2.*np.pi)
+        lon = y.arctan2(x) % TWOPI
 
 
         if np.any(derivs):
@@ -717,13 +719,13 @@ class Test_Spheroid(unittest.TestCase):
         cept1 = planet.vector3_from_coords((lon+eps,lat,0.))
         cept2 = planet.vector3_from_coords((lon-eps,lat,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - np.pi/2) < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI) < 1.e-8)
 
         (lon,lat) = planet.coords_from_vector3(cept, axes=2)
         cept1 = planet.vector3_from_coords((lon,lat+eps,0.))
         cept2 = planet.vector3_from_coords((lon,lat-eps,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - np.pi/2) < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI) < 1.e-8)
 
         # Test intercept_with_normal()
         vector = Vector3(np.random.random((100,3)))
@@ -765,7 +767,7 @@ class Test_Spheroid(unittest.TestCase):
                                                              derivs=False,
                                                              t_guess=t.plain())
             dcept_dpos = (cept1 - cept2) / (2*eps)
-            self.assertTrue(abs(dcept_dpos.sep(perp) - np.pi/2) < 1.e-5)
+            self.assertTrue(abs(dcept_dpos.sep(perp) - HALFPI) < 1.e-5)
 
             ref = cept.d_dpos.as_column(i).as_vector3()
             self.assertTrue(abs(dcept_dpos - ref) < 1.e-5)

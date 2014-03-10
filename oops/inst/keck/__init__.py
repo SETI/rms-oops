@@ -23,7 +23,7 @@ import oops
 ########################################
 
 # A handy constant
-RADIANS_PER_ARCSEC = np.pi / 180. / 3600.
+RADIANS_PER_ARCSEC = oops.RPD / 3600.
 
 # This should be a reasonably complete procedure for mapping the first three
 # letters of the P.I.'s target name to the SPICE name of the target body.

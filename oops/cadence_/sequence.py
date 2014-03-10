@@ -97,8 +97,7 @@ class Sequence(Cadence):
 
         tstep = Scalar.as_int(tstep)
         tstep_clipped = tstep.clip(0,self.steps-1,False)
-
-        time_min = Scalar(self.tlist[tstep_clipped])
+        time_min = Scalar(self.tlist[tstep_clipped]) # , tstep.mask) XXX
         time_max = time_min + self.texp[tstep_clipped]
 
         if mask:
@@ -154,7 +153,8 @@ class Sequence(Cadence):
                         False to exclude.
 
         Return:         a Boolean array indicating which time values are
-                        sampled by the cadence.
+                        sampled by the cadence. A masked time results in a
+                        value of False, not a masked Boolean.
         """
 
         # Fill in the internals if they are still empty
@@ -247,6 +247,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertEqual(cadence.time_at_tstep(3.5, mask=False), 135.)
         self.assertEqual(cadence.time_at_tstep(-0.5, mask=False), 95.) # out of range
         self.assertEqual(cadence.time_at_tstep(4.5, mask=False), 145.) # out of range
+        self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
         
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,140])
@@ -266,6 +269,9 @@ class Test_Sequence(unittest.TestCase):
                         [[False,True],[True,True],[False,False]])
         self.assertTrue(Boolean(cadence.time_is_inside(time, inclusive=False)) ==
                         [[False,True],[True,False],[False,False]])
+        self.assertEqual(cadence.time_is_inside(Scalar((100.,110.,120.),
+                                                       [False,True,False])),
+                         [True,False,True])
 
         # tstep_at_time()
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
@@ -278,6 +284,9 @@ class Test_Sequence(unittest.TestCase):
                                                mask=True).masked(), 0)
         self.assertEqual(cadence.tstep_at_time(95., mask=False), 0.) # out of range
         self.assertEqual(cadence.tstep_at_time(145., mask=False), 4.) # out of range
+        self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
 
         # Conversion and back (and tstride_at_tstep)
         random.seed(0)
@@ -317,6 +326,12 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
         
         # time_range_at_tstep()
+#        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+#                                            [False,True,False]))[0].mask),
+#                         [False,True,False])
+#        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+#                                            [False,True,False]))[1].mask),
+#                         [False,True,False])
         tstep = Scalar(7*random.rand(100,100) - 1.)
         tstep = tstep.int() # time_range_at_tstep requires an int input
         time = cadence.time_at_tstep(tstep, mask=False)
@@ -374,6 +389,9 @@ class Test_Sequence(unittest.TestCase):
         # of tstride
         self.assertEqual(cadence.time_at_tstep(-0.5, mask=False), 96.) # out of range
         self.assertEqual(cadence.time_at_tstep(4.5, mask=False), 142.) # out of range
+        self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
         
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,138])
@@ -393,6 +411,9 @@ class Test_Sequence(unittest.TestCase):
                         [[False,True],[True,True],[False,False]])
         self.assertTrue(Boolean(cadence.time_is_inside(time, inclusive=False)) ==
                         [[False,True],[True,False],[False,False]])
+        self.assertEqual(cadence.time_is_inside(Scalar((100.,110.,120.),
+                                                       [False,True,False])),
+                         [True,False,True])
 
         # tstep_at_time()
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
@@ -407,6 +428,9 @@ class Test_Sequence(unittest.TestCase):
                         [False,False,True,True,False])
         self.assertEqual(cadence.tstep_at_time(95., mask=False), 0.) # out of range
         self.assertEqual(cadence.tstep_at_time(145., mask=False), 4.) # out of range
+        self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
 
         # Conversion and back (and tstride_at_tstep)
         random.seed(0)
@@ -448,6 +472,12 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
 
         # time_range_at_tstep()
+#        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+#                                            [False,True,False]))[0].mask),
+#                         [False,True,False])
+#        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+#                                            [False,True,False]))[1].mask),
+#                         [False,True,False])
         tstep = Scalar(7*random.rand(100,100) - 1.)
         tstep = tstep.int() # time_range_at_tstep requires an int input
         time = cadence.time_at_tstep(tstep, mask=False)

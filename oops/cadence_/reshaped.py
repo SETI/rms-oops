@@ -162,7 +162,8 @@ class ReshapedCadence(Cadence):
                         False to exclude.
 
         Return:         a Boolean array indicating which time values are
-                        sampled by the cadence.
+                        sampled by the cadence. A masked time results in a
+                        value of False, not a masked Boolean.
         """
 
         return self.cadence.time_is_inside(time, inclusive)

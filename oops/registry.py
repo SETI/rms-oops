@@ -26,38 +26,40 @@ FRAME_CLASS = None
 TEMPORARY_FRAME_ID = 10000
 
 def is_frame(item):
-    """Returns true if the item is a Frame object."""
+    """Return True if the item is a Frame object."""
 
     return isinstance(item, FRAME_CLASS)
 
 def frame_lookup(key):
-    """Returns a frame from the registry given one of its keys."""
+    """Return a frame from the registry given one of its keys."""
 
     return FRAME_REGISTRY[key]
 
 def as_frame(frame):
-    """Returns a Frame object given the registered name or the object itself."""
+    """Return a Frame object given the registered name or the object itself."""
 
     if frame is None: return None
     if is_frame(frame): return frame
     return frame_lookup(frame)
 
 def as_frame_id(frame):
-    """Returns a Frame ID given the object or a registered ID."""
+    """Return a Frame ID given the object or a registered ID."""
 
     if frame is None: return None
     if is_frame(frame): return frame.frame_id
     return frame
 
 def as_primary_frame(frame):
-    """Returns the primary definition of a Frame object, based on a registered
-    name or a Frame object."""
+    """Return the primary definition of a Frame object.
+    
+    The result is based on a registered name or a Frame object."""
 
     return frame_lookup(as_frame_id(frame))
 
 def temporary_frame_id():
-    """Returns a temporary frame ID. This is assigned once and never re-used.
-    """
+    """Return a temporary frame ID.
+    
+    This is assigned once and never re-used."""
 
     global TEMPORARY_FRAME_ID
 
@@ -68,15 +70,15 @@ def temporary_frame_id():
         TEMPORARY_FRAME_ID += 1
 
 def initialize_frame_registry():
-    """Initializes the registry. It is not generally necessary to call this
-    function, but it can be used to reset the registry for purposes of
-    debugging."""
+    """Initialize the registry.
+    
+    It is not generally necessary to call this function, but it can be used
+    to reset the registry for purposes of debugging."""
 
     FRAME_CLASS.initialize_registry()
 
 def connect_frames(target, reference):
-    """Returns a Frame object that transforms from the given reference Frame
-    to the given target Frame.
+    """Return a Frame object that transforms between two frames.
 
     Input:
         target      a Frame object or the registered ID of the destination
@@ -116,39 +118,45 @@ PATH_CLASS = None
 TEMPORARY_PATH_ID = 10000
 
 def is_path(item):
-    """Returns true if the item is a Path object."""
+    """Return True if the item is a Path object."""
 
     return isinstance(item, PATH_CLASS)
 
 def path_lookup(key):
-    """Returns a path from the registry given one of its keys."""
+    """Return a path from the registry given one of its keys."""
 
     return PATH_REGISTRY[key]
 
+def is_valid_path_id(item):
+    """Return True if the item is a validly-formatted path ID."""
+
+    abbr = item.__class__.__name__[0:3]
+    return abbr in ("int", "str")
+
 def as_path(path):
-    """Returns a Path object given the registered name or the object
-    itself."""
+    """Return a Path object given the registered name or the object itself."""
 
     if path is None: return None
     if is_path(path): return path
     return path_lookup(path)
 
 def as_path_id(path):
-    """Returns a path ID given the object or a registered ID."""
+    """Return a path ID given the object or a registered ID."""
 
     if path is None: return None
     if is_path(path): return path.path_id
     return path
 
 def as_primary_path(path):
-    """Returns the primary definition of a Path object, based on a
-    registered name or a Path object."""
+    """Return the primary definition of a Path object.
+    
+    The result is based on a registered name or a Path object.
+    """
 
     return path_lookup(as_path_id(path))
 
 def temporary_path_id():
-    """Returns a temporary path ID. This is assigned once and never re-used.
-    """
+    """Return a temporary path ID. This is assigned once and never re-used."""
 
     global TEMPORARY_PATH_ID
 
@@ -159,15 +167,18 @@ def temporary_path_id():
         TEMPORARY_PATH_ID += 1
 
 def initialize_path_registry():
-    """Initializes the registry. It is not generally necessary to call this
-    function, but it can be used to reset the registry for purposes of
-    debugging."""
+    """Initialize the registry.
+    
+    It is not generally necessary to call this function, but it can be used
+    to reset the registry for purposes of debugging."""
 
     PATH_CLASS.initialize_registry()
 
 def connect_paths(target, origin, frame="J2000"):
-    """Returns a path that creates event objects in which vectors point
-    from any origin path to any target path, using any coordinate frame.
+    """Return a path that connects two paths.
+    
+    The returned path creates event objects in which vectors point from any
+    origin path to any target path, using any coordinate frame.
 
     Input:
         target      the Path object or ID of the target path.
@@ -189,41 +200,40 @@ BODY_REGISTRY = {}
 BODY_CLASS = None
 
 def is_body(item):
-    """Returns true if the item is a Body object."""
+    """Return True if the item is a Body object."""
 
     return isinstance(item, BODY_CLASS)
 
 def body_lookup(key):
-    """Returns a body from the registry given its name."""
+    """Return a body from the registry given its name."""
 
     global BODY_REGSITRY
     return BODY_REGISTRY[key]
 
 def body_exists(key):
-    """Returns True if the body's name exists in the registry."""
+    """Return True if the body's name exists in the registry."""
 
     global BODY_REGSITRY
     return BODY_REGISTRY.has_key(key)
 
 def as_body(body):
-    """If the argument is a body object, it returns that body. Otherwise, the
-    argument is interpreted as a key into the BODY_REGISTRY dictionary, and the
-    associated body is returned."""
+    """Return a body object given the registered name or the object itself."""
 
     if is_body(body): return body
     return body_lookup(body)
 
 def as_body_name(body):
-    """If the argument is a body object, it returns that body's name. Otherwise,
-    the argument itself is returned."""
+    """Return a body name given the registered name or the object itself."""
 
     if is_body(body): return body.name
     return body
 
 def initialize_body_registry():
-    """Initializes the registry. It is not generally necessary to call this
-    function, but it can be used to reset the registry for purposes of
-    debugging."""
+    """Initialize the registry.
+    
+    It is not generally necessary to call this function, but it can be used
+    to reset the registry for purposes of debugging.
+    """
 
     global BODY_REGISTRY
     BODY_REGISTRY = {}
@@ -232,15 +242,12 @@ def initialize_body_registry():
 # General Functions
 ################################################################################
 
-def is_id(item):
-    """Returns True if the item is a valid path ID."""
-
-    abbr = item.__class__.__name__[0:3]
-    return abbr in ("int", "str")
-
 def initialize():
     initialize_path_registry()
     initialize_frame_registry()
     initialize_body_registry()
 
 ################################################################################
+
+# There are no unit tests for registry because it is amply tested in all other
+# modules.

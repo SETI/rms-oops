@@ -8,8 +8,9 @@ import unittest
 
 from oops.config import EVENT_CONFIG, LOGGING
 
+from oops.constants import *
+
 import oops.registry  as registry
-import oops.constants as constants
 
 class Event(object):
     """An Event object is defined by a time, position and velocity. Times are
@@ -668,7 +669,7 @@ class Event(object):
         # of the observer from the ray, given the ray has length C.
 
         return ray_ssb - (self.wrt_ssb(quick).vel +
-                          self.wrt_ssb(quick).vflat)*ray_ssb.norm()/constants.C
+                          self.wrt_ssb(quick).vflat)*ray_ssb.norm()/C
 
     def aberrated_arr_ssb(self, quick=None):
         """Aberrated arriving ray in the SSB/J2000 frame."""
@@ -752,7 +753,7 @@ class Event(object):
 
         # Convert to RA and dec
         (x,y,z) = ray.to_scalars()
-        ra = y.arctan2(x) % (2*np.pi)
+        ra = y.arctan2(x) % TWOPI
 
         r = ray.norm()
         dec = (z/r).arcsin()

@@ -6,7 +6,6 @@ import numpy as np
 import scipy.interpolate as interp
 
 import oops.registry as registry
-import oops.utils as utils
 from polymath import *
 from oops.config     import QUICK, LOGGING
 from oops.transform  import Transform

@@ -714,6 +714,19 @@ class Qube(object):
 
         return obj
 
+    def confirm_units(self, units):
+        """Raises a ValueError if the units are not compatible with this object.
+        
+        Input:
+            units       the new units.
+
+        """
+
+        if not Units.can_match(first, second):
+            raise ValueError('units are not compatible')
+
+        return self
+    
     ############################################################################
     # Read-only/read-write operations
     ############################################################################

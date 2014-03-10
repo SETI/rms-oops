@@ -9,9 +9,8 @@ from oops.frame_.frame import Frame
 from oops.transform    import Transform
 
 import oops.registry as registry
-import oops.utils as utils
 
-TWOPI  = np.pi * 2.
+from oops.constants import *
 
 class RingFrame(Frame):
     """RingFrame is a Frame subclass describing a non-rotating frame centered on

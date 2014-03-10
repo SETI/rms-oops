@@ -98,7 +98,8 @@ class Cadence(object):
                         False to exclude.
 
         Return:         a Boolean array indicating which time values are
-                        sampled by the cadence.
+                        sampled by the cadence. A masked time results in a
+                        value of False, not a masked Boolean.
         """
 
         # Default behavior is to include all times between start and stop

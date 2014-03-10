@@ -14,6 +14,8 @@ from oops.transform    import Transform
 import oops.registry as registry
 import oops.spice_support as spice
 
+from oops.constants import *
+
 class SpiceFrame(Frame):
     """A SpiceFrame is a Frame object defined within the SPICE toolkit."""
 
@@ -269,9 +271,8 @@ class Test_SpiceFrame(unittest.TestCase):
         matrix = nacframe.transform_at_time(tdb).matrix
         optic_axis = (matrix * Vector3((0,0,1))).vals
 
-        test_ra  = (np.arctan2(optic_axis[1], optic_axis[0]) *
-                    180./np.pi) % 360
-        test_dec = np.arcsin(optic_axis[2]) * 180./np.pi
+        test_ra  = (np.arctan2(optic_axis[1], optic_axis[0]) * DPR) % 360
+        test_dec = np.arcsin(optic_axis[2]) * DPR
 
         right_ascension = 194.30861     # from the index table
         declination = 3.142808

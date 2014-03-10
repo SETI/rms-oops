@@ -12,6 +12,8 @@ from oops.config             import SURFACE_PHOTONS, LOGGING
 
 import oops.registry as registry
 
+from oops.constants import *
+
 class Limb(Surface):
     """The Limb surface is defined as the locus of points where a surface normal
     from a spheroid or ellipsoid is perpendicular to the line of sight. This 
@@ -373,9 +375,9 @@ class Test_Limb(unittest.TestCase):
 
         (cept,t) = limb.intercept(obs, los, groundtrack=True)
 
-        self.assertTrue(abs(limb.normal(cept).sep(los) - np.pi/2) < 1.e-5)
+        self.assertTrue(abs(limb.normal(cept).sep(los) - HALFPI) < 1.e-5)
 
-        lon = np.random.random(10) * 2.*np.pi
+        lon = np.random.random(10) * TWOPI
         lat = np.arcsin(np.random.random(10) * 2. - 1.)
         z = np.random.random(10) * 10000.
 

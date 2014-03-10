@@ -133,8 +133,8 @@ class ISS(object):
             yfov = info["FOV_CROSS_ANGLE"]
             assert info["FOV_ANGLE_UNITS"] == "DEGREES"
             
-            uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
-            vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
+            uscale = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
+            vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
             
             # Display directions: [u,v] = [right,down]
             full_fov = oops.fov.Flat((uscale,vscale), (samples,lines))

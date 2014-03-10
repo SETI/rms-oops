@@ -26,8 +26,6 @@ from polymath import *
 
 import oops.cadence_  as cadence
 import oops.calib_    as calib
-import oops.cmodel_   as cmodel
-import oops.format_   as format
 import oops.fov_      as fov
 import oops.frame_    as frame
 import oops.obs_      as obs

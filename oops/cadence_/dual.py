@@ -102,7 +102,8 @@ class DualCadence(Cadence):
                         False to exclude.
 
         Return:         a Boolean array indicating which time values are
-                        sampled by the cadence.
+                        sampled by the cadence. A masked time results in a
+                        value of False, not a masked Boolean.
         """
 
         tstep0 = self.long.tstep_at_time(time)
@@ -242,6 +243,21 @@ class Test_DualCadence(unittest.TestCase):
         test2d = cad2d.time_is_inside(time_seq)
 
         self.assertTrue(test1d == test2d)
+
+        # Test masked values
+        tstep = Pair(((0,0),(1,1),(2,2)), [False,True,False])
+        time = Scalar((100,110,120), [False,True,False])
+        self.assertTrue(Boolean(cad2d.time_at_tstep(tstep).mask) ==
+                        [False,True,False])
+        self.assertTrue(Boolean(cad2d.tstep_at_time(time).to_scalar(0).mask) ==
+                        [False,True,False])
+        self.assertTrue(Boolean(cad2d.tstep_at_time(time).to_scalar(1).mask) ==
+                        [False,True,False])
+        self.assertTrue(cad2d.time_is_inside(time) == [True,False,True])
+        self.assertTrue(Boolean(cad2d.time_range_at_tstep(tstep)[0].mask) ==
+                        [False,True,False])
+        self.assertTrue(Boolean(cad2d.time_range_at_tstep(tstep)[1].mask) ==
+                        [False,True,False])
 
         # Random tsteps
         values = np.random.rand(10,10,10,10,2)

@@ -25,12 +25,10 @@ import oops.registry   as registry
 import oops.surface_   as surface_
 import oops.path_      as path_
 
-from polymath              import *
+from polymath import *
+from oops.constants import *
 from oops.event    import Event
 from oops.meshgrid import Meshgrid
-
-HALFPI = np.pi / 2.
-TWOPI  = np.pi * 2.
 
 class Backplane(object):
     """Backplane is a class that supports the generation and manipulation of
@@ -845,7 +843,7 @@ class Backplane(object):
                 self.register_backplane(("ring_flip", event_key), flip)
 
                 # Now flip incidence angles where necessary
-                incidence = np.pi * flip + (1. - 2.*flip) * incidence
+                incidence = PI * flip + (1. - 2.*flip) * incidence
 
             self.register_backplane(key, incidence)
 
@@ -872,7 +870,7 @@ class Backplane(object):
                 flip = self.backplanes[("ring_flip", event_key)]
 
                 # Flip emission angles where necessary
-                emission = np.pi * flip + (1. - 2.*flip) * emission
+                emission = PI * flip + (1. - 2.*flip) * emission
 
             self.register_backplane(key, emission)
 
@@ -903,7 +901,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         key = ("scattering_angle", event_key)
         if not self.backplanes.has_key(key):
-            self.register_backplane(key, np.pi - self.phase_angle(event_key))
+            self.register_backplane(key, PI - self.phase_angle(event_key))
 
         return self.backplanes[key]
 
@@ -964,7 +962,7 @@ class Backplane(object):
 
                 # Now flip incidence angles where necessary
                 if flip.sum() > 0:
-                    incidence = np.pi * flip + (1. - 2.*flip) * incidence
+                    incidence = PI * flip + (1. - 2.*flip) * incidence
 
             self.register_gridless_backplane(key, incidence)
 
@@ -995,7 +993,7 @@ class Backplane(object):
 
                 # Flip emission angles where necessary
                 if flip.sum() > 0:
-                    emission = np.pi * flip + (1. - 2.*flip) * emission
+                    emission = PI * flip + (1. - 2.*flip) * emission
 
             self.register_gridless_backplane(key, emission)
 
@@ -1026,7 +1024,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         key = ("center_scattering_angle", event_key)
         if not self.backplanes.has_key(key):
-            angle = np.pi - self.center_phase_angle(event_key)
+            angle = PI - self.center_phase_angle(event_key)
             self.register_gridless_backplane(key, angle)
 
         return self.backplanes[key]
@@ -1079,11 +1077,11 @@ class Backplane(object):
         elif reference == "sun":
             ref_lon = self.sub_solar_longitude(event_key)
         elif reference == "sha":
-            ref_lon = self.sub_solar_longitude(event_key) - np.pi
+            ref_lon = self.sub_solar_longitude(event_key) - PI
         elif reference == "obs":
             ref_lon = self.sub_observer_longitude(event_key)
         elif reference == "oha":
-            ref_lon = self.sub_observer_longitude(event_key) - np.pi
+            ref_lon = self.sub_observer_longitude(event_key) - PI
 
         lon = self.backplanes[key_default] - ref_lon
 
@@ -1092,7 +1090,7 @@ class Backplane(object):
         if minimum == 0:
             lon = lon % TWOPI
         else:
-            lon = (lon + np.pi) % TWOPI - np.pi
+            lon = (lon + PI) % TWOPI - PI
 
         self.register_backplane(key, lon)
         return self.backplanes[key]
@@ -1483,22 +1481,22 @@ class Backplane(object):
         elif reference == "sun":
             ref_lon = self.sub_solar_longitude(event_key)
         elif reference == "sha":
-            ref_lon = self.sub_solar_longitude(event_key) - np.pi
+            ref_lon = self.sub_solar_longitude(event_key) - PI
         elif reference == "obs":
             ref_lon = self.sub_observer_longitude(event_key)
         elif reference == "oha":
-            ref_lon = self.sub_observer_longitude(event_key) - np.pi
+            ref_lon = self.sub_observer_longitude(event_key) - PI
 
         # These four options are deprecated but not deleted. The above versions
         # are much simpler and faster and the difference is infinitesimal.
         elif reference == "old-sun":
             ref_lon = self._sub_solar_ring_longitude(event_key)
         elif reference == "old-sha":
-            ref_lon = self._sub_solar_ring_longitude(event_key) - np.pi
+            ref_lon = self._sub_solar_ring_longitude(event_key) - PI
         elif reference == "old-obs":
             ref_lon = self._sub_observer_ring_longitude(event_key)
         elif reference == "old-oha":
-            ref_lon = self._sub_observer_ring_longitude(event_key) - np.pi
+            ref_lon = self._sub_observer_ring_longitude(event_key) - PI
 
         lon = (self.backplanes[key_node] - ref_lon) % TWOPI
         self.register_backplane(key, lon)
@@ -1727,7 +1725,7 @@ class Backplane(object):
             return self.backplanes[prograde_key]
 
         # Otherwise, flip the incidence angles and return a new backplane
-        incidence = np.pi - self.backplanes[key_prograde]
+        incidence = PI - self.backplanes[key_prograde]
         self.register_backplane(key, incidence)
         return self.backplanes[key]
 
@@ -1777,7 +1775,7 @@ class Backplane(object):
             return self.backplanes[key_prograde]
 
         # Otherwise, flip the emission angles and return a new backplane
-        emission = np.pi - self.backplanes[key_prograde]
+        emission = PI - self.backplanes[key_prograde]
         self.register_backplane(key, emission)
         return self.backplanes[key]
 
@@ -1875,7 +1873,7 @@ class Backplane(object):
             return self.backplanes[prograde_key]
 
         # Otherwise, flip the incidence angle and return a new backplane
-        incidence = np.pi - self.backplanes[key_prograde]
+        incidence = PI - self.backplanes[key_prograde]
         self.register_gridless_backplane(key, incidence)
 
         return self.backplanes[key]
@@ -1930,7 +1928,7 @@ class Backplane(object):
             return self.backplanes[prograde_key]
 
         # Otherwise, flip the emission angle and return a new backplane
-        emission = np.pi - self.backplanes[key_prograde]
+        emission = PI - self.backplanes[key_prograde]
         self.register_backplane(key, emission)
 
         return self.backplanes[key]
@@ -2087,22 +2085,22 @@ class Backplane(object):
         elif reference == "sun":
             ref_lon = self.sub_solar_longitude(event_key)
         elif reference == "sha":
-            ref_lon = self.sub_solar_longitude(event_key) - np.pi
+            ref_lon = self.sub_solar_longitude(event_key) - PI
         elif reference == "obs":
             ref_lon = self.sub_observer_longitude(event_key)
         elif reference == "oha":
-            ref_lon = self.sub_observer_longitude(event_key) - np.pi
+            ref_lon = self.sub_observer_longitude(event_key) - PI
 
         # These four options are deprecated but not deleted. The above versions
         # are much simpler and faster and the difference is infinitesimal.
         elif reference == "old-sun":
             ref_lon = self._sub_solar_ansa_longitude(event_key)
         elif reference == "old-sha":
-            ref_lon = self._sub_solar_ansa_longitude(event_key) - np.pi
+            ref_lon = self._sub_solar_ansa_longitude(event_key) - PI
         elif reference == "old-obs":
             ref_lon = self._sub_observer_ansa_longitude(event_key)
         elif reference == "old-oha":
-            ref_lon = self._sub_observer_ansa_longitude(event_key) - np.pi
+            ref_lon = self._sub_observer_ansa_longitude(event_key) - PI
 
         lon = (self.backplanes[key_node] - ref_lon) % TWOPI
         self.register_backplane(key, lon)

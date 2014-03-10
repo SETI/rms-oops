@@ -139,7 +139,7 @@ def from_file(filespec, use_fits_geom=False, **parameters):
             spectral_irradiance = nh_file[0].header["P"+spectral_name] # Point source
     
             F_solar = 176 # pivot 6076.2 A at 1 AU
-            extended_factor = 1/texp/spectral_radiance * np.pi * solar_range**2 / F_solar # Conversion to I/F
+            extended_factor = 1/texp/spectral_radiance * oops.PI * solar_range**2 / F_solar # Conversion to I/F
             point_factor = 1/texp/spectral_irradiance
         
             extended_calib[spectral_name] = oops.calib.ExtendedSource("I/F", extended_factor)
@@ -242,8 +242,8 @@ class LORRI(object):
             yfov = info["FOV_CROSS_ANGLE"]
             assert info["FOV_ANGLE_UNITS"] == "DEGREES"
             
-            uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
-            vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
+            uscale = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
+            vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
             
             # Display directions: [u,v] = [right,down]
             full_fov = oops.fov.Flat((-uscale,-vscale), (samples,lines))

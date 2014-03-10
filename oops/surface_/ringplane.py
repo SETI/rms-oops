@@ -10,6 +10,8 @@ from oops.surface_.surface import Surface
 
 import oops.registry as registry
 
+from oops.constants import *
+
 class RingPlane(Surface):
     """RingPlane is a subclass of Surface describing a flat surface in the (x,y)
     plane, in which the optional velocity field is defined by circular Keplerian
@@ -88,7 +90,7 @@ class RingPlane(Surface):
         y = pos.vals[...,1]
 
         r     = Scalar(np.sqrt(x**2 + y**2), mask)
-        theta = Scalar(np.arctan2(y,x) % (2.*np.pi), mask)
+        theta = Scalar(np.arctan2(y,x) % TWOPI, mask)
 
         if axes > 2:
             z = Scalar(pos.vals[...,2] - self.elevation, mask)
@@ -360,7 +362,7 @@ class Test_RingPlane(unittest.TestCase):
 
         (r,theta,z) = plane.coords_from_vector3(obs,axes=3)
         self.assertTrue((theta >= 0.).all())
-        self.assertTrue((theta < 2.*np.pi).all())
+        self.assertTrue((theta < TWOPI).all())
         self.assertTrue((r >= 0.).all())
 
         test = plane.vector3_from_coords((r,theta,z))

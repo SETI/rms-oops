@@ -10,6 +10,8 @@ from oops.config           import SURFACE_PHOTONS, LOGGING
 
 import oops.registry as registry
 
+from oops.constants import *
+
 class Ellipsoid(Surface):
     """Ellipsoid defines a ellipsoidal surface centered on the given path and
     fixed with respect to the given frame. The short radius of the ellipsoid is
@@ -125,11 +127,11 @@ class Ellipsoid(Surface):
         r = unsquashed.norm()
         (x,y,z) = unsquashed.to_scalars()
         lat = (z/r).arcsin()
-        lon_unsquashed = y.arctan2(x) % (2.*np.pi)
+        lon_unsquashed = y.arctan2(x) % TWOPI
 
         # Convert longitude from "unsquashed" to planetocentric
         lon = (lon_unsquashed.tan() * self.squash_y).arctan()   # -pi/2 to pi/2
-        lon += np.pi * ((lon_unsquashed.vals + np.pi/2) // np.pi)
+        lon += PI * ((lon_unsquashed.vals + HALFPI) // PI)
 
         if derivs is False: derivs = (False, False, False)
         if derivs is True: derivs = (True, True, True)
@@ -168,12 +170,12 @@ class Ellipsoid(Surface):
         """
 
         # Convert to Scalars in standard units
-        lon = coords[0] % (2.*np.pi)
+        lon = coords[0] % TWOPI
         lat = coords[1]
 
         # Convert longitude from planetocentric to "unsquashed"
         lon_unsquashed = (lon.tan() * self.unsquash_y).arctan()
-        lon_unsquashed += np.pi * ((lon.vals + np.pi/2) // np.pi)
+        lon_unsquashed += PI * ((lon.vals + HALFPI) // PI)
 
         if len(coords) == 2:
             r = Scalar(self.req)
@@ -659,7 +661,7 @@ class Test_Ellipsoid(unittest.TestCase):
         self.assertTrue(((test - pos).rms() < 1.e-8).all())
 
         # Make sure longitudes are planetocentric
-        test_lon = np.arctan2(pos[...,1], pos[...,0]) % (2.*np.pi)
+        test_lon = np.arctan2(pos[...,1], pos[...,0]) % TWOPI
         self.assertTrue(((lon - test_lon).rms() < 1.e-8).all())
 
         # Ellipsoid intercepts & normals
@@ -756,13 +758,13 @@ class Test_Ellipsoid(unittest.TestCase):
         cept1 = planet.vector3_from_coords((lon+eps,lat,0.))
         cept2 = planet.vector3_from_coords((lon-eps,lat,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - np.pi/2) < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI) < 1.e-8)
 
         (lon,lat) = planet.coords_from_vector3(cept, axes=2)
         cept1 = planet.vector3_from_coords((lon,lat+eps,0.))
         cept2 = planet.vector3_from_coords((lon,lat-eps,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - np.pi/2) < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI) < 1.e-8)
 
         # Test intercept_with_normal()
         vector = Vector3(np.random.random((100,3)))
@@ -804,7 +806,7 @@ class Test_Ellipsoid(unittest.TestCase):
                                                              derivs=False,
                                                              t_guess=t.plain())
             dcept_dpos = (cept1 - cept2) / (2*eps)
-            self.assertTrue(abs(dcept_dpos.sep(perp) - np.pi/2) < 1.e-5)
+            self.assertTrue(abs(dcept_dpos.sep(perp) - HALFPI) < 1.e-5)
 
             ref = cept.d_dpos.as_column(i).as_vector3()
             self.assertTrue(abs(dcept_dpos - ref) < 1.e-5)

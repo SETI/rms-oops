@@ -10,6 +10,8 @@ from oops.surface_.ringplane import RingPlane
 
 import oops.registry as registry
 
+from oops.constants import *
+
 class Ansa(Surface):
     """The Ansa surface is defined as the locus of points where a radius vector
     from the pole of the Z-axis is perpendicular to the line of sight. This 
@@ -104,7 +106,7 @@ class Ansa(Surface):
         lon = pos_y.arctan2(pos_x) - obs_y.arctan2(obs_x)
 
         # Put it in the range -pi to pi
-        lon = ((lon + np.pi) % (2*np.pi)) - np.pi
+        lon = ((lon + PI) % TWOPI) - PI
         sign = lon.sign()
 
         r = rabs * sign
@@ -402,7 +404,7 @@ class Test_Ansa(unittest.TestCase):
         pos_xy = pos.element_mul((1,1,0))
         los_xy = los.element_mul((1,1,0))
 
-        self.assertTrue(((pos_xy.sep(los_xy) - np.pi/2).rms() < 1.e-8).all())
+        self.assertTrue(((pos_xy.sep(los_xy) - HALFPI).rms() < 1.e-8).all())
         self.assertTrue(((obs + t * los - pos).rms() < 1.e-8).all())
 
         # coords_from_vector3()
@@ -422,7 +424,7 @@ class Test_Ansa(unittest.TestCase):
         pos_z  = pos.to_scalar(2)
         self.assertTrue(((pos_xy.norm() - abs(r)).rms() < 1.e-8).all())
         self.assertTrue(((pos_z - z).rms() < 1.e-8).all())
-        self.assertTrue((abs(theta).mvals <= np.pi).all())
+        self.assertTrue((abs(theta).mvals <= PI).all())
 
         # vector3_from_coords()
         obs = Vector3(1.e-5 + np.random.rand(100,3) * 1.e6)
@@ -438,7 +440,7 @@ class Test_Ansa(unittest.TestCase):
         self.assertTrue((abs(pos_z - z) < 1.e-8).all())
 
         obs_xy = obs.element_mul(Vector3((1,1,0)))
-        self.assertTrue((abs(pos_xy.sep(obs_xy - pos_xy) - np.pi/2) < 1.e-5).all())
+        self.assertTrue((abs(pos_xy.sep(obs_xy - pos_xy) - HALFPI) < 1.e-5).all())
 
         pos1 = surface.vector3_from_coords((r,z,theta), obs)
         pos1_xy = pos1.element_mul(Vector3((1,1,0)))

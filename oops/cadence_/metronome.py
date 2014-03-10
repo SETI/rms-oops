@@ -130,7 +130,8 @@ class Metronome(Cadence):
                         False to exclude.
 
         Return:         a Boolean array indicating which time values are
-                        sampled by the cadence.
+                        sampled by the cadence. A masked time results in a
+                        value of False, not a masked Boolean.
         """
 
         time = Scalar.as_scalar(time)
@@ -202,6 +203,9 @@ class Test_Metronome(unittest.TestCase):
         self.assertEqual(cadence.time_at_tstep(3.5, mask=False), 135.)
         self.assertEqual(cadence.time_at_tstep(-0.5, mask=False), 95.) # out of range
         self.assertEqual(cadence.time_at_tstep(4.5, mask=False), 145.) # out of range
+        self.assertEqual(Boolean(cadence.time_at_tstep(Scalar((0.,1.,2.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
         
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,140])
@@ -221,6 +225,9 @@ class Test_Metronome(unittest.TestCase):
                          [[False,True],[True,True],[False,False]])
         self.assertTrue(Boolean(cadence.time_is_inside(time, inclusive=False)) ==
                          [[False,True],[True,False],[False,False]])
+        self.assertEqual(cadence.time_is_inside(Scalar((100.,110.,120.),
+                                                       [False,True,False])),
+                         [True,False,True])
 
         # tstep_at_time()
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
@@ -233,6 +240,9 @@ class Test_Metronome(unittest.TestCase):
                                                 108.,109.,110]).masked(), 0)
         self.assertEqual(cadence.tstep_at_time(95., mask=False), -0.5) # out of range
         self.assertEqual(cadence.tstep_at_time(145., mask=False), 4.5) # out of range
+        self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
 
         # Conversion and back (and tstride_at_tstep)
         random.seed(0)
@@ -272,6 +282,12 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
         
         # time_range_at_tstep()
+        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+                                            [False,True,False]))[0].mask),
+                         [False,True,False])
+        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+                                            [False,True,False]))[1].mask),
+                         [False,True,False])
         tstep = Scalar(7*random.rand(100,100) - 1.)
         time = cadence.time_at_tstep(tstep, mask=False)
         (time0, time1) = cadence.time_range_at_tstep(tstep, mask=False)
@@ -323,6 +339,9 @@ class Test_Metronome(unittest.TestCase):
         self.assertEqual(cadence.time_at_tstep(3.5, mask=False), 134.)
         self.assertEqual(cadence.time_at_tstep(-0.5, mask=False), 94.) # out of range
         self.assertEqual(cadence.time_at_tstep(4.5, mask=False), 144.) # out of range
+        self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
         
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,138])
@@ -342,6 +361,9 @@ class Test_Metronome(unittest.TestCase):
                         [[False,True],[True,True],[False,False]])
         self.assertTrue(Boolean(cadence.time_is_inside(time, inclusive=False)) ==
                         [[False,True],[True,False],[False,False]])
+        self.assertEqual(cadence.time_is_inside(Scalar((100.,110.,120.),
+                                                       [False,True,False])),
+                         [True,False,True])
 
         # tstep_at_time()
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
@@ -356,6 +378,9 @@ class Test_Metronome(unittest.TestCase):
                         [False,False,True,True,False])
         self.assertEqual(cadence.tstep_at_time(95., mask=False), -0.375) # out of range
         self.assertEqual(cadence.tstep_at_time(145., mask=False), 4.625) # out of range
+        self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
+                                            [False,True,False])).mask),
+                         [False,True,False])
 
         # Conversion and back (and tstride_at_tstep)
         random.seed(0)
@@ -396,6 +421,12 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
 
         # time_range_at_tstep()
+        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+                                            [False,True,False]))[0].mask),
+                         [False,True,False])
+        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+                                            [False,True,False]))[1].mask),
+                         [False,True,False])
         tstep = Scalar(7*random.rand(100,100) - 1.)
         tstep = tstep.int() # time_range_at_tstep requires an int input
         time = cadence.time_at_tstep(tstep, mask=False)

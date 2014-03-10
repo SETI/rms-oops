@@ -13,6 +13,8 @@ import oops.frame_    as frame_
 import oops.path_     as path_
 import oops.registry  as registry
 
+from oops.constants import *
+
 class OrbitPlane(Surface):
     """OrbitPlane is a subclass of the Surface class describing a flat surface
     sharing its geometric center and tilt with a body on an eccentric and/or
@@ -131,7 +133,7 @@ class OrbitPlane(Surface):
 
             self.peri_path = path_.CirclePath(
                                     elements[0] * elements[3],  # a*e
-                                    elements[4] + np.pi,        # apocenter
+                                    elements[4] + PI,           # apocenter
                                     elements[5],                # precession
                                     self.epoch,                 # epoch
                                     self.internal_origin_id,    # origin
@@ -374,8 +376,8 @@ class OrbitPlane(Surface):
         x = lon - ae_x2 * lon.sin()
 
         # Iterate until all improvement ceases. Should not take long
-        prev_max_abs_dx = 2*np.pi
-        max_abs_dx = np.pi
+        prev_max_abs_dx = TWOPI
+        max_abs_dx = PI
         while (max_abs_dx < prev_max_abs_dx):
             dx = (lon - x - ae_x2 * x.sin()) / (1 + ae_x2 * x.cos())
             x += dx
@@ -406,7 +408,7 @@ class Test_OrbitPlane(unittest.TestCase):
         (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
 
         r_true = Scalar([1,2,1,1])
-        l_true = Scalar([0, 0, np.pi, np.pi/2])
+        l_true = Scalar([0, 0, PI, HALFPI])
         z_true = Scalar([0,0,0,0.1])
 
         self.assertTrue(abs(r - r_true) < 1.e-12)
@@ -472,7 +474,7 @@ class Test_OrbitPlane(unittest.TestCase):
         (r,l,z) = orbit.event_as_coords(event, derivs=False)
 
         r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
-        l_true = Scalar([2*np.pi, 2*np.pi, np.pi, np.arctan2(1,ae)])
+        l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,ae)])
         z_true = Scalar([0,0,0,0.1])
 
         self.assertTrue(abs(r - r_true) < delta)
@@ -535,7 +537,7 @@ class Test_OrbitPlane(unittest.TestCase):
         # Inclined orbit, no eccentricity, no derivatives, forward
         inc = 0.1
         regr = -0.1
-        node = -np.pi/2
+        node = -HALFPI
         sini = np.sin(inc)
         cosi = np.cos(inc)
 
@@ -551,7 +553,7 @@ class Test_OrbitPlane(unittest.TestCase):
         (r,l,z) = orbit.event_as_coords(event, derivs=False)
 
         r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])
-        l_true = Scalar([2*np.pi, 2*np.pi, np.pi, np.arctan2(1,dz*sini)])
+        l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,dz*sini)])
         z_true = Scalar([-sini, -2*sini, sini, dz*cosi])
 
         self.assertTrue(abs(r - r_true) < delta)
@@ -566,7 +568,7 @@ class Test_OrbitPlane(unittest.TestCase):
         # Inclined orbit, with derivatives, forward
         inc = 0.1
         regr = -0.1
-        node = -np.pi/2
+        node = -HALFPI
         sini = np.sin(inc)
         cosi = np.cos(inc)
 
@@ -587,7 +589,7 @@ class Test_OrbitPlane(unittest.TestCase):
             event = Event(eps, pos + vel*eps, vel, "SSB", "J2000")
             (r1,l1,z1) = orbit.event_as_coords(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
-            dl_dt_test = ((l1 - l + np.pi) % (2*np.pi) - np.pi) / eps
+            dl_dt_test = ((l1 - l + PI) % TWOPI - PI) / eps
             dz_dt_test = (z1 - z) / eps
 
             self.assertTrue(abs(r.d_dt - dr_dt_test).unmasked() < delta)
@@ -619,7 +621,7 @@ class Test_OrbitPlane(unittest.TestCase):
         epoch = 0
         orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
 
-        l = np.arange(361) * np.pi/180.
+        l = np.arange(361) * RPD
         anoms = orbit.to_mean_anomaly(l)
 
         lons = orbit.from_mean_anomaly(anoms)
