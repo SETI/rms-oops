@@ -145,10 +145,10 @@ class Boolean(Qube):
 
         return self.as_int()
 
-    def as_index(self):
-        """Return an object suitable for indexing a NumPy ndarray."""
+    def as_index(self, remove_masked=False):
+        """Return an object suitable for indexing a NumPy ndarray plus a mask."""
 
-        return self.values
+        return self.values, None
 
     def is_numeric(self):
         """Return True if this object is numeric; False otherwise.

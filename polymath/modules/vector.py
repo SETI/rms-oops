@@ -75,41 +75,64 @@ class Vector(Qube):
 
         return tuple(results)
 
-    def as_index(self, masked=None):
-        """Return an object suitable for indexing an N-dimensional NumPy array.
+    def as_index(self, remove_masked=False, masked=None):
+        """Return an object suitable for indexing an N-dimensional NumPy array and a mask.
 
         The returned object is a tuple of NumPy arrays, each of the same shape.
         Each array contains indices along the corresponding axis of the array
         being indexed.
 
         Input:
-            masked      the index or list/tuple/array of indices to insert in
-                        the place of a masked item. If None and the object
-                        contains masked elements, the array will be flattened
-                        and masked elements will be skipped over.
+            remove_masked True if the index should have masked values removed.
+            masked        the index or list/tuple/array of indices to insert in
+                          the place of a masked item. If None and the object
+                          contains masked elements, the array will be flattened
+                          and masked elements will be skipped over.
+                          
+        Return: (valueidx, mask)
+            valueidx    the indices corresponding to this Vector's value
+            mask        a boolean array indicating which indices are masked
         """
 
         if (self.drank > 0):
             raise ValueError('an indexing object cannot have a denominator')
 
         obj = self.as_int()
-
+        mask = None
+        
         if not np.any(self.mask):
             values = obj.values
 
-        elif np.shape(obj.mask) == ():
-            raise ValueError('object is entirely masked')
-
-        elif masked is None:
-            obj = obj.flatten()
-            values = obj[~obj.mask].values
-
+        if masked is None:
+            if remove_masked:
+                if np.all(obj.mask): # All masked
+                    return None, None
+                elif not np.any(obj.mask): # None masked
+                    values = obj.values
+                    mask = obj.mask
+                else: # Some masked
+                    obj = obj.flatten()
+                    values = obj[~obj.mask].values
+                    mask = obj.mask
+            else:
+                obj = obj.copy()
+                values = obj.values
+                mask = obj.mask
+                if np.shape(values) == ():
+                    if mask:
+                        values = 0
+                else:
+                    if np.shape(mask) == ():
+                        if mask:
+                            values[:] = 0 # All masked
+                    else: # Partially masked
+                        values[mask] = 0 # Always a safe index
         else:
             obj = obj.copy()
-            obj[obj.mask] = masked
+            obj.values[obj.mask] = masked
             values = obj.values
 
-        return tuple(np.rollaxis(values, -1, 0))
+        return tuple(np.rollaxis(values, -1, 0)), mask
 
     def as_column(self, recursive=True):
         """Convert the Vector to an Nx1 column matrix.

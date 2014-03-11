@@ -82,7 +82,7 @@ class Qube(object):
         __mask_     the array's mask as a NumPy boolean array. The array value
                     is True if the Array value at the same location is masked.
                     A scalar value of False indicates that the entire object is
-                    unmasked; a scalare value of True indicates that it is
+                    unmasked; a scalar value of True indicates that it is
                     entirely masked.
         __units_    the units of the array, if any. None indicates no units.
         __derivs_   a dictionary of the names and values of any derivatives,
@@ -3005,12 +3005,12 @@ class Qube(object):
 
     def __getitem__(self, i):
 
-        # Interpret and adapt the index
-        (i,imask) = self.prep_index(i)
-
         # A shapeless object cannot be indexed
         if self.__shape_ == ():
             raise IndexError('too many indices')
+
+        # Interpret and adapt the index
+        (i,imask,idxmask) = self.prep_index(i, remove_masked=False)
 
         # Apply index
         item_value = self.__values_[i]
@@ -3020,6 +3020,22 @@ class Qube(object):
         else:
             item_mask = self.__mask_[imask]
 
+        if idxmask is not None:
+            val_shape = np.shape(item_value)
+            mask_shape = val_shape[:len(val_shape)-self.drank-self.nrank]
+            if np.shape(idxmask) != mask_shape:
+                # Index is not of the same rank as the values
+                if np.shape(idxmask) == ():
+                    if idxmask: # Single True
+                        new_idxmask = np.ones(mask_shape, dtype='bool')
+                    else:
+                        new_idxmask = idxmask # Single False
+                else: # Need to reshape
+                    new_idxmask = np.zeros(mask_shape, dtype='bool')
+                    new_idxmask[idxmask] = True
+                idxmask = new_idxmask
+            item_mask |= idxmask
+            
         # Make sure we have not indexed into the item
         item_shape = np.shape(item_value)
         if len(item_shape) < self.__rank_:
@@ -3039,9 +3055,6 @@ class Qube(object):
     def __setitem__(self, i, arg):
         self.require_writable()
 
-        # Interpret and adapt the index
-        (i,imask) = self.prep_index(i)
-
         # A shapeless object cannot be indexed
         if self.__shape_ == ():
             raise IndexError('too many indices')
@@ -3055,10 +3068,21 @@ class Qube(object):
             if key not in arg.__derivs_:
                 raise ValueError('missing derivative d_d%s in replacement' %
                                  key)
+
+        # Interpret and adapt the index
+        (i,imask,idxmask) = self.prep_index(i, remove_masked=True)
+
+        if i is None or (np.shape(i) != () and None in i):
+            # Fully flattened index along at least one dimension; nothing to do
+            return
         
         # Insert the values
-        self.__values_[i] = arg.__values_
-
+        if (idxmask is None or (np.shape(idxmask) == () and idxmask == False) or
+            np.shape(arg.__values_) == ()):
+            self.__values_[i] = arg.__values_
+        else:
+            self.__values_[i] = new_vals[idxmask]
+            
         # Update the mask if necessary
         if np.shape(self.__mask_):
             self.__mask_[imask] = arg.__mask_
@@ -3079,10 +3103,18 @@ class Qube(object):
 
         return
 
-    def prep_index(self, index):
+    def prep_index(self, index, remove_masked):
         """Repair the index for use in a Qube, returning one for the values and
         one for the mask.
 
+        If remove_masked is False:
+            If the index is a single Qube object, then we also allow the return
+            of a mask indicating which index values are masked. However, if
+            the index is multiple objects, then no masked indices are allowed.
+        If remove_masked is True:
+            If the index is a single Qube object, then any masked items are
+            removed.
+        
         If the index contains a Ellipsis, we need to append additional null
         slices for the item elements of the array in order to make the axes
         align properly.
@@ -3096,12 +3128,13 @@ class Qube(object):
 
         # Replace a Qube with its index equivalent
         if isinstance(index, Qube):
-            index = index.as_index()
-            return (index, index)
+            index, idxmask = index.as_index(remove_masked=remove_masked)
+            return (index, index, idxmask)
 
         # There's only a problem with indices of type list or tuple
+        # By definition these are N-d array references with N>1
         if type(index) not in (tuple,list):
-            return (index, index)
+            return (index, index, None) # NOTE we don't handle NP MaskedArrays
 
         # Search for Ellipses and Qubes
         new_index = []
@@ -3111,7 +3144,10 @@ class Qube(object):
                 has_ellipsis = True
 
             if isinstance(item, Qube):
-                new_index.append(item.as_index())
+                index, idxmask = item.as_index(remove_masked=remove_masked)
+                if idxmask is not None:
+                    raise ValueError("illegal masked index for multi-dimensional indexing")
+                new_index.append(index)
             else:
                 new_index.append(item)
 
@@ -3120,7 +3156,7 @@ class Qube(object):
         else:
             value_index = new_index
 
-        return (tuple(value_index), tuple(new_index))
+        return (tuple(value_index), tuple(new_index), None)
 
     ############################################################################
     # Utilities for arithmetic operations

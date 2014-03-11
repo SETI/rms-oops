@@ -13,13 +13,13 @@ class Test_Scalar_as_index(unittest.TestCase):
   def runTest(self):
 
     a = Scalar(np.arange(12).reshape(3,4))
-    self.assertTrue(np.all(a.as_index() == a.values))
+    self.assertTrue(np.all(a.as_index()[0] == a.values))
 
     mask = a.values % 2 == 0
     a = Scalar(np.arange(12).reshape(3,4), mask)
-    self.assertTrue(np.all(a.as_index() == np.arange(1,12,2)))
+    self.assertTrue(np.all(a.as_index(remove_masked=True)[0] == np.arange(1,12,2)))
 
-    test = a.as_index(masked=-7)
+    test = a.as_index(masked=-7)[0]
     self.assertEqual(test.shape, (3,4))
     for i in range(3):
         for j in range(4):

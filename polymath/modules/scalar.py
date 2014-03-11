@@ -46,30 +46,57 @@ class Scalar(Qube):
 
         return Scalar(arg)
 
-    def as_index(self, masked=None):
-        """Return an object suitable for indexing a NumPy ndarray.
+    def as_index(self, remove_masked=False, masked=None):
+        """Return an object suitable for indexing a NumPy ndarray along with a mask.
 
         Input:
-            masked      the value to insert in the place of a masked item. If
-                        None and the object contains masked elements, the array
-                        will be flattened and masked elements will be skipped.
+            remove_masked True if the index should have masked values removed.
+            masked        the index or list/tuple/array of indices to insert in
+                          the place of a masked item. If None and the object
+                          contains masked elements, the array will be flattened
+                          and masked elements will be skipped over.
+                        
+        Return: (valueidx, mask)
+            valueidx    the indices corresponding to this Scalar's value
+            mask        a boolean array indicating which indices are masked
         """
 
         obj = self.as_int()
 
         if not np.any(self.mask):
-            return obj.values
+            return obj.values, None
 
-        if np.shape(obj.mask) == ():
-            raise ValueError('object is entirely masked')
-
-        if masked is None:
-            obj = obj.flatten()
-            return obj.values[~obj.mask]
-        else:
+        if masked is not None:
             obj = obj.copy()
-            obj.values[obj.mask] = masked
-            return obj.values
+            if np.shape(obj.mask) == () and obj.mask:
+                # All masked
+                obj.values[:] = masked
+            else:
+                # Partially masked
+                obj.values[obj.mask] = masked
+            return obj.values, None
+
+        if remove_masked:
+            if np.all(obj.mask): # All masked
+                return None, None
+            # Partially masked
+            obj = obj.flatten()
+            if np.shape(obj.values) == () and obj.mask:
+                return None, None
+            return obj[~obj.mask].values, obj.mask
+
+        obj = obj.copy()
+        values = obj.values
+        if np.shape(obj.values) == ():
+            if obj.mask:
+                values = 0
+        else:
+            if np.shape(obj.mask) == ():
+                if obj.mask:
+                    values[:] = 0 # All masked
+            else: # Partially masked
+                values[obj.mask] = 0 # Always a safe index
+        return values, obj.mask
 
     def int(self):
         """Return an integer (floor) version of this Scalar.

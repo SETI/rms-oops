@@ -1,5 +1,5 @@
 ################################################################################
-# polymath/unit_tests.py
+# polymath/unittester.py
 #
 # Mark R. Showalter, PDS Rings Node, SETI Institute
 ################################################################################
@@ -12,6 +12,8 @@ if __name__ == '__main__':
 
     from unit_tests.test_empty                  import *
 
+    from unit_tests.test_indices                import *
+    
     from unit_tests.test_matrix_column_vectors  import *
     from unit_tests.test_matrix_inverse         import *
     from unit_tests.test_matrix_is_diagonal     import *
