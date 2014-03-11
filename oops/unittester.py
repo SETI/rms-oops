@@ -6,8 +6,6 @@ import oops
 
 from oops.cadence_.unittester import *
 from oops.calib_.unittester   import *
-from oops.cmodel_.unittester  import *
-from oops.format_.unittester  import *
 from oops.fov_.unittester     import *
 from oops.frame_.unittester   import *
 from oops.obs_.unittester     import *
