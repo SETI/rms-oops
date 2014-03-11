@@ -472,12 +472,12 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
 
         # time_range_at_tstep()
-#        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
-#                                            [False,True,False]))[0].mask),
-#                         [False,True,False])
-#        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
-#                                            [False,True,False]))[1].mask),
-#                         [False,True,False])
+        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+                                            [False,True,False]))[0].mask),
+                         [False,True,False])
+        self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
+                                            [False,True,False]))[1].mask),
+                         [False,True,False])
         tstep = Scalar(7*random.rand(100,100) - 1.)
         tstep = tstep.int() # time_range_at_tstep requires an int input
         time = cadence.time_at_tstep(tstep, mask=False)
