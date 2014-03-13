@@ -17,11 +17,13 @@ import oops.registry       as registry
 import oops.constants      as constants
 
 class Body(object):
-    """Body is a class that defines the properties of, and relationships
-    between, solar system objects such as planets, satellites and rings.
+    """Defines the properties and relationships of solar system bodies.
 
-    Each body has these attributes:
+    Bodies include planets, dwarf planets, satellites and rings. Each body has
+    these attributes:
         name            the name of this body.
+        spice_id        the ID from the SPICE toolkit, if the body found in
+                        SPICE; otherwise, None.
         path_id         the ID of the Path this body follows.
         path            a Waypoint for the body's path
         frame_id        the ID of the coordinate frame describing this body.
@@ -68,6 +70,12 @@ class Body(object):
         """Constructor for a Body object."""
 
         self.name = name
+
+        try:
+            self.spice_id = cspice.bodn2c(name)
+        except KeyError:
+            self.spice_id = None
+
         self.path_id = path_id
         self.frame_id = frame_id
         self.ring_frame_id = None
@@ -93,7 +101,7 @@ class Body(object):
 
         self.children = []
 
-        # Append this to the appopriate child lists
+        # Append this to the appropriate child lists
         if self.parent is not None:
             if self not in self.parent.children:
                 self.parent.children.append(self)
@@ -105,10 +113,10 @@ class Body(object):
         # Save it in the Solar System dictionary
         registry.BODY_REGISTRY[self.name] = self
 
-########################################
+    ########################################
 
     def apply_surface(self, surface, radius, inner_radius=0.):
-        """Adds the surface attribute to a Body."""
+        """Add the surface attribute to a Body."""
 
         self.surface = surface
         self.radius = radius
@@ -117,7 +125,7 @@ class Body(object):
         # This assertion is not strictly necessary
 
     def apply_ring_frame(self, epoch=None, retrograde=False):
-        """Adds the and ring_frame and ring_frame_id attributes to a Body."""
+        """Add the and ring_frame and ring_frame_id attributes to a Body."""
 
         # On a repeat call, make sure they match
         if self.ring_frame_id is not None:
@@ -132,12 +140,12 @@ class Body(object):
         self.ring_is_retrograde = retrograde
 
     def apply_gravity(self, gravity):
-        """Adds the gravity attribute to a Body."""
+        """Add the gravity attribute to a Body."""
 
         self.gravity = gravity
 
     def add_keywords(self, keywords):
-        """Adds one or more keywords to the list associated with this Body."""
+        """Add one or more keywords to the list associated with this Body."""
 
         if type(keywords) == type(""): keywords = [keywords]
 
@@ -146,14 +154,13 @@ class Body(object):
             if keyword not in self.keywords:
                 self.keywords.append(keyword)
 
-################################################################################
-# Tools for selecting the children of an body
-################################################################################
+    ############################################################################
+    # Tools for selecting the children of an body
+    ############################################################################
 
     def select_children(self, include_all=None, include_any=None,
                               exclude=None, radius=None, recursive=False):
-        """Returns a list of body object satisfying the given constraints on
-        keywords and size."""
+        """Return a list of body objects based on keywords and size."""
 
         if recursive:
             bodies = []
@@ -188,8 +195,7 @@ class Body(object):
 
     @staticmethod
     def name_in(bodies, names):
-        """Retains bodies on this list only if their names ARE found in the list
-        provided."""
+        """Retain bodies if their names ARE found in the list provided."""
 
         if type(names) == type(""): names = [names]
 
@@ -201,8 +207,7 @@ class Body(object):
 
     @staticmethod
     def name_not_in(bodies, names):
-        """Retains bodies on this list only if their names are NOT found in the
-        list provided."""
+        """Retain bodies only if their names are NOT in the list provided."""
 
         if type(names) == type(""): names = [names]
 
@@ -214,8 +219,7 @@ class Body(object):
 
     @staticmethod
     def radius_in_range(bodies, min, max=np.inf):
-        """Retains bodies on this list only if their radii fall INSIDE the
-        specified range (min,max)."""
+        """Retain bodies if their radii fall INSIDE the range (min,max)."""
 
         list = []
         for body in bodies:
@@ -225,8 +229,7 @@ class Body(object):
 
     @staticmethod
     def radius_not_in_range(bodies, min, max=np.inf):
-        """Retains bodies on this list only if their radii fall OUTSIDE the
-        specified range (min,max)."""
+        """Retain bodies if their radii fall OUTSIDE the range (min,max)."""
 
         list = []
         for body in bodies:
@@ -236,9 +239,10 @@ class Body(object):
 
     @staticmethod
     def surface_class_in(bodies, class_names):
-        """Retains bodies on this list only if the name of their surface class
-        IS found in the specified list. Note that the name of the surface class
-        is "NoneType" for cases where the surface has not been specified."""
+        """Retain bodies if the their surface class IS found in the list.
+
+        Note that the name of the surface class is "NoneType" for cases where
+        the surface has not been specified."""
 
         if type(class_names) == type(""): class_names = [class_names]
 
@@ -251,9 +255,10 @@ class Body(object):
 
     @staticmethod
     def surface_class_not_in(bodies, class_names):
-        """Retains bodies on this list only if the name of their surface class
-        is NOT found in the specified list. Note that the name of the surface
-        class is "NoneType" for cases where the surface has not been specified."""
+        """Retain bodies if their surface class is NOT found in the list.
+
+        Note that the name of the surface class is "NoneType" for cases where
+        the surface has not been specified."""
 
         if type(class_names) == type(""): class_names = [class_names]
 
@@ -266,7 +271,7 @@ class Body(object):
 
     @staticmethod
     def has_gravity(bodies):
-        """Retains bodies on the list only if they HAVE a defined gravity."""
+        """Retain bodies on the list if they HAVE a defined gravity."""
 
         list = []
         for body in bodies:
@@ -276,7 +281,7 @@ class Body(object):
 
     @staticmethod
     def has_no_gravity(bodies):
-        """Retains bodies on the list only if they have NO gravity."""
+        """Retain bodies on the list if they have NO gravity."""
 
         list = []
         for body in bodies:
@@ -286,7 +291,7 @@ class Body(object):
 
     @staticmethod
     def has_children(bodies):
-        """Retains bodies on the list only if they HAVE children."""
+        """Retain bodies on the list if they HAVE children."""
 
         list = []
         for body in bodies:
@@ -296,7 +301,7 @@ class Body(object):
 
     @staticmethod
     def has_no_children(bodies):
-        """Retains bodies on the list only if they have NO children."""
+        """Retain bodies on the list if they have NO children."""
 
         list = []
         for body in bodies:
@@ -306,8 +311,7 @@ class Body(object):
 
     @staticmethod
     def keywords_include_any(bodies, keywords):
-        """Retains bodies on this list only if they have at least one of the
-        specified keywords."""
+        """Retain bodies that have at least one of the specified keywords."""
 
         if type(keywords) == type(""): keywords = [keywords]
 
@@ -321,8 +325,7 @@ class Body(object):
 
     @staticmethod
     def keywords_include_all(bodies, keywords):
-        """Retains bodies on this list only if they have all of the specified
-        keywords."""
+        """Retain bodies if they have all of the specified keywords."""
 
         if type(keywords) == type(""): keywords = [keywords]
 
@@ -341,8 +344,7 @@ class Body(object):
 
     @staticmethod
     def keywords_do_not_include(bodies, keywords):
-        """Retains bodies on this list only if they DO NOT have any of the
-        specified keywords."""
+        """Retain bodies if they DO NOT have any of the specified keywords."""
 
         if type(keywords) == type(""): keywords = [keywords]
 
@@ -363,9 +365,10 @@ class Body(object):
 
     @staticmethod
     def define_multipath(bodies, origin="SSB", frame="J2000", id=None):
-        """Constructs a multipath defining the centers of the given list of
-        bodies. The default ID is the name of the first body with a "+"
-        appended."""
+        """Construct a multipath for the centers of the given list of bodies.
+
+        The default ID of the path returned is the name of the first body with
+        a "+" appended."""
 
         paths = []
         for body in bodies:
@@ -378,100 +381,15 @@ class Body(object):
         return registry.body_lookup(name)
 
 ################################################################################
-# Definitions of satellite systems using SPICE body IDs
-# These are disjoint sets, organized based on the keywords to be applied.
-# They are also separated into groups based on whether they orbit the planet
-# or the barycenter.
+# General function to load Solar System components
 ################################################################################
 
-MARS_ALL_MOONS = range(401,403)
+def define_solar_system(start_time=None, stop_time=None, asof=None):
+    """Construct bodies, paths and frames for planets and their moons.
 
-JUPITER_CLASSICAL = range(501,505)
-JUPITER_REGULAR   = [505] + range(514,517)
-JUPITER_IRREGULAR = range(506,514) + range(517,550) + [55062, 55063]
-
-SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan orbit Saturn
-SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus orbit barycenter
-SATURN_CLASSICAL_IRREG = [609]              # Phoebe
-SATURN_REGULAR   = range(610,619) + range(632,636) + [649,653]
-SATURN_IRREGULAR = (range(619,632) + range(636,649) + range(650,653) +
-                    [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
-
-URANUS_CLASSICAL  = range(701,706)
-URANUS_INNER      = range(706,716) + [725,726,727]
-URANUS_IRREGULAR  = range(716,726)
-
-NEPTUNE_CLASSICAL_INNER = [801]             # Triton
-NEPTUNE_CLASSICAL_OUTER = [802]             # Nereid orbits barycenter
-NEPTUNE_REGULAR   = range(803,809)
-NEPTUNE_IRREGULAR = range(809,814)
-
-CHARON        = [901]
-PLUTO_REGULAR = range(902,906)
-
-################################################################################
-# Definitions of ring systems
-################################################################################
-
-JUPITER_MAIN_RING_LIMIT = 128940.
-
-SATURN_MAIN_RINGS = (74658., 136780.)
-SATURN_C_RING = ( 74658.,  91975.)
-SATURN_B_RING = ( 91975., 117507.)
-SATURN_A_RING = (122340., 136780.)
-SATURN_F_RING_LIMIT = 140612.
-SATURN_RINGS  = (SATURN_MAIN_RINGS[0], SATURN_F_RING_LIMIT)
-
-URANUS_EPSILON_LIMIT = 51604.
-URANUS_MU_LIMIT = [97700. - 17000./2, 97700. + 17700./2]
-URANUS_NU_LIMIT = [67300. -  3800./2, 67300. +  3800./2]
-
-NEPTUNE_ADAMS_LIMIT = 62940.
-
-# Special definitions of Uranian eccentric/inclined rings
-URANUS_OLD_GRAVITY = gravity.Gravity(5793939., [3.34343e-3, -2.885e-5], 26200.)
-
-# Local function used to adapt the tabulated elements from French et al. 1991.
-def uranus_elements(a, e, peri, i, node, da):
-    n = URANUS_OLD_GRAVITY.n(a)
-    prec = URANUS_OLD_GRAVITY.combo(a, (1,-1, 0))
-    regr = URANUS_OLD_GRAVITY.combo(a, (1, 0,-1))
-    peri *= constants.RPD
-    node *= constants.RPD
-    i *= constants.RPD
-    return (a, 0., n, e, peri, prec, i, node, regr, (a+da/2))
-    # The extra item returned is the outer radius in the orbit's frame
-
-URANUS_SIX_ELEMENTS  = uranus_elements(
-                        41837.15, 1.013e-3, 242.80, 0.0616,  12.12, 2.8)
-URANUS_FIVE_ELEMENTS = uranus_elements(
-                        42234.82, 1.899e-3, 170.31, 0.0536, 286.57, 2.8)
-URANUS_FOUR_ELEMENTS = uranus_elements(
-                        42570.91, 1.059e-3, 127.28, 0.0323,  89.26, 2.7)
-URANUS_ALPHA_ELEMENTS = uranus_elements(
-                        44718.45, 0.761e-3, 333.24, 0.0152,  63.08, 7.15+3.52)
-URANUS_BETA_ELEMENTS = uranus_elements(
-                        45661.03, 0.442e-3, 224.88, 0.0051, 310.05, 8.15+3.07)
-URANUS_ETA_ELEMENTS = uranus_elements(
-                        47175.91, 0.004e-3, 228.10, 0.0000,   0.00, 1.7)
-URANUS_GAMMA_ELEMENTS = uranus_elements(
-                        47626.87, 0.109e-3, 132.10, 0.0000,   0.00, 3.8)
-URANUS_DELTA_ELEMENTS = uranus_elements(
-                        48300.12, 0.004e-3, 216.70, 0.0011, 260.70, 7.0)
-URANUS_LAMBDA_ELEMENTS = uranus_elements(
-                        50023.94, 0.000e-3,   0.00, 0.0000,   0.00, 2.5)
-URANUS_EPSILON_ELEMENTS = uranus_elements(
-                        51149.32, 7.936e-3, 214.97, 0.0000,   0.00, 58.1+37.6)
-
-################################################################################
-# Convenient procedure to load the entire Solar System
-################################################################################
-
-def define_solar_system(start_time, stop_time, asof=None):
-    """Constructs bodies, paths and frames for all the planets and moons in the
-    solar system (including Pluto). Each planet is defined relative to the SSB.
-    Each moon is defined relative to its planet. Names are as defined within the
-    SPICE toolkit. Body associations are defined within the spicedb library.
+    Each planet is defined relative to the SSB. Each moon is defined relative to
+    its planet. Names are as defined within the SPICE toolkit. Body associations
+    are defined within the spicedb library.
 
     Input:
         start_time      start_time of the period to be convered, in ISO date
@@ -480,64 +398,109 @@ def define_solar_system(start_time, stop_time, asof=None):
                         or date-time format.
         asof            a UTC date such that only kernels released earlier
                         than that date will be included, in ISO format.
+
+    Return              an ordered list of SPICE kernel names
     """
-
-    # If the solar system was already loaded, just return
-    if registry.BODY_REGISTRY.has_key("SUN"): return
-
-    # Always load the most recent Leap Seconds kernel, but only once
-    spice.load_leap_seconds()
-
-    # Convert the formats to times as recognized by spicedb.
-    (day, sec) = julian.day_sec_from_iso(start_time)
-    start_time = julian.ymdhms_format_from_day_sec(day, sec)
-
-    (day, sec) = julian.day_sec_from_iso(stop_time)
-    stop_time = julian.ymdhms_format_from_day_sec(day, sec)
-
-    if asof is not None:
-        (day, sec) = julian.day_sec_from_iso(stop_time)
-        asof = julian.ymdhms_format_from_day_sec(day, sec)
 
     # Load the necessary SPICE kernels
     spicedb.open_db()
-    spicedb.furnish_solar_system(start_time, stop_time, asof)
+    names = spicedb.furnish_solar_system(start_time, stop_time, asof)
     spicedb.close_db()
 
-    # We might need B1950 in addition to J2000
+    # Define B1950 in addition to J2000
     ignore = frame_.SpiceFrame("B1950", "J2000")
 
-    # SSB and Sun and SSB
+    # SSB and Sun
     define_bodies(["SSB"], None, None, ["SUN", "BARYCENTER"])
     define_bodies(["SUN"], None, None, ["SUN"])
 
-    # Mercury-Jupiter and Jupiter barycenter orbit the Sun
-    define_bodies([199, 299, 399, 499, 599], "SUN", "SUN", ["PLANET"])
-    define_bodies([5], "SUN", "SUN", ["BARYCENTER"])
+    # Mercury, Venus, Earth orbit the Sun
+    define_bodies([199, 299, 399], "SUN", "SUN", ["PLANET"])
 
-    # Saturn-Pluto planets and barycenters orbit the SSB
-    define_bodies([699, 799, 899, 999], "SUN", "SSB", ["PLANET"])
-    define_bodies([6, 7, 8, 9], "SUN", "SSB", ["BARYCENTER"])
-
-    # Earth's Moon
+    # Add Earth's Moon
     define_bodies([301], "EARTH", "EARTH",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
+
+    # Define planetary systems
+    _define_mars(start_time, stop_time, asof)
+    _define_jupiter(start_time, stop_time, asof)
+    _define_saturn(start_time, stop_time, asof)
+    _define_uranus(start_time, stop_time, asof)
+    _define_neptune(start_time, stop_time, asof)
+    _define_pluto(start_time, stop_time, asof)
+
+################################################################################
+# Mars System
+################################################################################
+
+MARS_ALL_MOONS = range(401,403)
+
+def _define_mars(start_time, stop_time, asof=None, irregulars=False):
+    """Define components of the Mars system."""
+
+    # Mars and the Mars barycenter orbit the Sun
+    define_bodies([499], "SUN", "SUN", ["PLANET"])
+    define_bodies([4], "SUN", "SUN", ["BARYCENTER"])
 
     # Moons and rings of Mars
     define_bodies(MARS_ALL_MOONS, "MARS", "MARS",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_ring("MARS", "MARS_RING_PLANE", None, [])
 
+################################################################################
+# Jupiter System
+################################################################################
+
+JUPITER_CLASSICAL = range(501,505)
+JUPITER_REGULAR   = [505] + range(514,517)
+JUPITER_IRREGULAR = range(506,514) + range(517,550) + [55062, 55063]
+
+JUPITER_MAIN_RING_LIMIT = 128940.
+
+def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
+    """Define components of the Jupiter system."""
+
+    # Jupiter and the Jupiter barycenter orbit the Sun
+    define_bodies([599], "SUN", "SUN", ["PLANET"])
+    define_bodies([5], "SUN", "SUN", ["BARYCENTER"])
+
     # Moons and rings of Jupiter
     define_bodies(JUPITER_CLASSICAL, "JUPITER", "JUPITER",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(JUPITER_REGULAR, "JUPITER", "JUPITER",
                   ["SATELLITE", "REGULAR"])
-    define_bodies(JUPITER_IRREGULAR, "JUPITER", "JUPITER BARYCENTER",
-                  ["SATELLITE", "IRREGULAR"])
+
+    if irregulars:
+        define_bodies(JUPITER_IRREGULAR, "JUPITER", "JUPITER BARYCENTER",
+                      ["SATELLITE", "IRREGULAR"])
 
     define_ring("JUPITER", "JUPITER_RING_PLANE", None, [])
     define_ring("JUPITER", "JUPITER_RING_SYSTEM", JUPITER_MAIN_RING_LIMIT, [])
+
+################################################################################
+# Saturn System
+################################################################################
+
+SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan orbit Saturn
+SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus orbit barycenter
+SATURN_CLASSICAL_IRREG = [609]              # Phoebe
+SATURN_REGULAR   = range(610,619) + range(632,636) + [649,653]
+SATURN_IRREGULAR = (range(619,632) + range(636,649) + range(650,653) +
+                    [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
+
+SATURN_MAIN_RINGS = (74658., 136780.)
+SATURN_C_RING = ( 74658.,  91975.)
+SATURN_B_RING = ( 91975., 117507.)
+SATURN_A_RING = (122340., 136780.)
+SATURN_F_RING_LIMIT = 140612.
+SATURN_RINGS  = (SATURN_MAIN_RINGS[0], SATURN_F_RING_LIMIT)
+
+def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
+    """Define components of the Saturn system."""
+
+    # Saturn and the Saturn barycenter orbit the SSB
+    define_bodies([699], "SUN", "SSB", ["PLANET"])
+    define_bodies([6], "SUN", "SSB", ["BARYCENTER"])
 
     # Moons and rings of Saturn
     define_bodies(SATURN_CLASSICAL_INNER, "SATURN", "SATURN",
@@ -548,8 +511,10 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "CLASSICAL", "IRREGULAR"])
     define_bodies(SATURN_REGULAR, "SATURN", "SATURN",
                   ["SATELLITE", "REGULAR"])
-    define_bodies(SATURN_IRREGULAR, "SATURN", "SATURN BARYCENTER",
-                  ["SATELLITE", "IRREGULAR"])
+
+    if irregulars:
+        define_bodies(SATURN_IRREGULAR, "SATURN", "SATURN BARYCENTER",
+                      ["SATELLITE", "IRREGULAR"])
 
     define_ring("SATURN", "SATURN_RING_PLANE", None, [])
     define_ring("SATURN", "SATURN_RING_SYSTEM", SATURN_F_RING_LIMIT, [])
@@ -558,6 +523,60 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [])
     define_ring("SATURN", "SATURN_B_RING", SATURN_B_RING, [])
     define_ring("SATURN", "SATURN_C_RING", SATURN_C_RING, [])
+
+################################################################################
+# Uranus System
+################################################################################
+
+URANUS_CLASSICAL  = range(701,706)
+URANUS_INNER      = range(706,716) + [725,726,727]
+URANUS_IRREGULAR  = range(716,726)
+
+URANUS_EPSILON_LIMIT = 51604.
+URANUS_MU_LIMIT = [97700. - 17000./2, 97700. + 17700./2]
+URANUS_NU_LIMIT = [67300. -  3800./2, 67300. +  3800./2]
+
+# Special definitions of Uranian eccentric/inclined rings
+URANUS_OLD_GRAVITY = gravity.Gravity(5793939., [3.34343e-3, -2.885e-5], 26200.)
+
+# Local function used to adapt the tabulated elements from French et al. 1991.
+def _uranus_ring_elements(a, e, peri, i, node, da):
+    n = URANUS_OLD_GRAVITY.n(a)
+    prec = URANUS_OLD_GRAVITY.combo(a, (1,-1, 0))
+    regr = URANUS_OLD_GRAVITY.combo(a, (1, 0,-1))
+    peri *= constants.RPD
+    node *= constants.RPD
+    i *= constants.RPD
+    return (a, 0., n, e, peri, prec, i, node, regr, (a+da/2))
+    # The extra item returned is the outer radius in the orbit's frame
+
+URANUS_SIX_ELEMENTS  = _uranus_ring_elements(
+                        41837.15, 1.013e-3, 242.80, 0.0616,  12.12, 2.8)
+URANUS_FIVE_ELEMENTS = _uranus_ring_elements(
+                        42234.82, 1.899e-3, 170.31, 0.0536, 286.57, 2.8)
+URANUS_FOUR_ELEMENTS = _uranus_ring_elements(
+                        42570.91, 1.059e-3, 127.28, 0.0323,  89.26, 2.7)
+URANUS_ALPHA_ELEMENTS = _uranus_ring_elements(
+                        44718.45, 0.761e-3, 333.24, 0.0152,  63.08, 7.15+3.52)
+URANUS_BETA_ELEMENTS = _uranus_ring_elements(
+                        45661.03, 0.442e-3, 224.88, 0.0051, 310.05, 8.15+3.07)
+URANUS_ETA_ELEMENTS = _uranus_ring_elements(
+                        47175.91, 0.004e-3, 228.10, 0.0000,   0.00, 1.7)
+URANUS_GAMMA_ELEMENTS = _uranus_ring_elements(
+                        47626.87, 0.109e-3, 132.10, 0.0000,   0.00, 3.8)
+URANUS_DELTA_ELEMENTS = _uranus_ring_elements(
+                        48300.12, 0.004e-3, 216.70, 0.0011, 260.70, 7.0)
+URANUS_LAMBDA_ELEMENTS = _uranus_ring_elements(
+                        50023.94, 0.000e-3,   0.00, 0.0000,   0.00, 2.5)
+URANUS_EPSILON_ELEMENTS = _uranus_ring_elements(
+                        51149.32, 7.936e-3, 214.97, 0.0000,   0.00, 58.1+37.6)
+
+def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
+    """Define components of the Uranus system."""
+
+    # Uranus and the Uranus barycenter orbit the SSB
+    define_bodies([799], "SUN", "SSB", ["PLANET"])
+    define_bodies([7], "SUN", "SSB", ["BARYCENTER"])
 
     # Moons and rings of Uranus
     define_bodies(URANUS_CLASSICAL, "URANUS", "URANUS",
@@ -599,6 +618,24 @@ def define_solar_system(start_time, stop_time, asof=None):
     define_orbit("URANUS", "EPSILON_RING", URANUS_EPSILON_ELEMENTS,
                            URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
 
+################################################################################
+# Neptune System
+################################################################################
+
+NEPTUNE_CLASSICAL_INNER = [801]             # Triton
+NEPTUNE_CLASSICAL_OUTER = [802]             # Nereid orbits barycenter
+NEPTUNE_REGULAR   = range(803,809)
+NEPTUNE_IRREGULAR = range(809,814)
+
+NEPTUNE_ADAMS_LIMIT = 62940.
+
+def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
+    """Define components of the Neptune system."""
+
+    # Neptune and the Neptune barycenter orbit the SSB
+    define_bodies([899], "SUN", "SSB", ["PLANET"])
+    define_bodies([8], "SUN", "SSB", ["BARYCENTER"])
+
     # Moons and rings of Neptune
     define_bodies(NEPTUNE_CLASSICAL_INNER, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
@@ -606,11 +643,27 @@ def define_solar_system(start_time, stop_time, asof=None):
                   ["SATELLITE", "CLASSICAL", "IRREGULAR"])
     define_bodies(NEPTUNE_REGULAR, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "REGULAR"])
-    define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
-                  ["SATELLITE", "IRREGULAR"])
+
+    if irregulars:
+        define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
+                      ["SATELLITE", "IRREGULAR"])
 
     define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [])
     define_ring("NEPTUNE", "NEPTUNE_RING_SYSTEM", NEPTUNE_ADAMS_LIMIT, [])
+
+################################################################################
+# Pluto System
+################################################################################
+
+CHARON        = [901]
+PLUTO_REGULAR = range(902,906)
+
+def _define_pluto(start_time, stop_time, asof=None, irregulars=False):
+    """Define components of the Pluto system."""
+
+    # Pluto and the Pluto barycenter orbit the SSB
+    define_bodies([999], "SUN", "SSB", ["PLANET"])
+    define_bodies([9], "SUN", "SSB", ["BARYCENTER"])
 
     # Moons and rings of Pluto
     define_bodies(CHARON, "PLUTO", "PLUTO",
@@ -626,15 +679,25 @@ def define_solar_system(start_time, stop_time, asof=None):
     barycenter = registry.BODY_REGISTRY["PLUTO BARYCENTER"]
     barycenter.ring_frame_id = registry.BODY_REGISTRY["PLUTO"].ring_frame_id
 
+################################################################################
+# Define bodies and rings...
+################################################################################
+
 def define_bodies(spice_ids, parent, barycenter, keywords):
-    """Defines the path, frame, surface and body for a given list of bodies
-    identified by name or SPICE ID. All must share a common parent and
-    barycenter."""
+    """Define the path, frame, surface for bodies by name or SPICE ID.
+
+    All must share a common parent and barycenter."""
 
     for spice_id in spice_ids:
 
-        # Define the body's path and frame
+        # Define the body's path
         path = path_.SpicePath(spice_id, "SSB")
+
+        # The name of the path is the name of the body
+        name = path.path_id
+
+        # If the body already exists, skip it
+        if name in registry.BODY_REGISTRY: continue
 
         # Sometimes a frame is undefined for a new body; in this case any frame
         # will do.
@@ -643,10 +706,8 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         except LookupError:
             frame = frame_.Wayframe("J2000", path.path_id)
 
-        # The name of the path is the name of the body
-        name = path.path_id
-
-        # Define the planet's body, assuming an orbit around the Sun
+        # Define the planet's body
+        # Note that this will overwrite any registered body of the same name
         body = Body(name, name, frame.frame_id, parent, barycenter)
         body.add_keywords(keywords)
 
@@ -675,9 +736,10 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
 def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                 barycenter_name=None):
-    """Defines the path, frame, surface and body for a given ring, given its
-    inner and outer radii. A single radius value is used to define the outer
-    limit of rings, but the ring plane itself has no boundaries.
+    """Define the path, frame, surface and body for ring, given radial limits.
+
+    A single radius value is used to define the outer limit of rings. Note that
+    a ring has limits but a defined ring plane does not.
 
     Input:
         parent_name     the name of the central planet for the ring surface.
@@ -697,6 +759,10 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                         same as the name of the central planet.
     """
 
+    # If the ring body already exists, skip it
+    if ring_name in registry.BODY_REGISTRY: return
+
+    # Identify the parent
     parent = registry.body_lookup(parent_name)
     parent.apply_ring_frame(retrograde=retrograde)
 
@@ -718,6 +784,8 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
             rmax = radii
             radii = None
 
+    # Create the ring body
+    # Note that this will overwrite any registered ring of the same name
     body = Body(ring_name, barycenter.path_id, parent.ring_frame_id,
                 parent, parent)
     shape = surface.RingPlane(barycenter.path_id, parent.ring_frame_id,
@@ -729,8 +797,9 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     body.add_keywords(keywords)
 
 def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
-    """Defines the path, frame, surface and body for a given eccentric and/or
-    inclined ring as defined by a set of orbital elements.
+    """Define the path, frame, surface and body for ring given orbital elements.
+
+    The ring can be inclined or eccentric.
     """
 
     parent = registry.body_lookup(parent_name)
