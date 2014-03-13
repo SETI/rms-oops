@@ -388,114 +388,6 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
 
     return _sort_kernels(filtered_kernels)
 
-def _furnish_kernels(kernel_list, fast=True):
-    """Furnish a sorted list of kernels for use by the CSPICE toolkit.
-
-    Input:
-        kernel_list a list of one or more KernelInfo objects
-
-        fast        True to skip the loading kernels that have already been
-                    loaded. False to unload and load them again, thereby raising
-                    their priority.
-
-    Return:         an ordered list of the names, versions and file_nos of the
-                    kernels loaded. This can be used to re-load the exact same
-                    selection of kernels again at a later date.
-
-    The function also returns a list of the kernel names, including file_no
-    ranges if appropriate.
-    """
-
-    global DEBUG, FILE_LIST, FURNISHED_NAMES, FURNISHED_FILES, FURNISHED_FILENOS
-
-    file_list = []
-    file_types = {}     # returns the kernel type give the file name
-    name_list = []
-    name_types = {}
-    fileno_dict = {}
-
-    # For each kernel...
-    for kernel in kernel_list:
-
-        # Add the full name to the end of the name list
-        name = kernel.full_name
-        if name not in name_list:
-            name_list.append(name)
-            name_types[name] = kernel.kernel_type
-
-        # Keep track of file_nos required
-        if kernel.file_no is not None:
-            if name not in fileno_dict:
-                fileno_dict[name] = []
-
-            fileno_dict[name].append(kernel.file_no)
-
-        # Update the list of files to furnish
-        files = kernel.filespec.split(',')
-        for file in files:
-
-            # Remove the name from earliers in the list if necessary
-            if file in file_list:
-                file_list.remove(file)
-
-            # Always add it at the end
-            file_list.append(file)
-            file_types[file] = kernel.kernel_type       # track kernel types
-
-    # Furnish the kernel files...
-    if DEBUG:
-        FILE_LIST += file_list
-
-    else:
-        spice_path = get_spice_path()
-        for file in file_list:
-            furnished_list = FURNISHED_FILES[file_types[file]]
-
-            # In fast mode, avoid re-furnishing kernels
-            already_furnished = (file in furnished_list)
-            if fast and already_furnished:
-                continue
-
-            # Otherwise, unload the kernel if it is found
-            filespec = os.path.join(spice_path, file)
-            if already_furnished:
-                furnished_list.remove(file)
-                cspice.unload(filespec)
-
-            # Load the kernel
-            cspice.furnsh(filespec)
-            furnished_list.append(file)
-
-        # Track the kernel names loaded
-        for name in name_list:
-            furnished_list = FURNISHED_NAMES[name_types[name]]
-
-            if name in furnished_list:
-                if fast: continue
-                furnished_list.remove(name)
-
-            furnished_list.append(name)
-
-    # Append file number ranges into the names in the list returned
-    for (name,filenos) in fileno_dict.iteritems():
-        k = name_list.index(name)
-        name_list[k] = name + _fileno_str(filenos)
-
-        # Track kernels loaded by file_no
-        if not DEBUG:
-            if name not in FURNISHED_FILENOS:
-                FURNISHED_FILENOS[name] = []
-
-            fileno_list = FURNISHED_FILENOS[name]
-            for fileno in filenos:
-                if fileno in fileno_list:
-                    if fast: continue
-                    fileno_list.remove(fileno)
-
-                fileno_list.append(fileno)
-
-    return name_list
-
 def _fileno_str(filenos):
     """Construct a string listing filenos and their ranges inside brackets."""
 
@@ -570,8 +462,8 @@ def _fileno_values(name):
 # Database Query Support
 ################################################################################
 
-def _select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
-                                 after=None, path=None, limit=True, redo=False):
+def _query_kernels(kernel_type, name=None, body=None, time=None, asof=None,
+                                after=None, path=None, limit=True, redo=False):
     """Return a list of KernelInfo objects based on the given constraints.
 
     Input:
@@ -732,7 +624,7 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
 
     return "".join(query_list)
 
-def _select_kernels_by_name(names, time=None):
+def _query_by_name(names, time=None):
     """Return a list of KernelInfo objects based on a name (including version).
 
     Input:
@@ -882,8 +774,12 @@ def close_db():
 
     db.close()
 
-def furnish_lsk(asof=None, after=None, redo=True, fast=True):
-    """Furnish a leapseconds kernel.
+################################################################################
+# Public API for selecting kernels, returning lists of KernelInfo objects
+################################################################################
+
+def select_lsk(asof=None, after=None, redo=True):
+    """Return a sorted list of leapseconds kernels.
 
     Input:
         asof        an optional earlier date for which values should be
@@ -900,29 +796,18 @@ def furnish_lsk(asof=None, after=None, redo=True, fast=True):
                     matching results are found; False to raise a ValueError
                     instead.
 
-        fast        If True, the kernel will be furnished only if it is not
-                    currently loaded. If it is already loaded, nothing will be
-                    done and therefore its priority will not be changed. If
-                    False, the priority of the kernel will be raised to the top,
-                    by unloading the kernel if necessary.
-
-    Return:         A list of the names of all the kernels loaded.
+    Return:         A sorted list of KernelInfo objects.
     """
 
     # Search the database
-    kernel_list = _select_kernels("LSK", asof=asof, after=after, redo=redo,
-                                         limit=True)
-
-    # While we are at it, load the LSK file for the Julian Library
-    if not DEBUG:
-       julian.load_from_kernel(os.path.join(get_spice_path(),
-                               kernel_list[0].filespec))
+    kernel_list = _query_kernels("LSK", asof=asof, after=after, redo=redo,
+                                        limit=True)
 
     # Load the kernels and return the names
-    return _furnish_kernels(kernel_list, fast=fast)
+    return _sort_kernels(kernel_list)
 
-def furnish_pck(bodies=None, asof=None, after=None, redo=True):
-    """Furnish all needed planetary constants kernels for one or more bodies.
+def select_pck(bodies=None, asof=None, after=None, redo=True):
+    """Return a sorted list of PCKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
@@ -942,22 +827,19 @@ def furnish_pck(bodies=None, asof=None, after=None, redo=True):
                     matching results are found; False to raise a ValueError
                     instead.
 
-    Return:         A list of the names of all the kernels loaded.
+    Return:         A sorted list of KernelInfo objects.
     """
 
     # Search database
-    kernel_list = _select_kernels("PCK", body=bodies,
+    kernel_list = _query_kernels("PCK", body=bodies,
                                          asof=asof, after=after, redo=redo,
                                          limit=False)
 
-    # Sort the kernels
-    kernel_list = _sort_kernels(kernel_list)
+    # Sort the kernels and return
+    return _sort_kernels(kernel_list)
 
-    # Load the kernels and return the names
-    return _furnish_kernels(kernel_list)
-
-def furnish_spk(bodies, time=None, asof=None, after=None, redo=True):
-    """Furnish all needed planetary constants kernels for one or more bodies.
+def select_spk(bodies, time=None, asof=None, after=None, redo=True):
+    """Return a sorted list of SPKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
@@ -983,7 +865,7 @@ def furnish_spk(bodies, time=None, asof=None, after=None, redo=True):
                     matching results are found; False to raise a ValueError
                     instead.
 
-    Return:         A list of the names of all the kernels loaded.
+    Return:         A sorted list of KernelInfo objects.
     """
 
     # Normalize the input
@@ -994,28 +876,27 @@ def furnish_spk(bodies, time=None, asof=None, after=None, redo=True):
     kernel_list = []
     for body in bodies:
         if body > 0: spacecraft_only = False
-        kernel_list += _select_kernels("SPK", body=body, time=time,
+        kernel_list += _query_kernels("SPK", body=body, time=time,
                                               asof=asof, after=after, redo=redo,
                                               limit=False)
 
-    # Sort the kernels
+    # Remove kernels with overlapping time limits
     if time is None: time = (None, None)
     kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
 
     # One DE kernel is always required unless only spacecrafts were selected
     if (not spacecraft_only) and (kernel_list[-1].load_priority < 200): # kludge
-        kernel_list += _select_kernels("SPK", name="DE%", time=time,
+        kernel_list += _query_kernels("SPK", name="DE%", time=time,
                                               asof=asof, after=after, redo=redo,
                                               limit=True)
 
         kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
 
-    # Load the kernels and return the names
-    return _furnish_kernels(kernel_list)
+    # Return the sorted list
+    return kernel_list
 
-def furnish_inst(ids, inst=None, asof=None, after=None, redo=True):
-    """Furnish all needed planetary constants kernels for one or more
-    spacecrafts and instruments.
+def select_inst(ids, inst=None, asof=None, after=None, redo=True):
+    """Return a sorted list of IKs, FKs and SCLKs for spacecrafts/instruments.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
@@ -1037,7 +918,7 @@ def furnish_inst(ids, inst=None, asof=None, after=None, redo=True):
                     matching results are found; False to raise a ValueError
                     instead.
 
-    Return:         A list of the names of all the kernels loaded.
+    Return:         A sorted list of KernelInfo objects.
     """
 
     # Normalize inputs
@@ -1049,34 +930,31 @@ def furnish_inst(ids, inst=None, asof=None, after=None, redo=True):
     for id in ids:
 
         # Select the spacecraft clock kernels
-        kernel_list += _select_kernels("SCLK", body=id,
+        kernel_list += _query_kernels("SCLK", body=id,
                                                asof=asof, after=after, redo=redo,
                                                limit=True)
 
         # Select the frames kernels
-        kernel_list += _select_kernels("FK", body=id,
+        kernel_list += _query_kernels("FK", body=id,
                                              asof=asof, after=after, redo=redo,
                                              limit=False)
 
         # Select the instrument kernels
         if inst is None:
-            kernel_list += _select_kernels("IK", body=id,
+            kernel_list += _query_kernels("IK", body=id,
                                            asof=asof, after=after, redo=redo,
                                            limit=False)
         else:
           for name in inst:
-            kernel_list += _select_kernels("IK", name='%'+name+'%', body=id,
+            kernel_list += _query_kernels("IK", name='%'+name+'%', body=id,
                                            asof=asof, after=after, redo=redo,
                                            limit=False)
 
-    # Sort the kernels
-    kernel_list = _sort_kernels(kernel_list)
+    # Sort the kernels and return
+    return _sort_kernels(kernel_list)
 
-    # Load the kernels and return the names
-    return _furnish_kernels(kernel_list)
-
-def furnish_ck(ids, time=None, asof=None, after=None, redo=True):
-    """Furnish all needed C kernels for one or more spacecrafts.
+def select_ck(ids, time=None, asof=None, after=None, redo=True):
+    """Return a sorted list of CKs for one or more spacecrafts.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
@@ -1100,7 +978,7 @@ def furnish_ck(ids, time=None, asof=None, after=None, redo=True):
                     matching results are found; False to raise a ValueError
                     instead.
 
-    Return:         A list of the names of all the kernels loaded.
+    Return:         A sorted list of KernelInfo objects.
     """
 
     # Normalize inputs
@@ -1111,19 +989,326 @@ def furnish_ck(ids, time=None, asof=None, after=None, redo=True):
     for id in ids:
 
         # Select the C kernels
-        kernel_list += _select_kernels("CK", time=time,
+        kernel_list += _query_kernels("CK", time=time,
                                             body=id, asof=asof, after=after,
                                             limit=False)
 
-    # Sort the kernels
+    # Remove overlapping kernels and sort
     if time is None: time = ('0001-01-01', '3000-01-01')
-    kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
+    return _remove_overlaps(kernel_list, time[0], time[1])
+
+def select_by_name(names, time=None):
+    """Return a list of kernel objects associated with a list of names.
+
+    Input:
+        names       a list of kernel names, including version numbers, and
+                    optional file_no indices.
+
+        time        an optional tuple containing the start and stop times. Each
+                    time is expressed in either ISO format "yyyy-mm-ddThh:mm:ss"
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+                    Use None to load all the matching kernels.
+    """
+
+    # Search database
+    kernel_list = _query_by_name(names, time)
+
+    # Sort the kernels
+    return _sort_kernels(kernel_list)
+
+################################################################################
+# Public API for furnishing kernels
+################################################################################
+
+def furnish_kernels(kernel_list, fast=True):
+    """Furnish a sorted list of kernels for use by the CSPICE toolkit.
+
+    Input:
+        kernel_list a list of one or more KernelInfo objects
+
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
+
+    Return:         an ordered list of the names, versions and file_nos of the
+                    kernels loaded. This can be used to re-load the exact same
+                    selection of kernels again at a later date.
+
+    The function also returns a list of the kernel names, including file_no
+    ranges if appropriate.
+    """
+
+    global DEBUG, FILE_LIST, FURNISHED_NAMES, FURNISHED_FILES, FURNISHED_FILENOS
+
+    file_list = []
+    file_types = {}     # returns the kernel type give the file name
+    name_list = []
+    name_types = {}
+    fileno_dict = {}
+
+    # For each kernel...
+    for kernel in kernel_list:
+
+        # Add the full name to the end of the name list
+        name = kernel.full_name
+        if name not in name_list:
+            name_list.append(name)
+            name_types[name] = kernel.kernel_type
+
+        # Keep track of file_nos required
+        if kernel.file_no is not None:
+            if name not in fileno_dict:
+                fileno_dict[name] = []
+
+            fileno_dict[name].append(kernel.file_no)
+
+        # Update the list of files to furnish
+        files = kernel.filespec.split(',')
+        for file in files:
+
+            # Remove the name from earliers in the list if necessary
+            if file in file_list:
+                file_list.remove(file)
+
+            # Always add it at the end
+            file_list.append(file)
+            file_types[file] = kernel.kernel_type       # track kernel types
+
+    # Furnish the kernel files...
+    if DEBUG:
+        FILE_LIST += file_list
+
+    else:
+        spice_path = get_spice_path()
+        for file in file_list:
+            furnished_list = FURNISHED_FILES[file_types[file]]
+
+            # In fast mode, avoid re-furnishing kernels
+            already_furnished = (file in furnished_list)
+            if fast and already_furnished:
+                continue
+
+            # Otherwise, unload the kernel if it is found
+            filespec = os.path.join(spice_path, file)
+            if already_furnished:
+                furnished_list.remove(file)
+                cspice.unload(filespec)
+
+            # Load the kernel
+            cspice.furnsh(filespec)
+            furnished_list.append(file)
+
+        # Track the kernel names loaded
+        for name in name_list:
+            furnished_list = FURNISHED_NAMES[name_types[name]]
+
+            if name in furnished_list:
+                if fast: continue
+                furnished_list.remove(name)
+
+            furnished_list.append(name)
+
+    # Append file number ranges into the names in the list returned
+    for (name,filenos) in fileno_dict.iteritems():
+        k = name_list.index(name)
+        name_list[k] = name + _fileno_str(filenos)
+
+        # Track kernels loaded by file_no
+        if not DEBUG:
+            if name not in FURNISHED_FILENOS:
+                FURNISHED_FILENOS[name] = []
+
+            fileno_list = FURNISHED_FILENOS[name]
+            for fileno in filenos:
+                if fileno in fileno_list:
+                    if fast: continue
+                    fileno_list.remove(fileno)
+
+                fileno_list.append(fileno)
+
+    return name_list
+
+def furnish_lsk(asof=None, after=None, redo=True, fast=True):
+    """Furnish selected leapseconds kernels and return a list of names.
+
+    Input:
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
+
+    Return:         A list of kernel names in load order.
+    """
+
+    # Search the database
+    kernel_list = select_lsk(asof, after, redo)
 
     # Load the kernels and return the names
-    return _furnish_kernels(kernel_list)
+    return furnish_kernels(kernel_list, fast=fast)
+
+def furnish_pck(bodies=None, asof=None, after=None, redo=True, fast=True):
+    """Furnish selected PCKs for one or more bodies.
+
+    Input:
+        bodies      one or more SPICE body IDs; None to load kernels for all
+                    planetary bodies.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
+
+    Return:         A list of kernel names in load order.
+    """
+
+    # Search database
+    kernel_list = select_pck(bodies, asof, after, redo)
+
+    # Load the kernels and return the names
+    return furnish_kernels(kernel_list, fast=fast)
+
+def furnish_spk(bodies, time=None, asof=None, after=None, redo=True, fast=True):
+    """Furnish SPKs for one or more bodies and spacecrafts.
+
+    Input:
+        bodies      one or more SPICE body IDs; None to load kernels for all
+                    planetary bodies.
+
+        time        a tuple containing the start and stop times. Each time is
+                    expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
+                    number of seconds TAI elapsed since January 1, 2000. Use
+                    None to load the most recent complete set of kernels
+                    regardless of their time limits.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
+
+    Return:         A list of kernel names in load order.
+    """
+
+    # Search database
+    kernel_list = select_spk(bodies, time, asof, after, redo)
+
+    # Furnish the kernels and return the names
+    return furnish_kernels(kernel_list, fast=fast)
+
+def furnish_inst(ids, inst=None, asof=None, after=None, redo=True, fast=True):
+    """Furnish IKs, FKs and SCLKs for one or more spacecrafts and instruments.
+
+    Input:
+        ids         one or more negative SPICE body IDs for spacecrafts.
+
+        inst        one or more instrument names or abbreviations. None to load
+                    every instrument kernel.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
+
+    Return:         A list of kernel names in load order.
+    """
+
+    # Search database
+    kernel_list = select_inst(ids, inst, asof, after, redo)
+
+    # Furnish the kernels and return the names
+    return furnish_kernels(kernel_list, fast=fast)
+
+def furnish_ck(ids, time=None, asof=None, after=None, redo=True, fast=True):
+    """Furnish CKs for one or more spacecrafts.
+
+    Input:
+        ids         one or more negative SPICE body IDs for spacecrafts.
+
+        time        a tuple containing the start and stop times. Each time is
+                    expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
+                    number of seconds TAI elapsed since January 1, 2000. Use
+                    None to load a complete set of C kernels.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
+
+    Return:         A list of kernel names in load order.
+    """
+
+    # Search database
+    kernel_list = select_ck(ids, time, asof, after, redo)
+
+    # Furnish the kernels and return the names
+    return furnish_kernels(kernel_list, fast=fast)
 
 def furnish_by_name(names, time=None, fast=True):
-    """Furnish kernels based on a list of kernel names.
+    """Furnish kernels identified by a list of names.
 
     Input:
         names       a list of kernel names, including version numbers, and
@@ -1134,20 +1319,24 @@ def furnish_by_name(names, time=None, fast=True):
                     or as a number of seconds TAI elapsed since January 1, 2000.
                     Use None to load all the matching kernels.
 
-        fast        True to avoid re-loading a kernel that was already
-                    furnished. If the kernel has been loaded, its priority will
-                    not be changed. False to unload first, ensuring that the
-                    kernel has the highest priority after the call.
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
+
+    Return:         A list of kernel names in load order. This will typically
+                    match the input names unless different time limits are
+                    applied.
     """
 
     # Search database
-    kernel_list = _select_kernels_by_name(names, time)
+    kernel_list = select_by_name(names, time)
 
-    # Sort the kernels
-    kernel_list = _sort_kernels(kernel_list)
+    # Furnish the kernels and return the names
+    return furnish_kernels(kernel_list, fast=fast)
 
-    # Load the kernels and return the names
-    return _furnish_kernels(kernel_list, fast=fast)
+################################################################################
+# Public API for unloading kernels
+################################################################################
 
 def unload_by_name(names):
     """Unload kernels based on a list of kernel names."""
@@ -1155,7 +1344,7 @@ def unload_by_name(names):
     global FURNISHED_FILES, FURNISHED_NAMES, FURNISHED_FILENOS
 
     # Search database
-    kernel_list = _select_kernels_by_name(names)
+    kernel_list = _query_by_name(names)
 
     # Sort the kernels
     kernel_list = _sort_kernels(kernel_list)
@@ -1225,6 +1414,43 @@ def unload_by_type(types=None):
         FURNISHED_NAMES[key] = []
 
     return
+
+################################################################################
+# Public API for names of kernels
+################################################################################
+
+def as_names(kernels):
+    """Return a list of names identifying a list of KernelInfo objects."""
+
+    name_list = []
+    fileno_dict = {}
+
+    # For each selected type...
+    for kernel in kernels:
+
+        # Add the name to the end of the list, avoiding duplicates
+        name = kernel.full_name
+        if name in name_list:
+            name_list.remove(name)
+
+        name_list.append(name)
+
+        # If the kernel has a file_no, accumulate a list
+        if kernel.file_no is None: continue
+
+        if name not in fileno_dict:
+            fileno_dict[name] = []
+
+        if kernel.file_no not in fileno_dict[name]:
+            fileno_dict[name].append(kernel.file_no)
+
+    # Attach the file_no ranges to the associated kernel names
+    for name in fileno_dict:
+        k = name_list.index(name)
+        name_list[k] = name + _fileno_str(fileno_dict[name])
+
+    # Return the names
+    return name_list
 
 def furnished_names(types=None):
     """Return a list of strings containing the names of the furnished kernels.
@@ -1698,49 +1924,49 @@ class test_spicedb(unittest.TestCase):
         FILE_LIST = []
 
         ########################################################################
-        # _select_kernels()
+        # _query_kernels()
         ########################################################################
 
-        kernels = _select_kernels('LSK')
+        kernels = _query_kernels('LSK')
         self.assertEqual(len(kernels), 1)
 
-        kernels = _select_kernels('LSK', asof='2014-03-09')
+        kernels = _query_kernels('LSK', asof='2014-03-09')
         self.assertEqual(kernels[0].full_name, 'NAIF-LSK-0010')
 
-        kernels = _select_kernels('LSK', asof=(14*365.25*86400))
+        kernels = _query_kernels('LSK', asof=(14*365.25*86400))
         self.assertEqual(kernels[0].full_name, 'NAIF-LSK-0010')
 
-        kernels = _select_kernels('LSK', asof='2010-01-01')
+        kernels = _query_kernels('LSK', asof='2010-01-01')
         self.assertEqual(kernels[0].full_name, 'NAIF-LSK-0009')
 
-        self.assertRaises(ValueError, _select_kernels, 'LSK', asof='1950')
+        self.assertRaises(ValueError, _query_kernels, 'LSK', asof='1950')
 
-        self.assertRaises(ValueError, _select_kernels, 'LSK', after='3000')
+        self.assertRaises(ValueError, _query_kernels, 'LSK', after='3000')
 
-        kernels = _select_kernels('LSK', asof='1950-01-01', redo=True)
+        kernels = _query_kernels('LSK', asof='1950-01-01', redo=True)
         self.assertEqual(len(kernels), 1)
         self.assertTrue(kernels[0].full_name.startswith('NAIF-LSK-'))
 
-        kernels = _select_kernels('LSK', after='3000-01-01', redo=True)
+        kernels = _query_kernels('LSK', after='3000-01-01', redo=True)
         self.assertEqual(len(kernels), 1)
         self.assertTrue(kernels[0].full_name.startswith('NAIF-LSK-'))
 
-        kernels = _select_kernels('PCK', name='NAIF%')
+        kernels = _query_kernels('PCK', name='NAIF%')
         self.assertEqual(len(kernels), 1)
         self.assertTrue(kernels[0].full_name.startswith('NAIF-PCK-'))
 
-        kernels = _select_kernels('PCK', body=2)
+        kernels = _query_kernels('PCK', body=2)
         self.assertEqual(len(kernels), 1)           # Only NAIF PCKs have Venus
         self.assertTrue(kernels[0].full_name.startswith('NAIF-PCK-'))
 
-        kernels = _select_kernels('PCK', body=2, asof='2014')
+        kernels = _query_kernels('PCK', body=2, asof='2014')
         self.assertEqual(kernels[0].full_name, 'NAIF-PCK-00010')
 
-        kernels = _select_kernels('PCK', body=(1,2,3), asof='2014')
+        kernels = _query_kernels('PCK', body=(1,2,3), asof='2014')
         self.assertEqual(kernels[0].full_name, 'NAIF-PCK-00010')
 
         # Cassini CK tests
-        kernels = _select_kernels('CK', body=-82, asof='2014',
+        kernels = _query_kernels('CK', body=-82, asof='2014',
                                         time=('2008-01-01','2009-01-01'),
                                         limit=False)
         for kernel in kernels:
@@ -1751,7 +1977,7 @@ class test_spicedb(unittest.TestCase):
         self.assertTrue(kernels[-1].filespec.endswith('08242_08247rb.bc'))
 
         # Cassini SPK tests
-        kernels = _select_kernels('SPK', body=-82, asof='2014',
+        kernels = _query_kernels('SPK', body=-82, asof='2014',
                                         time=('2008-01-01','2009-01-01'),
                                         limit=False)
         for kernel in kernels:
