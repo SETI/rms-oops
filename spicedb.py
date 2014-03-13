@@ -5,188 +5,167 @@
 # criteria related to body, instrument, time frame, etc. It also sorts selected
 # kernels into their proper load order.
 #
-# Deukkwon Yoon & Mark Showalter, PDS Rings Node, SETI Institute, November 2011
+# 11/2011 original by Deukkwon Yoon & Mark Showalter
 #
-# 12/31/11 (MRS) Replaced calls to julian pyparsing routines with calls to much
-#   faster ISO parser routines. Added "after" constraint option to queries.
-#   Revised remove_overlaps() algorithm to improve performance. Defined
-#   set/get_spice_path to check an environment variable if the path has not been
-#   defined. Revised open_db() to search for an environment variable if the
-#   database name or path is not passed to it. Added furnish_solar_system()
-#   function to load a set of kernels sufficient for every moon and planet
-#   (including Pluto!)
-#
-# 1/4/12 (MRS) Minor bugs fixed for cassini and solar system load order.
-#
-# 1/6/12 (MRS) Added functions as_dict() and as_names().
-#
-# 1/11/12 (MRS) Fixed bug in select_kernels() using path constraint.
+# 3/11/14 (MRS) Complete rewrite.
+#   - Revised to support times TAI in addition to ISO format date/time strings.
+#   - New functions added:
+#       furnish_lsk(), furnish_spk(), furnish_inst(), furnish_ck(),
+#       furnish_by_name(), unload_by_name(), unload_by_type(), furnished_names()
+#     These function provide much greater control over what kernels are being
+#     used at a given moment, and the support the ability to save the current
+#     kernel state as a list of kernel names, and then restore it later.
+#   - Old functions deprecated:
+#       furnish_cassini_kernels(), furnish_solar_system()
+#   - SPICE.db has been reorganized to separate the kernel version from the
+#     kernel name, and this feature now makes it simpler to select different
+#     version of kernels that are otherwise functionally equivalent.
+#   - Unit tests now exercise the default SPICE.db file rather than a test DB.
+#     Results of unit tests should NOT change as the database is updated. This
+#     is important because we want the results of database query to be stable
+#     when using selection options such as "as of"
 ################################################################################
 
+from __future__ import division
+import os
+import unittest
+
 import julian
-import textkernel
 import interval
 import cspice
-import unittest
-import os
 
-# This is the SQLite3 version of the program
 import sqlite_db as db
-SPICE_DB_VARNAME = "SPICE_SQLITE_DB_NAME"
 
-# This would be the alternative mechanism for accessing a MySQL database.
-# NOT YET IMPLEMENTED!
-#import mysql_db as db
-
-TABLE_NAME = "SPICEDB"
-COLUMN_NAMES = ["KERNEL_NAME", "KERNEL_TYPE", "FILESPEC", "START_TIME",
-                "STOP_TIME", "RELEASE_DATE", "SPICE_ID", "LOAD_PRIORITY"]
-
-# Derived constants
-COLUMN_STRING = ", ".join(COLUMN_NAMES)
-
-KERNEL_NAME_INDEX   = COLUMN_NAMES.index("KERNEL_NAME")
-KERNEL_TYPE_INDEX   = COLUMN_NAMES.index("KERNEL_TYPE")
-FILESPEC_INDEX      = COLUMN_NAMES.index("FILESPEC")
-START_TIME_INDEX    = COLUMN_NAMES.index("START_TIME")
-STOP_TIME_INDEX     = COLUMN_NAMES.index("STOP_TIME")
-RELEASE_DATE_INDEX  = COLUMN_NAMES.index("RELEASE_DATE")
-SPICE_ID_INDEX      = COLUMN_NAMES.index("SPICE_ID")
-LOAD_PRIORITY_INDEX = COLUMN_NAMES.index("LOAD_PRIORITY")
-
-# For testing at debugging
+# For testing and debugging
 DEBUG = False   # If true, no files are furnished.
 FILE_LIST = []  # If DEBUG, lists the files that would have been furnished.
 
 ################################################################################
-# Definitions of useful sets of bodies
+# Global variables to track loaded kernels
 ################################################################################
 
-MARS_ALL_MOONS = range(401,403)
+FURNISHED_NAMES = {
+    'CK':   [],
+    'FK':   [],
+    'IK':   [],
+    'LSK':  [],
+    'PCK':  [],
+    'SCLK': [],
+    'SPK':  [],
+}
 
-JUPITER_CLASSICAL = range(501,505)
-JUPITER_REGULAR   = range(501,506) + range(514,517)
-JUPITER_INNER     = [505] + range(514,517)
-JUPITER_IRREGULAR = range(506,514) + range(517,550) + [55062, 55063]
-JUPITER_ALL_MOONS = range(501,550) + [55062, 55063]
+FURNISHED_FILES = {
+    'CK':   [],
+    'FK':   [],
+    'IK':   [],
+    'LSK':  [],
+    'PCK':  [],
+    'SCLK': [],
+    'SPK':  [],
+}
 
-SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan
-SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus
-SATURN_CLASSICAL_IRREG = [609]              # Phoebe
-SATURN_CLASSICAL  = range(601,610)          # Mimas through Phoebe
-SATURN_REGULAR    = range(601,619) + range(632,636) + [649,653] # with Phoebe
-SATURN_IRREGULAR  = (range(619,632) + range(636,649) + range(650,653) +
-                     [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
-SATURN_ALL_MOONS  = (range(601,654) + 
-                     [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
+FURNISHED_FILENOS = {}
 
-URANUS_CLASSICAL  = range(701,706)
-URANUS_INNER      = range(706,716) + [725,726,727]
-URANUS_REGULAR    = range(701,716) + [725,726,727]
-URANUS_IRREGULAR  = range(716,725)
-URANUS_ALL_MOONS  = range(701,728)
-
-NEPTUNE_CLASSICAL = range(801,803)
-NEPTUNE_INNER     = range(803,809)
-NEPTUNE_REGULAR   = [801] + NEPTUNE_INNER
-NEPTUNE_IRREGULAR = [802] + range(809,814)
-NEPTUNE_ALL_MOONS = range(801,814)
-
-PLUTO_CLASSICAL   = [901]
-PLUTO_REGULAR     = range(901,906)
-PLUTO_OUTER       = range(902,906)
-PLUTO_ALL_MOONS   = range(901,906)
+SPICE_PATH = None
 
 ################################################################################
-# SPICE file directory tree support
-################################################################################
-
-SPICE_PATH = ""
-
-def set_spice_path(spice_path=""):
-    """Call to define the directory path to the root of the SPICE file directory
-    tree. Call with no argument to reset."""
-
-    global SPICE_PATH
-
-    SPICE_PATH = spice_path
-
-def get_spice_path():
-    """Returns the current path to the root of the SPICE file directory tree.
-    If the path is undefined, it uses the value of environment variable
-    SPICE_PATH."""
-
-    global SPICE_PATH
-
-    if SPICE_PATH == "":
-        SPICE_PATH = os.environ["SPICE_PATH"]
-
-    return SPICE_PATH
-
-###############################################################################
 # Kernel Information class
 ################################################################################
+
+TABLE_NAME = "SPICEDB"
+COLUMN_NAMES = ["KERNEL_NAME", "KERNEL_VERSION", "KERNEL_TYPE",
+                "FILESPEC", "START_TIME", "STOP_TIME", "RELEASE_DATE",
+                "SPICE_ID", "LOAD_PRIORITY", "FULL_NAME", "FILE_NO"]
+
+# Derived constants
+COLUMN_STRING = ", ".join(COLUMN_NAMES)
+
+KERNEL_NAME_INDEX    = COLUMN_NAMES.index("KERNEL_NAME")
+KERNEL_VERSION_INDEX = COLUMN_NAMES.index("KERNEL_VERSION")
+KERNEL_TYPE_INDEX    = COLUMN_NAMES.index("KERNEL_TYPE")
+FILESPEC_INDEX       = COLUMN_NAMES.index("FILESPEC")
+START_TIME_INDEX     = COLUMN_NAMES.index("START_TIME")
+STOP_TIME_INDEX      = COLUMN_NAMES.index("STOP_TIME")
+RELEASE_DATE_INDEX   = COLUMN_NAMES.index("RELEASE_DATE")
+SPICE_ID_INDEX       = COLUMN_NAMES.index("SPICE_ID")
+LOAD_PRIORITY_INDEX  = COLUMN_NAMES.index("LOAD_PRIORITY")
+FULL_NAME_INDEX      = COLUMN_NAMES.index("FULL_NAME")
+FILE_NO_INDEX        = COLUMN_NAMES.index("FILE_NO")
+
+KERNEL_TYPE_SORT_DICT = {'LSK': 0, 'SCLK': 1, 'FK': 2, 'IK': 3, 'PCK': 4,
+                          'SPK': 5, 'CK': 6}
+KERNEL_TYPE_SORT_ORDER = ['LSK', 'SCLK', 'FK', 'IK', 'PCK', 'SPK', 'CK']
 
 class KernelInfo(object):
 
     def __init__(self, list):
-        self.kernel_name   = list[KERNEL_NAME_INDEX]
-        self.kernel_type   = list[KERNEL_TYPE_INDEX]
-        self.filespec      = list[FILESPEC_INDEX]
-        self.start_time    = list[START_TIME_INDEX]
-        self.stop_time     = list[STOP_TIME_INDEX]
-        self.release_date  = list[RELEASE_DATE_INDEX]
-        self.spice_id      = list[SPICE_ID_INDEX]
-        self.load_priority = list[LOAD_PRIORITY_INDEX]
+        self.kernel_name    = list[KERNEL_NAME_INDEX]
+        self.kernel_version = list[KERNEL_VERSION_INDEX]
+        self.kernel_type    = list[KERNEL_TYPE_INDEX]
+        self.filespec       = list[FILESPEC_INDEX]
+        self.start_time     = list[START_TIME_INDEX]
+        self.stop_time      = list[STOP_TIME_INDEX]
+        self.release_date   = list[RELEASE_DATE_INDEX]
+        self.spice_id       = list[SPICE_ID_INDEX]
+        self.load_priority  = list[LOAD_PRIORITY_INDEX]
 
-    def compare(self, other, ignore_spice_id=False):
-        """The compare() operator compares two KernelInfo objects and returns
+        if len(list) > FILE_NO_INDEX:
+            self.file_no = list[FILE_NO_INDEX]
+        else:
+            self.file_no = None
+
+    def compare(self, other):
+        """Identify which of two kernels has a higher load priority.
+
+        The compare() operator compares two KernelInfo objects and returns
         -1 if the former should be earlier in load order, 0 if they are equal,
         or +1 if the former should be later in loader order.
+        """
 
-        If ignore_spice_id is True, the KernelInfo objects are considered equal
-        even if the spice_ids differ, as long as the rest of the information is
-        the same."""
+        # Compare types
+        self_type = KERNEL_TYPE_SORT_DICT[self.kernel_type]
+        other_type = KERNEL_TYPE_SORT_DICT[other.kernel_type]
 
-        # LSK and SCLK kernels are best loaded first
-        if self.kernel_type == "LSK" and other.kernel_type != "LSK": return -1
-        if self.kernel_type != "LSK" and other.kernel_type == "LSK": return +1
-
-        if self.kernel_type == "SCLK" and other.kernel_type != "SCLK": return -1
-        if self.kernel_type != "SCLK" and other.kernel_type == "SCLK": return +1
+        if self_type < other_type: return -1
+        if self_type > other_type: return +1
 
         # Other kernel types are organized alphabetically for no particular
         # reason except to keep kernels of the same type together
         if self.kernel_type < other.kernel_type: return -1
         if self.kernel_type > other.kernel_type: return +1
 
-        # First compare load priorities
+        # Compare load priorities
         if self.load_priority < other.load_priority: return -1
         if self.load_priority > other.load_priority: return +1
 
-        # If load priorities are the same, compare release dates
+        # Compare release dates
         if self.release_date < other.release_date: return -1
         if self.release_date > other.release_date: return +1
 
-        # If release dates are the same, load earlier end dates first
-        if self.stop_time < other.stop_time: return -1
-        if self.stop_time > other.stop_time: return +1
-
-        # If end dates are the same, load later start dates first
-        if self.start_time > other.start_time: return -1
-        if self.start_time < other.start_time: return +1
-
-        # At this point we might as well just go alphabetical
+        # Group names alphabetically
         if self.kernel_name < other.kernel_name: return -1
         if self.kernel_name > other.kernel_name: return +1
 
+        # Earlier versions go first
+        if self.kernel_version < other.kernel_version: return -1
+        if self.kernel_version > other.kernel_version: return +1
+
+        # Earlier file numbers go first
+        if self.file_no < other.file_no: return -1
+        if self.file_no > other.file_no: return +1
+
+        # Earlier end dates, later starts go first for better chance of override
+        if self.stop_time < other.stop_time: return -1
+        if self.stop_time > other.stop_time: return +1
+
+        if self.start_time > other.start_time: return -1
+        if self.start_time < other.start_time: return +1
+
+        # Organize by file name if appropriate
         if self.filespec < other.filespec: return -1
         if self.filespec > other.filespec: return +1
 
-        # Finally, for kernels describing multiple bodies, the order goes by
-        # the body ID
-        if ignore_spice_id: return 0
-
+        # Finally, organize by file name and SPICE ID
         if self.spice_id < other.spice_id: return -1
         if self.spice_id > other.spice_id: return +1
 
@@ -196,33 +175,22 @@ class KernelInfo(object):
     # Comparison operators, needed for sorting, etc. Note __cmp__ is deprecated.
     def __eq__(self, other):
         if type(self) != type(other): return False
-        return self.compare(other, ignore_spice_id=False) == 0
+        return self.compare(other) == 0
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __le__(self, other):
-        return self.compare(other, ignore_spice_id=False) <= 0
+        return self.compare(other) <= 0
 
     def __lt__(self, other):
-        return self.compare(other, ignore_spice_id=False) < 0
+        return self.compare(other) < 0
 
     def __ge__(self, other):
-        return self.compare(other, ignore_spice_id=False) >= 0
+        return self.compare(other) >= 0
 
     def __gt__(self, other):
-        return self.compare(other, ignore_spice_id=False) > 0
-
-    # A test for equivalence that ignores the spice_id
-    def same_kernel_as(self, other):
-        """Returns True if the two kernels are the same except perhaps for the
-        spice_id."""
-
-        return self.compare(other, ignore_spice_id=True) == 0
-
-    def __str__(self):
-
-        return str(self.filespec)
+        return self.compare(other) > 0
 
     def __str__(self): return self.__repr__()
 
@@ -233,451 +201,427 @@ class KernelInfo(object):
         else:
             id = str(self.spice_id)
 
-        return (self.kernel_name + "/" + self.kernel_type + "/" +
-                   self.filespec + "/" + self.start_time + "/" +
-                   self.stop_time + "/" + self.release_date + "/" +
-                   id + "/" + str(self.load_priority))
+        result = (self.full_name + "|" +
+                  self.kernel_type + "|" +
+                  self.filespec + "|" +
+                  (self.start_time or '') + "|" +
+                  (self.stop_time  or '') + "|" +
+                  (self.release_date or '') + "|" +
+                  id + "|" +
+                  str(self.load_priority))
 
-####################################
-# UNIT TESTS
-####################################
+        if self.file_no is not None:
+            result = result + "[" + str(self.file_no) + "]"
 
-class test_KernelInfo(unittest.TestCase):
+        return result
 
-    # For reference...
-    # ["KERNEL_NAME", "KERNEL_TYPE", "FILESPEC", "START_TIME",
-    #  "STOP_TIME", "RELEASE_DATE", "SPICE_ID", "LOAD_PRIORITY"]
+    @property
+    def full_name(self):
+        # Append version if present
+        if self.kernel_version:
 
-    def runTest(self):
+            # Separate name and version by a dash unless version starts with '+'
+            if self.kernel_version[0] == '+':
+                return self.kernel_name + self.kernel_version[1:]
+            else:
+                return self.kernel_name + '-' + self.kernel_version
 
-        # Confirm that LSK always comes first
-        info1 = KernelInfo(["NAME", "LSK", "file", "T1", "T2", "T3", 0, 0])
-        
+        # Otherwise it's just the name
+        else:
+            return self.kernel_name
 
-        self.assertTrue(info1 == info1)
-        self.assertTrue(info1 ==
-                KernelInfo(["NAME", "LSK", "file", "T1", "T2", "T3", 0, 0]))
-
-        self.assertTrue(info1 <
-                KernelInfo(["NAME", "SCLK", "file", "T1", "T2", "T3", 0, 0]))
-        self.assertTrue(info1 <
-                KernelInfo(["NAME", "SPK",  "file", "T1", "T2", "T3", 0, 0]))
-        self.assertTrue(info1 <
-                KernelInfo(["NAME", "CK",   "file", "T1", "T2", "T3", 0, 0]))
-
-        info1 = KernelInfo(["NAME", "SCLK", "file", "T1", "T2", "T3", 0, 0])
-
-        # Confirm that SCLK always comes second
-        info1 = KernelInfo(["NAME", "SCLK", "file", "T1", "T2", "T3", 0, 0])
-
-        self.assertTrue(info1 == info1)
-        self.assertTrue(info1 ==
-                KernelInfo(["NAME", "SCLK", "file", "T1", "T2", "T3", 0, 0]))
-
-        self.assertTrue(info1 >
-                KernelInfo(["NAME", "LSK", "file", "T1", "T2", "T3", 0, 0]))
-        self.assertTrue(info1 <
-                KernelInfo(["NAME", "SPK", "file", "T1", "T2", "T3", 0, 0]))
-        self.assertTrue(info1 <
-                KernelInfo(["NAME", "CK",  "file", "T1", "T2", "T3", 0, 0]))
-
-        # Confirm that other types sort alphabetically
-        info1 = KernelInfo(["NAME", "FK", "file", "T1", "T2", "T3", 0, 0])
-
-        self.assertTrue(info1 == info1)
-        self.assertTrue(info1 ==
-                KernelInfo(["NAME", "FK", "file", "T1", "T2", "T3", 0, 0]))
-
-        self.assertTrue(info1 >
-                KernelInfo(["NAME", "LSK", "file", "T1", "T2", "T3", 0, 0]))
-        self.assertTrue(info1 >
-                KernelInfo(["NAME", "SCLK", "file", "T1", "T2", "T3", 0, 0]))
-        self.assertTrue(info1 >
-                KernelInfo(["NAME", "CK",  "file", "T1", "T2", "T3", 0, 0]))
-        self.assertTrue(info1 <
-                KernelInfo(["NAME", "SPK",  "file", "T1", "T2", "T3", 0, 0]))
-
-        # Check other comparisons
-        info1 = KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T30", 5, 10])
-
-        self.assertTrue(info1 == info1)
-        self.assertTrue(info1 ==
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T30", 5, 10]))
-
-        # Body ID
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T30", 4, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T30", 6, 10]))
-
-        # Filespec
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file2", "T10", "T20", "T30", 4, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file2", "T10", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file2", "T10", "T20", "T30", 6, 10]))
-
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file4", "T10", "T20", "T30", 4, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file4", "T10", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file4", "T10", "T20", "T30", 6, 10]))
-
-        # Kernel name
-        self.assertTrue(info1 >
-            KernelInfo(["AAAA", "SPK", "file2", "T10", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["AAAA", "SPK", "file3", "T10", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["AAAA", "SPK", "file4", "T10", "T20", "T30", 5, 10]))
-
-        self.assertTrue(info1 <
-            KernelInfo(["ZZZZ", "SPK", "file2", "T10", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["ZZZZ", "SPK", "file3", "T10", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["ZZZZ", "SPK", "file4", "T10", "T20", "T30", 5, 10]))
-
-        # Start time
-        self.assertTrue(info1 >
-            KernelInfo(["AAAA", "SPK", "file3", "T11", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["ZZZZ", "SPK", "file3", "T11", "T20", "T30", 5, 10]))
-
-        self.assertTrue(info1 <
-            KernelInfo(["AAAA", "SPK", "file3", "T09", "T20", "T30", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["ZZZZ", "SPK", "file3", "T09", "T20", "T30", 5, 10]))
-
-        # Stop time
-        self.assertTrue(info1 >
-            KernelInfo(["AAAA", "SPK", "file3", "T09", "T19", "T30", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["ZZZZ", "SPK", "file3", "T09", "T19", "T30", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["AAAA", "SPK", "file3", "T11", "T19", "T30", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["ZZZZ", "SPK", "file3", "T11", "T19", "T30", 5, 10]))
-
-        self.assertTrue(info1 <
-            KernelInfo(["AAAA", "SPK", "file3", "T09", "T21", "T30", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["ZZZZ", "SPK", "file3", "T09", "T21", "T30", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["AAAA", "SPK", "file3", "T11", "T21", "T30", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["ZZZZ", "SPK", "file3", "T11", "T21", "T30", 5, 10]))
-
-        # Release date
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file3", "T09", "T20", "T29", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T29", 5, 10]))
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file3", "T11", "T20", "T29", 5, 10]))
-
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file3", "T09", "T20", "T31", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T31", 5, 10]))
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file3", "T11", "T20", "T31", 5, 10]))
-
-        # Load priority
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T29", 5,  9]))
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T29", 5,  9]))
-        self.assertTrue(info1 >
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T29", 5,  9]))
-
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T31", 5, 11]))
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T31", 5, 11]))
-        self.assertTrue(info1 <
-            KernelInfo(["NAME", "SPK", "file3", "T10", "T20", "T31", 5, 11]))
-
-        # Test sorting
-        lsk0 = KernelInfo(["NAME", "LSK", "file", "T10", "T20", "T30", 0, 0])
-        lsk1 = KernelInfo(["ZZZZ", "LSK", "file", "T10", "T20", "T30", 0, 0])
-        lsk2 = KernelInfo(["NAME", "LSK", "file", "T10", "T20", "T40", 0, 0])
-        lsk3 = KernelInfo(["NAME", "LSK", "file", "T10", "T20", "T00", 0, 5])
-
-        sclk0 = KernelInfo(["NAME", "SCLK", "file", "T10", "T20", "T30", 0, 0])
-        sclk1 = KernelInfo(["ZZZZ", "SCLK", "file", "T10", "T20", "T30", 0, 0])
-        sclk2 = KernelInfo(["NAME", "SCLK", "file", "T10", "T20", "T40", 0, 0])
-        sclk3 = KernelInfo(["NAME", "SCLK", "file", "T10", "T20", "T00", 0, 5])
-
-        ck0 = KernelInfo(["NAME", "CK", "file0", "T10", "T20", "T30", 3, 0])
-        ck1 = KernelInfo(["NAME", "CK", "file0", "T10", "T20", "T30", 4, 0])
-        ck2 = KernelInfo(["NAME", "CK", "file1", "T10", "T20", "T30", 3, 0])
-        ck3 = KernelInfo(["ZZZZ", "CK", "file0", "T10", "T20", "T30", 3, 0])
-        ck4 = KernelInfo(["NAME", "CK", "file0", "T09", "T20", "T30", 3, 0])
-        ck5 = KernelInfo(["NAME", "CK", "file0", "T10", "T21", "T30", 3, 0])
-        ck6 = KernelInfo(["NAME", "CK", "file0", "T10", "T20", "T31", 3, 0])
-        ck7 = KernelInfo(["NAME", "CK", "file0", "T10", "T20", "T30", 3, 1])
-
-        fk0 = KernelInfo(["NAME", "FK", "file0", "T10", "T20", "T30", 3, 0])
-        fk1 = KernelInfo(["NAME", "FK", "file0", "T10", "T20", "T30", 4, 0])
-        fk2 = KernelInfo(["NAME", "FK", "file1", "T10", "T20", "T30", 3, 0])
-        fk3 = KernelInfo(["ZZZZ", "FK", "file0", "T10", "T20", "T30", 3, 0])
-        fk4 = KernelInfo(["NAME", "FK", "file0", "T09", "T20", "T30", 3, 0])
-        fk5 = KernelInfo(["NAME", "FK", "file0", "T10", "T21", "T30", 3, 0])
-        fk6 = KernelInfo(["NAME", "FK", "file0", "T10", "T20", "T31", 3, 0])
-        fk7 = KernelInfo(["NAME", "FK", "file0", "T10", "T20", "T30", 3, 1])
-
-        spk0 = KernelInfo(["NAME", "SPK", "file0", "T10", "T20", "T30", 3, 0])
-        spk1 = KernelInfo(["NAME", "SPK", "file0", "T10", "T20", "T30", 4, 0])
-        spk2 = KernelInfo(["NAME", "SPK", "file1", "T10", "T20", "T30", 3, 0])
-        spk3 = KernelInfo(["ZZZZ", "SPK", "file0", "T10", "T20", "T30", 3, 0])
-        spk4 = KernelInfo(["NAME", "SPK", "file0", "T09", "T20", "T30", 3, 0])
-        spk5 = KernelInfo(["NAME", "SPK", "file0", "T10", "T21", "T30", 3, 0])
-        spk6 = KernelInfo(["NAME", "SPK", "file0", "T10", "T20", "T31", 3, 0])
-        spk7 = KernelInfo(["NAME", "SPK", "file0", "T10", "T20", "T30", 3, 1])
-
-        random = [fk7, spk0, spk7, lsk2, fk3, ck2, spk6, fk6, spk1, fk1, lsk1,
-                  ck5, spk2, fk2, spk4, fk4, sclk0, spk3, ck0, sclk1, lsk3, ck1,
-                  sclk2, ck6, spk5, fk5, sclk3, ck3, ck7, fk0, ck4, lsk0]
-        random.sort()
-
-        sorted = [lsk0, lsk1, lsk2, lsk3, sclk0, sclk1, sclk2, sclk3,
-                  ck0, ck1, ck2, ck3, ck4, ck5, ck6, ck7,
-                  fk0, fk1, fk2, fk3, fk4, fk5, fk6, fk7,
-                  spk0, spk1, spk2, spk3, spk4, spk5, spk6, spk7]
-
-        self.assertEqual(sorted, random)
+    @property
+    def timeless(self):
+        return (self.start_time is None and self.stop_time is None)
 
 ################################################################################
-# Kernel List Operations
+# Kernel List Manipulations
 ################################################################################
 
-def sort_kernels(kernel_list):
-    """Sorts a list of kernels immediately prior to loading. It removes
-    duplicate kernels and puts the rest into their proper load order."""
+def _sort_kernels(kernel_list):
+    """Sort a list of KernelInfo objects immediately prior to loading.
 
-    # Sort into load order
+    Input:
+        kernel_list a list of KernelInfo objects.
+
+    Return:         a new list in which duplicates are removed and the rest are
+                    sorted into their proper load order.
+    """
+
+    # Sort kernels into load order
     kernel_list.sort()
 
-    # Copy the first element and set the spice_id to zero
-    cleaned_list = kernel_list[0:1]
+    # Delete kernels that are no longer needed
+    namekeys = []           # ordered list of kernel (name,version)
+    bodies_by_name = {}     # dict of bodies vs. kernel (name,version)
+    timeless_by_name = {}   # dict of timeless state vs. (name,version)
 
-    # Add each distinct kernel to the list in order
-    for kernel in kernel_list[1:]:
+    # For each kernel...
+    for kernel in kernel_list:
+        spice_id = kernel.spice_id
+        namekey = (kernel.kernel_name, kernel.kernel_version)
+        timeless_by_name[namekey] = kernel.timeless
 
-        # If it is not already in the list, add it
-        if not kernel.same_kernel_as(cleaned_list[-1]):
-            cleaned_list.append(kernel)
+        # Accumulate kernel names in load order and bodies per kernel name
+        if namekey in namekeys:
+            i = namekeys.index(namekey)
+            del namekeys[i]
+            namekeys.append(namekey)
+            bodies_by_name[namekey] |= {spice_id}
+        else:
+            namekeys.append(namekey)
+            bodies_by_name[namekey] = {spice_id}
 
-    return cleaned_list
+    # Delete SPICE IDs that appear in later versions of timeless kernels
+    for j in range(len(namekeys)):
+        namekey = namekeys[j]
+        if not timeless_by_name[namekey]: continue
+        if bodies_by_name[namekey] == {None}: continue
 
-################################################################################
+        for k in range(j+1,len(namekeys)):
+            if namekey[0] == namekeys[k][0]:
+                bodies_by_name[namekey] -= bodies_by_name[namekeys[k]]
 
-def remove_overlaps(kernel_list, start_time, stop_time):
-    """For kernels that have time limits such as CKs and SPKs, this method
+    # Delete kernels that are no longer needed
+    for j in range(len(namekeys)-1, -1, -1):
+        if len(bodies_by_name[namekey]) == 0:
+            del namekeys[j]
+
+    # Remove kernels that are still used but identical except for the SPICE_ID
+    filtered_list = []
+    for kernel in kernel_list:
+        namekey = (kernel.kernel_name, kernel.kernel_version)
+        if namekey not in namekeys: continue
+
+        if kernel.spice_id not in bodies_by_name[namekey]: continue
+
+        for (k,filtered) in enumerate(filtered_list):
+            if filtered.filespec == kernel.filespec:
+                del filtered_list[k]
+                break
+
+        filtered_list.append(kernel)
+
+    return filtered_list
+
+def _remove_overlaps(kernel_list, start_time, stop_time):
+    """Filter out kernels completely overridden by higher-priority kernels.
+
+    For kernels that have time limits such as CKs and SPKs, this method
     determines which kernels overlap higher-priority kernels, and removes
     kernels from the list if they are not required. It returns the filtered
     list in the proper load order.
 
     Input:
-        kernel_list     a list of kernels as returned by one or more calls to
-                        select_kernels("SPK", ...).
+        kernel_list a list of KernelInfo objects as returned by one or more
+                    calls to elect_kernels("SPK", ...), in its intended load
+                    order.
 
-        start_time      the start time of the interval of interest, is ISO
-                        format "yyyy-hh-mmThh:mm:ss".
+        start_time  the start time of the interval of interest, as ISO format
+                    "yyyy-hh-mmThh:mm:ss" or as seconds TAI since January 1,
+                    2000. None to ignore time limits and just select the most
+                    recent kernel(s).
 
-        stop_time       the stop time of the interval of interest.
+        stop_time   the stop time of the interval of interest. None to ignore
+                    time limits.  and just select the most recent kernel(s).
 
-    Return:             a filtered list of kernels, in which unnecessary kernels
-                        have been removed. An unnecessary kernel is one whose
-                        entire time range is covered by higher-priority kernels.
+    Return:         A filtered list of kernels, in which unnecessary kernels
+                    have been removed. An unnecessary kernel is one whose entire
+                    time range is covered by higher-priority kernels.
     """
 
-    # Sort the kernels
-    kernel_list.sort()
-
-    # Construct a list of kernels, one for each body
+    # Construct a dictionary of kernel lists, one list for each body
     body_dict = {}
     for kernel in kernel_list:
-        try:
-            body_dict[kernel.spice_id] += [kernel,]
-        except KeyError:
-            body_dict[kernel.spice_id] = [kernel,]
+        if kernel.spice_id not in body_dict:
+            body_dict[kernel.spice_id] = []
 
-        # Once the list is sorted, we can forget the body id
-        kernel.spice_id = None
+        body_dict[kernel.spice_id].append(kernel)
 
-    # Delete any duplicated lists, because the overlaps will be the same
-    for this_id in body_dict.keys():
-        for that_id in body_dict.keys():
-            if this_id != that_id and body_dict[this_id] == body_dict[that_id]:
-                body_dict[this_id] = None
-                continue
+    # Sort the kernels in each list
+    for kernels in body_dict.values():
+        kernels.sort()
 
-    for this_id in body_dict.keys():
-        if body_dict[this_id] is None:
-            del body_dict[this_id]
+    # If time limits are not specified, select the last kernel in each list
+    if start_time is None or stop_time is None:
+        filtered_kernels = []
+        for kernels in body_dict.values():
+            full_name = kernels[-1].full_name
+            filtered_kernels += [k for k in kernels if k.full_name == full_name]
+
+        return _sort_kernels(filtered_kernels)
 
     # Define the time interval of interest
-    interval_start_tai = julian.tai_from_iso(start_time)
-    interval_stop_tai  = julian.tai_from_iso(stop_time)
+    if type(start_time) == str:
+        interval_start_tai = julian.tai_from_iso(start_time)
+    else:
+        interval_start_tai = start_time
+
+    if type(stop_time) == str:
+        interval_stop_tai = julian.tai_from_iso(stop_time)
+    else:
+        interval_stop_tai = start_time
 
     # Remove overlaps for each body individually
     filtered_kernels = []
-    for id in body_dict.keys():
+    for id in body_dict:
 
         # Create an empty interval
         inter = interval.Interval(interval_start_tai, interval_stop_tai)
 
         # Insert the kernels for this body, beginning with the lowest priority
         for kernel in body_dict[id]:
-
             kernel_start_tai = julian.tai_from_iso(kernel.start_time)
             kernel_stop_tai  = julian.tai_from_iso(kernel.stop_time)
 
             inter[(kernel_start_tai,kernel_stop_tai)] = kernel
 
         # Retrieve the needed kernels in the proper order
-        body_list = inter[(interval_start_tai, interval_stop_tai)]
+        interval_kernels = inter[(interval_start_tai, interval_stop_tai)]
 
         # A leading value of None means there is a gap in time coverage
-        if body_list[0] is None:
-            body_list = body_list[1:]
+        if interval_kernels[0] is None:
+            interval_kernels = interval_kernels[1:]
 
         # Add this set to the list
-        filtered_kernels += body_list
+        filtered_kernels += interval_kernels
 
-    return sort_kernels(filtered_kernels)
+    return _sort_kernels(filtered_kernels)
 
-################################################################################
-
-def furnish_kernels(kernel_list):
-    """Furnishes a sorted list of kernels for use by the CSPICE toolkit. Also
-    returns a list of the kernel names.
-    """
-
-    global DEBUG, FILE_LIST
-
-    if not DEBUG: spice_path = get_spice_path()
-
-    name_list = []
-    for kernel in kernel_list:
-
-        if DEBUG:
-            FILE_LIST.append(kernel.filespec)
-        else:
-            cspice.furnsh(os.path.join(spice_path, kernel.filespec))
-
-        name = kernel.kernel_name
-        if name not in name_list: name_list.append(name)
-    
-    return name_list
-
-################################################################################
-
-def as_dict(kernel_list):
-    """Returns a dictionary containing all the information in the listed text
-    kernels. Binary kernels are ignored.
-    """
-
-    spice_path = get_spice_path()
-
-    clear_dict = True       # clear dictionary on the first pass
-    for kernel in kernel_list:
-
-        # Check for a text kernel
-        ext = os.path.splitext(kernel.filespec)[1].lower()
-        if ext[0:2] != ".t": continue
-
-        filespec = os.path.join(spice_path, kernel.filespec)
-        result = textkernel.from_file(filespec, clear=clear_dict)
-
-        # On later passes, don't clear the dictionary
-        clear_dict = False
-    
-    return result
-
-################################################################################
-
-def as_names(kernel_list):
-    """Returns a list of the names found in the given kernel list.
-    """
-
-    name_list = []
-    for kernel in kernel_list:
-        name = kernel.kernel_name
-        if name not in name_list: name_list.append(name)
-    
-    return name_list
-
-################################################################################
-# High-level Database I/O
-################################################################################
-
-def open_db(name=None):
-    """Opens the SPICE database given its name or file path."""
-
-    if name is None:
-        name = os.environ[SPICE_DB_VARNAME]
-
-    db.open(name)
-
-def close_db():
-    """Opens the SPICE database."""
-
-    db.close()
-
-################################################################################
-
-def select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
-                                after=None, path=None):
-    """Returns a list of KernelInfo objects containing the information returned
-    from a query performed on the SPICE kernel database.
+def _furnish_kernels(kernel_list, fast=True):
+    """Furnish a sorted list of kernels for use by the CSPICE toolkit.
 
     Input:
-        kernel_type     "SPK", "CK, "IK", "LSK", etc.
+        kernel_list a list of one or more KernelInfo objects
 
-        name            a SQL match string for the name of the kernel; use "%"
-                        for multiple wildcards and "_" for a single wildcard.
+        fast        True to skip the loading kernels that have already been
+                    loaded. False to unload and load them again, thereby raising
+                    their priority.
 
-        body            one or more SPICE body IDs.
+    Return:         an ordered list of the names, versions and file_nos of the
+                    kernels loaded. This can be used to re-load the exact same
+                    selection of kernels again at a later date.
 
-        time            a tuple consisting of a start and stop time, each
-                        expressed as a string in ISO format:
-                            "yyyy-mm-ddThh:mm:ss"
+    The function also returns a list of the kernel names, including file_no
+    ranges if appropriate.
+    """
 
-        asof            an optional date earlier than today for which values
-                        should be returned. Wherever possible, the kernels
-                        selected will have release dates earlier than this date.
-                        The date is expressed as a string in ISO format.
+    global DEBUG, FILE_LIST, FURNISHED_NAMES, FURNISHED_FILES, FURNISHED_FILENOS
 
-        after           an optional date such that files originating earlier are
-                        not considered. The date is expressed as a string in ISO
-                        format.
+    file_list = []
+    file_types = {}     # returns the kernel type give the file name
+    name_list = []
+    name_types = {}
+    fileno_dict = {}
 
-        path            an optional string that must appear within the file
-                        specification path of the kernel.
+    # For each kernel...
+    for kernel in kernel_list:
 
-    Return:             A list of KernelInfo objects describing the files that
-                        match the requirements.
+        # Add the full name to the end of the name list
+        name = kernel.full_name
+        if name not in name_list:
+            name_list.append(name)
+            name_types[name] = kernel.kernel_type
+
+        # Keep track of file_nos required
+        if kernel.file_no is not None:
+            if name not in fileno_dict:
+                fileno_dict[name] = []
+
+            fileno_dict[name].append(kernel.file_no)
+
+        # Update the list of files to furnish
+        files = kernel.filespec.split(',')
+        for file in files:
+
+            # Remove the name from earliers in the list if necessary
+            if file in file_list:
+                file_list.remove(file)
+
+            # Always add it at the end
+            file_list.append(file)
+            file_types[file] = kernel.kernel_type       # track kernel types
+
+    # Furnish the kernel files...
+    if DEBUG:
+        FILE_LIST += file_list
+
+    else:
+        spice_path = get_spice_path()
+        for file in file_list:
+            furnished_list = FURNISHED_FILES[file_types[file]]
+
+            # In fast mode, avoid re-furnishing kernels
+            already_furnished = (file in furnished_list)
+            if fast and already_furnished:
+                continue
+
+            # Otherwise, unload the kernel if it is found
+            filespec = os.path.join(spice_path, file)
+            if already_furnished:
+                furnished_list.remove(file)
+                cspice.unload(filespec)
+
+            # Load the kernel
+            cspice.furnsh(filespec)
+            furnished_list.append(file)
+
+        # Track the kernel names loaded
+        for name in name_list:
+            furnished_list = FURNISHED_NAMES[name_types[name]]
+
+            if name in furnished_list:
+                if fast: continue
+                furnished_list.remove(name)
+
+            furnished_list.append(name)
+
+    # Append file number ranges into the names in the list returned
+    for (name,filenos) in fileno_dict.iteritems():
+        k = name_list.index(name)
+        name_list[k] = name + _fileno_str(filenos)
+
+        # Track kernels loaded by file_no
+        if not DEBUG:
+            if name not in FURNISHED_FILENOS:
+                FURNISHED_FILENOS[name] = []
+
+            fileno_list = FURNISHED_FILENOS[name]
+            for fileno in filenos:
+                if fileno in fileno_list:
+                    if fast: continue
+                    fileno_list.remove(fileno)
+
+                fileno_list.append(fileno)
+
+    return name_list
+
+def _fileno_str(filenos):
+    """Construct a string listing filenos and their ranges inside brackets."""
+
+    # Copy and sort the list
+    filenos = list(filenos)
+    filenos.sort()
+
+    strlist = ['[', str(filenos[0])]
+    k_written = filenos[0]
+    k_prev = filenos[0]
+
+    for k in filenos[1:]:
+
+        # Don't write anything till we reach the end of a sequence
+        if k == k_prev + 1:
+            k_prev = k
+            continue
+
+        # Separate single values by commas
+        if k_prev == k_written:
+            strlist += [',']
+
+        # Use a comma on a list of just two
+        elif k_prev == k_written + 1:
+            strlist += [',', str(k_prev), ',']
+
+        # Otherwise, use a dash
+        else:
+            strlist += ['-', str(k_prev), ',']
+
+        strlist += [str(k)]
+        k_written = k
+        k_prev = k
+
+    if k_prev == k_written:
+        pass
+    elif k_prev == k_written + 1:
+        strlist += [',', str(k_prev)]
+    else:
+        strlist += ['-', str(k_prev)]
+
+    return ''.join(strlist + [']'])
+
+def _fileno_values(name):
+    """Return a kernel name and list of fileno values from a name string."""
+
+    # If there are no file_nos in the name, just return it with an empty list
+    if name[-1] != ']':
+        return (name, [])
+
+    # Isolate the name and indices
+    ibracket = name.index('[')
+    indices = name[ibracket+1:-1]
+    name = name[:ibracket]
+
+    # Interpret the indices
+    filenos = []
+    split_by_commas = index.split(',')
+    for item in split_by_commas:
+        split_by_dash = item.split('-')
+        if len(split_by_dash) == 2:
+            k0 = int(split_by_dash[0])
+            k1 = int(split_by_dash[1])
+            for fileno in range(k0,k1+1):
+                filenos.append(fileno)
+        else:
+            filenos.append(str(item))
+
+    return (name, filenos)
+
+################################################################################
+# Database Query Support
+################################################################################
+
+def _select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
+                                 after=None, path=None, limit=True, redo=False):
+    """Return a list of KernelInfo objects based on the given constraints.
+
+    Input:
+        kernel_type "SPK", "CK, "IK", "LSK", etc.
+
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
+
+        body        one or more SPICE body IDs.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000.
+
+        asof        an optional date earlier than today for which values should
+                    be returned. Wherever possible, the kernels selected will
+                    have release dates earlier than this date. The date is
+                    expressed as a string in ISO format or as a number of
+                    seconds TAI elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        path        an optional string that must appear within the file
+                    specification path of the kernel.
+
+        limit       True to limit the number of returned kernels to one where
+                    appropriate; False to return all the matching kernels.
+
+    Return:         A list of KernelInfo objects describing the files that match
+                    the requirements.
     """
 
     # Query the database
-    sql_string = _sql_query(kernel_type, name, body, time, asof, after, path)
+    sql_string = _sql_query(kernel_type, name, body, time, asof, after, path,
+                                         limit)
     table = db.query(sql_string)
 
     # If nothing was returned, relax the "asof" and "after" constraints and try
     # again
-    if len(table) == 0 and asof is not None:
-        sql_string = _sql_query(kernel_type, name, body, time, "redo", after,
-                                path)
+    if redo and len(table) == 0 and (asof is not None or after is not None):
+        sql_string = _sql_query(kernel_type, name, body, time, None, None,
+                                path, limit)
         table = db.query(sql_string)
 
     # If we still have nothing, raise an exception
     if len(table) == 0:
-        raise RuntimeError("no results found matching query")
+        raise ValueError("no results found matching query")
 
     kernel_info = []
     for row in table:
@@ -685,83 +629,632 @@ def select_kernels(kernel_type, name=None, body=None, time=None, asof=None,
 
     return kernel_info
 
-################################################################################
-
 def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
-                            after=None, path=None):
-    """This internal routine generates a query string based on constraints
-    involving the kernel type, name, body or bodies, time range, and release
-    date.
+                            after=None, path=None, limit=True):
+    """Generate a query string based on the constraints.
 
     Input:
-        kernel_type     "SPK", "CK, "IK", "LSK", etc.
+        kernel_type "SPK", "CK, "IK", "LSK", etc.
 
-        name            a SQL match string for the name of the kernel; use "%"
-                        for multiple wildcards and "_" for a single wildcard.
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
 
-        body            one or more SPICE body IDs.
+        body        one or more SPICE body IDs.
 
-        time            a tuple consisting of a start and stop time, each
-                        expressed as a string in ISO format:
-                            "yyyy-mm-ddThh:mm:ss"
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000.
 
-        asof            an optional date earlier than today for which values
-                        should be returned. Wherever possible, the kernels
-                        selected will have release dates earlier than this date.
-                        The date is expressed as a string in ISO format.
+        asof        an optional date earlier than today for which values should
+                    be returned. Wherever possible, the kernels selected will
+                    have release dates earlier than this date. The date is
+                    expressed as a string in ISO format or as a number of
+                    seconds TAI elapsed since January 1, 2000.
 
-        after           an optional date such that files originating earlier are
-                        not considered. The date is expressed as a string in ISO
-                        format.
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
 
-        path            an optional string that must appear within the file
-                        specification path of the kernel.
+        path        an optional string that must appear within the file
+                    specification path of the kernel.
 
-    Return:             A complete SQL query string.
+        limit       True to limit the number of returned kernels to one where
+                    appropriate; False to return all the matching kernels.
+
+    Return:         A complete SQL query string.
     """
 
+    # Begin query
     query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
     query_list += ["WHERE KERNEL_TYPE = '", kernel_type, "'\n"]
 
+    # Insert kernel name constraint
     if name is not None:
         query_list += ["AND KERNEL_NAME LIKE '", name, "'\n"]
 
+    # Insert body or bodies
     bodies = 0
     if body is not None:
-        if type(body) == type([]) or type(body) == type(()):
-            query_list += ["AND SPICE_ID in (", str(body)[1:-1], ")\n"]
-            bodies = len(body)
-        else:
-            query_list += ["AND SPICE_ID = '", str(body), "'\n"]
+        if type(body) == int:
+            query_list += ["AND SPICE_ID = ", str(body), "\n"]
             bodies = 1
+        else:
+            bodies = len(body)
 
-    if time is not None:
-        query_list += ["AND START_TIME < '", time[1], "'\n"]
-        query_list += ["AND STOP_TIME  > '", time[0], "'\n"]
+            if bodies == 1:
+                query_list += ["AND SPICE_ID = ", str(body[0]), "\n"]
+            else:
+                query_list += ["AND SPICE_ID in (", str(list(body))[1:-1],
+                               ")\n"]
 
-    if after is not None and asof != "redo":
-        query_list += ["AND RELEASE_DATE >= '", after, "'\n"]
+    # Insert start and stop times
+    if time is None: time = (None, None)
 
+    (time0, time1) = time
+    if time0 is not None:
+        if type(time0) != str:
+            time0 = julian.ymdhms_format_from_tai(time0, sep="T", digits=0,
+                                                         suffix="")
+        query_list += ["AND STOP_TIME  >= '", time0, "'\n"]
+
+    if time1 is not None:
+        if type(time1) != str:
+            time1 = julian.ymdhms_format_from_tai(time1, sep="T", digits=0,
+                                                         suffix="")
+
+        query_list += ["AND START_TIME <= '", time1, "'\n"]
+
+    # Insert path constraint
     if path is not None:
-        path = path.replace('\\', '/') # Must change Windows file separator
+        path = path.replace('\\', '/')  # Must change Windows file separator
         query_list += ["AND FILESPEC LIKE '%", path, "%'\n"]
 
-    if asof == "redo":
-        query_list += ["ORDER BY RELEASE_DATE ASC\n"]
-        query_list += ["LIMIT 1\n"]
-    elif asof is not None:
+    # Insert after constraint except on second pass
+    if after is not None:
+        if type(after) != str:
+            after = julian.ymdhms_format_from_tai(after, sep="T", digits=0,
+                                                         suffix="")
+        query_list += ["AND RELEASE_DATE >= '", after, "'\n"]
+
+    # Insert 'as of' constraint
+    if asof is not None:
+        if type(asof) != str:
+            asof = julian.ymdhms_format_from_tai(asof, sep="T", digits=0,
+                                                       suffix="")
         query_list += ["AND RELEASE_DATE <= '", asof, "'\n"]
 
-    if time is None and bodies <= 1:
-        query_list += ["ORDER BY LOAD_PRIORITY DESC, RELEASE_DATE DESC\n"]
-        query_list += ["LIMIT 1"]
+    # Return limited or unlimited results
+    if limit:
+        query_list += ["ORDER BY RELEASE_DATE DESC\n", "LIMIT 1\n"]
     else:
-        query_list += ["ORDER BY LOAD_PRIORITY ASC, RELEASE_DATE ASC\n"]
+        query_list += ["ORDER BY RELEASE_DATE ASC\n"]
+
+    return "".join(query_list)
+
+def _select_kernels_by_name(names, time=None):
+    """Return a list of KernelInfo objects based on a name (including version).
+
+    Input:
+        names       one or more full kernel names, including versions,
+                    optionally indexed by file_no ranges.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000. Use None to return kernels regardless
+                    of the time.
+
+    Return:         A list of KernelInfo objects describing the files that match
+                    the requirements.
+    """
+
+    # Normalize the input
+    if type(names) == str: names = [names]
+
+    # Loop through names...
+    kernel_info = []
+
+    for name in names:
+
+        # Query the database
+        sql_string = _sql_query_by_name(name, time)
+        table = db.query(sql_string)
+
+        # If we have nothing, raise an exception
+        if len(table) == 0:
+            raise ValueError("no results found matching query")
+
+        for row in table:
+            kernel_info.append(KernelInfo(row))
+
+    return kernel_info
+
+def _sql_query_by_name(name, time=None):
+    """Generate a query string based on a kernel name.
+
+    Input:
+        name        a full kernel name including version, optionally indexed by
+                    file_no ranges.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000. Use None to return kernels regardless
+                    of the time.
+
+    Return:         A list of KernelInfo objects describing the files that match
+                    the requirements.
+    """
+
+    # Begin query
+    query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
+
+    # Extract file_no ranges if necessary
+    if name[-1] == ']':
+        ibracket = name.index('[')
+        index = name[ibracket+1:-1]
+        name = name[:ibracket]
+
+        query_list += ["WHERE FULL_NAME = '", name, "'\n"]
+
+        filenos = []
+        split_by_commas = index.split(',')
+        for item in split_by_commas:
+            split_by_dash = item.split('-')
+            if len(split_by_dash) == 2:
+                k0 = int(split_by_dash[0])
+                k1 = int(split_by_dash[1])
+                for fileno in range(k0,k1+1):
+                    filenos.append(fileno)
+            else:
+                filenos.append(int(item))
+
+        query_list += ["AND FILE_NO in (", str(list(filenos))[1:-1], ")\n"]
+
+    else:
+        query_list += ["WHERE FULL_NAME = '", name, "'\n"]
+
+    # Insert start and stop times
+    if time is None: time = (None, None)
+
+    (time0, time1) = time
+    if time0 is not None:
+        if type(time0) != str:
+            time0 = julian.ymdhms_format_from_tai(time0, sep="T", digits=0,
+                                                         suffix="")
+        query_list += ["AND STOP_TIME  >= '", time0, "'\n"]
+
+    if time1 is not None:
+        if type(time1) != str:
+            time1 = julian.ymdhms_format_from_tai(time1, sep="T", digits=0,
+                                                         suffix="")
+
+        query_list += ["AND START_TIME <= '", time1, "'\n"]
+
+    query_list += ["ORDER BY LOAD_PRIORITY ASC, RELEASE_DATE ASC\n"]
 
     return "".join(query_list)
 
 ################################################################################
-# Special kernel loader for Cassini
+################################################################################
+# Public API
+################################################################################
+################################################################################
+
+def set_spice_path(spice_path=""):
+    """Define the directory path to the root of the SPICE file directory tree.
+
+    Call with no argument to reset the path to its default value."""
+
+    global SPICE_PATH
+
+    SPICE_PATH = spice_path
+
+def get_spice_path():
+    """Return the current path to the root of the SPICE file directory tree.
+
+    If the path is undefined, it uses the value of environment variable
+    SPICE_PATH.
+    """
+
+    global SPICE_PATH
+
+    if SPICE_PATH is None:
+        SPICE_PATH = os.environ["SPICE_PATH"]
+
+    return SPICE_PATH
+
+def open_db(name=None):
+    """Open the SPICE database given its name or file path.
+
+    If no name is given, the value of the environment variable
+    SPICE_SQLITE_DB_NAME is used.
+    """
+
+    if name is None:
+        name = os.environ["SPICE_SQLITE_DB_NAME"]
+
+    db.open(name)
+
+def close_db():
+    """Close the SPICE database."""
+
+    db.close()
+
+def furnish_lsk(asof=None, after=None, redo=True, fast=True):
+    """Furnish a leapseconds kernel.
+
+    Input:
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+        fast        If True, the kernel will be furnished only if it is not
+                    currently loaded. If it is already loaded, nothing will be
+                    done and therefore its priority will not be changed. If
+                    False, the priority of the kernel will be raised to the top,
+                    by unloading the kernel if necessary.
+
+    Return:         A list of the names of all the kernels loaded.
+    """
+
+    # Search the database
+    kernel_list = _select_kernels("LSK", asof=asof, after=after, redo=redo,
+                                         limit=True)
+
+    # While we are at it, load the LSK file for the Julian Library
+    if not DEBUG:
+       julian.load_from_kernel(os.path.join(get_spice_path(),
+                               kernel_list[0].filespec))
+
+    # Load the kernels and return the names
+    return _furnish_kernels(kernel_list, fast=fast)
+
+def furnish_pck(bodies=None, asof=None, after=None, redo=True):
+    """Furnish all needed planetary constants kernels for one or more bodies.
+
+    Input:
+        bodies      one or more SPICE body IDs; None to load kernels for all
+                    planetary bodies.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+    Return:         A list of the names of all the kernels loaded.
+    """
+
+    # Search database
+    kernel_list = _select_kernels("PCK", body=bodies,
+                                         asof=asof, after=after, redo=redo,
+                                         limit=False)
+
+    # Sort the kernels
+    kernel_list = _sort_kernels(kernel_list)
+
+    # Load the kernels and return the names
+    return _furnish_kernels(kernel_list)
+
+def furnish_spk(bodies, time=None, asof=None, after=None, redo=True):
+    """Furnish all needed planetary constants kernels for one or more bodies.
+
+    Input:
+        bodies      one or more SPICE body IDs; None to load kernels for all
+                    planetary bodies.
+
+        time        a tuple containing the start and stop times. Each time is
+                    expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
+                    number of seconds TAI elapsed since January 1, 2000. Use
+                    None to load the most recent complete set of kernels
+                    regardless of their time limits.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+    Return:         A list of the names of all the kernels loaded.
+    """
+
+    # Normalize the input
+    if type(bodies) == int: bodies = [bodies]
+
+    # Select the kernels
+    spacecraft_only = True
+    kernel_list = []
+    for body in bodies:
+        if body > 0: spacecraft_only = False
+        kernel_list += _select_kernels("SPK", body=body, time=time,
+                                              asof=asof, after=after, redo=redo,
+                                              limit=False)
+
+    # Sort the kernels
+    if time is None: time = (None, None)
+    kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
+
+    # One DE kernel is always required unless only spacecrafts were selected
+    if (not spacecraft_only) and (kernel_list[-1].load_priority < 200): # kludge
+        kernel_list += _select_kernels("SPK", name="DE%", time=time,
+                                              asof=asof, after=after, redo=redo,
+                                              limit=True)
+
+        kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
+
+    # Load the kernels and return the names
+    return _furnish_kernels(kernel_list)
+
+def furnish_inst(ids, inst=None, asof=None, after=None, redo=True):
+    """Furnish all needed planetary constants kernels for one or more
+    spacecrafts and instruments.
+
+    Input:
+        ids         one or more negative SPICE body IDs for spacecrafts.
+
+        inst        one or more instrument names or abbreviations. None to load
+                    every instrument kernel.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+    Return:         A list of the names of all the kernels loaded.
+    """
+
+    # Normalize inputs
+    if type(ids) == int: ids = [ids]
+    if type(inst) == str: inst = [inst]
+
+    # For each spacecraft...
+    kernel_list = []
+    for id in ids:
+
+        # Select the spacecraft clock kernels
+        kernel_list += _select_kernels("SCLK", body=id,
+                                               asof=asof, after=after, redo=redo,
+                                               limit=True)
+
+        # Select the frames kernels
+        kernel_list += _select_kernels("FK", body=id,
+                                             asof=asof, after=after, redo=redo,
+                                             limit=False)
+
+        # Select the instrument kernels
+        if inst is None:
+            kernel_list += _select_kernels("IK", body=id,
+                                           asof=asof, after=after, redo=redo,
+                                           limit=False)
+        else:
+          for name in inst:
+            kernel_list += _select_kernels("IK", name='%'+name+'%', body=id,
+                                           asof=asof, after=after, redo=redo,
+                                           limit=False)
+
+    # Sort the kernels
+    kernel_list = _sort_kernels(kernel_list)
+
+    # Load the kernels and return the names
+    return _furnish_kernels(kernel_list)
+
+def furnish_ck(ids, time=None, asof=None, after=None, redo=True):
+    """Furnish all needed C kernels for one or more spacecrafts.
+
+    Input:
+        ids         one or more negative SPICE body IDs for spacecrafts.
+
+        time        a tuple containing the start and stop times. Each time is
+                    expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
+                    number of seconds TAI elapsed since January 1, 2000. Use
+                    None to load a complete set of C kernels.
+
+        asof        an optional earlier date for which values should be
+                    returned. Wherever possible, the kernels selected will have
+                    release dates earlier than this date. The date is expressed
+                    as a string in ISO format or as a number of seconds TAI
+                    elapsed since January 1, 2000.
+
+        after       an optional date such that files originating earlier are not
+                    considered. The date is expressed as a string in ISO format
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+
+        redo        True to relax the 'asof' and 'after" constraints if no
+                    matching results are found; False to raise a ValueError
+                    instead.
+
+    Return:         A list of the names of all the kernels loaded.
+    """
+
+    # Normalize inputs
+    if type(ids) == int: ids = [ids]
+
+    # For each spacecraft...
+    kernel_list = []
+    for id in ids:
+
+        # Select the C kernels
+        kernel_list += _select_kernels("CK", time=time,
+                                            body=id, asof=asof, after=after,
+                                            limit=False)
+
+    # Sort the kernels
+    if time is None: time = ('0001-01-01', '3000-01-01')
+    kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
+
+    # Load the kernels and return the names
+    return _furnish_kernels(kernel_list)
+
+def furnish_by_name(names, time=None, fast=True):
+    """Furnish kernels based on a list of kernel names.
+
+    Input:
+        names       a list of kernel names, including version numbers, and
+                    optional file_no indices.
+
+        time        an optional tuple containing the start and stop times. Each
+                    time is expressed in either ISO format "yyyy-mm-ddThh:mm:ss"
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+                    Use None to load all the matching kernels.
+
+        fast        True to avoid re-loading a kernel that was already
+                    furnished. If the kernel has been loaded, its priority will
+                    not be changed. False to unload first, ensuring that the
+                    kernel has the highest priority after the call.
+    """
+
+    # Search database
+    kernel_list = _select_kernels_by_name(names, time)
+
+    # Sort the kernels
+    kernel_list = _sort_kernels(kernel_list)
+
+    # Load the kernels and return the names
+    return _furnish_kernels(kernel_list, fast=fast)
+
+def unload_by_name(names):
+    """Unload kernels based on a list of kernel names."""
+
+    global FURNISHED_FILES, FURNISHED_NAMES, FURNISHED_FILENOS
+
+    # Search database
+    kernel_list = _select_kernels_by_name(names)
+
+    # Sort the kernels
+    kernel_list = _sort_kernels(kernel_list)
+
+    # For each kernel...
+    spice_path = get_spice_path()
+    for kernel in kernel_list:
+        key = kernel.kernel_type
+
+        # Remove the kernel files from the dictionary and unload from SPICE
+        filespecs = kernel.filespec.split(',')
+        for filespec in filespecs:
+            if filespec in FURNISHED_FILES[key]:
+                FURNISHED_FILES[key].remove(filespec)
+                cspice.unload(os.path.join(spice_path, filespec))
+
+        # Delete the file_no from the list
+        name = kernel.full_name
+        if name in FURNISHED_FILENOS:
+            fileno_list = FURNISHED_FILENOS[name]
+            if kernel.file_no in fileno_list:
+                fileno_list.remove(kernel.file_no)
+
+                if len(fileno_list) == 0:
+                    del FURNISHED_FILENOS[name]
+
+        # Delete the kernel name from the dictionaries if there a no other files
+        if name not in FURNISHED_FILENOS:
+            furnished_list = FURNISHED_NAMES[key]
+            if name in furnished_list:
+                furnished_list.remove(name)
+
+    return
+
+def unload_by_type(types=None):
+    """Unload all the kernels of one or more specified types."""
+
+    global FURNISHED_FILES, FURNISHED_NAMES, FURNISHED_FILENOS
+    global KERNEL_TYPE_SORT_ORDER
+
+    # Normalize input
+    if types is None or types == []:
+        types = KERNEL_TYPE_SORT_ORDER
+    elif type(types) == str:
+        types = [types]
+
+    spice_path = get_spice_path()
+
+    # For each selected type...
+    for key in types:
+
+        # Unload each file from SPICE
+        file_list = FURNISHED_FILES[key]
+        for file in file_list:
+            cspice.unload(os.path.join(spice_path, file))
+
+        # Delete the file list from the dictionary
+        FURNISHED_FILES[key] = []
+
+        # Delete the file_no list if necessary
+        name_list = FURNISHED_NAMES[key]
+        for name in name_list:
+            if name in FURNISHED_FILENOS:
+                del FURNISHED_FILENOS[name]
+
+        # Delete the name list from the dictionary
+        FURNISHED_NAMES[key] = []
+
+    return
+
+def furnished_names(types=None):
+    """Return a list of strings containing the names of the furnished kernels.
+    """
+
+    global FURNISHED_NAMES, FURNISHED_FILENOS
+    global KERNEL_TYPE_SORT_ORDER
+
+    # Normalize input
+    if types is None or types == []:
+        types = KERNEL_TYPE_SORT_ORDER
+    elif type(types) == str:
+        types = [types]
+
+    name_list = []
+
+    # For each selected type...
+    for key in types:
+
+        # Unload each file from SPICE
+        for name in FURNISHED_NAMES[key]:
+            if name in FURNISHED_FILENOS:
+                name_list.append(name + _fileno_str(FURNISHED_FILENOS[name]))
+            else:
+                name_list.append(name)
+
+    return name_list
+
+################################################################################
+# DEPRECATED: Special kernel loader for Cassini
 ################################################################################
 
 def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
@@ -788,87 +1281,39 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
     Return:             a list of the names of all the kernels loaded.
     """
 
-    list = []
-    spks = []
-    cks  = []
-
-    bodies = [699] + SATURN_ALL_MOONS
+    names = []
 
     # Leapseconds Kernel (LSK)
-    list += select_kernels("LSK", asof=asof)
+    names += furnish_lsk(asof=asof)
 
-    # While we are at it, load the LSK file for the Julian Library
-    if not DEBUG:
-       julian.load_from_kernel(os.path.join(get_spice_path(), list[0].filespec))
+    # Instruments and frames
+    names += furnish_inst(-82, instrument, asof=asof)
 
     # Planetary Constants
-    list += select_kernels("PCK", asof=asof, name="PCK%")
-    list += select_kernels("PCK", asof=asof, name="CPCK_ROCK%")
-    list += select_kernels("PCK", asof=asof, name="CPCK_________")
-
-    # Planetary Frames
-    list += select_kernels("FK", asof=asof, name="CAS_ROCKS%")
+    bodies = [699] + range(601,654) + [65035, 65040, 65041] # plus a few more
+    names += furnish_pck(bodies, asof=asof)
 
     # Ephemerides (SP Kernels)
-    sat_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=bodies, name="SAT%")
-    sat_spks = remove_overlaps(sat_spks, start_time, stop_time)
+    names += furnish_spk(bodies + [-82], time=(start_time,stop_time), asof=asof)
 
-    cas_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=-82)
-
-    de_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                    body=[10,399,6], name="DE%")
-    de_spks.sort()
-    spks = sat_spks + cas_spks + de_spks[-1:]
-
-    # The above are sufficient without any instruments
-    if instrument is not None:
-
-        # Convert a single character string to a list, for convenience
-        if type(instrument) == type(""): instrument = [instrument]
-
-        # Instrument Kernels...
-        for id in instrument:
-            list += select_kernels("IK", asof=asof, name="CAS_" + id + "%")
-
-        # Spacecraft Frames
-        list += select_kernels("FK", asof=asof, name="CAS_V%")
-        list += select_kernels("FK", asof=asof, name="CAS_STATUS_V%")
-
-        # Spacecraft Clock
-        list += select_kernels("SCLK", asof=asof, body=-82)
-
-        # C (pointing) Kernels
-        cks = select_kernels("CK", asof=asof, time=(start_time, stop_time),
-                                   body=-82)
-        cks = remove_overlaps(cks, start_time, stop_time)
-
-    if DEBUG: FILE_LIST = []
-
-    # Sort and load the various other kernels
-    list = sort_kernels(list)
-    names = furnish_kernels(list)
-
-    # Load the SPKs
-    names += furnish_kernels(spks)
-
-    # Sort and load the CKs, if any
-    if cks != []: names += furnish_kernels(cks)
+    # C (pointing) Kernels
+    names += furnish_ck(-82, time=(start_time, stop_time), asof=asof)
 
     return names
 
 ################################################################################
-# Special kernel loader for every planet and moon
+# DEPRECATED: Special kernel loader for every planet and moon
 ################################################################################
 
-def furnish_solar_system(start_time, stop_time, asof=None):
+def furnish_solar_system(start_time=None, stop_time=None, asof=None):
     """A routine designed to load all the SPK, FK and planetary constants files
     needed for the planets and moons of the Solar System.
 
     Input:
         start_time      the start time of the period of interest, in ISO
-                        format, "yyyy-mm-ddThh:mm:ss".
+                        format, "yyyy-mm-ddThh:mm:ss" or in seconds TAI past
+                        January 1, 2000. Use None to furnish the latest kernels
+                        irrespective of their time limits.
 
         stop_time       the stop time of the period of interest.
 
@@ -880,356 +1325,1111 @@ def furnish_solar_system(start_time, stop_time, asof=None):
     Return:             a list of the names of all the kernels loaded.
     """
 
-    list = []
-    spks = []
+    names = []
 
     # Leapseconds Kernel (LSK)
-    list += select_kernels("LSK", asof=asof)
+    names += furnish_lsk(asof=asof)
 
-    # While we are at it, load the LSK file for the Julian Library
-    if not DEBUG:
-       julian.load_from_kernel(os.path.join(get_spice_path(), list[0].filespec))
+    # Planetary Constants
+#     bodies = range(1,11) + range(599, 1000, 100) + [399, 301, 401, 402]
+#     bodies += range(501,550) + [55062, 55063]
+#     bodies += range(601,654) + [65035, 65040, 65041]    # plus a few more...
+#     bodies += range(701,728) + range(801,815) + range(901,906)
 
-    # Planetary Constants, including the latest from Cassini
-    list += select_kernels("PCK", asof=asof, name="PCK%")
-    list += select_kernels("PCK", asof=asof, name="CPCK_ROCK%")
-    list += select_kernels("PCK", asof=asof, name="CPCK_________")
+    # We speed this up by taking advantage of the fact that certain sets of
+    # bodies are always grouped together in the kernels
 
-    # Planetary Frames, including Cassini
-    list += select_kernels("FK", asof=asof, name="CAS_ROCKS%")
+    bodies =  [3, 301, 399, 4, 401]
+    bodies += [501,505,506,530,540,55062]
+    bodies += [601,610,618,619,633,640,65035,65040]
+    bodies += [701,706,715,716,726]
+    bodies += [801,802,803,808,809,813,814]
+    bodies += [901,902,904,905]
+
+    names += furnish_pck(bodies, asof=asof)
 
     # Ephemerides (SP Kernels)
-    mar_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=MARS_ALL_MOONS, name="MAR%")
-    mar_spks = remove_overlaps(mar_spks, start_time, stop_time)
-
-    jup_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=JUPITER_ALL_MOONS, name="JUP%")
-    jup_spks = remove_overlaps(jup_spks, start_time, stop_time)
-
-    sat_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=SATURN_ALL_MOONS, name="SAT%")
-    sat_spks = remove_overlaps(sat_spks, start_time, stop_time)
-
-    ura_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=URANUS_ALL_MOONS, name="URA%")
-    ura_spks = remove_overlaps(ura_spks, start_time, stop_time)
-
-    nep_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=NEPTUNE_ALL_MOONS, name="NEP%")
-    nep_spks = remove_overlaps(nep_spks, start_time, stop_time)
-
-    plu_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                     body=PLUTO_ALL_MOONS, name="PLU%")
-    plu_spks = remove_overlaps(plu_spks, start_time, stop_time)
-
-    de_spks = select_kernels("SPK", asof=asof, time=(start_time, stop_time),
-                                    body=[10,199,299,301,399], name="DE%")
-    de_spks.sort()
-
-    spks = (mar_spks + jup_spks + sat_spks + ura_spks + nep_spks + plu_spks +
-            de_spks[-1:])
-
-    # Load the kernels
-    list = sort_kernels(list)
-    names = furnish_kernels(list)
-    names += furnish_kernels(spks)
+    names += furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
 
     return names
 
-########################################
-# UNIT TESTS
-########################################
+################################################################################
+################################################################################
+# spicedb.py and SPICE.db unit tests
+################################################################################
+################################################################################
+
+class test_KernelInfo(unittest.TestCase):
+
+  # For reference...
+  # ['KERNEL_NAME','KERNEL_VERSION', 'KERNEL_TYPE', 'FILESPEC', 'START_TIME',
+  #  'STOP_TIME', 'RELEASE_DATE', 'SPICE_ID', 'LOAD_PRIORITY']
+
+  def runTest(self):
+
+    # Sort based on kernel type
+    lsk  = KernelInfo(['LSK',  '1', 'LSK',  'file', 'T0', 'T1', 'T2', 0, 1])
+    lsk2 = KernelInfo(['LSK',  '1', 'LSK',  'file', 'T0', 'T1', 'T2', 0, 1])
+    sclk = KernelInfo(['SCLK', '1', 'SCLK', 'file', 'T0', 'T1', 'T2', 0, 1])
+    fk   = KernelInfo(['FK',   '1', 'FK',   'file', 'T0', 'T1', 'T2', 0, 1])
+    ik   = KernelInfo(['IK',   '1', 'IK',   'file', 'T0', 'T1', 'T2', 0, 1])
+    ck   = KernelInfo(['CK',   '1', 'CK',   'file', 'T0', 'T1', 'T2', 0, 1])
+    spk  = KernelInfo(['SPK',  '1', 'SPK',  'file', 'T0', 'T1', 'T2', 0, 1])
+
+    self.assertEqual(lsk, lsk2)
+    self.assertTrue(lsk <= lsk2)
+    self.assertTrue(lsk >= lsk2)
+    self.assertFalse(lsk < lsk2)
+    self.assertFalse(lsk > lsk2)
+    self.assertFalse(lsk != lsk2)
+
+    self.assertTrue(lsk < sclk)
+    self.assertTrue(sclk < ck)
+    self.assertTrue(fk < ck)
+    self.assertTrue(fk < ik)
+    self.assertTrue(ik < spk)
+
+    kernels = [spk, ck, ik, fk, sclk, lsk2, lsk]
+    kernels.sort()
+    self.assertEqual(kernels, [lsk, lsk2, sclk, fk, ik, spk, ck])
+
+    # Sort based on load priority
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 2])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 3])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 4])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 5])
+    spk6 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 6])
+
+    kernels = [spk6, spk5, spk4, spk3, spk2, spk1]
+    kernels.sort()
+    self.assertEqual(kernels, [spk1, spk2, spk3, spk4, spk5, spk6])
+
+    # Sort including release dates
+    lsk1 = KernelInfo(['LSK', '1', 'LSK', 'file', 'T0', 'T1', 'T9', 0, 9])
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T0', 0, 9])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 2])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T3', 0, 3])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T4', 0, 4])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T5', 0, 5])
+
+    # note--spk0 has the highest load priority
+    kernels = [spk0, spk5, spk4, spk3, spk2, lsk1]
+    kernels.sort()
+    self.assertEqual(kernels, [lsk1, spk2, spk3, spk4, spk5, spk0])
+
+    # Sort by name and version
+    spk0 = KernelInfo(['AA', '1', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
+    spk1 = KernelInfo(['AA', '2', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
+    spk2 = KernelInfo(['AA', '3', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
+    spk3 = KernelInfo(['BB', '3', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
+    spk4 = KernelInfo(['BB', '4', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
+    spk5 = KernelInfo(['CC', '4', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
+
+    kernels = [spk5, spk4, spk3, spk2, spk1, spk0]
+    kernels.sort()
+    self.assertEqual(kernels, [spk0, spk1, spk2, spk3, spk4, spk5])
+
+    # Sort by time ranges
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T4', 'T7', 'T9', 0, 1])
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T6', 'T7', 'T9', 0, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T4', 'T9', 0, 1])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T1', 'T4', 'T9', 0, 1])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T2', 'T4', 'T9', 0, 1])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T3', 'T4', 'T9', 0, 1])
+
+    kernels = [spk0, spk1, spk2, spk3, spk4, spk5]
+    kernels.sort()
+    self.assertEqual(kernels, [spk5, spk4, spk3, spk2, spk1, spk0])
+
+    # Sort by file name
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 0, 1])
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 0, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file2', 'T0', 'T9', 'T9', 0, 1])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file3', 'T1', 'T9', 'T9', 0, 1])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file4', 'T0', 'T9', 'T9', 0, 1])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file5', 'T0', 'T9', 'T9', 0, 1])
+
+    kernels = [spk5, spk4, spk3, spk2, spk1, spk0]
+    kernels.sort()
+    self.assertEqual(kernels, [spk3, spk0, spk1, spk2, spk4, spk5])
+
+    # Sort by body ID
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 0, 1])
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 1, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 2, 1])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 3, 1])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 4, 1])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 5, 1])
+
+    kernels = [spk5, spk4, spk3, spk2, spk1, spk0]
+    kernels.sort()
+    self.assertEqual(kernels, [spk3, spk4, spk5, spk0, spk1, spk2])
+
+    # Test full names
+    spk = KernelInfo(['VG1-JUP', '+230', 'SPK', 'file', '0', '1', '2', 0, 1])
+    self.assertEqual(spk.full_name, 'VG1-JUP230')
+
+    spk = KernelInfo(['VG1', 'JUP230', 'SPK', 'file', '0', '1', '2', 0, 1])
+    self.assertEqual(spk.full_name, 'VG1-JUP230')
+
+    spk = KernelInfo(['VG1-JUP230', None, 'SPK', 'file', '0', '1', '2', 0, 1])
+    self.assertEqual(spk.full_name, 'VG1-JUP230')
+
+################################################################################
+# UNIT TESTS for queries
+################################################################################
 
 class test_spicedb(unittest.TestCase):
 
-    def runTest(self):
+  def runTest(self):
+
+    global DEBUG, FILE_LIST
+
+    ############################################################################
+    # _sort_kernels()
+    ############################################################################
+
+    # Leapseconds should always come first
+    lsk0 = KernelInfo(['LEAPSECONDS', '1', 'LSK', 'File0.tls',
+                       '2000-01-01', '2000-01-02', '2000-01-03', None, 100])
+
+    # Spacecraft clock should always come second
+    # These kernels are ordered alphabetically
+    sclk0 = KernelInfo(['SCLK82', '1', 'SCLK', 'sclk-82.tsc',
+                        '2000-01-01', '2000-01-02', '2003-01-03', -82, 100])
+
+    sclk1 = KernelInfo(['SCLK99', '1', 'SCLK', 'sclk-99.tsc',
+                        '2000-01-01', '2000-01-02', '2003-01-03', -99, 100])
+
+    # CKs come next alphabetically
+    # Lowest load priority comes first, even with later release date
+    ck0 = KernelInfo(['CK-PREDICTED', '1', 'CK', 'File2.ck',
+                      '2001-01-01', '2099-01-01', '2005-01-01', -82, 50])
+
+    # Others are loaded in order of increasing end date
+    ck1 = KernelInfo(['CK-RECONSTRUCTED', '1', 'CK', 'File3.ck',
+                      '2001-01-01', '2002-01-01', '2003-01-01', -82, 100])
+
+    ck2 = KernelInfo(['CK-RECONSTRUCTED', '1', 'CK', 'File4.ck',
+                      '2002-01-01', '2003-01-01', '2004-01-01', -82, 100])
+
+    random = [ck2, lsk0, ck1, sclk1, ck0, sclk0]
+
+    sorted = [lsk0, sclk0, sclk1, ck0, ck1, ck2]
+    self.assertEqual(_sort_kernels(random), sorted)
+
+    # Frame and PC kernels
+    # Ordered by priority, release date, version; with duplicates removed
+    fk1 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5a.fk',
+                      None, None, '2004-01-01', 1, 100])
+    fk2 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5b.fk',
+                      None, None, '2004-01-01', 2, 100])
+    fk3 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5c.fk',
+                      None, None, '2004-01-01', 3, 100])
+    # later release date, but only body 1
+    fk4 = KernelInfo(['FRAMES', 'BBBB', 'FK', 'File6a.fk',
+                      None, None, '2005-01-01', 1, 100])
+
+    random = [fk1, fk2, fk3, fk4]
+    sorted = [fk2, fk3, fk4]
+    self.assertEqual(_sort_kernels(random), sorted)
+
+    # three bodies in one file
+    fk1 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
+                      None, None, '2004-01-01', 1, 100])
+    fk2 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
+                      None, None, '2004-01-01', 2, 100])
+    fk3 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
+                      None, None, '2004-01-01', 3, 100])
 
-        global DEBUG, FILE_LIST
+    # later release date, but only body 1
+    fk4 = KernelInfo(['FRAMES', 'BBBB', 'FK', 'File6a.fk',
+                     None, None, '2005-01-01', 1, 100])
 
-        ################################
-        # sort_kernels()
-        ################################
+    random = [fk1, fk2, fk3, fk4]
+    sorted = [fk3, fk4]
+    self.assertEqual(_sort_kernels(random), sorted)
 
-        # Leapseconds should always come first
-        info0 = KernelInfo(["LEAPSECONDS", "LSK", "File0.tls",
-                "2000-01-01", "2000-01-02", "2000-01-03", None, 100])
+    # higher load priority
+    fk1 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
+                      None, None, '2004-01-01', 1, 150])
+    fk2 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
+                      None, None, '2004-01-01', 2, 150])
+    fk3 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
+                      None, None, '2004-01-01', 3, 150])
+    # later release date, but only body 1
+    fk4 = KernelInfo(['FRAMES', 'BBBB', 'FK', 'File6a.fk',
+                      None, None, '2005-01-01', 1, 100])
 
-        # Spacecraft clock should always come second
-        # These kernels are ordered alphabetically
-        info1 = KernelInfo(["SCLK82", "SCLK", "sclk-82.tsc",
-                "2000-01-01", "2000-01-02", "2003-01-03", -82, 100])
+    random = [fk1, fk2, fk3, fk4]
+    sorted = [fk3]
+    self.assertEqual(_sort_kernels(random), sorted)
 
-        info2 = KernelInfo(["SCLK99", "SCLK", "sclk-99.tsc",
-                "2000-01-01", "2000-01-02", "2003-01-03", -99, 100])
+    # SP Kernels
+    # A low-priority predict kernel comes first
+    spk1 = KernelInfo(['SPK_PREDICTED', '1', 'SPK', 'predict.spk',
+                 '2000-01-02', '2020-12-31', '2003-01-03', -82, 50])
 
-        # CKs come next alphabetically
-        # Lowest load priority comes first, even with later release date
-        info3 = KernelInfo(["CK-PREDICTED", "CK", "File2.ck",
-                "2001-01-01", "2099-01-01", "2005-01-01", -82, 50])
+    # These are duplicates and all but the last will be skipped
+    spk2 = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
+                 '2002-01-01', '2005-01-01', '2003-01-03', -82, 100])
 
-        # Others are loaded in order of increasing end date
-        info4 = KernelInfo(["CK-RECONSTRUCTED", "CK", "File3.ck",
-                "2001-01-01", "2002-01-01", "2003-01-01", -82, 100])
+    spk2a = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
+                  '2002-01-01', '2005-01-01', '2003-01-03', 6, 100])
 
-        info5 = KernelInfo(["CK-RECONSTRUCTED", "CK", "File3.ck",
-                "2002-01-01", "2003-01-01", "2004-01-01", -82, 100])
+    spk2b = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
+                  '2002-01-01', '2005-01-01', '2003-01-03', 601, 100])
 
-        # Frames kernels
-        # Ordered by release date
-        info6 = KernelInfo(["FRAMES-V1", "FK", "File5a.fk",
-                "0000-01-01", "9999-12-31", "2004-01-01", 0, 100])
+    spk2c = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
+                  '2002-01-01', '2005-01-01', '2003-01-03', 602, 100])
 
-        info7 = KernelInfo(["FRAMES-V2", "FK", "File5b.fk",
-                "0000-01-01", "9999-12-31", "2005-01-01", 0, 100])
+    spk2d = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
+                  '2002-01-01', '2005-01-01', '2003-01-03', 699, 100])
 
-        # Planetary Constants
-        info8 = KernelInfo(["PCK", "PCK", "pck.pck",
-                "0000-01-01", "9999-12-31", "2003-01-03", 0, 50])
+    spk2e = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
+                  '2002-01-01', '2005-01-01', '2003-01-03', 699, 100])
 
-        # SP Kernels
-        # A low-priority predict kernel comes first
-        info9 = KernelInfo(["SPK_PREDICTED", "SPK", "predict.spk",
-                "2000-01-02", "2020-12-31", "2003-01-03", -82, 50])
+    # Another SPK, duplicated for three moons, alphabetically earlier
+    spk3 = KernelInfo(['SAT123','1',  'SPK', 'sat123.spk',
+                 '1950-01-01', '2050-01-02', '2003-01-03', 619, 100])
 
-        info10 = KernelInfo(["SPK-RECONSTRUCTED", "SPK", "recon.spk",
-                "2002-01-01", "2005-01-01", "2003-01-03", -82, 100])
+    spk3a = KernelInfo(['SAT123', '1', 'SPK', 'sat123.spk',
+                  '1950-01-01', '2050-01-02', '2003-01-03', 635, 100])
 
-        # These are duplicates and will be skipped
-        info10a = KernelInfo(["SPK-RECONSTRUCTED", "SPK", "recon.spk",
-                "2002-01-01", "2005-01-01", "2003-01-03", 6, 100])
+    spk3b = KernelInfo(['SAT123', '1', 'SPK', 'sat123.spk',
+                  '1950-01-01', '2050-01-02', '2003-01-03', 636, 100])
 
-        info10b = KernelInfo(["SPK-RECONSTRUCTED", "SPK", "recon.spk",
-                "2002-01-01", "2005-01-01", "2003-01-03", 601, 100])
+    random = [spk1, spk2, spk2a, spk2b, spk2c, spk2d, spk2e, spk3, spk3a, spk3b]
+    sorted = [spk1, spk3b, spk2e]
+    self.assertEqual(_sort_kernels(random), sorted)
 
-        info10c = KernelInfo(["SPK-RECONSTRUCTED", "SPK", "recon.spk",
-                "2002-01-01", "2005-01-01", "2003-01-03", 602, 100])
+    # Put them all together in a random order
+    random = [spk3, ck2, fk3, spk2d, ck0, spk2a, spk2b, fk1, fk2, spk2c, ck1,
+              lsk0, spk2e, sclk1, sclk0, spk1, fk4, spk2, spk3b, spk3a]
+    sorted = [lsk0, sclk0, sclk1, fk3, spk1, spk3b, spk2e, ck0, ck1, ck2]
+    self.assertEqual(_sort_kernels(random), sorted)
 
-        info10d = KernelInfo(["SPK-RECONSTRUCTED", "SPK", "recon.spk",
-                "2002-01-01", "2005-01-01", "2003-01-03", 699, 100])
+    ############################################################################
+    # _remove_overlaps()
+    ############################################################################
 
-        info10e = KernelInfo(["SPK-RECONSTRUCTED", "SPK", "recon.spk",
-                "2002-01-01", "2005-01-01", "2003-01-03", 699, 100])
+    start_time = '2000-01-01T00:00:00'
+    stop_time  = '2010-01-01T00:00:00'
 
-        # Another SPK, duplicated for three moons
-        info11 = KernelInfo(["SAT123", "SPK", "sat123.spk",
-                "1950-01-01", "2050-01-02", "2003-01-03", 619, 100])
+    info0 = KernelInfo(['SPK0', 'V1', 'SPK', '0000.spk',
+                  '1950-01-01', '2050-01-01', '2003-01-01', 6, 100])
 
-        info11a = KernelInfo(["SAT123", "SPK", "sat123.spk",
-                "1950-01-01", "2050-01-02", "2003-01-03", 635, 100])
+    info1 = KernelInfo(['SPK1', 'V1', 'SPK', '1111.spk',
+                  '1950-01-01', '2002-01-01', '2003-01-02', 6, 100])
 
-        info11b = KernelInfo(["SAT123", "SPK", "sat123.spk",
-                "1950-01-01", "2050-01-02", "2003-01-03", 636, 100])
+    info2 = KernelInfo(['SPK2', 'V1', 'SPK', '2222.spk',
+                  '1950-01-01', '2003-01-01', '2003-02-01', 6, 100])
 
-        # Put in random order
-        random_list = [info7, info8, info11, info10b, info10, info6, info10a,
-                       info2, info4, info10c, info9, info11a, info3, info5,
-                       info1, info11b, info0]
+    info3 = KernelInfo(['SPK3', 'V1', 'SPK', '3333.spk',
+                  '2002-07-01', '2004-01-01', '2003-03-01', 6, 100])
 
-        cleaned_list = [info0, info1, info2, info3, info4, info5, info6, info7,
-                        info8, info9, info10, info11]
+    info4 = KernelInfo(['SPK4', 'V1', 'SPK', '4444.spk',
+                  '1950-01-01', '2002-07-01', '2003-04-01', 6, 100])
 
-        self.assertEqual(cleaned_list, sort_kernels(random_list))
+    info5 = KernelInfo(['SPK5', 'V1', 'SPK', '5555.spk',
+                  '2004-01-01', '2050-01-01', '2003-05-01', 6, 100])
 
-        ################################
-        # remove_overlaps()
-        ################################
+    info6 = KernelInfo(['SPK6', 'V1', 'SPK', '6666.spk',
+                  '2004-01-01', '2004-07-01', '2003-06-01', 6, 100])
 
-        start_time = "2000-01-01T00:00:00"
-        stop_time  = "2010-01-01T00:00:00"
+    info7 = KernelInfo(['SPK7', 'V1', 'SPK', '7777.spk',
+                  '1950-01-01', '2050-01-01', '2003-07-01', 6, 100])
 
-        info0 = KernelInfo(["0", "SPK", "0000.spk",
-                "1950-01-01", "2050-01-01", "2003-01-01", 6, 100])
+    info8 = KernelInfo(['SPK8', 'V1', 'SPK', '8888.spk',
+                  '2004-07-01', '2050-01-01', '2003-08-01', 6, 100])
 
-        info1 = KernelInfo(["1", "SPK", "1111.spk",
-                "1950-01-01", "2002-01-01", "2003-01-02", 6, 100])
+    spks = [info0, info1, info2, info3, info4, info5, info6, info7, info8]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                                     [info7, info8])
 
-        info2 = KernelInfo(["2", "SPK", "2222.spk",
-                "1950-01-01", "2003-01-01", "2003-02-01", 6, 100])
+    spks = [info0, info1, info2, info3, info4, info5, info6, info7]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info7])
 
-        info3 = KernelInfo(["3", "SPK", "3333.spk",
-                "2002-07-01", "2004-01-01", "2003-03-01", 6, 100])
+    spks = [info0, info1, info2, info3, info4, info5, info6, info8]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info3, info4, info6, info8])
 
-        info4 = KernelInfo(["4", "SPK", "4444.spk",
-                "1950-01-01", "2002-07-01", "2003-04-01", 6, 100])
+    spks = [info0, info1, info2, info3, info4, info5, info6]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info3, info4, info5, info6])
 
-        info5 = KernelInfo(["5", "SPK", "5555.spk",
-                "2004-01-01", "2050-01-01", "2003-05-01", 6, 100])
+    spks = [info0, info1, info2, info3, info4, info5]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info3, info4, info5])
 
-        info6 = KernelInfo(["6", "SPK", "6666.spk",
-                "2004-01-01", "2004-07-01", "2003-06-01", 6, 100])
+    spks = [info0, info1, info2, info3, info4]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info0, info3, info4])
 
-        info7 = KernelInfo(["7", "SPK", "7777.spk",
-                "1950-01-01", "2050-01-01", "2003-07-01", 6, 100])
+    spks = [info0, info1, info2, info3]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info0, info2, info3])
 
-        info8 = KernelInfo(["8", "SPK", "8888.spk",
-                "2004-07-01", "2050-01-01", "2003-08-01", 6, 100])
+    spks = [info0, info1, info2]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info0, info2])
 
-        body6 = [info0, info1, info2, info3, info4, info5, info6, info7, info8]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info7, info8])
+    spks = [info0, info1]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info0, info1])
 
-        body6 = [info0, info1, info2, info3, info4, info5, info6, info7]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info7])
+    spks = [info0]
+    self.assertEqual(_remove_overlaps(spks, start_time, stop_time),
+                     [info0])
 
-        body6 = [info0, info1, info2, info3, info4, info5, info6, info8]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info3, info4, info6, info8])
+    ############################################################################
+    ############################################################################
+    # SPICE.db tests
+    ############################################################################
+    ############################################################################
 
-        body6 = [info0, info1, info2, info3, info4, info5, info6]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info3, info4, info5, info6])
-
-        body6 = [info0, info1, info2, info3, info4, info5]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info3, info4, info5])
-
-        body6 = [info0, info1, info2, info3, info4]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info0, info3, info4])
-
-        body6 = [info0, info1, info2, info3]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info0, info2, info3])
-
-        body6 = [info0, info1, info2]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info0, info2])
-
-        body6 = [info0, info1]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info0, info1])
-
-        body6 = [info0]
-        self.assertEqual(remove_overlaps(body6, start_time, stop_time),
-                                         [info0])
-
-        ################################
-        # select_kernels()
-        ################################
-
-        open_db("test_data/SPICE.db")
-
-        self.assertEqual(select_kernels("LSK")[0].kernel_name, "NAIF0009")
-
-        self.assertEqual(select_kernels("PCK")[0].kernel_name, "PCK00010")
-
-        self.assertEqual(select_kernels("CK", body=-82)[0].kernel_name,
-                         "CK-RECONSTRUCTED")
-
-        self.assertEqual(select_kernels("CK", body=-82,
-            time=("2008-01-01","2008-01-02"))[0].filespec,
-            "Cassini/CK-reconstructed/07362_08002ra.bc")
-
-        self.assertEqual(len(select_kernels("CK", body=-82,
-            time=("2008-01-01","2008-02-01"))), 7)
-
-        self.assertEqual(select_kernels("SPK", body=-82,
-            time=("2010-01-01","2010-01-02"))[-1].kernel_name,
-            "SPK-RECONSTRUCTED")
-
-        self.assertEqual(select_kernels("SPK", body=-82, asof="2009-12-01",
-            time=("2010-01-01","2010-01-02"))[-1].kernel_name,
-            "SPK-PREDICTED")
-
-        self.assertEqual(select_kernels("SPK", body=-82, name="%PREDICT%",
-            time=("2010-01-01","2010-01-02"))[0].kernel_name,
-            "SPK-PREDICTED")
-
-        self.assertEqual(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=601)[-1].kernel_name,
-            "SAT317")
-
-        self.assertEqual(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=601)[-2].kernel_name,
-            "SAT288")
-
-        self.assertEqual(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=601)[-3].kernel_name,
-            "SAT286")
-
-        self.assertEqual(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=(601, 603, 605, 607))[-1].kernel_name,
-            "SAT317")
-
-        self.assertEqual(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=(601, 603, 605, 607, 65056))[-1].kernel_name,
-            "SAT341")
-
-        self.assertEqual(len(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=(601, 603, 605, 607, 65056))), 51)
-
-        self.assertEqual(len(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=(601))), 12)
-
-        self.assertEqual(len(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=(601,602))), 24)
-
-        self.assertEqual(len(select_kernels("SPK", name="SAT%",
-            time=("2010-01-01","2010-01-02"),
-            body=(65056))), 3)
-
-        ################################
-        # furnish_cassini_kernels()
-        ################################
+    try:
+        get_spice_path()    # Find SPICE.db in the usual place
+        open_db()
 
         DEBUG = True        # Avoid attempting to load kernels
+        FILE_LIST = []
 
-        names1 = furnish_cassini_kernels("2009-01-01", "2009-02-01")
-        self.assertEqual(names1,
-            ['NAIF0009', 'CAS_ROCKS_V18',
-             'CPCK_ROCK_21JAN2011_MERGED', 'CPCK14OCT2011', 'PCK00010',
-             'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS',
-             'SPK-RECONSTRUCTED', 'DE421'])
+        ########################################################################
+        # _select_kernels()
+        ########################################################################
 
-        names2 = furnish_cassini_kernels("2009-01-01", "2009-02-01", "ISS")
-        self.assertEqual(names2,
-            ['NAIF0009',
-             'CAS00149',
-             'CAS_V40', 'CAS_STATUS_V04', 'CAS_ROCKS_V18', 'CAS_ISS_V10',
-             'CPCK_ROCK_21JAN2011_MERGED', 'CPCK14OCT2011', 'PCK00010',
-             'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS',
-             'SPK-RECONSTRUCTED', 'DE421', 'CK-RECONSTRUCTED'])
+        kernels = _select_kernels('LSK')
+        self.assertEqual(len(kernels), 1)
+
+        kernels = _select_kernels('LSK', asof='2014-03-09')
+        self.assertEqual(kernels[0].full_name, 'NAIF-LSK-0010')
+
+        kernels = _select_kernels('LSK', asof=(14*365.25*86400))
+        self.assertEqual(kernels[0].full_name, 'NAIF-LSK-0010')
+
+        kernels = _select_kernels('LSK', asof='2010-01-01')
+        self.assertEqual(kernels[0].full_name, 'NAIF-LSK-0009')
+
+        self.assertRaises(ValueError, _select_kernels, 'LSK', asof='1950')
+
+        self.assertRaises(ValueError, _select_kernels, 'LSK', after='3000')
+
+        kernels = _select_kernels('LSK', asof='1950-01-01', redo=True)
+        self.assertEqual(len(kernels), 1)
+        self.assertTrue(kernels[0].full_name.startswith('NAIF-LSK-'))
+
+        kernels = _select_kernels('LSK', after='3000-01-01', redo=True)
+        self.assertEqual(len(kernels), 1)
+        self.assertTrue(kernels[0].full_name.startswith('NAIF-LSK-'))
+
+        kernels = _select_kernels('PCK', name='NAIF%')
+        self.assertEqual(len(kernels), 1)
+        self.assertTrue(kernels[0].full_name.startswith('NAIF-PCK-'))
+
+        kernels = _select_kernels('PCK', body=2)
+        self.assertEqual(len(kernels), 1)           # Only NAIF PCKs have Venus
+        self.assertTrue(kernels[0].full_name.startswith('NAIF-PCK-'))
+
+        kernels = _select_kernels('PCK', body=2, asof='2014')
+        self.assertEqual(kernels[0].full_name, 'NAIF-PCK-00010')
+
+        kernels = _select_kernels('PCK', body=(1,2,3), asof='2014')
+        self.assertEqual(kernels[0].full_name, 'NAIF-PCK-00010')
+
+        # Cassini CK tests
+        kernels = _select_kernels('CK', body=-82, asof='2014',
+                                        time=('2008-01-01','2009-01-01'),
+                                        limit=False)
+        for kernel in kernels:
+            self.assertEqual(kernel.full_name, 'CAS-CK-RECONSTRUCTED-V01')
+
+        self.assertEqual(len(kernels), 75)
+        self.assertTrue(kernels[ 0].filespec.endswith('07362_08002ra.bc'))
+        self.assertTrue(kernels[-1].filespec.endswith('08242_08247rb.bc'))
+
+        # Cassini SPK tests
+        kernels = _select_kernels('SPK', body=-82, asof='2014',
+                                        time=('2008-01-01','2009-01-01'),
+                                        limit=False)
+        for kernel in kernels:
+            self.assertEqual(kernel.full_name, 'CAS-SPK-RECONSTRUCTED-V01')
+
+        self.assertEqual(len(kernels), 13)
+        self.assertTrue(kernels[ 0].filespec.endswith(
+                                        '080327R_SCPSE_07365_08045.bsp'))
+        self.assertTrue(kernels[-1].filespec.endswith(
+                                        '090225R_SCPSE_08350_09028.bsp'))
+
+        ########################################################################
+        # furnish_lsk(asof=None, after=None, redo=True)
+        ########################################################################
+
+        FILE_LIST = []
+        kernels = furnish_lsk(asof='2014')
+        self.assertEqual(kernels, ['NAIF-LSK-0010'])
+        self.assertEqual(len(FILE_LIST), 1)
+        self.assertTrue(FILE_LIST[0].endswith('/naif0010.tls'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        k1 = kernels
+        kernels = furnish_lsk(asof=(14*365.25*86400))
+        self.assertEqual(kernels, ['NAIF-LSK-0010'])
+        self.assertTrue(FILE_LIST[0].endswith('/naif0010.tls'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_lsk(asof='2010-01-01')
+        self.assertEqual(kernels, ['NAIF-LSK-0009'])
+        self.assertTrue(FILE_LIST[0].endswith('/naif0009.tls'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        self.assertRaises(ValueError, furnish_lsk, asof='1950', redo=False)
+
+        self.assertRaises(ValueError, furnish_lsk, after='3000', redo=False)
+
+        latest = furnish_lsk()
+
+        kernels = furnish_lsk(asof='1950-01-01', redo=True)
+        self.assertEqual(kernels, latest)
+
+        kernels = furnish_lsk(after='3000-01-01', redo=True)
+        self.assertEqual(kernels, latest)
+
+        ########################################################################
+        # furnish_pck(bodies, asof=None, after=None, redo=True)
+        ########################################################################
+
+        FILE_LIST = []
+        kernels = furnish_pck()
+        naif_pck_mars = -1
+        naif_pck = -1
+        for (i,kernel) in enumerate(kernels):
+            if kernel.startswith('NAIF-PCK-MARS-'): naif_pck_mars = i
+            if kernel.startswith('NAIF-PCK-00'): naif_pck = i
+
+        self.assertTrue(naif_pck >= 0)
+        self.assertTrue(naif_pck_mars >= 0)
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_pck(bodies=range(1,11) + range(199,1000,100) + [301] +
+                                     range(401,403) + range(501,517) +
+                                     range(601,654) + range(701,716) +
+                                     range(801,808) + range(901,906) +
+                                     [814,65035,65040,65041,65045,65048,65050],
+                              asof='2014-03-10')
+
+        self.assertEqual(kernels, ['NAIF-PCK-MARS-IAU2000-V0',
+                                   'CAS-FK-ROCKS-V18',
+                                   'CAS-PCK-ROCKS-2011-01-21',
+                                   'CAS-PCK-2014-02-19',
+                                   'NAIF-PCK-00010-EDIT-V01'])
+
+        self.assertTrue(FILE_LIST[0].endswith('mars_iau2000_v0.tpc'))
+        self.assertTrue(FILE_LIST[1].endswith('cas_rocks_v18.tf'))
+        self.assertTrue(FILE_LIST[2].endswith('cpck_rock_21Jan2011_merged.tpc'))
+        self.assertTrue(FILE_LIST[3].endswith('cpck19Feb2014.tpc'))
+        self.assertTrue(FILE_LIST[4].endswith('pck00010_edit_v01.tpc'))
+
+        ########################################################################
+        # furnish_spk(bodies, time=None, asof=None, after=None, redo=True)
+        ########################################################################
+
+        FILE_LIST = []
+        kernels = furnish_spk([1,2,3,4,5,6,7,8,9], asof='2014-03-10')
+        self.assertEqual(kernels, ['DE430'])
+        self.assertEqual(len(FILE_LIST), 1)
+        self.assertTrue(FILE_LIST[0].endswith('/de430.bsp'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([699], asof='2014-03-10')
+        self.assertEqual(kernels, ['SAT363', 'DE430'])
+        self.assertEqual(len(FILE_LIST), 2)
+        self.assertTrue(FILE_LIST[0].endswith('/sat363.bsp'))
+        self.assertTrue(FILE_LIST[1].endswith('/de430.bsp'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk(range(601,654), asof='2014-03-10')
+        self.assertEqual(kernels, ['SAT357', 'SAT360', 'SAT362', 'SAT363',
+                                   'DE430'])
+
+        # Only SAT357-rocks is loaded the first time, not SAT357
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+
+        for file in F1:
+            self.assertIn(file, FILE_LIST)
+
+        ########
+        self.assertRaises(ValueError, furnish_spk, [601], after='3000-01-01',
+                                                          redo=False)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([601], after='3000-01-01', redo=True)
+        self.assertEqual(kernels, ['SAT360', 'DE430'])
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([-82], asof='2014-03-10', time=None)
+        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-135]'])
+        self.assertEqual(len(FILE_LIST), 135)
+        self.assertTrue(FILE_LIST[ 0].endswith('/000331R_SK_LP0_V1P32.bsp'))
+        self.assertTrue(FILE_LIST[-1].endswith('/140219R_SCPSE_13352_14025.bsp'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([-82], asof='2014-03-10',
+                                     time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[114-117]'])
+        self.assertEqual(len(FILE_LIST), 4)
+        self.assertTrue(FILE_LIST[0].endswith('/120227R_SCPSE_11357_12016.bsp'))
+        self.assertTrue(FILE_LIST[1].endswith('/120312R_SCPSE_12016_12042.bsp'))
+        self.assertTrue(FILE_LIST[2].endswith('/120416R_SCPSE_12042_12077.bsp'))
+        self.assertTrue(FILE_LIST[3].endswith('/120426R_SCPSE_12077_12098.bsp'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([-82], asof='2012-04-01',
+                                     time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18',
+                                   'CAS-SPK-RECONSTRUCTED-V01[114,115]'])
+        self.assertEqual(len(FILE_LIST), 3)
+        self.assertTrue(FILE_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
+        self.assertTrue(FILE_LIST[1].endswith('120227R_SCPSE_11357_12016.bsp'))
+        self.assertTrue(FILE_LIST[2].endswith('120312R_SCPSE_12016_12042.bsp'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([-82], asof='2011-09-01',
+                                     time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18'])
+        self.assertEqual(len(FILE_LIST), 1)
+        self.assertTrue(FILE_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([-82], asof='2011-08-01',
+                                     time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2009-10-05'])
+        self.assertEqual(len(FILE_LIST), 1)
+        self.assertTrue(FILE_LIST[0].endswith('091005AP_SCPSE_09248_17265.bsp'))
+
+        self.assertRaises(ValueError, furnish_spk, [-82], after='3000-01-01',
+                                                          redo=False)
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_spk([-32,601,699], asof='2014-08-01',
+                              time=('1981-08-14', '1981-08-24'))
+        self.assertEqual(kernels, ['SAT360', 'SAT363', 'VG2-SPK-SAT337',
+                                   'DE430'])
+        self.assertEqual(len(FILE_LIST), 5)
+        self.assertTrue(FILE_LIST[-3].endswith('/sat337.bsp'))
+        self.assertTrue(FILE_LIST[-2].endswith('/vgr2_sat337.bsp'))
+        self.assertTrue(FILE_LIST[-1].endswith('/de430.bsp'))
+
+        self.assertRaises(ValueError, furnish_spk, [-82], after='3000-01-01',
+                                                          redo=False)
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1, time=('1981-08-14', '1981-08-24'))
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        sl9 = range(1000181,1000189) + [1000190,1000191] + \
+              range(1000193,1000204)
+        kernels = furnish_spk(sl9, asof='2014-08-01')
+        self.assertEqual(kernels, ['SL9-SPK-DE403'])
+        self.assertEqual(len(FILE_LIST), len(sl9) + 1)
+        self.assertTrue(FILE_LIST[-1].endswith('/de403.bsp'))
+        for file in FILE_LIST[:-1]:
+            self.assertTrue(file.endswith('_1992-1994.gst.DE403.bsp'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########################################################################
+        # furnish_inst(ids, inst=None, asof=None, after=None, redo=True)
+        ########################################################################
+
+        FILE_LIST = []
+        kernels = furnish_inst(-82, inst=[], asof='2014-03-10')
+        self.assertEqual(kernels, ['CAS-SCLK-00158', 'CAS-FK-V04'])
+        self.assertEqual(len(FILE_LIST), 3)
+        self.assertTrue(FILE_LIST[0].endswith('/cas00158.tsc'))
+        self.assertTrue(FILE_LIST[1].endswith('/cas_v40.tf'))
+        self.assertTrue(FILE_LIST[2].endswith('/cas_status_v04.tf'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_inst(-82, inst='ISS', asof='2014-03-10')
+        self.assertEqual(kernels, ['CAS-SCLK-00158', 'CAS-FK-V04',
+                                   'CAS-IK-ISS-V10'])
+        self.assertEqual(len(FILE_LIST), 4)
+        self.assertTrue(FILE_LIST[0].endswith('/cas00158.tsc'))
+        self.assertTrue(FILE_LIST[1].endswith('/cas_v40.tf'))
+        self.assertTrue(FILE_LIST[2].endswith('/cas_status_v04.tf'))
+        self.assertTrue(FILE_LIST[3].endswith('/cas_iss_v10.ti'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_inst(-82, inst=None, asof='2014-03-10')
+        for file in FILE_LIST[3:]:      # skip over one .tsc and two .tf files
+            self.assertTrue(file.endswith('.ti'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_inst(-31, inst='ISS', asof='2014-03-10')
+        self.assertEqual(kernels, ['VG1-SCLK-00019', 'VG1-FK-V02',
+                                   'VG1-IK-ISSNA-V02', 'VG1-IK-ISSWA-V01'])
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########################################################################
+        # furnish_ck(ids, time=None, asof=None, after=None, redo=True)
+        ########################################################################
+
+        FILE_LIST = []
+        kernels = furnish_ck(-82)
+        self.assertEqual(kernels, ['CAS-CK-JUP-V01[1-64]',
+                                   'CAS-CK-RECONSTRUCTED-V01[1-744]'])
+        self.assertEqual(len(FILE_LIST), 808)
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
+                                  asof='2014-01-01')
+        self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[69-75]'])
+        self.assertEqual(len(FILE_LIST), 7)
+        self.assertTrue(FILE_LIST[0].endswith('/05002_05007ra.bc'))
+        self.assertTrue(FILE_LIST[1].endswith('/05007_05012ra.bc'))
+        self.assertTrue(FILE_LIST[2].endswith('/05012_05017ra.bc'))
+        self.assertTrue(FILE_LIST[3].endswith('/05017_05022ra.bc'))
+        self.assertTrue(FILE_LIST[4].endswith('/05022_05027ra.bc'))
+        self.assertTrue(FILE_LIST[5].endswith('/04361_05002ra.bc'))
+        self.assertTrue(FILE_LIST[6].endswith('/05027_05032ra.bc'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1, time=('2005-01-01','2005-02-01'))
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
+                                  asof='2005-02-01')
+        self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[70-74]'])
+        self.assertEqual(len(FILE_LIST), 5)
+        self.assertTrue(FILE_LIST[0].endswith('/05002_05007ra.bc'))
+        self.assertTrue(FILE_LIST[1].endswith('/05007_05012ra.bc'))
+        self.assertTrue(FILE_LIST[2].endswith('/05012_05017ra.bc'))
+        self.assertTrue(FILE_LIST[3].endswith('/05017_05022ra.bc'))
+        self.assertTrue(FILE_LIST[4].endswith('/05022_05027ra.bc'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1, time=('2005-01-01','2005-02-01'))
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_ck(-32, asof='2014-00-01')
+        self.assertIn('VG2-CK-ISS-JUP-V01', kernels)
+        self.assertIn('VG2-CK-ISS-SAT-V01', kernels)
+        self.assertIn('VG2-CK-ISS-URA-V01', kernels)
+        self.assertIn('VG2-CK-ISS-NEP-V01', kernels)
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_ck(-98, asof='2014-00-01')
+        self.assertEqual(kernels, ['NH-CK-JUP-V01'])
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########################################################################
+        # DEBUG mode off...
+        ########################################################################
 
         DEBUG = False
 
-        ################################
-        # furnish_solar_system()
-        ################################
+        ########################################################################
+        # furnish_solar_system(start_time, stop_time, asof=None)
+        # unload_by_name(names)
+        # unload_by_type(types=None)
+        ########################################################################
 
-        DEBUG = True        # Avoid attempting to load kernels
+        kernels = furnish_solar_system('2000-01-01', '2020-01-01',
+                                       asof='2014-03-10')
 
-        names1 = furnish_solar_system("1980-01-01", "2010-01-01")
-        self.assertEqual(names1,
-            ['NAIF0009',
-             'CAS_ROCKS_V18', 'CPCK_ROCK_21JAN2011_MERGED',
-             'CPCK14OCT2011', 'PCK00010',
-             'MAR085',
-             'JUP204', 'JUP230', 'JUP230-ROCKS', 'JUP282',
-             'SAT317', 'SAT341', 'SAT342', 'SAT342-ROCKS',
-             'URA083', 'URA091', 'URA095',
-             'NEP077', 'NEP081', 'NEP085',
-             'PLU021',
-             'DE421'])
+        self.assertIn('NAIF-LSK-0010', kernels[0:1])
+        self.assertIn('NAIF-PCK-MARS-IAU2000-V0', kernels[1:6])
+        self.assertIn('NAIF-PCK-00010-EDIT-V01', kernels[1:6])
+        self.assertIn('CAS-FK-ROCKS-V18', kernels[1:6])
+        self.assertIn('CAS-PCK-ROCKS-2011-01-21', kernels[1:6])
+        self.assertIn('CAS-PCK-2014-02-19', kernels[1:6])
+        self.assertIn('MAR097', kernels[6:-1])
+        self.assertIn('JUP300', kernels[6:-1])
+        self.assertIn('JUP310', kernels[6:-1])
+        self.assertIn('SAT357', kernels[6:-1])
+        self.assertIn('SAT360', kernels[6:-1])
+        self.assertIn('SAT362', kernels[6:-1])
+        self.assertIn('SAT363', kernels[6:-1])
+        self.assertIn('URA091', kernels[6:-1])
+        self.assertIn('URA111', kernels[6:-1])
+        self.assertIn('URA112', kernels[6:-1])
+        self.assertIn('NEP077', kernels[6:-1])
+        self.assertIn('NEP081', kernels[6:-1])
+        self.assertIn('NEP086', kernels[6:-1])
+        self.assertIn('NEP087', kernels[6:-1])
+        self.assertIn('PLU043', kernels[6:-1])
+        self.assertIn('DE430', kernels[-1:])
+
+        self.assertEqual(len(kernels), 22)
+
+        self.assertTrue(kernels.index('JUP300') < kernels.index('JUP310'))
+        self.assertTrue(kernels.index('SAT357') < kernels.index('SAT360'))
+        self.assertTrue(kernels.index('SAT360') < kernels.index('SAT362'))
+        self.assertTrue(kernels.index('SAT362') < kernels.index('SAT363'))
+        self.assertTrue(kernels.index('URA091') < kernels.index('URA111'))
+        self.assertTrue(kernels.index('URA111') < kernels.index('URA112'))
+        self.assertTrue(kernels.index('NEP077') < kernels.index('NEP081'))
+        self.assertTrue(kernels.index('NEP081') < kernels.index('NEP087'))
+        self.assertTrue(kernels.index('NEP087') < kernels.index('NEP086'))
+        # NEP087 < NEP086 because the latter has the later creation date
+
+        self.assertEqual(len(FURNISHED_FILES['LSK']), 1)
+        self.assertEqual(len(FURNISHED_FILES['PCK']), 5)
+        self.assertEqual(len(FURNISHED_FILES['SPK']), 16)
+        self.assertEqual(len(FURNISHED_NAMES['LSK']), 1)
+        self.assertEqual(len(FURNISHED_NAMES['PCK']), 5)
+        self.assertEqual(len(FURNISHED_NAMES['SPK']), 16)
+
+        unload_by_name(kernels[:6])
+        self.assertEqual(len(FURNISHED_FILES['LSK']), 0)
+        self.assertEqual(len(FURNISHED_FILES['PCK']), 0)
+        self.assertEqual(len(FURNISHED_FILES['SPK']), 16)
+        self.assertEqual(len(FURNISHED_NAMES['LSK']), 0)
+        self.assertEqual(len(FURNISHED_NAMES['PCK']), 0)
+        self.assertEqual(len(FURNISHED_NAMES['SPK']), 16)
+
+        unload_by_type('SPK')
+        self.assertEqual(len(FURNISHED_FILES['SPK']), 0)
+        self.assertEqual(len(FURNISHED_NAMES['SPK']), 0)
+
+        ########
+        kernels1 = furnish_solar_system(asof='2014-03-10')
+        self.assertEqual(kernels, kernels1)
+
+        ########################################################################
+        # furnish_cassini_kernels(start_time, stop_time, instrument=None,
+        #                         asof=None)
+        # unload_by_name(names)
+        # unload_by_type(types=None)
+        # furnished_names(types=None)
+        ########################################################################
+
+        unload_by_type()
+        kernels = furnish_cassini_kernels('2010-01-01', '2010-04-01',
+                                          instrument='ISS', asof='2014-03-10')
+
+        self.assertIn('NAIF-LSK-0010', kernels[0:1])
+        self.assertIn('CAS-SCLK-00158', kernels[1:2])
+        self.assertIn('CAS-FK-V04', kernels[2:4])
+        self.assertIn('CAS-IK-ISS-V10', kernels[2:4])
+        self.assertIn('CAS-FK-ROCKS-V18', kernels[4:8])
+        self.assertIn('CAS-PCK-ROCKS-2011-01-21', kernels[4:8])
+        self.assertIn('CAS-PCK-2014-02-19', kernels[4:8])
+        self.assertIn('NAIF-PCK-00010-EDIT-V01', kernels[4:8])
+        self.assertIn('SAT357', kernels[8:12])
+        self.assertIn('SAT360', kernels[8:12])
+        self.assertIn('SAT362', kernels[8:12])
+        self.assertIn('SAT363', kernels[8:12])
+        self.assertIn('CAS-SPK-RECONSTRUCTED-V01[90-94]', kernels[12:13])
+        self.assertIn('DE430', kernels[13:14])
+        self.assertIn('CAS-CK-RECONSTRUCTED-V01[438-456]', kernels[-1:])
+
+        self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
+        self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00158'])
+        self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
+        self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10'])
+
+        self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
+        self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
+        self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
+        self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
+        self.assertEqual(len(FURNISHED_FILES['PCK']), 4)
+
+        self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('SAT363', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('CAS-SPK-RECONSTRUCTED-V01', FURNISHED_NAMES['SPK'][4:5])
+        self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
+        self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
+                         range(90,95))
+        self.assertEqual(len(FURNISHED_FILES['SPK']), 5 + 5)
+
+        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
+        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+                         range(438,457))
+        self.assertEqual(len(FURNISHED_FILES['CK']), 457 - 438)
+
+        ########
+        kernels1 = furnish_cassini_kernels('2010-03-01', '2010-06-01',
+                                          instrument='VIMS', asof='2014-03-10')
+
+        self.assertIn('NAIF-LSK-0010', kernels1[0:1])
+        self.assertIn('CAS-SCLK-00158', kernels1[1:2])
+        self.assertIn('CAS-FK-V04', kernels1[2:4])
+        self.assertIn('CAS-IK-VIMS-V06', kernels1[2:4])
+        self.assertIn('CAS-FK-ROCKS-V18', kernels1[4:8])
+        self.assertIn('CAS-PCK-ROCKS-2011-01-21', kernels1[4:8])
+        self.assertIn('CAS-PCK-2014-02-19', kernels1[4:8])
+        self.assertIn('NAIF-PCK-00010-EDIT-V01', kernels1[4:8])
+        self.assertIn('SAT357', kernels1[8:12])
+        self.assertIn('SAT360', kernels1[8:12])
+        self.assertIn('SAT362', kernels1[8:12])
+        self.assertIn('SAT363', kernels1[8:12])
+        self.assertIn('CAS-SPK-RECONSTRUCTED-V01[93-97]', kernels1[12:13])
+        self.assertIn('DE430', kernels1[13:14])
+        self.assertIn('CAS-CK-RECONSTRUCTED-V01[450-468]', kernels1[-1:])
+
+        self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
+        self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00158'])
+        self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
+        self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10',
+                                                 'CAS-IK-VIMS-V06'])
+
+        self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
+        self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
+        self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
+        self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
+        self.assertEqual(len(FURNISHED_FILES['PCK']), 4)
+
+        self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('SAT363', FURNISHED_NAMES['SPK'][:4])
+        self.assertIn('CAS-SPK-RECONSTRUCTED-V01', FURNISHED_NAMES['SPK'][4:5])
+        self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
+        self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
+                         range(90,98))
+        self.assertEqual(len(FURNISHED_FILES['SPK']), 8 + 5)
+
+        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
+        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+                         range(438,469))
+        self.assertEqual(len(FURNISHED_FILES['CK']), 469 - 438)
+        # SPK and CK file_no lists get merged
+
+        ########
+        self.assertEqual(furnished_names('CK'),
+                         ['CAS-CK-RECONSTRUCTED-V01[438-468]'])
+
+        unload_by_name('CAS-CK-RECONSTRUCTED-V01[440]')
+
+        self.assertEqual(furnished_names('CK'),
+                         ['CAS-CK-RECONSTRUCTED-V01[438,439,441-468]'])
+        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+                         [438,439] + range(441,469))
+
+        unload_by_name('CAS-CK-RECONSTRUCTED-V01[1-438]')
+
+        self.assertEqual(furnished_names('CK'),
+                         ['CAS-CK-RECONSTRUCTED-V01[439,441-468]'])
+        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+                         [439] + range(441,469))
+
+        unload_by_name('CAS-CK-RECONSTRUCTED-V01[439,442-465]')
+
+        self.assertEqual(furnished_names('CK'),
+                         ['CAS-CK-RECONSTRUCTED-V01[441,466-468]'])
+        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+                         [441] + range(466,469))
+
+        unload_by_name('CAS-CK-RECONSTRUCTED-V01[441-468]')
+
+        self.assertEqual(furnished_names('CK'), [])
+        self.assertNotIn('CAS-CK-RECONSTRUCTED-V01', FURNISHED_FILENOS)
+
+        self.assertEqual(furnished_names('SPK'),
+                         ['SAT357', 'SAT360', 'SAT362', 'SAT363',
+                          'CAS-SPK-RECONSTRUCTED-V01[90-97]', 'DE430'])
+
+        self.assertEqual(furnished_names(['IK','FK','LSK','SCLK']),
+                         ['CAS-IK-ISS-V10', 'CAS-IK-VIMS-V06',
+                          'CAS-FK-V04', 'NAIF-LSK-0010', 'CAS-SCLK-00158'])
+
+    ############################################################################
+    # Clean up...
+    ############################################################################
+
+    finally:
+        unload_by_type()
 
         DEBUG = False
-
         close_db()
 
 ################################################################################
-# Perform unit testing if executed from the command line
+# Execute from command line...
 ################################################################################
-
 if __name__ == '__main__':
-    unittest.main()
-
+    unittest.main(verbosity=2)
 ################################################################################
+
