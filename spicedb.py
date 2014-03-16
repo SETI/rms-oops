@@ -32,6 +32,7 @@ import unittest
 
 import julian
 import interval
+import textkernel
 import cspice
 
 import sqlite_db as db
@@ -895,14 +896,17 @@ def select_spk(bodies, time=None, asof=None, after=None, redo=True):
     # Return the sorted list
     return kernel_list
 
-def select_inst(ids, inst=None, asof=None, after=None, redo=True):
+def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
     """Return a sorted list of IKs, FKs and SCLKs for spacecrafts/instruments.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
 
-        inst        one or more instrument names or abbreviations. None to load
-                    every instrument kernel.
+        inst        one or more instrument names or abbreviations. None to
+                    return  every instrument kernel.
+
+        types       one or more kernel types ("IK", "FK", "SCLK") to return.
+                    None to return every kernel type.
 
         asof        an optional earlier date for which values should be
                     returned. Wherever possible, the kernels selected will have
@@ -925,30 +929,38 @@ def select_inst(ids, inst=None, asof=None, after=None, redo=True):
     if type(ids) == int: ids = [ids]
     if type(inst) == str: inst = [inst]
 
+    if types is None:
+        types = ["SCLK", "FK", "IK"]
+    elif type(types) == str:
+        types = [types]
+
     # For each spacecraft...
     kernel_list = []
     for id in ids:
 
         # Select the spacecraft clock kernels
-        kernel_list += _query_kernels("SCLK", body=id,
-                                               asof=asof, after=after, redo=redo,
-                                               limit=True)
+        if "SCLK" in types:
+            kernel_list += _query_kernels("SCLK", body=id,
+                                          asof=asof, after=after, redo=redo,
+                                          limit=True)
 
         # Select the frames kernels
-        kernel_list += _query_kernels("FK", body=id,
-                                             asof=asof, after=after, redo=redo,
-                                             limit=False)
+        if "FK" in types:
+            kernel_list += _query_kernels("FK", body=id,
+                                          asof=asof, after=after, redo=redo,
+                                          limit=False)
 
         # Select the instrument kernels
-        if inst is None:
-            kernel_list += _query_kernels("IK", body=id,
-                                           asof=asof, after=after, redo=redo,
-                                           limit=False)
-        else:
-          for name in inst:
-            kernel_list += _query_kernels("IK", name='%'+name+'%', body=id,
-                                           asof=asof, after=after, redo=redo,
-                                           limit=False)
+        if "IK" in types:
+            if inst is None:
+                kernel_list += _query_kernels("IK", body=id,
+                                              asof=asof, after=after, redo=redo,
+                                              limit=False)
+            else:
+              for name in inst:
+                kernel_list += _query_kernels("IK", name='%'+name+'%', body=id,
+                                              asof=asof, after=after, redo=redo,
+                                              limit=False)
 
     # Sort the kernels and return
     return _sort_kernels(kernel_list)
@@ -1015,6 +1027,33 @@ def select_by_name(names, time=None):
 
     # Sort the kernels
     return _sort_kernels(kernel_list)
+
+################################################################################
+# Public API for returning text kernels as dictionaries
+################################################################################
+
+def as_dict(kernel_list):
+    """Return a dictionary containing the information in  text kernels.
+
+    Binary kernels are ignored.
+    """
+
+    spice_path = get_spice_path()
+
+    clear_dict = True       # clear dictionary on the first pass
+    for kernel in kernel_list:
+
+        # Check for a text kernel
+        ext = os.path.splitext(kernel.filespec)[1].lower()
+        if ext[0:2] != ".t": continue
+
+        filespec = os.path.join(spice_path, kernel.filespec)
+        result = textkernel.from_file(filespec, clear=clear_dict)
+
+        # On later passes, don't clear the dictionary
+        clear_dict = False
+
+    return result
 
 ################################################################################
 # Public API for furnishing kernels
