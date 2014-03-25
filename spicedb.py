@@ -903,7 +903,7 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
         ids         one or more negative SPICE body IDs for spacecrafts.
 
         inst        one or more instrument names or abbreviations. None to
-                    return  every instrument kernel.
+                    return kernels for every instrument.
 
         types       one or more kernel types ("IK", "FK", "SCLK") to return.
                     None to return every kernel type.
@@ -918,7 +918,7 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
                     considered. The date is expressed as a string in ISO format
                     or as a number of seconds TAI elapsed since January 1, 2000.
 
-        redo        True to relax the 'asof' and 'after" constraints if no
+        redo        True to relax the 'asof' and 'after' constraints if no
                     matching results are found; False to raise a ValueError
                     instead.
 
@@ -1272,14 +1272,18 @@ def furnish_spk(bodies, time=None, asof=None, after=None, redo=True, fast=True):
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
 
-def furnish_inst(ids, inst=None, asof=None, after=None, redo=True, fast=True):
+def furnish_inst(ids, inst=None, types=None, asof=None, after=None, redo=True,
+                      fast=True):
     """Furnish IKs, FKs and SCLKs for one or more spacecrafts and instruments.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
 
-        inst        one or more instrument names or abbreviations. None to load
-                    every instrument kernel.
+        inst        one or more instrument names or abbreviations. None to
+                    furnish kernels for every instrument.
+
+        types       one or more kernel types ("IK", "FK", "SCLK") to furnish.
+                    None to return every kernel type.
 
         asof        an optional earlier date for which values should be
                     returned. Wherever possible, the kernels selected will have
@@ -1295,15 +1299,11 @@ def furnish_inst(ids, inst=None, asof=None, after=None, redo=True, fast=True):
                     matching results are found; False to raise a ValueError
                     instead.
 
-        fast        True to skip the loading kernels that have already been
-                    loaded. False to unload and load them again, thereby raising
-                    their priority.
-
     Return:         A list of kernel names in load order.
     """
 
     # Search database
-    kernel_list = select_inst(ids, inst, asof, after, redo)
+    kernel_list = select_inst(ids, inst, types, asof, after, redo)
 
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
