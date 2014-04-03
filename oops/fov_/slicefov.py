@@ -1,5 +1,5 @@
 ################################################################################
-# oops/fov/slicefov.py: SliceFOV subclass of FOV
+# oops/fov_/slicefov.py: SliceFOV subclass of FOV
 ################################################################################
 
 import numpy as np

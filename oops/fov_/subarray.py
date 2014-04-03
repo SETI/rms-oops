@@ -1,5 +1,5 @@
 ################################################################################
-# oops/fov/subarray.py: Subarray subclass of FOV
+# oops/fov_/subarray.py: Subarray subclass of FOV
 ################################################################################
 
 import numpy as np

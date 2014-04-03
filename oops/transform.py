@@ -289,9 +289,11 @@ class Transform(object):
                          self.reference, self.frame, self.origin)
 
     def rotate_transform(self, arg):
-        """Applies this transform to another, as a left-multiply. The result is
-        a single transform that converts coordinates in the reference frame of
-        the argument transform into the frame of this transform."""
+        """Apply this transform to another, as a left-multiply.
+        
+        The result is a single transform that converts coordinates in the
+        reference frame of the argument transform into the frame of this
+        transform."""
 
         # Two tranforms
         #   P1 = M P0; V1 = M (V0 - omega x P0)
@@ -320,11 +322,12 @@ class Transform(object):
                          self.frame, arg.reference, origin)
 
     def unrotate_transform(self, arg):
-        """Applies the inverse of one transform to another transform, as a
-        left-multiply. The result is a single transform that applies the
-        convert coordinates in the parent frame of the argument transform into
-        the parent frame of this transform. I.e., if arg rotates A to B and
-        self rotates C to B, then the result rotates A to C.
+        """Apply the inverse of this transform to another, as a left-multiply.
+        
+        The result is a single transform that applies the convert coordinates
+        in the parent frame of the argument transform into the parent frame of
+        this transform. I.e., if arg rotates A to B and self rotates C to B,
+        then the result rotates A to C.
         """
 
         return self.invert().rotate_transform(arg)

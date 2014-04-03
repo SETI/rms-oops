@@ -440,6 +440,8 @@ class Test_Metronome(unittest.TestCase):
         unmasked = ~mask
         self.assertTrue((time0[unmasked] >= cadence.time[0]).all())
         self.assertTrue((time1[unmasked] >= cadence.time[0]).all())
+# These are not actually true with Metronome because we're happy to keep
+# on computing time beyond the end of the time limits on both ends
 #        self.assertTrue((time0[unmasked] <= cadence.time[1]).all())
 #        self.assertTrue((time1[unmasked] <= cadence.time[1]).all())
 #        self.assertTrue((time0[unmasked] <= time[unmasked]).all())

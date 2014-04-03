@@ -43,8 +43,7 @@ class ReshapedCadence(Cadence):
     @staticmethod
     def _reshape_tstep(tstep, oldshape, oldstride, oldrank,
                               newshape, newstride, newrank):
-        """Private, static method to perform translations of tstep between the
-        new and the old shapes of the cadence."""
+        """Perform translations between new and old shapes of the cadence."""
 
         if oldrank == 1:
             tstep = Scalar.as_scalar(tstep)
@@ -94,16 +93,14 @@ class ReshapedCadence(Cadence):
         return returned_tstep
 
     def _old_tstep_from_new(self, tstep):
-        """Private method to convert tsteps in the new stride to tsteps in the
-        original stride."""
+        """Convert tsteps in the new stride to the original stride."""
 
         return ReshapedCadence._reshape_tstep(tstep,
                                    self.shape, self.stride, self.rank,
                                    self.oldshape, self.oldstride, self.oldrank)
 
     def _new_tstep_from_old(self, tstep):
-        """Private method to convert tsteps in the original stride to tsteps in
-        the new stride."""
+        """Convert tsteps in the original stride the new stride."""
 
         return ReshapedCadence._reshape_tstep(tstep,
                                    self.oldshape, self.oldstride, self.oldrank,

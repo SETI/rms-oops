@@ -547,46 +547,46 @@ class Test_SpicePath(unittest.TestCase):
         times = np.arange(0., 86401., 8640.)
 
         for frame in ["J2000", "IAU_EARTH"]:
-          Path.reset_registry()
-          Frame.reset_registry()
-
-          ignore = SpiceFrame("IAU_EARTH", "J2000")
-          earth  = SpicePath("EARTH", "SSB", frame)
-          pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
-
-          pluto = AliasPath("PLUTO", frame)
-          earth_event = AliasPath("EARTH", frame).event_at_time(times)
-          (pluto_event,earth_event) = pluto.photon_to_event(earth_event)
-
-          self.assertTrue(abs(earth_event.arr_lt + pluto_event.dep_lt).max() < 1.e-12)
-          self.assertTrue(abs(earth_event.wrt_ssb().arr -
-                              pluto_event.wrt_ssb().dep).max() < 1.e-5)
-
-          # Erase the wrt_ssb() cache and check again
-          pluto_event.filled_ssb = None
-          self.assertTrue(abs(earth_event.wrt_ssb().arr -
-                              pluto_event.wrt_ssb().dep).max() < 1.e-5)
-
-          pluto_rel = Edelta.sub_events(pluto_event, earth_event)
-          self.assertTrue(abs(pluto_rel.pos.norm() -
-                              pluto_event.dep.norm()).max() < 1.e-5)
-          self.assertTrue(abs(pluto_rel.pos + pluto_rel.dep).max() < 1.e-5)
-
-          pluto_rel_ssb = pluto_rel.wrt_ssb()
-          pluto_event_ssb = pluto_event.wrt_ssb()
-          self.assertTrue(abs(pluto_event_ssb.time - pluto_rel_ssb.time).max() < 1e-2)
-          self.assertTrue(abs(pluto_event_ssb.pos - pluto_rel_ssb.pos).max() < 1e-2)
-          self.assertTrue(abs(pluto_event_ssb.vel - pluto_rel_ssb.vel).max() < 1e-2)
-          self.assertTrue(abs(pluto_event_ssb.dep - pluto_rel_ssb.dep).max() < 1e-2)
-
-          for i in range(len(times)):
-            (state, lt) = cspice.spkez(9, times[i], frame, "CN", 399)
-            self.assertTrue(abs(pluto_rel.time[i] + lt) < 1.e-6)
-            self.assertTrue(abs(pluto_event.time[i] + lt
-                                          - earth_event.time[i]) < 1.e-10)
-            self.assertTrue(abs(earth_event.arr[i] + state[0:3]) < 1.e-5)
-            self.assertTrue(abs(pluto_rel.pos[i]   - state[0:3]) < 1.e-5)
-            self.assertTrue(abs(pluto_rel.vel[i]   - state[3:6]) < 1.e-3)
+            Path.reset_registry()
+            Frame.reset_registry()
+            
+            ignore = SpiceFrame("IAU_EARTH", "J2000")
+            earth  = SpicePath("EARTH", "SSB", frame)
+            pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
+            
+            pluto = AliasPath("PLUTO", frame)
+            earth_event = AliasPath("EARTH", frame).event_at_time(times)
+            (pluto_event,earth_event) = pluto.photon_to_event(earth_event)
+            
+            self.assertTrue(abs(earth_event.arr_lt + pluto_event.dep_lt).max() < 1.e-12)
+            self.assertTrue(abs(earth_event.wrt_ssb().arr -
+                                pluto_event.wrt_ssb().dep).max() < 1.e-5)
+            
+            # Erase the wrt_ssb() cache and check again
+            pluto_event.filled_ssb = None
+            self.assertTrue(abs(earth_event.wrt_ssb().arr -
+                                pluto_event.wrt_ssb().dep).max() < 1.e-5)
+            
+            pluto_rel = Edelta.sub_events(pluto_event, earth_event)
+            self.assertTrue(abs(pluto_rel.pos.norm() -
+                                pluto_event.dep.norm()).max() < 1.e-5)
+            self.assertTrue(abs(pluto_rel.pos + pluto_rel.dep).max() < 1.e-5)
+            
+            pluto_rel_ssb = pluto_rel.wrt_ssb()
+            pluto_event_ssb = pluto_event.wrt_ssb()
+            self.assertTrue(abs(pluto_event_ssb.time - pluto_rel_ssb.time).max() < 1e-2)
+            self.assertTrue(abs(pluto_event_ssb.pos - pluto_rel_ssb.pos).max() < 1e-2)
+            self.assertTrue(abs(pluto_event_ssb.vel - pluto_rel_ssb.vel).max() < 1e-2)
+            self.assertTrue(abs(pluto_event_ssb.dep - pluto_rel_ssb.dep).max() < 1e-2)
+            
+            for i in range(len(times)):
+                (state, lt) = cspice.spkez(9, times[i], frame, "CN", 399)
+                self.assertTrue(abs(pluto_rel.time[i] + lt) < 1.e-6)
+                self.assertTrue(abs(pluto_event.time[i] + lt
+                                              - earth_event.time[i]) < 1.e-10)
+                self.assertTrue(abs(earth_event.arr[i] + state[0:3]) < 1.e-5)
+                self.assertTrue(abs(pluto_rel.pos[i]   - state[0:3]) < 1.e-5)
+                self.assertTrue(abs(pluto_rel.vel[i]   - state[3:6]) < 1.e-3)
 
         ####################################
         # Fixed and then rotating frames, reverse calculation
@@ -594,39 +594,39 @@ class Test_SpicePath(unittest.TestCase):
         times = np.arange(0., 86401., 8640.)
 
         for frame in ["J2000", "IAU_EARTH"]:
-          Path.reset_registry()
-          Frame.reset_registry()
-
-          ignore = SpiceFrame("IAU_EARTH", "J2000")
-          earth  = SpicePath("EARTH", "SSB", frame)
-          pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
-
-          pluto = AliasPath("PLUTO", frame)
-          earth_event = AliasPath("EARTH", frame).event_at_time(times)
-          (pluto_event,earth_event) = pluto.photon_from_event(earth_event)
-
-          self.assertTrue(abs(earth_event.dep_lt + pluto_event.arr_lt).max() < 1.e-12)
-          self.assertTrue(abs(earth_event.wrt_ssb().dep -
-                              pluto_event.wrt_ssb().arr).max() < 1.e-5)
-
-          # Erase the wrt_ssb() cache and check again
-          pluto_event.filled_ssb = None
-          self.assertTrue(abs(earth_event.wrt_ssb().dep -
-                              pluto_event.wrt_ssb().arr).max() < 1e-5)
-
-          pluto_rel = Edelta.sub_events(pluto_event, earth_event)
-          self.assertTrue(abs(pluto_rel.pos.norm() -
-                              pluto_event.arr.norm()).max() < 1.e-5)
-          self.assertTrue(abs(pluto_rel.pos - pluto_rel.arr).max() < 1.e-5)
-
-          for i in range(len(times)):
-            (state, lt) = cspice.spkez(9, times[i], frame, "XCN", 399)
-            self.assertTrue(abs(pluto_rel.time[i] - lt) < 1.e-6)
-            self.assertTrue(abs(earth_event.time[i] + lt
-                                          - pluto_event.time[i]) < 1.e-10)
-            self.assertTrue(abs(earth_event.dep[i] - state[0:3]) < 1.e-5)
-            self.assertTrue(abs(pluto_rel.pos[i]   - state[0:3]) < 1.e-5)
-            self.assertTrue(abs(pluto_rel.vel[i]   - state[3:6]) < 1.e-3)
+            Path.reset_registry()
+            Frame.reset_registry()
+            
+            ignore = SpiceFrame("IAU_EARTH", "J2000")
+            earth  = SpicePath("EARTH", "SSB", frame)
+            pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
+            
+            pluto = AliasPath("PLUTO", frame)
+            earth_event = AliasPath("EARTH", frame).event_at_time(times)
+            (pluto_event,earth_event) = pluto.photon_from_event(earth_event)
+            
+            self.assertTrue(abs(earth_event.dep_lt + pluto_event.arr_lt).max() < 1.e-12)
+            self.assertTrue(abs(earth_event.wrt_ssb().dep -
+                                pluto_event.wrt_ssb().arr).max() < 1.e-5)
+            
+            # Erase the wrt_ssb() cache and check again
+            pluto_event.filled_ssb = None
+            self.assertTrue(abs(earth_event.wrt_ssb().dep -
+                                pluto_event.wrt_ssb().arr).max() < 1e-5)
+            
+            pluto_rel = Edelta.sub_events(pluto_event, earth_event)
+            self.assertTrue(abs(pluto_rel.pos.norm() -
+                                pluto_event.arr.norm()).max() < 1.e-5)
+            self.assertTrue(abs(pluto_rel.pos - pluto_rel.arr).max() < 1.e-5)
+            
+            for i in range(len(times)):
+                (state, lt) = cspice.spkez(9, times[i], frame, "XCN", 399)
+                self.assertTrue(abs(pluto_rel.time[i] - lt) < 1.e-6)
+                self.assertTrue(abs(earth_event.time[i] + lt
+                                              - pluto_event.time[i]) < 1.e-10)
+                self.assertTrue(abs(earth_event.dep[i] - state[0:3]) < 1.e-5)
+                self.assertTrue(abs(pluto_rel.pos[i]   - state[0:3]) < 1.e-5)
+                self.assertTrue(abs(pluto_rel.vel[i]   - state[3:6]) < 1.e-3)
 
         ####################################
         # More linked frames...

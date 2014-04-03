@@ -1,10 +1,9 @@
 ################################################################################
-# oops/frame/frame.py: Abstract class Frame and its required subclasses
+# oops/frame_/frame.py: Abstract class Frame and its required subclasses
 ################################################################################
 
 import numpy as np
 import scipy.interpolate as interp
-
 from polymath import *
 
 from oops.config     import QUICK, LOGGING
@@ -27,8 +26,10 @@ class Frame(object):
     ############################################################################
 
     def __init__(self):
-        """Constructor for a Frame object. Every frame must have these
-        attributes:
+        """Constructor for a Frame object.
+        
+        Every frame must have these attributes:
+        
             frame_id    the string ID of this frame.
             wayframe    the wayframe that uniquely identifies this frame. For
                         registered frames, this is the Wayframe with the same
@@ -754,8 +755,8 @@ class QuickFrame(Frame):
     ####################################
 
     def extend(self, interval):
-        """Modifies the given QuickFrame if necessary to accommodate the given
-        time interval."""
+        """Modify the given QuickFrame to accommodate the given time interval.
+        """
 
         # If the interval fits inside already, we're done
         if interval[0] >= self.t0 and interval[1] <= self.t1: return

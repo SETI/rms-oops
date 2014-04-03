@@ -1,5 +1,5 @@
 ################################################################################
-# oops/frame/ringframe.py: Subclass RingFrame of class Frame
+# oops/frame_/ringframe.py: Subclass RingFrame of class Frame
 ################################################################################
 
 import numpy as np
@@ -45,6 +45,7 @@ class RingFrame(Frame):
         self.epoch = epoch
         self.retrograde = retrograde
         self.shape = frame.shape
+        self.keys = set()
 
         # The frame might not be exactly inertial due to polar precession, but
         # it is good enough

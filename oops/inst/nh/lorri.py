@@ -5,11 +5,11 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 import julian
 import pyfits
 import pdstable
 import oops
-import oops.registry as registry
 import solar
 
 from oops.inst.nh.nh_ import NewHorizons
@@ -47,8 +47,10 @@ def from_file(filespec, use_fits_geom=False, **parameters):
     fov = LORRI.fovs[binning_mode]
     target_name = nh_file[0].header["SPCCBTNM"]
     target_body = None
-    if registry.body_exists(target_name):
-        target_body = registry.body_lookup(target_name)
+    try:
+        target_body = oops.Body.lookup(target_name)
+    except:
+        pass
     
     # Make sure the SPICE kernels are loaded
     NewHorizons.load_cks( tstart, tstart + texp)
@@ -63,7 +65,7 @@ def from_file(filespec, use_fits_geom=False, **parameters):
         vecy = -nh_file[0].header["SPCSSCY"]
         vecz = -nh_file[0].header["SPCSSCZ"]
         path_id = "NH_LORRI_PATH_"+str(tstart) # The path_id has to be unique to this observation
-        sc_path = oops.path.FixedPath(oops.Vector3([vecx, vecy, vecz]), "SUN", "J2000", path_id)
+        sc_path = oops.path.FixedPath(Vector3([vecx, vecy, vecz]), "SUN", "J2000", path_id)
 
         # Next create a frame based on the boresight
         ra = nh_file[0].header["SPCBRRA"]
@@ -121,8 +123,8 @@ def from_file(filespec, use_fits_geom=False, **parameters):
     
         # If necessary, get the solar range from the target name
         if solar_range is None and target_body is not None:
-            target_sun_path = oops.registry.connect_paths(target_body.path_id,
-                                                          "SUN")
+            target = oops.Path.as_path(target_body.path.path_id)
+            target_sun_path = target.wrt("SUN")
             # Paths of the relevant bodies need to be defined in advance!
     
             sun_event = target_sun_path.event_at_time(tdb_midtime)
@@ -246,7 +248,7 @@ class LORRI(object):
             vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
             
             # Display directions: [u,v] = [right,down]
-            full_fov = oops.fov.Flat((-uscale,-vscale), (samples,lines))
+            full_fov = oops.fov.FlatFOV((-uscale,-vscale), (samples,lines))
 
             # Load the dictionary
             LORRI.fovs[binning_mode] = full_fov
@@ -358,32 +360,32 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertEqual(snapshot.time, snapshot_fits.time)
         self.assertEqual(snapshot.texp, snapshot_fits.texp)
 
-        meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (0,0), limit=(1,1))
+        meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (0,0), limit=(0,0))
         bp = oops.Backplane(snapshot, meshgrid=meshgrid)
         bp_fits = oops.Backplane(snapshot_fits, meshgrid=meshgrid)
-        ra =          bp.right_ascension().vals.astype('float')
-        ra_fits =     bp_fits.right_ascension().vals.astype('float')
-        dec =         bp.declination().vals.astype('float')
-        dec_fits =    bp_fits.declination().vals.astype('float')
-        europa =      bp.where_intercepted("europa").vals.astype('float')
-        europa_fits = bp_fits.where_intercepted("europa").vals.astype('float')
+        ra =          bp.right_ascension().vals
+        ra_fits =     bp_fits.right_ascension().vals
+        dec =         bp.declination().vals
+        dec_fits =    bp_fits.declination().vals
+        europa =      bp.where_intercepted("europa")
+        europa_fits = bp_fits.where_intercepted("europa")
 
         self.assertAlmostEqual(ra, ra_fits, places=3)
         self.assertAlmostEqual(dec, dec_fits, places=3)
         self.assertEqual(europa, 0.0)
         self.assertEqual(europa_fits, 0.0)
 
-        meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (606,440), limit=(607,441))
+        meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (606,440), limit=(606,440))
         orig_fov = snapshot_fits.fov
-        snapshot_fits.fov = oops.fov.Offset(orig_fov, (-44,-16)) # Adjust as CSPICE kernels change
+        snapshot_fits.fov = oops.fov.OffsetFOV(orig_fov, (-44,-16)) # Adjust as CSPICE kernels change
         bp = oops.Backplane(snapshot, meshgrid=meshgrid)
         bp_fits = oops.Backplane(snapshot_fits, meshgrid=meshgrid)
-        long =        bp.longitude("europa").vals.astype('float')
-        long_fits =   bp_fits.longitude("europa").vals.astype('float')
-        lat =         bp.latitude("europa").vals.astype('float')
-        lat_fits =    bp_fits.latitude("europa").vals.astype('float')
-        europa =      bp.where_intercepted("europa").vals.astype('float')
-        europa_fits = bp_fits.where_intercepted("europa").vals.astype('float')
+        long =        bp.longitude("europa").vals
+        long_fits =   bp_fits.longitude("europa").vals
+        lat =         bp.latitude("europa").vals
+        lat_fits =    bp_fits.latitude("europa").vals
+        europa =      bp.where_intercepted("europa")
+        europa_fits = bp_fits.where_intercepted("europa")
         
         self.assertAlmostEqual(long, long_fits, places=-1)
         self.assertAlmostEqual(lat, lat_fits, places=0)

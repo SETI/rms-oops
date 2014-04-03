@@ -394,8 +394,7 @@ class Observation(object):
         return uv
 
     def inventory(self, bodies, expand=0., as_list=False, as_flags=False):
-        """Returns a list of the body names that fall somewhere inside the field
-        of view of the observation, and are not obscured by another.
+        """Return the body names that appear unobscured inside the FOV.
 
         Input:
             bodies      a list of the names of the body objects to be included

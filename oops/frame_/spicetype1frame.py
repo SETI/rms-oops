@@ -3,9 +3,9 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 import cspice
-from polymath import *
 
 from oops.frame_.frame import Frame
 from oops.config       import QUICK

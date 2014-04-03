@@ -3,8 +3,8 @@
 ################################################################################
 
 import numpy as np
-
 from polymath import *
+
 import gravity
 
 from oops.surface_.surface import Surface

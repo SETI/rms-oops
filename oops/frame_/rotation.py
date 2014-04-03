@@ -65,8 +65,9 @@ class Rotation(Frame, Fittable):
     ########################################
 
     def set_params(params):
-        """Redefines the Fittable object, using this set of parameters. In this
-        case, params is the set of angles of rotation.
+        """Redefine the Fittable object, using this set of parameters.
+        
+        In this case, params is the set of angles of rotation.
 
         Input:
             params      a list, tuple or 1-D Numpy array of floating-point
@@ -90,7 +91,7 @@ class Rotation(Frame, Fittable):
                                    self.reference, self.origin)
 
     def get_params(self):
-        """Returns the current set of parameters defining this fittable object.
+        """Return the current set of parameters defining this fittable object.
 
         Return:         a Numpy 1-D array of floating-point numbers containing
                         the parameter values defining this object.

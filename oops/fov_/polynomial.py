@@ -1,5 +1,5 @@
 ################################################################################
-# oops/fov/polynomial.py: Polynomial subclass of FOV
+# oops/fov_/polynomial.py: Polynomial subclass of FOV
 ################################################################################
 
 import numpy as np

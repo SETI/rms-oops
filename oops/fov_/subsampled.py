@@ -1,5 +1,5 @@
 ################################################################################
-# oops/fov/subsampled.py: Subsampled subclass of FOV
+# oops/fov_/subsampled.py: Subsampled subclass of FOV
 ################################################################################
 
 import numpy as np
@@ -10,7 +10,9 @@ from oops.fov_.fov import FOV
 class Subsampled(FOV):
 
     def __init__(self, fov, rescale):
-        """Returns a new FOV object in which the pixel size has been modified.
+        """Constructor for a Subsampled FOV.
+        
+        Returns a new FOV object in which the pixel size has been modified.
         The origin and the optic axis are unchanged.
 
         Inputs:

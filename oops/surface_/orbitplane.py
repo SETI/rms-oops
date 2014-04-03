@@ -313,7 +313,7 @@ class OrbitPlane(Surface):
             return anom + (2*self.ae) * anom.sin()
 
     def to_mean_anomaly(self, lon):
-        """he mean anomaly given an orbital longitude.
+        """The mean anomaly given an orbital longitude.
 
         Accurate to first order in eccentricity. Iteration is performed using
         Newton's method to ensure that this function is an exact inverse of

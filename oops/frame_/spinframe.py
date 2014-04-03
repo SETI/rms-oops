@@ -1,5 +1,5 @@
 ################################################################################
-# oops/frame/spinframe.py: Subclass SpinFrame of class Frame
+# oops/frame_/spinframe.py: Subclass SpinFrame of class Frame
 ################################################################################
 
 import numpy as np

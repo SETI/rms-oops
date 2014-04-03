@@ -2,7 +2,7 @@
 # oops/path_/kepler.py: Subclass Kepler of class Path.
 ################################################################################
 
-##### 3/29 reorganization not complete -- MRS
+##### 3/29/14 reorganization not complete -- MRS
 
 import numpy as np
 import gravity

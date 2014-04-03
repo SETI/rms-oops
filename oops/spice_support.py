@@ -20,7 +20,7 @@ PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
 LSK_LOADED = False
 
 def load_leap_seconds():
-    """Loads the most recent leap seconds kernel if it was not already loaded.
+    """Load the most recent leap seconds kernel if it was not already loaded.
     """
 
     global LSK_LOADED
@@ -37,7 +37,7 @@ def load_leap_seconds():
 ########################################
 
 def body_id_and_name(arg):
-    """Inteprets the argument as the name or ID of a SPICE body or SPICE body
+    """Intepret the argument as the name or ID of a SPICE body or SPICE body.
     """
 
     # First see if the path is already registered
@@ -74,8 +74,7 @@ def body_id_and_name(arg):
 ########################################
 
 def frame_id_and_name(arg):
-    """Inteprets the argument as the name or ID of a SPICE frame or SPICE body,
-    and returns a tuple (spice_id, spice_name)."""
+    """Return the spice_id and spice_name of a name/ID/SPICE frame."""
 
     # Interpret the SPICE frame ID as an int
     if type(arg) == type(0):

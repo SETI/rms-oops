@@ -103,12 +103,12 @@ class Cmatrix(Frame):
         cmatrix_values[...,2,1] =  sinr * cosd
         cmatrix_values[...,2,2] =  sind
 
-        return Cmatrix(Matrix3(cmatrix,mask), reference, id)
+        return Cmatrix(Matrix3(cmatrix_values,mask), reference, id)
 
     ########################################
 
     def transform_at_time(self, time, quick=False):
-        """The Transform into the this Frame at a Scalar of times."""
+        """Transform into this Frame at a Scalar of times."""
 
         return self.transform
 
