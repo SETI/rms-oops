@@ -27,17 +27,10 @@ def load_leap_seconds():
 
     if LSK_LOADED: return
 
-    # Query for the most recent LSK
-    spicedb.open_db()
-    lsk = spicedb.select_lsk()
-    spicedb.close_db()
-
     # Furnish the LSK to the SPICE toolkit
-    spicedb.furnish_kernels(lsk)
-
-    # Initialize the Julian toolkit
-    julian.load_from_kernel(os.path.join(spicedb.get_spice_path(),
-                                         lsk[0].filespec))
+    spicedb.open_db()
+    lsk = spicedb.furnish_lsk(fast=True)
+    spicedb.close_db()
 
     LSK_LOADED = True
 
