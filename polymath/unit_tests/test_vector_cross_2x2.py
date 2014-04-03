@@ -24,7 +24,7 @@ class Test_Vector_cross_2x2(unittest.TestCase):
     cross2 = omega.unit().dot(vec.unit()).arccos().sin()
 
     # This calculation has a small probability of a sizable error
-    diff = (cross1.abs() - cross2).abs()
+    diff = abs(abs(cross1) - cross2)
     self.assertTrue(np.all(diff.values < 1.e-10))
 
     # Test units

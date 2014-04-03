@@ -75,8 +75,32 @@ class Test_Qube_derivs(unittest.TestCase):
 
     self.assertRaises(ValueError, a.delete_deriv, 't')
     self.assertRaises(ValueError, a.delete_derivs)
-    self.assertRaises(ValueError, a.insert_derivs, {'y': Scalar((7,8,9))})
-    self.assertRaises(ValueError, a.insert_deriv, 'y', Scalar((7,8,9)))
+
+    self.assertRaises(ValueError, a.insert_derivs, {'a': Scalar((7,8,9)),
+                                                    'b': Scalar((8,9,0)),
+                                                    'c': Scalar((8,9,0)),
+                                                    'd': Scalar((8,9,0)),
+                                                    'e': Scalar((8,9,0)),
+                                                    'f': Scalar((8,9,0)),
+                                                    'g': Scalar((8,9,0)),
+                                                    't': Scalar((8,9,0))}) #!!
+    self.assertEqual(len(a.derivs), 2)
+
+    a.insert_derivs({'a': Scalar((7,8,9)),
+                     'b': Scalar((8,9,0)),
+                     'c': Scalar((8,9,0)),
+                     'd': Scalar((8,9,0)),
+                     'e': Scalar((8,9,0)),
+                     'f': Scalar((8,9,0)),
+                     'g': Scalar((8,9,0))})
+
+    self.assertEqual(len(a.derivs), 9)
+
+    a.insert_deriv('h', Scalar((7,8,9)))
+
+    self.assertEqual(len(a.derivs), 10)
+
+    self.assertRaises(ValueError, a.insert_derivs, {'a': Scalar((7,8,9))})
 
 ############################################
 if __name__ == '__main__':

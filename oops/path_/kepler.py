@@ -1,18 +1,18 @@
 ################################################################################
-# oops/path/kepler.py: Subclass Kepler of class Path.
+# oops/path_/kepler.py: Subclass Kepler of class Path.
 ################################################################################
 
+##### 3/29 reorganization not complete -- MRS
+
 import numpy as np
-from polymath import *
 import gravity
+from polymath import *
 
-from oops.path_.path import Path, Waypoint
-from oops.config     import PATH_PHOTONS
-from oops.event      import Event
-from oops.fittable   import Fittable
-
-import oops.registry  as Registry
-import oops.constants as constants
+from oops.event        import Event
+from oops.path_.path   import Path
+from oops.frame_.frame import Frame
+from oops.fittable     import Fittable
+import oops.constants  as constants
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
 MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians)
@@ -61,7 +61,8 @@ class Kepler(Path, Fittable):
                         already accounted for. If None (the default), then the
                         path is defined relative to the central planet in that
                         planet's ring_frame.
-            id          the name under which to register the path.
+            id          the name under which to register the path; None to leave
+                        the path unregistered.
         """
 
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
@@ -72,16 +73,15 @@ class Kepler(Path, Fittable):
         self.cache = {}
 
         self.planet = body
-        self.origin_id = body.path_id
+        self.origin = body.path
+        self.gravity = body.gravity
 
-        self.gravity = self.planet.gravity
-
-        observer = None     # FOR NOW; ALTERNATIVE DOES NOT WORK
+        observer = None     # FOR NOW; THE ALTERNATIVE DOES NOT WORK
         if observer is None:
             self.observer = None
             self.center = self.planet.path
-            self.origin_id = self.planet.path_id
-            self.frame_id = body.ring_frame_id
+            self.origin = self.planet.path
+            self.frame  = body.ring_frame
             self.to_j2000 = Matrix3.UNIT
         else:
             self.observer = Registry.as_path(observer)

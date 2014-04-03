@@ -66,6 +66,10 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertTrue(masked.max().mask)
     self.assertTrue(type(masked.max()), Scalar)
 
+    # Denominators
+    a = Scalar([1.,2.], drank=1)
+    self.assertRaises(ValueError, a.max)
+
 ################################################################################
 # Execute from command line...
 ################################################################################

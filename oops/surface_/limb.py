@@ -8,11 +8,11 @@ from polymath import *
 from oops.surface_.surface   import Surface
 from oops.surface_.spheroid  import Spheroid
 from oops.surface_.ellipsoid import Ellipsoid
+from oops.path_.path         import Path
+from oops.frame_.frame       import Frame
+
 from oops.config             import SURFACE_PHOTONS, LOGGING
-
-import oops.registry as registry
-
-from oops.constants import *
+from oops.constants          import *
 
 class Limb(Surface):
     """The Limb surface is defined as the locus of points where a surface normal
@@ -57,8 +57,8 @@ class Limb(Surface):
 
         assert ground.COORDINATE_TYPE == "spherical"
         self.ground = ground
-        self.origin_id = ground.origin_id
-        self.frame_id  = ground.frame_id
+        self.origin = ground.origin
+        self.frame  = ground.frame
 
         # Used if SPEEDUP = True to speed up repeated calls to
         #   self.ground.intercept_normal_to_iterated()
@@ -99,8 +99,6 @@ class Limb(Surface):
                         and the observer position, represented as a MatrixN
                         objects with item shape [1,3].
         """
-
-        pos = Vector3.as_standard(pos)
 
         # Re-use the most recent guess if the shape is unchanged
         if pos.shape == self.ground_shape:
@@ -155,9 +153,9 @@ class Limb(Surface):
                         [3,3].
         """
 
-        lon = Scalar.as_standard(coords[0])
-        lat = Scalar.as_standard(coords[1])
-        z = Scalar.as_standard(coords[2])
+        lon = coords[0]
+        lat = coords[1]
+        z = coords[2]
 
         groundtrack = self.ground.vector3_from_coords((lon,lat), derivs=derivs)
         normal = self.ground.normal(groundtrack, derivs=derivs).unit()
@@ -205,8 +203,8 @@ class Limb(Surface):
                                       " does not implement derivatives")
 
         # Convert to standard units
-        obs = Vector3.as_standard(obs)
-        los = Vector3.as_standard(los)
+        obs = Vector3.as_vector3(obs)
+        los = Vector3.as_vector3(los)
 
         # Re-use the most recent guess if the shape is unchanged
         if obs.shape == self.ground_shape and los.shape == self.ground_shape:
@@ -390,7 +388,8 @@ class Test_Limb(unittest.TestCase):
 
         SURFACE_PHOTONS.dlt_precision = save_dlt_precision
 
-        registry.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

@@ -27,38 +27,41 @@ class Vector3(Vector):
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     @staticmethod
-    def as_vector3(arg):
-        if type(arg) == Vector3: return arg
+    def as_vector3(arg, recursive=True):
+        if type(arg) == Vector3:
+            if recursive: return arg
+            return arg.without_derivs()
 
         if isinstance(arg, Qube):
 
             # Collapse a 1x3 or 3x1 Matrix down to a Vector
-            if arg.numer == (1,3) or arg.numer == (3,1):
-                return arg.reshape_items((3,), (Vector3, Qube.MATRIX_CLASS))
+            if arg.numer in ((1,3), (3,1)):
+                return arg.flatten_numer(Vector3, recursive)
+
+            # For any suitable Qube, move numerator items to the denominator
+            if arg.rank > 1 and arg.numer[0] == 3:
+                arg = arg.split_items(1, Vector3)
 
         return Vector3(arg)
 
     @staticmethod
-    def from_scalars(x,y,z):
-        """A Vector3 constructed by combining given x, y and z components.
+    def from_scalars(x, y, z, recursive=True):
+        """A Vector3 constructed by combining three scalars.
 
-        Derivates are ignored. Denominator items are disallowed.
+        Inputs:
+            args        any number of Scalars or arguments that can be casted
+                        to Scalars. They need not have the same shape, but it
+                        must be possible to cast them to the same shape. A value
+                        of None is converted to a zero-valued Scalar that
+                        matches the denominator shape of the other arguments.
+
+            recursive   True to include all the derivatives. The returned object
+                        will have derivatives representing the union of all the
+                        derivatives found amongst the scalars. Default is True.
         """
 
-        x = Scalar.as_scalar(x)
-        y = Scalar.as_scalar(y) #.confirm_units(x.units)
-        z = Scalar.as_scalar(z) #.confirm_units(x.units)
-
-        if x.denom or y.denom or z.denom:
-            raise NotImplementedError('denominator axes are disallowed')
-
-        (xx, yy, zz) = np.broadcast_arrays(x.values, y.values, z.values)
-
-        new_values = np.empty(xx.shape + (3,), dtype=xx.dtype)
-        new_values[...,0] = xx
-        new_values[...,1] = yy
-        new_values[...,2] = zz
-        return Vector3(new_values, x.mask | y.mask | z.mask, x.units)
+        return Vector.from_scalars(x, y, z, recursive=recursive,
+                                            classes=[Vector3])
 
     ### Most operations are inherited from Vector. These include:
     #     def extract_scalar(self, axis, recursive=True)
@@ -108,17 +111,23 @@ class Vector3(Vector):
         z = self.dot(zaxis)
         perp = self - z * zaxis
         r = perp.norm()
-        perp = perp.mask_where_eq(Vector3.ZEROS, Vector3.XAXIS, remask=False)
+        perp = perp.mask_where_eq(Vector3.ZERO, Vector3.XAXIS, remask=False)
         xaxis = perp.unit()
         yaxis = zaxis.cross(xaxis)
         return r * (angle.cos() * xaxis + angle.sin() * yaxis) + z * zaxis
 
 # A set of useful class constants
 Vector3.ZERO   = Vector3((0.,0.,0.)).as_readonly()
+Vector3.ONES   = Vector3((1.,1.,1.)).as_readonly()
 Vector3.XAXIS  = Vector3((1.,0.,0.)).as_readonly()
 Vector3.YAXIS  = Vector3((0.,1.,0.)).as_readonly()
 Vector3.ZAXIS  = Vector3((0.,0.,1.)).as_readonly()
 Vector3.MASKED = Vector3((1,1,1), True).as_readonly()
+
+Vector3.ZERO_POS_VEL = Vector3((0.,0.,0.)).as_readonly()
+Vector3.ZERO_POS_VEL.insert_deriv('t', Vector3.ZERO)
+
+Vector3.IDENTITY = Vector3([(1,0,0),(0,1,0),(0,0,1)], drank=1).as_readonly()
 
 ################################################################################
 # Once defined, register with Qube class

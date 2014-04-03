@@ -1214,14 +1214,16 @@ class Test_Scalar_ops(unittest.TestCase):
     a = Scalar(9, derivs={'t':Scalar(2)})
     b = a % (3,4,5)
     self.assertTrue(hasattr(a, 'd_dt'))
-    self.assertFalse(hasattr(b, 'd_dt'))
+    self.assertTrue(hasattr(b, 'd_dt'))
+    self.assertTrue(abs(b.d_dt - a.d_dt/(3,4,5)).max() < 1.e-12)
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
 
     a = Scalar(9, derivs={'t':Scalar(2)}).as_readonly()
     b = a % (3,4,5)
     self.assertTrue(hasattr(a, 'd_dt'))
-    self.assertFalse(hasattr(b, 'd_dt'))
+    self.assertTrue(hasattr(b, 'd_dt'))
+    self.assertTrue(abs(b.d_dt - a.d_dt/(3,4,5)).max() < 1.e-12)
     self.assertTrue(a.readonly)
     self.assertTrue(b.readonly)
 

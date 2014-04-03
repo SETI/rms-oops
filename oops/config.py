@@ -2,7 +2,6 @@
 # oops/config.py: General configuration parameters
 ################################################################################
 
-
 ################################################################################
 # QuickPath and QuickFrame default parameters
 #
@@ -20,7 +19,7 @@ class QUICK(object):
   dictionary = {
     "use_quickpaths": True,
     "path_time_step": 0.05,     # time step in seconds.
-    "path_time_extension": 0.,  # secs by which to extend interval at each end.
+    "path_time_extension": 5.,  # secs by which to extend interval at each end.
     "path_self_check": None,    # fractional precision for self-testing.
     "path_extra_steps": 4,      # number of extra time steps at each end.
     "quickpath_cache": 4,       # maximum number of non-overlapping quickpaths
@@ -28,7 +27,7 @@ class QUICK(object):
 
     "use_quickframes": True,
     "frame_time_step": 0.5,     # time interval in seconds.
-    "frame_time_extension": 0., # secs by which to extend interval at each end.
+    "frame_time_extension": 5., # secs by which to extend interval at each end.
     "frame_self_check": None,   # fractional precision for self-testing.
     "frame_extra_steps": 4,     # number of extra time steps at each end.
     "quickframe_cache": 4       # maximum number of non-overlapping quickframes

@@ -5,16 +5,16 @@
 import spicedb, cspice, julian
 import os
 
-import oops.registry as registry
+from oops.path_.path import Path
 
 # Maintain dictionaries that translates names in SPICE toolkit into their
 # corresponding names in the Frame and Path registries.
 
-FRAME_TRANSLATION = {"J2000":"J2000", cspice.namfrm("J2000"):"J2000"}
-PATH_TRANSLATION = {"SSB":"SSB", 0:"SSB", "SOLAR SYSTEM BARYCENTER":"SSB"}
+FRAME_TRANSLATION = {'J2000':'J2000', cspice.namfrm('J2000'):'J2000'}
+PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
 
 ################################################################################
-# Useful SPICe support utilities
+# Useful SPICE support utilities
 ################################################################################
 
 LSK_LOADED = False
@@ -29,7 +29,7 @@ def load_leap_seconds():
 
     # Query for the most recent LSK
     spicedb.open_db()
-    lsk = spicedb.select_kernels("LSK")
+    lsk = spicedb.select_lsk()
     spicedb.close_db()
 
     # Furnish the LSK to the SPICE toolkit
@@ -49,30 +49,34 @@ def body_id_and_name(arg):
 
     # First see if the path is already registered
     try:
-        path = registry.as_path(PATH_TRANSLATION[arg])
-        if path.path_id == "SSB": return (0, "SSB")
+        path = Path.as_primary_path(PATH_TRANSLATION[arg])
+        if path.path_id == 'SSB': return (0, 'SSB')
 
-        if type(path).__name__ != "SpicePath":
-            raise TypeError("a SpicePath cannot originate from a " +
+        if type(path).__name__ != 'SpicePath':
+            raise TypeError('a SpicePath cannot originate from a ' +
                             type(path).__name__)
 
         return (path.spice_target_id, path.spice_target_name)
     except KeyError: pass
 
     # Interpret the argument given as a string
-    if type(arg) == type(""):
+    if type(arg) == str:
         id = cspice.bodn2c(arg)     # raises LookupError if not found
         name = cspice.bodc2n(id)
         return (id, name)
 
     # Otherwise, interpret the argument given as an integer
-    try:
-        name = cspice.bodc2n(arg)
-    except LookupError:
-        # In rare cases, a body has no name; use the ID instead
-        name = str(arg)
+    elif type(arg) == int:
+        try:
+            name = cspice.bodc2n(arg)
+        except LookupError:
+            # In rare cases, a body has no name; use the ID instead
+            name = str(arg)
 
-    return (arg, name)
+        return (arg, name)
+
+    else:
+        raise LookupError('invalid SPICE body: %s' % str(arg))
 
 ########################################
 
@@ -85,12 +89,12 @@ def frame_id_and_name(arg):
         try:
             name = cspice.frmnam(arg)   # does not raise an error; I may fix
         except ValueError:
-            name = ""
+            name = ''
         except KeyError:
-            name = ""
+            name = ''
 
         # If the int is recognized as a frame ID, return it
-        if name != "": return (arg, name)
+        if name != '': return (arg, name)
 
         # Otherwise, perhaps it is a body ID
         return cspice.cidfrm(arg)       # raises LookupError if not found
@@ -120,8 +124,8 @@ def frame_id_and_name(arg):
 def initialize():
     global FRAME_TRANSLATION, PATH_TRANSLATION
 
-    FRAME_TRANSLATION = {"J2000":"J2000", cspice.namfrm("J2000"):"J2000"}
-    PATH_TRANSLATION = {"SSB":"SSB", 0:"SSB", "SOLAR SYSTEM BARYCENTER":"SSB"}
+    FRAME_TRANSLATION = {'J2000':'J2000', cspice.namfrm('J2000'):'J2000'}
+    PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
 
 ################################################################################
 # UNIT TESTS

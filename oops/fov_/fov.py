@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-
 from polymath import *
 
 class FOV(object):
@@ -33,8 +32,8 @@ class FOV(object):
     the focal plane of the instrument.
 
     The class also allows for the possibility that the field of view has
-    additional dependencies on wavelength, etc. Most functions support a tuple
-    of arguments called extras to contain these additional parameters.
+    additional dependencies on wavelength, etc. Additional arguments and keyword
+    values can be passed through these methods and into the subclass methods.
 
     Every FOV should have the following attributes:
         uv_los      a Pair defining the (u,v) coordinates of the nominal line of
@@ -63,30 +62,26 @@ class FOV(object):
 
         pass
 
-    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
-        """Returns a Pair of (x,y) spatial coordinates in units of radians,
-        given a Pair of coordinates (u,v).
+    def xy_from_uv(self, uv_pair, derivs=False, **keywords):
+        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
+
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
 
         Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
-        shape [2,2].
+        as keyword arguments.
         """
 
         pass
 
-    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
-        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
-        coordinates in radians.
+    def uv_from_xy(self, xy_pair, derivs=False, **keywords):
+        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
+
+        If derivs is True, then any derivatives in (x,y) get propagated into
+        the (u,v) returned.
 
         Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
-        shape [2,2].
+        as keyword arguments.
         """
 
         pass
@@ -95,161 +90,99 @@ class FOV(object):
 # Derived methods, to override only if necessary
 ########################################################
 
-    def area_factor(self, uv_pair, extras=()):
-        """Returns the relative area of a pixel or other sensor at (u,v)
-        coordinates, compared to a nominal pixel area.
+    def area_factor(self, uv_pair, **keywords):
+        """The relative area of a pixel or other sensor at (u,v).
+
+        Results are scaled to the nominal pixel area.
 
         Additional parameters that might affect the transform can be included
-        in the extras argument.
+        as keyword arguments.
         """
 
-        # Get the partial derivatives
-        xy = self.xy_from_uv(uv_pair, extras, derivs=True)
+        # Prepare for the partial derivatives
+        uv_pair = Pair.as_pair(uv_pair).clone(False)
+        uv_pair.insert_deriv('uv', Pair.IDENTITY, override=True)
+        xy_pair = self.xy_from_uv(uv_pair, derivs=True, **keywords)
 
-        dx_du = xy.d_duv.vals[...,0,0]
-        dx_dv = xy.d_duv.vals[...,0,1]
-        dy_du = xy.d_duv.vals[...,1,0]
-        dy_dv = xy.d_duv.vals[...,1,1]
+        dx_du = xy_pair.d_duv.vals[...,0,0]
+        dx_dv = xy_pair.d_duv.vals[...,0,1]
+        dy_du = xy_pair.d_duv.vals[...,1,0]
+        dy_dv = xy_pair.d_duv.vals[...,1,1]
 
         # Construct the cross products
         return Scalar(np.abs(dx_du * dy_dv - dx_dv * dy_du) / self.uv_area,
-                      xy.mask)
+                      xy_pair.mask)
 
     # This models the field of view as a pinhole camera
     def los_from_xy(self, xy_pair, derivs=False):
-        """Returns a unit Vector3 object pointing in the direction of the line
-        of sight of the specified coordinate Pair (x,y). Note that this is the
-        direction _opposite_ to that in which the photon is moving.
+        """Return the unit line-of-sight vector for camera coordinates (x,y).
 
-        If derivs is True, then the returned Vector3 has a subfield "d_dxy",
-        which contains the derivatives as a MatrixN with item shape [3,2].
+        Note that this is vector points in the direction _opposite_ to the path
+        of arriving photons.
+
+        If derivs is True, then derivatives in (x,y) get propagated forwared
+        into the components of the line-of-sight vector.
         """
 
         # Convert to Pair if necessary
-        xy_pair = Pair.as_pair(xy_pair)
+        xy_pair = Pair.as_pair(xy_pair, derivs)
 
-        # Fill in the numpy ndarray of vector components
-        vals = np.ones(xy_pair.shape + [3])
-        vals[...,0:2] = xy_pair.vals
-
-        # Convert to a unit Vector3
-        los = Vector3(vals, xy_pair.mask).unit()
-
-        # Attach the derivatives if necessary
-        if derivs:
-            # los_x = x / sqrt(1 + x**2 + y**2)
-            # los_y = y / sqrt(1 + x**2 + y**2)
-            # los_z = 1 / sqrt(1 + x**2 + y**2)
-            #
-            # dlos/d(x,y) = ([ 1+y**2,    -xy],
-            #                [    -xy, 1+x**2],
-            #                [     -x,     -y]) * (1 + x**2 + y**2)**(-3/2)
-
-            x = xy_pair.vals[...,0]
-            y = xy_pair.vals[...,1]
-
-            dlos_dxy_vals = np.empty(los.shape + [3,2])
-            dlos_dxy_vals[...,0,0] = 1 + y**2
-            dlos_dxy_vals[...,0,1] = -x * y
-            dlos_dxy_vals[...,1,0] = dlos_dxy_vals[...,0,1]
-            dlos_dxy_vals[...,1,1] = 1 + x**2
-            dlos_dxy_vals[...,2,:] = -xy_pair.vals[...,:]
-
-            normalize = (dlos_dxy_vals[...,0,0] + x**2)**(-1.5)
-            dlos_dxy_vals *= normalize[..., np.newaxis, np.newaxis]
-
-            los.insert_subfield("d_dxy", MatrixN(dlos_dxy_vals, xy_pair.mask))
-
-        return los
+        # In the pinhole camera model, the z-component is always 1
+        (x,y) = Pair.to_scalars(xy_pair)
+        return Vector3.from_scalars(x,y,1.).unit()
 
     def xy_from_los(self, los, derivs=False):
-        """Returns the coordinate Pair (x,y) based on a Vector3 object pointing
-        in the direction of a line of sight. Lines of sight point outward from
-        the camera, near the Z-axis, and are therefore opposite to the direction
-        in which a photon is moving. The length of the vector is ignored.
+        """Return camera frame coordinates (x,y) given a line of sight.
 
-        If derivs is True, then the Pair returned has a subfield "d_dlos", which
-        contains the derivatives d(x,y)/d(los) as a MatrixN with item shape
-        [2,3].
+        Lines of sight point outward from the camera, near the Z-axis, and are
+        therefore opposite to the direction in which a photon is moving. The
+        length of the vector is ignored.
+
+        If derivs is True, then derivatives in the components of the line of
+        sight get propagated forward into the components of the (x,y)
+        coordinates.
         """
 
         # Scale to z=1 and then convert to Pair
-        los = Vector3.as_vector3(los)
-        xy = Pair(los.vals[...,0:2] / los.vals[...,2:3], los.mask)
+        los = Vector3.as_vector3(los, derivs)
+        z = los.to_scalar(2)
+        los = los / z
+        return los.to_pair((0,1))
 
-        # Construct the derivatives if necessary
-        if derivs:
-            # x = los_x / los_z
-            # y = los_y / los_z
-            #
-            # dx/dlos_x = 1 / los_z
-            # dx/dlos_y = 0
-            # dx/dlos_z = -los_x / (los_z**2)
-            # dy/dlos_x = 0
-            # dy/dlos_y = 1 / los_z
-            # dy/dlos_z = -los_y / (los_z**2)
+    def los_from_uv(self, uv_pair, derivs=False, **keywords):
+        """Return the line of sight vector given FOV coordinates (u,v).
 
-            dxy_dlos_vals = np.zeros(los.shape + [2,3])
-            x = los.vals[...,0]
-            y = los.vals[...,1]
-            z = los.vals[...,2]
-            dxy_dlos_vals[...,0,0] =  z
-            dxy_dlos_vals[...,0,2] = -x
-            dxy_dlos_vals[...,1,1] =  z
-            dxy_dlos_vals[...,1,2] = -y
-            dxy_dlos_vals /= z[..., np.newaxis, np.newaxis]**2
+        The los points  the direction specified by coordinate Pair (u,v). Note
+        that this is the direction _opposite_ to that of the arriving photon.
 
-            xy.insert_subfield("d_dlos", MatrixN(dxy_dlos_vals, los.mask))
-
-        return xy
-
-    def los_from_uv(self, uv_pair, extras=(), derivs=False):
-        """Returns the line of sight (los) as a Vector3 object. The los points
-        in the direction specified by coordinate Pair (u,v). Note that this is
-        the direction _opposite_ to that in which the photon is moving.
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
 
         Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the Vector3 returned has a subfield "d_duv",
-        which contains the partial derivatives d(los)/d(u,v) as a MatrixN with
-        item shape [3,2]. 
+        as keyword arguments.
         """
 
-        xy_pair = self.xy_from_uv(uv_pair, extras, derivs)
-        los = self.los_from_xy(xy_pair, derivs)
+        xy_pair = self.xy_from_uv(uv_pair, derivs, **keywords)
+        return self.los_from_xy(xy_pair, derivs)
 
-        if derivs:
-            los.insert_subfield("d_duv", los.d_dxy * xy_pair.d_duv)
-            los.delete_subfield("d_dxy")
+    def uv_from_los(self, los, derivs=False, **keywords):
+        """Return FOV coordinates (u,v) given a line of sight vector.
 
-        return los
+        The los points  the direction specified by coordinate Pair (u,v). Note
+        that this is the direction _opposite_ to that of the arriving photon.
 
-    def uv_from_los(self, los, extras=(), derivs=False):
-        """Returns the coordinate Pair (u,v) based on a line of sight Vector3
-        pointing in the direction of a line of sight, i.e., _opposite_ to
-        the direction in which the photon is moving. The length of the vector is
-        ignored.
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
 
         Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then Pair return has a subarrray "d_dlos", which
-        contains the partial derivatives d(u,v)/d(los) as a MatrixN with item
-        shape [2,3]. 
+        as keyword arguments.
         """
 
-        xy = self.xy_from_los(los, derivs)
-        uv = self.uv_from_xy(xy, extras, derivs)
+        xy_pair = self.xy_from_los(los, derivs)
+        return uv_from_xy(xy, derivs, **keywords)
 
-        if derivs:
-            uv.insert_subfield("d_dlos", uv.d_dxy * xy.d_dlos)
-
-        return uv
-
-    def uv_is_inside(self, uv_pair, inclusive=True):
-        """Returns a boolean NumPy array identifying which coordinates fall
-        inside the FOV.
+    def uv_is_outside(self, uv_pair, inclusive=True):
+        """Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
@@ -257,25 +190,23 @@ class FOV(object):
                         each range as inside the FOV; False to interpet them as
                         outside.
 
-        Return:         a boolean NumPy array indicating True where the point is
-                        inside the FOV.
+        Return:         a Boolean indicating True where the point is outside the
+                        FOV.
         """
 
         uv_pair = Pair.as_pair(uv_pair)
-        if inclusive:
-            return ((uv_pair.vals[...,0] >= 0) &
-                    (uv_pair.vals[...,1] >= 0) &
-                    (uv_pair.vals[...,0] <= self.uv_shape.vals[0]) &
-                    (uv_pair.vals[...,1] <= self.uv_shape.vals[1]))
-        else:
-            return ((uv_pair.vals[...,0] >= 0) &
-                    (uv_pair.vals[...,1] >= 0) &
-                    (uv_pair.vals[...,0] < self.uv_shape.vals[0]) &
-                    (uv_pair.vals[...,1] < self.uv_shape.vals[1]))
+        (u,v) = uv_pair.to_scalars()
+        (umax, vmax) = self.uv_shape.values
 
-    def u_or_v_is_inside(self, uv_coord, uv_index, inclusive=True):
-        """Returns a boolean NumPy array identifying which u-coordinates fall
-        inside the FOV.
+        if inclusive:
+            result = (u < 0) |( v < 0) | (u > umax) | (v > vmax)
+        else:
+            result = (u < 0) | (v < 0) | (u >= umax) | (v >= vmax)
+
+        return result.values        # Convert to NumPy
+
+    def u_or_v_is_outside(self, uv_coord, uv_index, inclusive=True):
+        """Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_coord    a Scalar of u-coordinates or v-coordinates.
@@ -285,46 +216,50 @@ class FOV(object):
                         outside.
 
         Return:         a boolean NumPy array indicating True where the point is
-                        inside the FOV.
+                        outside the FOV.
         """
 
-        uv_coord = Scalar.as_scalar(uv_coord)
+        uv_coord = Scalar.to_scalar(uv_coord)
+        shape = self.uv_shape.values
         if inclusive:
-            return ((u_coord.vals >= 0) &
-                    (u_coord.vals <= self.uv_shape.vals[uv_index]))
+            result = (uv_coord < 0) | (uv_coord > shape[uv_index])
         else:
-            return ((uv_pair.vals >= 0) &
-                    (uv_pair.vals < self.uv_shape.vals[uv_index]))
+            result = (uv_coord < 0) | (uv_coord >= shape[uv_index])
 
-    def nearest_uv(self, uv_pair):
-        """Returns a Pair of (u,v) coordinates that fall inside the FOV and lie
-        as close as possible to the given points.
+        return result.values        # Convert to NumPy
+
+    def nearest_uv(self, uv_pair, remask=False):
+        """Return the closest (u,v) coordinates inside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
+            remask      True to mask the points outside the boundary.
 
         Return:         a new Pair of (u,v) coordinates.
         """
 
-        uv_pair = Pair.as_pair(uv_pair).copy()
+        clipped = Pair.as_pair(uv_pair).copy(readonly=False, recursive=False)
+        clipped.vals[...,0] = clipped.vals[...,0].clip(0, self.uv_shape[0])
+        clipped.vals[...,1] = clipped.vals[...,1].clip(0, self.uv_shape[1])
 
-        uv_pair.vals[...,0] = uv_pair.vals[...,0].clip(0,self.uv_shape.vals[0],False)
-        uv_pair.vals[...,1] = uv_pair.vals[...,1].clip(0,self.uv_shape.vals[1],False)
+        if remask:
+            return Pair(clipped, uv_pair.mask | (clipped != uv_pair))
+        else:
+            return clipped
 
-        return uv_pair
+    def xy_is_outside(self, xy_pair, inclusive=True, **keywords):
+        """Return a boolean mask identifying coordinates outside the FOV.
+        """
 
-    def xy_is_inside(self, xy_pair, extras=()):
-        """Returns a boolean NumPy array indicating True for (x,y) coordinates
-        that fall inside the FOV, False otherwise."""
+        uv = self.uv_from_xy(xy_pair, derivs=False, **keywords)
+        return self.uv_is_outside(uv, inclusive)
 
-        return self.uv_is_inside(self.uv_from_xy(xy_pair, extras),
-                                 inclusive=True)
+    def los_is_outside(self, los, inclusive=True, **keywords):
+        """Return a boolean mask identifying lines of sight outside the FOV.
+        """
 
-    def los_is_inside(self, los, extras=()):
-        """Returns a boolean NumPy array indicating True for line of sight
-        vectors that fall inside the FOV, False otherwise."""
-
-        return self.uv_is_inside(self.uv_from_los(los, extras), inclusive=True)
+        xy = self.xy_from_los(derivs=False)
+        return self.xy_is_outside(xy, inclusive, **keywords)
 
 ################################################################################
 # Properties and methods to support body inventories
@@ -334,76 +269,73 @@ class FOV(object):
 
     @property
     def center_xy(self):
-        """Property to return the (x,y) coordinate pair at the center of the
-        FOV.
+        """The (x,y) coordinate pair at the center of the FOV.
         """
 
-        if not self.__dict__.has_key("center_xy_filled"):
+        if not hasattr(self, 'center_xy_filled'):
             self.center_xy_filled = self.xy_from_uv(self.uv_shape/2.)
 
         return self.center_xy_filled
 
     @property
     def center_los(self):
-        """Property to return the unit line of sight defining the (u,v) center
-        of the FOV.
-        """
+        """The unit line of sight defining the (u,v) center of the FOV."""
 
-        if not self.__dict__.has_key("center_los_filled"):
+        if not hasattr(self, 'center_los_filled'):
             self.center_los_filled = self.los_from_xy(self.center_xy).unit()
 
         return self.center_los_filled
 
     @property
     def center_dlos_duv(self):
-        """Property to return the line of sight derivative matrix dlos/d(u,v) at
-        the center of the FOV.
+        """The line of sight derivative matrix dlos/d(u,v) at the FOV center.
         """
 
-        if not self.__dict__.has_key("center_dlos_duv_filled"):
-            los = self.los_from_uv(self.uv_shape/2., derivs=True)
+        if not hasattr(self, 'center_dlos_duv_filled'):
+            center_uv = Pair(self.uv_shape/2.)
+            center_uv.insert_deriv('uv', Pair.IDENTITY)
+
+            los = self.los_from_uv(center_uv, derivs=True)
             self.center_dlos_duv_filled = los.d_duv
 
         return self.center_dlos_duv_filled
 
     @property
     def outer_radius(self):
-        """Property to return the radius in radians of a circle around the
-        center of the FOV that circumscribes the entire FOV.
+        """The radius in radians of a circle circumscribing the entire FOV.
         """
 
-        if not self.__dict__.has_key("outer_radius_saved"):
+        if not hasattr(self, 'outer_radius_filled'):
             umax = self.uv_shape.vals[0]
             vmax = self.uv_shape.vals[1]
 
-            uv_corners = [(0.,0.), (0.,vmax), (umax,0.), (umax,vmax)]
+            uv_corners = Pair([(0.,0.), (0.,vmax), (umax,0.), (umax,vmax)])
 
             seps = self.center_los.sep(self.los_from_uv(uv_corners))
-            self.outer_radius_saved = seps.vals.max()
+            self.outer_radius_filled = seps.max()
 
-        return self.outer_radius_saved
+        return self.outer_radius_filled
 
     @property
     def inner_radius(self):
-        """Property to return the radius in radians of a circle around the
-        center of the FOV that is entirely enclosed within the FOV.
+        """The radius in radians of a circle entirely enclosed within the FOV.
         """
 
-        if not self.__dict__.has_key("inner_radius_saved"):
+        if not hasattr(self, 'inner_radius_filled'):
             umax = self.uv_shape.vals[0]
             vmax = self.uv_shape.vals[1]
             umid = umax / 2.
             vmid = vmax / 2.
 
-            uv_edges = [(0.,vmid), (umax,vmid), (umid,0.), (umid,vmax)]
+            uv_edges = Pair([(0.,vmid), (umax,vmid), (umid,0.), (umid,vmax)])
 
             seps = self.center_los.sep(self.los_from_uv(uv_edges))
-            self.inner_radius_saved = seps.vals.min()
+            self.inner_radius_filled = seps.min()
 
-        return self.inner_radius_saved
+        return self.inner_radius_filled
 
     def sphere_falls_inside(self, center, radius, border=0.):
-        """Returns True if any piece of sphere falls inside a field of view.
+        """Return True if any piece of sphere falls inside a field of view.
 
         Input:
             center      the apparent location of the center of the sphere in the
@@ -414,7 +346,7 @@ class FOV(object):
         """
 
         # Perform quick tests based on the separation angles
-        sphere_center_los = Vector3.as_vector3(center)
+        sphere_center_los = Vector3.as_vector3(center, recursive=False)
 
         scaled_radius = radius / sphere_center_los.norm()
         radius_angle = scaled_radius.arcsin()

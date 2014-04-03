@@ -9,9 +9,8 @@ from oops.frame_.frame     import Frame
 from oops.frame_.spinframe import SpinFrame
 from oops.frame_.rotation  import Rotation
 from oops.transform        import Transform
-
-import oops.registry as registry
-from oops.constants import *
+from oops.path_.path       import Path
+from oops.constants        import *
 
 class InclinedFrame(Frame):
     """InclinedFrame is a Frame subclass describing a frame that is inclined to
@@ -47,58 +46,61 @@ class InclinedFrame(Frame):
                         node.
 
             id          the ID under which the frame will be registered; None
-                        to use a temporary ID.
+                        to leave the frame unregistered.
 
         Note that inc, node, rate and epoch can all be scalars of arbitrary
         shape. The shape of the InclinedFrame is the result of broadcasting all
         these shapes together.
         """
 
-        self.inc = inc
-        self.node = node
-        self.rate = rate
-        self.epoch = epoch
-        self.despin = despin
+        self.inc = Scalar.as_scalar(inc)
+        self.node = Scalar.as_scalar(node)
+        self.rate = Scalar.as_scalar(rate)
+        self.epoch = Scalar.as_scalar(epoch)
 
-        self.shape = Array.broadcast_shape((inc, node, rate, epoch))
+        self.shape = Qube.broadcast(self.inc, self.node, self.rate, self.epoch)
 
-        self.frame_id = id
-        reference = registry.as_frame(reference)
-        self.reference_id = reference.frame_id
-        self.origin_id = reference.origin_id
+        self.frame_id  = id or Frame.temporary_frame_id()
+        self.reference = Frame.as_wayframe(reference)
+        self.origin    = self.reference.origin
+        self.keys      = set()
 
         self.spin1  = SpinFrame(self.node, self.rate, self.epoch, axis=2,
-                                reference=self.reference_id)
-        self.rotate = Rotation(self.inc, axis=0,
-                                reference=self.spin1.frame_id)
+                                reference=self.reference)
+        self.rotate = Rotation(self.inc, axis=0, reference=self.spin1)
 
-        if self.despin:
+        if despin:
             self.spin2 = SpinFrame(-self.node, -self.rate, self.epoch, axis=2,
-                                   reference=self.rotate.frame_id)
+                                   reference=self.rotate)
+        else:
+            self.spin2 = None
 
-        self.reregister()
+        if id:
+            self.register()
+        else:
+            self.wayframe = self
 
-########################################
+    ########################################
 
-    def transform_at_time(self, time, quick=None):
-        """Returns the Transform to the given Frame at a specified Scalar of
-        times."""
+    def transform_at_time(self, time, quick=False):
+        """The Transform into the this Frame at a Scalar of times."""
 
         xform = self.spin1.transform_at_time(time)
         xform = self.rotate.transform_at_time(time).rotate_transform(xform)
 
-        if self.despin:
+        if self.spin2:
             xform = self.spin2.transform_at_time(time).rotate_transform(xform)
 
         return xform
 
-########################################
+    ########################################
 
     def node_at_time(self, time):
-        """Returns the longitude of ascending node at the specified time."""
+        """Return the longitude of ascending node at the specified time."""
 
         # Locate the ascending nodes in the reference frame
-        return (self.node + rate * (time - self.epoch)) & TWOPI
+        return (self.node +
+                self.rate * (Scalar.as_scalar(time) - self.epoch)) % TWOPI
 
 ################################################################################
 # UNIT TESTS

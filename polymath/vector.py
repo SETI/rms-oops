@@ -34,7 +34,9 @@ class Vector(Qube):
         that derivatives are not necessarily removed when recursive is False.
         """
 
-        if type(arg) == Vector: return arg
+        if type(arg) == Vector:
+            if recursive: return arg
+            return arg.without_derivs()
 
         if isinstance(arg, Qube):
 
@@ -49,6 +51,10 @@ class Vector(Qube):
             # Convert Scalar to shape (1,)
             if arg.nrank == 0:
                 return arg.flatten_numer(Vector, recursive)
+
+            # For any other Qube, move numerator items to the denominator
+            if arg.rank > 1:
+                return arg.split_items(1, Vector)
 
         return Vector(arg)
 
@@ -75,8 +81,172 @@ class Vector(Qube):
 
         return tuple(results)
 
+    def to_pair(self, axes=(0,1), recursive=True):
+        """Return a Pair containing two selected components of a Vector.
+
+        Overrides the default method to include an 'axes' argument, which can
+        extract any two components of a Vector very efficiently.
+        """
+
+        i0 = axes[0]
+        di = axes[1] - axes[0]
+        if di < 0:
+            i0 -= self.item[0]
+        i1 = i0 + 2 * di
+
+        index = (Ellipsis, slice(i0,i1,di)) + self.drank * (slice(None),)
+
+        result = Qube.PAIR_CLASS(self.values[index], self.mask, self.units)
+        if result.readonly: result = result.as_readonly(nocopy='vm')
+
+        if recursive and self.derivs:
+            for (key,deriv) in self.derivs.iteritems():
+                result.insert_deriv(key, deriv.to_pair(axes,False), nocopy='vm')
+
+        return result
+
+    @staticmethod
+    def from_scalars(*args, **keywords):
+        """A Vector or subclass constructed by combining scalars.
+
+        Inputs:
+            args        any number of Scalars or arguments that can be casted
+                        to Scalars. They need not have the same shape, but it
+                        must be possible to cast them to the same shape. A value
+                        of None is converted to a zero-valued Scalar that
+                        matches the denominator shape of the other arguments.
+
+            recursive   True to include all the derivatives. The returned object
+                        will have derivatives representing the union of all the
+                        derivatives found amongst the scalars. Default is True.
+
+            classes     an arbitrary list of scalars defining the preferred
+                        class of the returned object. The first suitable class
+                        in the list will be used. Default is Vector.
+
+        Note that the 'recursive' and 'classes' inputs are handled as keyword
+        arguments in order to distinguish them from the scalar inputs.
+        """
+
+        # Search the keywords for "recursive" and "classes"
+        recursive = True
+        classes = []
+        if 'recursive' in keywords:
+            recursive = keywords['recursive']
+            del keywords['recursive']
+
+        if 'classes' in keywords:
+            classes = keywords['classes']
+            del keywords['classes']
+
+        # No other keyword is allowed
+        if keywords:
+          raise TypeError(("broadcast() got an unexpected keyword argument " +
+                           "'%s'") % keywords.keys()[0])
+
+        args = list(args)
+
+        # Get the properties of the first argument as a PolyMath subclass
+        denom = ()
+        for arg in args:
+            if isinstance(arg, Qube):
+                denom = arg.denom
+                break
+
+        drank = len(denom)
+
+        # Convert to Scalars, identify units, select dtype, check if readonly
+        units = None
+        dtype = 'int'
+        readonly = True
+        for (i,arg) in enumerate(args):
+
+            # Convert None to a zero-valued scalar of the proper denom shape
+            if arg is None:
+                args[i] = Scalar(np.zeros(denom, dtype='int'), drank=drank)
+
+            # Cast any Qube to a Scalar
+            elif isinstance(arg, Qube):
+                args[i] = Scalar.as_scalar(arg)
+
+                # Make sure denominator shape matches
+                if arg.denom != denom:
+                    raise ValueError('incompatible denominator shapes: ' +
+                                     str(denom) + ', ' + str(arg.denom))
+
+                # Remember any units encountered
+                if arg.units is not None:
+                    units = arg.units
+
+                # Remember any floats encountered
+                if arg.is_float():
+                    dtype = 'float'
+
+                # Remember any read-write objects
+                if not arg.readonly:
+                    readonly = False
+
+            # Otherwise, convert to Scalar
+            else:
+                # Remember any read-write objects
+                if isinstance(arg, np.ndarray):
+                    readonly = False
+
+                # Convert to Scalar
+                args[i] = Scalar(arg, drank=drank)
+
+                # Remember any floats encountered
+                if args[i].is_float():
+                    dtype = 'float'
+
+        # Make one more pass to confirm compatible units
+        if units is not None:
+            for arg in args:
+                arg.confirm_units(units)
+
+        # Broadcast all inputs into a common shape
+        args = Qube.broadcast(*args, recursive=True)
+
+        # Assemble the values into an array, merge the masks
+        mask = False
+        array = np.empty(args[0].shape + denom + (len(args),), dtype=dtype)
+
+        for (i,arg) in enumerate(args):
+            mask = mask | arg.mask
+            array[...,i] = arg.values
+
+        if len(denom):
+            array = np.rollaxis(array, -1, len(array.shape) - drank - 1)
+
+        # Construct the result
+        result = Qube(array, mask, units, nrank=1, drank=drank)
+        result = result.cast(list(classes) + [Vector])
+        if readonly:
+            result = result.as_readonly(nocopy='vm')
+
+        # Fill in derivatives if necessary
+        if recursive:
+            derivs = {}
+            for (i,arg) in enumerate(args):
+                for (key,deriv) in arg.derivs.iteritems():
+
+                    # Create a buffer empty except for one component
+                    deriv_args = len(args) * [None]
+                    deriv_args[i] = deriv
+                    full_deriv = Vector.from_scalars(*deriv_args,
+                                                     recursive=False,
+                                                     classes=classes)
+                    if key in derivs:
+                        derivs[key] = derivs[key] + full_deriv
+                    else:
+                        derivs[key] = full_deriv
+
+            result.insert_derivs(derivs, nocopy='vm')
+
+        return result
+
     def as_index(self, remove_masked=False, masked=None):
-        """Return an object suitable for indexing an N-dimensional NumPy array and a mask.
+        """An object suitable for indexing an N-dimensional array and a mask.
 
         The returned object is a tuple of NumPy arrays, each of the same shape.
         Each array contains indices along the corresponding axis of the array
@@ -88,7 +258,7 @@ class Vector(Qube):
                           the place of a masked item. If None and the object
                           contains masked elements, the array will be flattened
                           and masked elements will be skipped over.
-                          
+
         Return: (valueidx, mask)
             valueidx    the indices corresponding to this Vector's value
             mask        a boolean array indicating which indices are masked
@@ -251,16 +421,18 @@ class Vector(Qube):
             recursive   True to include the derivatives.
         """
 
+        # Convert arg to a unit vector
         if recursive:
             arg = self.as_this_type(arg, recursive).unit()
         else:
             arg = self.as_this_type(arg).without_derivs().unit()
             self = self.without_derivs()
 
+        # Return the component of this vector perpendicular to the arg
         return self - arg * self.dot(arg, recursive)
 
     def proj(self, arg, recursive=True):
-        """Return the component of a Vector projected into another Vector.
+        """Return the component of this Vector projected into another Vector.
 
         The returned object is an instance of the same subclass as this object.
 
@@ -268,11 +440,13 @@ class Vector(Qube):
             recursive   True to include the derivatives.
         """
 
+        # Convert arg to a unit vector
         if recursive:
             arg = self.as_this_type(arg, recursive).unit()
         else:
             arg = self.as_this_type(arg).without_derivs().unit()
 
+        # Return the component of this vector projected into the arg
         return arg * self.dot(arg, recursive)
 
     def sep(self, arg, recursive=True):
@@ -343,7 +517,7 @@ class Vector(Qube):
         if recursive:
             for (key, deriv) in self.derivs.iteritems():
                 obj.insert_deriv(key, deriv.cross_product_as_matrix(False),
-                                      override=True, nocopy='vm')
+                                      nocopy='vm')
 
         return obj
 
@@ -415,7 +589,7 @@ class Vector(Qube):
                     else:
                         new_derivs[key] = term
 
-            obj.insert_derivs(new_derivs, override=True, nocopy='vm')
+            obj.insert_derivs(new_derivs, nocopy='vm')
 
         return obj
 
@@ -499,19 +673,71 @@ class Vector(Qube):
                     else:
                         new_derivs[key] = -term
 
-            obj.insert_derivs(new_derivs, override=True, nocopy='vm')
+            obj.insert_derivs(new_derivs, nocopy='vm')
 
         return obj
+
+    @classmethod
+    def combos(cls, *args):
+        """A vector with every combination of components of given scalars.
+
+        Masks are also combined in the analogous manner.
+
+        The returned object will have a shape defined by concatenating the
+        shapes of all the arguments. Units and derivatives are ignored.
+        """
+
+        scalars = []
+        newshape = []
+        dtype = 'int'
+        for arg in args:
+            scalar = Scalar.as_scalar(arg)
+            if scalar.drank:
+                raise ValueError('scalar cannot have denominator in combos()')
+
+            scalars.append(scalar)
+            newshape += list(scalar.shape)
+            if scalar.is_float(): dtype = 'float'
+
+        newshape = tuple(newshape)
+        newrank = len(newshape)
+        data = np.empty(newshape + (len(args),), dtype=dtype)
+        mask = np.zeros(newshape, dtype='bool')
+
+        before = 0
+        after = newrank
+        for (i,scalar) in enumerate(scalars):
+            shape = scalar.shape
+            rank = len(shape)
+            scalar = scalar.reshape(before * (1,) + shape + (after-rank) * (1,))
+            data[...,i] = scalar.values
+            mask |= scalar.mask
+
+            before += rank
+            after -= rank
+
+        return cls(data, mask)
 
     ############################################################################
     # Overrides of superclass operators
     ############################################################################
 
-    def __abs__(self):
-        Qube.raise_unsupported_op('abs()', self)
+    def __abs__(self, recursive=True):
+        return self.norm(recursive)
 
     def identity(self):
         Qube.raise_unsupported_op('identity()', self)
+
+    def reciprocal(self, recursive=True, nozeros=False):
+        """Treat a Vector subclass with drank=1 as a Matrix inversion."""
+
+        if self.drank != 1:
+            Qube.raise_unsupported_op('reciprocal()', self)
+
+        matrix = self.join_items([Matrix])
+        inverse = matrix.reciprocal()
+
+        return inverse.split_items(1, [type(self)])
 
 # A set of useful class constants
 Vector.ZERO3   = Vector((0.,0.,0.)).as_readonly()

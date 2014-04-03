@@ -1,5 +1,5 @@
 ################################################################################
-# oops/surface_/spicebody.py: Handles bodys shaped defined in the SPICE toolkit.
+# oops/surface_/spicebody.py: For bodies shaped defined in SPICE.
 ################################################################################
 
 import cspice
@@ -8,8 +8,6 @@ from oops.surface_.spheroid  import Spheroid
 from oops.surface_.ellipsoid import Ellipsoid
 from oops.path_.spicepath    import SpicePath
 from oops.frame_.spiceframe  import SpiceFrame
-
-import oops.registry      as registry
 import oops.spice_support as spice
 
 def spice_body(spice_id):
@@ -46,6 +44,8 @@ class Test_spice_body(unittest.TestCase):
     
     def runTest(self):
 
+        from oops.path_.path import Path
+        from oops.frame_.frame import Frame
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import os.path
 
@@ -61,7 +61,8 @@ class Test_spice_body(unittest.TestCase):
         self.assertEqual(body.req, 6051.8)
         self.assertEqual(body.squash_z, 1.)
 
-        registry.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

@@ -7,13 +7,15 @@ from polymath import *
 
 from oops.obs_.observation   import Observation
 from oops.cadence_.metronome import Metronome
+from oops.path_.path         import Path
+from oops.frame_.frame       import Frame
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
     all exposed at the same time."""
 
     def __init__(self, axes, tstart, texp,
-                       fov, path_id, frame_id, **subfields):
+                       fov, path, frame, **subfields):
         """Constructor for a Snapshot.
 
         Input:
@@ -30,12 +32,11 @@ class Snapshot(Observation):
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y).
-            path_id     the registered ID of a path co-located with the
-                        instrument.
-            frame_id    the registered ID of a coordinate frame fixed to the
-                        optics of the instrument. This frame should have its
-                        Z-axis pointing outward near the center of the line of
-                        sight, with the X-axis pointing rightward and the y-axis
+            path        the path waypoint co-located with the instrument.
+            frame       the wayframe of a coordinate frame fixed to the optics
+                        of the instrument. This frame should have its Z-axis
+                        pointing outward near the center of the line of sight,
+                        with the X-axis pointing rightward and the y-axis
                         pointing downward.
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
@@ -43,12 +44,12 @@ class Snapshot(Observation):
 
         self.cadence = Metronome(tstart, texp, texp, 1)
         self.fov = fov
-        self.path_id = path_id
-        self.frame_id = frame_id
+        self.path = Path.as_waypoint(path)
+        self.frame = Frame.as_wayframe(frame)
 
         self.axes = list(axes)
-        self.u_axis = self.axes.index("u")
-        self.v_axis = self.axes.index("v")
+        self.u_axis = self.axes.index('u')
+        self.v_axis = self.axes.index('v')
         self.uv_shape = list(self.fov.uv_shape.vals)
 
         self.t_axis = -1
@@ -68,13 +69,15 @@ class Snapshot(Observation):
             self.insert_subfield(key, subfields[key])
 
     def uvt(self, indices, fovmask=False):
-        """Returns the FOV coordinates (u,v) and the time in seconds TDB
-        associated with the given indices into the data array. This method
-        supports non-integer index values.
+        """Return coordinates (u,v) and time t for indices into the data array.
+
+        This method supports non-integer index values.
 
         Input:
             indices     a Tuple of array indices.
             fovmask     True to mask values outside the field of view.
+            keywords    optional additional keyword values required to define
+                        the FOV and the relationship between (u,v) and time.
 
         Return:         (uv, time)
             uv          a Pair defining the values of (u,v) associated with the
@@ -83,31 +86,32 @@ class Snapshot(Observation):
                         with the array indices.
         """
 
-        indices = Tuple.as_tuple(indices)
+        indices = Vector.as_vector(indices)
 
-        uv = indices.as_pair((self.u_axis,self.v_axis))
+        uv = indices.to_pair((self.u_axis,self.v_axis))
         time = self.scalar_midtime
 
         if fovmask:
-            is_inside = self.uv_is_inside(uv, inclusive=True)
-            if not np.all(is_inside):
-                mask = indices.mask | np.logical_not(is_inside)
-                uv.mask = mask
+            is_outside = self.uv_is_outside(uv, inclusive=True)
+            if np.any(is_outside):
+                mask = uv.mask | is_outside
+                if np.any(mask != uv.mask):
+                    uv = uv.remask(mask)
 
-                time_vals = np.empty(indices.shape)
-                time_vals[...] = self.midtime
-                time = Scalar(time_vals, mask)
+                    time_vals = np.empty(uv.shape)
+                    time_vals[...] = self.midtime
+                    time = Scalar(time_vals, mask)
 
         return (uv, time)
 
     def uvt_range(self, indices, fovmask=False):
-        """Returns the ranges of FOV coordinates (u,v) and the time range in
-        seconds TDB associated with the given integer indices into the data
-        array.
+        """Return ranges of coordinates and time for integer array indices.
 
         Input:
             indices     a Tuple of integer array indices.
             fovmask     True to mask values outside the field of view.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         (uv_min, uv_max, time_min, time_max)
             uv_min      a Pair defining the minimum values of (u,v) associated
@@ -118,29 +122,30 @@ class Snapshot(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Tuple.as_int(indices)
+        indices = Vector.as_int(indices)
 
-        uv_min = indices.as_pair((self.u_axis,self.v_axis))
+        uv_min = indices.to_pair((self.u_axis,self.v_axis))
         uv_max = uv_min + Pair.ONES
 
         time_min = self.scalar_time[0]
         time_max = self.scalar_time[1]
 
         if fovmask:
-            is_inside = self.uv_is_inside(uv_min, inclusive=False)
-            if not np.all(is_inside):
-                uv_min.mask = uv_min.mask | np.logical_not(is_inside)
-                uv_max.mask = uv_min.mask
+            is_outside = self.uv_is_outside(uv_min, inclusive=False)
+            if np.any(is_outside):
+                mask = uv_min.mask | is_outside
+                if np.any(mask != uv_min.mask):
+                    uv_min = uv_min.remask(mask)
+                    uv_max = uv_max.remask(mask)
 
-                time_min_vals = np.empty(is_inside.shape)
-                time_max_vals = np.empty(is_inside.shape)
+                    time_min_vals = np.empty(uv_min.shape)
+                    time_max_vals = np.empty(uv_min.shape)
 
-                time_min_vals[...] = self.time[0]
-                time_max_vals[...] = self.time[1]
+                    time_min_vals[...] = self.time[0]
+                    time_max_vals[...] = self.time[1]
 
-                mask = np.logical_not(is_inside)
-                time_min = Scalar(time_min_vals, mask)
-                time_max = Scalar(time_max_vals, mask)
+                    time_min = Scalar(time_min_vals, mask)
+                    time_max = Scalar(time_max_vals, mask)
 
         return (uv_min, uv_max, time_min, time_max)
 
@@ -181,37 +186,34 @@ class Snapshot(Observation):
 #             else:
 #                 mask = uv_pair.mask
 # 
-#         return Tuple(index_vals, mask)
+#         return Vector(index_vals, mask)
 
     def times_at_uv(self, uv_pair, fovmask=False, extras=None):
-        """Returns the start and stop times of the specified spatial pixel
-        (u,v).
+        """Return start and stop times of the specified spatial pixel (u,v).
 
         Input:
             uv_pair     a Pair of spatial (u,v) coordinates in and observation's
                         field of view. The coordinates need not be integers, but
                         any fractional part is truncated.
             fovmask     True to mask values outside the field of view.
-            extras      an optional tuple or dictionary containing any extra
-                        parameters required for the conversion from (u,v) to
-                        time.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         a tuple containing Scalars of the start time and stop
                         time of each (u,v) pair, as seconds TDB.
         """
 
         if fovmask:
-            is_inside = self.uv_is_inside(uv_pair, inclusive=True)
-            if not np.all(is_inside):
-                time_min_vals = np.empty(is_inside.shape)
-                time_max_vals = np.empty(is_inside.shape)
+            is_outside = self.uv_is_outside(uv_pair, inclusive=True)
+            if np.any(is_outside):
+                time_min_vals = np.empty(uv_pair.shape)
+                time_max_vals = np.empty(uv_pair.shape)
 
                 time_min_vals[...] = self.time[0]
                 time_max_vals[...] = self.time[1]
 
-                mask = np.logical_not(is_inside)
-                time_min = Scalar(time_min_vals, mask)
-                time_max = Scalar(time_max_vals, mask)
+                time_min = Scalar(time_min_vals, is_outside)
+                time_max = Scalar(time_max_vals, is_outside)
 
                 return (time_min, time_max)
 
@@ -243,9 +245,9 @@ class Snapshot(Observation):
 #         if fovmask or np.any(time.mask):
 #             is_inside = (time >= self.time[0]) & (time <= self.time[1])
 #             if not np.all(is_inside):
-#                 uv_min_vals = np.zeros(time.shape + [2])
+#                 uv_min_vals = np.zeros(time.shape + (2,))
 # 
-#                 uv_max_vals = np.empty(time.shape + [2])
+#                 uv_max_vals = np.empty(time.shape + (2,))
 #                 uv_max_vals[...,0] = self.uv_shape[0]
 #                 uv_max_vals[...,1] = self.uv_shape[1]
 # 
@@ -256,14 +258,12 @@ class Snapshot(Observation):
 #         return (uv_min, uv_max)
 
     def sweep_duv_dt(self, uv_pair, extras=None):
-        """Returns the mean local sweep speed of the instrument in the (u,v)
-        directions.
+        """Return the mean local sweep speed of the instrument along (u,v) axes.
 
         Input:
             uv_pair     a Pair of spatial indices (u,v).
-            extras      an optional tuple or dictionary containing any extra
-                        parameters required to define the timing of array
-                        elements.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         a Pair containing the local sweep speed in units of
                         pixels per second in the (u,v) directions.
@@ -272,8 +272,7 @@ class Snapshot(Observation):
         return Pair.ZERO
 
     def time_shift(self, dtime):
-        """Returns a copy of the observation object in which times have been
-        shifted by a constant value.
+        """Return a copy of the observation object with a time-shift.
 
         Input:
             dtime       the time offset to apply to the observation, in units of
@@ -283,7 +282,7 @@ class Snapshot(Observation):
         """
 
         obs = Snapshot(self.axes, self.time[0] + dtime, self.texp,
-                       self.fov, self.path_id, self.frame_id)
+                       self.fov, self.path, self.frame)
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -294,26 +293,33 @@ class Snapshot(Observation):
 # Overrides of Observation methods
 ################################################################################
 
-    def uv_from_path(self, path, quick=None, derivs=False):
-        """Solves for the (u,v) indices of an object in the field of view, given
-        its path.
+    def uv_from_path(self, path, derivs=False, quick=False, converge={},
+                           **keywords):
+        """Return the (u,v) indices of an object in the FOV, given its path.
 
         Input:
             path        a Path object.
+            extras      a tuple of Scalar index values defining any extra
+                        indices into the observation's array, should these
+                        values be relevant.
             quick       defines how to use QuickPaths and QuickFrames.
-            derivs      True to include derivatives.
+            derivs      True to include derivatives d(u,v)/dt, neglecting any
+                        sweep motion within the observation.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:
             uv_pair     the (u,v) indices of the pixel in which the point was
                         found. The path is evaluated at the mid-time of this
                         pixel.
-
-        For paths that fall outside the field of view, the returned values of
-        time and index are masked.
         """
 
         # Snapshots are easy and require zero iterations
-        return Observation.uv_from_path(self, path, (), quick, derivs, iters=0)
+        converge = converge.copy()
+        converge.update({'max_iterations': 0})
+
+        return Observation.uv_from_path(self, path, derivs, quick, converge,
+                                              **keywords)
 
 ################################################################################
 # UNIT TESTS
@@ -328,10 +334,10 @@ class Test_Snapshot(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (10,20))
-        obs = Snapshot(axes=("u","v"), texp=2.,
-                       tstart=98., fov=fov, path_id="SSB", frame_id="J2000")
+        obs = Snapshot(axes=("u","v"), tstart=98., texp=2.,
+                       fov=fov, path="SSB", frame="J2000")
 
-        indices = Tuple([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
+        indices = Vector([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
 
         # uvt() with fovmask == False
         (uv,time) = obs.uvt(indices)
@@ -339,7 +345,7 @@ class Test_Snapshot(unittest.TestCase):
         self.assertFalse(uv.mask)
         self.assertFalse(time.mask)
         self.assertEqual(time, 99.)
-        self.assertEqual(uv, indices.as_pair())
+        self.assertEqual(uv, Pair.as_pair(indices))
 
         # uvt() with fovmask == True
         (uv,time) = obs.uvt(indices, fovmask=True)
@@ -347,7 +353,7 @@ class Test_Snapshot(unittest.TestCase):
         self.assertTrue(np.all(uv.mask == np.array(4*[False] + [True])))
         self.assertTrue(np.all(time.mask == uv.mask))
         self.assertEqual(time[:4], 99.)
-        self.assertEqual(uv[:4], indices.as_pair()[:4])
+        self.assertEqual(uv[:4], Pair.as_pair(indices)[:4])
 
         # uvt_range() with fovmask == False
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
@@ -357,8 +363,8 @@ class Test_Snapshot(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min, indices.as_pair())
-        self.assertEqual(uv_max, indices.as_pair() + (1,1))
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
         self.assertEqual(time_min,  98.)
         self.assertEqual(time_max, 100.)
 
@@ -370,22 +376,21 @@ class Test_Snapshot(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min, indices.as_pair())
-        self.assertEqual(uv_max, indices.as_pair() + (1,1))
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
         self.assertEqual(time_min,  98.)
         self.assertEqual(time_max, 100.)
 
         # uvt_range() with fovmask == True, new indices
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9),
                                                              fovmask=True)
-
         self.assertTrue(np.all(uv_min.mask == [False] + 4*[True]))
         self.assertTrue(np.all(uv_min.mask == uv_max.mask))
         self.assertTrue(np.all(uv_min.mask == time_min.mask))
         self.assertTrue(np.all(uv_min.mask == time_max.mask))
 
-        self.assertEqual(uv_min[0], indices.as_pair()[0])
-        self.assertEqual(uv_max[0], (indices.as_pair() + (1,1))[0])
+        self.assertEqual(uv_min[0], Pair.as_pair(indices)[0])
+        self.assertEqual(uv_max[0], (Pair.as_pair(indices) + (1,1))[0])
         self.assertEqual(time_min[0],  98.)
         self.assertEqual(time_max[0], 100.)
 
@@ -406,30 +411,30 @@ class Test_Snapshot(unittest.TestCase):
         self.assertEqual(time1[:4], 100.)
 
         # Alternative axis order ("v","u")
-        obs = Snapshot(axes=("v","u"), texp=2.,
-                       tstart=98., fov=fov, path_id="SSB", frame_id="J2000")
-        indices = Tuple([(0,0),(0,10),(20,0),(20,10),(20,11)])
+        obs = Snapshot(axes=("v","u"), tstart=98., texp=2.,
+                       fov=fov, path="SSB", frame="J2000")
+        indices = Pair([(0,0),(0,10),(20,0),(20,10),(20,11)])
 
         (uv,time) = obs.uvt(indices)
 
-        self.assertEqual(uv, indices.as_pair((1,0)))
+        self.assertEqual(uv, indices.to_pair((1,0)))
 
         (uv,time) = obs.uvt(indices, fovmask=True)
 
-        self.assertEqual(uv[:4], indices.as_pair((1,0))[:4])
+        self.assertEqual(uv[:4], indices.to_pair((1,0))[:4])
         self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
 
         # Alternative axis order ("v", "a", "u")
-        obs = Snapshot(axes=("v","a","u"), texp=2.,
-                       tstart=98., fov=fov, path_id="SSB", frame_id="J2000")
-        indices = Tuple([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
+        obs = Snapshot(axes=("v","a","u"), tstart=98., texp=2.,
+                       fov=fov, path="SSB", frame="J2000")
+        indices = Vector([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
         (uv,time) = obs.uvt(indices)
 
-        self.assertEqual(uv, indices.as_pair((2,0)))
+        self.assertEqual(uv, indices.to_pair((2,0)))
 
         (uv,time) = obs.uvt(indices, fovmask=True)
 
-        self.assertEqual(uv[:4], indices.as_pair((2,0))[:4])
+        self.assertEqual(uv[:4], indices.to_pair((2,0))[:4])
         self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
 
 ################################################################################

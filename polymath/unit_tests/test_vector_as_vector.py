@@ -18,8 +18,8 @@ class Test_Vector_as_vector(unittest.TestCase):
     a.insert_deriv('t', da_dt)
 
     b = Vector.as_vector(a, recursive=False)
-    self.assertTrue(a is b)
-    self.assertTrue(hasattr(a, 'd_dt'))     # not stripped when class is a match
+    self.assertTrue(hasattr(a, 'd_dt'))
+    self.assertFalse(hasattr(b, 'd_dt'))
 
     # Matrix case, Nx1
     a = Matrix(np.random.randn(N,7,1), units=Units.REV)

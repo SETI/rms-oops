@@ -99,7 +99,7 @@ class Pixel(Observation):
                 mask = indices.mask | np.logical_not(is_inside)
                 time = Scalar(time, mask)
 
-                uv_vals = np.empty(list(indices.shape) + [2])
+                uv_vals = np.empty(list(indices.shape) + (2,))
                 uv_vals[...] = 0.5
                 uv = Pair(uv_vals, mask)
 
@@ -134,8 +134,8 @@ class Pixel(Observation):
         if fovmask:
             mask = time_min.mask
             if np.any(mask):
-                uv_min_vals = np.zeros(list(indices.shape) + [2])
-                uv_max_vals = np.ones(list(indices.shape)  + [2])
+                uv_min_vals = np.zeros(list(indices.shape) + (2,))
+                uv_max_vals = np.ones(list(indices.shape)  + (2,))
 
                 uv_min = Pair(uv_min_vals, mask)
                 uv_max = Pair(uv_max_vals, mask)

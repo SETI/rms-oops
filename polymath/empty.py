@@ -29,7 +29,10 @@ class Empty(Qube):
     def __init__(self, *arg, **keywords):
         Qube.__init__(self, 0, False, None, {}, nrank=0, drank=0, example=None)
 
-    # Overrides of standard Array methods
+    # Overrides of standard Qube methods
+
+    def clone(self, recursive=True): return Empty()
+
     def __repr__(self): return "Empty()"
 
     def __str__(self): return "Empty()"
@@ -43,28 +46,28 @@ class Empty(Qube):
 
     # All arithmetic operations involving Empty return Empty
 
-    def __pos__(self): return self
-    def __neg__(self): return self
-    def __abs__(self): return self
+    def __pos__(self, recursive=True): return self
+    def __neg__(self, recursive=True): return self
+    def __abs__(self, recursive=True): return self
 
-    def __add__(self,  arg): return self
-    def __radd__(self, arg): return self
+    def __add__(self,  arg, recursive=True): return self
+    def __radd__(self, arg, recursive=True): return self
     def __iadd__(self, arg): return self
 
-    def __sub__(self,  arg): return self
-    def __rsub__(self, arg): return self
+    def __sub__(self,  arg, recursive=True): return self
+    def __rsub__(self, arg, recursive=True): return self
     def __isub__(self, arg): return self
 
-    def __mul__(self,  arg): return self
-    def __rmul__(self, arg): return self
+    def __mul__(self,  arg, recursive=True): return self
+    def __rmul__(self, arg, recursive=True): return self
     def __imul__(self, arg): return self
 
-    def __div__(self,  arg): return self
-    def __rdiv__(self, arg): return self
+    def __div__(self,  arg, recursive=True): return self
+    def __rdiv__(self, arg, recursive=True): return self
     def __idiv__(self, arg): return self
 
-    def __truediv__(self,  arg): return self
-    def __rtruediv__(self, arg): return self
+    def __truediv__(self,  arg, recursive=True): return self
+    def __rtruediv__(self, arg, recursive=True): return self
     def __itruediv__(self, arg): return self
 
     def __floordiv__(self,  arg): return self
@@ -75,9 +78,9 @@ class Empty(Qube):
     def __rmod__(self, arg): return self
     def __imod__(self, arg): return self
 
-    def __pow__(self, arg): return self
+    def __pow__(self, arg, recursive=True): return self
 
-    def reciprocal(self): return self
+    def reciprocal(self, recursive=True, nozeros=False): return self
 
     def __invert__(self): return self
     def __and__(self, arg): return self

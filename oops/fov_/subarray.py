@@ -1,11 +1,11 @@
 ################################################################################
-# oops/fov_/subarray.py: Subarray subclass of FOV
+# oops/fov/subarray.py: Subarray subclass of FOV
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.fov_.fov import FOV
-from polymath import *
 
 class Subarray(FOV):
 

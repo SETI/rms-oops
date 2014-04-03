@@ -1,11 +1,11 @@
 ################################################################################
-# oops/fov_/subsampled.py: Subsampled subclass of FOV
+# oops/fov/subsampled.py: Subsampled subclass of FOV
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.fov_.fov import FOV
-from polymath import *
 
 class Subsampled(FOV):
 
@@ -41,42 +41,25 @@ class Subsampled(FOV):
 
         assert self.rescale.element_mul(self.uv_shape) == self.fov.uv_shape
 
-    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
-        """Returns a Pair of (x,y) spatial coordinates in units of radians,
-        given a Pair of coordinates (u,v).
+    def xy_from_uv(self, uv_pair, derivs=False):
+        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
-        Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v).
+        If derivs is True, then any derivatives in (x,y) get propagated into
+        the (u,v) returned.
         """
 
-        uv_pair = Pair.as_pair(uv_pair)
-        xy_new = self.fov.xy_from_uv(self.rescale.element_mul(uv_pair), extras,
-                                     derivs=derivs)
+        uv_pair = Pair.as_pair(uv_pair, derivs)
+        return self.fov.xy_from_uv(self.rescale.element_mul(uv_pair), derivs)
 
-        if derivs:
-            xy_new.d_duv = self.rescale_mat * xy_new.d_duv
+    def uv_from_xy(self, xy_pair, derivs=False):
+        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
-        return xy_new
-
-    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
-        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
-        coordinates in radians.
-
-        Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y).
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
         """
 
-        uv_old = self.fov.uv_from_xy(xy_pair, extras, derivs=derivs)
-        uv_new = uv_old.element_div(self.rescale)
-
-        if derivs is True:
-            uv_new.insert_deriv("xy", uv_old.d_dxy * self.rescale_inv)
+        xy_pair = Pair.as_pair(xy_pair, derivs)
+        return self.fov.uv_from_xy(xy_pair, derivs).element_div(self.rescale)
 
         return uv_new
 

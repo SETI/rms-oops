@@ -97,9 +97,10 @@ class Test_Scalar_arccos(unittest.TestCase):
     dy_dx = 0.5 * (y1 - y0) / EPS
     dy_dt = x.arccos().d_dt
 
-    DEL = 3.e-4
+    DEL = 3.e-6
     for i in range(N):
-        self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i], delta=DEL)
+        if abs(dy_dt[i]) < 10:      # big errors near end points
+            self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i], delta=DEL)
 
     # Derivatives should be removed if necessary
     self.assertEqual(x.arccos(recursive=False).derivs, {})

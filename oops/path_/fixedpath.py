@@ -5,56 +5,60 @@
 import numpy as np
 from polymath import *
 
-from oops.path_.path  import Path
-from oops.event       import Event
-
-import oops.registry as registry
+from oops.event        import Event
+from oops.path_.path   import Path
+from oops.frame_.frame import Frame
 
 class FixedPath(Path):
-    """Subclass FixedPath of class Path remains at fixed coordinates relative to
-    a specified path and frame."""
+    """A path described by fixed coordinates relative to another path and frame.
+    """
 
     def __init__(self, pos, origin, frame, id=None):
         """Constructor for an FixedPath.
 
         Input:
             pos         a Vector3 of position vectors within the frame and
-                        relative to the specified origin. The shape of this
-                        object defines the shape of the path.
-            origin      the path or ID of the center of the circle.
-            frame       the frame or ID of the frame in which the circular
-                        motion is defined.
+                        relative to the specified origin.
+            origin      the path or ID of the reference point.
+            frame       the frame or ID of the frame in which the position is
+                        fixed.
             id          the name under which to register the new path; None to
-                        use a temporary path ID.
+                        leave the path unregistered.
         """
 
-        if id is None:
-            self.path_id = registry.temporary_path_id()
+        # Interpret the position
+        self.pos = Vector3.as_vector3(pos).as_readonly()
+        self.pos.insert_deriv('t', Vector3.ZERO, override=True)
+
+        # Required attributes
+        self.path_id = id or Path.temporary_path_id()
+        self.origin  = Path.as_waypoint(origin)
+        self.frame   = Frame.as_wayframe(frame) or self.origin.frame
+        self.keys    = set()
+        self.shape   = Qube.broadcasted_shape(self.radius, self.lon,
+                                              self.rate, self.epoch,
+                                              self.origin.shape,
+                                              self.frame.shape)
+
+        # Register if necessary
+        if id:
+            self.register()
         else:
-            self.path_id = id
+            self.waypoint = self
 
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id = registry.as_frame_id(frame)
+    ########################################
 
-        self.pos = Vector3.as_vector3(pos)
-
-        self.reregister()
-
-########################################
-
-    def event_at_time(self, time, quick=None):
-        """Returns an Event object corresponding to a specified Scalar time on
-        this path.
+    def event_at_time(self, time, quick=False):
+        """Return an Event corresponding to a specified time on this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
 
         Return:         an Event object containing (at least) the time, position
-                        and velocity of the path.
+                        and velocity on the path.
         """
 
-        return Event(time, self.pos, Vector3.ZERO,
-                           self.origin_id, self.frame_id)
+        return Event(time, self.pos, self.origin, self.frame)
 
 ################################################################################
 # UNIT TESTS

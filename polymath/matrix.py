@@ -36,9 +36,19 @@ class Matrix(Qube):
     DELTA = np.finfo(float).eps * 3     # Cutoff used in unary()
 
     @staticmethod
-    def as_matrix(arg):
-        if type(arg) == Matrix: return arg
-        return Matrix(arg)
+    def as_matrix(arg, recursive=True):
+
+        if type(arg) == Matrix:
+            if recursive: return arg
+            return arg.without_derivs()
+
+        # Convert a Vector with drank=1 to a Matrix
+        if isinstance(arg, Vector) and arg.drank == 1:
+            return arg.join_items([Matrix])
+
+        arg = Matrix(arg)
+        if recursive: return arg
+        return arg.without_derivs()
 
     def row_vector(self, row, recursive=True, classes=(Vector3,Vector)):
         """Return the selected row of a Matrix as a Vector.
@@ -243,7 +253,7 @@ class Matrix(Qube):
             for (key, deriv) in self.derivs.iteritems():
                 new_derivs[key] = -obj * deriv * obj
 
-            obj.insert_derivs(new_derivs, override=True, nocopy='vm')
+            obj.insert_derivs(new_derivs, nocopy='vm')
 
         return obj
 

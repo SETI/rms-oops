@@ -1,5 +1,5 @@
 ################################################################################
-# oops/frame_/postarg.py: Subclass PosTarg of class Frame
+# oops/frame/postarg.py: Subclass PosTarg of class Frame
 ################################################################################
 
 import numpy as np
@@ -7,8 +7,6 @@ from polymath import *
 
 from oops.frame_.frame import Frame
 from oops.transform    import Transform
-
-import oops.registry as registry
 
 class PosTarg(Frame):
     """PosTarg is a Frame subclass describing a fixed rotation about the X and
@@ -25,7 +23,7 @@ class PosTarg(Frame):
             ypos        the Y-position of the reference frame's Z-axis in this
                         frame, in radians.
             reference   the frame relative to which this frame is defined.
-            id          the ID to use; None to use a temporary ID.
+            id          the ID to use; None to leave the frame unregistered.
         """
 
         self.xpos = float(xpos)
@@ -47,28 +45,24 @@ class PosTarg(Frame):
 
         mat = ymat * xmat
 
-        self.frame_id = registry.as_frame_id(id)
-        self.reference_id = registry.as_frame_id(reference)
+        self.frame_id  = id or Frame.temporary_frame_id()
+        self.reference = Frame.as_wayframe(reference)
+        self.origin    = self.reference.origin
+        self.keys      = set()
 
-        if id is None:
-            self.frame_id = registry.temporary_frame_id()
+        if id:
+            self.reregister()
         else:
-            self.frame_id = id
+            self.wayframe = self
 
-        reference = registry.as_frame(self.reference_id)
-        self.reference_id = registry.as_frame_id(reference)
-        self.origin_id = reference.origin_id
-
-        self.reregister()
-
+        # It needs a wayframe before we can define the transform
         self.transform = Transform(mat, Vector3.ZERO,
-                                   self.reference_id, self.origin_id)
+                                   self.reference, self.origin)
 
-########################################
+    ########################################
 
-    def transform_at_time(self, time, quick=False):
-        """Returns the Transform to the given Frame at a specified Scalar of
-        times."""
+    def transform_at_time(self, time, quick={}):
+        """The Transform into the this Frame at a Scalar of times."""
 
         return self.transform
 
@@ -82,9 +76,7 @@ class Test_PosTarg(unittest.TestCase):
 
     def runTest(self):
 
-        import oops
-
-        registry.initialize()
+        Frame.reset_registry()
 
         postarg = PosTarg(0.0001, 0.0002, "J2000")
         transform = postarg.transform_at_time(0.)
@@ -93,7 +85,7 @@ class Test_PosTarg(unittest.TestCase):
         self.assertTrue(abs(rotated.vals[0] - 0.0001) < 1.e-8)
         self.assertTrue(abs(rotated.vals[1] - 0.0002) < 1.e-8)
 
-        registry.initialize()
+        Frame.reset_registry()
 
 #########################################
 if __name__ == '__main__':

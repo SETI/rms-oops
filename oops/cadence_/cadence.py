@@ -1,5 +1,5 @@
 ################################################################################
-# oops/cadence_/cadence.py: Abstract class Cadence
+# oops/cadence_/cadence_.py: Abstract class Cadence
 ################################################################################
 
 from polymath import *

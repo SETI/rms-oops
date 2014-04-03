@@ -9,8 +9,6 @@ from oops.frame_.frame import Frame
 from oops.fittable     import Fittable
 from oops.transform    import Transform
 
-import oops.registry as registry
-
 class Rotation(Frame, Fittable):
     """Rotation is a Frame subclass describing a fixed rotation about one axis
     of another frame.
@@ -24,7 +22,7 @@ class Rotation(Frame, Fittable):
                         containing multiple values.
             axis        the rotation axis: 0 for x, 1 for y, 2 for z.
             reference   the frame relative to which this rotation is defined.
-            id          the ID to use; None to use a temporary ID.
+            id          the ID to use; None to leave the frame unregistered.
         """
 
         self.angle = Scalar.as_scalar(angle)
@@ -34,35 +32,31 @@ class Rotation(Frame, Fittable):
         self.axis0 = (self.axis2 + 1) % 3
         self.axis1 = (self.axis2 + 2) % 3
 
-        mat = np.zeros(self.shape + [3,3])
+        mat = np.zeros(self.shape + (3,3))
         mat[..., self.axis2, self.axis2] = 1.
         mat[..., self.axis0, self.axis0] = np.cos(self.angle.vals)
         mat[..., self.axis0, self.axis1] = np.sin(self.angle.vals)
         mat[..., self.axis1, self.axis1] =  mat[..., self.axis0, self.axis0]
         mat[..., self.axis1, self.axis0] = -mat[..., self.axis0, self.axis1]
 
-        self.frame_id = registry.as_frame_id(id)
-        self.reference_id = registry.as_frame_id(reference)
+        self.frame_id  = id or Frame.temporary_frame_id()
+        self.reference = Frame.as_wayframe(reference)
+        self.origin    = self.reference.origin
+        self.keys      = set()
 
-        if id is None:
-            self.frame_id = registry.temporary_frame_id()
+        if id:
+            self.register()
         else:
-            self.frame_id = id
+            self.wayframe = self
 
-        reference = registry.as_frame(self.reference_id)
-        self.reference_id = registry.as_frame_id(reference)
-        self.origin_id = reference.origin_id
-
-        self.reregister()
-
+        # We need a wayframe before we can create the transform
         self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
-                                   self.reference_id, self.origin_id)
+                                   self.reference, self.origin)
 
     ########################################
 
     def transform_at_time(self, time, quick=False):
-        """Returns the Transform to the given Frame at a specified Scalar of
-        times."""
+        """The Transform into the this Frame at a Scalar of times."""
 
         return self.transform
 
@@ -85,7 +79,7 @@ class Rotation(Frame, Fittable):
 
         self.angle = params
 
-        mat = np.zeros(self.shape + [3,3])
+        mat = np.zeros(self.shape + (3,3))
         mat[..., self.axis2, self.axis2] = 1.
         mat[..., self.axis0, self.axis0] = np.cos(self.angle.vals)
         mat[..., self.axis0, self.axis1] = np.sin(self.angle.vals)
@@ -93,7 +87,7 @@ class Rotation(Frame, Fittable):
         mat[..., self.axis1, self.axis0] = -mat[..., self.axis0, self.axis1]
 
         self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
-                                   self.reference_id, self.origin_id)
+                                   self.reference, self.origin)
 
     def get_params(self):
         """Returns the current set of parameters defining this fittable object.
@@ -105,8 +99,9 @@ class Rotation(Frame, Fittable):
         return self.angle.vals
 
     def copy(self):
-        """Returns a deep copy of the given object. The copy can be safely
-        modified without affecting the original."""
+        """Return a deep copy of the given object.
+
+        The copy can be safely modified without affecting the original."""
 
         return Rotation(self.angle.copy(), self.axis, self.reference_id)
 

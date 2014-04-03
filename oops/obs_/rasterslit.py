@@ -123,19 +123,19 @@ class RasterSlit(Observation):
                         with the array indices.
         """
 
-        indices = Tuple.as_tuple(indices)
+        indices = Vector.as_vector(indices)
 
         slit_coord = indices.to_scalar(self.fast_axis)
         if self.slit_is_discontinuous:
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
 
-        uv_vals = np.empty(indices.shape + [2])
+        uv_vals = np.empty(indices.shape + (2,))
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
         uv_vals[..., self.cross_slit_uv_index] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
-        tstep = indices.as_pair(self.t_axis)
+        tstep = indices.to_pair(self.t_axis)
         time = self.cadence.time_at_tstep(tstep)
 
         if fovmask:
@@ -170,17 +170,17 @@ class RasterSlit(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Tuple.as_int(indices)
+        indices = Vector.as_int(indices)
 
         slit_coord = indices.to_scalar(self.fast_axis)
 
-        uv_vals = np.empty(indices.shape + [2], dtype="int")
+        uv_vals = np.empty(indices.shape + (2,), dtype="int")
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
         uv_vals[..., self.cross_slit_uv_index] = 0
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
-        tstep = indices.as_pair(self.t_axis)
+        tstep = indices.to_pair(self.t_axis)
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep)
 
         if fovmask:
@@ -217,7 +217,7 @@ class RasterSlit(Observation):
         """
 
         uv_tuple = Pair.as_int(uv_pair).as_tuple()
-        tstep = uv_tuple.as_pair((self.cross_slit_uv_index,
+        tstep = uv_tuple.to_pair((self.cross_slit_uv_index,
                                   self.along_slit_uv_index))
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
@@ -283,7 +283,7 @@ class Test_RasterSlit(unittest.TestCase):
                          cadence=cadence, fov=fov,
                          path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+        indices = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
         # uvt() with fovmask == False
         (uv,time) = obs.uvt(indices)
@@ -387,7 +387,7 @@ class Test_RasterSlit(unittest.TestCase):
                          cadence=cadence, fov=fov,
                          path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+        indices = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
         (uv,time) = obs.uvt(indices)
 

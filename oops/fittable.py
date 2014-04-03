@@ -3,7 +3,7 @@
 ################################################################################
 
 class Fittable(object):
-    """The Fittable interface enables an oops class to be used within a
+    """The Fittable interface enables any class to be used within a
     least-squares fitting procedure.
 
     Every Fittable object has these attributes:
@@ -11,14 +11,18 @@ class Fittable(object):
         param_name      the name of the attribute holding the parameters.
         cache           a dictionary containing prior values of the object,
                         keyed by the parameter set as a tuple.
+
+    It is also necessary to define these methods:
+        set_params() or set_params_new()
+        copy()
     """
 
     def set_params(self, params):
-        """Redefines the Fittable object, using this set of parameters. It does
-        not refer to the cache in advance. Before calling the class's
-        method set_params_new(), it checks an internal cache and returns a
-        cached version of the object if it exists. Override this method if the
-        subclass should not use a cache.
+        """Redefine the object using this set of parameters.
+
+        This implementation checks the cache first, and then calls
+        set_params_new() if the instance is not cached. Override this method
+        if the Fittable object does not need a cache.
 
         Input:
             params      a list, tuple or 1-D Numpy array of floating-point
@@ -36,9 +40,11 @@ class Fittable(object):
         return result
 
     def set_params_new(self, params):
-        """Redefines the Fittable object, using this set of parameters. Unlike
-        method set_params(), this method does not check the cache first.
-        Override this method if the subclass should use a cache.
+        """Redefine using this set of parameters. Do not check the cache first.
+
+        Override this method if the subclass uses a cache. Then calls to
+        set_params() will check the cache and only invoke this function when
+        needed.
 
         Input:
             params      a list, tuple or 1-D Numpy array of floating-point
@@ -49,7 +55,9 @@ class Fittable(object):
         pass
 
     def get_params(self):
-        """Returns the current set of parameters defining this fittable object.
+        """Return the current set of parameters defining this fittable object.
+
+        This method normally does not need to be overridden.
 
         Return:         a Numpy 1-D array of floating-point numbers containing
                         the parameter values defining this object.
@@ -58,13 +66,15 @@ class Fittable(object):
         return self.__dict__[self.param_name]
 
     def copy(self):
-        """Returns a deep copy of the given object. The copy can be safely
-        modified without affecting the original."""
+        """Return a deep copy of the given object.
+
+        The copy can be safely modified without affecting the original.
+        """
 
         pass
 
     def clear_cache(self):
-        """Clears the current cache."""
+        """Clear the current cache."""
 
         self.cache = {}
 

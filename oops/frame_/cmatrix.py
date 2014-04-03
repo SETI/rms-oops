@@ -3,12 +3,12 @@
 ################################################################################
 
 import numpy as np
-
-from oops.frame_.frame import Frame
-from oops.transform    import Transform
-import oops.constants  as constants
-import oops.registry   as registry
 from polymath import *
+
+from oops.transform    import Transform
+from oops.frame_.frame import Frame
+from oops.path_.path   import Path
+import oops.constants  as constants
 
 class Cmatrix(Frame):
     """Cmatrix is a Frame subclass in which the frame is defined by a fixed
@@ -17,96 +17,98 @@ class Cmatrix(Frame):
     points rightward, and the Y-axis points downward.
     """
 
-    def __init__(self, cmatrix, id, reference="J2000"):
+    def __init__(self, cmatrix, reference=None, id=None):
         """Constructor for a Cmatrix frame.
 
         Input:
             cmatrix     a Matrix3 object.
-            id          the ID under which the frame will be registered. It
-                        replaces a pre-existing frame of the same name.
-            reference   the ID or frame relative to which this frame is defined.
+            reference   the ID or frame relative to which this frame is defined;
+                        None for J2000.
+            id          the ID under which the frame will be registered; None
+                        to leave the frame unregistered
         """
 
         cmatrix = Matrix3.as_matrix3(cmatrix)
 
-        reference = registry.as_frame(reference)
-        self.reference_id = reference.frame_id
-        self.origin_id = reference.origin_id
+        # Required attributes
+        self.frame_id  = id or Frame.temporary_frame_id()
+        self.reference = Frame.as_wayframe(reference) or Frame.J2000
+        self.origin    = self.reference.origin
+        self.shape     = cmatrix.shape
+        self.keys      = set()
 
-        self.shape = cmatrix.shape
-        self.frame_id = id
+        # Register if necessary
+        if id:
+            self.register()
+        else:
+            self.wayframe = self
 
-        self.reregister()   # We have to register it before we can construct the
-                            # Transform
-
-        self.transform = Transform(cmatrix, (0,0,0),
-                                   self.frame_id,
-                                   self.reference_id)
+        # It needs a wayframe before we can construct the transform
+        self.transform = Transform(cmatrix, Vector3.ZERO,
+                                   self.wayframe, self.reference)
 
     @staticmethod
-    def from_ra_dec(ra, dec, clock, id, reference="J2000"):
-        """Constructs a Cmatrix frame given the RA, dec and celestial north
-        clock angles.
+    def from_ra_dec(ra, dec, clock, reference=None, id=None):
+        """Construct a Cmatrix from RA, dec and celestial north clock angles.
 
         Input:
-            ra              a Scalar or UnitScalar defining the right ascension
-                            of the optic axis in default units of degrees.
-
-            dec             a Scalar or UnitScalar defining the declination of
-                            the optic axis in degrees.
-
-            clock           a Scalar or UnitScalar defining the angle of
-                            celestial north in degrees, measured clockwise from
-                            the "up" direction in the observation.
-
-            id              the name ID to use when registering this frame. Note
-                            that any prior frame using the same ID is replaced.
-
-            reference       the ID of the coordinate reference frame, typically
-                            J2000.
+            ra          a Scalar defining the right ascension of the optic axis
+                        in degrees.
+            dec         a Scalar defining the declination of the optic axis in
+                        degrees.
+            clock       a Scalar defining the angle of celestial north in
+                        degrees, measured clockwise from the "up" direction in
+                        the observation.
+            reference   the reference frame or ID; None for J2000.
+            id          the ID to use when registering this frame; None to leave
+                        it unregistered
 
         Note that this Frame can have an arbitrary shape. This shape is defined
-        by broadcasting the shapes of the ra, dec and twist Scalars.
+        by broadcasting the shapes of the ra, dec, twist and reference.
         """
 
         ra    = Scalar.as_scalar(ra)
         dec   = Scalar.as_scalar(dec)
         clock = Scalar.as_scalar(clock)
+        mask = ra.mask | dec.mask | clock.mask
 
         # The transform is fixed so save it now
-        r = constants.RPD * ra.vals
-        d = constants.RPD * dec.vals
-        t = constants.RPD * (180. - clock.vals)
+        ra = constants.RPD * ra.values
+        dec = constants.RPD * dec.values
+        twist = constants.RPD * (180. - clock.values)
 
-        cosr = np.cos(r)
-        sinr = np.sin(r)
+        cosr = np.cos(ra)
+        sinr = np.sin(ra)
 
-        cosd = np.cos(d)
-        sind = np.sin(d)
+        cosd = np.cos(dec)
+        sind = np.sin(dec)
 
-        cost = np.cos(t)
-        sint = np.sin(t)
+        cost = np.cos(twist)
+        sint = np.sin(twist)
 
-        (cosr, sinr,
-         cosd, sind,
-         cost, sint) = np.broadcast_arrays(cosr, sinr, cosd, sind, cost, sint)
+        (cosr, cosd, cost,
+         sinr, sind, sint) = np.broadcast_arrays(cosr, cosd, cost,
+                                                 sinr, sind, sint)
 
         # Extracted from the PDS Data Dictionary definition, which is appended
         # below
-        cmatrix = Matrix3(
-            [[-sinr * cost - cosr * sind * sint,
-               cosr * cost - sinr * sind * sint, cosd * sint],
-             [ sinr * sint - cosr * sind * cost,
-              -cosr * sint - sinr * sind * cost, cosd * cost],
-             [ cosr * cosd,  sinr * cosd,        sind       ]])
+        cmatrix_values = np.empty(cosr.shape + (3,3))
+        cmatrix_values[...,0,0] = -sinr * cost - cosr * sind * sint
+        cmatrix_values[...,0,1] =  cosr * cost - sinr * sind * sint
+        cmatrix_values[...,0,2] =  cosd * sint
+        cmatrix_values[...,1,0] =  sinr * sint - cosr * sind * cost
+        cmatrix_values[...,1,1] = -cosr * sint - sinr * sind * cost
+        cmatrix_values[...,1,2] =  cosd * cost
+        cmatrix_values[...,2,0] =  cosr * cosd
+        cmatrix_values[...,2,1] =  sinr * cosd
+        cmatrix_values[...,2,2] =  sind
 
-        return Cmatrix(cmatrix, id, reference)
+        return Cmatrix(Matrix3(cmatrix,mask), reference, id)
 
-########################################
+    ########################################
 
-    def transform_at_time(self, time, quick=None):
-        """Returns the Transform to the given Frame at a specified Scalar of
-        times."""
+    def transform_at_time(self, time, quick=False):
+        """The Transform into the this Frame at a Scalar of times."""
 
         return self.transform
 
@@ -121,32 +123,34 @@ class Test_Cmatrix(unittest.TestCase):
     def runTest(self):
 
         # Imports are here to avoid conflicts
+        import os
+        import cspice
+
         from oops.frame_.spiceframe import SpiceFrame
         from oops.path_.spicepath import SpicePath
         from oops.event import Event
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-        import cspice
-        import os
         
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
-        registry.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
         ignore = SpicePath("MARS", "SSB")
         mars = SpiceFrame("IAU_MARS", "J2000")
 
         # Define a version of the IAU Mars frame always rotated by 180 degrees
         # around the Z-axis
-        mars180 = Cmatrix([[-1,0,0],[0,-1,0],[0,0,1]], "MARS180", "IAU_MARS")
+        mars180 = Cmatrix([[-1,0,0],[0,-1,0],[0,0,1]], "IAU_MARS")
 
         time = Scalar(np.random.rand(100) * 1.e8)
         posvel = np.random.rand(100,6)
-        event = Event(time, posvel[...,0:3], posvel[...,3:6], "MARS", "J2000")
+        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), "MARS", "J2000")
 
         wrt_mars = event.wrt_frame("IAU_MARS")
-        wrt_mars180 = event.wrt_frame("MARS180")
+        wrt_mars180 = event.wrt_frame(mars180)
 
         # Confirm that the components are related as expected
         self.assertTrue(np.all(wrt_mars.pos.vals[...,0] == -wrt_mars180.pos.vals[...,0]))
@@ -163,15 +167,14 @@ class Test_Cmatrix(unittest.TestCase):
         for (cos,sin) in ((1,0), (0,1), (-1,0), (0,-1)):
             matrices.append([[cos,sin,0],[-sin,cos,0],[0,0,1]])
 
-        mars90s = Cmatrix(matrices, "MARS90S", "IAU_MARS")
+        mars90s = Cmatrix(matrices, "IAU_MARS")
 
         time = Scalar(np.random.rand(100,1) * 1.e8)
         posvel = np.random.rand(100,1,6)
-        event = Event(time, posvel[...,0:3],
-                                 posvel[...,3:6], "MARS", "J2000")
+        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), "MARS", "J2000")
 
         wrt_mars = event.wrt_frame("IAU_MARS")
-        wrt_mars90s = event.wrt_frame("MARS90S")
+        wrt_mars90s = event.wrt_frame(mars90s)
 
         self.assertEqual(wrt_mars.shape, (100,1))
         self.assertEqual(wrt_mars90s.shape, (100,4))
@@ -201,7 +204,8 @@ class Test_Cmatrix(unittest.TestCase):
         self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,0][:,3]))
         self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,3]))
 
-        registry.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

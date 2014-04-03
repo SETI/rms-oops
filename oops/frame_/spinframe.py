@@ -1,5 +1,5 @@
 ################################################################################
-# oops/frame_/spinframe.py: Subclass SpinFrame of class Frame
+# oops/frame/spinframe.py: Subclass SpinFrame of class Frame
 ################################################################################
 
 import numpy as np
@@ -7,8 +7,6 @@ from polymath import *
 
 from oops.frame_.frame import Frame
 from oops.transform    import Transform
-
-import oops.registry as registry
 
 class SpinFrame(Frame):
     """SpinFrame is a Frame subclass describing a frame in uniform rotation
@@ -48,35 +46,37 @@ class SpinFrame(Frame):
         omega_vals[..., self.axis2] = self.rate.vals
         self.omega = Vector3(omega_vals, self.rate.mask)
 
-        if id is None:
-            self.frame_id = registry.temporary_frame_id()
+        # Required attributes
+        self.frame_id  = id or Frame.temporary_frame_id()
+        self.reference = Frame.as_wayframe(reference)
+        self.origin    = self.reference.origin
+        self.keys      = set()
+
+        if id:
+            self.register()
         else:
-            self.frame_id = id
+            self.wayframe = self
 
-        reference = registry.as_frame(reference)
-        self.reference_id = registry.as_frame_id(reference)
-        self.origin_id = reference.origin_id
+    ########################################
 
-        self.reregister()
+    def transform_at_time(self, time, quick={}):
+        """Return the Transform to this Frame at a specified Scalar of times.
 
-########################################
-
-    def transform_at_time(self, time, quick=False):
-        """Returns the Transform to the given Frame at a specified Scalar of
-        times."""
+        QuickFrame options are ignored.
+        """
 
         time = Scalar.as_scalar(time)
         angle = (time - self.epoch) * self.rate + self.offset
 
         mat = np.zeros(list(angle.shape) + [3,3])
         mat[..., self.axis2, self.axis2] = 1.
-        mat[..., self.axis0, self.axis0] = np.cos(angle.vals)
+        mat[..., self.axis0, self.axis0] = np.cos(angle.values)
         mat[..., self.axis1, self.axis1] = mat[..., self.axis0, self.axis0]
-        mat[..., self.axis0, self.axis1] = np.sin(angle.vals)
+        mat[..., self.axis0, self.axis1] = np.sin(angle.values)
         mat[..., self.axis1, self.axis0] = -mat[...,self.axis0,self.axis1]
 
         matrix = Matrix3(mat, angle.mask)
-        return Transform(matrix, self.omega, self.reference_id, self.origin_id)
+        return Transform(matrix, self.omega, self.reference, self.origin)
 
 ################################################################################
 # UNIT TESTS
@@ -92,14 +92,14 @@ class Test_SpinFrame(unittest.TestCase):
         from oops.event import Event
         from oops.transform import Transform
 
-        registry.initialize()
+        Frame.reset_registry()
 
         spin1  = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
         spin2  = SpinFrame(0., 2., 0., 2, "J2000", "spin2")
         spin3  = SpinFrame(0., 1., 0., 2, "spin2", "spin3")
         spin1a = SpinFrame(1., 1., 1., 2, "J2000", "spin1a")
 
-        event = Event(0., (1,0,0), (0,0,0), "SSB", "J2000")
+        event = Event(Scalar.ZERO, (Vector3.XAXIS,Vector3.ZERO), "SSB", "J2000")
         self.assertEqual(event.pos, (1,0,0))
         self.assertEqual(event.vel, (0,0,0))
 
@@ -118,7 +118,7 @@ class Test_SpinFrame(unittest.TestCase):
         self.assertEqual(event3.pos, (1, 0,0))
         self.assertEqual(event3.vel, (0,-3,0))
 
-        event = Event(0., (1,0,0), (1,2,3), "SSB", "J2000")
+        event = Event(Scalar.ZERO, (Vector3.XAXIS,(1,2,3)), "SSB", "J2000")
         self.assertEqual(event.pos, (1,0,0))
         self.assertEqual(event.vel, (1,2,3))
 
@@ -127,7 +127,7 @@ class Test_SpinFrame(unittest.TestCase):
         self.assertEqual(event1.vel, (1,1,3))
 
         eps = 1.e-10
-        event = Event(eps, (1,0,0), (0,0,0), "SSB", "J2000")
+        event = Event(eps, (Vector3.XAXIS,Vector3.ZERO), "SSB", "J2000")
 
         event1 = event.wrt_frame("spin1")
         self.assertEqual(event1.pos, (1, -eps,0))
@@ -157,24 +157,24 @@ class Test_SpinFrame(unittest.TestCase):
         (pos0, vel0) = tr0.rotate_pos_vel(pos, vel)
         (pos1, vel1) = tr1.rotate_pos_vel(pos + vel*dt, vel)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(((dpos_dt_test - vel0).norm() < 1.e-5).all())
+        self.assertTrue(abs(dpos_dt_test - vel0).max() < 1.e-5)
 
         (pos0, vel0) = tr0.unrotate_pos_vel(pos, vel)
         (pos1, vel1) = tr1.unrotate_pos_vel(pos + vel*dt, vel)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(((dpos_dt_test - vel0).norm() < 1.e-5).all())
+        self.assertTrue(abs(dpos_dt_test - vel0).max() < 1.e-5)
 
         pos0 = tr0.rotate(pos, derivs=True)
         pos1 = tr1.rotate(pos, derivs=False)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(((dpos_dt_test - pos0.d_dt.as_vector3()).norm() < 1.e-5).all())
+        self.assertTrue(abs(dpos_dt_test - pos0.d_dt).max() < 1.e-5)
 
         pos0 = tr0.unrotate(pos, derivs=True)
         pos1 = tr1.unrotate(pos, derivs=False)
         dpos_dt_test = (pos1 - pos0) / dt
-        self.assertTrue(((dpos_dt_test - pos0.d_dt.as_vector3()).norm() < 1.e-5).all())
+        self.assertTrue(abs(dpos_dt_test - pos0.d_dt).max() < 1.e-5)
 
-        registry.initialize()
+        Frame.reset_registry()
 
 #########################################
 if __name__ == '__main__':

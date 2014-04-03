@@ -3,9 +3,9 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.fov_.fov import FOV
-from polymath import *
 
 class FlatFOV(FOV):
     """Flat is a subclass of FOV that describes a field of view that is free of
@@ -13,9 +13,9 @@ class FlatFOV(FOV):
     """
 
     def __init__(self, uv_scale, uv_shape, uv_los=None, uv_area=None):
-        """Constructor for a FlatFOV. The U-axis is assumed to align with X and
-        the V-axis aligns with Y. A FlatFOV has no dependence on the optional
-        extra indices that can be associated with time, wavelength band, etc.
+        """Constructor for a FlatFOV.
+
+        The U-axis is assumed to align with X and the V-axis aligns with Y.
 
         Input:
             uv_scale    a single value, tuple or Pair defining the ratios dx/du
@@ -40,58 +40,48 @@ class FlatFOV(FOV):
                         based on the area of the central pixel.
         """
 
-        self.uv_scale = Pair(uv_scale).as_float().copy()
+        self.uv_scale = Pair.as_pair(uv_scale).as_float().as_readonly()
         if np.shape(uv_shape) == ():
-            self.uv_shape = Pair((uv_shape,uv_shape))
+            self.uv_shape = Pair((uv_shape,uv_shape)).as_readonly()
         else:
-            self.uv_shape = Pair.as_pair(uv_shape)
+            self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = Pair.as_pair(uv_los).as_float()
+            self.uv_los = Pair.as_pair(uv_los).as_float().as_readonly()
 
         if uv_area is None:
             self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
         else:
             self.uv_area = uv_area
 
-        scale = Pair.as_pair(uv_scale)
+        scale = Pair.as_pair(uv_scale).as_readonly()
 
-        self.dxy_duv = Pair([[  scale.vals[0], 0.], [0.,   scale.vals[1]]], drank=1).as_readonly()
-        self.duv_dxy = Pair([[1/scale.vals[0], 0.], [0., 1/scale.vals[1]]], drank=1).as_readonly()
+        self.dxy_duv = Pair([[  scale.vals[0], 0.],
+                             [0.,   scale.vals[1]]], drank=1).as_readonly()
+        self.duv_dxy = Pair([[1/scale.vals[0], 0.],
+                             [0., 1/scale.vals[1]]], drank=1).as_readonly()
 
-    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
-        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
-        coordinates in radians.
+    def uv_from_xy(self, xy_pair, derivs=False):
+        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
-        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
-        shape [2,2].
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
         """
 
-        uv = Pair.as_pair(xy_pair).element_div(self.uv_scale) + self.uv_los
+        xy_pair = Pair.as_pair(xy_pair, derivs)
+        return xy_pair.element_div(self.uv_scale) + self.uv_los
 
-        if derivs:
-            uv.insert_deriv("xy", self.duv_dxy)
+    def xy_from_uv(self, uv_pair, derivs=False):
+        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
-        return uv
-
-    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
-        """Returns a Pair of (x,y) spatial coordinates in units of radians,
-        given a Pair of coordinates (u,v).
-
-        If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
-        shape [2,2].
+        If derivs is True, then any derivatives in (x,y) get propagated into
+        the (u,v) returned.
         """
 
-        xy = (Pair.as_pair(uv_pair) - self.uv_los).element_mul(self.uv_scale)
-        
-        if derivs:
-            xy.insert_deriv("uv", self.dxy_duv)
-
-        return xy
+        uv_pair = Pair.as_pair(uv_pair, derivs)
+        return (uv_pair - self.uv_los).element_mul(self.uv_scale)
 
 ################################################################################
 # UNIT TESTS

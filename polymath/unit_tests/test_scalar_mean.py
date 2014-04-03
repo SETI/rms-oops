@@ -68,6 +68,25 @@ class Test_Scalar_mean(unittest.TestCase):
     self.assertTrue(masked.mean().mask)
     self.assertTrue(type(masked.mean()), Scalar)
 
+    # Denominators and derivatives
+    a = Scalar([1,2,3,4])
+    b = Scalar([[1,2],[3,4],[5,6],[7,8]], drank=1)
+    self.assertEqual(a.mean(), 2.5)
+    self.assertEqual(b.mean(), (4,5))
+    self.assertTrue(b.is_int())
+    self.assertTrue(b.mean().is_int())
+
+    a.insert_deriv('t', b)
+    mean = a.mean()
+    self.assertEqual(mean, 2.5)
+    self.assertEqual(type(mean), float)
+
+    mean = a.mean(True)
+    self.assertEqual(mean, 2.5)
+    self.assertEqual(type(mean), Scalar)
+    self.assertEqual(mean.d_dt, (4,5))
+    self.assertTrue(mean.d_dt.is_int())
+
 ################################################################################
 # Execute from command line...
 ################################################################################

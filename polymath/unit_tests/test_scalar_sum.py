@@ -62,6 +62,10 @@ class Test_Scalar_sum(unittest.TestCase):
     self.assertTrue(masked.sum().mask)
     self.assertTrue(type(masked.sum()), Scalar)
 
+    # Denominators
+    a = Scalar([1.,2.], drank=1)
+    self.assertRaises(ValueError, a.sum)
+
 ################################################################################
 # Execute from command line...
 ################################################################################

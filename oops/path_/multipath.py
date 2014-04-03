@@ -4,117 +4,94 @@
 
 import numpy as np
 from polymath import *
-import cspice
 
-from oops.path_.path import Path
-from oops.event      import Event
-
-import oops.registry      as registry
-import oops.spice_support as spice
+from oops.event        import Event
+from oops.path_.path   import Path
+from oops.frame_.frame import Frame
 
 class MultiPath(Path):
-    """A MultiPath gathers a set of paths into a single N-dimensional Path
-    object."""
+    """Gathers a set of paths into a single 1-D Path object."""
 
-    def __init__(self, paths, origin="SSB", frame="J2000", id=None):
+    def __init__(self, paths, origin=None, frame=None, id='+'):
         """Constructor for a MultiPath Path.
 
         Input:
-            paths           a tuple, list or ndarray of path IDs or objects.
-            origin          the name or integer ID of the origin body's path.
-            frame           the name or integer ID of the reference frame.
-            id              the name or ID under which this MultiPath will be
-                            registered. Default is the ID of the first path
-                            with a "+" appended.
+            paths       a tuple, list or ndarray of paths or path IDs.
+            origin      a path or path ID identifying the common origin of all
+                        paths. None to use the SSB.
+            frame       a frame or frame ID identifying the reference frame.
+                        None to use the default frame of the origin path.
+            id          the name or ID under which this path will be registered.
+                        A single '+' is changed to the ID of the first path with
+                        a '+' appended. None to leave the path unregistered.
         """
 
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id  = registry.as_frame_id(frame)
+        # Interpret the inputs
+        self.origin = Path.as_waypoint(origin) or Path.SSB
+        self.frame  = Frame.as_wayframe(frame) or self.origin.frame
 
-        self.shape = [np.size(paths)]
-        self.path_ids = np.empty(self.shape, dtype="object")
-        self.paths    = np.empty(self.shape, dtype="object")
-        self.dict = {}
+        self.paths = np.array(paths, dtype='object').ravel()
+        self.shape = self.paths.shape
 
-        for (index, path) in np.ndenumerate(np.array(paths, dtype="object")):
-            this_id = registry.as_path_id(path)
-            this_path = registry.connect_paths(this_id, self.origin_id,
-                                                        self.frame_id)
-            self.path_ids[index] = this_id
-            self.paths[index] = this_path
-            self.dict[this_id] = this_path
-            self.dict[index[0]] = this_path
+        for (index, path) in np.ndenumerate(self.paths):
+            self.paths[index] = Path.as_path(path).wrt(self.origin, self.frame)
 
         # Fill in the path_id
-        if id is None:
-            self.path_id = self.path_ids.ravel()[0] + "+"
+        self.path_id = id or Path.temporary_path_id()
+
+        if self.path_id == '+':
+            self.path_id = self.paths[0].path_id + '+'
+
+        # Register if necessary
+        if id:
+            self.register()
         else:
-            self.path_id = id
+            self.waypoint = self
 
-        self.reregister()
-
-########################################
+    ########################################
 
     def __getitem__(self, i):
-        return self.dict[i]
+        slice = self.paths[i]
+        if np.shape(slice) == (): return slice
+        return MultiPath(slice, self.origin, self.frame, id=None)
 
-    def __getslice__(self, i, j):
-        return self.paths[i:j]
+    ########################################
 
-    def __len__(self): return self.paths.size
-
-    def __str__(self):
-        return ("MultiPath([" + self.path_id   + " - " +
-                                self.origin_id + "]/" +
-                                self.frame_id + ")")
-
-########################################
-
-    def event_at_time(self, time, quick=None):
+    def event_at_time(self, time, quick={}):
         """Returns an Event object corresponding to a specified Scalar time on
         this path. The times are broadcasted across the shape of the MultiPath.
 
         Input:
             time        a time Scalar at which to evaluate the path.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
+            quick       False to disable QuickPaths; a dictionary to override
+                        specific options.
 
         Return:         an Event object containing the time, position and
                         velocity of the paths.
         """
 
-        # Broadcast to the same shape
-        time = Scalar.as_scalar(time)
-
-        masked = np.any(time.mask)
-        if masked:
-            (time_vals, time_mask,
-            paths) = np.broadcast_arrays(time.vals, time.mask, self.paths)
-            time_mask = np.array(time_mask.copy())
-        else:
-            (time_vals, paths) = np.broadcast_arrays(time.vals, self.paths)
-
-        time_vals = time_vals.copy()
+        # Broadcast everything to the same shape
+        time = Qube.broadcast(Scalar.as_scalar(time), self.shape)[0]
 
         # Create the event object
-        pos = np.empty(time_vals.shape + (3,))
-        vel = np.empty(time_vals.shape + (3,))
+        pos = np.empty(time.shape + (3,))
+        vel = np.empty(time.shape + (3,))
+        mask = np.empty(time.shape, dtype='bool')
+        mask[...] = time.mask
 
-        for index, path in np.ndenumerate(paths):
-            if masked and time_mask[index]:
-                pos[index] = np.zeros(3)
-                vel[index] = np.zeros(3)
-            else:
-                event = path.event_at_time(time_vals[index], quick)
-                pos[index] = event.pos.vals
-                vel[index] = event.vel.vals
+        for (index, path) in np.ndenumerate(self.paths):
+            event = path.event_at_time(time.values[...,index], quick=quick)
+            pos[...,index,:] = event.pos.values
+            vel[...,index,:] = event.vel.values
+            mask[...,index] |= (event.pos.mask | event.vel.mask)
 
-        if masked:
-            new_time = Scalar(time_vals, time_mask)
-        else:
-            new_time = Scalar(time_vals)
+        if not np.any(mask):
+            mask = False
+        elif np.all(mask):
+            mask = True
 
-        return Event(new_time, pos, vel, self.origin_id, self.frame_id)
+        return Event(Scalar(time.values,mask), (pos,vel),
+                            self.origin, self.frame)
 
 ################################################################################
 # UNIT TESTS
@@ -126,15 +103,18 @@ class Test_MultiPath(unittest.TestCase):
 
     def runTest(self):
 
-        from spicepath import SpicePath
+        import cspice
+        import oops.spice_support as spice
+        from oops.path_.spicepath import SpicePath
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import os
-        
+
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "naif0009.tls"))
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
 
-        registry.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
         sun   = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SSB")
@@ -143,7 +123,7 @@ class Test_MultiPath(unittest.TestCase):
         test = MultiPath([sun,earth,moon], "SSB")
 
         self.assertEqual(test.path_id, "SUN+")
-        self.assertEqual(test.shape, [3])
+        self.assertEqual(test.shape, (3,))
 
         # Single time
         event0 = test.event_at_time(0.)
@@ -193,8 +173,8 @@ class Test_MultiPath(unittest.TestCase):
         self.assertTrue(event012a.pos[0:2] == event01x.pos)
         self.assertTrue(event012a.vel[0:2] == event01x.vel)
 
-        registry.initialize()
-        spice.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

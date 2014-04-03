@@ -4,17 +4,26 @@
 
 import numpy as np
 import os
+
 import spicedb
 import julian
 import gravity
 import cspice
 
-import oops.path_          as path_
-import oops.frame_         as frame_
-import oops.surface_       as surface
-import oops.spice_support  as spice
-import oops.registry       as registry
-import oops.constants      as constants
+from oops.path_.path      import Path
+from oops.path_.multipath import MultiPath
+from oops.path_.spicepath import SpicePath
+
+from oops.frame_.frame      import Frame, AliasFrame
+from oops.frame_.ringframe  import RingFrame
+from oops.frame_.spiceframe import SpiceFrame
+
+from oops.surface_.nullsurface import NullSurface
+from oops.surface_.ringplane   import RingPlane
+from oops.surface_.orbitplane  import OrbitPlane
+from oops.surface_.spicebody   import spice_body
+
+import oops.constants    as constants
 
 class Body(object):
     """Defines the properties and relationships of solar system bodies.
@@ -24,13 +33,10 @@ class Body(object):
         name            the name of this body.
         spice_id        the ID from the SPICE toolkit, if the body found in
                         SPICE; otherwise, None.
-        path_id         the ID of the Path this body follows.
         path            a Waypoint for the body's path
-        frame_id        the ID of the coordinate frame describing this body.
         frame           a Wayframe for the body's frame.
-        ring_frame_id   the ID of a "despun" frame relevant to a ring that might
-                        orbit this body. None if not (yet) defined.
-        ring_frame      a RingFrame for the body.
+        ring_frame      the Wayframe of a "despun" RingFrame relevant to a ring
+                        that might orbit this body. None if not (yet) defined.
         ring_is_retrograde  True if the ring frame is retrograde relative to
                             IAU-defined north.
 
@@ -66,7 +72,9 @@ class Body(object):
                         its parent and also the children of its barycenter.
     """
 
-    def __init__(self, name, path_id, frame_id, parent, barycenter):
+    BODY_REGISTRY = {}      # global dictionary of body objects
+
+    def __init__(self, name, path, frame, parent, barycenter):
         """Constructor for a Body object."""
 
         self.name = name
@@ -76,20 +84,18 @@ class Body(object):
         except KeyError:
             self.spice_id = None
 
-        self.path_id = path_id
-        self.frame_id = frame_id
-        self.ring_frame_id = None
+        self.ring_frame = None
 
-        self.path = path_.Waypoint(self.path_id)
-        self.frame = frame_.Wayframe(self.frame_id)
+        self.path = Path.as_waypoint(path)
+        self.frame = Frame.as_wayframe(frame)
 
         if type(parent) == type(""):
-            self.parent = registry.body_lookup(parent)
+            self.parent = Body.lookup(parent)
         else:
             self.parent = parent
 
         if type(barycenter) == type(""):
-            self.barycenter = registry.body_lookup(barycenter)
+            self.barycenter = Body.lookup(barycenter)
         else:
             self.barycenter = barycenter
 
@@ -111,7 +117,7 @@ class Body(object):
                 self.barycenter.children.append(self)
 
         # Save it in the Solar System dictionary
-        registry.BODY_REGISTRY[self.name] = self
+        Body.BODY_REGISTRY[self.name] = self
 
     ########################################
 
@@ -121,22 +127,20 @@ class Body(object):
         self.surface = surface
         self.radius = radius
         self.inner_radius = inner_radius
-        # assert self.surface.origin_id == self.path_id
+        # assert self.surface.origin == self.path
         # This assertion is not strictly necessary
 
     def apply_ring_frame(self, epoch=None, retrograde=False):
-        """Add the and ring_frame and ring_frame_id attributes to a Body."""
+        """Add the ring and ring_frame attributes to a Body."""
 
         # On a repeat call, make sure they match
-        if self.ring_frame_id is not None:
-            ringframe = registry.as_frame(self.ring_frame_id)
-            assert ringframe.epoch == epoch
-            assert ringframe.retrograde == retrograde
+        if self.ring_frame is not None:
+            assert self.ring_frame.epoch == epoch
+            assert self.ring_frame.retrograde == retrograde
             return
 
-        self.ring_frame = frame_.RingFrame(self.frame_id, epoch=epoch,
-                                           retrograde=retrograde)
-        self.ring_frame_id = self.ring_frame.frame_id
+        self.ring_frame = RingFrame(self.frame, epoch=epoch,
+                                    retrograde=retrograde)
         self.ring_is_retrograde = retrograde
 
     def apply_gravity(self, gravity):
@@ -372,13 +376,44 @@ class Body(object):
 
         paths = []
         for body in bodies:
-            paths.append(body.path_id)
+            paths.append(body.path)
 
-        return path_.MultiPath(paths, origin, frame, id)
+        return MultiPath(paths, origin, frame, id)
+
+    ############################################################################
+    # Body registry
+    ############################################################################
 
     @staticmethod
-    def lookup(name):
-        return registry.body_lookup(name)
+    def lookup(key):
+        """Return a body from the registry given its name."""
+
+        return Body.BODY_REGISTRY[key]
+
+    @staticmethod
+    def as_body(body):
+        """Return a body object given the registered name or the object itself.
+        """
+
+        if type(body) == Body: return body
+        return body_lookup(body)
+
+    @staticmethod
+    def as_body_name(body):
+        """Return a body name given the registered name or the object itself."""
+
+        if is_body(body): return body.name
+        return body
+
+    @staticmethod
+    def reset_registry():
+        """Initialize the registry.
+    
+        It is not generally necessary to call this function, but it can be used
+        to reset the registry for purposes of debugging.
+        """
+
+        Body.BODY_REGISTRY.clear()
 
 ################################################################################
 # General function to load Solar System components
@@ -408,7 +443,7 @@ def define_solar_system(start_time=None, stop_time=None, asof=None):
     spicedb.close_db()
 
     # Define B1950 in addition to J2000
-    ignore = frame_.SpiceFrame("B1950", "J2000")
+    ignore = SpiceFrame("B1950", "J2000")
 
     # SSB and Sun
     define_bodies(["SSB"], None, None, ["SUN", "BARYCENTER"])
@@ -593,9 +628,9 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [], retrograde=True)
 
     URANUS_EPOCH = cspice.utc2et("1977-03-10T20:00:00")
-    uranus_wrt_b1950 = registry.connect_frames("IAU_URANUS", "B1950")
-    ignore = frame_.RingFrame(uranus_wrt_b1950, URANUS_EPOCH,
-                                         "URANUS_RINGS_B1950", retrograde=True)
+    uranus_wrt_b1950 = AliasFrame("IAU_URANUS").wrt("B1950")
+    ignore = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
+                       id="URANUS_RINGS_B1950")
 
     define_orbit("URANUS", "SIX_RING", URANUS_SIX_ELEMENTS,
                            URANUS_EPOCH, "URANUS_RINGS_B1950", [])
@@ -676,8 +711,8 @@ def _define_pluto(start_time, stop_time, asof=None, irregulars=False):
     define_ring("PLUTO", "PLUTO_INNER_RING_PLANE", None, [],
                 barycenter_name="PLUTO")
 
-    barycenter = registry.BODY_REGISTRY["PLUTO BARYCENTER"]
-    barycenter.ring_frame_id = registry.BODY_REGISTRY["PLUTO"].ring_frame_id
+    barycenter = Body.BODY_REGISTRY["PLUTO BARYCENTER"]
+    barycenter.ring_frame = Body.BODY_REGISTRY["PLUTO"].ring_frame
 
 ################################################################################
 # Define bodies and rings...
@@ -691,20 +726,20 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
     for spice_id in spice_ids:
 
         # Define the body's path
-        path = path_.SpicePath(spice_id, "SSB")
+        path = SpicePath(spice_id, "SSB")
 
         # The name of the path is the name of the body
         name = path.path_id
 
         # If the body already exists, skip it
-        if name in registry.BODY_REGISTRY: continue
+        if name in Body.BODY_REGISTRY: continue
 
         # Sometimes a frame is undefined for a new body; in this case any frame
         # will do.
         try:
-            frame = frame_.SpiceFrame(spice_id)
+            frame = SpiceFrame(spice_id)
         except LookupError:
-            frame = frame_.Wayframe("J2000", path.path_id)
+            frame = Frame.J2000
 
         # Define the planet's body
         # Note that this will overwrite any registered body of the same name
@@ -718,13 +753,13 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
         # Add the surface object if shape information is available
         try:
-            shape = surface.spice_body(spice_id)
+            shape = spice_body(spice_id)
             body.apply_surface(shape, shape.req, shape.rpol)
         except RuntimeError:
-            shape = surface.NullSurface(path, frame)
+            shape = NullSurface(path, frame)
             body.apply_surface(shape, 0., 0.)
         except LookupError:
-            shape = surface.NullSurface(path, frame)
+            shape = NullSurface(path, frame)
             body.apply_surface(shape, 0., 0.)
 
         # Add a planet name to any satellite or barycenter
@@ -760,16 +795,16 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     """
 
     # If the ring body already exists, skip it
-    if ring_name in registry.BODY_REGISTRY: return
+    if ring_name in Body.BODY_REGISTRY: return
 
     # Identify the parent
-    parent = registry.body_lookup(parent_name)
+    parent = Body.lookup(parent_name)
     parent.apply_ring_frame(retrograde=retrograde)
 
     if barycenter_name is None:
         barycenter = parent
     else:
-        barycenter = registry.body_lookup(barycenter_name)
+        barycenter = Body.lookup(barycenter_name)
 
     # Interpret the radii
     try:
@@ -786,10 +821,10 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
 
     # Create the ring body
     # Note that this will overwrite any registered ring of the same name
-    body = Body(ring_name, barycenter.path_id, parent.ring_frame_id,
+    body = Body(ring_name, barycenter.path, parent.ring_frame,
                 parent, parent)
-    shape = surface.RingPlane(barycenter.path_id, parent.ring_frame_id,
-                              radii, gravity=parent.gravity)
+    shape = RingPlane(barycenter.path, parent.ring_frame, radii,
+                      gravity=parent.gravity)
 
     body.apply_surface(shape, rmax, 0.)
 
@@ -802,23 +837,16 @@ def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
     The ring can be inclined or eccentric.
     """
 
-    parent = registry.body_lookup(parent_name)
+    parent = Body.lookup(parent_name)
 
-    orbit = surface.OrbitPlane(elements, epoch, parent.path_id, reference,
-                               id=ring_name)
+    orbit = OrbitPlane(elements, epoch, parent.path, reference, id=ring_name)
 
-    body = Body(ring_name, orbit.internal_origin_id, orbit.internal_frame_id,
+    body = Body(ring_name, orbit.internal_origin, orbit.internal_frame,
                 parent, parent)
     body.apply_surface(orbit, elements[9], 0.)
 
     body.add_keywords([parent, "RING", "ORBIT", ring_name])
     body.add_keywords(keywords)
-
-################################################################################
-# Initialize the registry
-################################################################################
-
-registry.BODY_CLASS = Body
 
 ################################################################################
 # UNIT TESTS
@@ -831,23 +859,22 @@ class Test_Body(unittest.TestCase):
     def runTest(self):
 
         # Imports are here to avoid conflicts
-        import oops.registry as registry
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
-        registry.initialize_body_registry()
+        Path.reset_registry()
+        Frame.reset_registry()
+        Body.reset_registry()
 
         define_solar_system("2000-01-01", "2010-01-01")
 
-        self.assertEqual(registry.body_lookup("DAPHNIS").barycenter.name,
+        self.assertEqual(Body.lookup("DAPHNIS").barycenter.name,
                          "SATURN")
-        self.assertEqual(registry.body_lookup("PHOEBE").barycenter.name,
+        self.assertEqual(Body.lookup("PHOEBE").barycenter.name,
                          "SATURN BARYCENTER")
 
-        mars = registry.body_lookup("MARS")
+        mars = Body.lookup("MARS")
         moons = mars.select_children(include_all=["SATELLITE"])
         self.assertEqual(len(moons), 2)     # Phobos, Deimos
 
-        saturn = registry.body_lookup("SATURN")
+        saturn = Body.lookup("SATURN")
         moons = saturn.select_children(include_all=["CLASSICAL", "IRREGULAR"])
         self.assertEqual(len(moons), 1)     # Phoebe
 
@@ -855,34 +882,34 @@ class Test_Body(unittest.TestCase):
         self.assertEqual(len(moons), 8)     # Mimas-Iapetus
 
         rings = saturn.select_children(include_any=("RING"))
-        self.assertEqual(len(rings), 7)     # A, B, C, Main, Saturn all, plane, system
+        self.assertEqual(len(rings), 7)     # A, B, C, Main, all, plane, system
 
         moons = saturn.select_children(include_all="SATELLITE",
                                        exclude=("IRREGULAR"), radius=1000)
         self.assertEqual(len(moons), 1)     # Titan only
 
-        sun = registry.body_lookup("SUN")
+        sun = Body.lookup("SUN")
         planets = sun.select_children(include_any=["PLANET"])
         self.assertEqual(len(planets), 9)
 
-        sun = registry.body_lookup("SUN")
+        sun = Body.lookup("SUN")
         planets = sun.select_children(include_any=["PLANET", "EARTH"])
         self.assertEqual(len(planets), 9)
 
-        sun = registry.body_lookup("SUN")
+        sun = Body.lookup("SUN")
         planets = sun.select_children(include_any=["PLANET", "EARTH"],
                                       recursive=True)
         self.assertEqual(len(planets), 10)  # 9 planets plus Earth's moon
 
-        sun = registry.body_lookup("SUN")
+        sun = Body.lookup("SUN")
         planets = sun.select_children(include_any=["PLANET", "JUPITER"],
                                       exclude=["IRREGULAR", "BARYCENTER", "IO"],
                                       recursive=True)
         self.assertEqual(len(planets), 16)  # 9 planets + 7 Jovian moons
 
-        registry.initialize_frame_registry()
-        registry.initialize_path_registry()
-        registry.initialize_body_registry()
+        Path.reset_registry()
+        Frame.reset_registry()
+        Body.reset_registry()
 
 ########################################
 if __name__ == '__main__':

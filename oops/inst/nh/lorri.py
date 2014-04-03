@@ -71,13 +71,13 @@ def from_file(filespec, use_fits_geom=False, **parameters):
         north_clk = nh_file[0].header["SPCEMEN"]
         scet = nh_file[0].header["SPCSCET"]
         frame_id = "NH_LORRI_FRAME_"+str(tstart) # The frame_id has to be unique to this observation
-        oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk, frame_id+"_FLIPPED", "J2000")
+        oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk, "J2000", frame_id+"_FLIPPED")
 
         # We have to flip the X/Y axes because the LORRI standard has X vertical and Y horizontal
         flipxy = oops.Matrix3([[0,1,0],
                                [1,0,0],
                                [0,0,1]])
-        oops.frame.Cmatrix(flipxy, frame_id, frame_id+"_FLIPPED")
+        oops.frame.Cmatrix(flipxy, frame_id+"_FLIPPED", frame_id)
     
     # Create a Snapshot
     snapshot = oops.obs.Snapshot(("v","u"), tstart, texp, fov,
@@ -260,10 +260,8 @@ class LORRI(object):
         flipxyz = oops.Matrix3([[-1, 0, 0],
                                 [ 0,-1, 0],
                                 [ 0, 0,-1]])
-        oops.frame.Cmatrix(flipxyz, "NH_LORRI_1X1",
-                           "NH_LORRI_1X1_FLIPPED")
-        oops.frame.Cmatrix(flipxyz, "NH_LORRI_4X4",
-                           "NH_LORRI_4X4_FLIPPED")
+        oops.frame.Cmatrix(flipxyz, "NH_LORRI_1X1_FLIPPED", "NH_LORRI_1X1")
+        oops.frame.Cmatrix(flipxyz, "NH_LORRI_4X4_FLIPPED", "NH_LORRI_4X4")
 
         LORRI.initialized = True
 

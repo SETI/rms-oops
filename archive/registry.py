@@ -6,29 +6,15 @@
 # Frame Registry
 ################################################################################
 
-# The frames registry is keyed in two ways. If the key is a string, then this
-# constitutes the primary definition of the frame. The reference_id of the frame
-# must already be in the registry, and the new frame's ID cannot be in the
-# registry.
-
-# We also create secondary definitions of a frame, where it is defined relative
-# to a different reference frame. These are entered into the registry keyed by a
-# tuple: (frame_id, reference_id). This saves the effort of re-creating a frame
-# used repeatedly.
-
 # NOTE: This file has the property that it does NOT need to import the Frame
 # class. This is necessary so that modules that must load earlier (such as
 # Event and Transform) will not have circular dependencies.
 
 J2000 = None
 FRAME_REGISTRY = {}
+FRAME_CACHE = {}
 FRAME_CLASS = None
 TEMPORARY_FRAME_ID = 10000
-
-def is_frame(item):
-    """Return True if the item is a Frame object."""
-
-    return isinstance(item, FRAME_CLASS)
 
 def frame_lookup(key):
     """Return a frame from the registry given one of its keys."""
@@ -39,22 +25,29 @@ def as_frame(frame):
     """Return a Frame object given the registered name or the object itself."""
 
     if frame is None: return None
-    if is_frame(frame): return frame
-    return frame_lookup(frame)
+
+    if isinstance(frame, FRAME_CLASS): return frame
+
+    return FRAME_REGISTRY[frame]
+
+def as_primary_frame(frame):
+    """Return a the primary definition of a Frame object."""
+
+    if frame is None: return None
+
+    if not isinstance(frame, FRAME_CLASS):
+        frame = FRAME_REGISTRY[frame]
+
+    return FRAME_CACHE[frame.wayframe]
 
 def as_frame_id(frame):
     """Return a Frame ID given the object or a registered ID."""
 
     if frame is None: return None
-    if is_frame(frame): return frame.frame_id
+
+    if isinstance(frame, FRAME_CLASS): return frame.frame_id
+
     return frame
-
-def as_primary_frame(frame):
-    """Return the primary definition of a Frame object.
-    
-    The result is based on a registered name or a Frame object."""
-
-    return frame_lookup(as_frame_id(frame))
 
 def temporary_frame_id():
     """Return a temporary frame ID.
@@ -64,10 +57,10 @@ def temporary_frame_id():
     global TEMPORARY_FRAME_ID
 
     while True:
+        TEMPORARY_FRAME_ID += 1
         frame_id = "TEMPORARY_" + str(TEMPORARY_FRAME_ID)
         if not FRAME_REGISTRY.has_key(frame_id):
             return frame_id
-        TEMPORARY_FRAME_ID += 1
 
 def initialize_frame_registry():
     """Initialize the registry.
@@ -75,6 +68,11 @@ def initialize_frame_registry():
     It is not generally necessary to call this function, but it can be used
     to reset the registry for purposes of debugging."""
 
+    global J2000, FRAME_REGISTRY, FRAME_CACHE
+
+    J2000 = None
+    FRAME_REGISTRY.clear()
+    FRAME_CACHE.clear()
     FRAME_CLASS.initialize_registry()
 
 def connect_frames(target, reference):
@@ -89,24 +87,12 @@ def connect_frames(target, reference):
     the shapes of the target and reference.
     """
 
-    return FRAME_CLASS.connect(target, reference)
+    target = as_frame(target)
+    return target.connect_to(reference)
 
 ################################################################################
 # Path Registry
 ################################################################################
-
-# The global path registry is keyed in two ways. If the key is a string, then
-# this constitutes the primary definition of the path. The origin_id
-# of the path must already be in the registry, and the new path's ID
-# cannot be in the registry.
-
-# We also create secondary definitions of a path, where it is defined
-# relative to a different reference frame and/or with respect to a different
-# origin. These are entered into the registry keyed twice, by a tuple:
-#   (path_id, origin_id)
-# and a triple:
-#   (path_id, origin_id, frame_id).
-# This saves the effort of re-creating paths used repeatedly.
 
 # NOTE: This file has the property that it does NOT need to import the Path
 # class. This is necessary so that modules that must load earlier (such as
@@ -114,46 +100,42 @@ def connect_frames(target, reference):
 
 SSB = None
 PATH_REGISTRY = {}
+PATH_CACHE = {}
 PATH_CLASS = None
 TEMPORARY_PATH_ID = 10000
-
-def is_path(item):
-    """Return True if the item is a Path object."""
-
-    return isinstance(item, PATH_CLASS)
 
 def path_lookup(key):
     """Return a path from the registry given one of its keys."""
 
     return PATH_REGISTRY[key]
 
-def is_valid_path_id(item):
-    """Return True if the item is a validly-formatted path ID."""
-
-    abbr = item.__class__.__name__[0:3]
-    return abbr in ("int", "str")
-
 def as_path(path):
     """Return a Path object given the registered name or the object itself."""
 
     if path is None: return None
-    if is_path(path): return path
-    return path_lookup(path)
+
+    if isinstance(path, PATH_CLASS): return path
+
+    return PATH_REGISTRY[path]
+
+def as_primary_path(path):
+    """Return a the primary definition of a Path object."""
+
+    if path is None: return None
+
+    if not isinstance(path, PATH_CLASS):
+        path = PATH_REGISTRY[path]
+
+    return PATH_CACHE[path.waypoint]
 
 def as_path_id(path):
     """Return a path ID given the object or a registered ID."""
 
     if path is None: return None
-    if is_path(path): return path.path_id
+
+    if isinstance(path, PATH_CLASS): return path.path_id
+
     return path
-
-def as_primary_path(path):
-    """Return the primary definition of a Path object.
-    
-    The result is based on a registered name or a Path object.
-    """
-
-    return path_lookup(as_path_id(path))
 
 def temporary_path_id():
     """Return a temporary path ID. This is assigned once and never re-used."""
@@ -161,10 +143,10 @@ def temporary_path_id():
     global TEMPORARY_PATH_ID
 
     while True:
-        path_id = "TEMPORARY_" + str(TEMPORARY_PATH_ID)
-        if not PATH_REGISTRY.has_key(path_id):
-            return path_id
         TEMPORARY_PATH_ID += 1
+        path_id = "TEMPORARY_" + str(TEMPORARY_PATH_ID)
+        if path_id not in PATH_REGISTRY:
+            return path_id
 
 def initialize_path_registry():
     """Initialize the registry.
@@ -172,9 +154,14 @@ def initialize_path_registry():
     It is not generally necessary to call this function, but it can be used
     to reset the registry for purposes of debugging."""
 
+    global SSB, PATH_REGISTRY, PATH_CACHE
+
+    SSB = None
+    PATH_REGISTRY.clear()
+    PATH_CACHE.clear()
     PATH_CLASS.initialize_registry()
 
-def connect_paths(target, origin, frame="J2000"):
+def connect_paths(target, origin, frame=None):
     """Return a path that connects two paths.
     
     The returned path creates event objects in which vectors point from any
@@ -187,7 +174,8 @@ def connect_paths(target, origin, frame="J2000"):
                     use None for the default frame of the origin.
     """
 
-    return PATH_CLASS.connect(target, origin, frame)
+    target = as_path(target)
+    return target.connect_to(origin, frame)
 
 ################################################################################
 # Body Registry

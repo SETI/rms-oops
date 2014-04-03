@@ -21,7 +21,7 @@ class Test_Quaternion_parts(unittest.TestCase):
     self.assertTrue(a.readonly)
 
     a = Quaternion.from_parts(1., [(1,0,0),(0,1,0),(0,0,1)])
-    a.insert_deriv('t', Quaternion((1.,2.,3.,4.)), override=True)
+    a.insert_deriv('t', Quaternion((1.,2.,3.,4.)))
 
     self.assertEqual(a.d_dt.shape, (3,))
     self.assertEqual(a.d_dt[0], (1,2,3,4))

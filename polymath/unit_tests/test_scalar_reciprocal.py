@@ -54,7 +54,7 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertTrue(random.reciprocal().units is None)
 
     # Masks
-    N = 100
+    N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     zero_mask = np.random.randn(N) < -0.5
     x.values[zero_mask] = 0.
@@ -67,7 +67,7 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertTrue(not np.any(y.mask[~zero_mask & ~x.mask]))
 
     # Derivatives
-    N = 100
+    N = 1000
     x = Scalar(np.random.randn(N))
     zero_mask = np.random.randn(N) < -0.5
     x.values[zero_mask] = 0.
@@ -93,16 +93,19 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     dy_dt = x.reciprocal().d_dt
     dy_dvec = x.reciprocal().d_dvec
 
-    DEL = 2.e-4
+    DEL = 3.e-6
     for i in range(N):
         if not y.mask[i]:
-            self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i],
-                                   delta = DEL * abs(dy_dt[i]))
+            deriv = dy_dt[i]
+            if abs(deriv) < 1.e5:
+                self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], deriv,
+                                       delta = DEL * abs(deriv))
 
             for k in range(3):
-                self.assertAlmostEqual(dy_dx[i] * x.d_dvec[i].values[k],
-                                       dy_dvec[i].values[k],
-                                       delta = DEL * abs(dy_dvec[i].values[k]))
+                deriv = dy_dvec[i].values[k]
+                if abs(deriv) < 1.e5:
+                    self.assertAlmostEqual(dy_dx[i] * x.d_dvec[i].values[k],
+                                           deriv, delta = DEL * abs(deriv))
 
     # Derivatives should be removed if necessary
     self.assertEqual(x.reciprocal(recursive=False).derivs, {})

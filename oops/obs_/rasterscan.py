@@ -114,14 +114,14 @@ class RasterScan(Observation):
                         with the array indices.
         """
 
-        indices = Tuple.as_tuple(indices)
+        indices = Vector.as_vector(indices)
 
-        uv = indices.as_pair((self.u_axis,self.v_axis))
+        uv = indices.to_pair((self.u_axis,self.v_axis))
         if self.uv_is_discontinuous:
             uv_int = Pair.as_int(uv)
             uv = uv_int + (uv - uv_int) * self.uv_size
 
-        tstep = indices.as_pair(self.t_axis)
+        tstep = indices.to_pair(self.t_axis)
         time = self.cadence.time_at_tstep(tstep)
 
         if fovmask:
@@ -151,12 +151,12 @@ class RasterScan(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Tuple.as_int(indices)
+        indices = Vector.as_int(indices)
 
-        uv_min = indices.as_pair((self.u_axis,self.v_axis))
+        uv_min = indices.to_pair((self.u_axis,self.v_axis))
         uv_max = uv_min + self.uv_size
 
-        tstep = indices.as_pair(self.t_axis)
+        tstep = indices.to_pair(self.t_axis)
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep)
 
         if fovmask:
@@ -188,7 +188,7 @@ class RasterScan(Observation):
         """
 
         uv_tuple = Pair.as_int(uv_pair).as_tuple()
-        tstep = uv_tuple.as_pair((self.slow_uv_axis, self.fast_uv_axis))
+        tstep = uv_tuple.to_pair((self.slow_uv_axis, self.fast_uv_axis))
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
@@ -253,7 +253,7 @@ class Test_RasterScan(unittest.TestCase):
                          cadence=cadence, fov=fov,
                          path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+        indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
         # uvt() with fovmask == False
         (uv,time) = obs.uvt(indices)
@@ -262,7 +262,7 @@ class Test_RasterScan(unittest.TestCase):
         self.assertFalse(time.mask)
         self.assertEqual(time, slow_cadence.tstride * indices.to_scalar(1) +
                                fast_cadence.tstride * indices.to_scalar(0))
-        self.assertEqual(uv, indices.as_pair())
+        self.assertEqual(uv, Pair.as_pair(indices))
 
         # uvt() with fovmask == True
         (uv,time) = obs.uvt(indices, fovmask=True)
@@ -272,7 +272,7 @@ class Test_RasterScan(unittest.TestCase):
         self.assertEqual(time[:6],
                          (slow_cadence.tstride * indices.to_scalar(1) +
                           fast_cadence.tstride * indices.to_scalar(0))[:6])
-        self.assertEqual(uv[:6], indices.as_pair()[:6])
+        self.assertEqual(uv[:6], Pair.as_pair(indices)[:6])
 
         # uvt_range() with fovmask == False
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
@@ -282,8 +282,8 @@ class Test_RasterScan(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min, indices.as_pair())
-        self.assertEqual(uv_max, indices.as_pair() + (1,1))
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
         self.assertEqual(time_min,
                          slow_cadence.tstride * indices.to_scalar(1) +
                          fast_cadence.tstride * indices.to_scalar(0))
@@ -297,8 +297,8 @@ class Test_RasterScan(unittest.TestCase):
         self.assertFalse(time_min.mask)
         self.assertFalse(time_max.mask)
 
-        self.assertEqual(uv_min, indices.as_pair())
-        self.assertEqual(uv_max, indices.as_pair() + (1,1))
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
         self.assertEqual(time_min, slow_cadence.tstride * indices.to_scalar(1) +
                                    fast_cadence.tstride * indices.to_scalar(0))
         self.assertEqual(time_max, time_min + fast_cadence.texp)
@@ -312,8 +312,8 @@ class Test_RasterScan(unittest.TestCase):
         self.assertTrue(np.all(time_min.mask == uv_min.mask))
         self.assertTrue(np.all(time_max.mask == uv_min.mask))
 
-        self.assertEqual(uv_min[:2], indices.as_pair()[:2])
-        self.assertEqual(uv_max[:2], indices.as_pair()[:2] + (1,1))
+        self.assertEqual(uv_min[:2], Pair.as_pair(indices)[:2])
+        self.assertEqual(uv_max[:2], Pair.as_pair(indices)[:2] + (1,1))
         self.assertEqual(time_min[:2],
                          (slow_cadence.tstride * indices.to_scalar(1) +
                           fast_cadence.tstride * indices.to_scalar(0))[:2])
@@ -347,18 +347,18 @@ class Test_RasterScan(unittest.TestCase):
                          cadence=cadence, fov=fov,
                          path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+        indices = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
         (uv,time) = obs.uvt(indices)
 
-        self.assertEqual(uv, indices.as_pair())
+        self.assertEqual(uv, Pair.as_pair(indices))
         self.assertEqual(time, slow_cadence.tstride * indices.to_scalar(0) +
                                fast_cadence.tstride * indices.to_scalar(1))
 
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
-        self.assertEqual(uv_min, indices.as_pair())
-        self.assertEqual(uv_max, indices.as_pair() + (1,1))
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
         self.assertEqual(time_min, slow_cadence.tstride * indices.to_scalar(0) +
                                    fast_cadence.tstride * indices.to_scalar(1))
         self.assertEqual(time_max, time_min + fast_cadence.texp)

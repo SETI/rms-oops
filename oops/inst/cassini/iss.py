@@ -137,7 +137,7 @@ class ISS(object):
             vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
             
             # Display directions: [u,v] = [right,down]
-            full_fov = oops.fov.Flat((uscale,vscale), (samples,lines))
+            full_fov = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
 
             # Load the dictionary, include the subsampling modes
             ISS.fovs[detector, "FULL"] = full_fov
@@ -147,16 +147,12 @@ class ISS(object):
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal coordinate system is
         # rotated 180 degrees
-        ignore = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
-                                       id="CASSINI_ISS_NAC_FLIPPED")
-        ignore = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
-                                       id="CASSINI_ISS_WAC_FLIPPED")
+        nac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_NAC")
+        wac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_WAC")
 
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-        ignore = oops.frame.Cmatrix(rot180, "CASSINI_ISS_NAC",
-                                            "CASSINI_ISS_NAC_FLIPPED")
-        ignore = oops.frame.Cmatrix(rot180, "CASSINI_ISS_WAC",
-                                            "CASSINI_ISS_WAC_FLIPPED")
+        ignore = oops.frame.Cmatrix(rot180, nac_flipped, id="CASSINI_ISS_NAC")
+        ignore = oops.frame.Cmatrix(rot180, wac_flipped, id="CASSINI_ISS_WAC")
 
         ISS.initialized = True
 

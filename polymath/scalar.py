@@ -36,7 +36,9 @@ class Scalar(Qube):
         If recursive is True, derivatives will also be converted.
         """
 
-        if type(arg) == Scalar: return arg
+        if type(arg) == Scalar:
+            if recursive: return arg
+            return arg.without_derivs()
 
         if type(arg) == Qube.BOOLEAN_CLASS:
             return Qube.BOOLEAN_CLASS(arg).as_int()
@@ -159,13 +161,12 @@ class Scalar(Qube):
         if recursive and self.derivs:
             factor = self.without_derivs().cos()
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, factor * deriv,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, factor * deriv, nocopy='vm')
 
         return obj
 
     def cos(self, recursive=True):
-        """Returns the cosine of each value.
+        """Return the cosine of each value.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -183,13 +184,12 @@ class Scalar(Qube):
         if recursive and self.derivs:
             factor = -self.without_derivs().sin()
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, factor * deriv,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, factor * deriv, nocopy='vm')
 
         return obj
 
     def tan(self, recursive=True):
-        """Returns the tangent of each value.
+        """Return the tangent of each value.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -208,13 +208,12 @@ class Scalar(Qube):
         if recursive and self.derivs:
             inv_sec_sq = self.without_derivs().cos()**(-2)
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, inv_sec_sq * deriv,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, inv_sec_sq * deriv, nocopy='vm')
 
         return obj
 
     def arcsin(self, recursive=True, check=True):
-        """Returns the arcsine of each value.
+        """Return the arcsine of each value.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -263,13 +262,12 @@ class Scalar(Qube):
             x = self.without_derivs()
             factor = (1. - x*x)**(-0.5)
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, factor * deriv,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, factor * deriv, nocopy='vm')
 
         return obj
 
     def arccos(self, recursive=True, check=True):
-        """Returns the arccosine of each value.
+        """Return the arccosine of each value.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -319,13 +317,12 @@ class Scalar(Qube):
             x = self.without_derivs()
             factor = -(1. - x*x)**(-0.5)
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, factor * deriv,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, factor * deriv, nocopy='vm')
 
         return obj
 
     def arctan(self, recursive=True):
-        """Returns the arctangent of each value.
+        """Return the arctangent of each value.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -344,13 +341,12 @@ class Scalar(Qube):
         if recursive and self.derivs:
             factor = 1. / (1. + self.without_derivs()**2)
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, factor * deriv,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, factor * deriv, nocopy='vm')
 
         return obj
 
     def arctan2(self, arg, recursive=True):
-        """Returns the four-quadrant value of arctan2(y,x).
+        """Return the four-quadrant value of arctan2(y,x).
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -381,17 +377,18 @@ class Scalar(Qube):
                 new_derivs[key] = x_wod * denom_inv * y_deriv
 
             for (key, x_deriv) in x.derivs.iteritems():
+                term = y_wod * denom_inv * x_deriv
                 if key in new_derivs:
-                    new_derivs[key] -= y_wod * denom_inv * x_deriv
+                    new_derivs[key] = new_derivs[key] - term
                 else:
-                    new_derivs[key] = -y_wod * denom_inv * x_deriv
+                    new_derivs[key] = -term
 
-            obj.insert_derivs(new_derivs, override=True, nocopy='vm')
+            obj.insert_derivs(new_derivs, nocopy='vm')
 
         return obj
 
     def sqrt(self, recursive=True, check=True):
-        """Returns the square root, masking imaginary values.
+        """Return the square root, masking imaginary values.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -425,13 +422,12 @@ class Scalar(Qube):
         if recursive and no_negs.derivs:
             factor = Scalar(0.5 / sqrt_vals, no_negs.mask)
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, factor * deriv,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, factor * deriv, nocopy='vm')
 
         return obj
 
     def log(self, recursive=True, check=True):
-        """Returns the log, masking undefined values.
+        """Return the natural log, masking undefined values.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -469,7 +465,7 @@ class Scalar(Qube):
         return obj
 
     def exp(self, recursive=True, check=False):
-        """Returns the e raised to the power of each value.
+        """Return e raised to the power of each value.
 
         If this object is read-only, the returned object will also be read-only.
 
@@ -506,13 +502,12 @@ class Scalar(Qube):
 
         if recursive and self.derivs:
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, deriv * exp_values,
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, deriv * exp_values, nocopy='vm')
 
         return obj
 
     def sign(self):
-        """Returns the sign of each value as +1, -1 or 0.
+        """Return the sign of each value as +1, -1 or 0.
 
         If this object is read-only, the returned object will also be read-only.
         """
@@ -523,7 +518,14 @@ class Scalar(Qube):
         return obj
 
     def max(self):
-        """Returns the maximum of the unmasked values."""
+        """Returns the maximum of the unmasked values.
+
+        A Python scalar is returned unless the result is masked, in which case
+        a single masked Scalar is returned. Denominators are not supported.
+        """
+
+        if self.drank:
+            raise ValueError('denominators are not supported in max()')
 
         if np.all(self.mask):
             if self.is_float():
@@ -545,7 +547,14 @@ class Scalar(Qube):
             return Scalar(maxval, False, self.units)
 
     def min(self):
-        """Returns the minimum of the unmasked values."""
+        """Return the minimum of the unmasked values.
+
+        A Python scalar is returned unless the result is masked, in which case
+        a single masked Scalar is returned. Denominators are not supported.
+        """
+
+        if self.drank:
+            raise ValueError('denominators are not supported in min()')
 
         if np.all(self.mask):
             if self.is_float():
@@ -566,32 +575,74 @@ class Scalar(Qube):
         else:
             return Scalar(minval, False, self.units)
 
-    def mean(self):
-        """Returns the mean of the unmasked values."""
+    def mean(self, recursive=False):
+        """Return the mean of the unmasked values.
 
+        Denominators are supported and derivatives are supported. The value is
+        returned as a single Python scalar if possible
+        """
+
+        # Deal with the fully masked Scalar
         if np.all(self.mask):
             if self.is_float():
-                return Scalar(1., True, self.units)
+                values = np.ones(self.denom, dtype='float')
             else:
-                return Scalar(1, True, self.units)
+                values = np.ones(self.denom, dtype='int')
 
-        if not np.any(self.mask):
-            meanval = np.mean(self.values)
-        else:
-            meanval = np.mean(self.values[~self.mask])
+            return Scalar(values, True, example=self)
 
-        if self.units is None or self.units == Units.UNITLESS:
-            if self.is_float() or (meanval % 1. != 0):
-                return float(meanval)
+        is_simple = ((self.units is None or self.units == Units.UNITLESS) and
+                     self.drank == 0 and (self.derivs == {} or not recursive))
+
+        # Deal with a single value
+        if self.shape == ():
+            if not is_simple:
+                return self.clone()
+            elif self.is_float():
+                return float(self.values)
             else:
-                return int(meanval)
+                return int(self.values)
+
+        # Get a flattened array of unmasked values
+        if np.any(self.mask):
+            values = self.values[~self.mask]
+        elif self.drank == 0:
+            values = self.values.ravel()
         else:
-            return Scalar(meanval, False, self.units)
+            values = self.values.reshape((self.size,) + self.denom)
+
+        # Average over the first axis
+        meanval = np.mean(values, axis=0)
+
+        # Convert to int(s) if appropriate
+        if self.is_int() and np.all(meanval % 1 == 0):
+            if np.shape(meanval) == ():
+                meanval = int(meanval)
+            else:
+                meanval = meanval.astype('int')
+
+        # Return a scalar if possible
+        if is_simple:
+            if type(meanval) == int: return meanval
+            return float(meanval)
+
+        obj = Scalar(meanval, False, derivs={}, example=self)
+
+        if recursive:
+            for (key, deriv) in self.derivs.iteritems():
+                obj.insert_deriv(key, Scalar.as_scalar(deriv.mean(False)))
+
+        return obj
 
     def sum(self, recursive=False):
-        """Returns the sum of the unmasked values.
+        """Return the sum of the unmasked values.
 
-        If recursive, the derivatives are summed too. """
+        If recursive, the derivatives are summed too. Denominators are not
+        supported.
+        """
+
+        if self.drank:
+            raise ValueError('denominators are not supported in sum()')
 
         if np.all(self.mask):
             if self.is_float():
@@ -659,8 +710,7 @@ class Scalar(Qube):
         if recursive and self.derivs:
             factor = -obj*obj       # At this point it has no derivs
             for (key,deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, factor * deriv, override=True,
-                                 nocopy='vm')
+                obj.insert_deriv(key, factor * deriv, nocopy='vm')
 
         return obj
 

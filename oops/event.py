@@ -4,266 +4,274 @@
 
 import numpy as np
 from polymath import *
-import unittest
 
-from oops.config import EVENT_CONFIG, LOGGING
-
-from oops.constants import *
-
-import oops.registry  as registry
+from oops.frame_.frame import Frame
+from oops.config       import EVENT_CONFIG, LOGGING
+from oops.constants    import *
 
 class Event(object):
-    """An Event object is defined by a time, position and velocity. Times are
-    measured in seconds TDB relative to noon TDB on January 1, 2000, as defined
-    in the SPICE toolkit. Positions and velocities are measured in km relative
-    to a named origin Path object and within a named Frame.
+    """An Event is defined by a time, position and velocity. It always has these
+    attributes:
 
-    The event objects need not have the same shape; standard rules of
-    broadcasting apply.
+        __time_     event time as a Scalar of arbitrary shape. Times are
+                    measured in seconds TDB relative to noon TDB on January 1,
+                    2000, consistent with the time system used by the SPICE
+                    toolkit.
+
+        __state_    position of the event as a Vector3 of arbitrary shape.
+                    Positions are measured in km relative to the specified path.
+                    Velocities are specified in km/s as the "t" derivative of
+                    the position.
+
+        __origin_   a path object defining the location relative to which all
+                    positions and velocities are measured.
+
+        __frame_    a frame object defining the coordinate system in which the
+                    components of the positions and velocities are defined.
+
+        __subfields_ a dictionary of PolyMath objects providing further
+                    information about the properties of the event.
+
+    Each of these attributes can also be accessed via a read-only property with
+    the same name except for the surrounding undercores.
+
+    Subfields are accessible both via the __subfields_ dictionary, and also
+    directly as attributes of the Event object. These are the most common
+    subfields:
+
+        arr         an optional Vector3 defining the direction of a photon
+                    arriving at this event. It is defined in the coordinate
+                    frame of this event and not corrected for stellar
+                    aberration. Length is arbitrary.
+
+        dep         an optional Vector3 defining the direction of a photon
+                    departing from this event. It is defined in the coordinate
+                    frame of this event and not corrected for stellar
+                    aberration. Length is arbitrary.
+
+        arr_lt      an optional Scalar defining the (negative) light travel time
+                    for the arriving photon from its origin.
+
+        dep_lt      an optional Scalar defining the light travel time of a
+                    departing photon to its destination.
+
+        perp        the direction of a normal vector if this event falls on a
+                    surface.
+
+        vflat       a velocity component within the surface, which can be used
+                    to describe winds across a planet or orbital motion
+                    within a ring plane.
+
+    Note that the attributes of an object need not have the same shape, but they
+    must all be broadcastable to the same shape.
+
+    Events are intended to be static, with the exception that users might have
+    reasons to modify some subfields.
     """
 
-    def __init__(self, time, pos, vel, origin, frame=None, **subfields):
-        """Constructor for the Event class.
+    PATH_CLASS = None       # undefined at load to avoid circular dependencies
+
+    def __init__(self, time, state, origin, frame=None, **subfields):
+        """Constructor for the Event class
+
+        If a link is specified, then either the arriving or the departing
+        photons will be filled in automatically.
 
         Input:
             time        a Scalar of event times in seconds TDB.
-            pos         position vectors as a Vector3 object.
-            vel         velocity vectors as a Vector3 object.
-            origin_id   the ID of a path defining the origin of this event.
-            frame_id    the ID of a frame identifying the coordinate system.
-                        Default is to match the frame of the origin.
-
-        These subfields define the connection between this event and some other
-        event.
-            link        an Event object relative to which this one was defined.
-                        Any partial derivatives in this Event object are assumed
-                        to be relative to changes at the prior event.
-            sign        the sign of the direction of the photon between this
-                        event and the link. +1 for an outgoing photon to a later
-                        event; -1 for an incoming photon from an earlier event;
-                        0 for an unlinked event.
-
-        The following attributes are optional. They are inserted using the
-        insert_subfield() method, or as extra keyword=value pairs in the
-        constructor:
-            arr         the direction of a photon arriving at the event, NOT
-                        corrected for stellar aberration.
-            dep         the direction of a photon departing from the event, NOT
-                        corrected for stellar aberration.
-            arr_lt      the (negative) light travel time for an arriving photon
-                        from its origin.
-            dep_lt      the light travel time of a departing photon to its
-                        destination.
-            perp        the direction of a normal vector if the event falls on a
-                        surface.
-            vflat       a velocity component within the surface, which can be
-                        used to describe winds across a planet or orbital motion
-                        within a ring plane.
-
-            subfields   a dictionary containing all of the optional attributes.
-                        Additional subfields may be included as needed.
-
-        These properties are also available.
-            shape       a list of integers defining the overall shape of the
-                        event, found as a result of broadcasting together the
-                        time, position, velocity, arr and dep attributes.
-
-            mask        the overall mask of the Event, constructed as the "or"
-                        of the time, pos, vel, arr and dep masks.
+            state       position vectors as a Vector3 object. The velocity
+                        should be included as the time-derivative. However, if
+                        specified as a tuple of two objects, the first is
+                        interpreted as the position and the second as the
+                        velocity.
+            origin      the path or path ID identifying the origin of this
+                        event.
+            frame       the frame or frame ID identifying the coordinate frame
+                        of this event. By default, it matches the default frame
+                        of the origin.
+            **subfields an arbitrary set of subfields that are will also be
+                        accessible as attributes of the Event object.
         """
 
-        self.I_AM_MASKED = False
-        self.time  = Scalar.as_scalar(time)
-        self.pos   = Vector3.as_vector3(pos)
-        self.vel   = Vector3.as_vector3(vel)
+        self.__time_ = Scalar.as_scalar(time).as_readonly()
 
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id = registry.as_path(origin).frame_id
+        if type(state) in (tuple,list) and len(state) == 2:
+            pos = Vector3.as_vector3(state[0]).as_readonly()
+            vel = Vector3.as_vector3(state[1]).as_readonly()
+            pos.insert_deriv('t', vel, override=True)
+            self.__state_ = pos
+        else:
+            self.__state_ = Vector3.as_vector3(state).as_readonly()
+
+        origin = Event.PATH_CLASS.as_primary_path(origin)
+        self.__origin_ = origin.waypoint
+        self.__frame_  = origin.frame.wayframe
 
         if frame is not None:
-            self.frame_id = registry.as_frame_id(frame)
+            self.__frame_ = Frame.as_wayframe(frame)
 
-        self.subfields = {}
-        self.insert_subfield("arr", Empty())            # These always exist
-        self.insert_subfield("dep", Empty())
-        self.insert_subfield("vflat", Vector3([0.,0.,0.])) # default
-        self.insert_subfield("link", None)
-        self.insert_subfield("sign", 0)
+        # Fill in default values for subfields as attributes
+        self.dep = Empty.EMPTY
+        self.arr = Empty.EMPTY
+        self.dep_lt = Empty.EMPTY
+        self.arr_lt = Empty.EMPTY
+        self.perp = Empty.EMPTY
+        self.vflat = Vector3.ZERO
 
-        for key in subfields.keys():
-            self.insert_subfield(key, subfields[key])
+        # Overwrite with given subfields
+        self.__subfields_ = {}
+        for (key,subfield) in subfields.iteritems():
+            self.insert_subfield(key, subfield.as_readonly())
 
+        # Used if needed
+        self.filled_ssb = None
         self.filled_shape = None
-        self.filled_mask  = None
-        self.filled_ssb   = None
-        self.subfield_math_property = True
+        self.filled_mask = None
+
+    @property
+    def time(self):
+        return self.__time_
+
+    @property
+    def state(self):
+        return self.__state_
+
+    @property
+    def pos(self):
+        return self.__state_.without_derivs()
+
+    @property
+    def vel(self):
+        if hasattr(self.__state_, 'd_dt'):
+            return self.__state_.d_dt
+        else:
+            return Vector3.ZERO
+
+    @property
+    def origin(self):
+        return self.__origin_
+
+    @property
+    def origin_id(self):
+        return self.__origin_.path_id
+
+    @property
+    def frame(self):
+        return self.__frame_
+
+    @property
+    def frame_id(self):
+        return self.__frame_.frame_id
+
+    @property
+    def subfields(self):
+        return self.__subfields_
 
     @property
     def shape(self):
         if self.filled_shape is None:
-            self.filled_shape = Qube.broadcasted_shape(self.time,
-                                            self.pos, self.vel,
-                                            registry.as_path(self.origin_id),
-                                            registry.as_frame(self.frame_id),
-                                            self.arr, self.dep)
+            self.filled_shape = Qube.broadcasted_shape(self.__time_,
+                                                       self.__state_,
+                                                       self.__origin_,
+                                                       self.__frame_)
         return self.filled_shape
 
     @property
     def mask(self):
         if self.filled_mask is None:
-            self.filled_mask = (self.time.mask | self.pos.mask | self.vel.mask |
-                                self.arr.mask | self.dep.mask)
+            self.filled_mask = (self.__time_.mask | self.__state_.mask |
+                                                    self.vel.mask)
 
         return self.filled_mask
 
-
     def __str__(self):
-        """show overview of Event for debugging purposes."""
-        s = "Event\n\ttime = " + str(self.time) + "\n"
-        s += "\torigin_id: " + self.origin_id + "\n"
-        s += "\tframe_id: " + self.frame_id + "\n"
-        s += "\tpos: " + str(self.pos.vals) + "\n"
-        s += "\tvel: " + str(self.vel.vals) + "\n"
-        return s
+        time = self.time.flatten()
+        pos = self.pos.flatten()
+        vel = self.vel.flatten()
 
-    # subfield_math pseudo-attribute
-    def get_subfield_math(self):
-        return self.subfield_math_property
+        str_list = ['Event(time = ', ]
+        if time.shape == ():
+            str_list.append(str(time))
+        elif time.size == 1:
+            str_list.append(str(time[0]))
+        elif time.size == 2:
+            str_list += [str(time)]
+        else:
+            str_list += [str(time[0]), ', ..., ', str(time[-1])]
 
-    def set_subfield_math(self, value):
-        self.subfield_math_property = value
+        str_list.append(';\n  pos = ')
+        if pos.shape == ():
+            str_list.append(str(pos))
+        elif pos.size == 1:
+            str_list.append(str(pos[0]))
+        elif pos.size == 2:
+            str_list += [str(pos)]
+        else:
+            str_list += [str(pos[0]), ', ..., ', str(pos[-1])]
 
-        self.time.subfield_math = value
-        self.pos.subfield_math  = value
-        self.vel.subfield_math  = value
+        str_list.append(';\n  vel = ')
+        if vel.shape == ():
+            str_list.append(str(vel))
+        elif vel.size == 1:
+            str_list.append(str(vel[0]))
+        elif vel.size == 2:
+            str_list += [str(vel)]
+        else:
+            str_list += [str(vel[0]), ', ..., ', str(vel[-1])]
 
-        for key in self.subfields.keys():
-            self.subfields[key].subfield_math = value
+        str_list += [';\n  shape = ', str(self.shape), ', ',
+                     self.__origin_.path_id, ', ',
+                     self.__frame_.frame_id]
 
-    subfield_math = property(get_subfield_math, set_subfield_math)
+        keys = self.subfields.keys()
+        keys.sort()
+        for key in keys:
+            str_list += ['; ', key]
 
-    def expand_mask(self):
-        """Expands the mask to an array if it is currently just a boolean."""
+        str_list += [')']
+        return ''.join(str_list)
 
-        if self.mask.shape == ():
-            if self.mask:
-                self.lt.mask  = np.ones(self.shape, dtype="bool")
-                self.pos.mask = np.ones(self.shape, dtype="bool")
-                self.vel.mask + np.ones(self.shape, dtype="bool")
-            else:
-                self.lt.mask  = np.zeros(self.shape, dtype="bool")
-                self.pos.mask = np.zeros(self.shape, dtype="bool")
-                self.vel.mask + np.zeros(self.shape, dtype="bool")
+    def insert_subfield(self, key, value):
+        """Insert a given subfield into this Event."""
 
-            self.filled_mask = None
-            ignore = self.mask
+        self.__subfields_[key] = value
+        self.__dict__[key] = value      # This makes it an attribute as well
 
-    def collapse_mask(self):
-        """Reduces the mask to a single boolean if possible."""
+        self.filled_ssb = None          # SSB version is now out of date
 
-        if not np.any(self.mask):
-            self.lt.mask  = False
-            self.pos.mask = False
-            self.vel.mask = False
-        elif np.all(self.mask):
-            self.lt.mask  = True
-            self.pos.mask = True
-            self.vel.mask = True
+    def insert_self_derivs(self, override=False):
+        """Insert unit derivatives into the time and position attributes.
 
-        self.filled_mask = None
-        ignore = self.mask
+        The derivatives are time.d_dt_link and state.d_dpos_link. They can be
+        used to track derivatives among events that link with this one.
+        """
 
-    def collapse_time(self, threshold=None):
-        """Replaces the time array by the average of its min and max, provided
-        the range of times is less than or equal to the specified threshold."""
-
-        if threshold is None:
-            threshold = EVENT_CONFIG.collapse_threshold
-
-        if self.time.shape != []:
-            tmin = self.time.min()
-            tmax = self.time.max()
-            span = tmax - tmin
-            if type(span) == Scalar and np.all(span.mask):
-                self.time = Scalar((np.max(self.time.vals) +
-                                    np.min(self.time.vals))/2., True)
-            elif span <= threshold:
-                self.time = Scalar((tmin + tmax) / 2.)
-
-                # Update the SSB version as well
-                if self.filled_ssb is not None:
-                    self.filled_ssb.time = self.time
-
-            if LOGGING.event_time_collapse:
-                print LOGGING.prefix, "Event.collapse_time()",
-                print tmin, tmax - tmin
-
+        self.__time_.insert_deriv('t_link', Scalar.ONE, override=override)
+        self.__state_.insert_deriv('pos_link', Vector3.IDENTITY,
+                                               override=override)
         return self
 
-    def wrt_ssb(self, quick=None, derivs=False):
-        """Returns the event relative to SSB coordinates in the J2000 frame
-        while also filling in the internal cached value if necessary. """
+    def clone(self, subfields=True, recursive=False):
+        """A shallow copy of the Event.
 
-        if self.filled_ssb is None:
-            self.filled_ssb = self.wrt("SSB", "J2000", quick, derivs=derivs)
-            self.filled_ssb.filled_ssb = self.filled_ssb
+        Inputs:
+            subfields   True to transfer the subfields.
+            recursive   True also to clone (shallow-copy) the attributes of the
+                        Event. This is necessary if derivatives of the subfields
+                        are going to be modified.
+        """
 
-        has_derivs = (self.filled_ssb.pos.subfields.has_key("d_dpos") and
-                      self.filled_ssb.pos.subfields.has_key("d_dt"))
-
-        if derivs and not has_derivs:
-            self.filled_ssb = self.wrt("SSB", "J2000", quick, derivs=derivs)
-            self.filled_ssb.filled_ssb = self.filled_ssb
-
-        self.filled_ssb.subarray_math = derivs
-        return self.filled_ssb
-
-    def copy(self, derivs=True):
-        """Returns a copy of the Event object with all attributes themselves
-        copied. However, if derivs is False; the subfields of all Array
-        attributes are not copied."""
-
-        result = Event(self.time.copy(derivs),
-                       self.pos.copy(derivs), self.vel.copy(derivs),
-                       self.origin_id, self.frame_id)
-
-        result.copy_subfields_from(self, derivs)
-
-        result.filled_shape = self.filled_shape
-        result.filled_mask  = self.filled_mask
-
-        if self.filled_ssb is self:
-            result.filled_ssb = result
-        elif result.filled_ssb is not None:
-            result.filled_ssb = self.filled_ssb.copy(derivs)
+        if recursive:
+            result = Event(self.__time_.clone(), self.__state_.clone(),
+                           self.__origin_, self.__frame_)
         else:
-            result.filled_ssb = None
-
-        return result
-
-    def copy_subfields_from(self, source, derivs=True):
-        for key in source.subfields.keys():
-            subfield = source.subfields[key]
-            if isinstance(subfield, Qube):
-                self.insert_subfield(key, subfield.copy(derivs))
-            else:
-                self.insert_subfield(key, subfield)
-
-    def plain(self, subfields=True):
-        """Returns a shallow copy of self with derivatives and, optionally, the
-        subfields removed."""
-
-        result = Event(self.time.plain(),
-                       self.pos.plain(), self.vel.plain(),
-                       self.origin_id, self.frame_id)
+            result = Event(self.__time_, self.__state_,
+                           self.__origin_, self.__frame_)
 
         if subfields:
-            for key in self.subfields.keys():
-                subfield = self.subfields[key]
-                if isinstance(subfield, Array):
-                    result.insert_subfield(key, subfield.plain())
-                else:
-                    result.insert_subfield(key, subfield)
+            for (key,subfield) in self.__subfields_.iteritems():
+                if recursive: subfield = subfield.clone()
+                result.insert_subfield(key, subfield)
 
         result.filled_shape = self.filled_shape
         result.filled_mask  = self.filled_mask
@@ -275,20 +283,39 @@ class Event(object):
 
         return result
 
-    def unmasked(self, subfields=True):
-        """Returns a shallow copy of self with the mask removed."""
+    def without_derivs(self):
+        """A shallow copy of this Event without derivatives.
 
-        result = Event(self.time.unmasked(),
-                       self.pos.unmasked(), self.vel.unmasked(),
-                       self.origin_id, self.frame_id)
+        Input:
+            subfields   True to retain subfields; False to remove them.
+        """
 
-        if subfields:
-            for key in self.subfields.keys():
-                subfield = self.subfields[key]
-                if isinstance(subfield, Array):
-                    result.insert_subfield(key, subfield.unmasked())
-                else:
-                    result.insert_subfield(key, subfield)
+        result = Event(self.__time_.without_derivs(),
+                       self.__state_.without_derivs(preserve='t'),
+                       self.__origin_, self.__frame_)
+
+        for (key,subfield) in self.subfields.iteritems():
+            result.insert_subfield(key, subfield.without_derivs(preserve='t'))
+
+        result.filled_shape = self.filled_shape
+        result.filled_mask  = self.filled_mask
+
+        if self.filled_ssb is self:
+            result.filled_ssb = result
+        else:
+            result.filled_ssb = None
+
+        return result
+
+    def without_mask(self):
+        """A shallow copy of this Event with the masks on subfields removed."""
+
+        result = Event(self.__time_.without_mask(recursive),
+                       self.__state_.without_mask(recursive),
+                       self.__origin_, self.__frame_)
+
+        for (key,subfield) in self.subfields.iteritems():
+            result.insert_subfield(key, subfield.without_mask(recursive))
 
         result.filled_shape = self.filled_shape
         result.filled_mask  = False
@@ -300,318 +327,215 @@ class Event(object):
 
         return result
 
-    def masked_link(self, origin, frame, sign):
-        """Returns an event linked to this one, with the same shape as self,
-        but entirely masked. The returned event uses the given origin frame and
-        sign."""
+    def all_masked(self, origin=None, frame=None, derivs=True):
+        """A shallow copy of this event, entirely masked.
 
-        shape = self.shape
-        event = Event(Scalar.all_masked(shape),
-                      Vector3.all_masked(shape),
-                      Vector3.all_masked(),
-                      origin, frame,
-                      perp = Vector3.all_masked(),
-                      vflat = Vector3.all_masked(),
-                      arr = Vector3.all_masked(),
-                      dep = Vector3.all_masked(),
-                      arr_lt = Scalar.all_masked(),
-                      dep_lt = Scalar.all_masked(),
-                      link = self, sign = sign)
-
-        if origin == "SSB" and frame == "J2000":
-            event.filled_ssb = event
-        else:
-            event.filled_ssb = Event(
-                      Scalar.all_masked(shape),
-                      Vector3.all_masked(shape),
-                      Vector3.all_masked(),
-                      "SSB", "J2000",
-                      perp = Vector3.all_masked(),
-                      vflat = Vector3.all_masked(),
-                      arr = Vector3.all_masked(),
-                      dep = Vector3.all_masked(),
-                      arr_lt = Scalar.all_masked(),
-                      dep_lt = Scalar.all_masked(),
-                      link = self, sign = sign)
-
-        event.filled_shape = shape
-        event.filled_mask = True
-
-        event.I_AM_MASKED = True
-        return event
-
-    @staticmethod
-    def null_event(time, origin="SSB", frame="J2000"):
-        return Event(time, (0.,0.,0.), (0.,0.,0.), origin, frame)
-
-    ####################################################
-    # Indexing operators
-    ####################################################
-
-    def __getitem__(self, i):
-
-        time = self.time.rebroadcast(self.shape)[i]
-        pos  = self.pos.rebroadcast(self.shape)[i]
-        vel  = self.vel.rebroadcast(self.shape)[i]
-
-        result = Event(time, pos, vel, self.origin_id, self.frame_id)
-
-        for key in self.subfields.keys():
-            subfield = self.subfields[key]
-            if type(subfield) == oops.Array:
-                subfield = subfield.rebroadcast(self.shape)[i]
-            result.insert_subfield(key, subfield)
-
-        return result
-
-    def __getslice__(self, i, j):
-
-        time = self.time.rebroadcast(self.shape)[i:j]
-        pos  = self.pos.rebroadcast(self.shape)[i:j]
-        vel  = self.vel.rebroadcast(self.shape)[i:j]
-
-        result = Event(time, pos, vel, self.origin_id, self.frame_id)
-
-        for key in self.subfields.keys():
-            subfield = self.subfields[key].rebroadcast(self.shape)[i:j]
-            result.insert_subfield(key, subfield)
-
-        return result
-
-    ####################################################
-    # Subfield support methods
-    ####################################################
-
-    def insert_subfield(self, key, value):
-        """Adds a given subfield to the Event."""
-
-        self.subfields[key] = value
-        self.__dict__[key] = value      # This makes it an attribute as well
-
-        self.filled_ssb = None          # SSB version is now out of date
-
-    def delete_subfield(self, key):
-        """Deletes a subfield, but not arr or dep."""
-
-        if key in ("arr","dep"):
-            self.subfields[key] = Empty()
-            self.__dict__[key] = self.subfields[key]
-        elif self.subfields.has_key(key):
-            del self.subfields[key]
-            del self.__dict__[key]
-
-        if self.filled_ssb is not None:
-            try:
-                del self.filled_ssb.subfields[key]
-                del self.filled_ssb.__dict__[key]
-            except KeyError: pass
-
-    def delete_subfields(self):
-        """Deletes all subfields."""
-
-        for key in self.subfields.keys():
-            if key not in ("arr","dep"):
-                del self.subfields[key]
-                del self.__dict__[key]
-
-        if self.filled_ssb is not None:
-            try:
-                del self.filled_ssb.subfields[key]
-                del self.filled_ssb.__dict__[key]
-            except KeyError: pass
-
-    def delete_derivs(self):
-        """Deletes all subfields of Array attributes."""
-
-        for key in self.subfields.keys():
-            try:
-                self.subfields[key].delete_subfields()
-            except: pass
-
-        self.time.delete_subfields()
-        self.pos.delete_subfields()
-        self.vel.delete_subfields()
-
-        if self.filled_ssb is not None and self.filled_ssb is not self:
-            self.filled_ssb.delete_sub_subfields()
-
-############################################
-# Event transformations
-############################################
-
-    def wrt(self, path=None, frame=None, quick=None, derivs=False):
-        """Returns a new event specified relative to a new path and/or a
-        new coordinate frame.
-
-        Input:
-            path        the Path object or ID defining the new origin; None to
-                        leave the origin unchanged.
-            frame       the Frame object of ID of the new coordinate frame; None
-                        to leave the frame unchanged.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      if True, any vectors in the event are returned with
-                        additional subfields "d_dt" and "d_dpos", representing
-                        the partial derivatives in the new frame and path
-                        relative to those in the original frame and path.
-
-        If the self event already contains derivatives, and derivs is True, then
-        the new derivatives will multiply the originals, yielding derivatives
-        that are with respect to the same event as those of the self event.
+        Inputs:
+            origin      the origin or origin_id of the Event returned; if None,
+                        use the origin of this Event.
+            frame       the frame or frame_id of the Event returned; if None,
+                        use the frame of this Event.
+            derivs      True to include derivatives in the returned Event.
         """
 
-        # Sort out inputs
-        if path is None: path = self.origin_id
-        if frame is None: frame = self.frame_id
+        if origin is None:
+            origin = self.__origin_
+        else:
+            origin = Event.PATH_CLASS.as_waypoint(origin)
 
-        path = registry.as_path(path)
-        frame = registry.as_frame(frame)
+        if frame is None:
+            frame = self.__frame_
+        else:
+            frame = Frame.as_wayframe(frame)
 
-        # Point to the working copy of the Event object
+        event = Event(self.__time_.all_masked(derivs),
+                      self.__state_.all_masked(derivs),
+                      origin, frame)
+
+        for (key,subfield) in self.subfields.iteritems():
+            event.insert_subfield(key, subfield.all_masked(derivs))
+
+        # Because this is masked, we can re-use this Event for the SSB version
+        event.filled_ssb = event.clone()
+        event.filled_ssb.__origin_ = Event.PATH_CLASS.SSB
+        event.filled_ssb.__frame_ = Frame.J2000
+
+        event.filled_mask = True
+        return event
+
+    ############################################################################
+    # Event transformations
+    ############################################################################
+
+    def wrt_ssb(self, derivs=True, quick=False):
+        """This event relative to SSB coordinates in the J2000 frame.
+
+        This value is cached inside of the object so it can be quickly accessed
+        again at a later time.
+
+        Input:
+            derivs      True to include the derivatives in the returned Event;
+                        False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        if self.filled_ssb is None:
+            self.filled_ssb = self.wrt(Event.PATH_CLASS.SSB, Frame.J2000,
+                                       derivs=derivs, quick=quick)
+            self.filled_ssb.filled_ssb = self.filled_ssb
+
+        if derivs:
+            return self.filled_ssb
+        else:
+            return self.filled_ssb.without_derivs()
+
+    def wrt(self, path=None, frame=None, derivs=True, quick=False):
+        """This event relative to a new path and/or a new coordinate frame.
+
+        Input:
+            path        the Path or path ID identifying the new origin;
+                        None to leave the origin unchanged.
+            frame       the Frame or frame ID of the new coordinate frame; None
+                        to leave the frame unchanged.
+            derivs      True to include the derivatives in the returned Event;
+                        False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+
+        The new derivatives will multiply the originals, yielding derivatives
+        with respect to the same event as those of this event.
+        """
+
+        # Interpret inputs
+        if path is None: path = self.__origin_
+        if frame is None: frame = self.__frame_
+
+        path = Event.PATH_CLASS.as_path(path)
+        frame = Frame.as_frame(frame)
+
+        # Point to the working copy of this Event object
         event = self
 
         # If the path is shifting...
-        if event.origin_id != path.path_id:
+        if event.__origin_.waypoint != path.waypoint:
 
-            # and the current frame is rotating...
-            old_frame = registry.as_frame(event.frame_id)
-            if old_frame.origin_id is not None:
+            # ...and the current frame is rotating...
+            old_frame = event.__frame_
+            if old_frame.origin is not None:
 
-                # then rotate to J2000
-                event = event.wrt_frame("J2000", quick, derivs=derivs)
+                # ...then rotate to J2000
+                event = event.wrt_frame(Frame.J2000, derivs, quick)
 
         # If the frame is changing...
-        if event.frame_id != frame.frame_id:
+        if event.__frame_.wayframe != frame.wayframe:
 
-            # and the new frame is rotating...
-            if frame.origin_id is not None:
+            # ...and the new frame is rotating...
+            if frame.origin is not None:
 
-                # then shift to the origin of the new frame
-                event = event.wrt_path(frame.origin_id, quick, derivs=derivs)
+                # ...then shift to the origin of the new frame
+                event = event.wrt_path(frame.origin, derivs, quick)
 
         # Now it is safe to rotate to the new frame
-        event = event.wrt_frame(frame.frame_id, quick, derivs=derivs)
+        event = event.wrt_frame(frame, derivs, quick)
 
         # Now it is safe to shift to the new path
-        event = event.wrt_path(path.path_id, quick, derivs=derivs)
+        event = event.wrt_path(path, derivs, quick)
 
-        event.subarray_math = derivs
         return event
 
-    def wrt_path(self, path, quick=None, derivs=False):
-        """Returns an equivalent event, but defined relative to a different
-        origin. The frame will be unchanged.
+    def wrt_path(self, path, derivs=True, quick=False):
+        """This event defined relative to a different origin path.
+
+        The frame is unchanged.
 
         Input:
             path        the Path object to be used as the new origin. If the
                         value is None, the event is returned unchanged.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      if True, any vectors in the event are returned with
-                        additional subfields "d_dt" and "d_dpos", representing
-                        the partial derivatives in the new frame and path
-                        relative to those in the original path.
+            derivs      True to include the derivatives in the returned Event;
+                        False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
         """
 
         if path is None: return self
 
-        path = registry.as_path_id(path)
-        if path == self.origin_id: return self
+        path = Event.PATH_CLASS.as_path(path)
+        if self.__origin_.waypoint == path.waypoint:
+            if derivs:
+                return self
+            else:
+                return self.without_derivs()
 
-        path = registry.connect_paths(path, self.origin_id, self.frame_id)
-        path = path.quick_path(self.time, quick)
+        new_path = self.__origin_.wrt(path, path.frame)
+        return new_path.add_to_event(self, derivs=derivs, quick=quick)
 
-        return path.subtract_from_event(self, derivs=derivs)
+    def wrt_frame(self, frame, derivs=True, quick=False):
+        """This event defined relative to a different frame.
 
-    def wrt_frame(self, frame, quick=None, derivs=False):
-        """Returns an equivalent event, but defined relative to a different
-        frame. The path is unchanged.
+        The path is unchanged.
 
         Input:
             frame       the Frame object to be used as the new reference. If the
                         value is None, the event is returned unchanged.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      if True, any vectors in the event are returned with
-                        additional subfields "d_dt" and "d_dpos", representing
-                        the partial derivatives in the new frame and path
-                        relative to those in the original frame.
+            derivs      True to include the derivatives in the returned Event;
+                        False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
         """
 
         if frame is None: return self
 
-        frame = registry.as_frame_id(frame)
-        if frame == self.frame_id: return self
-
-        frame = registry.connect_frames(frame, self.frame_id)
-        frame = frame.quick_frame(self.time, quick)
-
-        return self.rotate_by_frame(frame, quick=False, derivs=derivs)
-
-    def wrt_event(self, event, quick=None, derivs=False):
-        """Returns an equivalent event, but defined relative to the frame and
-        path of the specified body.
-
-        Input:
-            body        a body object or its ID.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      if True, any vectors in the event are returned with
-                        additional subfields "d_dt" and "d_dpos", representing
-                        the partial derivatives in the new frame and path
-                        relative to those in the original frame and path.
-        """
-
-        body = registry.as_body(body)
-        return self.wrt(body.path_id, body.frame_id, quick=quick, derivs=derivs)
-
-    def wrt_body(self, body, quick=None, derivs=False):
-        """Returns an equivalent event, but defined relative to the frame and
-        path of the specified body.
-
-        Input:
-            body        a body object or its ID.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      if True, any vectors in the event are returned with
-                        additional subfields "d_dt" and "d_dpos", representing
-                        the partial derivatives in the new frame and path
-                        relative to those in the original frame and path.
-        """
-
-        body = registry.as_body(body)
-        return self.wrt(body.path_id, body.frame_id, quick=quick, derivs=derivs)
-
-    def rotate_by_frame(self, frame, quick=None, derivs=False):
-        """Returns the same event after all coordinates have been transformed
-        forward into a new frame. The origin is unchanged. Coordinate rotation
-        is also performed on any subfields that are not Scalars.
-
-        Input:
-            frame       a Frame object to transform the coordinates. Its
-                        reference frame must be the current frame of the event.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      if True, then any subfields in the event are returned
-                        with a subfield "d_dt", representing its partial
-                        derivative in this frame relative to that in the
-                        original frame. This is combined with any pre-existing
-                        subfield of the same name.
-        """
-
-        assert self.frame_id == frame.reference_id
-
-        transform = frame.transform_at_time(self.time, quick)
-        (pos, vel) = transform.rotate_pos_vel(self.pos, self.vel)
-        result = Event(self.time, pos, vel, self.origin_id, frame.frame_id)
-
-        for key in self.subfields:
-            subfield = self.subfields[key]
-            if isinstance(subfield, Qube) and subfield.rank > 0:
-                result.insert_subfield(key, transform.rotate(subfield,
-                                                             derivs=derivs))
+        frame = Frame.as_frame(frame)
+        if self.__frame_.wayframe == frame.wayframe:
+            if derivs:
+                return self
             else:
-                result.insert_subfield(key, subfield)
+                return self.without_derivs()
+
+        new_frame = frame.wrt(self.__frame_)
+        return self.rotate_by_frame(new_frame, derivs=derivs, quick=quick)
+
+    def rotate_by_frame(self, frame, derivs=True, quick=False):
+        """This event rotated forward into a new frame.
+
+        The origin is unchanged. Subfields are also rotated into the new frame.
+
+        Input:
+            frame       a Frame into which to transform the coordinates. Its
+                        reference frame must be the current frame of the event.
+            derivs      True to include the derivatives in the returned Event;
+                        False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        frame = Frame.as_frame(frame)
+        assert self.__frame_ == frame.reference
+
+        transform = frame.transform_at_time(self.__time_, quick=quick)
+
+        if derivs:
+            state = transform.rotate(self.__state_, derivs)
+        else:
+            state = transform.rotate_pos_vel(self.pos, self.vel)
+
+        subfields = {}
+        for (key,subfield) in self.__subfields_.iteritems():
+            subfields[key] = transform.rotate(subfield, derivs)
+
+        result = Event(self.__time_, state, self.__origin_, frame.wayframe,
+                       **subfields)
 
         result.filled_shape = self.filled_shape
         result.filled_mask  = self.filled_mask
@@ -619,37 +543,39 @@ class Event(object):
 
         return result
 
-    def unrotate_by_frame(self, frame, quick=None, derivs=False):
-        """Returns the same event after all coordinates have been transformed
-        backward to the parent frame. The origin is unchanged. Subarrays that
-        are not Scalars are also transformed.
+    def unrotate_by_frame(self, frame, derivs=True, quick=False):
+        """This Event unrotated back into the given frame.
+
+        The origin is unchanged. Subfields are also urotated.
 
         Input:
             frame       a Frame object to to inverse-transform the coordinates.
                         Its target frame must be the current frame of the event.
                         The returned event will use the reference frame instead.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      if True, then any subfields in the event are returned
-                        with a subfield "d_dt", representing its partial
-                        derivative in this frame relative to that in the
-                        previous frame. This is combined with any pre-existing
-                        subfield of the same name.
+            derivs      True to include the derivatives in the returned Event;
+                        False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
         """
 
-        assert self.frame_id == frame.frame_id
+        frame = Frame.as_frame(frame)
+        assert self.__frame_ == frame.wayframe
 
-        transform = frame.transform_at_time(self.time, quick)
-        (pos, vel) = transform.unrotate_pos_vel(self.pos, self.vel)
-        result = Event(self.time, pos, vel, self.origin_id, frame.reference_id)
+        transform = frame.transform_at_time(self.__time_, quick=quick)
 
-        for key in self.subfields:
-            subfield = self.subfields[key]
-            if isinstance(subfield, Array) and subfield.rank > 0:
-                result.insert_subfield(key, transform.unrotate(subfield,
-                                                               derivs=derivs))
-            else:
-                result.insert_subfield(key, subfield)
+        if derivs:
+            state = transform.unrotate(self.__state_, derivs)
+        else:
+            state = transform.unrotate_pos_vel(self.pos, self.vel)
+
+        subfields = {}
+        for (key,subfield) in self.__subfields_.iteritems():
+            subfields[key] = transform.unrotate(subfield, derivs)
+
+        result = Event(self.__time_, state, self.__origin_, frame.reference,
+                       **subfields)
 
         result.filled_shape = self.filled_shape
         result.filled_mask  = self.filled_mask
@@ -657,161 +583,279 @@ class Event(object):
 
         return result
 
-################################################################################
-# Geometry procedures
-################################################################################
+    def collapse_time(self, threshold=None, recursive=False):
+        """If the time span is small, return a similar Event having fixed time.
 
-    def aberrated_ray_ssb(self, ray_ssb, quick=None):
-        """Returns the apparent direction of a photon given its actual
-        direction in the SSB/J2000 frame."""
+        If the difference between the earliest time and the latest time is
+        smaller than a specified threshold, a new Event object is returned in
+        which the time is replaced by a Scalar equal to the midtime.
 
-        # This procedure is equivalent to a vector subtraction of the velocity
-        # of the observer from the ray, given the ray has length C.
-
-        return ray_ssb - (self.wrt_ssb(quick).vel +
-                          self.wrt_ssb(quick).vflat)*ray_ssb.norm()/C
-
-    def aberrated_arr_ssb(self, quick=None):
-        """Aberrated arriving ray in the SSB/J2000 frame."""
-        return self.aberrated_ray_ssb(self.wrt_ssb(quick).arr)
-
-    def aberrated_arr(self, quick=None):
-        """Aberrated arriving ray in the event frame."""
-        arr_ssb = self.aberrated_ray_ssb(self.wrt_ssb(quick).arr)
-
-        frame = registry.connect_frames(self.frame_id, "J2000")
-        xform = frame.transform_at_time(self.time, quick)
-        return xform.rotate(arr_ssb)
-
-    def aberrated_dep_ssb(self, quick=None):
-        """Aberrated departing ray in the SSB/J2000 frame."""
-        return self.aberrated_ray_ssb(self.wrt_ssb(quick).dep)
-
-    def aberrated_dep(self, quick=None):
-        """Aberrated departing ray in the event frame."""
-        dep_ssb = self.aberrated_ray_ssb(self.wrt_ssb(quick).dep)
-
-        frame = registry.connect_frames(self.frame_id, "J2000")
-        xform = frame.transform_at_time(self.time, quick)
-        return xform.rotate(dep_ssb)
-
-    def incidence_angle(self, aberration=False, quick=None):
-        """Returns the incidence angle, measured between the surface normal and
-        the reversed direction of the arriving photon."""
-
-        return self.wrt_ssb(quick).perp.sep(self.aberrated_arr_ssb(),
-                                            reversed=True)
-
-    def emission_angle(self, quick=None):
-        """Returns the emission angle, measured between the surface normal and
-        the direction of the departing photon."""
-
-        return self.wrt_ssb(quick).perp.sep(self.aberrated_dep_ssb(quick))
-
-    def phase_angle(self, quick=None):
-        """Returns the phase angle, measured between the direction of the
-        arriving photon and the reversed direction of the departing photon."""
-
-        return self.aberrated_arr_ssb(quick).sep(self.aberrated_dep_ssb(quick),
-                                                 reversed=True)
-
-    def ra_and_dec(self, aberration=False, subfield="arr", frame="J2000",
-                         quick=None, derivs=False):
-        """Returns the J2000 right ascension and declination in the path and
-        frame of the event, as a tuple of two scalars.
+        Otherwise, the object is returned unchanged.
 
         Input:
-            aberration  True to include stellar aberration, thereby returning
+            threshold   the allowed difference in seconds between the earliest
+                        latest times. None to use the value specifed by the
+                        EVENT_CONFIG.
+        """
+
+        if self.__time_.shape == (): return self
+        if self.__time_.derivs: return self
+
+        if threshold is None:
+            threshold = EVENT_CONFIG.collapse_threshold
+
+        tmin = self.__time_.min()
+        tmax = self.__time_.max()
+        span = tmax - tmin
+
+        collapsed_mask = (span == Scalar.MASKED)
+
+        if span > threshold: return self
+
+        if LOGGING.event_time_collapse:
+            print LOGGING.prefix, "Event.collapse_time()",
+            print tmin, tmax - tmin
+
+        midtime = Scalar((tmin + tmax)/2., collapsed_mask, self.__time_.units)
+        return Event(midtime, self.__state_, self.__origin_, self.__frame_,
+                                   **self.subfields)
+
+    ############################################################################
+    # Geometry procedures
+    ############################################################################
+
+    def apparent_ray_ssb(self, ray_ssb, derivs=False, quick={}):
+        """Apparent direction of a photon in the SSB/J2000 frame.
+
+        Input:
+            ray_ssb     the true direction of a light ray in the SSB/J2000
+                        system.
+            derivs      True to include the derivatives of the light ray in the
+                        returned ray; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        # This procedure is equivalent to a vector subtraction of the velocity
+        # of the observer from the ray, given that the ray has length C.
+
+        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
+
+        if not derivs:
+            ray_ssb = ray_ssb.without_derivs()
+
+        return ray_ssb - (wrt_ssb.vel + wrt_ssb.vflat) * ray_ssb.norm() / C
+
+    def apparent_arr_ssb(self, derivs=False, quick={}):
+        """Apparent direction of the arriving ray in the SSB/J2000 frame.
+
+        Input:
+            derivs      True to include the derivatives of the light ray in the
+                        returned ray; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        ray_ssb = self.wrt_ssb(derivs, quick=quick).arr
+        return self.apparent_ray_ssb(ray_ssb, derivs, quick=quick)
+
+    def apparent_arr(self, derivs=False, quick={}):
+        """Apparent direction of an arriving ray in the event frame.
+
+        Input:
+            derivs      True to include the derivatives of the light ray in the
+                        returned ray; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        arr_ssb = self.apparent_arr_ssb(derivs, quick=quick)
+
+        if self.__frame_ == Frame.J2000: return arr_ssb
+
+        frame = self.__frame_.wrt(Frame.J2000)
+        xform = frame.transform_at_time(self.__time_, quick=quick)
+        return xform.rotate(arr_ssb)
+
+    def apparent_dep_ssb(self, derivs=False, quick={}):
+        """Apparent direction of a departing ray in the SSB/J2000 frame.
+
+        Input:
+            derivs      True to include the derivatives of the light ray in the
+                        returned ray; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        ray_ssb = self.wrt_ssb(derivs, quick=quick).dep
+        return self.apparent_ray_ssb(ray_ssb, derivs, quick=quick)
+
+    def apparent_dep(self, derivs=False, quick={}):
+        """Apparent direction of a departing ray in the event frame.
+
+        Input:
+            derivs      True to include the derivatives of the light ray in the
+                        returned ray; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        dep_ssb = self.apparent_dep_ssb(derivs, quick=quick)
+
+        if self.__frame_ == Frame.J2000:
+            return dep_ssb
+
+        frame = self.__frame_.wrt(Frame.J2000)
+        xform = frame.transform_at_time(self.__time_, quick=quick)
+        return xform.rotate(dep_ssb)
+
+    def incidence_angle(self, apparent=False, derivs=False, quick={}):
+        """The incidence angle.
+
+        The incidence angle is measured between the surface normal and the
+        reversed direction of the arriving photon.
+
+        Input:
+            apparent    True to account for the aberration in the Event frame.
+            derivs      True to include the derivatives of the light ray in the
+                        returned angle; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
+
+        if apparent:
+            arr_ssb = wrt_ssb.apparent_arr_ssb(derivs, quick=quick)
+        elif derivs:
+            arr_ssb = wrt_ssb.arr
+        else:
+            arr_ssb = wrt_ssb.arr.without_derivs()
+
+        return np.pi - wrt_ssb.perp.sep(arr_ssb)
+
+    def emission_angle(self, apparent=False, derivs=False, quick={}):
+        """The emission angle.
+
+        The emission angle is measured between the surface normal and the
+        direction of the departing photon.
+
+        Input:
+            apparent    True to account for the aberration in the Event frame.
+            derivs      True to include any derivatives of the light ray in the
+                        returned angle; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
+
+        if apparent:
+            dep_ssb = wrt_ssb.apparent_dep_ssb(derivs, quick=quick)
+        elif derivs:
+            dep_ssb = wrt_ssb.dep
+        else:
+            dep_ssb = wrt_ssb.dep.without_derivs()
+
+        return wrt_ssb.perp.sep(dep_ssb, derivs)
+
+    def phase_angle(self, apparent=False, derivs=False, quick={}):
+        """The phase angle.
+
+        The phase angle is measured between the apparent direction of the
+        arriving photon and the reversed direction of the departing photon.
+
+        Input:
+            apparent    True to account for the aberration in the Event frame.
+            derivs      True to include any derivatives of the light ray in the
+                        returned angle; False to exclude them.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+        """
+
+        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
+
+        if apparent:
+            dep_ssb = wrt_ssb.apparent_dep_ssb(derivs, quick=quick)
+            arr_ssb = wrt_ssb.apparent_arr_ssb(derivs, quick=quick)
+        elif derivs:
+            dep_ssb = wrt_ssb.dep
+            arr_ssb = wrt_ssb.arr
+        else:
+            dep_ssb = wrt_ssb.dep.without_derivs()
+            arr_ssb = wrt_ssb.arr.without_derivs()
+
+        return np.pi - dep_ssb.sep(arr_ssb, derivs)
+
+    def ra_and_dec(self, apparent=False, derivs=False,
+                         subfield='arr', quick={}):
+        """The right ascension and declination as a tuple of two Scalars.
+
+        Input:
+            apparent    True to include stellar aberration, thereby returning
                         the apparent direction of the photon relative to the
                         background stars; False to return the purely geometric
                         values, neglecting the motion of the observer.
+            derivs      True to include any derivatives of the light ray in the
+                        returned quantities; False to exclude them.
             subfield    The subfield to use for the calculation, either "arr"
                         or "dep". Note that an arriving direction is reversed.
-            frame       The frame in which the values should be returned. The
-                        default is J2000, but B1950 might be useful under some
-                        circumstances.
-            quick       False to disable QuickPaths; True for the default
-                        options; a dictionary to override specific options.
-            derivs      If True, then the derivatives of the right ascension
-                        and declination with respect to the line of sight are
-                        returned as subfields named "d_dlos".
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
         """
 
-        # Locate arrival ray in the SSB/J2000 frame
-        assert subfield in {"arr", "dep"}
+        # Validate the inputs
+        assert subfield in {'arr', 'dep'}
 
-        if aberration:
-            if subfield == "arr":
-                ray = -self.aberrated_arr_ssb(quick)
+        # Calculate the ray in J2000
+        if apparent:
+            if subfield == 'dep':
+                ray_ssb = self.wrt_ssb().apparent_dep_ssb(derivs, quick=quick)
             else:
-                ray = self.aberrated_dep_ssb(quick)
+                ray_ssb = -self.wrt_ssb().apparent_arr_ssb(derivs, quick=quick)
+        elif derivs:
+            if subfield == 'dep':
+                ray_ssb = self.wrt_ssb().dep
+            else:
+                ray_ssb = -self.wrt_ssb().arr
         else:
-            if subfield == "arr":
-                ray = -self.wrt_ssb(quick).arr
+            if subfield == 'dep':
+                ray_ssb = self.wrt_ssb().dep.without_derivs()
             else:
-                ray = self.wrt_ssb(quick).dep
+                ray_ssb = -self.wrt_ssb().arr.without_derivs()
 
         # Convert to RA and dec
-        (x,y,z) = ray.to_scalars()
-        ra = y.arctan2(x) % TWOPI
+        (x,y,z) = ray_ssb.to_scalars(derivs)
+        ra = y.arctan2(x,derivs) % TWOPI
 
-        r = ray.norm()
-        dec = (z/r).arcsin()
-
-        # Generate derivatives if necessary
-        if derivs:
-
-            x2_y2 = x.vals**2 + y.vals**2
-            r2 = x2_y2 + z.vals**2
-
-            # Declination = arcsin(z/r)
-            #
-            # dr/dx = x/r; similar for y and z.
-            #
-            # d(z/r)/dx = z (-1) r**(-2) dr/dx
-            #           = -x z / r**3
-            # d(z/r)/dy = -y z / r**3
-            # d(z/r)/dz = 1/r - z**2 / r**3
-            #           = (x**2 + y**2) / r**3
-            #
-            # d(arcsin(_))/d_ = (1 - _**2)**(-1/2)
-            #
-            # ddec/d_ = (1 - (z/r)**2)**(-1/2) * d(z/r)/d_
-            #         = r / (x**2 + y**2)**(1/2) * d(z/r)/d_
-            #
-            # ddec/dx = -x z / [(x**2 + y**2)**(1/2) r**2]
-            # ddec/dy = -y z / [(x**2 + y**2)**(1/2) r**2]
-            # ddec/dz = (x**2 + y**2) / [(x**2 + y**2)**(1/2) r**2]
-
-            denom = r2 * np.sqrt(x2_y2)
-
-            ddec_dxyz_vals = np.empty(ray.shape + [1,3])
-            ddec_dxyz_vals[...,0,0] = -x.vals * z.vals
-            ddec_dxyz_vals[...,0,1] = -y.vals * z.vals
-            ddec_dxyz_vals[...,0,2] = x2_y2
-            ddec_dxyz_vals /= denom[..., np.newaxis, np.newaxis]
-
-            dec.insert_subfield("d_dlos", MatrixN(ddec_dxyz_vals, ray.mask))
-
-            # Right ascension = arctan2(y,x)
-            #
-            # Note: The derivatives of arctan2(y,x) are always the same as the
-            # derivatives of arctan(y/x), because the values can only differ by
-
-            denom = x2_y2.copy()
-            denom[denom == 0.] = 1.
-
-            dra_dxyz_vals = np.zeros(ray.shape + [1,3])
-            dra_dxyz_vals[...,0,0] = -y.vals / denom
-            dra_dxyz_vals[...,0,1] =  x.vals / denom
-
-            ra.insert_subfield( "d_dlos", MatrixN(dra_dxyz_vals, ray.mask))
+        r = ray_ssb.norm(derivs)
+        dec = (z/r).arcsin(derivs)
 
         return (ra, dec)
 
 ################################################################################
 # UNIT TESTS
 ################################################################################
+
+import unittest
 
 class Test_Event(unittest.TestCase):
 

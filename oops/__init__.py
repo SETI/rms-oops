@@ -22,15 +22,13 @@ import cspice       # This is CRITICAL to avoid the MKL error in calls to
                     # dpstrf(). Somehow, this ensures that the cspice function
                     # overrides the MKL function of the same name.
 
-from polymath import *
-
-import oops.cadence_  as cadence
-import oops.calib_    as calib
-import oops.fov_      as fov
-import oops.frame_    as frame
-import oops.obs_      as obs
-import oops.path_     as path
-import oops.surface_  as surface
+import oops.cadence_.all as cadence
+import oops.calib_.all   as calib
+import oops.fov_.all     as fov
+import oops.frame_.all   as frame
+import oops.obs_.all     as obs
+import oops.path_.all    as path
+import oops.surface_.all as surface
 
 from oops.backplane   import *
 from oops.body        import *
@@ -39,10 +37,10 @@ from oops.edelta      import *
 from oops.event       import *
 from oops.fittable    import *
 from oops.meshgrid    import *
-from oops.registry    import *
 from oops.transform   import *
 
 import oops.spice_support as spice
-import oops.config as config
+import oops.config        as config
+import oops.utils as utils
 
 ################################################################################

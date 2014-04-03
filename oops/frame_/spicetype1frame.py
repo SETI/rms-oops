@@ -1,16 +1,15 @@
 ################################################################################
-# oops/frame_/spicetype1frame.py: Subclass SpiceType1Frame of class Frame
+# oops/frame_/spicetype1frame.py: Subclass SpiceType1Frame of Frame
 ################################################################################
 
 import numpy as np
-from polymath import *
+
 import cspice
+from polymath import *
 
 from oops.frame_.frame import Frame
 from oops.config       import QUICK
 from oops.transform    import Transform
-
-import oops.registry      as registry
 import oops.spice_support as spice
 
 class SpiceType1Frame(Frame):
@@ -50,6 +49,7 @@ class SpiceType1Frame(Frame):
         (self.spice_body_id,
          self.spice_body_name) = spice.body_id_and_name(spice_host)
 
+        # Fill in the time tolerances
         if type(tick_tolerance) == type(''):
             self.tick_tolerance = cspice.sctiks(spice_body_id, tick_tolerance)
         else:
@@ -57,30 +57,32 @@ class SpiceType1Frame(Frame):
 
         self.time_tolerance = None      # filled in on first use
 
-        # Fill in the OOPS frame_id and reference_id
-        if id is not None:
-            self.frame_id = id
-        else:
-            self.frame_id = self.spice_frame_name
-
-        self.reference_id = spice.FRAME_TRANSLATION[self.spice_reference_id]
-
-        # Save it in the global dictionary of translations under alternative
-        # names
+        # Fill in the Frame ID and save it in the SPICE global dictionary
+        self.frame_id = id or self.spice_frame_name
         spice.FRAME_TRANSLATION[self.spice_frame_id]   = self.frame_id
         spice.FRAME_TRANSLATION[self.spice_frame_name] = self.frame_id
 
-        # Fill in the origin ID
+        # Fill in the reference wayframe
+        reference_id = spice.FRAME_TRANSLATION[self.spice_reference_id]
+        self.reference = Frame.as_wayframe(reference_id)
+
+        # Fill in the origin waypoint
         self.spice_origin_id   = cspice.frinfo(self.spice_frame_id)[0]
         self.spice_origin_name = cspice.bodc2n(self.spice_origin_id)
 
-        self.origin_id = spice.PATH_TRANSLATION[self.spice_origin_id]
-        if self.origin_id == "SSB": self.origin_id = None
+        try:
+            self.origin = Path.as_waypoint(origin_id)
+        except KeyError:
+            # If the origin path was never defined, define it now
+            origin_path = SpicePath(origin_id)
+            self.origin = origin_path.waypoint
 
-        # No shape
-        self.shape = []
+        # No shape, no keys
+        self.shape = ()
+        self.keys = set()
 
-        # Always register a SpiceFrame
+        # Always register a SpiceType1Frame
+        # This also fills in the waypoint
         self.register()
 
         # Initialize cache
@@ -88,11 +90,10 @@ class SpiceType1Frame(Frame):
         self.cached_time = None
         self.cached_transform = None
 
-########################################
+    ########################################
 
-    def transform_at_time(self, time, quick=None):
-        """Returns a Transform object that rotates coordinates in a reference
-        frame into the new frame.
+    def transform_at_time(self, time, quick={}):
+        """A Transform that rotates from the reference frame into this frame.
 
         Input:
             time            a Scalar time.
@@ -117,7 +118,7 @@ class SpiceType1Frame(Frame):
                 return self.cached_transform
 
         # A single input time can be handled quickly
-        if time.shape == []:
+        if time.shape == ():
             ticks = cspice.sce2c(self.spice_body_id, time.vals)
             (matrix3, true_ticks) = cspice.ckgp(self.spice_frame_id, ticks,
                                                 self.tick_tolerance,
@@ -130,8 +131,8 @@ class SpiceType1Frame(Frame):
             return self.cached_transform
 
         # Create the buffers
-        matrix = np.empty(time.shape + [3,3])
-        omega  = np.zeros(time.shape + [3])
+        matrix = np.empty(time.shape + (3,3))
+        omega  = np.zeros(time.shape + (3,))
         true_times = np.empty(time.shape)
 
         # If all the times are close, we can return more quickly
@@ -153,7 +154,7 @@ class SpiceType1Frame(Frame):
             return self.cached_transform
         
         # Otherwise, iterate through the array...
-        for i,t in np.ndenumerate(time.vals):
+        for (i,t) in np.ndenumerate(time.vals):
             ticks = cspice.sce2c(self.spice_body_id, t)
             (matrix3, true_ticks) = cspice.ckgp(self.spice_frame_id, ticks,
                                                 self.tick_tolerance,
@@ -170,9 +171,6 @@ class SpiceType1Frame(Frame):
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
-# Here we also test many of the overall Frame operations, because we can be
-# confident that cspice produces valid results.
 
 import unittest
 

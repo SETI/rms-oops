@@ -6,7 +6,8 @@ from polymath import *
 from oops.cadence_.cadence import Cadence
 
 class DualCadence(Cadence):
-    """DualCadence is a Cadence subclass in which time steps are defined by a pair of cadences."""
+    """A Cadence subclass in which time steps are defined by a pair of cadences.
+    """
 
     def __init__(self, long, short):
         """Constructor for a DualCadence.
@@ -28,7 +29,7 @@ class DualCadence(Cadence):
                                         self.short.time[0])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         
-        # These are arbitrary definitions and may need to be changed in the future
+        # Arbitrary definitions and may need to be changed in the future
         self.is_continuous = self.short.is_continuous
         self.lasttime = self.long.lasttime
         
@@ -91,7 +92,7 @@ class DualCadence(Cadence):
                  time - self.long.time_range_at_tstep(tstep0, mask=mask)[0])
         tstep1 = self.short.tstep_at_time(time1, mask=mask)
 
-        return Pair.from_scalars(tstep0,tstep1)
+        return Pair.from_scalars(tstep0, tstep1)
 
     def time_is_inside(self, time, inclusive=True):
         """Return which time(s) fall inside the cadence.

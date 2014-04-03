@@ -9,8 +9,7 @@ from oops.config          import LOGGING, PATH_PHOTONS
 from oops.event           import Event
 from oops.meshgrid        import Meshgrid
 from oops.path_.multipath import MultiPath
-
-import oops.registry as registry
+from oops.body            import Body
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
@@ -53,12 +52,11 @@ class Observation(object):
         shape           a list or tuple defining the overall shape of the
                         observation data. Where the size of an axis is unknown
                         (e.g., for a wavelength axis), the value can be zero.
-        path_id         the registered ID of a path co-located with the
-                        instrument.
-        frame_id        the registered ID of a coordinate frame fixed to the
-                        optics of the instrument. This frame should have its
-                        Z-axis pointing outward near the center of the line of
-                        sight, with the X-axis pointing rightward and the y-axis
+        path            the path waypoint co-located with the instrument.
+        frame           the wayframe of a coordinate frame fixed to the optics
+                        of the instrument. This frame should have its Z-axis
+                        pointing outward near the center of the line of sight,
+                        with the X-axis pointing rightward and the y-axis
                         pointing downward.
         subfields       a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
@@ -75,14 +73,16 @@ class Observation(object):
 
         pass
 
-    def uvt(self, indices, fovmask=False):
-        """Returns the FOV coordinates (u,v) and the time in seconds TDB
-        associated with the given indices into the data array. This method
-        supports non-integer index values.
+    def uvt(self, indices, fovmask=False, **keywords):
+        """Return coordinates (u,v) and time t for indices into the data array.
+
+        This method supports non-integer index values.
 
         Input:
             indices     a Tuple of array indices.
             fovmask     True to mask values outside the field of view.
+            keywords    optional additional keyword values required to define
+                        the FOV and the relationship between (u,v) and time.
 
         Return:         (uv, time)
             uv          a Pair defining the values of (u,v) associated with the
@@ -93,14 +93,14 @@ class Observation(object):
 
         raise NotImplementedException("uvt() is not implemented")
 
-    def uvt_range(self, indices, fovmask=False):
-        """Returns the ranges of FOV coordinates (u,v) and the time range in
-        seconds TDB associated with the given integer indices into the data
-        array.
+    def uvt_range(self, indices, fovmask=False, **keywords):
+        """Return ranges of coordinates and time for integer array indices.
 
         Input:
             indices     a Tuple of integer array indices.
             fovmask     True to mask values outside the field of view.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         (uv_min, uv_max, time_min, time_max)
             uv_min      a Pair defining the minimum values of (u,v) associated
@@ -113,16 +113,19 @@ class Observation(object):
 
         raise NotImplementedException("uvt_range() is not implemented")
 
-    def indices_at_uvt(self, uv_pair, time, fovmask=False):
-        """Returns a Tuple of indices corresponding to a given spatial location
-        and time. This method supports non-integer positions and time steps, and
-        returns fractional indices.
+    def indices_at_uvt(self, uv_pair, time, fovmask=False, **keywords):
+        """Return a vector of indices for given FOV coordinates (u,v) and time.
+
+        This method supports non-integer positions and time steps, and returns
+        fractional indices.
 
         Input:
             uv_pair     a Pair of spatial (u,v) coordinates in or near the field
                         of view.
             time        a Scalar of times in seconds TDB.
             fovmask     True to mask values outside the field of view.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:
             indices     a Tuple of array indices. Any array indices not
@@ -133,18 +136,16 @@ class Observation(object):
 
         raise NotImplementedException("indices_at_uvt() is not implemented")
 
-    def times_at_uv(self, uv_pair, fovmask=False, extras=None):
-        """Returns the start and stop times of the specified spatial pixel
-        (u,v).
+    def times_at_uv(self, uv_pair, fovmask=False, **keywords):
+        """Return start and stop times of the specified spatial pixel (u,v).
 
         Input:
             uv_pair     a Pair of spatial (u,v) coordinates in and observation's
                         field of view. The coordinates need not be integers, but
                         any fractional part is truncated.
             fovmask     True to mask values outside the field of view.
-            extras      an optional tuple or dictionary containing any extra
-                        parameters required for the conversion from (u,v) to
-                        time.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         a tuple containing Scalars of the start time and stop
                         time of each (u,v) pair, as seconds TDB.
@@ -152,17 +153,15 @@ class Observation(object):
 
         raise NotImplementedException("times_at_uv() is not implemented")
 
-    def uv_at_time(self, time, fovmask=False, extras=None):
-        """Returns the (u,v) ranges of spatial pixel observed at the specified
-        time.
+    def uv_at_time(self, time, fovmask=False, **keywords):
+        """Return the active range of FOV (u,v) coordinates at a given time.
 
         Input:
             uv_pair     a Scalar of time values in seconds TDB.
             fovmask     True to mask values outside the time limits and/or the
                         field of view.
-            extras      an optional tuple or dictionary containing any extra
-                        parameters required for the conversion from (u,v) to
-                        time.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         (uv_min, uv_max)
             uv_min      the lower (u,v) corner of the area observed at the
@@ -173,15 +172,13 @@ class Observation(object):
 
         raise NotImplementedException("uv_at_time() is not implemented")
 
-    def sweep_duv_dt(self, uv_pair, extras=None):
-        """Returns the mean local sweep speed of the instrument in the (u,v)
-        directions.
+    def sweep_duv_dt(self, uv_pair, **keywords):
+        """Return the mean local sweep speed of the instrument along (u,v) axes.
 
         Input:
             uv_pair     a Pair of spatial indices (u,v).
-            extras      an optional tuple or dictionary containing any extra
-                        parameters required to define the timing of array
-                        elements.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         a Pair containing the local sweep speed in units of
                         pixels per second in the (u,v) directions.
@@ -190,8 +187,7 @@ class Observation(object):
         raise NotImplementedException("sweep_duv_dt() is not implemented")
 
     def time_shift(self, dtime):
-        """Returns a copy of the observation object in which times have been
-        shifted by a constant value.
+        """Return a copy of the observation object with a time-shift.
 
         Input:
             dtime       the time offset to apply to the observation, in units of
@@ -215,7 +211,7 @@ class Observation(object):
     def delete_subfield(self, key):
         """Deletes a subfield, but not arr or dep."""
 
-        if key in ("arr","dep"):
+        if key in ('arr','dep'):
             self.subfields[key] = Empty()
             self.__dict__[key] = self.subfields[key]
         elif self.subfields.has_key(key):
@@ -226,7 +222,7 @@ class Observation(object):
         """Deletes all subfields."""
 
         for key in self.subfields.keys():
-            if key not in ("arr","dep"):
+            if key not in ('arr','dep'):
                 del self.subfields[key]
                 del self.__dict__[key]
 
@@ -234,65 +230,64 @@ class Observation(object):
     # Methods probably not requiring overrides
     ####################################################
 
-    def uv_is_inside(self, uv_pair, inclusive=True):
-        """Returns a boolean NumPy array identifying which coordinates fall
-        inside the defined (u,v) shape of the object.
+    def uv_is_outside(self, uv_pair, inclusive=True, **keywords):
+        """Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpet them as
                         outside.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         a boolean NumPy array indicating True where the point is
-                        inside the FOV.
+                        outside the FOV.
         """
 
-        uv_pair = Pair.as_pair(uv_pair)
-        if inclusive:
-            return ((uv_pair.vals[...,0] >= 0) &
-                    (uv_pair.vals[...,1] >= 0) &
-                    (uv_pair.vals[...,0] <= self.fov.uv_shape.vals[0]) &
-                    (uv_pair.vals[...,1] <= self.fov.uv_shape.vals[1]))
-        else:
-            return ((uv_pair.vals[...,0] >= 0) &
-                    (uv_pair.vals[...,1] >= 0) &
-                    (uv_pair.vals[...,0] < self.fov.uv_shape.vals[0]) &
-                    (uv_pair.vals[...,1] < self.fov.uv_shape.vals[1]))
+        return self.fov.uv_is_outside(uv_pair, inclusive, **keywords)
 
-    def midtime_at_uv(self, uv, extras=()):
-        """Returns the mid-time for the selected spatial pixel (u,v)."""
+    def midtime_at_uv(self, uv, **keywords):
+        """Return the mid-time for the selected spatial pixel (u,v).
 
-        (time0, time1) = self.times_at_uv(uv, extras=())
+        Input:
+            uv          a Pair of (u,v) coordinates.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
+
+        Optional additional parameters affecting the timing and FOV can be
+        passed as keywords."""
+
+        (time0, time1) = self.times_at_uv(uv, **keywords)
         return 0.5 * (time0 + time1)
 
-    def event_at_grid(self, meshgrid=None, time=None):
-        """Returns an event object describing the arrival of a photon at a set
-        of locations defined by the given meshgrid.
+    def event_at_grid(self, meshgrid=None, time=None, **keywords):
+        """Return a photon arrival event from directions defined by a meshgrid.
 
         Input:
             meshgrid    a Meshgrid object describing the sampling of the field
                         of view; None for a directionless observation.
             time        a Scalar of times; None to use the midtime of each
                         pixel in the meshgrid.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         the corresponding event.
         """
 
         if time is None:
-            time = self.midtime_at_uv(meshgrid.uv, meshgrid.extras)
+            time = self.midtime_at_uv(meshgrid.uv, **keywords)
 
-        event = Event(time, Vector3.ZERO, Vector3.ZERO,
-                            self.path_id, self.frame_id)
+        event = Event(time, (Vector3.ZERO,Vector3.ZERO), self.path, self.frame)
 
         # Insert the arrival directions
-        event.insert_subfield("arr", -meshgrid.los)
+        event.insert_subfield('arr', -meshgrid.los)
 
         return event
 
-    def gridless_event(self, meshgrid=None, time=None, shapeless=False):
-        """Returns an event object describing the arrival of a photon at an
-        instrument, irrespective of the direction.
+    def gridless_event(self, meshgrid=None, time=None, shapeless=False,
+                             **keywords):
+        """Return a photon arrival event irrespective of the direction.
 
         Input:
             meshgrid    a Meshgrid object describing the sampling of the field
@@ -301,18 +296,19 @@ class Observation(object):
                         pixel in the meshgrid.
             shapeless   True to return a shapeless event, referring to the mean
                         of all the times.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:         the corresponding event.
         """
 
         if time is None:
-            time = self.midtime_at_uv(meshgrid.uv, meshgrid.extras)
+            time = self.midtime_at_uv(meshgrid.uv, **keywords)
 
         if shapeless:
             time = time.mean()
 
-        event = Event(time, Vector3.ZERO, Vector3.ZERO,
-                            self.path_id, self.frame_id)
+        event = Event(time, (Vector3.ZERO,Vector3.ZERO), self.path, self.frame)
 
         return event
 
@@ -321,13 +317,12 @@ class Observation(object):
     # there is a large gap in timing between adjacent pixels at a time when the
     # object is crossing that gap. However, even then, it should select roughly
     # the correct location. It could also fail to converge during a fast slew.
-    #
-    # It is safe to call the function with iters=0 for a Snapshot observation.
 
-    def uv_from_path(self, path, extras=(), quick=None, derivs=False,
-                           iters=None):
-        """Solves for the (u,v) indices of an object in the field of view, given
-        its path.
+    ##### DOES NOT WORK, IN PROGRESS!
+
+    def uv_from_path(self, path, derivs=False, quick=False, converge={},
+                           **keywords):
+        """Return the (u,v) indices of an object in the FOV, given its path.
 
         Input:
             path        a Path object.
@@ -337,22 +332,18 @@ class Observation(object):
             quick       defines how to use QuickPaths and QuickFrames.
             derivs      True to include derivatives d(u,v)/dt, neglecting any
                         sweep motion within the observation.
-            iters       maximum number of iterations; None for the default
-                        defined in config.py.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
 
         Return:
             uv_pair     the (u,v) indices of the pixel in which the point was
                         found. The path is evaluated at the mid-time of this
                         pixel.
-
-                        If derivs is True, then uv is returned with a subfield
-                        "d_dt", containing the velocity of the path intercept
-                        point as a MatrixN with item shape [2,1].
         """
 
         if iters is None: iters = PATH_PHOTONS.max_iterations
 
-        path_event_guesses = None
+        guess = None
         max_dt = np.inf
         obs_time = self.midtime
 
@@ -360,13 +351,13 @@ class Observation(object):
         for iter in range(iters):
 
             # Locate the object in the field of view
-            obs_event = Event(obs_time, Vector3.ZERO, Vector3.ZERO,
-                              self.path_id, self.frame_id)
-            path_event = path.photon_to_event(obs_event, quick=quick,
-                                              guess=path_event_guesses,
-                                              derivs=False)
-            path_event_guesses = path_event.time
-            uv = self.uv_from_event(obs_event)
+            obs_event = Event(obs_time, (Vector3.ZERO,Vector3.ZERO),
+                              self.path, self.frame)
+            (path_event,obs_event) = path.photon_to_event(obs_event,
+                                        derivs=False, guess=guess,
+                                        quick=quick, converge=converge)
+            guess = path_event.time
+            uv = self.uv_from_event(obs_event)      # not implemented??
 
             # Update the times based on the locations
             new_obs_time = self.midtime_at_uv(uv)
@@ -383,13 +374,14 @@ class Observation(object):
                 break
 
         # Return the results at the best mid-time
-        obs_event = Event(obs_time, Vector3.ZERO, Vector3.ZERO,
-                          self.path_id, self.frame_id)
+        obs_event = Event(obs_time, (Vector3.ZERO, Vector3.ZERO),
+                          self.path, self.frame)
 
-        ignore = path.photon_to_event(obs_event, quick=quick,
-                                      guess=path_event_guesses,
-                                      derivs=derivs)
-        # If derivs is True, then event.arr.d_dt is now defined
+        (path_event,obs_event) = path.photon_to_event(obs_event,
+                                        derivs=derivs, guess=guess,
+                                        quick=quick, converge=converge)
+
+        ### NEEDS FIXING BELOW
 
         uv = self.fov.uv_from_los(-obs_event.arr, derivs=derivs)
         # If derivs is True, then uv.d_dlos is defined
@@ -433,15 +425,15 @@ class Observation(object):
         observation midtime and all bodies are assumed to be spherical.
         """
 
-        body_names = [registry.as_body_name(body) for body in bodies]
-        bodies  = [registry.as_body(body) for body in bodies]
+        body_names = [Body.as_body_name(body) for body in bodies]
+        bodies  = [Body.as_body(body) for body in bodies]
         nbodies = len(bodies)
 
         path_ids = [body.path_id for body in bodies]
         multipath = MultiPath(path_ids)
 
-        obs_event = Event(self.midtime, Vector3.ZERO, Vector3.ZERO,
-                          self.path_id, self.frame_id)
+        obs_event = Event(self.midtime, (Vector3.ZERO,Vector3.ZERO),
+                          self.path, self.frame)
         ignore = multipath.photon_to_event(obs_event)   # insert photon arrivals
 
         centers = -obs_event.arr
@@ -453,12 +445,12 @@ class Observation(object):
         inner_angles = (inner_radii / ranges).arcsin()
 
         # This array equals True for each body falling somewhere inside the FOV
-        falls_inside = np.empty(nbodies, dtype="bool")
+        falls_inside = np.empty(nbodies, dtype='bool')
         for i in range(nbodies):
             falls_inside[i] = self.fov.sphere_falls_inside(centers[i], radii[i])
 
         # This array equals True for each body completely hidden by another
-        is_hidden = np.zeros(nbodies, dtype="bool")
+        is_hidden = np.zeros(nbodies, dtype='bool')
         for i in range(nbodies):
           if not falls_inside[i]: continue
 
@@ -497,7 +489,7 @@ class Test_Observation(unittest.TestCase):
     def runTest(self):
 
         # TBD
-        # Note in particular that uv_from_path() is not yet tested!
+        # Note in particular that uv_from_path() is imcomplete and untested!
 
         pass
 

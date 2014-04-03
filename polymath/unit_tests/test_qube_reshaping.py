@@ -73,7 +73,7 @@ class Test_qube_reshaping(unittest.TestCase):
     da_dt = Vector(np.ones((3,1,5,6,3,2,2)), drank=2)
     self.assertFalse(da_dt.readonly)
 
-    a.insert_deriv('t', da_dt, override=True)
+    a.insert_deriv('t', da_dt)
     self.assertFalse(a.readonly)
     self.assertFalse(da_dt.readonly)
     self.assertTrue(a.d_dt.readonly)    # because of broadcast

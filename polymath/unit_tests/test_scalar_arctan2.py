@@ -28,17 +28,17 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertAlmostEqual(Scalar(-1.).arctan2( 1.), -0.25 * np.pi, 1.e-15)
 
     # Multiple values
-    self.assertTrue((4/np.pi * Scalar(1.).arctan2((1,0,-1)) -
-                     (1,2,3)).abs().max() < 1.e-15)
+    self.assertTrue(abs(4/np.pi * Scalar(1.).arctan2((1,0,-1)) -
+                     (1,2,3)).max() < 1.e-15)
 
-    self.assertTrue((4/np.pi * Scalar(-1.).arctan2((1,0,-1)) -
-                     (-1,-2,-3)).abs().max() < 1.e-15)
+    self.assertTrue(abs(4/np.pi * Scalar(-1.).arctan2((1,0,-1)) -
+                     (-1,-2,-3)).max() < 1.e-15)
 
-    self.assertTrue((4/np.pi * Scalar((1,0,-1)).arctan2((1,0,-1)) -
-                     (1,0,-3)).abs().max() < 1.e-15)
+    self.assertTrue(abs(4/np.pi * Scalar((1,0,-1)).arctan2((1,0,-1)) -
+                     (1,0,-3)).max() < 1.e-15)
 
-    self.assertTrue((4/np.pi * Scalar((1,0,-1)).arctan2((1.)) -
-                     (1,0,-1)).abs().max() < 1.e-15)
+    self.assertTrue(abs(4/np.pi * Scalar((1,0,-1)).arctan2((1.,)) -
+                     (1,0,-1)).max() < 1.e-15)
 
     # Arrays
     N = 1000
@@ -92,7 +92,6 @@ class Test_Scalar_arctan2(unittest.TestCase):
     N = 20
     y = Scalar(np.random.randn(N))
     x = Scalar(np.random.randn(N))
-    angle = y.arctan2(x)
     x.insert_deriv('f', Scalar(np.random.randn(N)))
     x.insert_deriv('h', Scalar(np.random.randn(N)))
     y.insert_deriv('g', Scalar(np.random.randn(N)))

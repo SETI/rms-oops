@@ -5,7 +5,6 @@
 from polymath import *
 
 from oops.calib_.calibration import Calibration
-from oops.constants import *
 
 class PointSource(Calibration):
     """PointSource is a Calibration subclass in which every pixel is multiplied
@@ -75,7 +74,8 @@ class Test_PointSource(unittest.TestCase):
 
         import numpy as np
         from oops.fov_.flatfov import FlatFOV
-        
+        from oops.constants import *
+
         flat_fov = FlatFOV((RPD/3600.,RPD/3600.), (1024,1024)) 
         ps = PointSource("TEST", 5., flat_fov)
         self.assertEqual(ps.value_from_dn(0., (512,512)), 0.)

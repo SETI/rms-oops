@@ -117,7 +117,7 @@ class RasterSlit1D(Observation):
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
 
-        uv_vals = np.empty(indices.shape + [2])
+        uv_vals = np.empty(indices.shape + (2,))
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
         uv_vals[..., self.cross_slit_uv_index] = 0.5
         uv = Pair(uv_vals, indices.mask)
@@ -156,7 +156,7 @@ class RasterSlit1D(Observation):
 
         slit_coord = indices.as_scalar(self.t_axis)
 
-        uv_vals = np.empty(indices.shape + [2], dtype="int")
+        uv_vals = np.empty(indices.shape + (2,), dtype="int")
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
         uv_vals[..., self.cross_slit_uv_index] = 0
         uv_min = Pair(uv_vals, indices.mask)

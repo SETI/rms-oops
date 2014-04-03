@@ -4,21 +4,20 @@
 
 import numpy as np
 from polymath import *
-import cspice
 
-from oops.path_.path import Path, Waypoint, RotatedPath
-from oops.event      import Event
-
-import oops.registry      as registry
-import oops.spice_support as spice
+from oops.event        import Event
+from oops.path_.path   import Path
+from oops.frame_.frame import Frame
 
 class CirclePath(Path):
-    """Subclass CirclePath of class Path that moves in uniform circular motion
-    about another path, in an orientation defined by the z-axis of a given
-    frame."""
+    """A path describing uniform circular motion about another path.
 
-    def __init__(self, radius, lon, rate, epoch, origin, frame, id=None):
-        """Constructor for an CirclePath.
+    The orientation of the circle is defined by the z-axis of the given
+    frame.
+    """
+
+    def __init__(self, radius, lon, rate, epoch, origin, frame=None, id=None):
+        """Constructor for a CirclePath.
 
         Input:
             radius      radius of the path, km.
@@ -30,40 +29,46 @@ class CirclePath(Path):
                         defined.
             origin      the path or ID of the center of the circle.
             frame       the frame or ID of the frame in which the circular
-                        motion is defined.
+                        motion is defined; None to use the default frame of the
+                        origin path.
             id          the name under which to register the new path; None to
-                        use a temporary path ID.
+                        leave the path unregistered.
 
         Note: The shape of the Path object returned is defined by broadcasting
         together the shapes of all the orbital elements plus the epoch.
         """
 
-        self.path_id = id or registry.temporary_path_id()
-
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id = registry.as_frame_id(frame)
-
-        self.epoch = Scalar.as_scalar(epoch)
-        self.shape = Array.broadcast_shape((radius, lon, rate, epoch))
-
         # Interpret the elements
-        self.radius = Scalar.as_standard(radius)
-        self.lon    = Scalar.as_standard(lon)
-        self.rate   = Scalar.as_standard(rate)
+        self.epoch  = Scalar.as_scalar(epoch)
+        self.radius = Scalar.as_scalar(radius)
+        self.lon    = Scalar.as_scalar(lon)
+        self.rate   = Scalar.as_scalar(rate)
 
-        self.reregister()
+        # Required attributes
+        self.path_id = id or Path.temporary_path_id()
+        self.origin  = Path.as_waypoint(origin)
+        self.frame   = Frame.as_wayframe(frame) or self.origin.frame
+        self.keys    = set()
+        self.shape   = Qube.broadcasted_shape(self.radius, self.lon,
+                                              self.rate, self.epoch,
+                                              self.origin.shape,
+                                              self.frame.shape)
 
-########################################
+        if id:
+            self.register()
+        else:
+            self.waypoint = self
 
-    def event_at_time(self, time, quick=None):
-        """Returns an Event object corresponding to a specified Scalar time on
-        this path.
+    ########################################
+
+    def event_at_time(self, time, quick=False):
+        """Return an Event corresponding to a specified time on this path.
 
         Input:
-            time        a time Scalar at which to evaluate the path.
+            time    a time Scalar at which to evaluate the path.
 
-        Return:         an Event object containing (at least) the time, position
-                        and velocity of the path.
+        Return:     an Event object containing (at least) the time, position
+                    and velocity on the path.
         """
 
         lon = self.lon + self.rate * (Scalar.as_scalar(time) - self.epoch)
@@ -74,7 +79,7 @@ class CirclePath(Path):
         vel = Vector3.from_scalars(-r_sin_lon * self.rate,
                                     r_cos_lon * self.rate, 0.)
 
-        return Event(time, pos, vel, self.origin_id, self.frame_id)
+        return Event(time, (pos,vel), self.origin, self.frame)
 
 ################################################################################
 # UNIT TESTS

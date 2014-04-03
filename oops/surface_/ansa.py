@@ -7,9 +7,8 @@ from polymath import *
 
 from oops.surface_.surface   import Surface
 from oops.surface_.ringplane import RingPlane
-
-import oops.registry as registry
-
+from oops.path_.path         import Path
+from oops.frame_.frame       import Frame
 from oops.constants import *
 
 class Ansa(Surface):
@@ -26,10 +25,6 @@ class Ansa(Surface):
 
     COORDINATE_TYPE = "cylindrical"
     IS_VIRTUAL = True
-
-    # Class constants to override where derivs are undefined
-    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
-    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
 
     def __init__(self, origin, frame, gravity=None, ringplane=None):
         """Constructor for an Ansa Surface.
@@ -49,53 +44,46 @@ class Ansa(Surface):
                         should be ignored.
         """
 
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id  = registry.as_frame_id(frame)
-        self.gravity   = gravity
+        self.origin  = Path.as_waypoint(origin)
+        self.frame   = Frame.as_wayframe(frame)
+        self.gravity = gravity
 
         if ringplane is None:
-            self.ringplane = RingPlane(self.origin_id, self.frame_id,
+            self.ringplane = RingPlane(self.origin, self.frame,
                                        gravity=self.gravity)
         else:
             self.ringplane = ringplane
 
     @staticmethod
     def for_ringplane(ringplane):
-        """Constructor for an Ansa Surface associated with a given RingPlane.
+        """Construct an Ansa Surface associated with a given RingPlane.
 
         Input:
             ringplane   a ringplane surface relative to which this ansa surface
                         is to be defined.
         """
 
-        return Ansa(ringplane.origin_id, ringplane.frame_id, ringplane.gravity,
+        return Ansa(ringplane.origin, ringplane.frame, ringplane.gravity,
                     ringplane)
 
     def coords_from_vector3(self, pos, obs, axes=2, derivs=False):
-        """Converts from position vectors in the internal frame into the surface
-        coordinate system.
+        """Convert positions in the internal frame to surface coordinates.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
-            obs         position of the observer in the surface frame.
+            pos         a Vector3 of positions at or near the surface.
+            obs         a Vector3 of observer observer positions. Ignored for
+                        solid surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
-            derivs      a boolean or tuple of booleans. If True, then the
-                        partial derivatives of each coordinate with respect to
-                        pos and obs are returned as well. Using a tuple, you
-                        can indicate whether to return partial derivatives on a
-                        coordinate-by-coordinate basis.
+            derivs      True to propagate any derivatives inside pos and obs
+                        into the returned coordinates.
 
-        Return:         coordinate values packaged as a tuple containing two
-                        unitless Scalars, one for each coordinate (r,z,theta).
-
-                        Where derivs is True, the Scalar returned will have
-                        subfields "d_dpos" and "d_obs", which contain the
-                        partial derivatives of that coordinate, represented as
-                        MatrixN objects with item shape [1,3].
+        Return:         coordinate values packaged as a tuple containing two or
+                        three unitless Scalars, one for each coordinate.
         """
 
+        pos = Vector3.as_vector3(pos, derivs)
+        obs = Vector3.as_vector3(obs, derivs)
         (pos_x, pos_y, pos_z) = pos.to_scalars()
         (obs_x, obs_y, obs_z) = obs.to_scalars()
 
@@ -108,9 +96,7 @@ class Ansa(Surface):
         # Put it in the range -pi to pi
         lon = ((lon + PI) % TWOPI) - PI
         sign = lon.sign()
-
         r = rabs * sign
-        z = pos_z.copy()
 
         # Fill in the third coordinate if necessary
         if axes > 2:
@@ -119,53 +105,26 @@ class Ansa(Surface):
 
             phi = (rabs / obs_xy).arccos()
             theta = sign*lon - phi
-            coords = (r, z, theta)
+            return (r, pos_z, theta)
 
-        else:
-            coords = (r, z)
-
-        # Check the derivative requirements
-        if np.any(derivs):
-            if derivs is True: derivs = (derivs, derivs, derivs)
-
-            if derivs[0]:
-                dr_dpos = pos/r
-                dr_dpos.vals[...,2] = 0.
-                r.insert_subfield("d_dpos", dr_dpos.as_row())
-                r.insert_subfield("d_dobs", Vector3((0,0,0)).as_row())
-
-            if derivs[1]:
-                z.insert_subfield("d_dpos",Vector3((0,0,1)).as_row())
-                z.insert_subfield("d_dobs",Vector3((0,0,0)).as_row())
-
-            if axes > 2 and derivs[2]:
-                raise NotImplementedError("Ansa.coords_from_vector3() " +
-                                    "does not implement theta derivatives")
-
-        return coords
+        return (r, pos_z)
 
     def vector3_from_coords(self, coords, obs, derivs=False):
-        """Returns the position where a point with the given surface coordinates
-        would fall in the surface frame, given the location of the observer.
+        """Convert surface coordinates to positions in the internal frame.
 
         Input:
-            coords      a tuple of two or three Scalars: (r, z, theta)
-                r       radial distance from the planetary pole.
-                z       vertical distance from the equatorial plane.
-                theta   longitude relative to the ansa.
-            obs         position of the observer in the surface frame.
-            derivs      True to include the partial derivatives of the intercept
-                        point with respect to observer and to the coordinates.
+            coords      a tuple of two or three Scalars defining the
+                        coordinates.
+            obs         position of the observer in the surface frame. Ignored
+                        for solid surfaces but needed for virtual surfaces.
+            derivs      True to propagate any derivatives inside the coordinates
+                        and obs into the returned position vectors.
 
         Return:         a unitless Vector3 of intercept points defined by the
                         coordinates.
 
-                        If derivs is True, then pos is returned with subfields
-                        "d_dobs" and "d_dcoords", where the former contains the
-                        MatrixN of partial derivatives with respect to obs and
-                        the latter is the MatrixN of partial derivatives with
-                        respect to the coordinates. The MatrixN item shapes are
-                        [3,3].
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
         """
 
         # Given (r,z, theta) and the observer position, solve for position.
@@ -204,8 +163,8 @@ class Ansa(Surface):
 
         assert len(coords) in {2,3}
 
-        r = coords[0]
-        z = coords[1]
+        r = Scalar.as_scalar(coords[0], derivs)
+        z = Scalar.as_scalar(coords[1], derivs)
 
         sign = r.sign()
         rabs = r * sign
@@ -213,9 +172,9 @@ class Ansa(Surface):
         if len(coords) == 2:
             theta = Scalar(0.)
         else:
-            theta = coords[2]
+            theta = Scalar.as_scalar(coords[2], derivs)
 
-        (obs_x, obs_y, obs_z) = Vector3.as_vector(obs).to_scalars()
+        (obs_x, obs_y, obs_z) = Vector3.as_vector(obs, derivs).to_scalars()
         obs_xy = (obs_x**2 + obs_y**2).sqrt()
 
         phi = (rabs / obs_xy).arccos()
@@ -224,162 +183,70 @@ class Ansa(Surface):
 
         pos = Vector3.from_scalars(rabs * pos_lon.cos(),
                                    rabs * pos_lon.sin(), z)
-
-        if derivs:
-            raise NotImplementedError("Ansa.vector3_from_coords() " +
-                                      "does not implement derivatives")
-
         return pos
 
     def intercept(self, obs, los, derivs=False, t_guess=None):
-        """Returns the position where a specified line of sight intercepts the
-        surface.
+        """The position where a specified line of sight intercepts the surface.
 
         Input:
-            obs         observer position as a Vector3, with optional units.
-            los         line of sight as a Vector3, with optional units.
-            derivs      True to include the partial derivatives of the intercept
-                        point with respect to obs and los.
+            obs         observer position as a Vector3.
+            los         line of sight as a Vector3.
+            derivs      True to propagate any derivatives inside obs and los
+                        into the returned intercept point.
             t_guess     initial guess at the t array, optional.
 
-        Return:         (pos, t)
-            pos         a unitless Vector3 of intercept points on the surface,
-                        in km.
-            t           a unitless Scalar of scale factors t such that:
+        Return:         a tuple (pos, t) where
+            pos         a Vector3 of intercept points on the surface, in km.
+            t           a unitless Scalar such that:
                             position = obs + t * los
-
-                        If derivs is True, then pos and t are returned with
-                        subfields "d_dobs" and "d_dlos", where the former
-                        contains the MatrixN of partial derivatives with respect
-                        to obs and the latter is the MatrixN of partial
-                        derivatives with respect to los. The MatrixN item shapes
-                        are [3,3] for the derivatives of pos, and [1,3] for the
-                        derivatives of t. For purposes of differentiation, los
-                        is assumed to have unit length.
         """
+
+        obs = Vector3.as_vector3(obs, derivs)
+        los = Vector3.as_vector3(los, derivs)
 
         # (obs_xy + t los_xy) dot los_xy = 0
         # t = -(obs_xy dot los_xy) / (los_xy dot los_xy)
         # pos = obs + t * los
 
-        obs_x = obs.to_scalar(0).vals
-        obs_y = obs.to_scalar(1).vals
-        los_x = los.to_scalar(0).vals
-        los_y = los.to_scalar(1).vals
+        obs_x = obs.to_scalar(0)
+        obs_y = obs.to_scalar(1)
+        los_x = los.to_scalar(0)
+        los_y = los.to_scalar(1)
 
-        los_x_sq = los_x**2
-        los_y_sq = los_y**2
-        los_sq = los_x_sq + los_y_sq
+        los_sq = los_x**2 + los_y**2
 
         obs_dot_los = obs_x * los_x + obs_y * los_y
-        t_vals = -obs_dot_los / los_sq
+        t = -obs_dot_los / los_sq
 
-        pos = obs + los * Scalar(t_vals)
-        t = Scalar(t_vals, pos.mask)
+        pos = obs + t * los
 
-        if derivs:
-            # t = -(obs_x * los_x + obs_y * los_y) / |los|**2
-            #
-            # dt/dobs[x] = -los[x] / |los|**2
-            # dt/dobs[y] = -los[y] / |los|**2
-            # dt/dobs[z] = 0.
-            #
-            # dpos[x]/dobs[x] = 1 + los[x] dt/dobs[x]
-            #                 = 1 - los[x]**2 / |los|**2
-            #                 = (|los|**2 - los[x]**2) / |los|**2
-            #                 = los[y]**2 / |los|**2
-            # dpos[x]/dobs[y] = los[x] * dt/dobs[y]
-            #                 = -los[x] * los[y] / |los|**2
-            # dpos[x]/dobs[z] = los[x] * dt/dobs[z] = 0.
-            #
-            # dpos[z]/dobs[x] = los[z] * dt/dobs[x]
-            #                 = -los[x] los[z] / |los|**2
-            # dpos[z]/dobs[z] = 1
-
-            los_z = los.to_scalar(2).vals
-
-            dt_dobs_vals = np.zeros(obs.shape + (1,3))
-            dt_dobs_vals[...,0,0] = -los_x / los_sq
-            dt_dobs_vals[...,0,1] = -los_y / los_sq
-
-            dpos_dobs_vals = np.zeros(obs.shape + (3,3))
-            dpos_dobs_vals[...,0,0] = los_y_sq
-            dpos_dobs_vals[...,0,1] = -los_x * los_y
-            dpos_dobs_vals[...,1,0] = dpos_dobs_vals[...,0,1]
-            dpos_dobs_vals[...,1,1] = los_x_sq
-            dpos_dobs_vals[...,2,0] = -los_x * los_z
-            dpos_dobs_vals[...,2,1] = -los_y * los_z
-            dpos_dobs_vals[...,2,2] = los_sq
-            dpos_dobs_vals /= los_sq[..., np.newaxis, np.newaxis]
-
-            # t = -(obs_x * los_x + obs_y * los_y) / (los_x**2 + los_y**2)
-            #
-            # dt/dlos[x] = (-obs_x los_sq + 2 los_x * obs_dot_los) / los_sq**2
-            # dt/dlos[y] = (-obs_y los_sq + 2 los_y * obs_dot_los) / los_sq**2
-            # dt/dlos[z] = 0.
-            #
-            # dpos[x]/dlos[x] = los[x] dt/dlos[x] + t
-            # dpos[x]/dlos[y] = los[x] dt/dlos[y]
-            # dpos[y]/dlos[x] = los[y] dt/dlos[x]
-            # dpos[y]/dlos[y] = los[y] dt/dlos[y] + t
-            # dpos[z]/dlos[x] = los[z] dt/dlos[x]
-            # dpos[z]/dlos[y] = los[z] dt/dlos[y]
-            # dpos[z]/dlos[z] = t
-
-            dt_dlos_vals = np.zeros(obs.shape + (1,3))
-            dt_dlos_vals[...,0,0] = 2 * los_x * obs_dot_los - obs_x * los_sq
-            dt_dlos_vals[...,0,1] = 2 * los_y * obs_dot_los - obs_y * los_sq
-            dt_dlos_vals /= (los_sq**2)[...,np.newaxis,np.newaxis]
-
-            dpos_dlos_vals = np.zeros(obs.shape + (3,3))
-            dpos_dlos_vals[...,0,0] = los_x * dt_dlos_vals[...,0,0] + t_vals
-            dpos_dlos_vals[...,0,1] = los_x * dt_dlos_vals[...,0,1]
-            dpos_dlos_vals[...,1,0] = los_y * dt_dlos_vals[...,0,0]
-            dpos_dlos_vals[...,1,1] = los_y * dt_dlos_vals[...,0,1] + t_vals
-            dpos_dlos_vals[...,2,0] = los_z * dt_dlos_vals[...,0,0]
-            dpos_dlos_vals[...,2,1] = los_z * dt_dlos_vals[...,0,1]
-            dpos_dlos_vals[...,2,2] = t_vals
-
-            # Normalize in the los denominators
-            los_norm_vals = los.norm().vals[..., np.newaxis, np.newaxis]
-            dt_dlos_vals *= los_norm_vals
-            dpos_dlos_vals *= los_norm_vals
-
-            pos.d_dobs = Matrix(dpos_dobs_vals, pos.mask)
-            pos.d_dlos = Matrix(dpos_dlos_vals, pos.mask)
-            t.d_dobs = Matrix(dt_dobs_vals, pos.mask)
-            t.d_dlos = Matrix(dt_dlos_vals, pos.mask)
+        mask = (t < 0.)
+        pos = pos.mask_where(mask)
+        t = t.mask_where(mask)
 
         return (pos, t)
 
     def normal(self, pos, derivs=False):
-        """Returns the normal vector at a position at or near a surface.
-        Counterintuitively, we define this as the ring plane normal for the
-        Ansa surface, so that incidence and emission angles work out as the
-        user would expect.
+        """The normal vector at a position at or near a surface.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
-            derivs      True to include a matrix of partial derivatives.
+            pos         a Vector3 of positions at or near the surface.
+            derivs      True to propagate any derivatives of pos into the
+                        returned normal vectors.
 
-        Return:         a unitless Vector3 containing directions normal to the
-                        surface that pass through the position. Lengths are
-                        arbitrary.
+        Return:         a Vector3 containing directions normal to the surface
+                        that pass through the position. Lengths are arbitrary.
 
-                        If derivs is True, then the normal vectors returned have
-                        a subfield "d_dpos", which contains the partial
-                        derivatives with respect to components of the given
-                        position vector, as a MatrixN object with item shape
-                        [3,3].
+
+        NOTE: Counterintuitively, we define this as the ring plane normal for
+        the Ansa surface, so that incidence and emission angles work out as the
+        user would expect.
         """
 
-        perp = Vector3((0,0,1))
+        pos = Vector3.as_vector3(pos, derivs)
 
-        if derivs:
-            perp.insert_subfield("d_dpos", MatrixN(np.zeros((3,3))))
-
-        return perp
+        # Always the Z-axis
+        return pos.all_constant((0.,0.,1.))
 
 ################################################################################
 # UNIT TESTS
@@ -391,21 +258,18 @@ class Test_Ansa(unittest.TestCase):
     
     def runTest(self):
 
-        import oops.frame_ as frame
-        import oops.path_ as path
-
         surface = Ansa("SSB", "J2000")
 
         # intercept()
-        obs = Vector3(np.random.rand(100,3) * 1.e5)
-        los = Vector3(np.random.rand(100,3))
+        obs = Vector3( np.random.rand(10,3) * 1.e5)
+        los = Vector3(-np.random.rand(10,3))
 
         (pos,t) = surface.intercept(obs, los)
         pos_xy = pos.element_mul((1,1,0))
         los_xy = los.element_mul((1,1,0))
 
-        self.assertTrue(((pos_xy.sep(los_xy) - HALFPI).rms() < 1.e-8).all())
-        self.assertTrue(((obs + t * los - pos).rms() < 1.e-8).all())
+        self.assertTrue(abs(pos_xy.sep(los_xy) - HALFPI).max() < 1.e-8)
+        self.assertTrue(abs(obs + t * los - pos).max() < 1.e-8)
 
         # coords_from_vector3()
         obs = Vector3(np.random.rand(100,3) * 1.e6)
@@ -415,16 +279,16 @@ class Test_Ansa(unittest.TestCase):
 
         pos_xy = pos.element_mul(Vector3((1,1,0)))
         pos_z  = pos.to_scalar(2)
-        self.assertTrue((abs(pos_xy.norm() - abs(r)) < 1.e-8).all())
-        self.assertTrue((abs(pos_z - z) < 1.e-8).all())
+        self.assertTrue(abs(pos_xy.norm() - abs(r)).max() < 1.e-8)
+        self.assertTrue(abs(pos_z - z).max() < 1.e-8)
 
         (r,z,theta) = surface.coords_from_vector3(pos, obs, axes=3)
 
         pos_xy = pos.element_mul(Vector3((1,1,0)))
         pos_z  = pos.to_scalar(2)
-        self.assertTrue(((pos_xy.norm() - abs(r)).rms() < 1.e-8).all())
-        self.assertTrue(((pos_z - z).rms() < 1.e-8).all())
-        self.assertTrue((abs(theta).mvals <= PI).all())
+        self.assertTrue(abs(pos_xy.norm() - abs(r)).max() < 1.e-8)
+        self.assertTrue(abs(pos_z - z).max() < 1.e-8)
+        self.assertTrue(abs(theta).max() <= PI)
 
         # vector3_from_coords()
         obs = Vector3(1.e-5 + np.random.rand(100,3) * 1.e6)
@@ -436,30 +300,30 @@ class Test_Ansa(unittest.TestCase):
 
         pos_xy = pos.element_mul(Vector3((1,1,0)))
         pos_z  = pos.to_scalar(2)
-        self.assertTrue((abs(pos_xy.norm() - abs(r)) < 1.e-8).all())
-        self.assertTrue((abs(pos_z - z) < 1.e-8).all())
+        self.assertTrue(abs(pos_xy.norm() - abs(r)).max() < 1.e-8)
+        self.assertTrue(abs(pos_z - z).max() < 1.e-8)
 
         obs_xy = obs.element_mul(Vector3((1,1,0)))
-        self.assertTrue((abs(pos_xy.sep(obs_xy - pos_xy) - HALFPI) < 1.e-5).all())
+        self.assertTrue(abs(pos_xy.sep(obs_xy - pos_xy) - HALFPI).max() < 1.e-5)
 
         pos1 = surface.vector3_from_coords((r,z,theta), obs)
         pos1_xy = pos1.element_mul(Vector3((1,1,0)))
-        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
+        self.assertTrue(abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5)
 
         pos1 = surface.vector3_from_coords((r,z,-theta), obs)
         pos1_xy = pos1.element_mul(Vector3((1,1,0)))
-        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
+        self.assertTrue(abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5)
 
         pos = surface.vector3_from_coords((-r,z), obs)
         pos_xy = pos.element_mul(Vector3((1,1,0)))
 
         pos1 = surface.vector3_from_coords((-r,z,-theta), obs)
         pos1_xy = pos1.element_mul(Vector3((1,1,0)))
-        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
+        self.assertTrue(abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5)
 
         pos1 = surface.vector3_from_coords((-r,z,theta), obs)
         pos1_xy = pos1.element_mul(Vector3((1,1,0)))
-        self.assertTrue((abs(pos1_xy.sep(pos_xy) - theta) < 1.e-5).all())
+        self.assertTrue(abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5)
 
         # vector3_from_coords() & coords_from_vector3()
         obs = Vector3((1.e6,0,0))
@@ -470,63 +334,63 @@ class Test_Ansa(unittest.TestCase):
 
         pos = surface.vector3_from_coords((r,z,theta), obs)
         coords = surface.coords_from_vector3(pos, obs, axes=3)
-        self.assertTrue((abs(r - coords[0]) < 1.e-5).all())
-        self.assertTrue((abs(z - coords[1]) < 1.e-5).all())
-        self.assertTrue((abs(theta - coords[2]) < 1.e-8).all())
+        self.assertTrue(abs(r - coords[0]).max() < 1.e-5)
+        self.assertTrue(abs(z - coords[1]).max() < 1.e-5)
+        self.assertTrue(abs(theta - coords[2]).max() < 1.e-8)
 
         obs = Vector3(np.random.rand(100,3) * 1.e6)
         pos = Vector3(np.random.rand(100,3) * 1.e5)
         coords = surface.coords_from_vector3(pos, obs, axes=3)
         test_pos = surface.vector3_from_coords(coords, obs)
-        self.assertTrue(((test_pos - pos).rms().mvals < 1.e-5).all())
+        self.assertTrue(abs(test_pos - pos).max() < 1.e-5)
 
         # intercept() derivatives
-        obs = Vector3(np.random.rand(10000,3))
-        los = Vector3(np.random.rand(10000,3))
+        obs = Vector3( np.random.rand(10,3))
+        obs.insert_deriv('obs', Vector3.IDENTITY)
+        los = Vector3(-np.random.rand(10,3))
+        los.insert_deriv('los', Vector3.IDENTITY)
         (pos0,t0) = surface.intercept(obs, los, derivs=True)
 
         eps = 1e-6
         (pos1,t1) = surface.intercept(obs + (eps,0,0), los, derivs=False)
         dpos_dobs_test = (pos1 - pos0) / eps
         dt_dobs_test = (t1 - t0) / eps
-        self.assertTrue(((dpos_dobs_test - pos0.d_dobs.vals[...,0]).rms() < 1.e-6).all())
-        self.assertTrue(((dt_dobs_test - t0.d_dobs.vals[...,0,0]).rms() < 1.e-6).all())
+        self.assertTrue(abs(dpos_dobs_test - pos0.d_dobs.vals[...,0]).max() < 1.e-6)
+        self.assertTrue(abs(dt_dobs_test - t0.d_dobs.vals[...,0]).max() < 1.e-6)
 
         (pos1,t1) = surface.intercept(obs + (0,eps,0), los, derivs=False)
         dpos_dobs_test = (pos1 - pos0) / eps
         dt_dobs_test = (t1 - t0) / eps
-        self.assertTrue(((dpos_dobs_test - pos0.d_dobs.vals[...,1]).rms() < 1.e-5).all())
-        self.assertTrue(((dt_dobs_test - t0.d_dobs.vals[...,0,1]).rms() < 1.e-6).all())
+        self.assertTrue(abs(dpos_dobs_test - pos0.d_dobs.vals[...,1]).max() < 1.e-5)
+        self.assertTrue(abs(dt_dobs_test - t0.d_dobs.vals[...,1]).max() < 1.e-6)
 
         (pos1,t1) = surface.intercept(obs + (0,0,eps), los, derivs=False)
         dpos_dobs_test = (pos1 - pos0) / eps
         dt_dobs_test = (t1 - t0) / eps
-        self.assertTrue(((dpos_dobs_test - pos0.d_dobs.vals[...,2]).rms() < 1.e-5).all())
-        self.assertTrue(((dt_dobs_test - t0.d_dobs.vals[...,0,2]).rms() < 1.e-6).all())
+        self.assertTrue(abs(dpos_dobs_test - pos0.d_dobs.vals[...,2]).max() < 1.e-5)
+        self.assertTrue(abs(dt_dobs_test - t0.d_dobs.vals[...,2]).max() < 1.e-6)
 
         eps = 1e-6
-        los_norm = los.norm()
-
         (pos1,t1) = surface.intercept(obs, los + (eps,0,0), derivs=False)
-        dpos_dlos_test = (pos1 - pos0) / eps * los_norm
-        dt_dlos_test = (t1 - t0) / eps * los_norm
-        print np.max((dpos_dlos_test - pos0.d_dlos.vals[...,0]).rms().mvals)
-        self.assertTrue(((dpos_dlos_test - pos0.d_dlos.vals[...,0]).rms().mvals < 1.e-2).all())
-        self.assertTrue(((dt_dlos_test - t0.d_dlos.vals[...,0,0]).rms().mvals < 1.e-2).all())
+        dpos_dlos_test = (pos1 - pos0) / eps
+        dt_dlos_test = (t1 - t0) / eps
+        self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,0]).max() < 1.e-2)
+        self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,0]).max() < 1.e-2)
 
         (pos1,t1) = surface.intercept(obs, los + (0,eps,0), derivs=False)
-        dpos_dlos_test = (pos1 - pos0) / eps * los_norm
-        dt_dlos_test = (t1 - t0) / eps * los_norm
-        self.assertTrue(((dpos_dlos_test - pos0.d_dlos.vals[...,1]).rms().mvals < 1.e-2).all())
-        self.assertTrue(((dt_dlos_test - t0.d_dlos.vals[...,0,1]).rms().mvals < 1.e-2).all())
+        dpos_dlos_test = (pos1 - pos0) / eps
+        dt_dlos_test = (t1 - t0) / eps
+        self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,1]).max() < 1.e-2)
+        self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,1]).max() < 1.e-2)
 
         (pos1,t1) = surface.intercept(obs, los + (0,0,eps), derivs=False)
-        dpos_dlos_test = (pos1 - pos0) / eps * los_norm
-        dt_dlos_test = (t1 - t0) / eps * los_norm
-        self.assertTrue(((dpos_dlos_test - pos0.d_dlos.vals[...,2]).rms().mvals < 1.e-2).all())
-        self.assertTrue(((dt_dlos_test - t0.d_dlos.vals[...,0,2]).rms().mvals < 1.e-2).all())
+        dpos_dlos_test = (pos1 - pos0) / eps
+        dt_dlos_test = (t1 - t0) / eps
+        self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,2]).max() < 1.e-2)
+        self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,2]).max() < 1.e-2)
 
-        registry.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

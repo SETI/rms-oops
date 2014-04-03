@@ -1,13 +1,11 @@
 ################################################################################
-# oops/format_/unittester.py
+# oops/frame_/unittester.py
 ################################################################################
 
 import unittest
-import cspice
-import os.path
 
-from oops.frame_.cmatrix         import Test_Cmatrix
 from oops.frame_.frame           import Test_Frame
+from oops.frame_.cmatrix         import Test_Cmatrix
 from oops.frame_.inclinedframe   import Test_InclinedFrame
 from oops.frame_.postarg         import Test_PosTarg
 from oops.frame_.ringframe       import Test_RingFrame

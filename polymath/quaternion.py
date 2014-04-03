@@ -31,16 +31,18 @@ class Quaternion(Vector):
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     @staticmethod
-    def as_quaternion(arg):
+    def as_quaternion(arg, recursive=True):
         """Return this object converted to a Quaternion."""
 
-        if type(arg) == Quaternion: return arg
+        if type(arg) == Quaternion:
+            if recursive: return arg
+            return arg.without_derivs()
 
         if type(arg) == Matrix3:
-            return Quaternion.from_matrix3(arg)
+            return Quaternion.from_matrix3(arg, recursive)
 
         if isinstance(arg, Qube) and arg.numer == (3,):
-            return from_parts(0., arg)
+            return from_parts(0., arg, recursive)
 
         return Quaternion(arg)
 
@@ -104,7 +106,7 @@ class Quaternion(Vector):
                 else:
                     new_derivs[key] = term
 
-            obj.insert_derivs(new_derivs, override=True)
+            obj.insert_derivs(new_derivs)
 
         return obj
 
@@ -162,8 +164,7 @@ class Quaternion(Vector):
 
         if recursive and self.derivs:
             for (key, deriv) in self.derivs.iteritems():
-                self.insert_deriv(key, deriv.conj(recursive=False),
-                                       override=True, nocopy='vm')
+                self.insert_deriv(key, deriv.conj(recursive=False), nocopy='vm')
 
         return obj
 
@@ -302,8 +303,7 @@ class Quaternion(Vector):
                                                                pnorm**3)
 
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, dm_dp.chain(deriv),
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, dm_dp.chain(deriv), nocopy='vm')
 
         if partials:
             return (obj, dm_dp)
@@ -322,7 +322,7 @@ class Quaternion(Vector):
                         CURRENTLY IMPLEMENTED.
         """
 
-        if recursive:
+        if recursive and len(matrix.derivs):
             raise NotImplementedError('derivatives are not implemented for ' +
                                       'from_matrix3()')
 
@@ -452,8 +452,7 @@ class Quaternion(Vector):
             dq_dQ = Quaternion(new_values, matrix.mask, drank=2)
 
             for (key, deriv) in matrix.derivs.iteritems():
-                obj.insert_deriv(key, dq_dQ.chain(deriv),
-                                      override=True, nocopy='vm')
+                obj.insert_deriv(key, dq_dQ.chain(deriv), nocopy='vm')
 
         return obj
 
@@ -461,19 +460,19 @@ class Quaternion(Vector):
     # Overrides of arithmetic operators
     ############################################################################
 
-    def __mul__(self, arg):
+    def __mul__(self, arg, recursive=True):
 
         # Use default operator for anything but a Qube subclass
         if not isinstance(arg, Qube):
-            return Qube.__mul__(self, arg)
+            return Qube.__mul__(self, arg, recursive)
 
         # Convert any 3-vector to a Quaternion
         if arg.numer == (3,):
-            arg = Quaternion.from_parts(0., arg)
+            arg = Quaternion.from_parts(0., arg, recursive)
 
         # Send any other object to the default operator
         if type(arg) != Quaternion:
-            return Qube.__mul__(self, arg)
+            return Qube.__mul__(self, arg, recursive)
 
         # Check denominators
         if self.drank and arg.drank:
@@ -512,22 +511,24 @@ class Quaternion(Vector):
             obj = obj.as_readonly(nocopy='vm')
 
         # Construct the derivatives if necessary
-        new_derivs = {}
+        if recursive:
+            new_derivs = {}
 
-        if a.derivs:
-            b_wod = b.without_derivs()
-            for (key, a_deriv) in a.derivs.iteritems():
-                new_derivs[key] = a_deriv * b_wod
+            if a.derivs:
+                b_wod = b.without_derivs()
+                for (key, a_deriv) in a.derivs.iteritems():
+                    new_derivs[key] = a_deriv * b_wod
 
-        if b.derivs:
-            a_wod = a.without_derivs()
-            for (key, b_deriv) in b.derivs.iteritems():
-                if key in new_derivs:
-                    new_derivs[key] = new_derivs[key] + a_wod * b_deriv
-                else:
-                    new_derivs[key] = a_wod * b_deriv
+            if b.derivs:
+                a_wod = a.without_derivs()
+                for (key, b_deriv) in b.derivs.iteritems():
+                    if key in new_derivs:
+                        new_derivs[key] = new_derivs[key] + a_wod * b_deriv
+                    else:
+                        new_derivs[key] = a_wod * b_deriv
 
-        obj.insert_derivs(new_derivs, override=True, nocopy='vm')
+            obj.insert_derivs(new_derivs, nocopy='vm')
+
         return obj
 
     @staticmethod
@@ -560,32 +561,32 @@ class Quaternion(Vector):
 
         return new_values
 
-    def __rmul__(self, arg):
+    def __rmul__(self, arg, recursive=True):
 
         # Convert any 3-vector to a Quaternion and try again
         if isinstance(arg, Qube) and arg.numer == (3,):
-            arg = Quaternion.from_parts(0., arg)
-            return arg.__mul__(self)
+            arg = Quaternion.from_parts(0., arg, recursive)
+            return arg.__mul__(self, recursive)
 
         # Send any other object to the default operator
-        return Qube.__mul__(self, arg)
+        return Qube.__mul__(self, arg, recursive)
 
-    def __truediv__(self, arg):
+    def __truediv__(self, arg, recursive=True):
 
         # Use default operator for anything but a Qube subclass
         if not isinstance(arg, Qube):
-            return Qube.__truediv__(self, arg)
+            return Qube.__truediv__(self, arg, recursive)
 
         # Convert any 3-vector to a Quaternion
         if arg.numer == (3,):
-            arg = Quaternion.from_parts(0., arg)
+            arg = Quaternion.from_parts(0., arg, recursive)
 
         # Send any other subclass to the default operator
         if type(arg) != Quaternion:
-            return Qube.__truediv__(self, arg)
+            return Qube.__truediv__(self, arg, recursive)
 
         # Multiply by the reciprocal
-        return self * arg.reciprocal()
+        return self.__mul__(arg.reciprocal(recursive), recursive)
 
     def reciprocal(self, recursive=True):
         """Return an object equivalent to the reciprocal of this object.

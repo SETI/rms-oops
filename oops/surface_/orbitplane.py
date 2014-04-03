@@ -5,15 +5,15 @@
 import numpy as np
 from polymath import *
 
-from oops.event              import Event
-from oops.surface_.surface   import Surface
-from oops.surface_.ringplane import RingPlane
-
-import oops.frame_    as frame_
-import oops.path_     as path_
-import oops.registry  as registry
-
-from oops.constants import *
+from oops.event                import Event
+from oops.surface_.surface     import Surface
+from oops.surface_.ringplane   import RingPlane
+from oops.path_.path           import Path
+from oops.path_.circlepath     import CirclePath
+from oops.frame_.frame         import Frame
+from oops.frame_.inclinedframe import InclinedFrame
+from oops.frame_.spinframe     import SpinFrame
+from oops.constants            import *
 
 class OrbitPlane(Surface):
     """OrbitPlane is a subclass of the Surface class describing a flat surface
@@ -60,21 +60,21 @@ class OrbitPlane(Surface):
             origin      the path or ID of the planet center.
             frame       the frame or ID of the frame in which the orbit is
                         defined. Should be inertial.
-            id          the name under which to register a temporary path or
-                        frame if it is needed. Not used for circular, equatorial
-                        orbits. None to use temporary path and frame names.
+            id          the ID under which to register the orbit path; None to
+                        leave it unregistered
 
         Note that the origin_id and frame_id used by the returned OrbitPlane
         object will differ from those used to define it here. 
         """
 
         # Save the initial center path and frame. The frame should be inertial.
-        self.defined_origin_id = registry.as_path_id(origin)
-        self.defined_frame_id = registry.as_frame_id(frame)
+        self.defined_origin = Path.as_waypoint(origin)
+        self.defined_frame = Frame.as_wayframe(frame)
+        assert self.defined_frame.origin is None    # assert inertial
 
         # We will update the surface's actual path and frame as needed
-        self.internal_origin_id = self.defined_origin_id
-        self.internal_frame_id = self.defined_frame_id
+        self.internal_origin = self.defined_origin
+        self.internal_frame = self.defined_frame
 
         # Save the orbital elements
         self.a   = elements[0]
@@ -84,7 +84,7 @@ class OrbitPlane(Surface):
         self.epoch = Scalar.as_scalar(epoch)
 
         # Interpret the inclination
-        self.has_inclination = len(elements) >= 9
+        self.has_inclination = (len(elements) >= 9)
         if self.has_inclination:
             self.i = elements[6]
             self.has_inclination = (self.i != 0)
@@ -92,29 +92,27 @@ class OrbitPlane(Surface):
         # If the orbit is inclined, define a special-purpose inclined frame
         if self.has_inclination:
             if id is None:
-                self.inclined_frame_id = registry.temporary_frame_id()
+                frame_id = None
             else:
-                self.inclined_frame_id = id + "_INCLINATION"
+                frame_id = id + "_INCLINATION"
 
-            self.inclined_frame = frame_.InclinedFrame(
-                                                elements[6],  # inclination
+            self.inclined_frame = InclinedFrame(elements[6],  # inclination
                                                 elements[7],  # ascending node
                                                 elements[8],  # regression rate
                                                 self.epoch,
-                                                self.internal_frame_id,
+                                                self.internal_frame,
                                                 True,         # despin
-                                                self.inclined_frame_id)
-            self.internal_frame_id = self.inclined_frame_id
+                                                id = frame_id)
+            self.internal_frame = self.inclined_frame.wayframe
         else:
             self.inclined_frame = None
-            self.inclined_frame_id = self.internal_frame_id
 
         # The inclined frame changes its tilt relative to the equatorial plane,
         # accounting for nodal regression, but does not change the reference
         # longitude from that used by the initial frame.
 
         # Interpret the eccentricity
-        self.has_eccentricity = len(elements) >= 6
+        self.has_eccentricity = (len(elements) >= 6)
         if self.has_eccentricity:
             self.e = elements[3]
             self.has_eccentricity = (self.e != 0)
@@ -127,170 +125,131 @@ class OrbitPlane(Surface):
             self.n_sub_prec = self.n - elements[5]
 
             if id is None:
-                self.peri_path_id = registry.temporary_path_id()
+                path_id = None
             else:
-                self.peri_path_id = id + "_ECCENTRICITY"
+               path_id = id + "_ECCENTRICITY"
 
-            self.peri_path = path_.CirclePath(
+            self.peri_path = CirclePath(
                                     elements[0] * elements[3],  # a*e
                                     elements[4] + PI,           # apocenter
                                     elements[5],                # precession
                                     self.epoch,                 # epoch
-                                    self.internal_origin_id,    # origin
-                                    self.internal_frame_id,     # reference
-                                    self.peri_path_id)          # id
-            self.internal_origin_id = self.peri_path_id
+                                    self.internal_origin,       # origin
+                                    self.internal_frame,        # reference
+                                    id = path_id)
+            self.internal_origin = self.peri_path.waypoint
 
             # The peri_path circulates around the initial origin but does not
             # rotate.
 
             if id is None:
-                self.spin_frame_id = registry.temporary_frame_id()
+                frame_id = None
             else:
-                self.spin_frame_id = id + "_PERICENTER"
+                frame_id = id + "_PERICENTER"
 
-            self.spin_frame = frame_.SpinFrame(elements[4],     # pericenter
-                                            elements[5],        # precession
-                                            self.epoch,         # epoch
-                                            2,                  # z-axis
-                                            self.internal_frame_id, # reference
-                                            self.spin_frame_id)     # id
-            self.internal_frame_id = self.spin_frame_id
+            self.spin_frame = SpinFrame(elements[4],            # pericenter
+                                        elements[5],            # precession
+                                        self.epoch,             # epoch
+                                        2,                      # z-axis
+                                        self.internal_frame,    # reference
+                                        id = frame_id)
+            self.internal_frame = self.spin_frame.wayframe
+
         else:
             self.peri_path = None
-            self.peri_path_id = self.internal_origin_id
-
             self.spin_frame = None
-            self.spin_frame_id = self.internal_frame_id
 
-        self.ringplane = RingPlane(self.internal_origin_id,
-                                   self.internal_frame_id,
+        self.ringplane = RingPlane(self.internal_origin,
+                                   self.internal_frame,
                                    radii=(0,self.a), gravity=None, elevation=0.)
 
-        self.refplane = RingPlane(self.defined_origin_id,
-                                  self.defined_frame_id, 
+        self.refplane = RingPlane(self.defined_origin,
+                                  self.defined_frame, 
                                   radii=(0,self.a), gravity=None, elevation=0.)
 
-        # The world needs to see the internal frame and path for intercept() to
-        # work properly
-        self.origin_id = self.internal_origin_id
-        self.frame_id = self.internal_frame_id
+        # The primary origin and frame for the orbit
+        self.origin = self.internal_origin.waypoint
+        self.frame = self.internal_frame.wayframe
 
-    def coords_from_vector3(self, pos, axes=2, obs=None, derivs=False):
-        """Converts from position vectors in the internal frame into the surface
-        coordinate system.
+    def coords_from_vector3(self, pos, obs, axes=2, derivs=False):
+        """Convert positions in the internal frame to surface coordinates.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
+            pos         a Vector3 of positions at or near the surface.
+            obs         a Vector3 of observer observer positions. Ignored for
+                        solid surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
-            obs         ignored.
-            derivs      a boolean or tuple of booleans. If True, then the
-                        partial derivatives of each coordinate with respect to
-                        surface position and observer position are returned as
-                        well. Using a tuple, you can indicate whether to return
-                        partial derivatives on an coordinate-by-coordinate
-                        basis.
+            derivs      True to propagate any derivatives inside pos and obs
+                        into the returned coordinates.
 
         Return:         coordinate values packaged as a tuple containing two or
                         three unitless Scalars, one for each coordinate.
-
-                        Where derivs is True, then the coordinate has subfield
-                        "d_dpos", which contains the partial derivatives with
-                        respect to the surface position, represented as a
-                        MatrixN object with item shape [1,3].
         """
 
-        return self.ringplane.coords_from_vector3(pos, axes=axes,
+        return self.ringplane.coords_from_vector3(pos, obs, axes=axes,
                                                        derivs=derivs)
 
     def vector3_from_coords(self, coords, obs=None, derivs=False):
-        """Returns the position where a point with the given surface coordinates
-        would fall in the surface frame, given the location of the observer.
+        """Convert surface coordinates to positions in the internal frame.
 
         Input:
-            coords      a tuple of two or three Scalars defining the coordinates
-                r       a Scalar of radius values, with optional units.
-                theta   a Scalar of pericenter values, with optional units.
-                z       an optional Scalar of elevation values, with optional
-                        units; default is Scalar(0.).
-            obs         position of the observer in the surface frame; ignored.
-            derivs      True to include the partial derivatives of the intercept
-                        point with respect to observer and to the coordinates.
+            coords      a tuple of two or three Scalars defining the
+                        coordinates.
+            obs         position of the observer in the surface frame. Ignored
+                        for solid surfaces but needed for virtual surfaces.
+            derivs      True to propagate any derivatives inside the coordinates
+                        and obs into the returned position vectors.
 
         Return:         a unitless Vector3 of intercept points defined by the
                         coordinates.
 
-                        If derivs is True, then pos is returned with subfields
-                        "d_dobs" and "d_dcoords", where the former contains the
-                        MatrixN of partial derivatives with respect to obs and
-                        the latter is the MatrixN of partial derivatives with
-                        respect to the coordinates. The MatrixN item shapes are
-                        [3,3].
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
         """
 
         return self.ringplane.vector3_from_coords(coords, obs, derivs=derivs)
 
     def intercept(self, obs, los, derivs=False, t_guess=None):
-        """Returns the position where a specified line of sight intercepts the
-        surface.
+        """The position where a specified line of sight intercepts the surface.
 
         Input:
-            obs         observer position as a Vector3, with optional units.
-            los         line of sight as a Vector3, with optional units.
-            derivs      True to include the partial derivatives of the intercept
-                        point with respect to obs and los.
+            obs         observer position as a Vector3.
+            los         line of sight as a Vector3.
+            derivs      True to propagate any derivatives inside obs and los
+                        into the returned intercept point.
             t_guess     initial guess at the t array, optional.
 
-        Return:         (pos, t)
-            pos         a unitless Vector3 of intercept points on the surface,
-                        in km.
-            t           a unitless Scalar of scale factors t such that:
+        Return:         a tuple (pos, t) where
+            pos         a Vector3 of intercept points on the surface, in km.
+            t           a unitless Scalar such that:
                             position = obs + t * los
-
-                        If derivs is True, then pos and t are returned with
-                        subfields "d_dobs" and "d_dlos", where the former
-                        contains the MatrixN of partial derivatives with respect
-                        to obs and the latter is the MatrixN of partial
-                        derivatives with respect to los. The MatrixN item shapes
-                        are [3,3] for the derivatives of pos, and [1,3] for the
-                        derivatives of t. For purposes of differentiation, los
-                        is assumed to have unit length.
         """
 
-        return self.ringplane.intercept(obs, los, derivs=derivs)
+        return self.ringplane.intercept(obs, los, derivs=derivs, t_guess=None)
 
     def normal(self, pos, derivs=False):
-        """Returns the normal vector at a position at or near a surface.
+        """The normal vector at a position at or near a surface.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
-            derivs      True to include a matrix of partial derivatives.
+            pos         a Vector3 of positions at or near the surface.
+            derivs      True to propagate any derivatives of pos into the
+                        returned normal vectors.
 
-        Return:         a unitless Vector3 containing directions normal to the
-                        surface that pass through the position. Lengths are
-                        arbitrary.
-
-                        If derivs is True, then the normal vectors returned have
-                        a subfield "d_dpos", which contains the partial
-                        derivatives with respect to components of the given
-                        position vector, as a MatrixN object with item shape
-                        [3,3].
+        Return:         a Vector3 containing directions normal to the surface
+                        that pass through the position. Lengths are arbitrary.
         """
 
         return self.ringplane.normal(pos, derivs=derivs)
 
     def velocity(self, pos):
-        """Returns the local velocity vector at a point within the surface.
+        """The local velocity vector at a point within the surface.
+
         This can be used to describe the orbital motion of ring particles or
-        local wind speeds on a planet. In this case, it defines the velocity of
-        an orbiting object.
+        local wind speeds on a planet.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
+            pos         a Vector3 of positions at or near the surface.
 
         Return:         a unitless Vector3 of velocities, in units of km/s.
         """
@@ -335,17 +294,18 @@ class OrbitPlane(Surface):
             return Vector3.from_scalars(dx_dt, dy_dt, 0.)
 
         else:
-            return self.n * pos.cross((0,0,-1))
+            return self.n * Vector3.ZAXIS.cross(pos)
 
     ############################################################################
     # Longitude-anomaly conversions
     ############################################################################
 
     def from_mean_anomaly(self, anom):
-        """Returns the longitude in this coordinate frame based on the mean
-        anomaly, and accurate to first order in eccentricity."""
+        """The longitude in this frame based on the mean anomaly.
 
-        anom = Scalar.as_standard(anom)
+        Accurate to first order in eccentricity."""
+
+        anom = Scalar.as_scalar(anom)
 
         if not self.has_eccentricity:
             return anom
@@ -353,13 +313,14 @@ class OrbitPlane(Surface):
             return anom + (2*self.ae) * anom.sin()
 
     def to_mean_anomaly(self, lon):
-        """Returns the mean anomaly given a longitude in this frame, accurate
-        to first order in eccentricity. Iteration is performed using Newton's
-        method to ensure that this function is an exact inverse of
+        """he mean anomaly given an orbital longitude.
+
+        Accurate to first order in eccentricity. Iteration is performed using
+        Newton's method to ensure that this function is an exact inverse of
         from_mean_anomaly().
         """
 
-        lon = Scalar.as_standard(lon)
+        lon = Scalar.as_scalar(lon)
         if not self.has_eccentricity: return lon
 
         # Solve lon = x + 2ae sin(x)
@@ -405,58 +366,62 @@ class Test_OrbitPlane(unittest.TestCase):
         orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
+        (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
 
         r_true = Scalar([1,2,1,1])
         l_true = Scalar([0, 0, PI, HALFPI])
         z_true = Scalar([0,0,0,0.1])
 
-        self.assertTrue(abs(r - r_true) < 1.e-12)
-        self.assertTrue(abs(l - l_true) < 1.e-12)
-        self.assertTrue(abs(z - z_true) < 1.e-12)
+        self.assertTrue(np.all(abs(r - r_true) < 1.e-12))
+        self.assertTrue(np.all(abs(l - l_true) < 1.e-12))
+        self.assertTrue(np.all(abs(z - z_true) < 1.e-12))
 
         # Circular orbit, no derivatives, reverse
-        pos2 = orbit.vector3_from_coords((r, l, z), derivs=False)
+        pos2 = orbit.vector3_from_coords((r, l, z), None, derivs=False)
 
-        self.assertTrue(abs(pos - pos2) < 1.e-10)
+        self.assertTrue((pos - pos2).norm().max() < 1.e-10)
 
         # Circular orbit, with derivatives, forward
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+        pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
         eps = 1.e-6
         delta = 1.e-4
 
         for step in ([eps,0,0], [0,eps,0], [0,0,eps]):
             dpos = Vector3(step)
-            (r,l,z) = orbit.coords_from_vector3(pos + dpos, axes=3,
+            (r,l,z) = orbit.coords_from_vector3(pos + dpos, None, axes=3,
                                                 derivs=True)
 
-            r_test = r + (r.d_dpos * dpos.as_column()).as_scalar()
-            l_test = l + (l.d_dpos * dpos.as_column()).as_scalar()
-            z_test = z + (z.d_dpos * dpos.as_column()).as_scalar()
+            r_test = r + r.d_dpos.chain(dpos)
+            l_test = l + l.d_dpos.chain(dpos)
+            z_test = z + z.d_dpos.chain(dpos)
 
-            self.assertTrue(abs(r - r_test) < delta)
-            self.assertTrue(abs(l - l_test) < delta)
-            self.assertTrue(abs(z - z_test) < delta)
+            self.assertTrue(abs(r - r_test).max() < delta)
+            self.assertTrue(abs(l - l_test).max() < delta)
+            self.assertTrue(abs(z - z_test).max() < delta)
 
         # Circular orbit, with derivatives, reverse
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
+        (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
         eps = 1.e-6
         delta = 1.e-5
 
-        pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
+        r.insert_deriv('r', Scalar.ONE, override=True)
+        l.insert_deriv('l', Scalar.ONE, override=True)
+        z.insert_deriv('z', Scalar.ONE, override=True)
+        pos0 = orbit.vector3_from_coords((r, l, z), None, derivs=True)
 
-        pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        pos1 = orbit.vector3_from_coords((r + eps, l, z), None, derivs=False)
+        pos1_test = pos0 + eps * pos0.d_dr
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
-        pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        pos1 = orbit.vector3_from_coords((r, l + eps, z), None, derivs=False)
+        pos1_test = pos0 + eps * pos0.d_dl
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
-        pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        pos1 = orbit.vector3_from_coords((r, l, z + eps), None, derivs=False)
+        pos1_test = pos0 + eps * pos0.d_dz
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         # elements = (a, lon, n, e, peri, prec)
 
@@ -470,7 +435,7 @@ class Test_OrbitPlane(unittest.TestCase):
         delta = 1.e-5
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        event = Event(0., pos, Vector3((0,0,0)), "SSB", "J2000")
+        event = Event(0., (pos,Vector3.ZERO), "SSB", "J2000")
         (r,l,z) = orbit.event_as_coords(event, derivs=False)
 
         r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
@@ -483,8 +448,8 @@ class Test_OrbitPlane(unittest.TestCase):
 
         # Eccentric orbit, no derivatives, reverse
         event2 = orbit.coords_as_event(event.time, (r,l,z))
-        self.assertTrue(abs(pos - event.pos) < 1.e-10)
-        self.assertTrue(abs(event.vel) < 1.e-10)
+        self.assertTrue((pos - event.pos).norm().max() < 1.e-10)
+        self.assertTrue((event.vel).norm().max() < 1.e-10)
 
         # Eccentric orbit, with derivatives, forward
         ae = 0.1
@@ -499,10 +464,10 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
-            event = Event(0., pos, vel, "SSB", "J2000")
+            event = Event(0., (pos,vel), "SSB", "J2000")
             (r,l,z) = orbit.event_as_coords(event, derivs=True)
 
-            event = Event(eps, pos + vel*eps, vel, "SSB", "J2000")
+            event = Event(eps, (pos + vel*eps, vel), "SSB", "J2000")
             (r1,l1,z1) = orbit.event_as_coords(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = (l1 - l) / eps
@@ -522,15 +487,15 @@ class Test_OrbitPlane(unittest.TestCase):
 
         pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         # elements = (a, lon, n, e, peri, prec, i, node, regr)
 
@@ -549,7 +514,7 @@ class Test_OrbitPlane(unittest.TestCase):
 
         dz = 0.1
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
-        event = Event(0., pos, Vector3((0,0,0)), "SSB", "J2000")
+        event = Event(0., (pos, Vector3.ZERO), "SSB", "J2000")
         (r,l,z) = orbit.event_as_coords(event, derivs=False)
 
         r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])
@@ -583,10 +548,10 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
-            event = Event(0., pos, vel, "SSB", "J2000")
+            event = Event(0., (pos, vel), "SSB", "J2000")
             (r,l,z) = orbit.event_as_coords(event, derivs=True)
 
-            event = Event(eps, pos + vel*eps, vel, "SSB", "J2000")
+            event = Event(eps, (pos + vel*eps, vel), "SSB", "J2000")
             (r1,l1,z1) = orbit.event_as_coords(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = ((l1 - l + PI) % TWOPI - PI) / eps
@@ -606,15 +571,15 @@ class Test_OrbitPlane(unittest.TestCase):
 
         pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
         pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
-        self.assertTrue(abs(pos1_test - pos1) < delta)
+        self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         # From/to mean anomaly
         elements = (1, 0, 1, 0.1, 0, 0.1)

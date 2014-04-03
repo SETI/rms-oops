@@ -26,20 +26,20 @@ class Test_Indices(unittest.TestCase):
         #
         # An unmasked Scalar with traditional indexing
         #
-        
+
         b = np.ma.arange(10)
         a = Scalar(b)
-        
+
         self.assertEqual(a, b)
         self.assertEqual(a[1], b[1])
         self.assertEqual(a[1:5], b[1:5])
         self.assertEqual(a[:], b[:])
         self.assertEqual(a[...,:], b[...,:])
-        
+
         #
         # An unmasked Scalar indexed by a Scalar
         #
-                
+
         # Single element
         self.assertEqual(a[Scalar(1)], b[1])
         self.assertEqual(a[Scalar(1,True)], make_masked(b, [1])[1])
@@ -48,7 +48,7 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])
-        
+
         #
         # A fully masked Scalar with traditional indexing
         #
@@ -66,7 +66,7 @@ class Test_Indices(unittest.TestCase):
         #
         # A fully masked Scalar indexed by a Scalar
         #
-        
+
         b = np.ma.arange(10)
         b[:] = np.ma.masked
         a = Scalar(b)
@@ -79,11 +79,11 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])
-        
+
         #
         # A partially masked Scalar with traditional indexing
         #
-        
+
         b = np.ma.arange(10)
         b[3] = np.ma.masked
         a = Scalar(b)
@@ -97,7 +97,7 @@ class Test_Indices(unittest.TestCase):
         #
         # A partially masked Scalar indexed by a Scalar
         #
-        
+
         b = np.ma.arange(10)
         b[3] = np.ma.masked
         a = Scalar(b)
@@ -110,11 +110,11 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])
-        
+
         #
         # An unmasked 2-D Scalar with traditional indexing
         #
-        
+
         b = np.ma.arange(25).reshape(5,5)
         a = Scalar(b)
 
@@ -128,10 +128,10 @@ class Test_Indices(unittest.TestCase):
         #
         # An unmasked 2-D Scalar indexed by a Scalar
         #
-        
+
         b = np.ma.arange(25).reshape(5,5)
         a = Scalar(b)
-        
+
         # Single element
         self.assertEqual(a[Scalar(1)], b[1])
         self.assertEqual(a[Scalar(1,True)], make_masked(b, [1])[1])
@@ -144,11 +144,11 @@ class Test_Indices(unittest.TestCase):
         #
         # An unmasked 2-D Scalar indexed by a Pair
         #
-        
+
         b = np.ma.arange(25).reshape(5,5)
         a = Scalar(b)
 
-        self.assertEqual(a[Pair((1,1))], b[1,1]) 
+        self.assertEqual(a[Pair((1,1))], b[1,1])
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
         self.assertEqual(a[Pair(((1,1),(2,2),(3,3)))],
                          extract(b, ((1,1),(2,2),(3,3))))
@@ -171,7 +171,7 @@ class Test_Indices(unittest.TestCase):
         b[1,1] = np.ma.masked
         a = Scalar(b)
 
-        self.assertEqual(a[Pair((1,1))], b[1,1]) 
+        self.assertEqual(a[Pair((1,1))], b[1,1])
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
         self.assertEqual(a[Pair(((1,1),(2,2),(3,3)))],
                          extract(b, ((1,1),(2,2),(3,3))))
@@ -226,11 +226,11 @@ class Test_Indices(unittest.TestCase):
         #
         # An unmasked 3-D Scalar indexed by a Pair
         #
-        
+
         b = np.ma.arange(125).reshape(5,5,5)
         a = Scalar(b)
 
-        self.assertEqual(a[Pair((1,1))], b[1,1]) 
+        self.assertEqual(a[Pair((1,1))], b[1,1])
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
         self.assertEqual(a[Pair(((1,1),(2,2),(3,3)))],
                          extract(b, ((1,1),(2,2),(3,3))))
@@ -253,7 +253,7 @@ class Test_Indices(unittest.TestCase):
         b[1,1,1] = np.ma.masked
         a = Scalar(b)
 
-        self.assertEqual(a[Pair((1,1))], b[1,1]) 
+        self.assertEqual(a[Pair((1,1))], b[1,1])
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
         self.assertEqual(a[Pair(((1,1),(2,2),(3,3)))],
                          extract(b, ((1,1),(2,2),(3,3))))
@@ -269,12 +269,12 @@ class Test_Indices(unittest.TestCase):
                          make_masked(extract(b, ((1,1),(2,2),(3,3))), [2]))
 
         #
-        # An unmasked 3-D Scalar indexed by a Vector 
+        # An unmasked 3-D Scalar indexed by a Vector
         #
 
         b = np.ma.arange(125).reshape(5,5,5)
         a = Scalar(b)
-        
+
         self.assertEqual(a[Vector((1,1,1))], b[1,1,1])
         self.assertEqual(a[Vector((1,1,1),True)],
                          make_masked(b, [[1,1,1]])[1,1,1])
@@ -296,9 +296,9 @@ class Test_Indices(unittest.TestCase):
                                      [2]))
 
         #
-        # An unmasked 3-D Scalar indexed by mixed types 
+        # An unmasked 3-D Scalar indexed by mixed types
         #
-                                 
+
         b = np.ma.arange(125).reshape(5,5,5)
         a = Scalar(b)
 
@@ -313,7 +313,7 @@ class Test_Indices(unittest.TestCase):
 
         b = np.ma.arange(16).reshape(2,2,2,2)
         a = Matrix(b)
-        
+
         self.assertEqual(a[Pair((1,1))], b[1,1])
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
         self.assertEqual(a[...,1], b[...,1,:,:])
@@ -327,7 +327,7 @@ class Test_Indices(unittest.TestCase):
         b = np.ma.arange(16.).reshape(2,2,2,2)
         a = Matrix(b.copy(), ((False,True),(False,False)))
         b[0,1,:,:] = np.ma.masked
-        
+
         self.assertEqual(a[Pair((1,1))], b[1,1])
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
 #        self.assertEqual(a[...,1], b[...,1,:,:])
@@ -337,10 +337,10 @@ class Test_Indices(unittest.TestCase):
         #
         # Assignment to a 1-D Scalar
         #
-        
+
         b = np.zeros(10)
         a = Scalar(b)
-        
+
         a[2] = 1
         self.assertEqual(a, Scalar((0,0,1,0,0,0,0,0,0,0)))
         a[Scalar(3)] = 1
@@ -371,7 +371,7 @@ class Test_Indices(unittest.TestCase):
         #
         # Assignment to a 2-D Scalar
         #
-        
+
         a = Scalar(((0,0,0),(0,0,0)))
         a[Pair((1,2))] = 1
         self.assertEqual(a, Scalar(((0,0,0),(0,0,1))))
@@ -393,14 +393,14 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a, Scalar(((2,0,2),(0,0,1)),
                                    ((False,False,False),
                                     (True,True,True))))
-        
-        
+
+
         #
         # Assignment to a 2-D Matrix indexed 2-D
         #
-        
+
         a = Matrix(np.zeros(16).reshape(2,2,2,2))
-        
+
         a[Pair((1,1))] = Matrix(((1,2),(3,4)))
         self.assertEqual(a, Matrix(((((0,0),(0,0)), ((0,0),(0,0))),
                                     (((0,0),(0,0)), ((1,2),(3,4))))))

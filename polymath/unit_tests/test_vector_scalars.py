@@ -129,11 +129,11 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(test.values[...,1] == (2,3,4)))
     self.assertTrue(np.all(test.values[...,2] == c))
     self.assertTrue(np.all(test.mask == [True,False,False]))
-
     self.assertEquals(test.readonly, False)
 
-    test = Vector.from_scalars(a,b,c, readonly=True)
-
+    b = b.as_readonly()
+    c = Scalar(c).as_readonly()
+    test = Vector.from_scalars(a,b,c)
     self.assertEquals(test.readonly, True)
 
     #### from_scalars(*args), with derivatives
@@ -158,8 +158,6 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(test.d_dt.values[...,1] == (3,4,5)))
     self.assertTrue(np.all(test.d_dt.values[...,2] == 0))
 
-    self.assertTrue(np.all(test.d_dt.mask == [False,True,False]))
-
     #### from_scalars(*args), with derivatives, denominators
 
     a = 1.
@@ -172,7 +170,7 @@ class Test_Vector_scalars(unittest.TestCase):
                                mask=db_dt_mask))
     c.insert_deriv('t', Scalar(np.random.randn(4,3,2,2), drank=2, mask=c.mask))
 
-    test = Vector.from_scalars(a,b,c, recursive=True)
+    test = Vector.from_scalars(a, b, c, recursive=True)
 
     self.assertTrue(np.all(test.values[...,0] == 1))
     self.assertTrue(np.all(test.values[...,1] == (2,3,4)))

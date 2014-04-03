@@ -34,7 +34,9 @@ class Pair(Vector):
         If recursive is True, derivatives will also be converted.
         """
 
-        if type(arg) == Pair: return arg
+        if type(arg) == Pair:
+            if recursive: return arg
+            return arg.without_derivs()
 
         if isinstance(arg, Qube):
 
@@ -42,7 +44,29 @@ class Pair(Vector):
             if arg.numer in ((1,2), (2,1)):
                 return arg.flatten_numer(Pair, recursive)
 
+            # For any suitable Qube, move numerator items to the denominator
+            if arg.rank > 1 and arg.numer[0] == 2:
+                arg = arg.split_items(1, Pair)
+
         return Pair(arg)
+
+    @staticmethod
+    def from_scalars(x, y, recursive=True):
+        """A Pair constructed by combining two scalars.
+
+        Inputs:
+            args        any number of Scalars or arguments that can be casted
+                        to Scalars. They need not have the same shape, but it
+                        must be possible to cast them to the same shape. A value
+                        of None is converted to a zero-valued Scalar that
+                        matches the denominator shape of the other arguments.
+
+            recursive   True to include all the derivatives. The returned object
+                        will have derivatives representing the union of all the
+                        derivatives found amongst the scalars. Default is True.
+        """
+
+        return Vector.from_scalars(x, y, recursive=recursive, classes=[Pair])
 
     def swapxy(self, recursive=True):
         """A pair object in which the first and second values are switched.
@@ -68,8 +92,7 @@ class Pair(Vector):
         # Fill in the derivatives if necessary
         if recursive:
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, deriv.swapxy(False),
-                                 override=True, nocopy='vm')
+                obj.insert_deriv(key, deriv.swapxy(False), nocopy='vm')
 
         return obj
 
@@ -80,6 +103,8 @@ Pair.ONES   = Pair((1.,1.)).as_readonly()
 Pair.XAXIS  = Pair((1.,0.)).as_readonly()
 Pair.YAXIS  = Pair((0.,1.)).as_readonly()
 Pair.MASKED = Pair((1,1), True).as_readonly()
+
+Pair.IDENTITY = Pair([(1.,0.),(0.,1.)], drank=1).as_readonly()
 
 ################################################################################
 # Once defined, register with Qube class

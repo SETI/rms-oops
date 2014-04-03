@@ -66,6 +66,10 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertTrue(masked.min().mask)
     self.assertTrue(type(masked.min()), Scalar)
 
+    # Denominators
+    a = Scalar([1.,2.], drank=1)
+    self.assertRaises(ValueError, a.min)
+
 ################################################################################
 # Execute from command line...
 ################################################################################

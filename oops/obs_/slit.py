@@ -112,14 +112,14 @@ class Slit(Observation):
                         with the array indices.
         """
 
-        indices = Tuple.as_tuple(indices)
+        indices = Vector.as_vector(indices)
 
         slit_coord = indices.to_scalar(self.along_slit_index)
         if self.slit_is_discontinuous:
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
 
-        uv_vals = np.empty(indices.shape + [2])
+        uv_vals = np.empty(indices.shape + (2,))
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
         uv_vals[..., self.cross_slit_uv_index] = 0.5
         uv = Pair(uv_vals, indices.mask)
@@ -159,11 +159,11 @@ class Slit(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Tuple.as_int(indices)
+        indices = Vector.as_int(indices)
 
         slit_coord = indices.to_scalar(self.along_slit_index)
 
-        uv_vals = np.empty(indices.shape + [2], dtype="int")
+        uv_vals = np.empty(indices.shape + (2,), dtype="int")
         uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
         uv_vals[..., self.cross_slit_uv_index] = 0
         uv_min = Pair(uv_vals, indices.mask)
@@ -277,7 +277,7 @@ class Test_Slit(unittest.TestCase):
         obs = Slit(axes=("u","vt"), det_size=1,
                    cadence=cadence, fov=fov, path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+        indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
         # uvt() with fovmask == False
         (uv,time) = obs.uvt(indices)
@@ -368,7 +368,7 @@ class Test_Slit(unittest.TestCase):
         obs = Slit(axes=("ut","v"), det_size=1,
                    cadence=cadence, fov=fov, path_id="SSB", frame_id="J2000")
 
-        indices = Tuple([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+        indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
         (uv,time) = obs.uvt(indices)
 

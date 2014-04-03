@@ -2,6 +2,7 @@
 # oops/calib_/flatcalib.py: Subclass Flat of class Calibration
 ################################################################################
 
+from polymath import *
 from oops.calib_.extended import ExtendedSource
 
 class FlatCalib(ExtendedSource):

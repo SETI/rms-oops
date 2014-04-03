@@ -6,11 +6,10 @@ import numpy as np
 from polymath import *
 
 from oops.surface_.surface import Surface
+from oops.path_.path       import Path
+from oops.frame_.frame     import Frame
 from oops.config           import SURFACE_PHOTONS, LOGGING
-
-import oops.registry as registry
-
-from oops.constants import *
+from oops.constants        import *
 
 class Spheroid(Surface):
     """Spheroid defines a spheroidal surface centered on the given path and
@@ -36,11 +35,6 @@ class Spheroid(Surface):
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
 
-    # Class constants to override where derivs are undefined
-    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
-    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
-    intercept_with_normal_DERIVS_ARE_IMPLEMENTED = False
-
     def __init__(self, origin, frame, radii, exclusion=0.95):
         """Constructor for a Spheroid surface.
 
@@ -58,8 +52,8 @@ class Spheroid(Surface):
                         the problem becomes numerically unstable.
         """
 
-        self.origin_id = registry.as_path_id(origin)
-        self.frame_id  = registry.as_frame_id(frame)
+        self.origin = Path.as_waypoint(origin)
+        self.frame  = Frame.as_wayframe(frame)
 
         # Allow either two or three radius values
         if len(radii) == 2:
@@ -76,10 +70,10 @@ class Spheroid(Surface):
         self.squash_z   = self.radii[2] / self.radii[0]
         self.unsquash_z = self.radii[0] / self.radii[2]
 
-        self.squash    = Vector3((1., 1.,   self.squash_z))
-        self.squash_sq = self.squash.element_mul(self.squash)
-        self.unsquash  = Vector3((1,1,1)).element_div(self.squash)
-        self.unsquash_sq = self.unsquash.element_mul(self.unsquash)
+        self.squash    = Vector3((1., 1., self.squash_z))
+        self.squash_sq = Vector3((1., 1., self.squash_z**2))
+        self.unsquash  = Vector3((1., 1., 1./self.squash_z))
+        self.unsquash_sq = Vector3((1., 1., 1./self.squash_z**2))
 
         self.unsquash_sq_2d = Matrix(([1,0,0],
                                       [0,1,0],
@@ -92,33 +86,22 @@ class Spheroid(Surface):
         self.exclusion = exclusion * self.rpol
 
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
-        """Converts from position vectors in the internal frame into the surface
-        coordinate system.
+        """Convert positions in the internal frame to surface coordinates.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
-            obs         ignored.
+            pos         a Vector3 of positions at or near the surface.
+            obs         a Vector3 of observer observer positions. Ignored for
+                        solid surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
-            derivs      a boolean or tuple of booleans. If True, then the
-                        partial derivatives of each coordinate with respect to
-                        surface position and observer position are returned as
-                        well. Using a tuple, you can indicate whether to return
-                        partial derivatives on an coordinate-by-coordinate
-                        basis.
+            derivs      True to propagate any derivatives inside pos and obs
+                        into the returned coordinates.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate. The
-                        coordinates are (longitude, latitude, elevation). Units
-                        are radians and km; longitude ranges from 0 to 2*pi.
-
-                        If derivs is True, then the coordinate has extra
-                        attributes "d_dpos" and "d_dobs", which contain the
-                        partial derivatives with respect to the surface position
-                        and the observer position, represented as a MatrixN
-                        objects with item shape [1,3].
+                        three unitless Scalars, one for each coordinate.
         """
+
+        pos = Vector3.as_vector3(pos, derivs)
 
         unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
 
@@ -127,92 +110,64 @@ class Spheroid(Surface):
         lat = (z/r).arcsin()
         lon = y.arctan2(x) % TWOPI
 
-
-        if np.any(derivs):
-            raise NotImplementedError("Spheroid.coords_from_vector3() " +
-                                      " does not implement derivatives")
-
         if axes == 2:
             return (lon, lat)
         else:
             return (lon, lat, r - self.req)
 
     def vector3_from_coords(self, coords, obs=None, derivs=False):
-        """Returns the position where a point with the given surface coordinates
-        would fall in the surface frame, given the location of the observer.
+        """Convert surface coordinates to positions in the internal frame.
 
         Input:
-            coords      a tuple of two or three Scalars defining the coordinates
-                lon     longitude in radians.
-                lat     latitude in radians
-                elev    a rough measure of distance from the surface, in km;
-            obs         position of the observer in the surface frame; ignored.
-            derivs      True to include the partial derivatives of the intercept
-                        point with respect to observer and to the coordinates.
+            coords      a tuple of two or three Scalars defining the
+                        coordinates.
+            obs         position of the observer in the surface frame. Ignored
+                        for solid surfaces but needed for virtual surfaces.
+            derivs      True to propagate any derivatives inside the coordinates
+                        and obs into the returned position vectors.
 
         Return:         a unitless Vector3 of intercept points defined by the
                         coordinates.
 
-                        If derivs is True, then pos is returned with subfields
-                        "d_dobs" and "d_dcoords", where the former contains the
-                        MatrixN of partial derivatives with respect to obs and
-                        the latter is the MatrixN of partial derivatives with
-                        respect to the coordinates. The MatrixN item shapes are
-                        [3,3].
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
         """
 
-        # Convert to Scalars in standard units
-        lon = coords[0]
-        lat = coords[1]
+        # Convert to Scalars
+        lon = Scalar.as_scalar(coords[0], derivs)
+        lat = Scalar.as_scalar(coords[1], derivs)
 
         if len(coords) == 2:
             r = Scalar(self.req)
         else:
-            r = coords[2] + self.req
+            r = Scalar(coords[2], derivs) + self.req
 
         r_coslat = r * lat.cos()
         x = r_coslat * lon.cos()
         y = r_coslat * lon.sin()
         z = r * lat.sin() * self.squash_z
 
-        pos = Vector3.from_scalars(x,y,z)
-
-        if derivs:
-            raise NotImplementedError("Spheroid.vector3_from_coords() " +
-                                      " does not implement derivatives")
-
-        return pos
+        return Vector3.from_scalars(x,y,z)
 
     def intercept(self, obs, los, derivs=False, t_guess=None):
-        """Returns the position where a specified line of sight intercepts the
-        surface.
+        """The position where a specified line of sight intercepts the surface.
 
         Input:
-            obs         observer position as a Vector3, with optional units.
-            los         line of sight as a Vector3, with optional units.
-            derivs      True to include the partial derivatives of the intercept
-                        point with respect to obs and los.
+            obs         observer position as a Vector3.
+            los         line of sight as a Vector3.
+            derivs      True to propagate any derivatives inside obs and los
+                        into the returned intercept point.
             t_guess     initial guess at the t array, optional.
 
         Return:         a tuple (pos, t) where
-            pos         a unitless Vector3 of intercept points on the surface,
-                        in km.
+            pos         a Vector3 of intercept points on the surface, in km.
             t           a unitless Scalar such that:
                             position = obs + t * los
-
-                        If derivs is True, then pos and t are returned with
-                        subfields "d_dobs" and "d_dlos", where the former
-                        contains the MatrixN of partial derivatives with respect
-                        to obs and the latter is the MatrixN of partial
-                        derivatives with respect to los. The MatrixN item shapes
-                        are [3,3] for the derivatives of pos, and [1,3] for the
-                        derivatives of t. For purposes of differentiation, los
-                        is assumed to have unit length.
         """
 
-        # Convert to standard units and un-squash
-        obs = Vector3.as_vector3(obs)
-        los = Vector3.as_vector3(los)
+        # Convert to Vector3 and un-squash
+        obs = Vector3.as_vector3(obs, derivs)
+        los = Vector3.as_vector3(los, derivs)
 
         obs_unsquashed = obs.element_mul(self.unsquash)
         los_unsquashed = los.element_mul(self.unsquash)
@@ -240,161 +195,76 @@ class Spheroid(Surface):
 
         bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
         t = (bsign_sqrtd_div2 - b_div2) / a
+
         pos = obs + t*los
-        pos = self._apply_exclusion(pos)
-
-        if derivs:
-            # Using step-by-step differentiation of the equations above
-
-            # da_dlos = 2 * los * self.unsquash_sq
-            # db_dlos = 2 * obs * self.unsquash_sq
-            # db_dobs = 2 * los * self.unsquash_sq
-            # dc_dobs = 2 * obs * self.unsquash_sq
-
-            da_dlos_div2 = los.element_mul(self.unsquash_sq)
-            db_dlos_div2 = obs.element_mul(self.unsquash_sq)
-            db_dobs_div2 = los.element_mul(self.unsquash_sq)
-            dc_dobs_div2 = obs.element_mul(self.unsquash_sq)
-
-            # dd_dlos = 2 * b * db_dlos - 4 * c * da_dlos
-            # dd_dobs = 2 * b * db_dobs - 4 * a * dc_dobs
-
-            dd_dlos_div8 = b_div2 * db_dlos_div2 - c * da_dlos_div2
-            dd_dobs_div8 = b_div2 * db_dobs_div2 - a * dc_dobs_div2
-
-            # dsqrt = d.sqrt()
-            # d_dsqrt_dd = 0.5 / dsqrt
-            # d_dsqrt_dlos = d_dsqrt_dd * dd_dlos
-            # d_dsqrt_dobs = d_dsqrt_dd * dd_dobs
-
-            # d[bsign_sqrtd]/d[x] = 1/2 / bsign_sqrtd * d[d]/d[x]
-            #                     = 1/4 / bsign_sqrtd_div2 * d[d]/d[x]
-
-            d_bsign_sqrtd_dlos_div2 = dd_dlos_div8 / bsign_sqrtd_div2
-            d_bsign_sqrtd_dobs_div2 = dd_dobs_div8 / bsign_sqrtd_div2
-
-            # inv2a = 0.5/a
-            # d_inv2a_da = -2 * inv2a**2
-            # 
-            # dt_dlos = (inv2a * (b.sign()*d_dsqrt_dlos - db_dlos) +
-            #           (b.sign()*dsqrt - b)*d_inv2a_da * da_dlos).as_vectorn()
-            # dt_dobs = (inv2a * (b.sign()*d_dsqrt_dobs - db_dobs)).as_vectorn()
-            # 
-            # dpos_dobs = los.as_column() * dt_dobs.as_row() + MatrixN.UNIT33
-            # dpos_dlos = los.as_column() * dt_dlos.as_row() + MatrixN.UNIT33*t
-
-            dt_dlos = ((d_bsign_sqrtd_dlos_div2
-                        - db_dlos_div2 - 2 * t * da_dlos_div2) / a)
-            dt_dobs = ((d_bsign_sqrtd_dobs_div2
-                        - db_dobs_div2) / a)
-
-            dpos_dobs = los.as_column() * dt_dobs.as_row() + Matrix.UNIT33
-            dpos_dlos = los.as_column() * dt_dlos.as_row() + Matrix.UNIT33 * t
-
-            los_norm = los.norm()
-            pos.insert_subfield("d_dobs", dpos_dobs)
-            pos.insert_subfield("d_dlos", dpos_dlos * los_norm)
-            t.insert_subfield("d_dobs", dt_dobs.as_row())
-            t.insert_subfield("d_dlos", dt_dlos.as_row() * los_norm)
 
         return (pos, t)
 
     def normal(self, pos, derivs=False):
-        """Returns the normal vector at a position at or near a surface.
+        """The normal vector at a position at or near a surface.
 
         Input:
-            pos         a Vector3 of positions at or near the surface, with
-                        optional units.
-            derivs      True to include a matrix of partial derivatives.
+            pos         a Vector3 of positions at or near the surface.
+            derivs      True to propagate any derivatives of pos into the
+                        returned normal vectors.
 
-        Return:         a unitless Vector3 containing directions normal to the
-                        surface that pass through the position. Lengths are
-                        arbitrary.
-
-                        If derivs is True, then the normal vectors returned have
-                        a subfield "d_dpos", which contains the partial
-                        derivatives with respect to components of the given
-                        position vector, as a MatrixN object with item shape
-                        [3,3].
+        Return:         a Vector3 containing directions normal to the surface
+                        that pass through the position. Lengths are arbitrary.
         """
 
-        perp = Vector3.as_vector3(pos).element_mul(self.unsquash_sq)
+        pos = Vector3.as_vector3(pos, derivs)
+        return pos.element_mul(self.unsquash_sq)
 
-        if derivs:
-            perp.insert_subfield("d_dpos", self.unsquash_sq_2d)
-
-        return perp
-
-    def intercept_with_normal(self, normal, derivs=False):
-        """Constructs the intercept point on the surface where the normal vector
-        is parallel to the given vector.
+    def intercept_with_normal(self, normal, derivs=False, t_guess=None):
+        """Intercept point where the normal vector parallels the given vector.
 
         Input:
-            normal      a Vector3 of normal vectors, with optional units.
-            derivs      true to return a matrix of partial derivatives.
+            normal      a Vector3 of normal vectors.
+            derivs      True to propagate derivatives in the normal vector into
+                        the returned intercepts.
+            t_guess     optional initial guess at the t array. This is the
+                        scalar such that
+                            intercept + t * normal(intercept) = pos
+                        A value other than None changes the returned result to
+                        a tuple; use t_guess=False to get both return results
+                        without providing an initial guess.
 
-        Return:         a unitless Vector3 of surface intercept points, in km.
-                        Where no solution exists, the components of the returned
-                        vector should be masked.
+        Return:         a Vector3 of surface intercept points, in km. Where no
+                        solution exists, the returned Vector3 will be masked.
 
-                        If derivs is True, then the returned intercept points
-                        have a subfield "d_dperp", which contains the partial
-                        derivatives with respect to components of the normal
-                        vector, as a MatrixN object with item shape [3,3].
+                        if t_guess is not None, then instead it returns a tuple
+                        (intercepts, t), where t is the converged solution to
+                        the t array.
         """
 
-        cept = (Vector3.as_standard(normal) * self.squash).unit() * self.radii
+        normal = Vector3.as_vector3(normal, derivs)
+        return normal.element_mul(self.squash).unit().element_mul(self.radii)
 
-        if derivs:
-            raise NotImplementedError("Spheroid.intercept_with_normal() " +
-                                      "does not implement derivatives")
-
-        return cept
-
-    def intercept_normal_to(self, pos, derivs=False):
-        """Constructs the intercept point on the surface where a normal vector
-        passes through a given position.
+    def intercept_normal_to(self, pos, derivs=False, t_guess=None):
+        """Intercept point whose normal vector passes through a given position.
 
         Input:
-            pos         a Vector3 of positions near the surface, with optional
-                        units.
-            derivs      true to return a matrix of partial derivatives
-                        d(intercept)/d(pos).
+            pos         a Vector3 of positions near the surface.
+            derivs      True to propagate derivatives in pos into the returned
+                        intercepts.
+            t_guess     optional initial guess at the t array. This is the
+                        scalar such that
+                            intercept + t * normal(intercept) = pos
+                        A value other than None changes the returned result to
+                        a tuple; use t_guess=False to get both return results
+                        without providing an initial guess.
 
-        Return:         a unitless vector3 of surface intercept points. Where no
-                        solution exists, the returned vector should be masked.
+        Return:         a vector3 of surface intercept points, in km. Where no
+                        solution exists, the returned vector will be masked.
 
-                        If derivs is True, then the returned intercept points
-                        have a subfield "d_dpos", which contains the partial
-                        derivatives with respect to components of the given
-                        position vector, as a MatrixN object with item shape
-                        [3,3].
+                        if t_guess is not None, then instead it returns a tuple
+                        (intercepts, t), where t is the converged solution to
+                        the t array.
         """
 
-        return self.intercept_normal_to_iterated(pos, derivs)[0]
+        pos_with_derivs = Vector3.as_vector3(pos, derivs)
 
-    def intercept_normal_to_iterated(self, pos, derivs=False, t_guess=None):
-        """This is the same as above but allows an initial guess at the t array
-        to be passed in, and returns a tuple containing both the intercept and
-        the values of t. Also used by the Limb class.
-
-        Input:
-            pos         a Vector3 of positions near the surface, with optional
-                        units.
-            derivs      true to return a matrix of partial derivatives
-                        d(intercept)/d(pos).
-            t_guess     initial guess at the t array. This is the scalar such
-                        that
-                            intercept + t * perp(intercept) = pos
-
-        Return:         a tuple (pos,t):
-            intercept   a unitless vector3 of surface intercept points. Where no
-                        solution exists, the returned vector should be masked.
-            t           the scale factor such that:
-                            cept + t * normal(cept) = pos
-        """
-
-        pos = Vector3.as_standard(pos)
+        pos = pos_with_derivs.without_derivs()
         pos = self._apply_exclusion(pos)
 
         # The intercept point satisfies:
@@ -432,24 +302,29 @@ class Spheroid(Surface):
         # Let unsquash = [1, 1, C1]
         # Let unsquash_sq = [1, 1, C2]
         #
+        # Let scale = [1, 1, C1] / [1 + t, 1 + t, 1 + C2 t]
+        #
         # f(t) = (pos * scale) dot (pos * scale) - req_sq
         #
-        # df/dt = -2 (pos * scale) dot (pos * scale**2)
+        # df/dt = -2 (pos * scale) dot (pos * scale * unsquash_sq/denom)
 
         # Make an initial guess at t, if necessary
-        if t_guess is None:
-            cept = (pos * self.unsquash).unit() * self.radii
+        if t_guess in (None, False):
+            cept = pos.element_mul(self.unsquash).unit().element_mul(self.radii)
             t = (pos - cept).norm() / self.normal(cept).norm()
         else:
-            t = t_guess.copy(False)
+            t = t_guess.copy(readonly=False, recursive=False)
 
         # Terminate when accuracy stops improving by at least a factor of 2
         max_dt = 1.e99
         for iter in range(SURFACE_PHOTONS.max_iterations):
             denom = Vector3.ONES + t * self.unsquash_sq
-            pos_scale = pos * self.unsquash / denom
+
+            pos_scale = pos.element_mul(self.unsquash.element_div(denom))
             f = pos_scale.dot(pos_scale) - self.req_sq
-            df_dt_div_neg2 = pos_scale.dot(pos_scale * self.unsquash_sq/denom)
+
+            ratio = self.unsquash_sq.element_div(denom)
+            df_dt_div_neg2 = pos_scale.dot(pos_scale.element_mul(ratio))
 
             dt = -0.5 * f/df_dt_div_neg2
             t -= dt
@@ -466,7 +341,7 @@ class Spheroid(Surface):
                 max_dt >= prev_max_dt * 0.5): break
 
         denom = Vector3.ONES + t * self.unsquash_sq
-        cept = pos / denom
+        cept = pos.element_div(denom)
 
         if derivs:
             # First, we need dt/dpos
@@ -504,8 +379,9 @@ class Spheroid(Surface):
             # dt/dpos_y * denom1 = pos_y  / (1+t)**2
             # dt/dpos_z * denom1 = pos_z  * C2 / (1 + C2 t)**2
 
-            dt_dpos = pos * self.unsquash_sq / (denom**2 * df_dt_div_neg2)
-            dt_dpos = dt_dpos.as_row()
+            stretch = self.unsquash_sq.element_div(denom.element_mul(denom))
+            dt_dpos = pos.element_mul(stretch) / df_dt_div_neg2
+            dt_dpos = dt_dpos.swap_items([Scalar])
 
             # Now we can proceed with dcept/dpos
             #
@@ -517,22 +393,22 @@ class Spheroid(Surface):
             #
             # dcept/dpos = (I + t dperp/dcept)**(-1) * (I - perp dt/dpos)
 
-            perp = self.normal(cept, derivs=True)
-            dperp_dcept = perp.d_dpos
-            perp = perp.plain()
+            cept_with_derivs = cept.copy(readonly=False, recursive=False)
+            cept_with_derivs.insert_deriv('cept', Vector3.IDENTITY)
+            perp = self.normal(cept_with_derivs, derivs=True)
 
-            # Note that (I + t dperp/dcept) is diagonal!
-            scale = MatrixN.UNIT33 + t * dperp_dcept
-            scale.vals[...,0,0] = 1 / scale.vals[...,0,0]
-            scale.vals[...,1,1] = 1 / scale.vals[...,1,1]
-            scale.vals[...,2,2] = 1 / scale.vals[...,2,2]
+            mat = Matrix.as_matrix(Vector3.IDENTITY + t * perp.d_dcept)
+            dcept_dpos = mat.reciprocal() * (Vector3.IDENTITY -
+                                             perp.without_derivs() * dt_dpos)
 
-            dcept_dpos = scale * (MatrixN.UNIT33 - perp.as_column() * dt_dpos)
+            for (key,deriv) in pos_with_derivs.derivs.iteritems():
+                cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
+                t.insert_deriv(key, dt_dpos.chain(deriv), override=True)
 
-            t.insert_subfield("d_dpos", dt_dpos)
-            cept.insert_subfield("d_dpos", dcept_dpos)
-
-        return (cept, t)
+        if t_guess is None:
+            return cept
+        else:
+            return (cept, t)
 
     def _apply_exclusion(self, pos):
         """This internal method is used by intercept_normal_to() to exclude any
@@ -545,64 +421,55 @@ class Spheroid(Surface):
             libraries.
         """
 
-        # Define the exclusion zone
-        pos.vals[np.isnan(pos.vals)] = 0.
+        replacement = Vector3((0.,0.,self.exclusion/2.))
 
+        # Replace NaNs and zeros
+        nans = np.any(np.isnan(pos.vals), axis=-1)
+        zeros = np.all(pos.vals == 0, axis=-1)
+        pos = pos.mask_where(nans | zeros, replace=replacement)
+
+        # Define the exclusion zone as a NumPy boolean array
         pos_unsquashed = pos.element_mul(self.unsquash)
         pos_sq_vals = pos_unsquashed.dot(pos_unsquashed).vals
         mask = (pos_sq_vals <= self.exclusion**2)
 
         if not np.any(mask): return pos
 
-        # Suppress any exact zeros
-        mask2 = (pos_sq_vals == 0)
-        if np.any(mask2):
-
-            # For the scalar case, replace with a nonzero vector and repeat
-            if mask2 is True:
-                return self._mask_pos(Vector3((0,0,self.exclusion/2.)))
-
-            # Otherwise, just replace the zero values
-            pos_sq_vals[mask][2] = self.exclusion**2/4.
-
-        # Scale all masked vectors out the exclusion radius
-        factor = self.exclusion / np.sqrt(pos_sq_vals)
-        pos.vals[mask] *= factor[mask][...,np.newaxis]
-        pos.mask = pos.mask | mask
-
-        return pos
+        # Scale all masked vectors out to the exclusion radius
+        if mask is True:
+            return pos * self.exclusion / np.sqrt(pos_sq_vals)
+        else:
+            factor = np.ones(pos.shape)
+            factor[mask] = self.exclusion / np.sqrt(pos_sq_vals[mask])
+            return pos * Scalar(factor, mask)
 
     ############################################################################
     # Latitude conversions
     ############################################################################
 
-    def lat_to_centric(self, lat):
-        """Converts a latitude value given in internal spheroid coordinates to
-        its planetocentric equivalent.
+    def lat_to_centric(self, lat, derivs=False):
+        """Convert latitude in internal spheroid coordinates to planetocentric.
         """
 
-        return (lat.tan() * self.squash_z).arctan()
+        return (lat.tan(derivs) * self.squash_z).arctan()
 
-    def lat_to_graphic(self, lat):
-        """Converts a latitude value given in internal spheroid coordinates to
-        its planetographic equivalent.
+    def lat_to_graphic(self, lat, derivs=False):
+        """Convert latitude in internal spheroid coordinates to planetographic.
         """
 
-        return (lat.tan() * self.unsquash_z).arctan()
+        return (lat.tan(derivs) * self.unsquash_z).arctan()
 
-    def lat_from_centric(self, lat):
-        """Converts a latitude value given in planetocentric coordinates to its
-        equivalent value in internal spheroid coordinates.
+    def lat_from_centric(self, lat, derivs=False):
+        """Convert planetocentric latitude to internal spheroid latitude.
         """
 
-        return (lat.tan() * self.unsquash_z).arctan()
+        return (lat.tan(derivs) * self.unsquash_z).arctan()
 
-    def lat_from_graphic(self, lat):
-        """Converts a latitude value given in planetographic coordinates to its
-        equivalent value in internal spheroid coordinates.
+    def lat_from_graphic(self, lat, derivs=False):
+        """Convertsa planetographic latitude to internal spheroid latitude.
         """
 
-        return (lat.tan() * self.squash_z).arctan()
+        return (lat.tan(derivs) * self.squash_z).arctan()
 
 ################################################################################
 # UNIT TESTS
@@ -628,7 +495,7 @@ class Test_Spheroid(unittest.TestCase):
 
         (lon,lat,elev) = planet.coords_from_vector3(pos, axes=3)
         test = planet.vector3_from_coords((lon,lat,elev))
-        self.assertTrue(((test - pos).rms() < 1.e-8).all())
+        self.assertTrue(abs(test - pos).max() < 1.e-8)
 
         # Spheroid intercepts & normals
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
@@ -636,7 +503,7 @@ class Test_Spheroid(unittest.TestCase):
 
         (pts, t) = planet.intercept(obs, los)
         test = t * Vector3(los) + Vector3(obs)
-        self.assertTrue(((test - pts).rms().mvals < 1.e-9).all())
+        self.assertTrue(abs(test - pts).max() < 1.e-9)
 
         self.assertTrue(np.all(t.mask == pts.mask))
         self.assertTrue(np.all(pts.mask[t.vals < 0.]))
@@ -644,10 +511,10 @@ class Test_Spheroid(unittest.TestCase):
         normals = planet.normal(pts)
 
         pts.vals[...,2] *= REQ/RPOL
-        self.assertTrue(((pts.norm()[np.logical_not(pts.mask)] - REQ).rms() < 1.e-8).all())
+        self.assertTrue(abs(pts.norm() - REQ).max() < 1.e-8)
 
         normals.vals[...,2] *= RPOL/REQ
-        self.assertTrue(((normals.unit() - pts.unit()).rms().mvals < 1.e-14).all())
+        self.assertTrue(abs(normals.unit() - pts.unit()).max() < 1.e-14)
 
         # Intercept derivatives
 
@@ -655,6 +522,15 @@ class Test_Spheroid(unittest.TestCase):
         # but this is not to be considered an error in the analytic calculation.
         # As a unit test, we ignore the largest 3% of the errors, but require
         # that the rest of the errors be very small.
+
+        obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
+        los = -np.random.rand(NPTS,3)                   # range is -1 to 0
+
+        obs = Vector3(obs)
+        los = Vector3(los).unit()
+        obs.insert_deriv('obs', Vector3.IDENTITY)
+        los.insert_deriv('los', Vector3.IDENTITY)
+
         eps = 1.
         frac = 0.97     # Ignore errors above this cutoff
         dobs = ((eps,0,0), (0,eps,0), (0,0,eps))
@@ -664,7 +540,7 @@ class Test_Spheroid(unittest.TestCase):
             (cept2,t2) = planet.intercept(obs - dobs[i], los, derivs=False)
 
             dcept_dobs = (cept1 - cept2) / (2*eps)
-            ref = cept.d_dobs.as_column(i).as_vector3()
+            ref = Vector3(cept.d_dobs.vals[...,i], cept.d_dobs.mask)
 
             errors = abs(dcept_dobs - ref) / abs(ref)
             sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
@@ -673,7 +549,7 @@ class Test_Spheroid(unittest.TestCase):
             self.assertTrue(selected_error < 1.e-5)
 
             dt_dobs = (t1 - t2) / (2*eps)
-            ref = t.d_dobs.vals[...,0,i]
+            ref = t.d_dobs.vals[...,i]
 
             errors = abs(dt_dobs/ref - 1)
             sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
@@ -683,15 +559,13 @@ class Test_Spheroid(unittest.TestCase):
         eps = 1.e-6
         frac = 0.97
         dlos = ((eps,0,0), (0,eps,0), (0,0,eps))
-        norms = np.sqrt(los[...,0]**2 + los[...,1]**2 + los[...,2]**2)
-        los /= norms[..., np.newaxis]
         for i in range(3):
             (cept,t) = planet.intercept(obs, los, derivs=True)
             (cept1,t1) = planet.intercept(obs, los + dlos[i], derivs=False)
             (cept2,t2) = planet.intercept(obs, los - dlos[i], derivs=False)
 
             dcept_dlos = (cept1 - cept2) / (2*eps)
-            ref = cept.d_dlos.as_column(i).as_vector3()
+            ref = Vector3(cept.d_dlos.vals[...,i], cept.d_dlos.mask)
 
             errors = abs(dcept_dlos - ref) / abs(ref)
             sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
@@ -699,7 +573,7 @@ class Test_Spheroid(unittest.TestCase):
             self.assertTrue(selected_error < 1.e-5)
 
             dt_dlos = (t1 - t2) / (2*eps)
-            ref = t.d_dlos.vals[...,0,i]
+            ref = t.d_dlos.vals[...,i]
 
             errors = abs(dt_dlos/ref - 1)
             sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
@@ -707,41 +581,42 @@ class Test_Spheroid(unittest.TestCase):
             self.assertTrue(selected_error < 1.e-5)
 
         # Test normal()
-        cept = Vector3(np.random.random((100,3))).unit() * planet.radii
+        cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
         perp = planet.normal(cept)
-        test1 = (cept * planet.unsquash).unit()
-        test2 = (perp * planet.squash).unit()
+        test1 = cept.element_mul(planet.unsquash).unit()
+        test2 = perp.element_mul(planet.squash).unit()
 
-        self.assertTrue(abs(test1 - test2) < 1.e-12)
+        self.assertTrue(abs(test1 - test2).max() < 1.e-12)
 
         eps = 1.e-7
         (lon,lat) = planet.coords_from_vector3(cept, axes=2)
         cept1 = planet.vector3_from_coords((lon+eps,lat,0.))
         cept2 = planet.vector3_from_coords((lon-eps,lat,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI) < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 1.e-8)
 
         (lon,lat) = planet.coords_from_vector3(cept, axes=2)
         cept1 = planet.vector3_from_coords((lon,lat+eps,0.))
         cept2 = planet.vector3_from_coords((lon,lat-eps,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI) < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 1.e-8)
 
         # Test intercept_with_normal()
         vector = Vector3(np.random.random((100,3)))
         cept = planet.intercept_with_normal(vector)
         sep = vector.sep(planet.normal(cept))
-        self.assertTrue(sep < 1.e-14)
+        self.assertTrue(sep.max() < 1.e-14)
 
         # Test intercept_normal_to()
         pos = Vector3(np.random.random((100,3)) * 4.*REQ + REQ)
         cept = planet.intercept_normal_to(pos)
         sep = (pos - cept).sep(planet.normal(cept))
-        self.assertTrue(sep < 3.e-12)
-        self.assertTrue(abs((cept*planet.unsquash).norm() - planet.req) < 1.e-6)
+        self.assertTrue(sep.max() < 3.e-12)
+        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() - planet.req).max() < 1.e-6)
 
         # Test normal() derivative
-        cept = Vector3(np.random.random((100,3))).unit() * planet.radii
+        cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
+        cept.insert_deriv('pos', Vector3.IDENTITY, override=True)
         perp = planet.normal(cept, derivs=True)
         eps = 1.e-5
         dpos = ((eps,0,0), (0,eps,0), (0,0,eps))
@@ -749,34 +624,35 @@ class Test_Spheroid(unittest.TestCase):
             perp1 = planet.normal(cept + dpos[i])
             dperp_dpos = (perp1 - perp) / eps
 
-            self.assertTrue(abs(dperp_dpos - perp.d_dpos.as_row(i)) < 1.e-4)
+            ref = Vector3(perp.d_dpos.vals[...,i,:], perp.d_dpos.mask)
+            self.assertTrue(abs(dperp_dpos - ref).max() < 1.e-4)
 
         # Test intercept_normal_to() derivative
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
-        (cept,t) = planet.intercept_normal_to_iterated(pos, derivs=True)
-        self.assertTrue(abs((cept*planet.unsquash).norm() - planet.req) < 1.e-6)
+        pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
+        (cept,t) = planet.intercept_normal_to(pos, derivs=True, t_guess=False)
+        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() - planet.req).max() < 1.e-6)
 
         eps = 1.
         dpos = ((eps,0,0), (0,eps,0), (0,0,eps))
         perp = planet.normal(cept)
         for i in range(3):
-            (cept1,t1) = planet.intercept_normal_to_iterated(pos + dpos[i],
-                                                             derivs=False,
-                                                             t_guess=t.plain())
-            (cept2,t2) = planet.intercept_normal_to_iterated(pos - dpos[i],
-                                                             derivs=False,
-                                                             t_guess=t.plain())
+            (cept1,t1) = planet.intercept_normal_to(pos + dpos[i], derivs=False,
+                                                    t_guess=t)
+            (cept2,t2) = planet.intercept_normal_to(pos - dpos[i], derivs=False,
+                                                    t_guess=t)
             dcept_dpos = (cept1 - cept2) / (2*eps)
-            self.assertTrue(abs(dcept_dpos.sep(perp) - HALFPI) < 1.e-5)
+            self.assertTrue(abs(dcept_dpos.sep(perp) - HALFPI).max() < 1.e-5)
 
-            ref = cept.d_dpos.as_column(i).as_vector3()
-            self.assertTrue(abs(dcept_dpos - ref) < 1.e-5)
+            ref = Vector3(cept.d_dpos.vals[...,i], cept.d_dpos.mask)
+            self.assertTrue(abs(dcept_dpos - ref).max() < 1.e-5)
 
             dt_dpos = (t1 - t2) / (2*eps)
-            ref = t.d_dpos.vals[...,0,i]
-            self.assertTrue(abs(dt_dpos/ref - 1) < 1.e-5)
+            ref = t.d_dpos.vals[...,i]
+            self.assertTrue(abs(dt_dpos/ref - 1).max() < 1.e-5)
 
-        registry.initialize()
+        Path.reset_registry()
+        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

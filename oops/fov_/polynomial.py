@@ -1,11 +1,11 @@
 ################################################################################
-# oops/fov_/polynomial.py: Polynomial subclass of FOV
+# oops/fov/polynomial.py: Polynomial subclass of FOV
 ################################################################################
 
 import numpy as np
+from polymath import *
 
 from oops.fov_.fov import FOV
-from polymath import *
 
 class Polynomial(FOV):
     """The Polynomial subclass of FOV describes a field of view in which the

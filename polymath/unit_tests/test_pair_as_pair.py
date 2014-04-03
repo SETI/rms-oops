@@ -18,8 +18,8 @@ class Test_Pair_as_pair(unittest.TestCase):
     a.insert_deriv('t', da_dt)
 
     b = Pair.as_pair(a, recursive=False)
-    self.assertTrue(a is b)
-    self.assertTrue(hasattr(a, 'd_dt'))     # not stripped when class is a match
+    self.assertTrue(hasattr(a, 'd_dt'))
+    self.assertFalse(hasattr(b, 'd_dt'))
 
     # Matrix case, 2x1
     a = Matrix(np.random.randn(N,2,1), units=Units.REV)

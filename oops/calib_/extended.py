@@ -2,8 +2,8 @@
 # oops/calib_/extended.py: ExtendedSource subclass of class Calibration
 ################################################################################
 
-from oops.calib_.calibration import Calibration
 from polymath import *
+from oops.calib_.calibration import Calibration
 
 class ExtendedSource(Calibration):
     """A Scaling is a Calibration object in which every pixel is multiplied by a
@@ -69,7 +69,7 @@ class Test_ExtendedSource(unittest.TestCase):
     def runTest(self):
 
         import numpy as np
-        
+
         es = ExtendedSource("TEST", 5.)
         self.assertEqual(es.value_from_dn(0.), 0.)
         self.assertEqual(es.value_from_dn(0., (10,10)), 0.)

@@ -69,7 +69,7 @@ class Test_Qube_items(unittest.TestCase):
     ####
     a = Matrix(np.random.randn(5,4,3)).as_readonly()
     da_dt = Matrix(np.random.randn(5,4,3,2), drank=1)
-    a.insert_deriv('t', da_dt, override=True)
+    a.insert_deriv('t', da_dt)
 
     b = a.transpose_numer(0,1,recursive=True)
 
@@ -140,7 +140,7 @@ class Test_Qube_items(unittest.TestCase):
     ####
     a = Matrix(np.random.randn(5,4,3)).as_readonly()
     da_dt = Matrix(np.random.randn(5,4,3,2), drank=1)
-    a.insert_deriv('t', da_dt, override=True)
+    a.insert_deriv('t', da_dt)
 
     b = a.reshape_numer((6,2),recursive=True)
 
@@ -211,7 +211,7 @@ class Test_Qube_items(unittest.TestCase):
     ####
     a = Matrix(np.random.randn(5,4,3)).as_readonly()
     da_dt = Matrix(np.random.randn(5,4,3,2), drank=1)
-    a.insert_deriv('t', da_dt, override=True)
+    a.insert_deriv('t', da_dt)
 
     b = a.flatten_numer(recursive=True)
 

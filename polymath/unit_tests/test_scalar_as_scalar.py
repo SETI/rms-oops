@@ -18,8 +18,8 @@ class Test_Scalar_as_scalar(unittest.TestCase):
     a.insert_deriv('t', da_dt)
 
     b = Scalar.as_scalar(a, recursive=False)
-    self.assertTrue(a is b)
-    self.assertTrue(hasattr(a, 'd_dt'))     # not stripped when class is a match
+    self.assertTrue(hasattr(a, 'd_dt'))
+    self.assertFalse(hasattr(b, 'd_dt'))
 
     # Units case
     a = Units.CM
