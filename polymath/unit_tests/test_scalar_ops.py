@@ -136,12 +136,13 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, -2)
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     self.assertRaises(ValueError, a.__isub__, 1)
-    self.assertRaises(ValueError, b.__isub__, 1)
+    #self.assertRaises(ValueError, b.__isub__, 1)
+    b -= 1
 
     a = Scalar((1,2), derivs={'t':Scalar((3,4))})
     b = -a
@@ -159,12 +160,13 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (-3,-4))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     self.assertRaises(ValueError, a.__isub__, 1)
-    self.assertRaises(ValueError, b.__isub__, 1)
+    #self.assertRaises(ValueError, b.__isub__, 1)
+    b -= 1
 
     ############################################################################
     # abs()
@@ -237,15 +239,15 @@ class Test_Scalar_ops(unittest.TestCase):
     a = Scalar(1).as_readonly()
     b = abs(a)
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Scalar((1,-1), derivs={'t':Scalar((2,2))}).as_readonly()
     b = abs(a)
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     ############################################################################
     # Addition
@@ -361,7 +363,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
     self.assertFalse(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)            # because of reshaping
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = (1,2,3) + a
@@ -371,7 +373,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
     self.assertFalse(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)            # because of reshaping
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = a + (1,2,3)
@@ -379,9 +381,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, 2)
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     self.assertEqual(b.shape, b.d_dt.shape)     # d_dt must be broadcasted
 
@@ -391,9 +393,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, 2)
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = Scalar(3, derivs={'t':Scalar(4)})
@@ -407,7 +409,7 @@ class Test_Scalar_ops(unittest.TestCase):
     c = a + b
     self.assertEqual(c.d_dt, 6)
     self.assertTrue(b.readonly)
-    self.assertTrue(c.d_dt.readonly)
+    self.assertFalse(c.d_dt.readonly)
 
     # In-place
     a = Scalar((1,2))
@@ -561,7 +563,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
     self.assertFalse(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)            # because of reshaping
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     a = Scalar(1, derivs={'t':Scalar(-2)})
     b = (1,2,3) - a
@@ -571,7 +573,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
     self.assertFalse(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)            # because of reshaping
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = a - (1,2,3)
@@ -579,9 +581,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, 2)
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     self.assertEqual(b.shape, b.d_dt.shape)     # d_dt must be broadcasted
 
@@ -591,9 +593,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, 2)
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
     a = Scalar(1, derivs={'t':Scalar(10)}).as_readonly()
     b = Scalar(3, derivs={'t':Scalar(4)})
@@ -607,7 +609,7 @@ class Test_Scalar_ops(unittest.TestCase):
     c = a - b
     self.assertEqual(c.d_dt, 6)
     self.assertTrue(b.readonly)
-    self.assertTrue(c.d_dt.readonly)
+    self.assertFalse(c.d_dt.readonly)
 
     # In-place
     a = Scalar((3,4))
@@ -780,9 +782,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (2,4,6))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = (1,2,3) * a
@@ -790,9 +792,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (2,4,6))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = Scalar(2, derivs={'t':Scalar(3)})
@@ -806,7 +808,7 @@ class Test_Scalar_ops(unittest.TestCase):
     c = a * b
     self.assertEqual(c.d_dt, 7)
     self.assertTrue(b.readonly)
-    self.assertTrue(c.d_dt.readonly)
+    self.assertFalse(c.d_dt.readonly)
 
     # In-place
     a = Scalar((1,2))
@@ -921,9 +923,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (1,2,3))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     a = Scalar(5, derivs={'t':Scalar(6)}).as_readonly()
     b = Scalar(2, derivs={'t':Scalar(4)})
@@ -937,7 +939,7 @@ class Test_Scalar_ops(unittest.TestCase):
     c = a / b
     self.assertEqual(c.d_dt, -2)
     self.assertTrue(b.readonly)
-    self.assertTrue(c.d_dt.readonly)
+    self.assertFalse(c.d_dt.readonly)
 
     # In-place
     a = Scalar((4,6))
@@ -1084,14 +1086,14 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertFalse(hasattr(b, 'd_dt'))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = (1,2,3) // a
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertFalse(hasattr(b, 'd_dt'))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = Scalar(3, derivs={'t':Scalar(4)})
@@ -1102,7 +1104,7 @@ class Test_Scalar_ops(unittest.TestCase):
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = Scalar(3, derivs={'t':Scalar(4)}).as_readonly()
     c = a // b
-    self.assertTrue(c.readonly)
+    self.assertFalse(c.readonly)
 
     # In-place
     a = Scalar((4,6))
@@ -1225,14 +1227,14 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertTrue(abs(b.d_dt - a.d_dt/(3,4,5)).max() < 1.e-12)
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Scalar(5, derivs={'t':Scalar(2)}).as_readonly()
     b = (7,8,9) % a
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertFalse(hasattr(b, 'd_dt'))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Scalar(5, derivs={'t':Scalar(2)}).as_readonly()
     b = Scalar(3, derivs={'t':Scalar(4)})
@@ -1243,7 +1245,7 @@ class Test_Scalar_ops(unittest.TestCase):
     a = Scalar(5, derivs={'t':Scalar(2)}).as_readonly()
     b = Scalar(3, derivs={'t':Scalar(4)}).as_readonly()
     c = a % b
-    self.assertTrue(c.readonly)
+    self.assertFalse(c.readonly)
 
     # In-place
     a = Scalar((5,7))
@@ -1403,13 +1405,13 @@ class Test_Scalar_ops(unittest.TestCase):
 
     b = a.as_readonly()
     self.assertTrue(b.readonly)
-    self.assertTrue((b**0).readonly)
-    self.assertTrue((b**1).readonly)
-    self.assertTrue((b**2).readonly)
-    self.assertTrue((b**3).readonly)
-    self.assertTrue((b**0.5).readonly)
-    self.assertTrue((b**(-0.5)).readonly)
-    self.assertTrue((b**(-1)).readonly)
+    self.assertFalse((b**0).readonly)
+    self.assertFalse((b**1).readonly)
+    self.assertFalse((b**2).readonly)
+    self.assertFalse((b**3).readonly)
+    self.assertFalse((b**0.5).readonly)
+    self.assertFalse((b**(-0.5)).readonly)
+    self.assertFalse((b**(-1)).readonly)
 
     ############################################################################
     # Reciprocal
@@ -1448,8 +1450,8 @@ class Test_Scalar_ops(unittest.TestCase):
 
     a = Scalar((-2,-1,0,1,2), derivs={'t':Scalar((1,1,2,2,2))}).as_readonly()
     b = a.reciprocal()
-    self.assertTrue(b.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     a = Scalar((-2,-1,0,1,2), derivs={'t':Scalar((1,1,2,2,2))})
     b = a.reciprocal(recursive=False)
@@ -1637,10 +1639,10 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse((x <= y.as_readonly()).readonly)
     self.assertFalse((x >= y.as_readonly()).readonly)
 
-    self.assertTrue((x.as_readonly() <  y.as_readonly()).readonly)
-    self.assertTrue((x.as_readonly() >  y.as_readonly()).readonly)
-    self.assertTrue((x.as_readonly() <= y.as_readonly()).readonly)
-    self.assertTrue((x.as_readonly() >= y.as_readonly()).readonly)
+    self.assertFalse((x.as_readonly() <  y.as_readonly()).readonly)
+    self.assertFalse((x.as_readonly() >  y.as_readonly()).readonly)
+    self.assertFalse((x.as_readonly() <= y.as_readonly()).readonly)
+    self.assertFalse((x.as_readonly() >= y.as_readonly()).readonly)
 
 ################################################################################
 # Execute from command line...

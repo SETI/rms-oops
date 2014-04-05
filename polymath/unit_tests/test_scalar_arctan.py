@@ -91,13 +91,13 @@ class Test_Scalar_arctan(unittest.TestCase):
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertFalse(hasattr(x.arctan(recursive=False), 'd_dt'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
     self.assertFalse(x.arctan().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().arctan().readonly)
+    self.assertFalse(x.as_readonly().arctan().readonly)
 
 ################################################################################
 # Execute from command line...

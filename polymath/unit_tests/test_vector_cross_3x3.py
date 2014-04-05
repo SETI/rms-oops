@@ -235,7 +235,7 @@ class Test_Vector_cross_3x3(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().cross(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().cross(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().cross(x).readonly)
     self.assertFalse(y.cross(x.as_readonly()).readonly)

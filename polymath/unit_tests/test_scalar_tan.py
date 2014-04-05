@@ -98,13 +98,13 @@ class Test_Scalar_tan(unittest.TestCase):
                                    dy_dvec[i].values[k],
                                    delta = 1.e-5 * abs(dy_dvec[i].values[k]))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(x.readonly)
     self.assertFalse(x.tan().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().tan().readonly)
+    self.assertFalse(x.as_readonly().tan().readonly)
 
 ################################################################################
 # Execute from command line...

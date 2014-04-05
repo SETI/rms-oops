@@ -78,18 +78,13 @@ class Test_Scalar_sign(unittest.TestCase):
     self.assertFalse(hasattr(x.sign(), 'd_dt'))
     self.assertFalse(hasattr(x.sign(), 'd_dvec'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
     self.assertFalse(x.sign().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().sign().readonly)
-
-    self.assertFalse(x.readonly)
-    self.assertFalse(x.sign().readonly)
-    self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().sign().readonly)
+    self.assertFalse(x.as_readonly().sign().readonly)
 
 ################################################################################
 # Execute from command line...

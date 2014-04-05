@@ -93,7 +93,7 @@ class Test_Quaternion(unittest.TestCase):
     self.assertAlmostEqual(a.d_dt[2].values[2], 0.0, delta=DEL)
     self.assertAlmostEqual(a.d_dt[2].values[3], 0.5, delta=DEL)
 
-    self.assertTrue(a.readonly)
+    self.assertFalse(a.readonly)
 
     ############################################################################
     # conj(self, recursive=True)
@@ -118,7 +118,7 @@ class Test_Quaternion(unittest.TestCase):
     b = a.conj()
 
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     ############################################################################
     # def identity(self)
@@ -164,9 +164,9 @@ class Test_Quaternion(unittest.TestCase):
     ba = b * a
 
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
-    self.assertTrue(ab.readonly)
-    self.assertTrue(ba.readonly)
+    self.assertFalse(b.readonly)
+    self.assertFalse(ab.readonly)
+    self.assertFalse(ba.readonly)
 
     ############################################################################
     # Many operations are inherited from Vector. These include:

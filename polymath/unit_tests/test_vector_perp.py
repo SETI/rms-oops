@@ -243,7 +243,7 @@ class Test_Vector_perp(unittest.TestCase):
     self.assertFalse(hasattr(y.perp(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.perp(x, recursive=False), 'd_dh'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -254,7 +254,7 @@ class Test_Vector_perp(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().perp(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().perp(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().perp(x).readonly)
     self.assertFalse(y.perp(x.as_readonly()).readonly)

@@ -102,13 +102,13 @@ class Test_Scalar_exp(unittest.TestCase):
     self.assertFalse(hasattr(x.exp(recursive=False), 'd_dt'))
     self.assertFalse(hasattr(x.exp(recursive=False), 'd_dvec'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(x.readonly)
     self.assertFalse(x.exp().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().exp().readonly)
+    self.assertFalse(x.as_readonly().exp().readonly)
 
     ###### With and without checking
     N = 1000

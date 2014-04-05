@@ -126,7 +126,7 @@ class Test_Vector_unit(unittest.TestCase):
 
     self.assertFalse(x.readonly)
     self.assertFalse(x.unit().readonly)
-    self.assertTrue(x.as_readonly().unit().readonly)
+    self.assertFalse(x.as_readonly().unit().readonly)
 
 ################################################################################
 # Execute from command line...

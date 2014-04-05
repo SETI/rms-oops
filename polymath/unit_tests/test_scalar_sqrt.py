@@ -43,11 +43,11 @@ class Test_Scalar_sqrt(unittest.TestCase):
     random = Scalar(values, units=Units.KM)
     self.assertRaises(ValueError, Scalar.sqrt, random)
 
-    values = np.random.randn(10)
     random = Scalar((4.,9.,16.), units=Units.KM**2)
     self.assertEqual(random.sqrt(), (2,3,4))
     self.assertEqual(random.sqrt(), Scalar((2,3,4), units=Units.KM))
 
+    values = np.random.randn(10)
     random = Scalar(values, units=Units.SECONDS)
     self.assertRaises(ValueError, Scalar.sqrt, random)
 
@@ -91,13 +91,13 @@ class Test_Scalar_sqrt(unittest.TestCase):
         self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i],
                                delta = abs(dy_dt[i]) * DEL)
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
     self.assertFalse(x.sqrt().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().sqrt().readonly)
+    self.assertFalse(x.as_readonly().sqrt().readonly)
 
     ###### Without Checking
     N = 1000

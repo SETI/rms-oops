@@ -103,13 +103,13 @@ class Test_Vector_as_diagonal(unittest.TestCase):
     self.assertFalse(hasattr(x.as_diagonal(recursive=False), 'd_dt'))
     self.assertFalse(hasattr(x.as_diagonal(recursive=False), 'd_dv'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Vector(np.random.randn(N,7))
 
     self.assertFalse(x.readonly)
     self.assertFalse(x.as_diagonal().readonly)
-    self.assertTrue(x.as_readonly().as_diagonal().readonly)
+    self.assertFalse(x.as_readonly().as_diagonal().readonly)
 
 ################################################################################
 # Execute from command line...

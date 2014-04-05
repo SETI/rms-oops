@@ -108,14 +108,14 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertFalse(c.readonly)
 
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
-    a = a.as_readonly()
+    a.as_readonly()
     self.assertTrue(a.readonly)
 
     b = a.to_scalar(3)
-    self.assertTrue(b.readonly)
+    self.assertTrue(b.readonly)     # because of memory overlap
 
     c = a.to_scalars()[3]
-    self.assertTrue(c.readonly)
+    self.assertTrue(c.readonly)     # because of memory overlap
 
     #### from_scalars(*args)
 
@@ -134,7 +134,7 @@ class Test_Vector_scalars(unittest.TestCase):
     b = b.as_readonly()
     c = Scalar(c).as_readonly()
     test = Vector.from_scalars(a,b,c)
-    self.assertEquals(test.readonly, True)
+    self.assertEquals(test.readonly, False)
 
     #### from_scalars(*args), with derivatives
 

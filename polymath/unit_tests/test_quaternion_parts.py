@@ -18,7 +18,7 @@ class Test_Quaternion_parts(unittest.TestCase):
     self.assertEqual(a[1], (1,0,1,0))
     self.assertEqual(a[2], (1,0,0,1))
 
-    self.assertTrue(a.readonly)
+    self.assertFalse(a.readonly)
 
     a = Quaternion.from_parts(1., [(1,0,0),(0,1,0),(0,0,1)])
     a.insert_deriv('t', Quaternion((1.,2.,3.,4.)))
@@ -40,8 +40,8 @@ class Test_Quaternion_parts(unittest.TestCase):
     self.assertEqual(v[1].d_dt, (0,0.5,0))
     self.assertEqual(v[2].d_dt, (0,0,0.5))
 
-    self.assertTrue(s.readonly)
-    self.assertTrue(v.readonly)
+    self.assertFalse(s.readonly)
+    self.assertFalse(v.readonly)
 
     ####
     N = 100

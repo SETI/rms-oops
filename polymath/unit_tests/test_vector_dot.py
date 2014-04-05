@@ -119,7 +119,7 @@ class Test_Vector_dot(unittest.TestCase):
     self.assertFalse(hasattr(y.dot(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.dot(x, recursive=False), 'd_dh'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     y = Vector(np.random.randn(N,7))
     x = Vector(np.random.randn(N,7))
@@ -130,7 +130,7 @@ class Test_Vector_dot(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().dot(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().dot(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().dot(x).readonly)
     self.assertFalse(y.dot(x.as_readonly()).readonly)

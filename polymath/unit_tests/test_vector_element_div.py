@@ -270,7 +270,7 @@ class Test_Vector_element_div(unittest.TestCase):
     self.assertFalse(hasattr(y.element_div(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.element_div(x, recursive=False), 'd_dh'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -281,7 +281,7 @@ class Test_Vector_element_div(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().element_div(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().element_div(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().element_div(x).readonly)
     self.assertFalse(y.element_div(x.as_readonly()).readonly)

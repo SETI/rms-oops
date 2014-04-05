@@ -126,7 +126,7 @@ class Test_Vector_ucross(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k], dz_dg.values[i,k], delta=EPS)
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=EPS)
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -137,7 +137,7 @@ class Test_Vector_ucross(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().ucross(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().ucross(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().ucross(x).readonly)
     self.assertFalse(y.ucross(x.as_readonly()).readonly)

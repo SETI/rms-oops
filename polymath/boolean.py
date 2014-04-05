@@ -113,9 +113,6 @@ class Boolean(Qube):
         else:
             result = Scalar(self.values.astype('int'))
 
-        if self.readonly:
-            result = result.as_readonly(nocopy='vm')
-
         return result
 
     def as_float(self):
@@ -130,9 +127,6 @@ class Boolean(Qube):
             result = Scalar(float(self.values))
         else:
             result = Scalar(self.values.astype('float'))
-
-        if self.readonly:
-            result = result.as_readonly(nocopy='vm')
 
         return result
 
@@ -253,37 +247,25 @@ class Boolean(Qube):
     # (~) operator
     def __invert__(self):
 
-        obj = Boolean(~self.values)
-        if self.readonly: obj = obj.as_readonly(nocopy='vm')
-
-        return obj
+        return Boolean(~self.values)
 
     # (&) operator
     def __and__(self, arg):
         if Qube.is_empty(arg): return arg
 
-        obj = Boolean(self.values & Boolean.as_boolean(arg).values)
-        if self.readonly and arg.readonly: obj = obj.as_readonly(nocopy='vm')
-
-        return obj
+        return Boolean(self.values & Boolean.as_boolean(arg).values)
 
     # (|) operator
     def __or__(self, arg):
         if Qube.is_empty(arg): return arg
 
-        obj = Boolean(self.values | Boolean.as_boolean(arg).values)
-        if self.readonly and arg.readonly: obj = obj.as_readonly(nocopy='vm')
-
-        return obj
+        return Boolean(self.values | Boolean.as_boolean(arg).values)
 
     # (^) operator
     def __xor__(self, arg):
         if Qube.is_empty(arg): return arg
 
-        obj = Boolean(self.values ^ Boolean.as_boolean(arg).values)
-        if self.readonly and arg.readonly: obj = obj.as_readonly(nocopy='vm')
-
-        return obj
+        return Boolean(self.values ^ Boolean.as_boolean(arg).values)
 
     # (&=) operator
     def __iand__(self, arg):
@@ -291,6 +273,7 @@ class Boolean(Qube):
 
         self.require_writable()
         self._Qube__values_ &= Boolean.as_boolean(arg).values
+
         return self
 
     # (|=) operator
@@ -299,6 +282,7 @@ class Boolean(Qube):
 
         self.require_writable()
         self._Qube__values_ |= Boolean.as_boolean(arg).values
+
         return self
 
     # (^=) operator
@@ -307,6 +291,7 @@ class Boolean(Qube):
 
         self.require_writable()
         self._Qube__values_ ^= Boolean.as_boolean(arg).values
+
         return self
 
 # Useful class constants

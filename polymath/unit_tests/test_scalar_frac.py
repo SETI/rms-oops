@@ -54,7 +54,7 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertTrue(np.all(y.mask[x.mask]))
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
-    # Derivatives should be stripped
+    # Derivatives should be preserved
     N = 10
     random = Scalar(np.random.randn(N) * 10.)
     random.insert_deriv('t', Scalar(np.random.randn(N) * 10.))
@@ -65,11 +65,11 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertTrue(hasattr(random, 'd_dt'))
     self.assertTrue(hasattr(random, 'd_dvec'))
 
-    self.assertEqual(random.frac().derivs, {})
-    self.assertNotIn('t', random.frac().derivs)
-    self.assertNotIn('vec', random.frac().derivs)
-    self.assertFalse(hasattr(random.frac(), 'd_dt'))
-    self.assertFalse(hasattr(random.frac(), 'd_dvec'))
+    self.assertEqual(random.frac().derivs, random.derivs)
+    self.assertIn('t', random.frac().derivs)
+    self.assertIn('vec', random.frac().derivs)
+    self.assertTrue(hasattr(random.frac(), 'd_dt'))
+    self.assertTrue(hasattr(random.frac(), 'd_dvec'))
 
     N = 10
     random = Scalar(np.arange(10))
@@ -81,19 +81,19 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertTrue(hasattr(random, 'd_dt'))
     self.assertTrue(hasattr(random, 'd_dvec'))
 
-    self.assertEqual(random.frac().derivs, {})
-    self.assertNotIn('t', random.frac().derivs, 't')
-    self.assertNotIn('vec', random.frac().derivs, 'vec')
-    self.assertFalse(hasattr(random.frac(), 'd_dt'))
-    self.assertFalse(hasattr(random.frac(), 'd_dvec'))
+    self.assertEqual(random.frac().derivs, random.derivs)
+    self.assertIn('t', random.frac().derivs, 't')
+    self.assertIn('vec', random.frac().derivs, 'vec')
+    self.assertTrue(hasattr(random.frac(), 'd_dt'))
+    self.assertTrue(hasattr(random.frac(), 'd_dvec'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     random = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(random.readonly)
     self.assertFalse(random.frac().readonly)
     self.assertTrue(random.as_readonly().readonly)
-    self.assertTrue(random.as_readonly().frac().readonly)
+    self.assertFalse(random.as_readonly().frac().readonly)
 
 ################################################################################
 # Execute from command line...

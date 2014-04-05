@@ -140,7 +140,7 @@ class Test_Vector_sep(unittest.TestCase):
     self.assertFalse(hasattr(y.sep(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.sep(x, recursive=False), 'd_dh'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     y = Vector(np.random.randn(N,7))
     x = Vector(np.random.randn(N,7))
@@ -151,7 +151,7 @@ class Test_Vector_sep(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().sep(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().sep(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().sep(x).readonly)
     self.assertFalse(y.sep(x.as_readonly()).readonly)

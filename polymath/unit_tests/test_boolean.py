@@ -149,7 +149,7 @@ class Test_Boolean(unittest.TestCase):
     self.assertFalse(c.readonly)
 
     self.assertTrue(a.as_readonly().readonly)
-    self.assertTrue(~(a.as_readonly()).readonly)
+    self.assertFalse((~a.as_readonly()).readonly)
 
     a = Boolean(True)
     c = a.as_int()
@@ -181,7 +181,7 @@ class Test_Boolean(unittest.TestCase):
     self.assertFalse(c.readonly)
 
     self.assertTrue(a.as_readonly().readonly)
-    self.assertTrue(~(a.as_readonly()).readonly)
+    self.assertFalse((~a.as_readonly()).readonly)
 
     a = Boolean(True)
     c = a.as_float()
@@ -209,7 +209,7 @@ class Test_Boolean(unittest.TestCase):
     self.assertFalse(c.readonly)
 
     self.assertTrue(a.as_readonly().readonly)
-    self.assertTrue(~(a.as_readonly()).readonly)
+    self.assertFalse((~a.as_readonly()).readonly)
 
     ############################################################################
     # & operator (and)
@@ -229,7 +229,7 @@ class Test_Boolean(unittest.TestCase):
 
     self.assertTrue(a.as_readonly().readonly)
     self.assertTrue(b.as_readonly().readonly)
-    self.assertTrue((a.as_readonly() & b.as_readonly()).readonly)
+    self.assertFalse((a.as_readonly() & b.as_readonly()).readonly)
 
     self.assertFalse((a.as_readonly() & b).readonly)
     self.assertFalse((a & b.as_readonly()).readonly)
@@ -266,7 +266,7 @@ class Test_Boolean(unittest.TestCase):
 
     self.assertTrue(a.as_readonly().readonly)
     self.assertTrue(b.as_readonly().readonly)
-    self.assertTrue((a.as_readonly() | b.as_readonly()).readonly)
+    self.assertFalse((a.as_readonly() | b.as_readonly()).readonly)
 
     self.assertFalse((a.as_readonly() | b).readonly)
     self.assertFalse((a | b.as_readonly()).readonly)
@@ -299,7 +299,7 @@ class Test_Boolean(unittest.TestCase):
 
     self.assertTrue(a.as_readonly().readonly)
     self.assertTrue(b.as_readonly().readonly)
-    self.assertTrue((a.as_readonly() ^ b.as_readonly()).readonly)
+    self.assertFalse((a.as_readonly() ^ b.as_readonly()).readonly)
 
     self.assertFalse((a.as_readonly() ^ b).readonly)
     self.assertFalse((a ^ b.as_readonly()).readonly)

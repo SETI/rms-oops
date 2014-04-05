@@ -67,9 +67,10 @@ class Test_Qube_items(unittest.TestCase):
     self.assertEquals(b.d_dt.readonly, False)
 
     ####
-    a = Matrix(np.random.randn(5,4,3)).as_readonly()
+    a = Matrix(np.random.randn(5,4,3))
     da_dt = Matrix(np.random.randn(5,4,3,2), drank=1)
     a.insert_deriv('t', da_dt)
+    a.as_readonly()
 
     b = a.transpose_numer(0,1,recursive=True)
 
@@ -146,6 +147,10 @@ class Test_Qube_items(unittest.TestCase):
 
     self.assertEquals(a.readonly, True)
     self.assertEquals(b.readonly, True)
+    self.assertEquals(a.d_dt.readonly, True)
+    self.assertEquals(b.d_dt.readonly, True)
+
+    a.as_readonly()
     self.assertEquals(a.d_dt.readonly, True)
     self.assertEquals(b.d_dt.readonly, True)
 
