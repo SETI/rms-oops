@@ -362,8 +362,8 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(b.d_dt, 2)
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
-    self.assertFalse(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)        # because of broadcast
+    self.assertFalse(a.d_dt.readonly)       # writeable because it is a scalar
+    self.assertTrue(b.d_dt.readonly)        # readonly because of broadcast
 
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = (1,2,3) + a

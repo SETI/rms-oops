@@ -370,9 +370,11 @@ class Qube(object):
 
         self.__shape_ = shape
 
-        # The object is read-only if the values and mask are both read-only
-        self.__readonly_ = (Qube._array_is_readonly(self.__values_) and
-                            Qube._array_is_readonly(self.__mask_))
+        # The object is read-only if the values array is read-only
+        self.__readonly_ = Qube._array_is_readonly(self.__values_)
+
+        if self.__readonly_:
+            Qube._array_to_readonly(self.__mask_)
 
         # Install the derivs (converting to read-only if necessary)
         self.__derivs_ = {}
@@ -430,8 +432,62 @@ class Qube(object):
         return obj
 
     ############################################################################
-    # Properties
+    # Properties and low-level access
     ############################################################################
+
+    def __set_values_(self, values, mask=None):
+        """Low-level method to update the values of an array.
+
+        The read-only status of the object will be modified accordingly.
+
+        If a mask is provided, it is also updated.
+        """
+
+        # Confirm shapes
+        assert np.shape(values) == np.shape(self.__values_)
+        if type(mask) == np.ndarray:
+            assert np.shape(mask) == self.shape
+
+        # Determine the new read-only state
+        new_readonly = Qube._array_is_readonly(values)
+
+        # Update values
+        self.__values_ = values
+
+        # Update the mask if necessary
+        if mask is not None:
+
+            # Mask must match the read-only state of the object
+            if new_readonly:
+                Qube._array_to_readonly(mask)
+
+            self.__mask_ = mask
+
+        # If the object is newly read-only, confirm the mask and derivs are also
+        if new_readonly and not self.__readonly_:
+            if mask is None:
+                Qube._array_to_readonly(self.__mask_)
+
+            for derivs in self.__derivs_.values():
+                derivs.as_readonly()
+
+        # Update the internal read-only state
+        self.__readonly_ = new_readonly
+
+    def __set_mask_(self, mask):
+        """Low-level method to update the mask of an array.
+
+        If the object is read-only, then the mask will be set to read-only.
+        """
+
+        # Confirm the shape
+        assert mask.shape == self.shape
+
+        # Mask must match the read-only state of the object
+        if self.__readonly_:
+            Qube._array_to_readonly(mask)
+
+        self.__mask_ = mask
 
     @property
     def values(self): return self.__values_
@@ -745,8 +801,7 @@ class Qube(object):
 
         # Construct the new object
         obj = self.clone(recursive)
-        obj.__values_ = Units.into_units(self.__units_, self.__values_)
-        obj.__readonly_ = False
+        obj.__set_values_(Units.into_units(self.__units_, self.__values_))
 
         # Fill in derivatives if necessary
         if recursive:
@@ -772,8 +827,7 @@ class Qube(object):
 
         # Construct the new object
         obj = self.clone(recursive)
-        obj.__values_ = Units.from_units(self.__units_, self.__values_)
-        obj.__readonly_ = False
+        obj.__set_values_(Units.from_units(self.__units_, self.__values_))
 
         # Fill in derivatives if necessary
         if recursive:
@@ -808,33 +862,39 @@ class Qube(object):
 
         return (not arg.flags['WRITEABLE'])
 
-    def as_readonly(self):
+    @staticmethod
+    def _array_to_readonly(arg):
+        """Make the given array read-only. Returns the array."""
+
+        if type(arg) != np.ndarray: return arg
+
+        arg.flags['WRITEABLE'] = False
+        return arg
+
+    def as_readonly(self, recursive=True):
         """Convert this object to read-only. It is modified and returned.
 
-        This method always acts recursively on the derivatives.
+        If recursive is False, the derivatives are removed. Otherwise, they are
+        also converted to read-only.
 
         If this object is already read-only, it is returned as is. Otherwise,
         the internal __values_ and __mask_ arrays are modified as necessary.
-        Once this happens, this array will cease to be writable by any other
-        object that links to this array.
+        Once this happens, the internal arrays will also cease to be writable in
+        any other object that shares them.
         """
 
         # If it is already read-only, return
         if self.__readonly_: return self
 
         # Update the value if it is an array
-        if type(self.__values_) == np.ndarray:
-            self.__values_.flags['WRITEABLE'] = False
-
-        # Upate the mask if it is an array
-        if type(self.__mask_) == np.ndarray:
-            self.__mask_.flags['WRITEABLE'] = False
-
+        Qube._array_to_readonly(self.__values_)
+        Qube._array_to_readonly(self.__mask_)
         self.__readonly_ = True
 
         # Update the derivatives
-        for key in self.__derivs_:
-            self.__derivs_[key].as_readonly()
+        if recursive:
+            for key in self.__derivs_:
+                self.__derivs_[key].as_readonly()
 
         return self
 
@@ -850,12 +910,12 @@ class Qube(object):
 
         # Update the value if it is an array
         if type(self.__values_) == np.ndarray:
-            if not self.__values_.flags['WRITEABLE']:
+            if Qube._array_is_readonly(self.__values_):
                 self.__values_ = self.__values_.copy()
 
         # Update the mask if it is an array
         if type(self.__mask_) == np.ndarray:
-            if not self.__mask_.flags['WRITEABLE']:
+            if Qube._array_is_readonly(self.__mask_):
                 self.__mask_ = self.__mask_.copy()
 
         # Update the derivatives
@@ -972,15 +1032,19 @@ class Qube(object):
         # Scalar case
         return not isinstance(self.__values_, numbers.Rational)
 
-    def as_float(self):
+    def as_float(self, recursive=True):
         """Return a floating-point version of this object.
 
         If this object already contains floating-point values, it is returned
         as is. Otherwise, a copy is returned. Derivatives are not modified.
+
+        Derivatives are not modified.
         """
 
         # If already floating, return as is
-        if self.is_float(): return self
+        if self.is_float():
+            if recursive: return self
+            return self.without_derivs()
 
         # If object cannot contain floats, raise an error
         if not self.FLOATS_OK:
@@ -994,10 +1058,8 @@ class Qube(object):
             new_values = float(self.__values_)
 
         # Construct a new copy
-        obj = self.clone(True)
-        obj.__values_ = new_values
-        obj.__readonly_ = False
-
+        obj = self.clone(recursive)
+        obj.__set_values_(new_values)
         return obj
 
     def is_int(self):
@@ -1010,7 +1072,7 @@ class Qube(object):
         # Scalar case
         return isinstance(self.__values_, numbers.Rational)
 
-    def as_int(self):
+    def as_int(self, recursive=True):
         """Return an integer version of this object.
 
         If this object already contains integers, it is returned as is.
@@ -1018,7 +1080,9 @@ class Qube(object):
         """
 
         # If already integers, return as is
-        if self.is_int(): return self
+        if self.is_int():
+            if recursive: return self
+            return self.without_derivs()
 
         # If object cannot contain ints, raise an error
         if not self.INTS_OK:
@@ -1032,9 +1096,8 @@ class Qube(object):
             new_values = int(self.__values_ // 1.)
 
         # Construct a new copy
-        obj = self.clone(True)
-        obj.__values_ = new_values
-        obj.__readonly_ = False
+        obj = self.clone(recursive)
+        obj.__set_values_(new_values)
         return obj
 
     ############################################################################
@@ -1179,9 +1242,7 @@ class Qube(object):
                 new_mask = self.__mask_
 
             obj = self.clone(True)
-            obj.__values_ = new_values
-            obj.__mask_ = new_mask
-            obj.__readonly_ = False
+            obj.__set_values_(new_values, new_mask)
             return obj
 
         # Insert replacement values if necessary
@@ -1201,9 +1262,7 @@ class Qube(object):
 
         # Construct the object
         obj = self.clone(True)
-        obj.__values_ = new_values
-        obj.__mask_ = new_mask
-        obj.__readonly_ = False
+        obj.__set_values_(new_values, new_mask)
         return obj
 
     def mask_where_eq(self, match, replace=None, remask=True):
@@ -1433,7 +1492,7 @@ class Qube(object):
         if self.mask is False: return self
 
         obj = self.clone(False)
-        obj.__mask_ = False
+        obj.__set_mask_(False)
 
         if recursive:
             for (key,deriv) in self.__derivs_.iteritems():
@@ -1447,7 +1506,7 @@ class Qube(object):
         if self.mask is True: return self
 
         obj = self.clone(False)
-        obj.__mask_ = True
+        obj.__set_mask_(True)
 
         if recursive:
             for (key,deriv) in self.__derivs_.iteritems():
@@ -1468,7 +1527,7 @@ class Qube(object):
 
         # Construct the new object
         obj = self.clone(False)
-        obj.__mask_ = mask
+        obj.__set_mask_(mask)
 
         if recursive:
             for (key,deriv) in self.__derivs_.iteritems():
@@ -1488,7 +1547,7 @@ class Qube(object):
         constant = self.as_this_type(constant, recursive=False)
 
         obj = self.clone(False)
-        obj.__values_(Qube.broadcast(constant, obj)[0].__values_)
+        obj.__set_values_(Qube.broadcast(constant, obj)[0].__values_)
         obj.as_readonly()
 
         if recursive:
@@ -1935,8 +1994,7 @@ class Qube(object):
 
         # Construct a copy with negative values
         obj = self.clone(False)
-        obj.__values_ = -self.__values_
-        obj.__readonly_ = False
+        obj.__set_values_(-self.__values_)
 
         # Fill in the negative derivatives
         if recursive and self.__derivs_:
@@ -1953,8 +2011,7 @@ class Qube(object):
 
         # Construct a copy with absolute values
         obj = self.clone(False)
-        obj.__values_ = np.abs(self.__values_)
-        obj.__readonly_ = False
+        obj.__set_values_(np.abs(self.__values_))
 
         # Fill in the derivatives, multiplied by sign(self)
         if recursive and self.__derivs_:
@@ -2275,9 +2332,7 @@ class Qube(object):
         # Matrix multiply case
         if self.__nrank_ == 2 and arg.__nrank_ == 2 and arg.__drank_ == 0:
             result = Qube.dot(self, arg, -1, 0, type(self), recursive=True)
-            self.__values_ = result.__values_
-            self.__mask_ = result.__mask_
-            self.__units_ = result.__units_
+            self.__set_values_(result.__values_, result.__mask_)
             self.insert_derivs(result.__derivs_)
             return self
 
@@ -2288,8 +2343,7 @@ class Qube(object):
         """Internal multiply op when the arg is a Python scalar."""
 
         obj = self.clone(False)
-        obj.__values_ = self.__values_ * arg
-        obj.__readonly_ = False
+        obj.__set_values_(self.__values_ * arg)
 
         if recursive and self.__derivs_:
             for (key, deriv) in self.__derivs_.iteritems():
@@ -2450,13 +2504,12 @@ class Qube(object):
         """Internal division op when the arg is a Python scalar."""
 
         obj = self.clone(False)
-        obj.__readonly_ = False
 
         # Mask out zeros
         if arg == 0:
-            obj.__mask_ = True
+            obj.__set_mask_(True)
         else:
-            obj.__values_ = self.__values_ / arg
+            obj.__set_values_(self.__values_ / arg)
 
         if recursive and self.__derivs_:
             for (key, deriv) in self.__derivs_.iteritems():
@@ -2606,12 +2659,11 @@ class Qube(object):
         """Internal floor division op when the arg is a Python scalar."""
 
         obj = self.clone(False)
-        obj.__readonly_ = False
 
         if arg == 0:
-            obj.__mask_ = True
+            obj.__set_mask_(True)
         else:
-            obj.__values_ = self.__values_ // arg
+            obj.__set_values_(self.__values_ // arg)
 
         return obj
 
@@ -2735,13 +2787,12 @@ class Qube(object):
         """Internal modulus op when the arg is a Python scalar."""
 
         obj = self.clone(False)
-        obj.__readonly_ = False
 
         # Mask out zeros
         if arg == 0:
-            obj.__mask_ = True
+            obj.__set_mask_(True)
         else:
-            obj.__values_ = self.__values_ % arg
+            obj.__set_values_(self.__values_ % arg)
 
         if recursive and self.__derivs_:
             for (key, deriv) in self.__derivs_.iteritems():
@@ -2813,9 +2864,8 @@ class Qube(object):
                 arg = arg.mask_where_eq(0., 1.)
 
         obj = arg.clone(False)
-        obj.__values_ = arg.__values_**expo
+        obj.__set_values_(arg.__values_**expo)
         obj.__units_ = Units.units_power(self.__units_, expo)
-        obj.__readonly_ = False
 
         # Evaluate the derivatives if necessary
         if recursive and self.__derivs_:
@@ -3104,14 +3154,14 @@ class Qube(object):
         if i is None or (np.shape(i) != () and None in i):
             # Fully flattened index along at least one dimension; nothing to do
             return
-        
+
         # Insert the values
         if (idxmask is None or (np.shape(idxmask) == () and idxmask == False) or
             np.shape(arg.__values_) == ()):
             self.__values_[i] = arg.__values_
         else:
             self.__values_[i] = new_vals[idxmask]
-            
+
         # Update the mask if necessary
         if np.shape(self.__mask_):
             self.__mask_[imask] = arg.__mask_
@@ -3173,7 +3223,8 @@ class Qube(object):
             if isinstance(item, Qube):
                 index, idxmask = item.as_index(remove_masked=remove_masked)
                 if idxmask is not None:
-                    raise ValueError("illegal masked index for multi-dimensional indexing")
+                    raise ValueError("illegal masked index for " +
+                                     "multi-dimensional indexing")
                 new_index.append(index)
             else:
                 new_index.append(item)
@@ -3896,9 +3947,7 @@ class Qube(object):
         """Returns an object broadcasted to the specified shape.
 
         It returns self if the shape already matches. Otherwise, the returned
-        object shares data with the original and must be treated as read-only.
-        In this case it is marked read-only but the internal arrays are not
-        protected.
+        object shares data with the original and both objects will be read-only.
 
         Input:
             shape           the shape into which the object is to be broadcast.
@@ -3909,37 +3958,43 @@ class Qube(object):
         """
 
         shape = tuple(shape)
-        if sample_array is not None:
-            assert sample_array.shape == shape
 
+        # If no broadcast is needed, return the object
         if shape == self.__shape_:
             if recursive or not self.__derivs_: return self
 
+        # Prepare or validate the sample array
         if sample_array is None:
             sample_array = np.empty(shape, dtype='byte')
+        else:
+            assert sample_array.shape == shape
 
-        sample_shape = shape + self.__rank_ * (1,)
+        # Save the derivatives for later
+        derivs = self.__derivs_
+
+        # A broadcasted object must be read-only if __values_ is an array
+        if np.shape(self.__values_):
+            self.as_readonly(recursive=False)
+
+        # Broadcast the values array
+        values_shape = shape + self.__rank_ * (1,)
         new_values = np.broadcast_arrays(self.__values_,
-                                         sample_array.reshape(sample_shape))[0]
+                                         sample_array.reshape(values_shape))[0]
+        Qube._array_to_readonly(new_values)
 
+        # Broadcast the mask if necessary
         if np.shape(self.__mask_) == ():
             new_mask = self.__mask_
         else:
             new_mask = np.broadcast_arrays(self.__mask_, sample_array)[0]
 
+        # Construct the new object
         obj = Qube.__new__(type(self))
-
-        # Broadcasted arrays must be read-only
-        if np.shape(new_values):
-            new_values.flags['WRITEABLE'] = False
-        if np.shape(new_mask):
-            new_mask.flags['WRITEABLE'] = False
-
         obj.__init__(new_values, new_mask, derivs={}, example=self)
-        obj.__readonly_ = True
 
+        # Process the derivatives if necessary
         if recursive:
-            for (key, deriv) in self.__derivs_.iteritems():
+            for (key, deriv) in derivs.iteritems():
                 obj.insert_deriv(key, deriv.broadcast_into_shape(shape, False,
                                                                  sample_array))
 
