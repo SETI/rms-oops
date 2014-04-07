@@ -615,9 +615,9 @@ class Path(object):
 
         # Fill in the key subfields
         if sign > 0:
-            ray_vector = (path_pos_ssb - link_pos_ssb).as_readonly(nocopy='vm')
+            ray_vector = (path_pos_ssb - link_pos_ssb).as_readonly()
         else:
-            ray_vector = (link_pos_ssb - path_pos_ssb).as_readonly(nocopy='vm')
+            ray_vector = (link_pos_ssb - path_pos_ssb).as_readonly()
 
         path_event_ssb.insert_subfield(path_key, ray_vector)
         link_event_ssb.insert_subfield(link_key, ray_vector)
