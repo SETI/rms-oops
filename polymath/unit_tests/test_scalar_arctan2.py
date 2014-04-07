@@ -159,7 +159,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().arctan2(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().arctan2(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().arctan2(x).readonly)
     self.assertFalse(y.arctan2(x.as_readonly()).readonly)

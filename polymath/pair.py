@@ -6,6 +6,7 @@
 
 from __future__ import division
 import numpy as np
+import numbers
 
 from qube   import Qube
 from scalar import Scalar
@@ -32,6 +33,9 @@ class Pair(Vector):
         """Return the argument converted to Pair if possible.
 
         If recursive is True, derivatives will also be converted.
+
+        As a special case as_pair() of a single value returns a Pair with the
+        value repeated.
         """
 
         if type(arg) == Pair:
@@ -47,6 +51,14 @@ class Pair(Vector):
             # For any suitable Qube, move numerator items to the denominator
             if arg.rank > 1 and arg.numer[0] == 2:
                 arg = arg.split_items(1, Pair)
+
+            arg = Pair(arg, example=arg)
+            if recursive: return arg
+            return arg.without_derivs()
+
+        # Special case of a single number
+        if isinstance(arg, numbers.Number):
+            return Pair((arg,arg))
 
         return Pair(arg)
 
@@ -86,13 +98,12 @@ class Pair(Vector):
 
         # Construct the object
         obj = Pair(new_values, derivs={}, example=self)
-        if self.readonly:
-            obj = obj.as_readonly()
+        if self.readonly: obj.as_readonly()
 
         # Fill in the derivatives if necessary
         if recursive:
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, deriv.swapxy(False), nocopy='vm')
+                obj.insert_deriv(key, deriv.swapxy(False))
 
         return obj
 

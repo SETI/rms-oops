@@ -90,13 +90,18 @@ class Test_Scalar_int(unittest.TestCase):
     self.assertFalse(hasattr(random.int(), 'd_dt'))
     self.assertFalse(hasattr(random.int(), 'd_dvec'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     random = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(random.readonly)
     self.assertFalse(random.int().readonly)
     self.assertTrue(random.as_readonly().readonly)
-    self.assertTrue(random.as_readonly().int().readonly)
+    self.assertFalse(random.as_readonly().int().readonly)
+
+    # But int objects are returned as is
+    a = Scalar(np.arange(10)).as_readonly()
+    self.assertTrue(a.readonly)
+    self.assertTrue(a.int().readonly)
 
 ################################################################################
 # Execute from command line...

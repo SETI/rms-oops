@@ -56,6 +56,10 @@ class Vector(Qube):
             if arg.rank > 1:
                 return arg.split_items(1, Vector)
 
+            arg = Vector(arg, example=arg)
+            if recursive: return arg
+            return arg.without_derivs()
+
         return Vector(arg)
 
     def to_scalar(self, axis, recursive=True):
@@ -96,12 +100,11 @@ class Vector(Qube):
 
         index = (Ellipsis, slice(i0,i1,di)) + self.drank * (slice(None),)
 
-        result = Qube.PAIR_CLASS(self.values[index], self.mask, self.units)
-        if result.readonly: result = result.as_readonly(nocopy='vm')
+        result = Qube.PAIR_CLASS(self.values[index], example=self)
 
         if recursive and self.derivs:
             for (key,deriv) in self.derivs.iteritems():
-                result.insert_deriv(key, deriv.to_pair(axes,False), nocopy='vm')
+                result.insert_deriv(key, deriv.to_pair(axes,False))
 
         return result
 
@@ -155,10 +158,9 @@ class Vector(Qube):
 
         drank = len(denom)
 
-        # Convert to Scalars, identify units, select dtype, check if readonly
+        # Convert to Scalars, identify units, select dtype
         units = None
         dtype = 'int'
-        readonly = True
         for (i,arg) in enumerate(args):
 
             # Convert None to a zero-valued scalar of the proper denom shape
@@ -182,17 +184,8 @@ class Vector(Qube):
                 if arg.is_float():
                     dtype = 'float'
 
-                # Remember any read-write objects
-                if not arg.readonly:
-                    readonly = False
-
             # Otherwise, convert to Scalar
             else:
-                # Remember any read-write objects
-                if isinstance(arg, np.ndarray):
-                    readonly = False
-
-                # Convert to Scalar
                 args[i] = Scalar(arg, drank=drank)
 
                 # Remember any floats encountered
@@ -221,8 +214,6 @@ class Vector(Qube):
         # Construct the result
         result = Qube(array, mask, units, nrank=1, drank=drank)
         result = result.cast(list(classes) + [Vector])
-        if readonly:
-            result = result.as_readonly(nocopy='vm')
 
         # Fill in derivatives if necessary
         if recursive:
@@ -238,10 +229,11 @@ class Vector(Qube):
                                                      classes=classes)
                     if key in derivs:
                         derivs[key] = derivs[key] + full_deriv
+                        # Better than '+=' because it converts to float
                     else:
                         derivs[key] = full_deriv
 
-            result.insert_derivs(derivs, nocopy='vm')
+            result.insert_derivs(derivs)
 
         return result
 
@@ -415,7 +407,6 @@ class Vector(Qube):
         """Return the component of this vector perpendicular to another.
 
         The returned object is an instance of the same subclass as this object.
-        If the inputs are readonly, 
 
         Input:
             recursive   True to include the derivatives.
@@ -512,12 +503,10 @@ class Vector(Qube):
             new_values = np.rollaxis(new_values, -3, len(new_values.shape))
 
         obj = Qube.MATRIX_CLASS(new_values, derivs={}, example=self)
-        if self.readonly: obj = obj.as_readonly(nocopy='vm')
 
         if recursive:
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, deriv.cross_product_as_matrix(False),
-                                      nocopy='vm')
+                obj.insert_deriv(key, deriv.cross_product_as_matrix(False))
 
         return obj
 
@@ -569,9 +558,6 @@ class Vector(Qube):
                      drank = self.drank + arg.drank,
                      example=self)
 
-        if self.readonly and arg.readonly:
-            obj = obj.as_readonly(nocopy='vm')
-
         # Insert derivatives if necessary
         if recursive:
             new_derivs = {}
@@ -585,11 +571,11 @@ class Vector(Qube):
                 for (key, arg_deriv) in arg.derivs.iteritems():
                     term = self_wod.element_mul(arg_deriv, False)
                     if key in new_derivs:
-                        new_derivs[key] = new_derivs[key] + term
+                        new_derivs[key] += term
                     else:
                         new_derivs[key] = term
 
-            obj.insert_derivs(new_derivs, nocopy='vm')
+            obj.insert_derivs(new_derivs)
 
         return obj
 
@@ -644,9 +630,6 @@ class Vector(Qube):
                      self.mask | divisor_mask,
                      Units.div_units(self.units, arg.units))
 
-        if self.readonly and arg.readonly:
-            obj = obj.as_readonly(nocopy='vm')
-
         # Insert the derivatives if necessary
         if recursive:
             new_derivs = {}
@@ -669,11 +652,11 @@ class Vector(Qube):
                     term = arg_deriv.element_mul(factor)
 
                     if key in new_derivs:
-                        new_derivs[key] = new_derivs[key] - term
+                        new_derivs[key] -= term
                     else:
                         new_derivs[key] = -term
 
-            obj.insert_derivs(new_derivs, nocopy='vm')
+            obj.insert_derivs(new_derivs)
 
         return obj
 

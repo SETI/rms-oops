@@ -42,6 +42,10 @@ class Vector3(Vector):
             if arg.rank > 1 and arg.numer[0] == 3:
                 arg = arg.split_items(1, Vector3)
 
+            arg = Vector3(arg, example=arg)
+            if recursive: return arg
+            return arg.without_derivs()
+
         return Vector3(arg)
 
     @staticmethod
@@ -125,7 +129,7 @@ Vector3.ZAXIS  = Vector3((0.,0.,1.)).as_readonly()
 Vector3.MASKED = Vector3((1,1,1), True).as_readonly()
 
 Vector3.ZERO_POS_VEL = Vector3((0.,0.,0.)).as_readonly()
-Vector3.ZERO_POS_VEL.insert_deriv('t', Vector3.ZERO)
+Vector3.ZERO_POS_VEL.insert_deriv('t', Vector3.ZERO).as_readonly()
 
 Vector3.IDENTITY = Vector3([(1,0,0),(0,1,0),(0,0,1)], drank=1).as_readonly()
 

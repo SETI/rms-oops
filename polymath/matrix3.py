@@ -32,14 +32,24 @@ class Matrix3(Matrix):
     def as_matrix3(arg, recursive=True):
         """Convert to Matrix3. The result is not checked to be unitary.
 
-        Quaternions are converted to matrices."""
+        Quaternions are converted to matrices.
+
+        Inputs:
+            arg         the object to convert.
+            recursive   True to include derivatives in the returned result.
+        """
 
         if type(arg) == Matrix3:
             if recursive: return arg
             return arg.without_derivs()
 
-        if isinstance(arg, Qube.QUATERNION_CLASS):
-            return arg.to_matrix3(recursive)
+        if isinstance(arg, Qube):
+            if isinstance(arg, Qube.QUATERNION_CLASS):
+                return arg.to_matrix3(recursive)
+
+            arg = Matrix3(arg, example=arg)
+            if recursive: return arg
+            return arg.without_derivs()
 
         return Matrix3(arg)
 
@@ -121,8 +131,6 @@ class Matrix3(Matrix):
         if not isinstance(arg, Qube):
             try:
                 arg = Scalar.as_scalar(arg)
-                if type(original_arg) != np.ndarray:
-                    arg = arg.as_readonly(nocopy='vm')
             except:
                 Qube.raise_unsupported_op('*', self, original_arg)
 

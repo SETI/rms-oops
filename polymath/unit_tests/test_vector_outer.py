@@ -133,7 +133,7 @@ class Test_Vector_outer(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().outer(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().outer(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().outer(x).readonly)
     self.assertFalse(y.outer(x.as_readonly()).readonly)

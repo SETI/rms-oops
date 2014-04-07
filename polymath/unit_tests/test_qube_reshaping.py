@@ -75,13 +75,24 @@ class Test_qube_reshaping(unittest.TestCase):
 
     a.insert_deriv('t', da_dt)
     self.assertFalse(a.readonly)
-    self.assertFalse(da_dt.readonly)
-    self.assertTrue(a.d_dt.readonly)    # because of broadcast
+    self.assertTrue(da_dt.readonly)     # because of broadcast
+    self.assertTrue(a.d_dt.readonly)
 
     b = a.reshape((6,5,4,3,2), recursive=True)
     self.assertFalse(b.readonly)
+    self.assertTrue(b.d_dt.readonly)
 
-    a = a.as_readonly()
+    a = Vector(np.ones((2,3,4,5,6,3)))
+    da_dt = Vector(np.ones((2,3,4,5,6,3,2,2)), drank=2)
+    a.insert_deriv('t', da_dt)
+    self.assertFalse(a.readonly)
+    self.assertFalse(a.d_dt.readonly)
+
+    b = a.reshape((6,5,4,3,2), recursive=True)
+    self.assertFalse(b.readonly)
+    self.assertFalse(b.d_dt.readonly)
+
+    a.as_readonly()
     self.assertTrue(a.readonly)
     self.assertTrue(a.d_dt.readonly)
 
@@ -136,7 +147,7 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(b.d_dt.denom, (2,2))
     self.assertEqual(type(b), Vector)
     self.assertFalse(b.readonly)
-    self.assertTrue(b.d_dt.readonly)        # because of broadcast
+    self.assertTrue(b.d_dt.readonly)    # because of broadcast
 
     a = a.as_readonly()
     self.assertTrue(a.readonly)
@@ -238,14 +249,16 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(a[:,0], b[0,:,0])
     self.assertEqual(a[:,0], b[3,:,1])
 
-    self.assertFalse(a.readonly)
+    self.assertTrue(a.readonly)     # Because of broadcast of b
     self.assertTrue(b.readonly)
 
+    a = Matrix(np.random.randn(3,1,4,3,2), drank=1)
     a.insert_deriv('t', Matrix(np.random.randn(3,1,4,3,2,2), drank=2))
     self.assertFalse(a.readonly)
     self.assertFalse(a.d_dt.readonly)
 
     b = a.broadcast_into_shape((4,3,2), recursive=False)
+    self.assertTrue(a.readonly)         # because of broadcast of b
     self.assertTrue(b.readonly)         # because of broadcast
     self.assertFalse(hasattr(b, 'd_dt'))
 

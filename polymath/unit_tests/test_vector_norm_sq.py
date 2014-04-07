@@ -99,14 +99,14 @@ class Test_Vector_norm_sq(unittest.TestCase):
         self.assertAlmostEqual(y.d_dv.values[i,1], dy_dv1.values[i], delta=EPS)
         self.assertAlmostEqual(y.d_dv.values[i,2], dy_dv2.values[i], delta=EPS)
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     y = Vector(np.random.randn(N,3))
     x = Vector(np.random.randn(N,3))
 
     self.assertFalse(x.readonly)
     self.assertFalse(x.norm_sq().readonly)
-    self.assertTrue(x.as_readonly().norm_sq().readonly)
+    self.assertFalse(x.as_readonly().norm_sq().readonly)
 
 ################################################################################
 # Execute from command line...

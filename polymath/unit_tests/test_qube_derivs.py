@@ -1,7 +1,7 @@
 ################################################################################
 # Tests for Qube derivative methods
-#   insert_deriv(self, key, deriv, override=False, nocopy='')
-#   insert_derivs(self, dict, override=False, nocopy='')
+#   insert_deriv(self, key, deriv, override=False)
+#   insert_derivs(self, dict, override=False)
 #   delete_deriv(self, key)
 #   delete_derivs(self)
 #   without_derivs(self)
@@ -65,7 +65,7 @@ class Test_Qube_derivs(unittest.TestCase):
 
     # changing derivatives, readonly
     a = Scalar((1,2,3), derivs={'t': Scalar(4), 'x': Scalar((5,6,7))})
-    self.assertEquals(a.d_dt.readonly, True)    # because of broadcast
+    self.assertEquals(a.d_dt.readonly, True)        # because of broadcast
     self.assertEquals(a.d_dx.readonly, False)
 
     a = a.as_readonly()

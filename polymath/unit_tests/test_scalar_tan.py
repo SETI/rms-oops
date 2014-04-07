@@ -88,23 +88,24 @@ class Test_Scalar_tan(unittest.TestCase):
     dy_dt = x.tan().d_dt
     dy_dvec = x.tan().d_dvec
 
+    DEL = 3.e-5
     for i in range(N):
         scale = dy_dt[i]
         self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i],
-                               delta = 1.e-5 * abs(dy_dt[i]))
+                               delta = DEL * abs(dy_dt[i]))
 
         for k in range(3):
             self.assertAlmostEqual(dy_dx[i] * x.d_dvec[i].values[k],
                                    dy_dvec[i].values[k],
-                                   delta = 1.e-5 * abs(dy_dvec[i].values[k]))
+                                   delta = DEL * abs(dy_dvec[i].values[k]))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(x.readonly)
     self.assertFalse(x.tan().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().tan().readonly)
+    self.assertFalse(x.as_readonly().tan().readonly)
 
 ################################################################################
 # Execute from command line...

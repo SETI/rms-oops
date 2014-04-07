@@ -236,7 +236,7 @@ class Test_Vector_proj(unittest.TestCase):
     self.assertFalse(hasattr(y.proj(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.proj(x, recursive=False), 'd_dh'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -247,7 +247,7 @@ class Test_Vector_proj(unittest.TestCase):
 
     self.assertTrue(x.as_readonly().readonly)
     self.assertTrue(y.as_readonly().readonly)
-    self.assertTrue(y.as_readonly().proj(x.as_readonly()).readonly)
+    self.assertFalse(y.as_readonly().proj(x.as_readonly()).readonly)
 
     self.assertFalse(y.as_readonly().proj(x).readonly)
     self.assertFalse(y.proj(x.as_readonly()).readonly)

@@ -55,7 +55,8 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertFalse(a.d_dt.readonly)
     self.assertFalse(b.d_dt.readonly)
 
-    a = Vector((1,2,3), derivs={'t':Vector((1,1,2))}).as_readonly()
+    a = Vector((1,2,3), derivs={'t':Vector((1,1,2))})
+    a.as_readonly()
     b = +a
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
@@ -136,12 +137,13 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (-1,-1,-2))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     self.assertRaises(ValueError, a.__isub__, (1,1,1))
-    self.assertRaises(ValueError, b.__isub__, (1,1,1))
+    #self.assertRaises(ValueError, b.__isub__, (1,1,1))
+    b += (1,1,1)
 
     a = Vector((1,2), derivs={'t':Vector((3,4))})
     b = -a
@@ -159,12 +161,12 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (-3,-4))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
-    self.assertRaises(ValueError, a.__isub__, 1)
-    self.assertRaises(ValueError, b.__isub__, 1)
+    self.assertRaises(ValueError, a.__isub__, 1)    # because it's read-only
+    self.assertRaises(TypeError, b.__isub__, 1)
 
     ############################################################################
     # abs()
@@ -264,7 +266,7 @@ class Test_Vector_ops(unittest.TestCase):
 
     self.assertFalse(x.readonly)
     self.assertFalse(abs(x).readonly)
-    self.assertTrue(x.as_readonly().norm().readonly)
+    self.assertFalse(x.as_readonly().norm().readonly)
 
     ############################################################################
     # Addition
@@ -397,9 +399,9 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (3,2,1))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # because objects are identical
 
     a = Vector((1,2,3), derivs={'t':Vector((3,2,1))}).as_readonly()
     b = a + [(1,2,3),(4,5,6)]
@@ -407,7 +409,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, ((3,2,1),(3,2,1))) # d_dt must be broadcasted
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
     self.assertTrue(b.d_dt.readonly)
 
@@ -582,9 +584,9 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (3,2,1))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # because objects are identical
 
     a = Vector((1,2,3), derivs={'t':Vector((3,2,1))}).as_readonly()
     b = a - [(1,2,3),(4,5,6)]
@@ -592,9 +594,9 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, ((3,2,1),(3,2,1))) # d_dt must be broadcasted
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # because objects are identical
 
     # In-place
     a = Vector((1,2))
@@ -762,9 +764,9 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, (6,4,2))
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     a = Scalar((1,3), derivs={'t':Scalar((1,2))})
     b = Vector((1,2), derivs={'t':Vector((3,2))})
@@ -876,8 +878,8 @@ class Test_Vector_ops(unittest.TestCase):
     c = a / b
     self.assertEqual(c, (1,2,3))
     self.assertEqual(c.d_dt, -a/b/b*b.d_dt + a.d_dt/b)
-    self.assertTrue(c.readonly)
-    self.assertTrue(c.d_dt.readonly)
+    self.assertFalse(c.readonly)
+    self.assertFalse(c.d_dt.readonly)
 
     # In-place
     a = Vector((4,6))
@@ -975,7 +977,7 @@ class Test_Vector_ops(unittest.TestCase):
     a = Vector((2,4,7)).as_readonly()
     b = a // 2
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Vector((2,4,7)).as_readonly()
     b = a // Scalar(2)
@@ -985,7 +987,7 @@ class Test_Vector_ops(unittest.TestCase):
     a = Vector((2,4,7)).as_readonly()
     b = a // Scalar(2).as_readonly()
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Vector((2,4,7)).as_readonly()
     b = a // np.array(2)
@@ -1067,7 +1069,7 @@ class Test_Vector_ops(unittest.TestCase):
     a = Vector((2,4,7)).as_readonly()
     b = a % 2
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Vector((2,4,7)).as_readonly()
     b = a % Scalar(2)
@@ -1077,7 +1079,7 @@ class Test_Vector_ops(unittest.TestCase):
     a = Vector((2,4,7)).as_readonly()
     b = a % Scalar(2).as_readonly()
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     a = Vector((2,4,7)).as_readonly()
     b = a % np.array(2)

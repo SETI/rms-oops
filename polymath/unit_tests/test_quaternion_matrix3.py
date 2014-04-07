@@ -32,7 +32,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     mat = a.to_matrix3()
     b = Quaternion.from_matrix3(mat)
 
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     # N Quaternions
     N = 100
@@ -52,7 +52,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     mat = a.to_matrix3()
     b = Quaternion.from_matrix3(mat)
 
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
 
     ############################################################################
     # Quaternion to Euler angles and back

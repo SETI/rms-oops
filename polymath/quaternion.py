@@ -41,8 +41,14 @@ class Quaternion(Vector):
         if type(arg) == Matrix3:
             return Quaternion.from_matrix3(arg, recursive)
 
-        if isinstance(arg, Qube) and arg.numer == (3,):
-            return from_parts(0., arg, recursive)
+        if isinstance(arg, Qube):
+
+            if arg.numer == (3,):
+                return from_parts(0., arg, recursive)
+
+            arg = Quaternion(arg, example=arg)
+            if recursive: return arg
+            return arg.without_derivs()
 
         return Quaternion(arg)
 
@@ -88,9 +94,6 @@ class Quaternion(Vector):
 
         # Construct object
         obj = Quaternion(values, scalar.mask | vector.mask, drank=drank)
-
-        if scalar.readonly and vector.readonly:
-            obj = obj.as_readonly(nocopy='vm')
 
         # Fill in derivatives if necessary
         if recursive:
@@ -160,11 +163,10 @@ class Quaternion(Vector):
             new_values = np.rollaxis(new_values, -1, -self.drank-1)
 
         obj = Quaternion(new_values, example=self)
-        if self.readonly: obj = obj.as_readonly(nocopy='vm')
 
         if recursive and self.derivs:
             for (key, deriv) in self.derivs.iteritems():
-                self.insert_deriv(key, deriv.conj(recursive=False), nocopy='vm')
+                self.insert_deriv(key, deriv.conj(recursive=False))
 
         return obj
 
@@ -230,8 +232,6 @@ class Quaternion(Vector):
         values[...,2,2] = 1. - (xx + yy)
 
         obj = Matrix3(values, pmask)
-
-        if self.readonly: obj = obj.as_readonly(nocopy='vm')
 
         if (recursive and self.derivs) or partials:
 #           Before scaling, but assuming a unit quaternion...
@@ -303,7 +303,7 @@ class Quaternion(Vector):
                                                                pnorm**3)
 
             for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, dm_dp.chain(deriv), nocopy='vm')
+                obj.insert_deriv(key, dm_dp.chain(deriv))
 
         if partials:
             return (obj, dm_dp)
@@ -393,7 +393,6 @@ class Quaternion(Vector):
             quat_over_s[mask,k+1] = Q[mask,i,k] + Q[mask,k,i]
 
         obj = Quaternion((quat_over_s * s[...,np.newaxis])[0], matrix.mask)
-        if matrix.readonly: obj = obj.as_readonly(nocopy='vm')
 
         # The following code does not work, perhaps because of the vague meaning
         # of partial derivatives when the components of a Matrix3 are so closely
@@ -452,7 +451,7 @@ class Quaternion(Vector):
             dq_dQ = Quaternion(new_values, matrix.mask, drank=2)
 
             for (key, deriv) in matrix.derivs.iteritems():
-                obj.insert_deriv(key, dq_dQ.chain(deriv), nocopy='vm')
+                obj.insert_deriv(key, dq_dQ.chain(deriv))
 
         return obj
 
@@ -507,9 +506,6 @@ class Quaternion(Vector):
                      drank = a.drank + b.drank,
                      example = self)
 
-        if a.readonly and b.readonly:
-            obj = obj.as_readonly(nocopy='vm')
-
         # Construct the derivatives if necessary
         if recursive:
             new_derivs = {}
@@ -523,11 +519,11 @@ class Quaternion(Vector):
                 a_wod = a.without_derivs()
                 for (key, b_deriv) in b.derivs.iteritems():
                     if key in new_derivs:
-                        new_derivs[key] = new_derivs[key] + a_wod * b_deriv
+                        new_derivs[key] += a_wod * b_deriv
                     else:
                         new_derivs[key] = a_wod * b_deriv
 
-            obj.insert_derivs(new_derivs, nocopy='vm')
+            obj.insert_derivs(new_derivs)
 
         return obj
 

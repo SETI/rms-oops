@@ -77,9 +77,9 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, [(-1,-0),(-1,-1)])
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     self.assertRaises(ValueError, a.__isub__, [(1,0),(1,1)]) # because readonly
 
@@ -138,9 +138,9 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, [(1,1),(-1,-1)])
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)    # deriv is a direct copy
 
     # In-place
     a = Matrix([(1,2),(3,4)])
@@ -215,9 +215,9 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, [(1,1),(-1,-1)])
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertTrue(b.d_dt.readonly)        # deriv is an exact copy
 
     # In-place
     a = Matrix([(1,2),(3,4)])
@@ -303,9 +303,9 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, [(6,4,2),(2,2,2)])
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     a = Matrix([(1,0,-1),(0,2,-1)])
     b = Vector((1,2,3))
@@ -329,7 +329,7 @@ class Test_Matrix_ops(unittest.TestCase):
     b = Vector((1,2,3)).as_readonly()
     c = a * b
     self.assertEqual(c, (-2,1))
-    self.assertTrue(c.readonly)
+    self.assertFalse(c.readonly)
 
     # In-place
     a = Matrix([(1,2),(3,4)])
@@ -412,9 +412,9 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertTrue(hasattr(b, 'd_dt'))
     self.assertEqual(b.d_dt, [(3,2,1),(1,1,1)])
     self.assertTrue(a.readonly)
-    self.assertTrue(b.readonly)
+    self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)
-    self.assertTrue(b.d_dt.readonly)
+    self.assertFalse(b.d_dt.readonly)
 
     a = Matrix([(1,-1),(0,2)], derivs={'t':Matrix([(6,4),(2,2)])})
     b = Scalar(2, derivs={'t':Scalar(1)})
@@ -436,8 +436,8 @@ class Test_Matrix_ops(unittest.TestCase):
     a = Matrix([(1,-1),(0,2)], derivs={'t':Matrix([(6,4),(2,2)])}).as_readonly()
     b = Scalar(2, derivs={'t':Scalar(1)}).as_readonly()
     c = a / b
-    self.assertTrue(c.readonly)
-    self.assertTrue(c.d_dt.readonly)
+    self.assertFalse(c.readonly)
+    self.assertFalse(c.d_dt.readonly)
 
     # In-place
     a = Matrix([(2,4),(6,8)])

@@ -66,7 +66,7 @@ class Test_Vector_as_row(unittest.TestCase):
     self.assertTrue(np.all(a.d_dt.values == b.d_dt.values[...,0,:]))
     self.assertTrue(np.all(a.d_dv.values == b.d_dv.values[...,0,:,:]))
 
-    # read-only status
+    # read-only status is not preserved
     N = 10
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
     self.assertFalse(a.readonly)
@@ -79,7 +79,7 @@ class Test_Vector_as_row(unittest.TestCase):
     self.assertTrue(a.readonly)
 
     b = a.as_row()
-    self.assertTrue(b.readonly)
+    self.assertTrue(b.readonly)     # shared memory
 
 ################################################################################
 # Execute from command line...

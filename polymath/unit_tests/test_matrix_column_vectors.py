@@ -128,10 +128,10 @@ class Test_Matrix_column_vectors(unittest.TestCase):
     self.assertTrue(a.readonly)
 
     b = a.column_vector(3)
-    self.assertTrue(b.readonly)
+    self.assertTrue(b.readonly) # preserved because of overlapping memory
 
     c = a.column_vectors()[3]
-    self.assertTrue(c.readonly)
+    self.assertTrue(c.readonly) # preserved because of overlapping memory
 
 ################################################################################
 # Execute from command line...

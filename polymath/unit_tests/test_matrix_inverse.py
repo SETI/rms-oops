@@ -254,7 +254,7 @@ class Test_Matrix_inverse(unittest.TestCase):
                                    b.d_dv.values[i,j,k,1],
                                    delta = DEL * max(1., vscale[i,1]))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     a = Matrix(np.random.randn(N,3,3))
     b = a.inverse()
@@ -262,7 +262,7 @@ class Test_Matrix_inverse(unittest.TestCase):
     self.assertFalse(a.readonly)
     self.assertFalse(a.inverse().readonly)
     self.assertTrue(a.as_readonly().readonly)
-    self.assertTrue(a.as_readonly().inverse().readonly)
+    self.assertFalse(a.as_readonly().inverse().readonly)
 
 ################################################################################
 # Execute from command line...

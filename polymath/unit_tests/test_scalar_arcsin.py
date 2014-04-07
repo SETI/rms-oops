@@ -107,13 +107,13 @@ class Test_Scalar_arcsin(unittest.TestCase):
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertFalse(hasattr(x.arcsin(recursive=False), 'd_dt'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
     self.assertFalse(x.arcsin().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().arcsin().readonly)
+    self.assertFalse(x.as_readonly().arcsin().readonly)
 
     ###### Without Checking
     N = 1000

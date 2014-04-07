@@ -107,13 +107,13 @@ class Test_Scalar_arccos(unittest.TestCase):
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertFalse(hasattr(x.arccos(recursive=False), 'd_dt'))
 
-    # Read-only status should be preserved
+    # Read-only status should NOT be preserved
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
     self.assertFalse(x.arccos().readonly)
     self.assertTrue(x.as_readonly().readonly)
-    self.assertTrue(x.as_readonly().arccos().readonly)
+    self.assertFalse(x.as_readonly().arccos().readonly)
 
     ###### Without Checking
     N = 1000

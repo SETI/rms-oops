@@ -1,7 +1,7 @@
 ################################################################################
 # Tests for Qube methods related to read-only and read-write status
 #
-#   as_readonly(self, nocopy='')
+#   as_readonly(self)
 #   copy(self, readonly=False, recursive=True)
 ################################################################################
 
@@ -35,7 +35,6 @@ class Test_Qube_readonly(unittest.TestCase):
     b = a.copy(readonly=True)
     self.assertEqual(a.readonly, True)
     self.assertEqual(b.readonly, True)
-    self.assertTrue(a is b)
 
     ####
     a = Vector(np.random.randn(5,3))

@@ -42,13 +42,17 @@ class Matrix(Qube):
             if recursive: return arg
             return arg.without_derivs()
 
-        # Convert a Vector with drank=1 to a Matrix
-        if isinstance(arg, Vector) and arg.drank == 1:
-            return arg.join_items([Matrix])
+        if isinstance(arg, Qube):
 
-        arg = Matrix(arg)
-        if recursive: return arg
-        return arg.without_derivs()
+            # Convert a Vector with drank=1 to a Matrix
+            if isinstance(arg, Vector) and arg.drank == 1:
+                return arg.join_items([Matrix])
+
+            arg = Matrix(arg, example=arg)
+            if recursive: return arg
+            return arg.without_derivs()
+
+        return Matrix(arg)
 
     def row_vector(self, row, recursive=True, classes=(Vector3,Vector)):
         """Return the selected row of a Matrix as a Vector.
@@ -232,7 +236,7 @@ class Matrix(Qube):
         # A single item
         elif self.shape == ():
             return Matrix(np.array(np.matrix(self.values).I))
-            
+
         # Remainder are TBD
         else:
             raise NotImplementedError("inversion of non-diagonal matrices " +
@@ -241,9 +245,7 @@ class Matrix(Qube):
         # Construct inverse matrix
         obj = Matrix(new_values, new_mask,
                      units = Units.units_power(self.units,-1),
-                     derivs = {},
-                     example = self)
-        if self.readonly: obj = obj.as_readonly()
+                     derivs = {}, example = self)
 
         # Fill in derivatives
         if recursive and self.derivs:
@@ -253,7 +255,7 @@ class Matrix(Qube):
             for (key, deriv) in self.derivs.iteritems():
                 new_derivs[key] = -obj * deriv * obj
 
-            obj.insert_derivs(new_derivs, nocopy='vm')
+            obj.insert_derivs(new_derivs)
 
         return obj
 
@@ -286,12 +288,7 @@ class Matrix(Qube):
             if rms.max() <= Matrix.DELTA: break
 
         new_mask = (rms.values > Matrix.DELTA)
-        obj = Qube.MATRIX3_CLASS(next_m.values, self.mask | new_mask)
-
-        if obj.readonly:
-            obj = obj.as_readonly()
-
-        return obj
+        return Qube.MATRIX3_CLASS(next_m.values, self.mask | new_mask)
 
     ############################################################################
     # Overrides of superclass operators
@@ -333,7 +330,7 @@ class Matrix(Qube):
         obj = Qube.__new__(type(self))
         obj.__init__(values)
 
-        return obj.as_readonly(nocopy='vm')
+        return obj.as_readonly()
 
     ############################################################################
     # Overrides of arithmetic operators
