@@ -41,7 +41,7 @@ class FlatFOV(FOV):
         """
 
         self.uv_scale = Pair.as_pair(uv_scale).as_float().as_readonly()
-        if np.shape(uv_shape) == ():
+        if np.shape(uv_shape) == () and not isinstance(uv_shape, Qube):
             self.uv_shape = Pair((uv_shape,uv_shape)).as_readonly()
         else:
             self.uv_shape = Pair.as_pair(uv_shape).as_readonly()

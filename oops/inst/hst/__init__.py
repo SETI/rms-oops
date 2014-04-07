@@ -687,7 +687,7 @@ class HST(object):
         sizaxis = oops.Pair((header1["SIZAXIS1"], header1["SIZAXIS2"]))
         binaxis = oops.Pair((header1["BINAXIS1"], header1["BINAXIS2"]))
 
-        return oops.fov.Flat(scale * binaxis, sizaxis, crpix)
+        return oops.fov.FlatFOV(scale.element_mul(binaxis), sizaxis, crpix)
 
     def construct_fov(self, fov_dict, hst_file):
         """Returns the FOV object associated with an HST instrument, allowing for

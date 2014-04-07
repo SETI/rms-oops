@@ -94,9 +94,9 @@ def iss_test_suite(filespec, derivs, info, display):
     DISPLAY = display
 
     # Define the bodies we care about
-    ring_body = oops.registry.body_lookup("SATURN_MAIN_RINGS")
-    saturn_body = oops.registry.body_lookup("SATURN")
-    sun_body = oops.registry.body_lookup("SUN")
+    ring_body = oops.Body.lookup("SATURN_MAIN_RINGS")
+    saturn_body = oops.Body.lookup("SATURN")
+    sun_body = oops.Body.lookup("SUN")
 
     # Create the snapshot object
     snapshot = cassini_iss.from_file(filespec)
