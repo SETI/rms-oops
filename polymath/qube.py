@@ -579,6 +579,9 @@ class Qube(object):
         are stripped away. If the object is read-only, then derivatives will
         also be converted to read-only.
 
+        Derivatives cannot be integers. They are converted to floating-point if
+        necessary.
+
         You cannot replace the pre-existing value of a derivative in a read-only
         object unless you explicit set override=True. However, inserting a new
         derivative into a read-only object is not prevented.
@@ -613,8 +616,8 @@ class Qube(object):
                               "'%s': %s, %s") % (key, str(deriv.__numer_),
                                                       str(self.__numer_)))
 
-        # Prevent recursion
-        deriv = deriv.without_derivs()
+        # Prevent recursion, convert to floating point
+        deriv = deriv.without_derivs().as_float()
 
         # Broadcast the shape to match the parent object if necessary
         if deriv.shape != self.shape:

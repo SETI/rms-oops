@@ -228,8 +228,7 @@ class Vector(Qube):
                                                      recursive=False,
                                                      classes=classes)
                     if key in derivs:
-                        derivs[key] = derivs[key] + full_deriv
-                        # Better than '+=' because it converts to float
+                        derivs[key] += full_deriv
                     else:
                         derivs[key] = full_deriv
 
