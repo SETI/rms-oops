@@ -716,7 +716,7 @@ class Vector(Qube):
         if self.drank != 1:
             Qube.raise_unsupported_op('reciprocal()', self)
 
-        matrix = self.join_items([Matrix])
+        matrix = self.join_items([Qube.MATRIX_CLASS])
         inverse = matrix.reciprocal()
 
         return inverse.split_items(1, [type(self)])
