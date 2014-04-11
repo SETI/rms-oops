@@ -1939,7 +1939,7 @@ class Qube(object):
                         the first suitable subclass in the list.
         """
 
-        obj = Qube(derivs={}, nrank=nrank, drank=(self.__rank__ - nrank),
+        obj = Qube(derivs={}, nrank=nrank, drank=(self.__rank_ - nrank),
                    example=self)
         obj = obj.cast(classes)
         obj.__readonly_ = self.__readonly_
