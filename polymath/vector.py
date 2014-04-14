@@ -237,7 +237,43 @@ class Vector(Qube):
 
         return result
 
-    def as_index(self, remove_masked=False, masked=None):
+    def as_index(self, masked=None):
+        """Return an object suitable for indexing an N-dimensional NumPy array.
+
+        The returned object is a tuple of NumPy arrays, each of the same shape.
+        Each array contains indices along the corresponding axis of the array
+        being indexed.
+
+        Input:
+            masked      the index or list/tuple/array of indices to insert in
+                        the place of a masked item. If None and the object
+                        contains masked elements, the array will be flattened
+                        and masked elements will be skipped over.
+        """
+
+        if (self.drank > 0):
+            raise ValueError('an indexing object cannot have a denominator')
+
+        obj = self.as_int()
+
+        if not np.any(self.mask):
+            values = obj.values
+
+        elif np.shape(obj.mask) == ():
+            raise ValueError('object is entirely masked')
+
+        elif masked is None:
+            obj = obj.flatten()
+            values = obj[~obj.mask].values
+
+        else:
+            obj = obj.copy()
+            obj[obj.mask] = masked
+            values = obj.values
+
+        return tuple(np.rollaxis(values, -1, 0))
+
+    def as_index_and_mask(self, remove_masked=False, masked=None):
         """An object suitable for indexing an N-dimensional array and a mask.
 
         The returned object is a tuple of NumPy arrays, each of the same shape.

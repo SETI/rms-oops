@@ -53,7 +53,37 @@ class Scalar(Qube):
 
         return Scalar(arg)
 
-    def as_index(self, remove_masked=False, masked=None):
+    def as_index(self, masked=None):
+        """Return an object suitable for indexing a NumPy ndarray.
+
+        Input:
+            masked      the value to insert in the place of a masked item. If
+                        None and the object contains masked elements, the array
+                        will be flattened and masked elements will be skipped.
+        """
+
+        obj = self.as_int()
+
+        if not np.any(self.mask):
+            return obj.values
+
+        if np.shape(obj.mask) == ():
+            raise ValueError('object is entirely masked')
+
+        if masked is None:
+            obj = obj.flatten()
+            if np.shape(obj.values) == ():
+                if obj.mask:
+                    return None
+                else:
+                    return obj.values
+            return obj.values[~obj.mask]
+        else:
+            obj = obj.copy()
+            obj.values[obj.mask] = masked
+            return obj.values
+
+    def as_index_and_mask(self, remove_masked=False, masked=None):
         """Return an object suitable for indexing a NumPy ndarray along with a mask.
 
         Input:

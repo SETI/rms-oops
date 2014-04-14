@@ -3200,12 +3200,13 @@ class Qube(object):
             if Ellipsis in index
         fail when the index contains a NumPy array.
 
-        The code also replaces a Qube with the result of its as_index() method.
+        The code also replaces a Qube with the result of its
+        as_index_and_mask() method.
         """
 
         # Replace a Qube with its index equivalent
         if isinstance(index, Qube):
-            index, idxmask = index.as_index(remove_masked=remove_masked)
+            index, idxmask = index.as_index_and_mask(remove_masked=remove_masked)
             return (index, index, idxmask)
 
         # There's only a problem with indices of type list or tuple
@@ -3221,7 +3222,7 @@ class Qube(object):
                 has_ellipsis = True
 
             if isinstance(item, Qube):
-                index, idxmask = item.as_index(remove_masked=remove_masked)
+                index, idxmask = item.as_index_and_mask(remove_masked=remove_masked)
                 if idxmask is not None:
                     raise ValueError("illegal masked index for " +
                                      "multi-dimensional indexing")

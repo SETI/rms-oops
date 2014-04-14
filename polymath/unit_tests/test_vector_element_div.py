@@ -151,7 +151,7 @@ class Test_Vector_element_div(unittest.TestCase):
     dz_dg = dz_dy.chain(y.d_dg)
     dz_dh = dz_dx.chain(x.d_dh) + dz_dy.chain(y.d_dh)
 
-    DEL = 1.e-4
+    DEL = 1.e-3
     for i in range(N):
       for k in range(3):
         self.assertAlmostEqual(z.d_df.values[i,k], dz_df.values[i,k],

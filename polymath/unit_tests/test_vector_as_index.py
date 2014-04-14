@@ -32,7 +32,7 @@ class Test_Vector_as_index(unittest.TestCase):
     vec = Vector(values)
 
     # Index into array
-    index13 = vec.as_index()[0]
+    index13 = vec.as_index()
 
     # Show that the index has been recovered
     indexed = array[index13]
@@ -60,13 +60,13 @@ class Test_Vector_as_index(unittest.TestCase):
     vec_one_masked = Vector(vec, mask)
     
     # This will create a flattened array with the first two items missing
-    new_index = vec_one_masked.as_index(remove_masked=True, masked=None)[0]
+    new_index = vec_one_masked.as_index(masked=None)
     self.assertEquals(qube[new_index].shape, (7*11-2,))
     self.assertEquals(qube[new_index] // 13, np.arange(2,77))
 
     # This will fill in the last item of the array in place of the first two
     # items
-    new_index = vec_one_masked.as_index(masked=(9,9,9))[0]
+    new_index = vec_one_masked.as_index(masked=(9,9,9))
     self.assertEquals(qube[new_index].shape, (7,11))
     self.assertEquals(qube[new_index][0,0], 999)
     self.assertEquals(qube[new_index][0,1], 999)
