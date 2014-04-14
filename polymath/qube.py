@@ -292,7 +292,7 @@ class Qube(object):
                         arg = int(arg)
                     else:
                         arg = float(arg)
-            elif isinstance(arg, int):
+            elif isinstance(arg, int) or isinstance(arg, long):
                 if not self.INTS_OK:
                     if self.FLOATS_OK:
                         arg = float(arg)

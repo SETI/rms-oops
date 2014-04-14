@@ -7,6 +7,7 @@ from polymath import *
 
 from oops.config          import LOGGING, PATH_PHOTONS
 from oops.event           import Event
+from oops.frame_.frame    import Frame
 from oops.meshgrid        import Meshgrid
 from oops.path_.multipath import MultiPath
 from oops.body            import Body
@@ -311,6 +312,72 @@ class Observation(object):
         event = Event(time, (Vector3.ZERO,Vector3.ZERO), self.path, self.frame)
 
         return event
+
+    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
+                                 **keywords):
+        """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
+
+        Input:
+            ra          a Scalar of J2000 right ascensions.
+            dec         a Scalar of J2000 declinations.
+            derivs      True to propagate derivatives of ra and dec through to
+                        derivatives of the returned (u,v) Pairs.
+            iters       the number of iterations to perform until convergence
+                        is reached. Two is the most that should ever be needed;
+                        Snapshot should override to one.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
+
+        Return:         a Pair of (u,v) coordinates.
+
+        Note: The only reasons for iteration are that the C-matrix and the
+        velocity WRT the SSB could vary during the observation. I doubt this
+        would ever be significant.
+        """
+
+        # Convert to scalar; strip derivatives if necessary
+        ra = Scalar.as_scalar(ra, derivs)
+        dec = Scalar.as_scalar(dec, derivs)
+
+        # Convert to line of sight in SSB/J2000 frame
+        cos_dec = dec.cos()
+        x = cos_dec * ra.cos()
+        y = cos_dec * ra.sin()
+        z = dec.sin()
+        los = -Vector3.from_scalars(x,y,z)      # negative for incoming photon
+
+        # Define the rotation from J2000 to the observer's frame
+        rotation = self.frame.wrt(Frame.J2000)
+
+        # Iterate until the observation time has converged
+        obs_time = self.midtime
+        for iter in range(iters):
+
+            # Define the photon arrival event
+            obs_event = Event(obs_time, (Vector3.ZERO, Vector3.ZERO),
+                              self.path, self.frame)
+
+            # Use a quickframe if appropriate
+            rotation = Frame.quick_frame(rotation, obs_time, quick)
+
+            # Rotate the line of sight to the observer's frame
+            xform = rotation.transform_at_time(obs_time)
+            obs_event.insert_subfield("arr", xform.rotate(los))
+
+            # Get the apparent direction, allowing for stellar aberration
+            apparent_arr = obs_event.apparent_arr(quick=quick)
+
+            # Convert to FOV coordinates
+            uv = self.fov.uv_from_los(apparent_arr)
+
+            # Update the time
+            obs_time = self.midtime_at_uv(uv, **keywords)
+
+        return uv
 
     # This procedure assumes that movement along a path is very limited during
     # the exposure time of an individual pixel. It could fail to converge if

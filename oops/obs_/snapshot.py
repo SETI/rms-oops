@@ -293,6 +293,35 @@ class Snapshot(Observation):
 # Overrides of Observation methods
 ################################################################################
 
+    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
+                                 **keywords):
+        """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
+
+        Input:
+            ra          a Scalar of J2000 right ascensions.
+            dec         a Scalar of J2000 declinations.
+            derivs      True to propagate derivatives of ra and dec through to
+                        derivatives of the returned (u,v) Pairs.
+            iters       the number of iterations to perform until convergence
+                        is reached. Two is the most that should ever be needed;
+                        Snapshot should override to one.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+            keywords    optional additional keyword values, based on the
+                        requirements of the observation and its attributes.
+
+        Return:         a Pair of (u,v) coordinates.
+
+        Note: The only reasons for iteration are that the C-matrix and the
+        velocity WRT the SSB could vary during the observation. I doubt this
+        would ever be significant.
+        """
+
+        return Observation.uv_from_ra_and_dec(self, ra, dec, derivs, 1,
+                                              quick, **keywords)
+        
     def uv_from_path(self, path, derivs=False, quick=False, converge={},
                            **keywords):
         """Return the (u,v) indices of an object in the FOV, given its path.

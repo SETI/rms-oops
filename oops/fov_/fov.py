@@ -120,7 +120,7 @@ class FOV(object):
         Note that this is vector points in the direction _opposite_ to the path
         of arriving photons.
 
-        If derivs is True, then derivatives in (x,y) get propagated forwared
+        If derivs is True, then derivatives in (x,y) get propagated forward
         into the components of the line-of-sight vector.
         """
 
@@ -179,7 +179,7 @@ class FOV(object):
         """
 
         xy_pair = self.xy_from_los(los, derivs)
-        return uv_from_xy(xy, derivs, **keywords)
+        return self.uv_from_xy(xy_pair, derivs, **keywords)
 
     def uv_is_outside(self, uv_pair, inclusive=True):
         """Return a boolean mask identifying coordinates outside the FOV.
