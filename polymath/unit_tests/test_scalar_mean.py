@@ -85,7 +85,7 @@ class Test_Scalar_mean(unittest.TestCase):
     self.assertEqual(mean, 2.5)
     self.assertEqual(type(mean), Scalar)
     self.assertEqual(mean.d_dt, (4,5))
-    self.assertTrue(mean.d_dt.is_int())
+    self.assertTrue(mean.d_dt.is_float())   # derivatives are always floats
 
 ################################################################################
 # Execute from command line...

@@ -8,11 +8,13 @@ from polymath import *
 from oops.fov_.fov import FOV
 
 class SliceFOV(FOV):
+    """SliceFOV is a subclass of FOV in only a slice of another FOV's (u,v)
+    array is used, but the geometry is unchanged. This differs from a Subarray
+    in that the optic axis is not modified.
+    """
 
     def __init__(self, fov, origin, shape):
-        """Returns a new FOV object in which the geometry is unchanged relative
-        to another FOV, but only a slice of that FOV's (u,v) array is used. This
-        differs from a Subarray FOV in that the optic axis is not modified.
+        """Constructor for a SliceFOV.
 
         Inputs:
             fov         the reference FOV object within which this slice is
@@ -26,40 +28,31 @@ class SliceFOV(FOV):
         """
 
         self.fov = fov
-        self.uv_origin = Pair.as_int(origin)
-        self.uv_shape  = Pair.as_int(shape)
+        self.uv_origin = Pair.as_int(origin).as_readonly()
+        self.uv_shape  = Pair.as_int(shape).as_readonly()
 
         # Required fields
         self.uv_los   = self.fov.uv_los - self.uv_origin
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
 
-    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
-        """Returns a Pair of (x,y) spatial coordinates in units of radians,
-        given a Pair of coordinates (u,v).
+    def xy_from_uv(self, uv_pair, derivs=False):
+        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
-        Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v).
+        If derivs is True, then any derivatives in (x,y) get propagated into
+        the (u,v) returned.
         """
 
         return self.fov.xy_from_uv(uv_pair + self.uv_origin, derivs=derivs)
 
     def uv_from_xy(self, xy_pair, extras=(), derivs=False):
-        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
-        coordinates in radians.
+        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
-        Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y).
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
         """
 
-        return self.fov.uv_from_xy(xy_pair, extras=extras,
-                                   derivs=derivs) - self.origin
+        return self.fov.uv_from_xy(xy_pair, derivs=derivs) - self.origin
 
 ################################################################################
 # UNIT TESTS

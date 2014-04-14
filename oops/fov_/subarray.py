@@ -8,12 +8,18 @@ from polymath import *
 from oops.fov_.fov import FOV
 
 class Subarray(FOV):
+    """Subarray is a subclass of FOV that describes a rectangular region of a
+    larger FOV.
+    """
+
 
     def __init__(self, fov, new_los, uv_shape, uv_los=None):
-        """Returns a new FOV object in which the ICS origin and/or the optic
-        axis have been modified.
+        """Constructor for a Subarray.
 
-        Inputs:
+        In the returned FOV object, the ICS origin and/or the optic axis have
+        been modified.
+
+        Input:
             fov         the FOV object within which this subarray is defined.
 
             new_los     a tuple or Pair defining the location of the subarray's
@@ -31,11 +37,7 @@ class Subarray(FOV):
         self.fov = fov
         self.new_los_in_old_uv  = Pair.as_pair(new_los).as_float()
         self.new_los_wrt_old_xy = fov.xy_from_uv(self.new_los_in_old_uv)
-
-        if np.shape(uv_shape) == () or len(np.asarray(uv_shape)) == 1:
-            self.uv_shape = Pair.as_pair((uv_shape, uv_shape)).copy()
-        else:
-            self.uv_shape = Pair.as_pair(uv_shape).copy()
+        self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
 
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
@@ -47,51 +49,36 @@ class Subarray(FOV):
 
         self.new_origin_in_old_uv = self.new_los_in_old_uv - self.uv_los
 
+        self.new_los_in_old_uv.as_readonly()
+        self.new_los_wrt_old_xy.as_readonly()
+        self.uv_shape.as_readonly()
+        self.uv_los.as_readonly()
+        self.new_origin_in_old_uv.as_readonly
+
         # Required fields
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
 
-    def xy_from_uv(self, uv_pair, extras=(), derivs=False):
-        """Returns a Pair of (x,y) spatial coordinates in units of radians,
-        given a Pair of coordinates (u,v).
+    def xy_from_uv(self, uv_pair, derivs=False):
+        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
-        Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_duv", which
-        contains the partial derivatives d(x,y)/d(u,v) as a MatrixN with item
-        shape [2,2].
+        If derivs is True, then any derivatives in (x,y) get propagated into
+        the (u,v) returned.
         """
 
         old_xy = self.fov.xy_from_uv(self.new_origin_in_old_uv + uv_pair,
-                                     extras, derivs)
-        new_xy = old_xy - self.new_los_wrt_old_xy
+                                     derivs)
+        return old_xy - self.new_los_wrt_old_xy
 
-        if derivs:
-            new_xy.insert_deriv("uv", old_xy.d_duv)
+    def uv_from_xy(self, xy_pair, derivs=False):
+        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
-        return new_xy
-
-    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
-        """Returns a Pair of coordinates (u,v) given a Pair (x,y) of spatial
-        coordinates in radians.
-
-        Additional parameters that might affect the transform can be included
-        in the extras argument.
-
-        If derivs is True, then the returned Pair has a subarrray "d_dxy", which
-        contains the partial derivatives d(u,v)/d(x,y) as a MatrixN with item
-        shape [2,2].
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
         """
 
-        old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair,
-                                     extras, derivs)
-        new_uv = old_uv - self.new_origin_in_old_uv
-
-        if derivs:
-            new_uv.insert_deriv("xy", old_uv.d_dxy)
-
-        return new_uv
+        old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair, derivs)
+        return old_uv - self.new_origin_in_old_uv
 
 ################################################################################
 # UNIT TESTS
