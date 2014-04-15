@@ -26,7 +26,7 @@ class ExtendedSource(Calibration):
         """
 
         self.name = name
-        self.factor = float(factor)
+        self.factor = Scalar.as_scalar(factor)
 
     def value_from_dn(self, dn, uv_pair=None):
         """Returns calibrated values based an uncalibrated image value ("DN")

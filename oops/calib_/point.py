@@ -29,7 +29,7 @@ class PointSource(Calibration):
         """
 
         self.name = name
-        self.factor = Scalar(factor)
+        self.factor = Scalar.as_scalar(factor)
         self.fov = fov
 
     def value_from_dn(self, dn, uv_pair):
@@ -37,7 +37,7 @@ class PointSource(Calibration):
         and image coordinates.
 
         Input:
-            dn          a scalar, numpy array or arbitrary oops Array subclass
+            dn          a scalar, numpy array or arbitrary oops Qube subclass
                         containing uncalibrated values.
             uv_pair     a Pair containing (u,v) indices into the image.
 
@@ -45,7 +45,7 @@ class PointSource(Calibration):
                         containing the calibrated values.
         """
 
-        return (self.factor / self.fov.area_factor(uv_pair)) * dn
+        return dn * (self.factor / self.fov.area_factor(uv_pair))
 
     def dn_from_value(self, value, uv_pair):
         """Returns uncalibrated image values ("dn") based on calibrated values
@@ -60,7 +60,7 @@ class PointSource(Calibration):
                         containing the uncalibrated DN values.
         """
 
-        return (self.fov.area_factor(uv_pair) / self.factor) * value
+        return value * (self.fov.area_factor(uv_pair) / self.factor)
 
 ################################################################################
 # UNIT TESTS
