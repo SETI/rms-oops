@@ -40,6 +40,8 @@ class FixedPath(Path):
 
         self.pos = Vector3.as_vector3(pos)
 
+        self.shape = []
+
         self.reregister()
 
 ########################################
