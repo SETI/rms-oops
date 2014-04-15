@@ -481,7 +481,7 @@ class Qube(object):
         """
 
         # Confirm the shape
-        assert mask.shape == self.shape
+        assert type(mask)==bool or mask.shape == self.shape
 
         # Mask must match the read-only state of the object
         if self.__readonly_:
