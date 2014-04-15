@@ -32,6 +32,7 @@ class MultiPath(Path):
 
         self.paths = np.array(paths, dtype='object').ravel()
         self.shape = self.paths.shape
+        self.keys = set()
 
         for (index, path) in np.ndenumerate(self.paths):
             self.paths[index] = Path.as_path(path).wrt(self.origin, self.frame)

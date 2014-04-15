@@ -68,10 +68,10 @@ class Polynomial(FOV):
     ########################################
 
     def xy_from_uv(self, uv_pair, derivs=False):
-        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
+        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
-        If derivs is True, then any derivatives in (x,y) get propagated into
-        the (u,v) returned.
+        If derivs is True, then any derivatives in (u,v) get propagated into
+        the (x,y) returned.
         """
 
         # Subtract off the center of the field of view
@@ -126,10 +126,10 @@ class Polynomial(FOV):
     ########################################
 
     def uv_from_xy(self, xy_pair, derivs=False):
-        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
+        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
-        If derivs is True, then any derivatives in (u,v) get propagated into
-        the (x,y) returned.
+        If derivs is True, then any derivatives in (x,y) get propagated into
+        the (u,v) returned.
         """
 
         xy_pair = Pair.as_pair(xy_pair, derivs)

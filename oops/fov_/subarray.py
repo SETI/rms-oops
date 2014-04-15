@@ -42,10 +42,7 @@ class Subarray(FOV):
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            if np.shape(uv_los) == () or len(np.asarray(uv_los)) == 1:
-                self.uv_los = Pair.as_pair((uv_los, uv_los)).copy()
-            else:
-                self.uv_los = Pair.as_pair(uv_los).copy()
+            self.uv_los = Pair.as_pair(uv_los).as_readonly()
 
         self.new_origin_in_old_uv = self.new_los_in_old_uv - self.uv_los
 

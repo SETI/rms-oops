@@ -15,6 +15,7 @@
 ################################################################################
 
 import numpy as np
+from polymath import *
 import os
 import os.path
 import re
@@ -229,6 +230,7 @@ class HST(object):
         # the y-axis. MRS 4/8/12.
 
         uv_center = fov.uv_from_xy((0,0))
+        uv_center.insert_deriv('uv', Pair.IDENTITY, override=True)
         xy_center = fov.xy_from_uv(uv_center, derivs=True)
 
         v_wrt_y_deg = np.arctan(xy_center.d_duv.vals[0,1] /
@@ -256,12 +258,12 @@ class HST(object):
 
         # Applies at the start time of the observation
         cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
-                                                 frame_id + "_CMATRIX")
+                                                 id=frame_id + "_CMATRIX")
 
         # Applies for the duration of the observation
         time_limits = self.time_limits(hst_file)
         tracker = oops.frame.Tracker(cmatrix,
-                                     self.target_body(hst_file).path_id,
+                                     self.target_body(hst_file).path.path_id,
                                      "EARTH", time_limits[0], frame_id)
 
         return frame_id
@@ -281,7 +283,7 @@ class HST(object):
         assert new_pos_targ is not None
 
         if reference.pos_targ == new_pos_targ:
-            return reference.frame_id
+            return reference.frame
 
         xpos =  RADIANS_PER_ARCSEC * (new_pos_targ[0] - reference.pos_targ[0])
         ypos = -RADIANS_PER_ARCSEC * (new_pos_targ[1] - reference.pos_targ[1])
@@ -358,8 +360,8 @@ class HST(object):
         # If necessary, get the solar range from the target name
         if solar_range is None:
             target_body = self.target_body(hst_file)
-            target_sun_path = oops.registry.connect_paths(target_body.path_id,
-                                                          "SUN")
+            target = oops.Path.as_path(target_body.path.path_id)
+            target_sun_path = target.wrt("SUN")
             # Paths of the relevant bodies need to be defined in advance!
 
             times = self.time_limits(hst_file)
@@ -415,7 +417,7 @@ class HST(object):
             body_name = HST_TARGET_DICT[key2]
         # Raises a KeyError on failure
 
-        return oops.registry.body_lookup(body_name)
+        return oops.Body.lookup(body_name)
 
     def construct_snapshot(self, hst_file, **parameters):
         """Returns a Snapshot object for the data found in the specified image.
@@ -430,8 +432,8 @@ class HST(object):
                         tstart = times[0],
                         texp = times[1] - times[0],
                         fov = fov,
-                        path_id = "EARTH",
-                        frame_id = self.register_frame(hst_file, fov,
+                        path = "EARTH",
+                        frame = self.register_frame(hst_file, fov,
                                                        **parameters),
                         target = self.target_body(hst_file),
                         telescope = self.telescope_name(hst_file),
@@ -739,7 +741,7 @@ class HST(object):
         # Apply the subarray correction
         subarray_fov = oops.fov.Subarray(fov, centera,              # new_los
                                               naxis,                # uv_shape
-                                              crpix * binaxis)      # uv_los
+                                              crpix.element_mul(binaxis))      # uv_los
 
         # Apply the subsampling if necessary
         if binaxis == (1,1):
@@ -975,7 +977,7 @@ class Test_HST(unittest.TestCase):
         buffer[:,:,1] = np.arange(shape[1]) + 0.5
         pixels = oops.Pair(buffer)
 
-        self.assertTrue(np.all(fov.uv_is_inside(pixels)))
+        self.assertTrue(not np.any(fov.uv_is_outside(pixels)))
 
         # Confirm that a fov.Polynomial is reversible
 

@@ -15,7 +15,7 @@ import oops.inst.hst as hst
 
 # At this point, a Body class object has been created for every planet and moon
 # (including Pluto). If you don't believe me...
-print oops.registry.BODY_REGISTRY.keys()
+print oops.Body.BODY_REGISTRY.keys()
 
 from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
@@ -240,7 +240,7 @@ multipath = oops.Body.define_multipath(moons, id="URANIAN_MOONS")
 # Locate the moons in the FOV by solving for the photon paths
 image_event = oops.Event(snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
                          snapshot.path_id, snapshot.frame_id)
-moon_event = multipath.photon_to_event(image_event)
+moon_event, image_event = multipath.photon_to_event(image_event)
 # At this point, image_event.arr contains the arrival vector of the photons from
 # each moon.
 
