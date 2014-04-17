@@ -622,6 +622,7 @@ class Qube(object):
         # Broadcast the shape to match the parent object if necessary
         if deriv.shape != self.shape:
             deriv = deriv.broadcast_into_shape(self.shape, False).copy()
+            deriv = deriv.as_readonly()
         elif self.__readonly_ and not deriv.__readonly_:
             deriv = deriv.clone().as_readonly()
 
