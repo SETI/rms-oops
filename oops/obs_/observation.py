@@ -348,8 +348,8 @@ class Observation(object):
         x = cos_dec * ra.cos()
         y = cos_dec * ra.sin()
         z = dec.sin()
-        los = -Vector3.from_scalars(x,y,z)      # negative for incoming photon
-
+        los = Vector3.from_scalars(x,y,z)
+        
         # Define the rotation from J2000 to the observer's frame
         rotation = self.frame.wrt(Frame.J2000)
 
