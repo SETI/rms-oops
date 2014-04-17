@@ -147,8 +147,10 @@ class ISS(object):
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal coordinate system is
         # rotated 180 degrees
-        nac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_NAC")
-        wac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_WAC")
+        nac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
+                                            id="CASSINI_ISS_NAC_FLIPPED")
+        wac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
+                                            id="CASSINI_ISS_WAC_FLIPPED")
 
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
         ignore = oops.frame.Cmatrix(rot180, nac_flipped, id="CASSINI_ISS_NAC")
