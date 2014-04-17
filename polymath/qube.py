@@ -1112,6 +1112,11 @@ class Qube(object):
     def is_empty(arg):
         return (type(arg) == Qube.EMPTY_CLASS)
 
+    @staticmethod
+    def is_real_number(arg):
+        """Return True if arg is of a Python numeric or NumPy numeric type.""" 
+        return isinstance(arg, numbers.Real) or isinstance(arg, np.number) 
+            
     def masked_single(self):
         """Return an object of this subclass containing one masked value."""
 
@@ -2245,7 +2250,7 @@ class Qube(object):
         if Qube.is_empty(arg): return arg
 
         # Handle multiplication by a number
-        if isinstance(arg, numbers.Real):
+        if Qube.is_real_number(arg):
             return self.mul_by_number(arg, recursive)
 
         # Convert arg to a Scalar if necessary
@@ -2288,7 +2293,7 @@ class Qube(object):
     def __rmul__(self, arg, recursive=True):
 
         # Handle multiplication by a number
-        if isinstance(arg, numbers.Real):
+        if Qube.is_real_number(arg):
             return self.mul_by_number(arg, recursive)
 
         # Convert arg to a Scalar and try again
@@ -2424,7 +2429,7 @@ class Qube(object):
         if Qube.is_empty(arg): return arg
 
         # Handle division by a number
-        if isinstance(arg, numbers.Real):
+        if Qube.is_real_number(arg):
             return self.div_by_number(arg, recursive)
 
         # Convert arg to a Scalar if necessary
@@ -2466,7 +2471,7 @@ class Qube(object):
     def __rtruediv__(self, arg, recursive=True):
 
         # Handle right division by a number
-        if isinstance(arg, numbers.Real):
+        if Qube.is_real_number(arg):
             return self.reciprocal(recursive).__mul__(arg, recursive)
 
         # Convert arg to a Scalar and try again
@@ -2705,7 +2710,7 @@ class Qube(object):
         if Qube.is_empty(arg): return arg
 
         # Handle modulus by a number
-        if isinstance(arg, numbers.Real):
+        if Qube.is_real_number(arg):
             return self.mod_by_number(arg, recursive)
 
         # Convert arg to a Scalar if necessary
@@ -4042,7 +4047,7 @@ class Qube(object):
         for obj in objects:
             if obj is None: continue
             if Qube.is_empty(obj): continue
-            if isinstance(obj, numbers.Real): continue
+            if Qube.is_real_number(obj): continue
 
             # Get the next shape
             if type(obj) == tuple or type(obj) == list:
