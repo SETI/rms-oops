@@ -2,7 +2,10 @@
 # oops/inst/hst/wfc3/__init__.py: HST subclass WFC3
 ################################################################################
 
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 import oops
 from oops.inst.hst import HST
 

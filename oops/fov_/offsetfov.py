@@ -47,7 +47,7 @@ class OffsetFOV(FOV, Fittable):
         self.xy_offset = xy_offset
 
         if self.uv_offset is not None:
-            self.xy_offset = self.fov.xy_from_uv(self.uv_offset -
+            self.xy_offset = self.fov.xy_from_uv(self.uv_offset +
                                                  self.fov.uv_los)
 
         elif self.xy_offset is not None:

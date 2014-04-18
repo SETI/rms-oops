@@ -2,7 +2,10 @@
 # oops/inst/hst/wfc3/uvis.py: HST/WFC3 subclass UVIS
 ################################################################################
 
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 from oops.inst.hst.wfc3 import WFC3
 
 ################################################################################

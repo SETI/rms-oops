@@ -5,7 +5,10 @@
 #   images; local method deleted.
 ################################################################################
 
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 import oops
 from oops.inst.hst import HST
 

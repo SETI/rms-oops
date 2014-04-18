@@ -2,7 +2,10 @@
 # oops/inst/hst/acs/sbc.py: HST/ACS subclass SBC
 ################################################################################
 
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 from oops.inst.hst.acs import ACS
 
 ################################################################################

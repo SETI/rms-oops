@@ -2,7 +2,10 @@
 # oops/inst/hst/acs/hrc.py: HST/ACS subclass HRC
 ################################################################################
 
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 from oops.inst.hst.acs import ACS
 
 ################################################################################

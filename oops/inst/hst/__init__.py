@@ -19,7 +19,10 @@ from polymath import *
 import os
 import os.path
 import re
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 import glob
 import unittest
 import warnings

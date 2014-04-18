@@ -2,7 +2,10 @@
 # oops/inst/hst/nicmos/nic3.py: HST/NICMOS subclass NIC3
 ################################################################################
 
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 from oops.inst.hst.nicmos import NICMOS
 
 ################################################################################

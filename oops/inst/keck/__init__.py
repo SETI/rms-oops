@@ -9,7 +9,10 @@
 import numpy as np
 import os
 import re
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 import glob
 import unittest
 

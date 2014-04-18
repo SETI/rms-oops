@@ -6,7 +6,10 @@
 #
 ################################################################################
 
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 import oops
 from oops.inst.keck import Keck
 import numpy as np
