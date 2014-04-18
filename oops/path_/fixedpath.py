@@ -35,7 +35,8 @@ class FixedPath(Path):
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
         self.keys    = set()
-        self.shape   = []
+        self.shape   = Qube.broadcast_shape(self.pos, self.origin.shape,
+                                                      self.frame.shape)
 
         # Register if necessary
         if id:
