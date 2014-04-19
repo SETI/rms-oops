@@ -60,7 +60,7 @@ class InclinedFrame(Frame):
 
         self.shape = Qube.broadcast(self.inc, self.node, self.rate, self.epoch)
 
-        self.frame_id  = id or Frame.temporary_frame_id()
+        self.frame_id  = id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
         self.keys      = set()
@@ -75,10 +75,8 @@ class InclinedFrame(Frame):
         else:
             self.spin2 = None
 
-        if id:
-            self.register()
-        else:
-            self.wayframe = self
+        # Update wayframe and frame_id; register if not temporary
+        self.register()
 
     ########################################
 

@@ -12,7 +12,7 @@ from oops.frame_.frame import Frame
 class LinearPath(Path):
     """A path defining linear motion relative to another path and frame."""
 
-    def __init__(self, pos, epoch, origin, frame, id=None):
+    def __init__(self, pos, epoch, origin, frame=None, id=None):
         """Constructor for a LinearPath.
 
         Input:
@@ -23,7 +23,8 @@ class LinearPath(Path):
             epoch       time Scalar relative to which the motion is defined,
                         seconds TDB
             origin      the path or path ID of the reference point.
-            frame       the frame or frame ID of the coordinate system.
+            frame       the frame or frame ID of the coordinate system; None for
+                        the frame used by the origin path.
             id          the name under which to register the new path; None to
                         leave the path unregistered.
         """
@@ -45,18 +46,17 @@ class LinearPath(Path):
         self.epoch = Scalar.as_scalar(epoch)
 
         # Required attributes
-        self.path_id = id or Path.temporary_path_id()
+        self.path_id = id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
         self.keys    = set()
-        self.shape   = Qube.broadcast_shape(self.pos, self.vel, self.epoch,
-                                            self.origin.shape, self.frame.shape)
+        self.shape   = Qube.broadcasted_shape(self.pos, self.vel,
+                                              self.epoch,
+                                              self.origin.shape,
+                                              self.frame.shape)
 
-        # Register if necessary
-        if id:
-            self.register()
-        else:
-            self.waypoint = self
+        # Update waypoint and path_id; register only if necessary
+        self.register()
 
     ########################################
 

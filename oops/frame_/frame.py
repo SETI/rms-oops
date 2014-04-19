@@ -164,6 +164,9 @@ class Frame(object):
         name is given, then this frame is treated as a shortcut definition. The
         frame is cached under the shortcut name and also under the tuple
         (wayframe, reference_wayframe).
+
+        If the frame ID is None, blank, or begins with '.', it is treated as a
+        temporary path and is not registered.
         """
 
         # Make sure the registry is initialized
@@ -187,8 +190,25 @@ class Frame(object):
 
             return
 
+        # Fill in a temporary name if needed; don't register
+        if self.frame_id in (None, '', '.'):
+            self.frame_id = Frame.temporary_frame_id()
+            self.wayframe = self
+            return
+
+        # Don't register a name beginning with dot
+        if self.frame_id.startswith('.'):
+            self.wayframe = self
+            return
+
         # Make sure the reference frame is registered; otherwise raise KeyError
-        test = WAYFRAME_REG[self.reference.frame_id]
+        try:
+            test = WAYFRAME_REG[self.reference.frame_id]
+        except KeyError:
+            raise ValueError('frame ' + self.frame_id +
+                             ' cannot be registered because it connects to ' +
+                             'unregistered frame ' + self.reference.frame_id)
+
         test = FRAME_CACHE[self.reference]
 
         # If the ID is not registered, insert this as the primary definition
@@ -292,6 +312,11 @@ class Frame(object):
             if frame_id not in Frame.WAYFRAME_REGISTRY:
                 return frame_id
 
+    def is_registered(self):
+        """True if this frame is registered."""
+
+        return (self.frame_id in Frame.WAYFRAME_REGISTRY)
+
     ############################################################################
     # Frame Generators
     ############################################################################
@@ -307,6 +332,16 @@ class Frame(object):
 
         # Convert the reference to a frame
         reference = Frame.as_frame(reference)
+
+        # Deal with an unregistered frame
+        if not self.is_registered():
+            if self.reference == reference.wayframe:
+                return self
+
+            if reference.reference == self.wayframe:
+                return ReversedFrame(reference)
+
+            return LinkedFrame(self, self.reference.wrt(reference))
 
         # Use the cache if possible
         key = (self.wayframe, reference.wayframe)
@@ -551,7 +586,8 @@ class LinkedFrame(Frame):
             self.origin = self.parent.origin
             # assert self.frame.origin == self.parent.origin
 
-        self.register()     # for later use
+        if frame.is_registered() and parent.is_registered():
+            self.register()     # save for later use
 
     def transform_at_time(self, time, quick={}):
 
@@ -590,15 +626,15 @@ class RelativeFrame(Frame):
             self.origin = frame2.origin
             # assert frame2.origin == self.origin
 
-        self.register()     # for later use
+        if frame1.is_registered() and frame2.is_registered():
+            self.register()     # save for later use
 
     def transform_at_time(self, time, quick={}):
 
         xform1 = self.frame1.transform_at_time(time)
         xform2 = self.frame2.transform_at_time(time)
 
-        return xform1.rotate_transform(xform2.invert(), derivs=False,
-                                                        quick=quick)
+        return xform1.rotate_transform(xform2.invert())
 
 ################################################################################
 
@@ -618,7 +654,8 @@ class ReversedFrame(Frame):
         self.shape     = frame.shape
         self.keys      = set()
 
-        self.register()     # for later use
+        if frame.is_registered() and frame.reference.is_registered():
+            self.register()         # save for later use
 
     def transform_at_time(self, time, quick={}):
 
@@ -824,10 +861,6 @@ Frame.J2000.wrt_j2000 = Frame.J2000
 # Initialize the registry
 Frame.initialize_registry()
 
-# Inform friendly classes that this class exists
-# This is necessary to avoid circular load dependencies
-Transform.FRAME_CLASS = Frame
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -838,14 +871,17 @@ class Test_Frame(unittest.TestCase):
 
     def runTest(self):
 
-        # Imports are here to avoid conflicts
+        # Re-import here to so modules all come from the oops tree
+        from oops.frame_.frame import Frame, QuickFrame, ReversedFrame
+
+        # More imports are here to avoid conflicts
         import os
         import cspice
-
+        from oops.frame_.rotation import Rotation
         from oops.frame_.spiceframe import SpiceFrame
         from oops.path_.spicepath import SpicePath
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-        
+
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
@@ -853,6 +889,7 @@ class Test_Frame(unittest.TestCase):
         Frame.reset_registry()
 
         # QuickFrame tests
+
         ignore = SpicePath("EARTH", "SSB")
         ignore = SpicePath("MOON", "SSB")
         ignore = SpiceFrame("IAU_EARTH", "J2000")
@@ -873,6 +910,101 @@ class Test_Frame(unittest.TestCase):
         ignore = quick.transform_at_time(test) # takes way less than 1 sec
 
         Frame.reset_registry()
+
+        ################################
+        # Test unregistered frames
+        ################################
+
+        j2000 = Frame.as_wayframe('J2000')
+        rot_180 = Rotation(np.pi, 2, j2000)
+        self.assertTrue(rot_180.frame_id.startswith('TEMPORARY'))
+
+        xform = rot_180.transform_at_time(0.)
+        self.assertAlmostEqual(xform.matrix.vals[0,0], -1, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[0,1],  0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,0],  0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,1], -1, delta=1.e-14)
+        self.assertEqual(xform.matrix.vals[2,0], 0)
+        self.assertEqual(xform.matrix.vals[2,1], 0)
+        self.assertEqual(xform.matrix.vals[0,2], 0)
+        self.assertEqual(xform.matrix.vals[1,2], 0)
+        self.assertEqual(xform.matrix.vals[2,2], 1)
+
+        rot_neg60 = Rotation(-np.pi/3, 2, rot_180)
+        self.assertTrue(rot_neg60.frame_id.startswith('TEMPORARY'))
+
+        c60 = 0.5
+        s60 = np.sqrt(0.75)
+
+        xform = rot_neg60.transform_at_time(0.)
+        self.assertAlmostEqual(xform.matrix.vals[0,0],  c60, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[0,1], -s60, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,0],  s60, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,1],  c60, delta=1.e-14)
+        self.assertEqual(xform.matrix.vals[2,0], 0)
+        self.assertEqual(xform.matrix.vals[2,1], 0)
+        self.assertEqual(xform.matrix.vals[0,2], 0)
+        self.assertEqual(xform.matrix.vals[1,2], 0)
+        self.assertEqual(xform.matrix.vals[2,2], 1)
+
+        rot_neg120 = Rotation(-np.pi/1.5, 2, rot_neg60)
+        self.assertTrue(rot_neg120.frame_id.startswith('TEMPORARY'))
+
+        xform = rot_neg120.transform_at_time(0.)
+        self.assertAlmostEqual(xform.matrix.vals[0,0], -c60, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[0,1], -s60, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,0],  s60, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,1], -c60, delta=1.e-14)
+        self.assertEqual(xform.matrix.vals[2,0], 0)
+        self.assertEqual(xform.matrix.vals[2,1], 0)
+        self.assertEqual(xform.matrix.vals[0,2], 0)
+        self.assertEqual(xform.matrix.vals[1,2], 0)
+        self.assertEqual(xform.matrix.vals[2,2], 1)
+
+        # Attempt to register a frame defined relative to an unregistered frame
+        self.assertRaises(ValueError, Rotation, -np.pi, 2, rot_neg60, 'NEG180')
+
+        # Link unregistered frame to registered frame
+        identity = rot_neg120.wrt('J2000')
+
+        xform = identity.transform_at_time(0.)
+        self.assertAlmostEqual(xform.matrix.vals[0,0], 1, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[0,1], 0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,0], 0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,1], 1, delta=1.e-14)
+        self.assertEqual(xform.matrix.vals[2,0], 0)
+        self.assertEqual(xform.matrix.vals[2,1], 0)
+        self.assertEqual(xform.matrix.vals[0,2], 0)
+        self.assertEqual(xform.matrix.vals[1,2], 0)
+        self.assertEqual(xform.matrix.vals[2,2], 1)
+
+        # Link registered frame to unregistered frame
+        identity = Frame.J2000.wrt(rot_neg120)
+
+        xform = identity.transform_at_time(0.)
+        self.assertAlmostEqual(xform.matrix.vals[0,0], 1, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[0,1], 0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,0], 0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,1], 1, delta=1.e-14)
+        self.assertEqual(xform.matrix.vals[2,0], 0)
+        self.assertEqual(xform.matrix.vals[2,1], 0)
+        self.assertEqual(xform.matrix.vals[0,2], 0)
+        self.assertEqual(xform.matrix.vals[1,2], 0)
+        self.assertEqual(xform.matrix.vals[2,2], 1)
+
+        # Link unregistered frame to registered frame
+        identity = rot_neg120.wrt(rot_180)
+
+        xform = identity.transform_at_time(0.)
+        self.assertAlmostEqual(xform.matrix.vals[0,0], -1, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[0,1],  0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,0],  0, delta=1.e-14)
+        self.assertAlmostEqual(xform.matrix.vals[1,1], -1, delta=1.e-14)
+        self.assertEqual(xform.matrix.vals[2,0], 0)
+        self.assertEqual(xform.matrix.vals[2,1], 0)
+        self.assertEqual(xform.matrix.vals[0,2], 0)
+        self.assertEqual(xform.matrix.vals[1,2], 0)
+        self.assertEqual(xform.matrix.vals[2,2], 1)
 
 ########################################
 if __name__ == '__main__':

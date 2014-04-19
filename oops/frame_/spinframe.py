@@ -47,15 +47,13 @@ class SpinFrame(Frame):
         self.omega = Vector3(omega_vals, self.rate.mask)
 
         # Required attributes
-        self.frame_id  = id or Frame.temporary_frame_id()
+        self.frame_id  = id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
         self.keys      = set()
 
-        if id:
-            self.register()
-        else:
-            self.wayframe = self
+        # Update wayframe and frame_id; register if not temporary
+        self.register()
 
     ########################################
 

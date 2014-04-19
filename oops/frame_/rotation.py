@@ -39,15 +39,13 @@ class Rotation(Frame, Fittable):
         mat[..., self.axis1, self.axis1] =  mat[..., self.axis0, self.axis0]
         mat[..., self.axis1, self.axis0] = -mat[..., self.axis0, self.axis1]
 
-        self.frame_id  = id or Frame.temporary_frame_id()
+        self.frame_id  = id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
         self.keys      = set()
 
-        if id:
-            self.register()
-        else:
-            self.wayframe = self
+        # Update wayframe and frame_id; register if not temporary
+        self.register()
 
         # We need a wayframe before we can create the transform
         self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,

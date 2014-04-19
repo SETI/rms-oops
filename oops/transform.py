@@ -2,6 +2,7 @@
 # oops/transform.py: Class Transform
 ################################################################################
 
+import sys
 import numpy as np
 from polymath import *
 
@@ -50,7 +51,17 @@ class Transform(object):
         shape           the intrinsic shape of the transform.
     """
 
-    FRAME_CLASS = None      # undefined at load to avoid circular dependencies
+    ############################################################################
+    # Avoid circular dependencies with Frame class at load time
+    SAVED_FRAME_CLASS = None
+
+    @classmethod
+    def FRAME_CLASS(cls):
+        if cls.SAVED_FRAME_CLASS: return cls.SAVED_FRAME_CLASS
+        if 'oops.frame_.frame' in sys.modules:
+            cls.SAVED_FRAME_CLASS = sys.modules['oops.frame_.frame'].Frame
+        return cls.SAVED_FRAME_CLASS
+    ############################################################################
 
     def __init__(self, matrix, omega, frame, reference, origin=None):
         """Constructor for a Transform object.
@@ -71,8 +82,8 @@ class Transform(object):
 
         self.is_fixed = (self.omega == Vector3.ZERO)
 
-        self.frame     = Transform.FRAME_CLASS.as_frame(frame)
-        self.reference = Transform.FRAME_CLASS.as_frame(reference)
+        self.frame     = Transform.FRAME_CLASS().as_wayframe(frame)
+        self.reference = Transform.FRAME_CLASS().as_wayframe(reference)
 
         if origin is not None:
             self.origin = origin

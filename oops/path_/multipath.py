@@ -38,16 +38,13 @@ class MultiPath(Path):
             self.paths[index] = Path.as_path(path).wrt(self.origin, self.frame)
 
         # Fill in the path_id
-        self.path_id = id or Path.temporary_path_id()
+        self.path_id = id
 
         if self.path_id == '+':
             self.path_id = self.paths[0].path_id + '+'
 
-        # Register if necessary
-        if id:
-            self.register()
-        else:
-            self.waypoint = self
+        # Update waypoint and path_id; register only if necessary
+        self.register()
 
     ########################################
 

@@ -2,6 +2,7 @@
 # oops/event.py: Event class
 ################################################################################
 
+import sys
 import numpy as np
 from polymath import *
 
@@ -69,7 +70,17 @@ class Event(object):
     reasons to modify some subfields.
     """
 
-    PATH_CLASS = None       # undefined at load to avoid circular dependencies
+    ############################################################################
+    # Avoid circular dependencies with Path class at load time
+    SAVED_PATH_CLASS = None
+
+    @classmethod
+    def PATH_CLASS(cls):
+        if cls.SAVED_PATH_CLASS: return cls.SAVED_PATH_CLASS
+        if 'oops.path_.path' in sys.modules:
+            cls.SAVED_PATH_CLASS = sys.modules['oops.path_.path'].Path
+        return cls.SAVED_PATH_CLASS
+    ############################################################################
 
     def __init__(self, time, state, origin, frame=None, **subfields):
         """Constructor for the Event class
@@ -103,12 +114,8 @@ class Event(object):
         else:
             self.__state_ = Vector3.as_vector3(state).as_readonly()
 
-        origin = Event.PATH_CLASS.as_primary_path(origin)
-        self.__origin_ = origin.waypoint
-        self.__frame_  = origin.frame.wayframe
-
-        if frame is not None:
-            self.__frame_ = Frame.as_wayframe(frame)
+        self.__origin_ = Event.PATH_CLASS().as_waypoint(origin)
+        self.__frame_ = Frame.as_wayframe(frame) or origin.frame
 
         # Fill in default values for subfields as attributes
         self.dep = Empty.EMPTY
@@ -341,7 +348,7 @@ class Event(object):
         if origin is None:
             origin = self.__origin_
         else:
-            origin = Event.PATH_CLASS.as_waypoint(origin)
+            origin = Event.PATH_CLASS().as_waypoint(origin)
 
         if frame is None:
             frame = self.__frame_
@@ -357,7 +364,7 @@ class Event(object):
 
         # Because this is masked, we can re-use this Event for the SSB version
         event.filled_ssb = event.clone()
-        event.filled_ssb.__origin_ = Event.PATH_CLASS.SSB
+        event.filled_ssb.__origin_ = Event.PATH_CLASS().SSB
         event.filled_ssb.__frame_ = Frame.J2000
 
         event.filled_mask = True
@@ -383,7 +390,7 @@ class Event(object):
         """
 
         if self.filled_ssb is None:
-            self.filled_ssb = self.wrt(Event.PATH_CLASS.SSB, Frame.J2000,
+            self.filled_ssb = self.wrt(Event.PATH_CLASS().SSB, Frame.J2000,
                                        derivs=derivs, quick=quick)
             self.filled_ssb.filled_ssb = self.filled_ssb
 
@@ -415,7 +422,7 @@ class Event(object):
         if path is None: path = self.__origin_
         if frame is None: frame = self.__frame_
 
-        path = Event.PATH_CLASS.as_path(path)
+        path = Event.PATH_CLASS().as_path(path)
         frame = Frame.as_frame(frame)
 
         # Point to the working copy of this Event object
@@ -466,7 +473,7 @@ class Event(object):
 
         if path is None: return self
 
-        path = Event.PATH_CLASS.as_path(path)
+        path = Event.PATH_CLASS().as_path(path)
         if self.__origin_.waypoint == path.waypoint:
             if derivs:
                 return self

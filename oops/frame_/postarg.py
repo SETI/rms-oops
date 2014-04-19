@@ -45,15 +45,13 @@ class PosTarg(Frame):
 
         mat = ymat * xmat
 
-        self.frame_id  = id or Frame.temporary_frame_id()
+        self.frame_id  = id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
         self.keys      = set()
 
-        if id:
-            self.reregister()
-        else:
-            self.wayframe = self
+        # Update wayframe and frame_id; register if not temporary
+        self.register()
 
         # It needs a wayframe before we can define the transform
         self.transform = Transform(mat, Vector3.ZERO,

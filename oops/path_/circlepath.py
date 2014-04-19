@@ -45,7 +45,7 @@ class CirclePath(Path):
         self.rate   = Scalar.as_scalar(rate)
 
         # Required attributes
-        self.path_id = id or Path.temporary_path_id()
+        self.path_id = id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
         self.keys    = set()
@@ -54,10 +54,8 @@ class CirclePath(Path):
                                               self.origin.shape,
                                               self.frame.shape)
 
-        if id:
-            self.register()
-        else:
-            self.waypoint = self
+        # Update waypoint and path_id; register only if necessary
+        self.register()
 
     ########################################
 

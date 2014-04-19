@@ -39,16 +39,14 @@ class Tracker(Frame):
         assert self.observer_path.shape == ()
 
         # Required attributes
-        self.frame_id  = id or Frame.temporary_frame_id()
+        self.frame_id  = id
         self.reference = self.fixed_frame.reference
         self.origin    = self.fixed_frame.origin
         self.shape     = ()
         self.keys      = set()
 
-        if id:
-            self.register()
-        else:
-            self.wayframe = self
+        # Update wayframe and frame_id; register if not temporary
+        self.register()
 
         obs_event = Event(epoch, (Vector3.ZERO,Vector3.ZERO),
                           self.observer_path, Frame.J2000)

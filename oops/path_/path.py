@@ -166,6 +166,9 @@ class Path(object):
         If override is True, then this path will override the definition of any
         previous path with the same name. The old path might still exist but it
         will not be available from the registry.
+
+        If the path ID is None, blank, or begins with '.', it is treated as a
+        temporary path and is not registered.
         """
 
         # Make sure the registry is initialized
@@ -190,6 +193,17 @@ class Path(object):
             if not hasattr(self, 'waypoint') or self.waypoint is None:
                 self.waypoint = WAYPOINT_REG[id]
 
+            return
+
+        # Fill in a temporary name if needed; don't register
+        if self.path_id in (None, '', '.'):
+            self.path_id = Path.temporary_path_id()
+            self.waypoint = self
+            return
+
+        # Don't register a name beginning with dot
+        if self.path_id.startswith('.'):
+            self.waypoint = self
             return
 
         # Make sure the origin path is registered; raise a KeyError otherwise
@@ -310,6 +324,11 @@ class Path(object):
 
             if path_id not in Path.WAYPOINT_REGISTRY:
                 return path_id
+
+    def is_registered(self):
+        """True if this frame is registered."""
+
+        return (self.path_id in Path.WAYPOINT_REGISTRY)
 
     ############################################################################
     # Event operations
@@ -663,12 +682,26 @@ class Path(object):
         origin = Path.as_path(origin)
 
         # Determine the coordinate frame
-        frame = Frame.as_frame(frame)
+        frame = Frame.as_wayframe(frame)
         if frame is None:
             frame = origin.frame
 
+        # Use this path if possible
+        if self.origin == origin.waypoint:
+            if self.frame == frame:
+                return self
+            else:
+                return RotatedPath(self, frame)
+
+        if origin.origin == self.waypoint:
+            newpath = ReversedPath(origin)
+            if newpath.frame == frame:
+                return newpath
+            else:
+                return RotatedPath(newpath, frame)
+
         # If the path already exists, just return it
-        key = (self.waypoint, origin.waypoint, frame.wayframe)
+        key = (self.waypoint, origin.waypoint, frame)
         if key in Path.PATH_CACHE:
             return Path.PATH_CACHE[key]
 
@@ -683,14 +716,22 @@ class Path(object):
             path = Path.as_primary_path(self)
         except KeyError:
             # On failure, link from the origin path
-            return LinkedPath(self, self.origin.wrt(origin), frame)
+            newpath = LinkedPath(self, self.origin.wrt(origin))
+            if newpath.frame == frame:
+                return newpath
+            else:
+                return RotatedPath(newpath, frame)
 
         # Look up the primary definition of the origin path
         try:
             origin = Path.as_primary_path(origin)
         except KeyError:
             # On failure, link through the origin's origin
-            return RelativePath(path.wrt(origin.origin, frame), origin, frame)
+            newpath = RelativePath(path.wrt(origin.origin, frame), origin)
+            if newpath.frame == frame:
+                return newpath
+            else:
+                return RotatedPath(newpath, frame)
 
         # If the path is an ancestor of the origin, reverse the direction and
         # try again
@@ -700,7 +741,11 @@ class Path(object):
 
         # Otherwise, search from the parent path and then link
         newpath = path.ancestry[0].wrt(origin, frame)
-        return LinkedPath(path, newpath)
+        newpath = LinkedPath(path, newpath)
+        if newpath.frame == frame:
+            return newpath
+        else:
+            return RotatedPath(newpath, frame)
 
     ########################################
 
@@ -938,7 +983,8 @@ class LinkedPath(Path):
         self.shape    = Qube.broadcasted_shape(path.shape, parent.shape)
         self.keys     = set()
 
-        self.register()     # for later use
+        if path.is_registered() and parent.is_registered():
+            self.register()     # save for later use
 
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
@@ -985,7 +1031,8 @@ class RelativePath(Path):
         self.shape    = Qube.broadcasted_shape(path.shape, origin.shape)
         self.keys     = set()
 
-        self.register()     # for later use
+        if path.is_registered() and origin.is_registered():
+            self.register()     # save for later use
 
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
@@ -1018,7 +1065,8 @@ class ReversedPath(Path):
         self.shape    = self.path.shape
         self.keys     = set()
 
-        self.register()     # for later use
+        if path.is_registered():
+            self.register()     # save for later use
 
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
@@ -1049,7 +1097,8 @@ class RotatedPath(Path):
         self.shape    = path.shape
         self.keys     = set()
 
-        self.register()     # for later use
+        if path.is_registered():
+            self.register()     # save for later use
 
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
@@ -1233,10 +1282,6 @@ Path.SSB.wrt_ssb = Path.SSB
 # Initialize the registry
 Path.initialize_registry()
 
-# Inform friendly classes that this class exists
-# This is necessary to avoid circular load dependencies
-Event.PATH_CLASS = Path
-
 ###############################################################################
 # UNIT TESTS
 ################################################################################
@@ -1247,20 +1292,20 @@ class Test_Path(unittest.TestCase):
 
     def runTest(self):
 
-        # NOTE: THIS UNIT TEST IS KNOWN TO NOT WORK STANDALONE BECAUSE THE
-        # PATH CLASS IN THIS FILE ENDS UP BEING A DIFFERENT CLASS FROM
-        # oops.PATH_.PATH.PATH. EVERYTHING IS FINE AS LONG AS YOU RUN FROM
-        # ONE OF THE HIGHER-LEVEL UNITTESTER PROGRAMS.
+        # Re-import here to so modules all come from the oops tree
+        from oops.path_.path import Path, LinkedPath, ReversedPath, \
+                                          RelativePath, RotatedPath, QuickPath
+
+        # More imports are here to avoid conflicts
+        import os
+        import cspice
+        from oops.path_.spicepath import SpicePath
+        from oops.path_.linearpath import LinearPath
+        from oops.frame_.spiceframe import SpiceFrame
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         
         Path.USE_QUICKPATHS = False
 
-        # Imports are here to avoid conflicts
-        from oops.path_.spicepath import SpicePath
-        from oops.frame_.spiceframe import SpiceFrame
-        import os
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-        import cspice
-        
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
         # Registry tests
@@ -1338,6 +1383,47 @@ class Test_Path(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+
+        ################################
+        # Test unregistered paths
+        ################################
+
+        ssb = Path.as_waypoint('SSB')
+
+        slider1 = LinearPath(([3,0,0],[0,3,0]), 0., ssb)
+        self.assertTrue(slider1.path_id.startswith('TEMPORARY'))
+
+        event = slider1.event_at_time(1.)
+        self.assertEqual(event.pos, (3,3,0))
+        self.assertEqual(event.vel, (0,3,0))
+
+        slider2 = LinearPath(([-2,0,0],[0,0,-2]), 0., slider1)
+        self.assertTrue(slider2.path_id.startswith('TEMPORARY'))
+
+        event = slider2.event_at_time(1.)
+        self.assertEqual(event.pos, (-2,0,-2))
+        self.assertEqual(event.vel, (0,0,-2))
+
+        slider3 = LinearPath(([-1,0,0],[0,-3,2]), 0., slider2)
+        self.assertTrue(slider3.path_id.startswith('TEMPORARY'))
+
+        event = slider3.event_at_time(1.)
+        self.assertEqual(event.pos, (-1,-3,2))
+        self.assertEqual(event.vel, ( 0,-3,2))
+
+        # Link unregistered frame to registered frame
+        static = slider3.wrt(ssb)
+
+        event = static.event_at_time(1.)
+        self.assertEqual(event.pos, (0,0,0))
+        self.assertEqual(event.vel, (0,0,0))
+
+        # Link registered frame to unregistered frame
+        static = ssb.wrt(slider3)
+
+        event = static.event_at_time(1.)
+        self.assertEqual(event.pos, (0,0,0))
+        self.assertEqual(event.vel, (0,0,0))
 
 ########################################
 if __name__ == '__main__':

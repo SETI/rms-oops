@@ -31,17 +31,14 @@ class Cmatrix(Frame):
         cmatrix = Matrix3.as_matrix3(cmatrix)
 
         # Required attributes
-        self.frame_id  = id or Frame.temporary_frame_id()
+        self.frame_id  = id
         self.reference = Frame.as_wayframe(reference) or Frame.J2000
         self.origin    = self.reference.origin
         self.shape     = cmatrix.shape
         self.keys      = set()
 
-        # Register if necessary
-        if id:
-            self.register()
-        else:
-            self.wayframe = self
+        # Update wayframe and frame_id; register if not temporary
+        self.register()
 
         # It needs a wayframe before we can construct the transform
         self.transform = Transform(cmatrix, Vector3.ZERO,

@@ -31,18 +31,15 @@ class FixedPath(Path):
         self.pos.insert_deriv('t', Vector3.ZERO, override=True)
 
         # Required attributes
-        self.path_id = id or Path.temporary_path_id()
+        self.path_id = id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
         self.keys    = set()
         self.shape   = Qube.broadcast_shape(self.pos, self.origin.shape,
                                                       self.frame.shape)
 
-        # Register if necessary
-        if id:
-            self.register()
-        else:
-            self.waypoint = self
+        # Update waypoint and path_id; register only if necessary
+        self.register()
 
     ########################################
 
