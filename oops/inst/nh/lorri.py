@@ -8,20 +8,19 @@ import numpy as np
 import julian
 import pyfits
 import pdstable
-import oops
 import solar
 
-from oops.inst.nh.nh_ import NewHorizons
-
+import oops
+from oops.inst.nh.nh_  import NewHorizons
 
 ################################################################################
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, use_fits_geom=False, **parameters):
+def from_file(filespec, geom='spice', pointing='spice', **parameters):
     """A general, static method to return a Snapshot object based on a given
     NewHorizons LORRI image file.
-    
+
     If parameters["data"] is False, no data or associated arrays are loaded.
     If parameters["calibration"] is False, no calibration objects are created.
     If parameters["headers"] is False, no header dictionary is returned.
@@ -33,197 +32,162 @@ def from_file(filespec, use_fits_geom=False, **parameters):
     the Sun to the target body (in AU) for calibration purposes.
     """
 
+    assert geom in {'spice', 'fits'}
+    assert pointing in {'spice', 'fits'}
+
     LORRI.initialize()    # Define everything the first time through
 
     # Load the FITS file
     nh_file = pyfits.open(filespec)
+    filename = os.path.split(filespec)[1]
 
     # Get key information from the header
-    texp = nh_file[0].header["EXPTIME"]
-    tdb_midtime = nh_file[0].header["SPCSCET"]
-    tstart = tdb_midtime-texp/2
-    binning_mode = nh_file[0].header["SFORMAT"]
+    texp = nh_file[0].header['EXPTIME']
+    tdb_midtime = nh_file[0].header['SPCSCET']
+    tstart = tdb_midtime - texp/2
+
+    binning_mode = nh_file[0].header['SFORMAT']
     fov = LORRI.fovs[binning_mode]
-    target_name = nh_file[0].header["SPCCBTNM"]
-    target_body = None
-    try:
-        target_body = oops.Body.lookup(target_name)
-    except:
-        pass
-    
+
+    target_name = nh_file[0].header['SPCCBTNM']
+    if target_name.strip() == '---':
+        target_name = 'PLUTO'
+
+    target_body = oops.Body.lookup(target_name)
+
     # Make sure the SPICE kernels are loaded
     NewHorizons.load_cks( tstart, tstart + texp)
     NewHorizons.load_spks(tstart, tstart + texp)
 
-    path_id = "NEW HORIZONS"
-    frame_id = "NH_LORRI_"+binning_mode
-    
-    if use_fits_geom:
-        # Don't use the SPICE information to figure out where we're looking
+    if geom != 'spice':
+
         # First construct a path from the Sun to NH
-        vecx = -nh_file[0].header["SPCSSCX"]
-        vecy = -nh_file[0].header["SPCSSCY"]
-        vecz = -nh_file[0].header["SPCSSCZ"]
+        posx = -nh_file[0].header['SPCSSCX']
+        posy = -nh_file[0].header['SPCSSCY']
+        posz = -nh_file[0].header['SPCSSCZ']
+
+        velx = -nh_file[0].header['SPCSSCVX']
+        vely = -nh_file[0].header['SPCSSCVY']
+        velz = -nh_file[0].header['SPCSSCVZ']
+
         # The path_id has to be unique to this observation
-        path_id = "NH_LORRI_PATH_"+str(tstart)
-        sc_path = oops.path.FixedPath(oops.Vector3([vecx, vecy, vecz]), "SUN",
-                                      "J2000", path_id)
+        sun_path = oops.Path.as_waypoint('SUN')
+        path_id = '.NH_PATH_' + filename
+        sc_path = oops.path.LinearPath((oops.Vector3([posx, posy, posz]),
+                                        oops.Vector3([velx, vely, velz])),
+                                       tdb_midtime, sun_path,
+                                       oops.Frame.J2000,
+                                       id=path_id)
+        path = oops.Path.as_waypoint(sc_path)
+    else:
+        path = oops.Path.as_waypoint('NEW HORIZONS')
+
+    if pointing != 'spice':
 
         # Next create a frame based on the boresight
-        ra = nh_file[0].header["SPCBRRA"]
-        dec = nh_file[0].header["SPCBRDEC"]
-        north_clk = nh_file[0].header["SPCEMEN"]
-        scet = nh_file[0].header["SPCSCET"]
-        # The frame_id has to be unique to this observation
-        frame_id = "NH_LORRI_FRAME_"+str(tstart) 
-        oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk, "J2000",
-                                       frame_id+"_FLIPPED")
+        ra = nh_file[0].header['SPCBRRA']
+        dec = nh_file[0].header['SPCBRDEC']
+        north_clk = nh_file[0].header['SPCEMEN']
+        scet = nh_file[0].header['SPCSCET']
 
-        # We have to flip the X/Y axes because the LORRI standard has X
-        # vertical and Y horizontal
-        flipxy = oops.Matrix3([[0,1,0],
-                               [1,0,0],
-                               [0,0,1]])
-        oops.frame.Cmatrix(flipxy, frame_id+"_FLIPPED", frame_id)
-    
+        frame_id = '.NH_FRAME_' + filename
+        lorri_frame = oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk,
+                                                     oops.Frame.J2000,
+                                                     id=frame_id)
+        frame = oops.Frame.as_wayframe(lorri_frame)
+    else:
+        frame = oops.Frame.as_wayframe('NH_LORRI')
+
     # Create a Snapshot
-    snapshot = oops.obs.Snapshot(("v","u"), tstart, texp, fov,
-                                 path_id, frame_id,
+    snapshot = oops.obs.Snapshot(('v','u'), tstart, texp, fov, path, frame,
                                  target = target_name,
-                                 instrument = "LORRI")
+                                 instrument = 'LORRI')
 
     # Interpret loader options
-    if parameters.has_key("astrometry") and parameters["astrometry"]:
+    if ('astrometry' in parameters) and parameters['astrometry']:
         include_data = False
         include_calibration = False
         include_headers = False
 
     else:
-        include_data = (not parameters.has_key("data") or
-                        parameters["data"])
-        include_calibration = (not parameters.has_key("calibration") or
-                        parameters["calibration"])
-        include_headers = (not parameters.has_key("headers") or
-                        parameters["headers"])
+        include_data = ('data' not in parameters) or parameters['data']
+        include_calibration = (('calibration' not in parameters) or
+                               parameters['calibration'])
+        include_headers = ('headers' not in parameters) or parameters['headers']
 
     if include_data:
         data = nh_file[0].data
-        error = nh_file[1].data
-        quality = nh_file[2].data
+        error = None
+        quality = None
 
-        snapshot.insert_subfield("data", data)
-        snapshot.insert_subfield("error", error)
-        snapshot.insert_subfield("quality", quality)
+        try:
+            error = nh_file[1].data
+            quality = nh_file[2].data
+        except IndexError:
+            pass
+
+        snapshot.insert_subfield('data', data)
+        snapshot.insert_subfield('error', error)
+        snapshot.insert_subfield('quality', quality)
 
     if include_calibration:
         spectral_name = target_name
-        if parameters.has_key("calib_body"):
-            spectral_name = parameters["calib_body"]
+        if parameters.has_key('calib_body'):
+            spectral_name = parameters['calib_body']
     
         # Look up the solar range...
         try:
-            solar_range = parameters["solar_range"]
+            solar_range = parameters['solar_range']
         except KeyError:
             solar_range = None
     
         # If necessary, get the solar range from the target name
         if solar_range is None and target_body is not None:
-            target = oops.Path.as_path(target_body.path.path_id)
-            target_sun_path = target.wrt("SUN")
+            target_sun_path = oops.Path.as_waypoint(target_name).wrt('SUN')
             # Paths of the relevant bodies need to be defined in advance!
     
             sun_event = target_sun_path.event_at_time(tdb_midtime)
             solar_range = sun_event.pos.norm().vals / solar.AU
     
         if solar_range is None:
-            raise IOError("Calibration can't figure out range from Sun to "
-                          "target body "+target_name+" in file "+filespec)
+            raise IOError("Calibration can't figure out range from Sun to " +
+                          "target body " + target_name + " in file " +
+                          filespec)
 
         extended_calib = {}
         point_calib = {}
 
-        for spectral_name in ["SOLAR", "PLUTO", "PHOLUS", "CHARON",
-                              "JUPITER"]:
-            F_solar = 176 # pivot 6076.2 A at 1 AU
+        for spectral_name in ['SOLAR', 'PLUTO', 'PHOLUS', 'CHARON', 'JUPITER']:
 
             # Extended source
-            spectral_radiance = nh_file[0].header["R"+spectral_name]
-            extended_factor = 1/texp/spectral_radiance
-            # Conversion to I/F
-            extended_factor *= np.pi * solar_range**2 / F_solar
+            spectral_radiance = nh_file[0].header['R' + spectral_name]
 
             # Point source
-            spectral_irradiance = nh_file[0].header["P"+spectral_name]
-            point_factor = 1/texp/spectral_irradiance
+            spectral_irradiance = nh_file[0].header['P' + spectral_name]
+    
+            F_solar = 176.  # pivot 6076.2 A at 1 AU
+
             # Conversion to I/F
-            point_factor *= 1/fov.uv_area * np.pi * solar_range**2 / F_solar
+            extended_factor = (1./ texp/spectral_radiance * np.pi *
+                               solar_range**2 / F_solar)
+            point_factor = 1. / texp / spectral_irradiance
         
-            extended_calib[spectral_name] = oops.calib.ExtendedSource("I/F",
-                                              extended_factor)
-            point_calib[spectral_name] = oops.calib.PointSource("I/F",
-                                              point_factor, fov)
+            extended_calib[spectral_name] = oops.calib.ExtendedSource('I/F',
+                                                            extended_factor)
+            point_calib[spectral_name] = oops.calib.PointSource('I/F',
+                                                            point_factor, fov)
         
-        snapshot.insert_subfield("point_calib", point_calib)
-        snapshot.insert_subfield("extended_calib", extended_calib)
+        snapshot.insert_subfield('point_calib', point_calib)
+        snapshot.insert_subfield('extended_calib', extended_calib)
 
     if include_headers:
         headers = []
         for objects in nh_file:
             headers.append(objects.header)
 
-        snapshot.insert_subfield("headers", headers)
-                               
+        snapshot.insert_subfield('headers', headers)
+
     return snapshot
-
-################################################################################
-
-def from_index(filespec, parameters={}):
-    """A static method to return a list of Snapshot objects, one for each row
-    in an LORRI index file. The filespec refers to the label of the index file.
-    """
-
-    assert False # Not implemented
-
-#    LORRI.initialize()    # Define everything the first time through
-#
-#    # Read the index file
-#    COLUMNS = []        # Return all columns
-#    TIMES = ["START_TIME"]
-#    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
-#    row_dicts = table.dicts_by_row()
-#
-#    # Create a list of Snapshot objects
-#    snapshots = []
-#    for dict in row_dicts:
-#
-#        tstart = julian.tdb_from_tai(dict["START_TIME"])
-#        texp = max(1.e-3, dict["EXPOSURE_DURATION"]) / 1000.
-#        mode = dict["INSTRUMENT_MODE_ID"]
-#
-#        name = dict["INSTRUMENT_NAME"]
-#        if "WIDE" in name:
-#            camera = "WAC"
-#        else:
-#            camera = "NAC"
-#
-#        item = oops.obs.Snapshot(("v","u"), tstart, texp, LORRI.fovs[camera,mode],
-#                                 "NEWHORIZONS", "NEWHORIZONS_LORRI_" + camera,
-#                                 dict = dict,       # Add index dictionary
-#                                 index_dict = dict, # Old name
-#                                 instrument = "LORRI",
-#                                 detector = camera,
-#                                 sampling = mode)
-#
-#        snapshots.append(item)
-#
-#    # Make sure all the SPICE kernels are loaded
-#    tdb0 = row_dicts[ 0]["START_TIME"]
-#    tdb1 = row_dicts[-1]["START_TIME"]
-#
-#    NewHorizons.load_cks( tdb0, tdb1)
-#    NewHorizons.load_spks(tdb0, tdb1)
-#
-#    return snapshots
 
 ################################################################################
 
@@ -246,45 +210,37 @@ class LORRI(object):
         NewHorizons.load_instruments()
 
         # Load the instrument kernel
-        LORRI.instrument_kernel = NewHorizons.spice_instrument_kernel("LORRI")[0]
+        LORRI.instrument_kernel = NewHorizons.spice_instrument_kernel('LORRI')[0]
 
         # Construct a flat FOV for each camera
-        for binning_mode, binning_id in [("1X1", -98301), ("4X4", -98302)]:
-            info = LORRI.instrument_kernel["INS"][binning_id]
+        for binning_mode, binning_id in [('1X1', -98301), ('4X4', -98302)]:
+            info = LORRI.instrument_kernel['INS'][binning_id]
 
             # Full field of view
-            lines = info["PIXEL_LINES"]
-            samples = info["PIXEL_SAMPLES"]
+            lines = info['PIXEL_LINES']
+            samples = info['PIXEL_SAMPLES']
 
-            xfov = info["FOV_REF_ANGLE"]
-            yfov = info["FOV_CROSS_ANGLE"]
-            assert info["FOV_ANGLE_UNITS"] == "DEGREES"
+            xfov = info['FOV_REF_ANGLE']
+            yfov = info['FOV_CROSS_ANGLE']
+            assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
             
             uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
             vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
             
             # Display directions: [u,v] = [right,down]
-            full_fov = oops.fov.FlatFOV((-uscale,-vscale), (samples,lines))
+            full_fov = oops.fov.FlatFOV((uscale,-vscale), (samples,lines))
 
             # Load the dictionary
             LORRI.fovs[binning_mode] = full_fov
 
         # Construct a SpiceFrame for each camera
-        ignore = oops.frame.SpiceFrame("NH_LORRI_1x1",
-                                       id='NH_LORRI_1X1_FLIPPED')
-        ignore = oops.frame.SpiceFrame("NH_LORRI_4x4",
-                                       id='NH_LORRI_4X4_FLIPPED')
+        flipped_lorri_frame = oops.frame.SpiceFrame('NH_LORRI')
 
-        # For some reason the SPICE IK gives the boresight along -Z instead of
-        # +Z,  so we have to flip all axes.
-        flipxyz = oops.Matrix3([[-1, 0, 0],
-                                [ 0,-1, 0],
+        # The SPICE IK gives the boresight along -Z, so flip axes.
+        flipxyz = oops.Matrix3([[ 0, 1, 0],
+                                [ 1, 0, 0],
                                 [ 0, 0,-1]])
-        oops.frame.Cmatrix(flipxyz, "NH_LORRI_1X1_FLIPPED",
-                           "NH_LORRI_1X1")
-
-        oops.frame.Cmatrix(flipxyz, "NH_LORRI_4X4_FLIPPED",
-                           "NH_LORRI_4X4")
+        ignore = oops.frame.Cmatrix(flipxyz, flipped_lorri_frame, 'NH_LORRI')
 
         LORRI.initialized = True
 

@@ -38,7 +38,7 @@ oops.spice.load_leap_seconds()
 class NewHorizons(object):
     """A instance-free class to hold NewHorizons-specific parameters."""
 
-    START_TIME = "1997-10-01"
+    START_TIME = "2006-10-01"
     STOP_TIME  = "2018-01-01"
     
     TDB0 = julian.tdb_from_tai(julian.tai_from_iso(START_TIME))
@@ -47,13 +47,10 @@ class NewHorizons(object):
     DTDB = (TDB1 - TDB0) / MONTHS
     SLOP = 43200.
     
-    CK_SUBPATH = os.path.join("New-Horizons", "CK-reconstructed")
     CK_LOADED  = np.zeros(MONTHS, dtype="bool")  # True if month was loaded
     CK_LIST    = np.empty(MONTHS, dtype="object")# Kernels needed
     CK_DICT    = {}     # A dictionary of kernel names returning True if loaded
     
-    SPK_SUBPATH = os.path.join("New-Horizons", "SPK-reconstructed")
-    SPK_PREDICT = os.path.join("New-Horizons", "SPK-predicted")
     SPK_LOADED  = np.zeros(MONTHS, dtype="bool")
     SPK_LIST    = np.empty(MONTHS, dtype="object")
     SPK_DICT    = {}
@@ -71,10 +68,12 @@ class NewHorizons(object):
         spicedb.open_db()
 
         kernels = spicedb.select_ck(-98, time=("1000-01-01", "2999-12-31"))
-        NewHorizons.initialize_kernels(kernels, NewHorizons.CK_LIST, NewHorizons.CK_DICT)
+        NewHorizons.initialize_kernels(kernels, NewHorizons.CK_LIST,
+                                                NewHorizons.CK_DICT)
 
         kernels = spicedb.select_spk(-98, time=("1000-01-01", "2999-12-31"))
-        NewHorizons.initialize_kernels(kernels, NewHorizons.SPK_LIST, NewHorizons.SPK_DICT)
+        NewHorizons.initialize_kernels(kernels, NewHorizons.SPK_LIST,
+                                                NewHorizons.SPK_DICT)
 
         spicedb.close_db()
 
@@ -107,8 +106,9 @@ class NewHorizons(object):
         """Ensures that the C kernels applicable at or near the given time have
         been furnished. The time can be tai or tdb."""
 
-        NewHorizons.load_kernels(t, t, NewHorizons.CK_LOADED, NewHorizons.CK_LIST,
-                                 NewHorizons.CK_DICT)
+        NewHorizons.load_kernels(t, t, NewHorizons.CK_LOADED,
+                                       NewHorizons.CK_LIST,
+                                       NewHorizons.CK_DICT)
 
     @staticmethod
     def load_cks(t0, t1):
@@ -116,24 +116,27 @@ class NewHorizons(object):
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb.
         """
 
-        NewHorizons.load_kernels(t0, t1, NewHorizons.CK_LOADED, NewHorizons.CK_LIST,
-                                 NewHorizons.CK_DICT)
+        NewHorizons.load_kernels(t0, t1, NewHorizons.CK_LOADED,
+                                         NewHorizons.CK_LIST,
+                                         NewHorizons.CK_DICT)
 
     @staticmethod
     def load_spk(t):
         """Ensures that the SPK kernels applicable at or near the given time have
         been furnished. The time can be tai or tdb."""
 
-        NewHorizons.load_kernels(t, t, NewHorizons.SPK_LOADED, NewHorizons.SPK_LIST,
-                                 NewHorizons.SPK_DICT)
+        NewHorizons.load_kernels(t, t, NewHorizons.SPK_LOADED,
+                                       NewHorizons.SPK_LIST,
+                                       NewHorizons.SPK_DICT)
 
     @staticmethod
     def load_spks(t0, t1):
         """Ensures that all the SPK kernels applicable near or within the time
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb."""
 
-        NewHorizons.load_kernels(t0, t1, NewHorizons.SPK_LOADED, NewHorizons.SPK_LIST,
-                                 NewHorizons.SPK_DICT)
+        NewHorizons.load_kernels(t0, t1, NewHorizons.SPK_LOADED,
+                                         NewHorizons.SPK_LIST,
+                                         NewHorizons.SPK_DICT)
 
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, dict):
@@ -206,31 +209,25 @@ class NewHorizons(object):
         # On later calls, return quickly if there's nothing to do
         if instruments == []: return
 
-        # Check the formatting of the "as of" date
-        if asof is not None:
-            (day, sec) = julian.day_sec_from_iso(asof)
-            asof = julian.ymdhms_format_from_day_sec(day, sec)
-
+        # Load instrument kernels
         spicedb.open_db()
-
-        # Furnish instruments and frames
-        kernels = spicedb.furnish_inst(-98, inst=instruments, asof=asof,
-                                            fast=True)
-
+        ignore = spicedb.furnish_inst(-98, instruments, asof=asof)
         spicedb.close_db()
+
+        NewHorizons.loaded_instruments += instruments
 
     ############################################################################
     # Routines for managing text kernel information
     ############################################################################
 
     @staticmethod
-    def spice_instrument_kernel(inst, asof=None):
+    def spice_instrument_kernel(inst_name, asof=None):
         """Return a dictionary containing the Instrument Kernel information.
 
-        Also furnishes it for use by the SPICE tools.
+        It also furnishes it for use by the SPICE tools.
 
         Input:
-            inst        one of "LORRI", etc.
+            inst_name   one of "LORRI", etc.
             asof        an optional date in the past, in ISO date or date-time
                         format. If provided, then the information provided will
                         be applicable as of that date. Otherwise, the most
@@ -241,13 +238,10 @@ class NewHorizons(object):
                             the name of the kernel.
         """
 
-        if asof is not None:
-            (day,sec) = julian.day_sec_from_iso(stop_time)
-            asof = julian.ymdhms_format_from_day_sec(day, sec)
-
         spicedb.open_db()
-        kernel_info = spicedb.select_inst(-98, types="IK", inst=inst, asof=asof)
-        spicedb.furnish_kernels(kernel_info, fast=True)
+        kernel_info = spicedb.select_inst(-98, inst=inst_name, types="IK",
+                                               asof=asof)
+        spicedb.furnish_kernels(kernel_info)
         spicedb.close_db()
 
         return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
@@ -276,10 +270,11 @@ class NewHorizons(object):
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()
-        kernel_list = spicedb.select_inst(-98, types="FK", asof=asof)
-        spicedb.furnish_kernels(kernel_info, fast=True)
+        kernel_info = spicedb.select_inst(-98, inst=inst_name, types="FK",
+                                               asof=asof)
+        spicedb.furnish_kernels(kernel_info)
         spicedb.close_db()
 
-        return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))
+        return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
 
 ################################################################################
