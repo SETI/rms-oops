@@ -135,10 +135,16 @@ class Packrat(object):
             self.file = open(filename, 'r+')
 
             # Jump to just before the last line of the file
-            for line in self.file:
-                pass
-
-            self.file.seek(-len(line), 2)
+            last_pos = 0
+            new_last_pos = 0
+            while True:
+                old_line = self.file.readline()
+                if len(old_line) == 0:
+                    break
+                last_pos = new_last_pos
+                new_last_pos = self.file.tell()
+                
+            self.file.seek(last_pos, 0)
 
     @staticmethod
     def open(filename, access='r', indent=2, savings=(1000,1000)):
