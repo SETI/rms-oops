@@ -45,7 +45,8 @@ class Packrat(object):
     ENTITIES = {'"': '&quot;', "'": '&apos;'}
     UNENTITIES = {'&quot;':'"', '&apos;': "'"}
 
-    def __init__(self, filename, access='w',  indent=2, savings=1.e5):
+    def __init__(self, filename, access='w', indent=2, savings=1.e5,
+                       crlf=None):
         """Create a Packrat object for write or append.
 
         It opens a new file of the given name. Use the close() method when
@@ -67,6 +68,12 @@ class Packrat(object):
                             associated pickle file. None to prevent the use of a
                             pickle file.
                         Either value can be None to disable that option.
+            crlf        True to use Windows <cr><lf> line terminators; False to
+                        use Unix/MacOS <lf> line terminators. Use None (the
+                        default) to use the line terminator native to this OS.
+                        Note that, when opening for append, whatever line
+                        terminator is already in the file will continue to be
+                        used.
         """
 
         if not filename.lower().endswith('.xml'):
@@ -81,6 +88,13 @@ class Packrat(object):
         self._version = Packrat.VERSION
         self.tuples = ()
         self.tuple_no = 0
+
+        if crlf is None:
+            self.linesep = os.linesep
+        elif crlf:
+            self.linesep = '\r\n'
+        else:
+            self.linesep = '\n'
 
         self.pickle_filename = os.path.splitext(filename)[0] + '.pickle'
         self.pickle = None
@@ -122,32 +136,38 @@ class Packrat(object):
 
         # When opening for write, initialize the file
         if self.access == 'w':
-            self.file = open(filename, 'w')
+            self.file = open(filename, 'wb')
 
-            self.file.write('<?xml version="1.0" encoding="ASCII"?>\n\n')
-            self.file.write('<packrat version="%s">\n' % Packrat.VERSION)
+            self.file.write('<?xml version="1.0" encoding="ASCII"?>')
+            self.file.write(self.linesep)
+            self.file.write(self.linesep)
+            self.file.write('<packrat version="%s">' % Packrat.VERSION)
+            self.file.write(self.linesep)
 
             if os.path.exists(self.pickle_filename):
                 os.remove(self.pickle_filename)
 
         # When opening for append, position before the last line
         else:
-            self.file = open(filename, 'r+')
+            self.file = open(filename, 'r+b')
+
+            # Figure out line termination
+            self.file.seek(-2, 2)
+            char = self.file.read(1)
+            if char == '\r':     # Windows CRLF line terminators
+                self.linesep = '\r\n'
+            else:
+                self.linesep = '\n'
 
             # Jump to just before the last line of the file
-            last_pos = 0
-            new_last_pos = 0
-            while True:
-                old_line = self.file.readline()
-                if len(old_line) == 0:
-                    break
-                last_pos = new_last_pos
-                new_last_pos = self.file.tell()
-                
-            self.file.seek(last_pos, 0)
+            self.file.seek(0, 0)
+            for line in self.file:
+                pass
+
+            self.file.seek(1 - len(line) - len(self.linesep), 2)
 
     @staticmethod
-    def open(filename, access='r', indent=2, savings=(1000,1000)):
+    def open(filename, access='r', indent=2, savings=(1000,1000), crlf=None):
         """Create and open a Packrat object for write or append.
 
         This is an alternative to calling the constructor directly.
@@ -171,9 +191,15 @@ class Packrat(object):
                             associated pickle file. None to prevent the use of a
                             pickle file.
                         Either value can be None to disable that option.
+            crlf        True to use Windows <cr><lf> line terminators; False to
+                        use Unix/MacOS <lf> line terminators. Use None (the
+                        default) to use the line terminator native to this OS.
+                        Note that, when opening for append, whatever line
+                        terminator is already in the file will continue to be
+                        used.
         """
 
-        return Packrat(filename, access, indent, savings)
+        return Packrat(filename, access, indent, savings, crlf)
 
     def close(self):
         """Close this Packrat file."""
@@ -182,7 +208,7 @@ class Packrat(object):
         if self.file is not None:
 
             # Always terminate
-            self.file.write('</packrat>\n')
+            self.file.write('</packrat>' + self.linesep)
             self.file.close()
             self.file = None
 
@@ -268,7 +294,7 @@ class Packrat(object):
                 pickle.dump(value, self.pickle)
 
                 self.file.write(' first="%s"' % first)
-                self.file.write(' encoding="pickle"/>\n')
+                self.file.write(' encoding="pickle"/>' + self.linesep)
                 close_element = False
 
             # Otherwise, write data as base64 if the savings is large enough
@@ -277,11 +303,11 @@ class Packrat(object):
                 else:           first = repr(flattened[0])
 
                 self.file.write(' first="%s"' % first)
-                self.file.write(' encoding="base64">\n')
+                self.file.write(' encoding="base64">' + self.linesep)
 
                 string = base64.b64encode(value.tostring())
                 self.file.write(string) # escape() not needed
-                self.file.write('\n')
+                self.file.write(self.linesep)
                 self.file.write(self.indent * level * ' ')
 
             # Handle integers and floats
@@ -318,7 +344,7 @@ class Packrat(object):
                 self.file.write('"')
 
             if close_element:
-                self.file.write('</' + element + '>\n')
+                self.file.write('</' + element + '>' + self.linesep)
 
         # Write a standard Python class
 
@@ -327,7 +353,7 @@ class Packrat(object):
             self._write_element(element, level,
                                 [('type', type(value).__name__)] + attributes)
             self.file.write(repr(value))
-            self.file.write('</' + element + '>\n')
+            self.file.write('</' + element + '>' + self.linesep)
 
         # str
         elif type(value) == str:
@@ -336,43 +362,45 @@ class Packrat(object):
             self.file.write('"')
             self.file.write(escape(value, Packrat.ENTITIES))
             self.file.write('"')
-            self.file.write('</' + element + '>\n')
+            self.file.write('</' + element + '>' + self.linesep)
 
         # None
         elif value == None:
             self._write_element(element, level, [('type', 'None')] + attributes,
-                                terminate='/>\n')
+                                terminate='/>')
+            self.file.write(self.linesep)
 
         # tuple, list
         elif type(value) in (tuple,list):
             self._write_element(element, level,
                                 [('type', type(value).__name__)] + attributes)
-            self.file.write('\n')
+            self.file.write(self.linesep)
 
             for (i,item) in enumerate(value):
                 self.write('item', item, level=level+1,
                            attributes=[('index',str(i))])
 
             self.file.write(self.indent * level * ' ')
-            self.file.write('</' + element + '>\n')
+            self.file.write('</' + element + '>' + self.linesep)
 
         # set
         elif type(value) == set:
             self._write_element(element, level,
                                 [('type', type(value).__name__)] + attributes)
-            self.file.write('\n')
+            self.file.write(self.linesep)
 
             for item in value:
                 self.write('item', item, level=level+1)
 
             self.file.write(self.indent * level * ' ')
-            self.file.write('</' + element + '>\n')
+            self.file.write('</' + element + '>' + self.linesep)
+
 
         # dict
         elif type(value) == dict:
             self._write_element(element, level,
                                 [('type', type(value).__name__)] + attributes)
-            self.file.write('\n')
+            self.file.write(self.linesep)
 
             keys = value.keys()
             keys.sort()
@@ -380,7 +408,7 @@ class Packrat(object):
                 self._write_dict_pair(key, value[key], level=level+1)
 
             self.file.write(self.indent * level * ' ')
-            self.file.write('</' + element + '>\n')
+            self.file.write('</' + element + '>' + self.linesep)
 
         # Otherwise write an object
 
@@ -389,7 +417,7 @@ class Packrat(object):
                                 [('type', 'object'),
                                  ('module', type(value).__module__),
                                  ('class', type(value).__name__)] + attributes)
-            self.file.write('\n')
+            self.file.write(self.linesep)
 
             # Use the special attribute list if available
             if hasattr(type(value), 'PACKRAT_ARGS'):
@@ -402,7 +430,7 @@ class Packrat(object):
                 self.write(key, value.__dict__[key], level=level+1)
 
             self.file.write(self.indent * level * ' ')
-            self.file.write('</' + element + '>\n')
+            self.file.write('</' + element + '>' + self.linesep)
 
     def _write_element(self, element, level, attributes, terminate='>'):
         """Internal method to write the beginning of one element."""
@@ -420,13 +448,13 @@ class Packrat(object):
         """Internal write method for key/value pairs from dictionaries."""
 
         self.file.write(self.indent * level * ' ')
-        self.file.write('<dict_pair>\n')
+        self.file.write('<dict_pair>' + self.linesep)
 
         self.write('key', key, level=level+1)
         self.write('value', value, level=level+1)
 
         self.file.write(self.indent * level * ' ')
-        self.file.write('</dict_pair>\n')
+        self.file.write('</dict_pair>' + self.linesep)
 
     ############################################################################
     # Read methods
@@ -625,218 +653,247 @@ class test_packrat(unittest.TestCase):
 
   def runTest(self):
 
-    filename = 'packrat_unittests.xml'
-
-    ####################
-    f = Packrat.open(filename, access='w')
-    f.write('two', 2)
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    rec = f.read()
-    self.assertEqual(rec[0], 'two')
-    self.assertEqual(rec[1], 2)
-    self.assertEqual(type(rec[1]), int)
-
-    rec = f.read()
-    self.assertEqual(rec, ())
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='a')
-    f.write('three', 3.)
-    f.write('four', '4')
-    f.write('five', (5,5.,'five'))
-    f.write('six', [6,6.,'six'])
-    f.write('seven', set([7,'7']))
-    f.write('eight', {8:'eight', 'eight':8.})
-    f.write('nine', True)
-    f.write('ten', False)
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    rec = f.read()
-    self.assertEqual(rec[0], 'two')
-    self.assertEqual(rec[1], 2)
-    self.assertEqual(type(rec[1]), int)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'three')
-    self.assertEqual(rec[1], 3.)
-    self.assertEqual(type(rec[1]), float)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'four')
-    self.assertEqual(rec[1], '4')
-    self.assertEqual(type(rec[1]), str)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'five')
-    self.assertEqual(rec[1], (5,5.,'five'))
-    self.assertEqual(type(rec[1]), tuple)
-    self.assertEqual(type(rec[1][0]), int)
-    self.assertEqual(type(rec[1][1]), float)
-    self.assertEqual(type(rec[1][2]), str)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'six')
-    self.assertEqual(rec[1], [6,6.,'six'])
-    self.assertEqual(type(rec[1]), list)
-    self.assertEqual(type(rec[1][0]), int)
-    self.assertEqual(type(rec[1][1]), float)
-    self.assertEqual(type(rec[1][2]), str)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'seven')
-    self.assertEqual(rec[1], set([7,'7']))
-    self.assertEqual(type(rec[1]), set)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'eight')
-    self.assertEqual(rec[1], {8:'eight', 'eight':8.})
-    self.assertEqual(rec[1][8], 'eight')
-    self.assertEqual(rec[1]['eight'], 8.)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'nine')
-    self.assertEqual(rec[1], True)
-    self.assertEqual(type(rec[1]), bool)
-
-    rec = f.read()
-    self.assertEqual(rec[0], 'ten')
-    self.assertEqual(rec[1], False)
-    self.assertEqual(type(rec[1]), bool)
-
-    ####################
-    f = Packrat.open(filename, access='a')
-    f.write('eleven', {'>11':'<=13', '>=11':12, '"elev"':"'11'"})
-    f.write('twelve', 'eleven<"12"<<thirteen>')
-    f.write('thirteen', None)
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_list()
-
-    self.assertEqual(recs[-4][0], 'ten')
-
-    self.assertEqual(recs[-3][0], 'eleven')
-    self.assertEqual(recs[-3][1], {'>11':'<=13', '>=11':12, '"elev"':"'11'"})
-    self.assertEqual(recs[-3][1]['>11'], '<=13')
-    self.assertEqual(recs[-3][1]['>=11'], 12)
-    self.assertEqual(recs[-3][1]['"elev"'], "'11'")
-
-    self.assertEqual(recs[-2][0], 'twelve')
-    self.assertEqual(recs[-2][1], 'eleven<"12"<<thirteen>')
-
-    self.assertEqual(recs[-1][0], 'thirteen')
-    self.assertEqual(recs[-1][1], None)
-
-    ####################
-    f = Packrat.open(filename, access='a')
-
-    bools = np.array([True, False, False, True]).reshape(2,1,2)
-    ints = np.arange(20)
-    floats = np.arange(20.)
-
     random = np.random.randn(20).reshape(2,2,5)
     random *= 10**(30. * np.random.randn(20).reshape(2,2,5))
-
-    strings = np.array(['1', '22', '333', '4444']).reshape(2,2)
-    uints = np.arange(40,60).astype('uint')
-    chars = np.array([str(i) for i in (range(10) + list('<>"'))])
-
-    f.write('bools', bools)
-    f.write('ints', ints)
-    f.write('floats', floats)
-
-    f.write('random', random)
-
-    f.write('strings', strings)
-    f.write('uints', uints)
-    f.write('chars', chars)
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_dict()
-
-    self.assertTrue(np.all(recs['bools'] == bools))
-    self.assertTrue(np.all(recs['ints'] == ints))
-    self.assertTrue(np.all(recs['floats'] == floats))
-    self.assertTrue(np.all(recs['random'] == random))
-    self.assertTrue(np.all(recs['strings'] == strings))
-    self.assertTrue(np.all(recs['uints'] == uints))
-    self.assertTrue(np.all(recs['chars'] == chars))
-    f.close()
-
-    #################### uses a pickle file
-    f = Packrat.open(filename, access='a')
-
-    more_ints = np.arange(10000).reshape(4,100,25)
-    f.write('more_ints', more_ints)
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_dict()
-
-    self.assertTrue(np.all(recs['more_ints'] == more_ints))
-
-    #################### uses base64
-    f = Packrat.open(filename, access='a', savings=(1,1.e99))
-
-    more_floats = np.arange(200.)
-    f.write('more_floats', more_floats)
 
     more_randoms = np.random.randn(200).reshape(2,5,4,5)
     more_randoms *= 10**(30. * np.random.randn(200).reshape(2,5,4,5))
 
-    f.write('more_floats', more_floats)
-    f.write('more_randoms', more_randoms)
-    f.write('more_randoms_msb', more_randoms.astype('>f8'))
-    f.write('more_randoms_lsb', more_randoms.astype('<f8'))
+    for (suffix,crlf) in [('crlf', True), ('lf', False), ('native', None)]:
+        filename = 'packrat_unittests_' + suffix + '.xml'
+
+        ####################
+        f = Packrat.open(filename, access='w', crlf=crlf)
+        f.write('two', 2)
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        rec = f.read()
+        self.assertEqual(rec[0], 'two')
+        self.assertEqual(rec[1], 2)
+        self.assertEqual(type(rec[1]), int)
+
+        rec = f.read()
+        self.assertEqual(rec, ())
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='a')
+        f.write('three', 3.)
+        f.write('four', '4')
+        f.write('five', (5,5.,'five'))
+        f.write('six', [6,6.,'six'])
+        f.write('seven', set([7,'7']))
+        f.write('eight', {8:'eight', 'eight':8.})
+        f.write('nine', True)
+        f.write('ten', False)
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        rec = f.read()
+        self.assertEqual(rec[0], 'two')
+        self.assertEqual(rec[1], 2)
+        self.assertEqual(type(rec[1]), int)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'three')
+        self.assertEqual(rec[1], 3.)
+        self.assertEqual(type(rec[1]), float)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'four')
+        self.assertEqual(rec[1], '4')
+        self.assertEqual(type(rec[1]), str)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'five')
+        self.assertEqual(rec[1], (5,5.,'five'))
+        self.assertEqual(type(rec[1]), tuple)
+        self.assertEqual(type(rec[1][0]), int)
+        self.assertEqual(type(rec[1][1]), float)
+        self.assertEqual(type(rec[1][2]), str)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'six')
+        self.assertEqual(rec[1], [6,6.,'six'])
+        self.assertEqual(type(rec[1]), list)
+        self.assertEqual(type(rec[1][0]), int)
+        self.assertEqual(type(rec[1][1]), float)
+        self.assertEqual(type(rec[1][2]), str)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'seven')
+        self.assertEqual(rec[1], set([7,'7']))
+        self.assertEqual(type(rec[1]), set)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'eight')
+        self.assertEqual(rec[1], {8:'eight', 'eight':8.})
+        self.assertEqual(rec[1][8], 'eight')
+        self.assertEqual(rec[1]['eight'], 8.)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'nine')
+        self.assertEqual(rec[1], True)
+        self.assertEqual(type(rec[1]), bool)
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'ten')
+        self.assertEqual(rec[1], False)
+        self.assertEqual(type(rec[1]), bool)
+
+        ####################
+        f = Packrat.open(filename, access='a')
+        f.write('eleven', {'>11':'<=13', '>=11':12, '"elev"':"'11'"})
+        f.write('twelve', 'eleven<"12"<<thirteen>')
+        f.write('thirteen', None)
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        recs = f.read_list()
+
+        self.assertEqual(recs[-4][0], 'ten')
+
+        self.assertEqual(recs[-3][0], 'eleven')
+        self.assertEqual(recs[-3][1], {'>11':'<=13',
+                                       '>=11':12,
+                                       '"elev"':"'11'"})
+        self.assertEqual(recs[-3][1]['>11'], '<=13')
+        self.assertEqual(recs[-3][1]['>=11'], 12)
+        self.assertEqual(recs[-3][1]['"elev"'], "'11'")
+
+        self.assertEqual(recs[-2][0], 'twelve')
+        self.assertEqual(recs[-2][1], 'eleven<"12"<<thirteen>')
+
+        self.assertEqual(recs[-1][0], 'thirteen')
+        self.assertEqual(recs[-1][1], None)
+
+        ####################
+        f = Packrat.open(filename, access='a')
+
+        bools = np.array([True, False, False, True]).reshape(2,1,2)
+        ints = np.arange(20)
+        floats = np.arange(20.)
+
+        strings = np.array(['1', '22', '333', '4444']).reshape(2,2)
+        uints = np.arange(40,60).astype('uint')
+        chars = np.array([str(i) for i in (range(10) + list('<>"'))])
+
+        f.write('bools', bools)
+        f.write('ints', ints)
+        f.write('floats', floats)
+
+        f.write('random', random)
+
+        f.write('strings', strings)
+        f.write('uints', uints)
+        f.write('chars', chars)
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        recs = f.read_dict()
+
+        self.assertTrue(np.all(recs['bools'] == bools))
+        self.assertTrue(np.all(recs['ints'] == ints))
+        self.assertTrue(np.all(recs['floats'] == floats))
+        self.assertTrue(np.all(recs['random'] == random))
+        self.assertTrue(np.all(recs['strings'] == strings))
+        self.assertTrue(np.all(recs['uints'] == uints))
+        self.assertTrue(np.all(recs['chars'] == chars))
+        f.close()
+
+        #################### uses a pickle file
+        f = Packrat.open(filename, access='a')
+
+        more_ints = np.arange(10000).reshape(4,100,25)
+        f.write('more_ints', more_ints)
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        recs = f.read_dict()
+
+        self.assertTrue(np.all(recs['more_ints'] == more_ints))
+
+        #################### uses base64
+        f = Packrat.open(filename, access='a', savings=(1,1.e99))
+
+        more_floats = np.arange(200.)
+        f.write('more_floats', more_floats)
+
+        f.write('more_floats', more_floats)
+        f.write('more_randoms', more_randoms)
+        f.write('more_randoms_msb', more_randoms.astype('>f8'))
+        f.write('more_randoms_lsb', more_randoms.astype('<f8'))
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        recs = f.read_dict()
+
+        self.assertTrue(np.all(recs['more_floats'] == more_floats))
+        self.assertTrue(np.all(recs['more_randoms'] == more_randoms))
+        self.assertTrue(np.all(recs['more_randoms_lsb'] == more_randoms))
+        self.assertTrue(np.all(recs['more_randoms_msb'] == more_randoms))
+
+        #################### uses a new class foo, without PACKRAT_ARGS
+        f = Packrat.open(filename, access='a')
+        f.write('foo', Foo(np.arange(10), np.arange(10.)))
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        recs = f.read_dict()
+
+        self.assertEqual(type(recs['foo']), Foo)
+        self.assertTrue(np.all(recs['foo'].ints == np.arange(10)))
+        self.assertTrue(np.all(recs['foo'].floats == np.arange(10.)))
+        self.assertTrue(np.all(recs['foo'].sum == 2.*np.arange(10)))
+
+        #################### uses a new class bar, with PACKRAT_ARGS
+        sample_bar = Bar(np.arange(10), np.arange(10.))
+        f = Packrat.open(filename, access='a')
+        f.write('bar', sample_bar)
+        f.close()
+
+        ####################
+        f = Packrat.open(filename, access='r')
+        recs = f.read_dict()
+
+        self.assertEqual(type(recs['bar']), Bar)
+        self.assertTrue(np.all(recs['bar'].ints   == sample_bar.ints))
+        self.assertTrue(np.all(recs['bar'].floats == sample_bar.floats))
+        self.assertTrue(np.all(recs['bar'].sum    == sample_bar.sum))
+
+    # Test all line terminators
+
+    f = open('packrat_unittests_native.xml', 'rb')
+    native_lines = f.readlines()
+    f.close()
+    native_rec = 0
+
+    f = open('packrat_unittests_crlf.xml', 'rb')
+    for line in f:
+        self.assertTrue(line.endswith('\r\n'))
+        if len(os.linesep) > 1:
+            self.assertTrue(line == native_lines[native_rec])
+            native_rec += 1
     f.close()
 
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_dict()
+    filename = 'packrat_unittests_lf.xml'
+    f = open('packrat_unittests_lf.xml', 'rb')
+    for line in f:
+        if len(line) >= 2:
+            self.assertTrue(line[-2] != '\r')
 
-    self.assertTrue(np.all(recs['more_floats'] == more_floats))
-    self.assertTrue(np.all(recs['more_randoms'] == more_randoms))
-    self.assertTrue(np.all(recs['more_randoms_lsb'] == more_randoms))
-    self.assertTrue(np.all(recs['more_randoms_msb'] == more_randoms))
-
-    #################### uses a new class foo, without PACKRAT_ARGS
-    f = Packrat.open(filename, access='a')
-    f.write('foo', Foo(np.arange(10), np.arange(10.)))
+        if len(os.linesep) == 1:
+            self.assertTrue(line == native_lines[native_rec])
+            native_rec += 1
     f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_dict()
-
-    self.assertEqual(type(recs['foo']), Foo)
-    self.assertTrue(np.all(recs['foo'].ints == np.arange(10)))
-    self.assertTrue(np.all(recs['foo'].floats == np.arange(10.)))
-    self.assertTrue(np.all(recs['foo'].sum == 2.*np.arange(10)))
-
-    #################### uses a new class bar, with PACKRAT_ARGS
-    sample_bar = Bar(np.arange(10), np.arange(10.))
-    f = Packrat.open(filename, access='a')
-    f.write('bar', sample_bar)
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_dict()
-
-    self.assertEqual(type(recs['bar']), Bar)
-    self.assertTrue(np.all(recs['bar'].ints   == sample_bar.ints))
-    self.assertTrue(np.all(recs['bar'].floats == sample_bar.floats))
-    self.assertTrue(np.all(recs['bar'].sum    == sample_bar.sum))
 
 ################################################################################
 # Perform unit testing if executed from the command line
