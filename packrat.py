@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import base64
 import pickle
+import getpass
+import time
 from xml.sax.saxutils import escape, unescape
 import xml.etree.ElementTree as ET
 
@@ -20,10 +22,15 @@ class Packrat(object):
     The procedure also handles NumPy arrays of all dtypes except 'U' (Unicode)
     and 'o' (object).
 
+    A special class "Session" is designed for grouping together information that
+    has been added to a Packrat file all it once. A Session records the user
+    ID and time, and exposes its contents as attributes and by indexing. A call
+    to start_session() is all that is required.
+
     For other object classes, it looks for a class attribute 'PACKRAT_ARGS',
     containing a list of the names of attributes. When writing, the values of
     these attributes are written in the order listed. When reading, it calls
-    the constructor using argument values in the order they appear in this
+    the constructor using the argument values in the order they appear in this
     list.
 
     For classes that do not have a PACKRAT_ARGS attribute, _all_ of the
@@ -39,6 +46,38 @@ class Packrat(object):
     returns a tuple containing the name and value of the next object in the 
     file.
     """
+
+    class Session(object):
+        """Subclass to logically grouped information.
+
+        Values are saved by name as session attributes. Sessions can also be
+        indexed to return (name,value) tuples in order.
+        """
+
+        def __init__(self, node, picklefile):
+            self.list = []
+            self.dict = {}
+
+            for subnode in node:
+                (key, value) = Packrat._read_node(subnode, picklefile)
+                self.list.append((key, value))
+                self.dict[key] = value
+                self.__dict__[key] = value
+
+            self.user = node.attrib['user']
+            self.time = node.attrib['time']
+            self.note = node.attrib['note']
+
+        def __getitem__(self, i):
+            if type(i) == int:
+                return self.list[i]
+            else:
+                return self.dict[i]
+
+        def __str__(self):
+            return 'Session(user="%s", time="%s")' % (self.user, self.time)
+
+        def __repr__(self): return str(self)
 
     VERSION = '1.0'
 
@@ -143,6 +182,7 @@ class Packrat(object):
             self.file.write(self.linesep)
             self.file.write('<packrat version="%s">' % Packrat.VERSION)
             self.file.write(self.linesep)
+            self.begun = ['packrat']
 
             if os.path.exists(self.pickle_filename):
                 os.remove(self.pickle_filename)
@@ -165,6 +205,7 @@ class Packrat(object):
                 pass
 
             self.file.seek(1 - len(line) - len(self.linesep), 2)
+            self.begun = ['packrat']
 
     @staticmethod
     def open(filename, access='r', indent=2, savings=(1000,1000), crlf=None):
@@ -207,8 +248,12 @@ class Packrat(object):
         # Close a file open for write or append
         if self.file is not None:
 
-            # Always terminate
-            self.file.write('</packrat>' + self.linesep)
+            # Terminate anything already begun
+            levels = len(self.begun) - 1
+            for (k,element) in enumerate(self.begun[::-1]):
+                self.file.write(self.indent * (levels - k) * ' ')
+                self.file.write('</' + element + '>' + self.linesep)
+
             self.file.close()
             self.file = None
 
@@ -238,7 +283,7 @@ class Packrat(object):
     # Write methods
     ############################################################################
 
-    def write(self, element, value, level=1, attributes=[]):
+    def write(self, element, value, level=0, attributes=[]):
         """Write an object into a Packrat file.
 
         The object and its value is appended to this file.
@@ -246,7 +291,8 @@ class Packrat(object):
         Input:
             element     name of the XML element.
             value       the value of the element.
-            level       the indent level within the XML file.
+            level       the indent level of this element relative to the
+                        previous indentation.
             skip        True to skip a line before and after.
             attributes  a list of additional attributes to include as (name,
                         value) tuples.
@@ -257,7 +303,7 @@ class Packrat(object):
         # Write a NumPy ndarray
 
         if type(value) == np.ndarray:
-            self._write_element(element, level, 
+            self._write_element(element, level,
                                 [('type', 'array'),
                                  ('shape', str(value.shape)),
                                  ('dtype', value.dtype.str)] + attributes, '')
@@ -308,7 +354,7 @@ class Packrat(object):
                 string = base64.b64encode(value.tostring())
                 self.file.write(string) # escape() not needed
                 self.file.write(self.linesep)
-                self.file.write(self.indent * level * ' ')
+                self.file.write(self.indent * (len(self.begun) + level) * ' ')
 
             # Handle integers and floats
             elif kind in 'iuf':
@@ -380,7 +426,7 @@ class Packrat(object):
                 self.write('item', item, level=level+1,
                            attributes=[('index',str(i))])
 
-            self.file.write(self.indent * level * ' ')
+            self.file.write(self.indent * (len(self.begun) + level) * ' ')
             self.file.write('</' + element + '>' + self.linesep)
 
         # set
@@ -392,7 +438,7 @@ class Packrat(object):
             for item in value:
                 self.write('item', item, level=level+1)
 
-            self.file.write(self.indent * level * ' ')
+            self.file.write(self.indent * (len(self.begun) + level) * ' ')
             self.file.write('</' + element + '>' + self.linesep)
 
 
@@ -407,7 +453,7 @@ class Packrat(object):
             for key in keys:
                 self._write_dict_pair(key, value[key], level=level+1)
 
-            self.file.write(self.indent * level * ' ')
+            self.file.write(self.indent * (len(self.begun) + level) * ' ')
             self.file.write('</' + element + '>' + self.linesep)
 
         # Otherwise write an object
@@ -429,13 +475,50 @@ class Packrat(object):
             for key in attr_list:
                 self.write(key, value.__dict__[key], level=level+1)
 
-            self.file.write(self.indent * level * ' ')
+            self.file.write(self.indent * (len(self.begun) + level) * ' ')
             self.file.write('</' + element + '>' + self.linesep)
+
+    def start(self, element, attributes=[]):
+        """Write the beginning of an object into a Packrat file."""
+
+        self.file.write(self.linesep)
+        self.file.write(self.indent * len(self.begun) * ' ')
+        self.file.write('<' + element)
+
+        for tuple in attributes:
+            self.file.write(' ' + tuple[0] + '="' +
+                            escape(tuple[1], Packrat.ENTITIES) + '"')
+
+        self.file.write('>' + self.linesep)
+
+        self.begun.append(element)
+
+    def start_session(self, note=''):
+        """Write the beginning of a new session into a Packrat file.
+
+        A session is just an optional way to group information in a file. A
+        session saves the user name, date and Packrat version ID into the file
+        as attributes. The next call to finish() ends the session.
+        """
+
+        self.start('session', [('type', 'session'),
+                               ('user', getpass.getuser()),
+                               ('time', time.strftime('%Y-%m-%dT%H:%M:%S')),
+                               ('note', note),
+                               ('version', Packrat.VERSION)])
+
+    def finish(self):
+        """End of the most recently begun object in a Packrat file."""
+
+        self.file.write(self.indent * (len(self.begun) - 1) * ' ')
+        self.file.write('</' + self.begun[-1] + '>' + self.linesep)
+
+        del self.begun[-1]
 
     def _write_element(self, element, level, attributes, terminate='>'):
         """Internal method to write the beginning of one element."""
 
-        self.file.write(self.indent * level * ' ')
+        self.file.write(self.indent * (len(self.begun) + level) * ' ')
         self.file.write('<' + element)
 
         for tuple in attributes:
@@ -447,13 +530,13 @@ class Packrat(object):
     def _write_dict_pair(self, key, value, level):
         """Internal write method for key/value pairs from dictionaries."""
 
-        self.file.write(self.indent * level * ' ')
+        self.file.write(self.indent * (len(self.begun) + level) * ' ')
         self.file.write('<dict_pair>' + self.linesep)
 
         self.write('key', key, level=level+1)
         self.write('value', value, level=level+1)
 
-        self.file.write(self.indent * level * ' ')
+        self.file.write(self.indent * (len(self.begun) + level) * ' ')
         self.file.write('</dict_pair>' + self.linesep)
 
     ############################################################################
@@ -629,6 +712,11 @@ class Packrat(object):
             obj.__dict__ = object_dict
 
             return (node.tag, obj)
+
+        if node_type == 'session':
+            return Packrat.Session(node, pf)
+
+        raise TypeError('unrecognized Packrat element type: ' + node_type)
 
 ################################################################################
 # Unit tests
@@ -882,6 +970,7 @@ class test_packrat(unittest.TestCase):
         if len(os.linesep) > 1:
             self.assertTrue(line == native_lines[native_rec])
             native_rec += 1
+
     f.close()
 
     filename = 'packrat_unittests_lf.xml'
@@ -893,7 +982,82 @@ class test_packrat(unittest.TestCase):
         if len(os.linesep) == 1:
             self.assertTrue(line == native_lines[native_rec])
             native_rec += 1
+
     f.close()
+
+    ############################################################################
+    # Test start(), finish(), sessions
+
+    filename = 'packrat_unittests2.xml'
+
+    f = Packrat.open(filename, 'w')
+    f.start_session(note='test')
+    f.write('one23', [1,2,3])
+    f.close()
+
+    ####################
+    f = Packrat.open(filename, access='r')
+    recs = f.read_list()
+    f.close()
+
+    self.assertEqual(len(recs), 1)
+    self.assertEqual(type(recs[0]), Packrat.Session)
+    self.assertEqual(recs[0][0][0], 'one23')
+    self.assertEqual(recs[0][0][1], [1,2,3])
+    self.assertEqual(recs[0].one23, [1,2,3])
+    self.assertEqual(recs[0].note, 'test')
+    self.assertTrue(hasattr(recs[0], 'user'))
+    self.assertTrue(hasattr(recs[0], 'time'))
+
+    ####################
+    time.sleep(1)
+
+    f = Packrat.open(filename, 'a')
+    f.start_session(note='another test')
+    f.write('four56',  [4,5,6])
+    f.write('seven89', [7,8,9])
+    f.close()
+
+    ####################
+    f = Packrat.open(filename, access='r')
+    recs = f.read_list()
+    f.close()
+
+    self.assertEqual(len(recs), 2)
+    self.assertEqual(type(recs[1]), Packrat.Session)
+    self.assertEqual(len(recs[1].list), 2)
+    self.assertEqual(len(recs[1].dict), 2)
+
+    self.assertEqual(recs[1][0][0], 'four56')
+    self.assertEqual(recs[1][0][1], [4,5,6])
+    self.assertEqual(recs[1].four56, [4,5,6])
+    self.assertEqual(recs[1]['four56'], [4,5,6])
+
+    self.assertEqual(recs[1][1][0], 'seven89')
+    self.assertEqual(recs[1][1][1], [7,8,9])
+    self.assertEqual(recs[1].seven89, [7,8,9])
+    self.assertEqual(recs[1]['seven89'], [7,8,9])
+
+    self.assertEqual(recs[1].note, 'another test')
+
+    self.assertEqual(recs[0].user, recs[1].user)
+    self.assertTrue(recs[0].time < recs[1].time)
+
+    #################### use start/finish to create a fake tuple
+    f = Packrat.open(filename, 'a')
+    f.start('fake_tuple', attributes=[('type', 'tuple')])
+    f.write('item', 1)
+    f.write('item', 2)
+    f.finish()
+    f.close()
+
+    ####################
+    f = Packrat.open(filename, access='r')
+    recs = f.read_list()
+    f.close()
+
+    self.assertEqual(recs[2][0], 'fake_tuple')
+    self.assertEqual(recs[2][1], (1,2))
 
 ################################################################################
 # Perform unit testing if executed from the command line
