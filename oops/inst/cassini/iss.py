@@ -107,6 +107,31 @@ class ISS(object):
     fovs = {}
     initialized = False
 
+    # Create a master version of the NAC distortion model from
+    #   Owen Jr., W.M., 2003. Cassini ISS Geometric Calibration of April 2003.
+    #   JPL IOM 312.E-2003.
+    # as included in Cooper et al. (2006, Icarus, 181, 223-234) Appendix A.
+    
+    NAC_F = 2002.703    # mm
+    NAC_E1 = 8.28e-6    # / mm2
+    NAC_E2 = 5.45e-6    # / mm
+    NAC_E3 = -19.67e-6  # / mm
+    NAC_KX = 83.33333   # samples/mm
+    NAC_KY = 83.3428    # lines/mm
+    
+    NAC_COEFF = np.zeros((4,4,2))
+    NAC_COEFF[1,0,0] = NAC_KX        * NAC_F
+    NAC_COEFF[3,0,0] = NAC_KX*NAC_E1 * NAC_F**3
+    NAC_COEFF[1,2,0] = NAC_KX*NAC_E1 * NAC_F**3
+    NAC_COEFF[1,1,0] = NAC_KX*NAC_E2 * NAC_F**2
+    NAC_COEFF[2,0,0] = NAC_KX*NAC_E3 * NAC_F**2
+    
+    NAC_COEFF[0,1,1] = NAC_KY        * NAC_F
+    NAC_COEFF[2,1,1] = NAC_KY*NAC_E1 * NAC_F**3
+    NAC_COEFF[0,3,1] = NAC_KY*NAC_E1 * NAC_F**3
+    NAC_COEFF[0,2,1] = NAC_KY*NAC_E2 * NAC_F**2
+    NAC_COEFF[1,1,1] = NAC_KY*NAC_E3 * NAC_F**2
+    
     @staticmethod
     def initialize():
         """Fills in key information about the WAC and NAC. Must be called first.
@@ -137,7 +162,11 @@ class ISS(object):
             vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
             
             # Display directions: [u,v] = [right,down]
-            full_fov = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
+            if detector == "NAC":
+                full_fov = oops.fov.Polynomial(ISS.NAC_COEFF, (samples,lines),
+                                               xy_to_uv=True)
+            else:
+                full_fov = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
 
             # Load the dictionary, include the subsampling modes
             ISS.fovs[detector, "FULL"] = full_fov
