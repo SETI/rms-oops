@@ -36,8 +36,7 @@ class Polynomial(FOV):
 
             uv_los      a single value, tuple or Pair defining the (u,v)
                         coordinates of the nominal line of sight. By default,
-                        this is the midpoint of the rectangle, i.e,
-                        (uv_shape-1)/2.
+                        this is the midpoint of the rectangle, i.e, uv_shape/2.
 
             uv_area     an optional parameter defining the nominal area of a
                         pixel in steradians after distortion has been removed.
@@ -56,7 +55,7 @@ class Polynomial(FOV):
         self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
 
         if uv_los is None:
-            self.uv_los = (self.uv_shape-(1.,1.)) / 2.
+            self.uv_los = self.uv_shape / 2.
         else:
             self.uv_los = Pair.as_pair(uv_los).as_float()
             self.uv_los.as_readonly()
