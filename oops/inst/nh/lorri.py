@@ -21,8 +21,7 @@ from oops.inst.nh.nh_  import NewHorizons
 ################################################################################
 
 def from_file(filespec, geom='spice', pointing='spice', **parameters):
-    """A general, static method to return a Snapshot object based on a given
-    NewHorizons LORRI image file.
+    """Return a Snapshot object based on a given NewHorizons LORRI image file.
 
     If parameters["data"] is False, no data or associated arrays are loaded.
     If parameters["calibration"] is False, no calibration objects are created.
@@ -56,10 +55,7 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
     if target_name.strip() == '---':
         target_name = 'PLUTO'
 
-    try:
-        target_body = oops.Body.lookup(target_name)
-    except:
-        target_body = None
+    target_body = oops.Body.lookup(target_name)
 
     # Make sure the SPICE kernels are loaded
     NewHorizons.load_cks( tstart, tstart + texp)
@@ -93,7 +89,16 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
         # Next create a frame based on the boresight
         ra = nh_file[0].header['SPCBRRA']
         dec = nh_file[0].header['SPCBRDEC']
-        north_clk = nh_file[0].header['SPCEMEN']+90
+
+        # OH, THE HORROR
+        year = int(nh_file[0].header['SPCUTCID'][:4])
+        if year <= 2012:
+            print 'before 2012!'
+            north_clk = nh_file[0].header['SPCEMEN'] + 90.
+        else:
+            print 'after 2012!'
+            north_clk = nh_file[0].header['SPCEMEN']
+
         scet = nh_file[0].header['SPCSCET']
 
         frame_id = '.NH_FRAME_' + filename
@@ -140,21 +145,21 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
         spectral_name = target_name
         if parameters.has_key('calib_body'):
             spectral_name = parameters['calib_body']
-    
+
         # Look up the solar range...
         try:
             solar_range = parameters['solar_range']
         except KeyError:
             solar_range = None
-    
+
         # If necessary, get the solar range from the target name
         if solar_range is None and target_body is not None:
             target_sun_path = oops.Path.as_waypoint(target_name).wrt('SUN')
             # Paths of the relevant bodies need to be defined in advance!
-    
+
             sun_event = target_sun_path.event_at_time(tdb_midtime)
             solar_range = sun_event.pos.norm().vals / solar.AU
-    
+
         if solar_range is None:
             raise IOError("Calibration can't figure out range from Sun to " +
                           "target body " + target_name + " in file " +
@@ -170,7 +175,7 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
 
             # Point source
             spectral_irradiance = nh_file[0].header['P' + spectral_name]
-    
+
             F_solar = 176.  # pivot 6076.2 A at 1 AU
 
             # Conversion to I/F
@@ -178,12 +183,12 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
                                solar_range**2 / F_solar)
             point_factor = (1. / texp / spectral_irradiance / fov.uv_area *
                             np.pi * solar_range**2 / F_solar)
-        
+
             extended_calib[spectral_name] = oops.calib.ExtendedSource('I/F',
                                                             extended_factor)
             point_calib[spectral_name] = oops.calib.PointSource('I/F',
                                                             point_factor, fov)
-        
+
         snapshot.insert_subfield('point_calib', point_calib)
         snapshot.insert_subfield('extended_calib', extended_calib)
 
@@ -207,7 +212,7 @@ class LORRI(object):
 
     @staticmethod
     def initialize():
-        """Fills in key information about LORRI. Must be called first.
+        """Fill in key information about LORRI. Must be called first.
         """
 
         # Quick exit after first call
@@ -217,7 +222,8 @@ class LORRI(object):
         NewHorizons.load_instruments()
 
         # Load the instrument kernel
-        LORRI.instrument_kernel = NewHorizons.spice_instrument_kernel('LORRI')[0]
+        kernels = NewHorizons.spice_instrument_kernel('LORRI')
+        LORRI.instrument_kernel = kernels[0]
 
         # Construct a flat FOV for each camera
         for binning_mode, binning_id in [('1X1', -98301), ('4X4', -98302)]:
@@ -230,10 +236,10 @@ class LORRI(object):
             xfov = info['FOV_REF_ANGLE']
             yfov = info['FOV_CROSS_ANGLE']
             assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
-            
+
             uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
             vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
-            
+
             # Display directions: [u,v] = [right,down]
             full_fov = oops.fov.FlatFOV((uscale,-vscale), (samples,lines))
 
@@ -241,21 +247,21 @@ class LORRI(object):
             LORRI.fovs[binning_mode] = full_fov
 
         # Construct a SpiceFrame for each camera
-        flipped_lorri_frame = oops.frame.SpiceFrame('NH_LORRI',
-                                                    id='NH_LORRI_FLIPPED')
+        lorri_flipped = oops.frame.SpiceFrame('NH_LORRI', id='NH_LORRI_FLIPPED')
 
-        # The SPICE IK gives the boresight along -Z, so flip axes.
+        # The SPICE IK gives the boresight along -Z, so flip axes
         flipxyz = oops.Matrix3([[ 1, 0, 0],
-                                [ 0, -1, 0],
+                                [ 0,-1, 0],
                                 [ 0, 0,-1]])
-        ignore = oops.frame.Cmatrix(flipxyz, flipped_lorri_frame, 'NH_LORRI')
+        ignore = oops.frame.Cmatrix(flipxyz, lorri_flipped, 'NH_LORRI')
 
         LORRI.initialized = True
 
     @staticmethod
     def reset():
-        """Resets the internal NewHorizons LORRI parameters. Can be useful for
-        debugging."""
+        """Reset the internal NewHorizons LORRI parameters.
+
+        Can be useful for debugging."""
 
         LORRI.instrument_kernel = None
         LORRI.fovs = {}
@@ -282,7 +288,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
 
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
         import cspice
-        
+
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                              astrometry=True)
@@ -302,7 +308,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertTrue(snapshot.__dict__.has_key("point_calib"))
         self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
         self.assertTrue(snapshot.__dict__.has_key("headers"))
-    
+
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                              data=True, calibration=False)
@@ -335,7 +341,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertTrue(snapshot.data.shape == (1024,1024))
         self.assertTrue(snapshot.quality.shape == (1024,1024))
         self.assertTrue(snapshot.error.shape == (1024,1024))
-        
+
         self.assertAlmostEqual(snapshot.time[1]-snapshot.time[0],
                                snapshot.texp)
         self.assertAlmostEqual(snapshot.time[0]+snapshot.texp/2,
@@ -344,17 +350,17 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertEqual(snapshot.target, "EUROPA")
 
         fov_1024 = snapshot.fov
-        
+
         for pointing, geom in [('spice', 'fits'),
                                ('fits', 'spice'),
                                ('fits', 'fits')]:
             snapshot_fits = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
                             "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                             geom=geom, pointing=pointing)
-            
+
             self.assertEqual(snapshot.time, snapshot_fits.time)
             self.assertEqual(snapshot.texp, snapshot_fits.texp)
-    
+
             meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (0,0), limit=(0,0))
             bp = oops.Backplane(snapshot, meshgrid=meshgrid)
             bp_fits = oops.Backplane(snapshot_fits, meshgrid=meshgrid)
@@ -364,12 +370,12 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
             dec_fits =    bp_fits.declination().vals.astype('float')
             europa =      bp.where_intercepted("europa").vals
             europa_fits = bp_fits.where_intercepted("europa").vals
-    
+
             self.assertAlmostEqual(ra, ra_fits, places=3)
             self.assertAlmostEqual(dec, dec_fits, places=3)
             self.assertEqual(europa, 0.0)
             self.assertEqual(europa_fits, 0.0)
-    
+
             # Adjust offset as CSPICE kernels change
             europa_uv = (385,510)
             meshgrid = oops.Meshgrid.for_fov(snapshot.fov, europa_uv,
@@ -390,7 +396,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
             europa_fits = bp_fits.where_intercepted("europa").vals
             snapshot.fov = orig_fov
             snapshot_fits.fov = orig_fits_fov
-            
+
             self.assertAlmostEqual(long, long_fits, places=-1)
             self.assertAlmostEqual(lat, lat_fits, places=0)
             self.assertEqual(europa, 1.0)
@@ -411,9 +417,9 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertTrue(snapshot.data.shape == (256,256))
         self.assertTrue(snapshot.quality.shape == (256,256))
         self.assertTrue(snapshot.error.shape == (256,256))
-        
+
         fov_256 = snapshot.fov
-        
+
         self.assertAlmostEqual(fov_256.uv_scale.vals[0]/4,
                                fov_1024.uv_scale.vals[0])
         self.assertAlmostEqual(fov_256.uv_scale.vals[1]/4,

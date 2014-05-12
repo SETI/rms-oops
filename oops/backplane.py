@@ -945,8 +945,8 @@ class Backplane(object):
         if key not in self.backplanes:
             incidence = self.incidence_angle(event_key)
             lambert_law = incidence.cos()
-            lambert_law.mask |= (incidence.vals >= constants.HALFPI)
-            lambert_law.vals[lambert_law.mask] = 0.
+            lambert_law = lambert_law.mask_where(incidence >= constants.HALFPI,
+                                                 0.)
             self.register_backplane(key, lambert_law)
 
         return self.backplanes[key]

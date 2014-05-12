@@ -159,7 +159,7 @@ class Transform(object):
     def __str__(self):
         return ('Transform(shape=' +
                 repr(self.shape).replace(' ', '') + '/' +
-                repr(self.frame_id) + ')')
+                repr(self.frame.frame_id) + ')')
 
     def __repr__(self): return self.__str__()
 
