@@ -55,7 +55,10 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
     if target_name.strip() == '---':
         target_name = 'PLUTO'
 
-    target_body = oops.Body.lookup(target_name)
+    try:
+        target_body = oops.Body.lookup(target_name)
+    except:
+        target_body = None
 
     # Make sure the SPICE kernels are loaded
     NewHorizons.load_cks( tstart, tstart + texp)
@@ -210,6 +213,30 @@ class LORRI(object):
     fovs = {}
     initialized = False
 
+    # Create a master version of the LORRI distortion models from
+    #   Owen Jr., W.M., 2011. New Horizons LORRI Geometric Calibration of
+    #   August 2006. JPL IOM 343L-11-002.
+    
+    LORRI_F = 2619.008    # mm
+    LORRI_E2 = 2.696e-5   # / mm2
+    LORRI_E5 = 1.988e-5   # / mm
+    LORRI_E6 = -2.864e-5  # / mm
+    LORRI_KX = 76.9231    # samples/mm
+    LORRI_KY = -76.9231   # lines/mm
+    
+    LORRI_COEFF = np.zeros((4,4,2))
+    LORRI_COEFF[1,0,0] = LORRI_KX          * LORRI_F
+    LORRI_COEFF[3,0,0] = LORRI_KX*LORRI_E2 * LORRI_F**3
+    LORRI_COEFF[1,2,0] = LORRI_KX*LORRI_E2 * LORRI_F**3
+    LORRI_COEFF[1,1,0] = LORRI_KX*LORRI_E5 * LORRI_F**2
+    LORRI_COEFF[2,0,0] = LORRI_KX*LORRI_E6 * LORRI_F**2
+    
+    LORRI_COEFF[0,1,1] = LORRI_KY          * LORRI_F
+    LORRI_COEFF[2,1,1] = LORRI_KY*LORRI_E2 * LORRI_F**3
+    LORRI_COEFF[0,3,1] = LORRI_KY*LORRI_E2 * LORRI_F**3
+    LORRI_COEFF[0,2,1] = LORRI_KY*LORRI_E5 * LORRI_F**2
+    LORRI_COEFF[1,1,1] = LORRI_KY*LORRI_E6 * LORRI_F**2
+
     @staticmethod
     def initialize():
         """Fill in key information about LORRI. Must be called first.
@@ -225,28 +252,26 @@ class LORRI(object):
         kernels = NewHorizons.spice_instrument_kernel('LORRI')
         LORRI.instrument_kernel = kernels[0]
 
-        # Construct a flat FOV for each camera
-        for binning_mode, binning_id in [('1X1', -98301), ('4X4', -98302)]:
-            info = LORRI.instrument_kernel['INS'][binning_id]
+        # Construct a Polynomial FOV
+        info = LORRI.instrument_kernel['INS']['NH_LORRI_1X1']#[-98301]
 
-            # Full field of view
-            lines = info['PIXEL_LINES']
-            samples = info['PIXEL_SAMPLES']
+        # Full field of view
+        lines = info['PIXEL_LINES']
+        samples = info['PIXEL_SAMPLES']
 
-            xfov = info['FOV_REF_ANGLE']
-            yfov = info['FOV_CROSS_ANGLE']
-            assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
+        xfov = info['FOV_REF_ANGLE']
+        yfov = info['FOV_CROSS_ANGLE']
+        assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
 
-            uscale = np.arctan(np.tan(xfov * np.pi/180.) / (samples/2.))
-            vscale = np.arctan(np.tan(yfov * np.pi/180.) / (lines/2.))
+        # Display directions: [u,v] = [right,down]
+        full_fov = oops.fov.Polynomial(LORRI.LORRI_COEFF,
+                                       (samples,lines), xy_to_uv=True)
 
-            # Display directions: [u,v] = [right,down]
-            full_fov = oops.fov.FlatFOV((uscale,-vscale), (samples,lines))
+        # Load the dictionary, include the subsampling modes
+        LORRI.fovs['1X1'] = full_fov
+        LORRI.fovs['4X4'] = oops.fov.Subsampled(full_fov, 4)
 
-            # Load the dictionary
-            LORRI.fovs[binning_mode] = full_fov
-
-        # Construct a SpiceFrame for each camera
+        # Construct a SpiceFrame
         lorri_flipped = oops.frame.SpiceFrame('NH_LORRI', id='NH_LORRI_FLIPPED')
 
         # The SPICE IK gives the boresight along -Z, so flip axes
