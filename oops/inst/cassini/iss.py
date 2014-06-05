@@ -35,6 +35,19 @@ def from_file(filespec, **parameters):
     else:
         camera = "NAC"
 
+    filter1, filter2 = dict["FILTER_NAME"]
+    
+    gain_mode = None
+    
+    if dict["GAIN_MODE_ID"][:3] == "215":
+        gain_mode = 0
+    elif dict["GAIN_MODE_ID"][:2] == "95":
+        gain_mode = 1
+    elif dict["GAIN_MODE_ID"][:2] == "29":
+        gain_mode = 2
+    elif dict["GAIN_MODE_ID"][:2] == "12":
+        gain_mode = 3
+
     # Make sure the SPICE kernels are loaded
     Cassini.load_cks( tstart, tstart + texp)
     Cassini.load_spks(tstart, tstart + texp)
@@ -46,7 +59,10 @@ def from_file(filespec, **parameters):
                                data = vic.data_2d,      # Add the data array
                                instrument = "ISS",
                                detector = camera,
-                               sampling = mode)
+                               sampling = mode,
+                               filter1 = filter1,
+                               filter2 = filter2,
+                               gain_mode = gain_mode)
 
     return result
 
