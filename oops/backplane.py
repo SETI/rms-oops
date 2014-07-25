@@ -63,7 +63,7 @@ class Backplane(object):
         self.obs_event = obs.event_at_grid(self.meshgrid, time)
         self.obs_gridless_event = obs.gridless_event(self.meshgrid, time)
 
-        self.shape = self.obs_event.shape
+        self.shape = self.obs_event.arr.shape
 
         # The surface_events dictionary comes in two versions, one with
         # derivatives and one without. Each dictionary is keyed by a tuple of
@@ -833,9 +833,10 @@ class Backplane(object):
         if key not in self.backplanes:
             distance = self.center_distance(event_key)
 
-            (dlos_du, dlos_dv) = self.obs.fov.center_dlos_duv.as_columns()
-            u_resolution = distance * dlos_du.as_vector3().norm()
-            v_resolution = distance * dlos_dv.as_vector3().norm()
+            res = self.obs.fov.center_dlos_duv.swap_items(Pair)
+            (u_resolution, v_resolution) = res.to_scalars()
+            u_resolution = distance * u_resolution.join_items(Vector3).norm()
+            v_resolution = distance * v_resolution.join_items(Vector3).norm()
 
             self.register_gridless_backplane(key[:-1] + ('u',), u_resolution)
             self.register_gridless_backplane(key[:-1] + ('v',), v_resolution)

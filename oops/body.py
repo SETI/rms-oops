@@ -74,13 +74,17 @@ class Body(object):
 
     BODY_REGISTRY = {}      # global dictionary of body objects
 
-    def __init__(self, name, path, frame, parent, barycenter):
+    def __init__(self, name, path, frame, parent, barycenter,
+                 spice_name=None):
         """Constructor for a Body object."""
 
         self.name = name
 
+        if spice_name is None:
+            spice_name = name
+            
         try:
-            self.spice_id = cspice.bodn2c(name)
+            self.spice_id = cspice.bodn2c(spice_name)
         except KeyError:
             self.spice_id = None
 
@@ -396,13 +400,13 @@ class Body(object):
         """
 
         if type(body) == Body: return body
-        return body_lookup(body)
+        return Body.lookup(body)
 
     @staticmethod
     def as_body_name(body):
         """Return a body name given the registered name or the object itself."""
 
-        if is_body(body): return body.name
+        if type(body) == Body: return body.name
         return body
 
     @staticmethod

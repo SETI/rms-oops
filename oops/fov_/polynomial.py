@@ -17,22 +17,34 @@ class Polynomial(FOV):
 
     DEBUG = False       # True to print convergence steps on xy_from_uv()
 
-    def __init__(self, coefft, uv_shape, uv_los=None, uv_area=None,
-                       xy_to_uv=False, iters=8):
+    def __init__(self, uv_shape, coefft_xy_from_uv=None,
+                 coefft_uv_from_xy=None, uv_los=None, uv_area=None,
+                 iters=8):
         """Constructor for a PolynomialFOV.
 
         Inputs:
-            coefft      the coefficient array of the polynomial. The array has
-                        shape [order+1,order+1,2], where coefft[i,j,0] is the
-                        coefficient on (u**i * v**j) yielding x(u,v), and
-                        coefft[i,j,1] is the coefficient yielding y(u,v). All
-                        coefficients are 0 for (i+j) > order. If xy_to_uv is
-                        True, swap (u,v) and (x,y) in the above description.
-
             uv_shape    a single value, tuple or Pair defining size of the field
                         of view in pixels. This number can be non-integral if
                         the detector is not composed of a rectangular array of
                         pixels.
+
+            coefft_xy_from_uv
+                        the coefficient array of the polynomial to
+                        convert U,V to X,Y. The array has shape
+                        [order+1,order+1,2], where coefft[i,j,0] is the
+                        coefficient on (u**i * v**j) yielding x(u,v), and
+                        coefft[i,j,1] is the coefficient yielding y(u,v). All
+                        coefficients are 0 for (i+j) > order. If None, then
+                        the polynomial for uv_from_xy is inverted.
+
+            coefft_uv_from_xy
+                        the coefficient array of the polynomial to
+                        convert X,Y to U,V. The array has shape
+                        [order+1,order+1,2], where coefft[i,j,0] is the
+                        coefficient on (x**i * y**j) yielding u(x,y), and
+                        coefft[i,j,1] is the coefficient yielding v(x,y). All
+                        coefficients are 0 for (i+j) > order. If None, then
+                        the polynomial for xy_from_uv is inverted. 
 
             uv_los      a single value, tuple or Pair defining the (u,v)
                         coordinates of the nominal line of sight. By default,
@@ -41,7 +53,7 @@ class Polynomial(FOV):
             uv_area     an optional parameter defining the nominal area of a
                         pixel in steradians after distortion has been removed.
 
-            xy_to_uv    True to indicate that the polynomial converts from
+            uv_from_xy    True to indicate that the polynomial converts from
                         (x,y) to (u,v). The default is that it converts from
                         (u,v) to (x,y).
                         
@@ -49,9 +61,17 @@ class Polynomial(FOV):
                         evaluating uv_from_xy().
         """
 
-        self.coefft = np.asarray(coefft)
-        self.order  = self.coefft.shape[0] - 1
+        self.coefft_xy_from_uv = None
+        self.coefft_uv_from_xy = None
+        
+        if coefft_xy_from_uv is not None:
+            self.coefft_xy_from_uv = np.asarray(coefft_xy_from_uv)
+        if coefft_uv_from_xy is not None:
+            self.coefft_uv_from_xy = np.asarray(coefft_uv_from_xy)
 
+        assert (self.coefft_xy_from_uv is not None or
+                self.coefft_uv_from_xy is not None)
+        
         self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
 
         if uv_los is None:
@@ -60,14 +80,15 @@ class Polynomial(FOV):
             self.uv_los = Pair.as_pair(uv_los).as_float()
             self.uv_los.as_readonly()
 
-        self.xy_to_uv = xy_to_uv
         self.iters = iters
         
         # Required attribute
-        if self.xy_to_uv:
-            self.uv_scale = Pair.as_pair((1./coefft[1,0,0], 1./coefft[0,1,1]))
+        if self.coefft_uv_from_xy is not None:
+            self.uv_scale = Pair.as_pair((1./self.coefft_uv_from_xy[1,0,0],
+                                          1./self.coefft_uv_from_xy[0,1,1]))
         else:
-            self.uv_scale = Pair.as_pair((coefft[1,0,0], coefft[0,1,1]))
+            self.uv_scale = Pair.as_pair((self.coefft_xy_from_uv[1,0,0],
+                                          self.coefft_xy_from_uv[0,1,1]))
 
         if uv_area is None:
             self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
@@ -86,10 +107,11 @@ class Polynomial(FOV):
         # Subtract off the center of the field of view
         uv_pair = Pair.as_pair(uv_pair, derivs) - self.uv_los
         
-        if self.xy_to_uv:
-            xy = self._solve_polynomial(uv_pair, derivs)
+        if self.coefft_xy_from_uv is not None:
+            xy = self._apply_polynomial(uv_pair, self.coefft_xy_from_uv, derivs)
         else:
-            xy = self._apply_polynomial(uv_pair, derivs)
+            xy = self._solve_polynomial(uv_pair, self.coefft_uv_from_xy, derivs,
+                                        True)
 
         return xy
         
@@ -102,16 +124,17 @@ class Polynomial(FOV):
 
         xy_pair = Pair.as_pair(xy_pair, derivs)
         
-        if self.xy_to_uv:
-            uv = self._apply_polynomial(xy_pair, derivs)
+        if self.coefft_uv_from_xy is not None:
+            uv = self._apply_polynomial(xy_pair, self.coefft_uv_from_xy, derivs)
         else:
-            uv = self._solve_polynomial(xy_pair, derivs)
+            uv = self._solve_polynomial(xy_pair, self.coefft_xy_from_uv, derivs,
+                                        False)
 
         uv = uv + self.uv_los
         
         return uv
 
-    def _apply_polynomial(self, uv_pair, derivs):
+    def _apply_polynomial(self, uv_pair, coefft, derivs):
         """Apply the polynomial to a (u,v) pair to return (x,y).
         
         The terminology in this function assumes that the polynomial takes
@@ -120,6 +143,8 @@ class Polynomial(FOV):
         with (u,v) and (x,y) swapped from the point of view of the FOV.
         """
         
+        order = coefft.shape[0]-1
+        
         (du,dv) = uv_pair.to_scalars()
         du = du.vals[..., np.newaxis]
         dv = dv.vals[..., np.newaxis]
@@ -127,7 +152,7 @@ class Polynomial(FOV):
         # Construct the powers of line and sample
         du_powers = [1.]
         dv_powers = [1.]
-        for k in range(1, self.order + 1):
+        for k in range(1, order + 1):
             du_powers.append(du_powers[-1] * du)
             dv_powers.append(dv_powers[-1] * dv)
 
@@ -138,10 +163,10 @@ class Polynomial(FOV):
         #
         # Start with the high-order terms and work downward, because this
         # improves accuracy. Stop at one because there are no zero-order terms.
-        for k in range(self.order, -1, -1):
+        for k in range(order, -1, -1):
           for i in range(k+1):
             j = k - i
-            xy_pair_vals += self.coefft[i,j,:] * du_powers[i] * dv_powers[j]
+            xy_pair_vals += coefft[i,j,:] * du_powers[i] * dv_powers[j]
 
         xy = Pair(xy_pair_vals, uv_pair.mask)
 
@@ -149,12 +174,12 @@ class Polynomial(FOV):
         if uv_pair.derivs:
             dxy_duv_vals = np.zeros(uv_pair.shape + (2,2))
 
-            for k in range(self.order, 0, -1):
+            for k in range(order, 0, -1):
               for i in range(k+1):
                 j = k - i
-                dxy_duv_vals[...,:,0] += (self.coefft[i,j,:] *
+                dxy_duv_vals[...,:,0] += (coefft[i,j,:] *
                                           i*du_powers[i-1] * dv_powers[j])
-                dxy_duv_vals[...,:,1] += (self.coefft[i,j,:] *
+                dxy_duv_vals[...,:,1] += (coefft[i,j,:] *
                                           du_powers[i] * j*dv_powers[j-1])
 
             dxy_duv = Pair(dxy_duv_vals, uv_pair.mask, drank=1)
@@ -167,7 +192,7 @@ class Polynomial(FOV):
 
         return xy
 
-    def _solve_polynomial(self, xy_pair, derivs):
+    def _solve_polynomial(self, xy_pair, coefft, derivs, uv_from_xy):
         """Solve the polynomial for an (x,y) pair to return (u,v).
         
         The terminology in this function assumes that the polynomial takes
@@ -176,14 +201,16 @@ class Polynomial(FOV):
         with (u,v) and (x,y) swapped from the point of view of the FOV.
         """
 
+        order = coefft.shape[0]-1
+
         xy_pair = Pair.as_pair(xy_pair, derivs)
         xy_wod = xy_pair.without_derivs()
 
         # Make a rough initial guess
-        if self.xy_to_uv:
-            uv = (xy_wod - self.coefft[0,0]).element_mul(self.uv_scale)
+        if uv_from_xy:
+            uv = (xy_wod - coefft[0,0]).element_mul(self.uv_scale)
         else:
-            uv = (xy_wod - self.coefft[0,0]).element_div(self.uv_scale)
+            uv = (xy_wod - coefft[0,0]).element_div(self.uv_scale)
         uv.insert_deriv('uv', Pair.IDENTITY)
 
         # Iterate until convergence...
@@ -191,7 +218,7 @@ class Polynomial(FOV):
         for iter in range(self.iters):
 
             # Evaluate the transform and its partial derivatives
-            xy = self._apply_polynomial(uv, derivs=True)
+            xy = self._apply_polynomial(uv, coefft, derivs=True)
             dxy_duv = xy.d_duv
 
             # Apply one step of Newton's method in 2-D
@@ -246,7 +273,7 @@ class Test_Polynomial(unittest.TestCase):
 
         uv = Pair.combos(np.arange(20), np.arange(15))
 
-        fov = Polynomial(uv_coefft, uv.shape, (7,7), 1.)
+        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
 
         xy = fov.xy_from_uv(uv)
         uv_test = fov.uv_from_xy(xy)
@@ -266,7 +293,7 @@ class Test_Polynomial(unittest.TestCase):
         uv = Pair.combos(np.arange(20), np.arange(15))
         uv.insert_deriv('t', Pair((1,1)))
 
-        fov = Polynomial(uv_coefft, uv.shape, (7,7), 1.)
+        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
 
         xy = fov.xy_from_uv(uv, derivs=False)
         self.assertEqual(xy.derivs, {})
@@ -291,7 +318,7 @@ class Test_Polynomial(unittest.TestCase):
         uv.insert_deriv('t', Pair(np.random.randn(20,15,2)))
         uv.insert_deriv('ab', Pair(np.random.randn(20,15,2,2), drank=1))
 
-        fov = Polynomial(uv_coefft, uv.shape, (7,7), 1.)
+        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
 
         xy = fov.xy_from_uv(uv, derivs=True)
 
@@ -324,7 +351,7 @@ class Test_Polynomial(unittest.TestCase):
                                      [-0.02,  0.00,  0.00]])
 
         uv = Pair.combos(np.arange(20), np.arange(15))
-        fov = Polynomial(uv_coefft, uv.shape, (7,7), 1.)
+        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
 
         xy = fov.xy_from_uv(uv, derivs=False)
         xy.insert_deriv('t', Pair(np.random.randn(20,15,2)))

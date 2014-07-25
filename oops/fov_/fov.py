@@ -27,9 +27,9 @@ class FOV(object):
 
     Although ICS coordinates (u,v) are defined here in units of pixels, the FOV
     concept can be used to describe an arbitrary field of view, consisting of
-    detectors of arbitary shape. In this case, (u,v) are simply a convenient set
-    of coordinates to use in a frame that describes the layout of detectors on
-    the focal plane of the instrument.
+    detectors of arbitrary shape. In this case, (u,v) are simply a convenient
+    set of coordinates to use in a frame that describes the layout of detectors
+    on the focal plane of the instrument.
 
     The class also allows for the possibility that the field of view has
     additional dependencies on wavelength, etc. Additional arguments and keyword
@@ -239,8 +239,8 @@ class FOV(object):
         """
 
         clipped = Pair.as_pair(uv_pair).copy(readonly=False, recursive=False)
-        clipped.vals[...,0] = clipped.vals[...,0].clip(0, self.uv_shape[0])
-        clipped.vals[...,1] = clipped.vals[...,1].clip(0, self.uv_shape[1])
+        clipped.vals[...,0] = clipped.vals[...,0].clip(0, self.uv_shape.vals[0])
+        clipped.vals[...,1] = clipped.vals[...,1].clip(0, self.uv_shape.vals[1])
 
         if remask:
             return Pair(clipped, uv_pair.mask | (clipped != uv_pair))

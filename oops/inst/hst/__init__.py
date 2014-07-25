@@ -663,10 +663,10 @@ class HST(object):
                 cxy[j,i-j,1] = -fov_dict["CY" + str(i) + str(j)]
             except KeyError: pass
 
-        return oops.fov.Polynomial(cxy * RADIANS_PER_ARCSEC,
-                        (fov_dict["XSIZE"], fov_dict["YSIZE"]),
-                        (fov_dict["XREF" ], fov_dict["YREF" ]),
-                        (fov_dict["SCALE"] * RADIANS_PER_ARCSEC)**2)
+        return oops.fov.Polynomial((fov_dict["XSIZE"], fov_dict["YSIZE"]),
+            coefft_xy_from_uv = cxy*RADIANS_PER_ARCSEC,
+            uv_los            = (fov_dict["XREF" ], fov_dict["YREF" ]),
+            uv_area           = (fov_dict["SCALE"] * RADIANS_PER_ARCSEC)**2)
 
     def construct_drz_fov(self, fov_dict, hst_file):
         """Returns the FOV object associated with the full field of view of a

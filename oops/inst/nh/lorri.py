@@ -263,8 +263,8 @@ class LORRI(object):
         assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
 
         # Display directions: [u,v] = [right,down]
-        full_fov = oops.fov.Polynomial(LORRI.LORRI_COEFF,
-                                       (samples,lines), xy_to_uv=True)
+        full_fov = oops.fov.Polynomial((samples,lines),
+                                       coefft_uv_from_xy=LORRI.LORRI_COEFF)
 
         # Load the dictionary, include the subsampling modes
         LORRI.fovs['1X1'] = full_fov

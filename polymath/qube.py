@@ -1585,6 +1585,7 @@ class Qube(object):
 
         return self.__str__()
 
+
     def __str__(self):
         """Express the value as a string.
 
@@ -1594,15 +1595,20 @@ class Qube(object):
         to a NumPy ndarray.
 
         The suffices are, in order...
-            - "mask" if the object has a mask
-            - the name of the units of the object has units
-            - the names of all the derivatives, in alphabetical order
+            - "denom=(shape)" if the object has a denominator;
+            - "mask" if the object has a mask;
+            - the name of the units of the object has units;
+            - the names of all the derivatives, in alphabetical order.
         """
 
         suffix = []
 
         # Apply the units if necessary
         obj = self.into_units(recursive=False)
+
+        # Indicate the denominator shape if necessary
+        if self.__denom_ != ():
+            suffix += ['denom=' + str(self.__denom_)]
 
         # Masked objects have a suffix ', mask'
         is_masked = np.any(self.__mask_)
@@ -1631,6 +1637,10 @@ class Qube(object):
         else:
             string = str(self.__values_)[1:-1]
 
+        # Add an extra set of brackets around derivatives
+        if self.__denom_ != ():
+            string = '[' + string + ']'
+
         # Concatenate the results
         if len(suffix) == 0:
             suffix = ''
@@ -1638,7 +1648,7 @@ class Qube(object):
             suffix = '; ' + ', '.join(suffix)
 
         return type(self).__name__ + '(' + string + suffix + ')'
-
+    
     ############################################################################
     # Numerator slicing operations
     ############################################################################
@@ -3346,6 +3356,10 @@ class Qube(object):
         array1 = np.rollaxis(array1, k1, len(array1.shape))
         array2 = np.rollaxis(array2, k2, len(array2.shape))
 
+        # Make arrays contiguous so sum will run faster
+        array1 = np.ascontiguousarray(array1)
+        array2 = np.ascontiguousarray(array2)
+        
         # Construct the dot product
         new_values = np.sum(array1 * array2, axis=-1)
 

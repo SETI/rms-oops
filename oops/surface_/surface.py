@@ -283,7 +283,8 @@ class Surface(object):
         iters = converge['max_iterations']
         precision = converge['dlt_precision']
         limit = converge['dlt_limit']
-
+        collapse_threshold = converge['collapse_threshold']
+        
         # Interpret the quick parameters
         if type(quick) == dict:
             quick = quick.copy()
@@ -369,6 +370,19 @@ class Surface(object):
                                                        t_guess=new_lt)
 
             new_lt = new_lt.clip(lt_min, lt_max, False)
+            
+            tmin = new_lt.min()
+            tmax = new_lt.max()
+            span = tmax - tmin
+
+            collapsed_mask = (span == Scalar.MASKED)
+
+            if span <= collapse_threshold:
+                if LOGGING.surface_time_collapse:
+                    print LOGGING.prefix, "Surface.collapse_time()",
+                    print tmin, tmax - tmin    
+                new_lt = Scalar((tmin + tmax)/2., collapsed_mask, new_lt.units)
+            
             dlt = new_lt - lt
             lt = new_lt
 

@@ -743,7 +743,7 @@ class QuickFrame(Frame):
         # for i in range(3):
         for i in range(2):
           for j in range(3):
-            self.matrix[i,j] = interp.UnivariateSpline(self.times,
+            self.matrix[i,j] = interp.InterpolatedUnivariateSpline(self.times,
                                     self.transforms.matrix.vals[...,i,j],
                                     k=KIND)
 
@@ -753,32 +753,87 @@ class QuickFrame(Frame):
         else:
             self.omega = np.empty((3,), dtype="object")
             for i in range(3):
-                self.omega[i] = interp.UnivariateSpline(self.times,
+                self.omega[i] = interp.InterpolatedUnivariateSpline(self.times,
                                         self.transforms.omega.vals[...,i],
                                         k=KIND)
 
-    def _interpolate_matrix_omega(self, time):
+    def _interpolate_matrix_omega(self, time, collapse_threshold=None):
 
+        if collapse_threshold is None:
+            collapse_threshold = QUICK.dictionary['quickframe_linear_interpolation_threshold']
+            
         # time can only be a 1-D array in the splines
         tflat = Scalar.as_scalar(time).flatten()
+        tflat_max = np.max(tflat.vals)
+        tflat_min = np.min(tflat.vals)
+        time_diff = tflat_max-tflat_min
         matrix = np.empty(list(tflat.shape) + [3,3])
         omega  = np.zeros(list(tflat.shape) + [3])
 
-        # Evaluate the matrix and rotation vector
-        matrix[...,0,0] = self.matrix[0,0](tflat.vals)
-        matrix[...,0,1] = self.matrix[0,1](tflat.vals)
-        matrix[...,0,2] = self.matrix[0,2](tflat.vals)
-        matrix[...,1,0] = self.matrix[1,0](tflat.vals)
-        matrix[...,1,1] = self.matrix[1,1](tflat.vals)
-        matrix[...,1,2] = self.matrix[1,2](tflat.vals)
-        # matrix[...,2,0] = self.matrix[2,0](tflat.vals)
-        # matrix[...,2,1] = self.matrix[2,1](tflat.vals)
-        # matrix[...,2,2] = self.matrix[2,2](tflat.vals)
+        if time_diff < collapse_threshold:
+            # If all time values are basically the same, we only need to do
+            # linear interpolation.
+            tflat_diff = tflat.vals-tflat_min
+            tflat2 = Scalar([tflat_min, tflat_max])
+            matrix00 = self.matrix[0,0](tflat2.vals)
+            matrix01 = self.matrix[0,1](tflat2.vals)
+            matrix02 = self.matrix[0,2](tflat2.vals)
+            matrix10 = self.matrix[1,0](tflat2.vals)
+            matrix11 = self.matrix[1,1](tflat2.vals)
+            matrix12 = self.matrix[1,2](tflat2.vals)
+            if self.omega is not None:
+                omega0 = self.omega[0](tflat.vals)
+                omega1 = self.omega[1](tflat.vals)
+                omega2 = self.omega[2](tflat.vals)
+        
+            if time_diff == 0.:
+                matrix[...,0,0] = matrix00[0]
+                matrix[...,0,1] = matrix01[0]
+                matrix[...,0,2] = matrix02[0]
+                matrix[...,1,0] = matrix10[0]
+                matrix[...,1,1] = matrix11[0]
+                matrix[...,1,2] = matrix12[0]
+                if self.omega is not None:
+                    omega[...,0] = omega0
+                    omega[...,1] = omega1
+                    omega[...,2] = omega2
+            else:
+                matrix[...,0,0] = ((matrix00[1]-matrix00[0])/time_diff *
+                                   tflat_diff + matrix00[0])
+                matrix[...,0,1] = ((matrix01[1]-matrix01[0])/time_diff *
+                                   tflat_diff + matrix01[0])
+                matrix[...,0,2] = ((matrix02[1]-matrix02[0])/time_diff *
+                                   tflat_diff + matrix02[0])
+                matrix[...,1,0] = ((matrix10[1]-matrix10[0])/time_diff *
+                                   tflat_diff + matrix10[0])
+                matrix[...,1,1] = ((matrix11[1]-matrix11[0])/time_diff *
+                                   tflat_diff + matrix11[0])
+                matrix[...,1,2] = ((matrix12[1]-matrix12[0])/time_diff *
+                                   tflat_diff + matrix12[0])
+                if self.omega is not None:
+                    omega[...,0] = ((omega0[1]-omega0[0])/time_diff *
+                                    tflat_diff + omega0[0])
+                    omega[...,1] = ((omega1[1]-omega1[0])/time_diff *
+                                    tflat_diff + omega1[0])
+                    omega[...,2] = ((omega2[1]-omega2[0])/time_diff *
+                                    tflat_diff + omega2[0])
+                    
+        else:
+            # Evaluate the matrix and rotation vector
+            matrix[...,0,0] = self.matrix[0,0](tflat.vals)
+            matrix[...,0,1] = self.matrix[0,1](tflat.vals)
+            matrix[...,0,2] = self.matrix[0,2](tflat.vals)
+            matrix[...,1,0] = self.matrix[1,0](tflat.vals)
+            matrix[...,1,1] = self.matrix[1,1](tflat.vals)
+            matrix[...,1,2] = self.matrix[1,2](tflat.vals)
+            # matrix[...,2,0] = self.matrix[2,0](tflat.vals)
+            # matrix[...,2,1] = self.matrix[2,1](tflat.vals)
+            # matrix[...,2,2] = self.matrix[2,2](tflat.vals)
 
-        if self.omega is not None:
-            omega[...,0] = self.omega[0](tflat.vals)
-            omega[...,1] = self.omega[1](tflat.vals)
-            omega[...,2] = self.omega[2](tflat.vals)
+            if self.omega is not None:
+                omega[...,0] = self.omega[0](tflat.vals)
+                omega[...,1] = self.omega[1](tflat.vals)
+                omega[...,2] = self.omega[2](tflat.vals)
 
         # Normalize the matrix
         matrix[...,2,:] = utils.ucross3d(matrix[...,0,:], matrix[...,1,:])

@@ -1179,35 +1179,75 @@ class QuickPath(Path):
 
     def _spline_setup(self):
         KIND = 3
-        self.pos_x = interp.UnivariateSpline(self.times,
+        self.pos_x = interp.InterpolatedUnivariateSpline(self.times,
                                              self.events.pos.vals[:,0], k=KIND)
-        self.pos_y = interp.UnivariateSpline(self.times,
+        self.pos_y = interp.InterpolatedUnivariateSpline(self.times,
                                              self.events.pos.vals[:,1], k=KIND)
-        self.pos_z = interp.UnivariateSpline(self.times,
+        self.pos_z = interp.InterpolatedUnivariateSpline(self.times,
                                              self.events.pos.vals[:,2], k=KIND)
 
-        self.vel_x = interp.UnivariateSpline(self.times,
+        self.vel_x = interp.InterpolatedUnivariateSpline(self.times,
                                              self.events.vel.vals[:,0], k=KIND)
-        self.vel_y = interp.UnivariateSpline(self.times,
+        self.vel_y = interp.InterpolatedUnivariateSpline(self.times,
                                              self.events.vel.vals[:,1], k=KIND)
-        self.vel_z = interp.UnivariateSpline(self.times,
+        self.vel_z = interp.InterpolatedUnivariateSpline(self.times,
                                              self.events.vel.vals[:,2], k=KIND)
 
-    def _interpolate_pos_vel(self, time):
+    def _interpolate_pos_vel(self, time, collapse_threshold=None):
 
-        # time can only be a 1-D array in the splines
+        if collapse_threshold is None:
+            collapse_threshold = QUICK.dictionary['quickpath_linear_interpolation_threshold']
+            
         tflat = Scalar.as_scalar(time).flatten()
+        tflat_max = np.max(tflat.vals)
+        tflat_min = np.min(tflat.vals)
+        time_diff = tflat_max-tflat_min
+
         pos = np.empty(tflat.shape + (3,))
         vel = np.empty(tflat.shape + (3,))
 
-        # Evaluate the positions and velocities
-        pos[...,0] = self.pos_x(tflat.vals)
-        pos[...,1] = self.pos_y(tflat.vals)
-        pos[...,2] = self.pos_z(tflat.vals)
+        if time_diff < collapse_threshold:
+            # If all time values are basically the same, we only need to do
+            # linear interpolation.
+            tflat_diff = tflat.vals-tflat_min
+            tflat2 = Scalar([tflat_min, tflat_max])
+            pos_x = self.pos_x(tflat2.vals)
+            pos_y = self.pos_y(tflat2.vals)
+            pos_z = self.pos_z(tflat2.vals)
+            vel_x = self.vel_x(tflat2.vals)
+            vel_y = self.vel_y(tflat2.vals)
+            vel_z = self.vel_z(tflat2.vals)
+        
+            if time_diff == 0.:
+                pos[...,0] = pos_x[0]
+                pos[...,1] = pos_y[0]
+                pos[...,2] = pos_z[0]
+                vel[...,0] = vel_x[0]
+                vel[...,1] = vel_x[0]
+                vel[...,2] = vel_x[0]
+            else:
+                pos[...,0] = ((pos_x[1]-pos_x[0])/time_diff * tflat_diff +
+                              pos_x[0])
+                pos[...,1] = ((pos_y[1]-pos_y[0])/time_diff * tflat_diff +
+                              pos_y[0])
+                pos[...,2] = ((pos_z[1]-pos_z[0])/time_diff * tflat_diff +
+                              pos_z[0])
+                vel[...,0] = ((vel_x[1]-vel_x[0])/time_diff * tflat_diff +
+                              vel_x[0])
+                vel[...,1] = ((vel_y[1]-vel_y[0])/time_diff * tflat_diff +
+                              vel_y[0])
+                vel[...,2] = ((vel_z[1]-vel_z[0])/time_diff * tflat_diff +
+                              vel_z[0])
 
-        vel[...,0] = self.vel_x(tflat.vals)
-        vel[...,1] = self.vel_y(tflat.vals)
-        vel[...,2] = self.vel_z(tflat.vals)
+        else:            
+            # Evaluate the positions and velocities
+            pos[...,0] = self.pos_x(tflat.vals)
+            pos[...,1] = self.pos_y(tflat.vals)
+            pos[...,2] = self.pos_z(tflat.vals)
+    
+            vel[...,0] = self.vel_x(tflat.vals)
+            vel[...,1] = self.vel_y(tflat.vals)
+            vel[...,2] = self.vel_z(tflat.vals)
 
         # Return the positions and velocities
         return (Vector3(pos, tflat.mask).reshape(time.shape),

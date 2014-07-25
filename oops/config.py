@@ -24,21 +24,31 @@ class QUICK(object):
     "path_extra_steps": 4,      # number of extra time steps at each end.
     "quickpath_cache": 4,       # maximum number of non-overlapping quickpaths
                                 # to cache for any given path.
+    "quickpath_linear_interpolation_threshold": 0.1,
+                                # if a time span is less than this amount,
+                                # perform linear interpolation instead of
+                                # using InterpolatedUnivariateSpline; this
+                                # increases performance
 
     "use_quickframes": True,
     "frame_time_step": 0.5,     # time interval in seconds.
     "frame_time_extension": 5., # secs by which to extend interval at each end.
     "frame_self_check": None,   # fractional precision for self-testing.
     "frame_extra_steps": 4,     # number of extra time steps at each end.
-    "quickframe_cache": 4       # maximum number of non-overlapping quickframes
+    "quickframe_cache": 4,      # maximum number of non-overlapping quickframes
                                 # to cache for any given frame.
+    "quickframe_linear_interpolation_threshold": 0.1,
+                                # if a time span is less than this amount,
+                                # perform linear interpolation instead of
+                                # using InterpolatedUnivariateSpline; this
+                                # increases performance
 }
 
 ################################################################################
 # Photon solver parameters
 ################################################################################
 
-# For Path._solve_photons()
+# For Path._solve_photon()
 
 class PATH_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
@@ -50,12 +60,17 @@ class PATH_PHOTONS(object):
                                 # should be related to the physical scale of
                                 # the system being studied.
 
-# For Surface._solve_photons()
+# For Surface._solve_photon_by_los()
 
 class SURFACE_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
     dlt_precision = 1.e-6       # See PATH_PHOTONS for more info.
     dlt_limit = 10.             # See PATH_PHOTONS for more info.
+    collapse_threshold = 0.1    # When a surface intercept consists of a range
+                                # of times smaller than this threshold, the
+                                # times are converted to a single value.
+                                # This approximation can speed up some
+                                # calculations substantially.
 
 ################################################################################
 # Event precision
@@ -79,6 +94,7 @@ class LOGGING(object):
     path_iterations = False         # Log iterations of Path._solve_photons().
     surface_iterations = False      # Log iterations of Surface._solve_photons()
     event_time_collapse = False     # Report event time collapse
+    surface_time_collapse = False   # Report surface time collapse
 
     @staticmethod
     def all(flag):
@@ -87,6 +103,7 @@ class LOGGING(object):
         LOGGING.path_iterations = flag
         LOGGING.surface_iterations = flag
         LOGGING.event_time_collapse = flag
+        LOGGING.surface_time_collapse = flag
 
     @staticmethod
     def off(): LOGGING.all(False)

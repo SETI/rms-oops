@@ -495,12 +495,12 @@ class Observation(object):
         bodies  = [Body.as_body(body) for body in bodies]
         nbodies = len(bodies)
 
-        path_ids = [body.path_id for body in bodies]
+        path_ids = [body.path for body in bodies]
         multipath = MultiPath(path_ids)
 
         obs_event = Event(self.midtime, (Vector3.ZERO,Vector3.ZERO),
                           self.path, self.frame)
-        ignore = multipath.photon_to_event(obs_event)   # insert photon arrivals
+        _, obs_event = multipath.photon_to_event(obs_event)   # insert photon arrivals
 
         centers = -obs_event.arr
         ranges = centers.norm()
