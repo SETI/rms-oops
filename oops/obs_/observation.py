@@ -460,37 +460,63 @@ class Observation(object):
 
         return uv
 
-    def inventory(self, bodies, expand=0., as_list=False, as_flags=False):
+    def inventory(self, bodies, expand=0., return_type='list',
+                  fov=None):
         """Return the body names that appear unobscured inside the FOV.
+
+        Restrictions: All inventory calculations are performed at the
+        observation midtime and all bodies are assumed to be spherical.
 
         Input:
             bodies      a list of the names of the body objects to be included
                         in the inventory.
             expand      an optional angle in radians by which to extend the
                         limits of the field of view. This can be used to
-                        accommodate pointing uncertainties.
-            as_list     True to return the inventory as a list of names. This is
-                        the default if neither as_list or as_flags is True.
-            as_flags    True to return the inventory as an array of boolean flag
-                        values.
+                        accommodate pointing uncertainties. XXX NOT IMPLEMENTED XXX
+            return_type 'list' returns the inventory as a list of names.
+                        'flags' returns the inventory as an array of boolean
+                                flag values in the same order as bodies.
+                        'full' returns the inventory as a dictionary of
+                                dictionaries. The main dictionary is indexed by
+                                body name. The subdictionaries contain
+                                attributes of the body in the FOV.
+            fov         If not None, use this fov instead of the OBS FOV.
+            
+        Return:         list, array, or dictionary
 
-        Return:         list, array, or (list,array)
+            If return_type is 'list', it returns a list of the names of all the
+            body objects that fall at least partially inside the FOV and are
+            not completely obscured by another object in the list.
 
-            If as_list is True, it returns a list of the names of all the body
-            objects that fall at least partially inside the FOV and are not
-            completely obscured by another object in the list.
+            If return_type is 'flags', it returns a boolean array containing
+            True everywhere that the body falls at least partially inside the
+            FOV and is not completely obscured.
 
-            If as_flags is True, it returns a boolean array containing True
-            everywhere that the body falls at least partially inside the FOV
-            and is not completely obscured.
-
-            If both as_list and as_flags are True, then the tuple (list,array)
-            is returned.
-
-        Restrictions: All inventory calculations are performed at the
-        observation midtime and all bodies are assumed to be spherical.
+            If return_type is 'full', it returns a dictionary with one entry
+            per body that falls at least partially inside the FOV and is not
+            completely obscured. Each dictionary entry is itself a dictionary
+            containing data about the body in the FOV:
+            
+                body_data['name']          The body name
+                body_data['center_uv']     The U,V Pair of the center point
+                body_data['center']        The Vector3 direction of the center
+                                           point
+                body_data['range']         The range in km
+                body_data['outer_radius']  The outer radius of the body in km
+                body_data['inner_radius']  The inner radius of the body in km
+                body_data['u_min']         The minimum U value covered by the
+                                           body (clipped to the FOV size) 
+                body_data['u_max']         The maximum U value covered by the
+                                           body (clipped to the FOV size)
+                body_data['v_min']         The minimum V value covered by the
+                                           body (clipped to the FOV size)
+                body_data['v_max']         The maximum V value covered by the
+                                           body (clipped to the FOV size)
         """
 
+        if fov is None:
+            fov = self.fov
+            
         body_names = [Body.as_body_name(body) for body in bodies]
         bodies  = [Body.as_body(body) for body in bodies]
         nbodies = len(bodies)
@@ -502,6 +528,9 @@ class Observation(object):
                           self.path, self.frame)
         _, obs_event = multipath.photon_to_event(obs_event)   # insert photon arrivals
 
+        if return_type == 'full':
+            body_uv = fov.uv_from_los(-obs_event.arr).vals
+            
         centers = -obs_event.arr
         ranges = centers.norm()
         radii = Scalar([body.radius for body in bodies])
@@ -513,7 +542,7 @@ class Observation(object):
         # This array equals True for each body falling somewhere inside the FOV
         falls_inside = np.empty(nbodies, dtype='bool')
         for i in range(nbodies):
-            falls_inside[i] = self.fov.sphere_falls_inside(centers[i], radii[i])
+            falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i])
 
         # This array equals True for each body completely hidden by another
         is_hidden = np.zeros(nbodies, dtype='bool')
@@ -532,17 +561,47 @@ class Observation(object):
 
         flags = falls_inside & ~is_hidden
 
-        if as_flags and not as_list:
+        if return_type == 'flags':
             return flags
 
-        list = []
+        if return_type == 'list':
+            ret_list = []
+            for i in range(nbodies):
+                if flags[i]: ret_list.append(body_names[i])
+            return ret_list
+        
+        assert return_type == 'full'
+        
+        ret_dict = {}
+        
+        u_scale = fov.uv_scale.vals[0]
+        v_scale = fov.uv_scale.vals[1]
         for i in range(nbodies):
-            if flags[i]: list.append(body_names[i])
+            if flags[i]:
+                body_data = {}
+                body_data['name'] = body_names[i]
+                body_data['center_uv'] = body_uv[i]
+                body_data['center'] = centers[i]
+                body_data['range'] = ranges[i]
+                body_data['outer_radius'] = radii[i]
+                body_data['inner_radius'] = inner_radii[i]
+                u = body_uv[i][0]
+                v = body_uv[i][1]
+                body_data['u_min'] = np.clip(np.floor(u-radius_angles[i].vals/
+                                                      u_scale), 0,
+                                             self.data.shape[1]-1)
+                body_data['u_max'] = np.clip(np.ceil(u+radius_angles[i].vals/
+                                                     u_scale), 0,
+                                             self.data.shape[1]-1)
+                body_data['v_min'] = np.clip(np.floor(v-radius_angles[i].vals/
+                                                      v_scale), 0,
+                                             self.data.shape[0]-1)
+                body_data['v_max'] = np.clip(np.ceil(v+radius_angles[i].vals/
+                                                     v_scale), 0,
+                                             self.data.shape[0]-1)
+                ret_dict[body_names[i]] = body_data
 
-        if not as_flags:
-            return list
-        else:
-            return (list, flags)
+        return ret_dict
 
 ################################################################################
 # UNIT TESTS
