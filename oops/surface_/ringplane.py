@@ -59,7 +59,7 @@ class RingPlane(Surface):
 
         Input:
             pos         a Vector3 of positions at or near the surface.
-            obs         a Vector3 of observer observer positions. Ignored for
+            obs         a Vector3 of observer positions. Ignored for
                         solid surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
