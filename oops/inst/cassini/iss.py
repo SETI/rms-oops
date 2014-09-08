@@ -14,7 +14,7 @@ from oops.inst.cassini.cassini_ import Cassini
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, fast_distortion=False, **parameters):
+def from_file(filespec, fast_distortion=True, **parameters):
     """A general, static method to return a Snapshot object based on a given
     Cassini ISS image file."""
 
