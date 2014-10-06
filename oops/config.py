@@ -24,7 +24,7 @@ class QUICK(object):
     "path_extra_steps": 4,      # number of extra time steps at each end.
     "quickpath_cache": 4,       # maximum number of non-overlapping quickpaths
                                 # to cache for any given path.
-    "quickpath_linear_interpolation_threshold": 0.1,
+    "quickpath_linear_interpolation_threshold": 3.,
                                 # if a time span is less than this amount,
                                 # perform linear interpolation instead of
                                 # using InterpolatedUnivariateSpline; this
@@ -37,7 +37,7 @@ class QUICK(object):
     "frame_extra_steps": 4,     # number of extra time steps at each end.
     "quickframe_cache": 4,      # maximum number of non-overlapping quickframes
                                 # to cache for any given frame.
-    "quickframe_linear_interpolation_threshold": 0.1,
+    "quickframe_linear_interpolation_threshold": 3.,
                                 # if a time span is less than this amount,
                                 # perform linear interpolation instead of
                                 # using InterpolatedUnivariateSpline; this
@@ -66,7 +66,7 @@ class SURFACE_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
     dlt_precision = 1.e-6       # See PATH_PHOTONS for more info.
     dlt_limit = 10.             # See PATH_PHOTONS for more info.
-    collapse_threshold = 0.1    # When a surface intercept consists of a range
+    collapse_threshold = 3.     # When a surface intercept consists of a range
                                 # of times smaller than this threshold, the
                                 # times are converted to a single value.
                                 # This approximation can speed up some

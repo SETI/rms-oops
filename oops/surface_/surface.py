@@ -677,7 +677,7 @@ class Surface(object):
             # Update the light travel time
             los_in_j2000 = (pos_wrt_origin_j2000 + origin_wrt_ssb_then -
                             obs_wrt_ssb_now)
-            new_lt = offset_j2000.norm() / signed_c
+            new_lt = los_in_j2000.norm() / signed_c
 
             if converged: break
 
