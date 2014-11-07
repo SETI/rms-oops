@@ -31,10 +31,19 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
 
     If parameters["solar_range"] is specified, it overrides the distance from
     the Sun to the target body (in AU) for calibration purposes.
+
+    Inputs:
+        geom        'spice' to use a SPICE SPK for the geometry;
+                    'fits'  to read the geoemtry info from the header.
+        pointing    'spice' to use a SPICE CK for the pointing;
+                    'fits'  to use the pointing info in the FITS header;
+                    'fits90' to use the pointing info in the FITS header but
+                            add a 90 degree rotation; this is needed to correct
+                            an error in the first PDS delivery of the data set.
     """
 
     assert geom in {'spice', 'fits'}
-    assert pointing in {'spice', 'fits'}
+    assert pointing in {'spice', 'fits', 'fits90'}
 
     LORRI.initialize()    # Define everything the first time through
 
@@ -63,8 +72,9 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
     NewHorizons.load_cks( tstart, tstart + texp)
     NewHorizons.load_spks(tstart, tstart + texp)
 
-    if geom != 'spice':
-
+    if geom == 'spice':
+        path = oops.Path.as_waypoint('NEW HORIZONS')
+    else:
         # First construct a path from the Sun to NH
         posx = -nh_file[0].header['SPCSSCX']
         posy = -nh_file[0].header['SPCSSCY']
@@ -83,23 +93,20 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
                                        oops.Frame.J2000,
                                        id=path_id)
         path = oops.Path.as_waypoint(sc_path)
+
+    if pointing == 'spice':
+        frame = oops.Frame.as_wayframe('NH_LORRI')
     else:
-        path = oops.Path.as_waypoint('NEW HORIZONS')
-
-    if pointing != 'spice':
-
-        # Next create a frame based on the boresight
+        # Create a frame based on the boresight
         ra = nh_file[0].header['SPCBRRA']
         dec = nh_file[0].header['SPCBRDEC']
+        north_clk = nh_file[0].header['SPCEMEN']
 
         # OH, THE HORROR
-        year = int(nh_file[0].header['SPCUTCID'][:4])
-        if year <= 2012:
-            print 'before 2012!'
-            north_clk = nh_file[0].header['SPCEMEN'] + 90.
-        else:
-            print 'after 2012!'
-            north_clk = nh_file[0].header['SPCEMEN']
+        if pointing == 'fits90':
+            year = int(nh_file[0].header['SPCUTCID'][:4])
+            if year <= 2012:
+                north_clk += 90.
 
         scet = nh_file[0].header['SPCSCET']
 
@@ -108,8 +115,6 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
                                                      oops.Frame.J2000,
                                                      id=frame_id)
         frame = oops.Frame.as_wayframe(lorri_frame)
-    else:
-        frame = oops.Frame.as_wayframe('NH_LORRI')
 
     # Create a Snapshot
     snapshot = oops.obs.Snapshot(('v','u'), tstart, texp, fov, path, frame,
