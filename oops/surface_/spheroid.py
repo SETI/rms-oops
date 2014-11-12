@@ -90,8 +90,8 @@ class Spheroid(Surface):
 
         Input:
             pos         a Vector3 of positions at or near the surface.
-            obs         a Vector3 of observer observer positions. Ignored for
-                        solid surfaces but needed for virtual surfaces.
+            obs         a Vector3 of observer positions. Ignored for solid
+                        surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
@@ -405,6 +405,9 @@ class Spheroid(Surface):
                 cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
                 t.insert_deriv(key, dt_dpos.chain(deriv), override=True)
 
+        # Mask as needed
+        self._apply_exclusion(cept)
+
         if t_guess is None:
             return cept
         else:
@@ -451,24 +454,28 @@ class Spheroid(Surface):
         """Convert latitude in internal spheroid coordinates to planetocentric.
         """
 
+        lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.squash_z).arctan()
 
     def lat_to_graphic(self, lat, derivs=False):
         """Convert latitude in internal spheroid coordinates to planetographic.
         """
 
+        lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.unsquash_z).arctan()
 
     def lat_from_centric(self, lat, derivs=False):
         """Convert planetocentric latitude to internal spheroid latitude.
         """
 
+        lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.unsquash_z).arctan()
 
     def lat_from_graphic(self, lat, derivs=False):
         """Convertsa planetographic latitude to internal spheroid latitude.
         """
 
+        lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.squash_z).arctan()
 
 ################################################################################
@@ -612,7 +619,8 @@ class Test_Spheroid(unittest.TestCase):
         cept = planet.intercept_normal_to(pos)
         sep = (pos - cept).sep(planet.normal(cept))
         self.assertTrue(sep.max() < 3.e-12)
-        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() - planet.req).max() < 1.e-6)
+        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
+                            planet.req).max() < 1.e-6)
 
         # Test normal() derivative
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
@@ -631,7 +639,8 @@ class Test_Spheroid(unittest.TestCase):
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
         (cept,t) = planet.intercept_normal_to(pos, derivs=True, t_guess=False)
-        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() - planet.req).max() < 1.e-6)
+        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
+                            planet.req).max() < 1.e-6)
 
         eps = 1.
         dpos = ((eps,0,0), (0,eps,0), (0,0,eps))

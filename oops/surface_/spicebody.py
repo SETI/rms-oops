@@ -56,8 +56,8 @@ class Test_spice_body(unittest.TestCase):
         ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
 
         body = spice_body("VENUS")
-        self.assertEqual(body.origin_id, "APHRODITE")
-        self.assertEqual(body.frame_id,  "SLOWSPINNER")
+        self.assertEqual(Path.as_path_id(body.origin), "APHRODITE")
+        self.assertEqual(Frame.as_frame_id(body.frame),  "SLOWSPINNER")
         self.assertEqual(body.req, 6051.8)
         self.assertEqual(body.squash_z, 1.)
 

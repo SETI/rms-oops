@@ -6,8 +6,6 @@ import numpy as np
 from polymath import *
 
 from oops.surface_.surface   import Surface
-from oops.surface_.spheroid  import Spheroid
-from oops.surface_.ellipsoid import Ellipsoid
 from oops.path_.path         import Path
 from oops.frame_.frame       import Frame
 
@@ -49,7 +47,8 @@ class Limb(Surface):
 
         Input:
             ground      the Surface object relative to which limb points are to
-                        be defined. It should be a Spheroid or Ellipsoid.
+                        be defined. It should be a Spheroid or Ellipsoid,
+                        optically using Centric or Graphic coordinates.
             limits      an optional single value or tuple defining the absolute
                         numerical limit(s) placed on the limb; values outside
                         this range are masked.
@@ -77,8 +76,8 @@ class Limb(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface, with
                         optional units.
-            obs         a Vector3 of observer observer positions. Ignored for
-                        solid surfaces but needed for virtual surfaces.
+            obs         a Vector3 of observer positions. Ignored for solid
+                        surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects
             derivs      a boolean or tuple of booleans. If True, then the
@@ -104,10 +103,10 @@ class Limb(Surface):
         if pos.shape == self.ground_shape:
             guess = self.ground_guess
         else:
-            guess = None
+            guess = False
 
-        (groundtrack, guess) = self.ground.intercept_normal_to_iterated(pos,
-                                                        derivs, t_guess=guess)
+        (groundtrack, guess) = self.ground.intercept_normal_to(pos, derivs,
+                                                               t_guess=guess)
         if Limb.SPEEDUP:
             self.ground_shape = guess.shape
             self.ground_guess = guess
@@ -157,9 +156,9 @@ class Limb(Surface):
         lat = coords[1]
         z = coords[2]
 
-        groundtrack = self.ground.vector3_from_coords((lon,lat), derivs=derivs)
+        groundtrack = self.ground.vector3_from_coords((lon,lat,), derivs=derivs)
         normal = self.ground.normal(groundtrack, derivs=derivs).unit()
-        return groundtrack + z * normal
+        return groundtrack + Scalar.as_scalar(z) * normal
 
     def intercept(self, obs, los, derivs=False, t_guess=None,
                   groundtrack=False):
@@ -210,52 +209,54 @@ class Limb(Surface):
         if obs.shape == self.ground_shape and los.shape == self.ground_shape:
             guess = self.ground_guess
         else:
-            guess = None
+            guess = False
 
         # Solve for the intercept distance where the line of sight is normal to
         # the surface.
         #
         # pos = obs + t * los
-        # ground.normal(ground.intercept_normal_to(pos(t))) dot los = 0
+        # track = ground.intercept_normal_to(pos(t)))
+        # normal(track) dot los = 0
         #
         # Solve for t.
         #
-        # f(t) = perp(pos(t)) dot los
+        #   f(t) = normal(track(pos(t)) dot los
         #
-        # df/dt = dperp/dpos(pos(t)) dpos/dt dot los
-        #       = [dperp/dpos(pos(t)) los] dot los
+        #   df/dt = (dnormal/dpos <chain> los) dot los
         #
         # Initial guess is where los and pos are perpendicular:
         # (obs + t * los) dot los = 0
         #
         # t = -(obs dot los) / (los dot los)
 
-        if t_guess is None:
-            t = -obs.dot(los) / los.dot(los)
-        else:
+        if t_guess:
             t = t_guess.copy()
+        else:
+            t = -obs.dot(los) / los.dot(los)
 
-        max_dt = 1.e99
+        max_abs_dt = 1.e99
         for iter in range(SURFACE_PHOTONS.max_iterations):
             pos = obs + t * los
+            pos.insert_deriv('pos', Vector3.IDENTITY)
 
-            (track, guess) = self.ground.intercept_normal_to_iterated(pos,
-                                                    derivs=True, t_guess=guess)
-            perp = self.ground.normal(track, derivs=True)
+            (track, guess) = self.ground.intercept_normal_to(pos, derivs=True,
+                                                             t_guess=guess)
+            normal = self.ground.normal(track, derivs=True)
 
-            df_dt = (perp.d_dpos * track.d_dpos * los).dot(los)
-            dt = perp.plain().dot(los) / df_dt
+            f = normal.without_derivs().dot(los)
+            df_dt = normal.d_dpos.chain(los).dot(los)
+            dt = f / df_dt
 
             t = t - dt
 
-            prev_max_dt = max_dt
-            max_dt = abs(dt).max()
+            prev_max_abs_dt = max_abs_dt
+            max_abs_dt = abs(dt).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print LOGGING.prefix, "Surface.limb.intercept", iter, max_dt
+                print LOGGING.prefix, "Surface.limb.intercept", iter, max_abs_dt
 
-            if (max_dt <= SURFACE_PHOTONS.dlt_precision or
-                max_dt >= prev_max_dt * 0.5): break
+            if (max_abs_dt <= SURFACE_PHOTONS.dlt_precision or
+                max_abs_dt >= prev_max_abs_dt): break
 
         pos = obs + t * los
 
@@ -263,18 +264,18 @@ class Limb(Surface):
             raise NotImplementedError("Limb.intercept() " +
                                       " does not implement derivatives")
 
-        if groundtrack:
-            (track, guess) = self.ground.intercept_normal_to_iterated(pos,
-                                                    derivs=True, t_guess=guess)
-            pos.insert_subfield("groundtrack", track)
-
         if Limb.SPEEDUP:
             self.ground_shape = guess.shape
             self.ground_guess = guess
 
+        if groundtrack:
+            (track, guess) = self.ground.intercept_normal_to(pos, derivs=True,
+                                                             t_guess=guess)
+            return (pos, t, track)
+
         return (pos, t)
 
-    def normal(self, pos, derivs=False):
+    def normal(self, pos, derivs=False, groundtrack=None):
         """Returns the normal vector at a position at or near a surface. This
         is the normal to the planetary surface, not the normal to the limb
         surface.
@@ -283,6 +284,8 @@ class Limb(Surface):
             pos         a Vector3 of positions at or near the surface, with
                         optional units.
             derivs      True to include a matrix of partial derivatives.
+            groundtrack optional value of the groundtrack, as returned by
+                        intercept().
 
         Return:         a unitless Vector3 containing directions normal to the
                         surface that pass through the position. Lengths are
@@ -297,55 +300,21 @@ class Limb(Surface):
 
         pos = Vector3.as_vector3(pos)
 
-        if pos.subfields.has_key("groundtrack"):
-            groundtrack = pos.groundtrack
-        else:
+        if "groundtrack" is None:
 
             # Re-use the most recent guess if the shape is unchanged
             if pos.shape == self.ground_shape:
                 guess = self.ground_guess
             else:
-                guess = None
+                guess = False
 
-            (groundtrack, guess) = self.ground.intercept_normal_to_iterated(pos,
+            (groundtrack, guess) = self.ground.intercept_normal_to(pos,
                                                 derivs=derivs, t_guess=guess)
             if Limb.SPEEDUP:
                 self.ground_shape = guess.shape
                 self.ground_guess = guess
 
         return self.ground.normal(groundtrack, derivs=derivs)
-
-    ############################################################################
-    # Latitude conversions
-    ############################################################################
-
-    def lat_to_centric(self, lat):
-        """Converts a latitude value given in internal spheroid coordinates to
-        its planetocentric equivalent.
-        """
-
-        return self.ground.lat_to_centric(lat)
-
-    def lat_to_graphic(self, lat):
-        """Converts a latitude value given in internal spheroid coordinates to
-        its planetographic equivalent.
-        """
-
-        return self.ground.lat_to_graphic(lat)
-
-    def lat_from_centric(self, lat):
-        """Converts a latitude value given in planetocentric coordinates to its
-        equivalent value in internal spheroid coordinates.
-        """
-
-        return self.ground.lat_from_centric(lat)
-
-    def lat_from_graphic(self, lat):
-        """Converts a latitude value given in planetographic coordinates to its
-        equivalent value in internal spheroid coordinates.
-        """
-
-        return self.ground.lat_from_graphic(lat)
 
 ################################################################################
 # UNIT TESTS
@@ -357,23 +326,35 @@ class Test_Limb(unittest.TestCase):
 
     def runTest(self):
 
-        save_dlt_precision = SURFACE_PHOTONS.dlt_precision
-        SURFACE_PHOTONS.dlt_precision = 0
-
         from oops.frame_.frame import Frame
         from oops.path_.path import Path
 
+        from oops.surface_.spheroid  import Spheroid
+        from oops.surface_.ellipsoid import Ellipsoid
+        from oops.surface_.centricspheroid import CentricSpheroid
+        from oops.surface_.graphicspheroid import GraphicSpheroid
+        from oops.surface_.centricellipsoid import CentricEllipsoid
+        from oops.surface_.graphicellipsoid import GraphicEllipsoid
+
         REQ  = 60268.
+        RMID = 54364.
         RPOL = 50000.
+
         ground = Spheroid("SSB", "J2000", (REQ, RPOL))
         limb = Limb(ground)
 
-        obs = Vector3(np.random.random((1000,3)) * 4.*REQ + REQ)
-        los = Vector3(np.random.random((1000,3)))
+        obs = Vector3([4*REQ,0,0])
 
-        (cept,t) = limb.intercept(obs, los, groundtrack=True)
+        los_vals = np.empty((220,220,3))
+        los_vals[...,0] = -4 *REQ
+        los_vals[...,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+        los_vals[...,2] = np.arange(-1.10,1.10,0.01) * REQ
+        los = Vector3(los_vals)
 
-        self.assertTrue(abs(limb.normal(cept).sep(los) - HALFPI) < 1.e-5)
+        (cept,t, track) = limb.intercept(obs, los, groundtrack=True)
+        normal = limb.normal(cept, groundtrack=track)
+
+        self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
 
         lon = np.random.random(10) * TWOPI
         lat = np.arcsin(np.random.random(10) * 2. - 1.)
@@ -382,11 +363,165 @@ class Test_Limb(unittest.TestCase):
         pos = limb.vector3_from_coords((lon,lat,z))
         coords = limb.coords_from_vector3(pos, axes=3)
 
-        self.assertTrue(abs(coords[0] - lon) < 1.e-6)
-        self.assertTrue(abs(coords[1] - lat) < 1.e-6)
-        self.assertTrue(abs(coords[2] - z) < 1.e-2)
+        self.assertTrue(abs(coords[0] - lon).max() < 1.e-12)
+        self.assertTrue(abs(coords[1] - lat).max() < 1.e-12)
+        self.assertTrue(abs(coords[2] - z).max() < 1.e-6)
 
-        SURFACE_PHOTONS.dlt_precision = save_dlt_precision
+        ####################
+
+        REQ  = 60268.
+        RMID = 54364.
+        RPOL = 50000.
+        ground = Ellipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        limb = Limb(ground)
+
+        obs = Vector3([4*REQ,0,0])
+
+        los_vals = np.empty((220,220,3))
+        los_vals[:,:,0] = -4 *REQ
+        los_vals[:,:,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+        los_vals[:,:,2] = np.arange(-1.10,1.10,0.01) * REQ
+        los = Vector3(los_vals)
+
+        (cept,t, track) = limb.intercept(obs, los, groundtrack=True)
+        normal = limb.normal(cept, groundtrack=track)
+
+        self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
+
+        lon = np.random.random(10) * TWOPI
+        lat = np.arcsin(np.random.random(10) * 2. - 1.)
+        z = np.random.random(10) * 10000.
+
+        pos = limb.vector3_from_coords((lon,lat,z))
+        coords = limb.coords_from_vector3(pos, axes=3)
+
+        self.assertTrue(abs(coords[0] - lon).max() < 1.e-12)
+        self.assertTrue(abs(coords[1] - lat).max() < 1.e-12)
+        self.assertTrue(abs(coords[2] - z).max() < 1.e-6)
+
+        ####################
+
+        ground = CentricSpheroid("SSB", "J2000", (REQ, RPOL))
+        limb = Limb(ground)
+
+        obs = Vector3([4*REQ,0,0])
+
+        los_vals = np.empty((220,220,3))
+        los_vals[:,:,0] = -4 *REQ
+        los_vals[:,:,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+        los_vals[:,:,2] = np.arange(-1.10,1.10,0.01) * REQ
+        los = Vector3(los_vals)
+
+        (cept,t, track) = limb.intercept(obs, los, groundtrack=True)
+        normal = limb.normal(cept, groundtrack=track)
+
+        self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
+
+        lon = np.random.random(10) * TWOPI
+        lat = np.arcsin(np.random.random(10) * 2. - 1.)
+        z = np.random.random(10) * 10000.
+
+        pos = limb.vector3_from_coords((lon,lat,z))
+        coords = limb.coords_from_vector3(pos, axes=3)
+
+        diffs = abs(coords[0] - lon)
+        diffs = (diffs + PI) % TWOPI - PI
+        self.assertTrue(diffs.max() < 1.e-12)
+        self.assertTrue(abs(coords[1] - lat).max() < 1.e-12)
+        self.assertTrue(abs(coords[2] - z).max() < 1.e-6)
+
+        ####################
+
+        ground = GraphicSpheroid("SSB", "J2000", (REQ, RPOL))
+        limb = Limb(ground)
+
+        obs = Vector3([4*REQ,0,0])
+
+        los_vals = np.empty((220,220,3))
+        los_vals[:,:,0] = -4 *REQ
+        los_vals[:,:,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+        los_vals[:,:,2] = np.arange(-1.10,1.10,0.01) * REQ
+        los = Vector3(los_vals)
+
+        (cept,t, track) = limb.intercept(obs, los, groundtrack=True)
+        normal = limb.normal(cept, groundtrack=track)
+
+        self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
+
+        lon = np.random.random(10) * TWOPI
+        lat = np.arcsin(np.random.random(10) * 2. - 1.)
+        z = np.random.random(10) * 10000.
+
+        pos = limb.vector3_from_coords((lon,lat,z))
+        coords = limb.coords_from_vector3(pos, axes=3)
+
+        diffs = abs(coords[0] - lon)
+        diffs = (diffs + PI) % TWOPI - PI
+        self.assertTrue(diffs.max() < 1.e-12)
+        self.assertTrue(abs(coords[1] - lat).max() < 1.e-12)
+        self.assertTrue(abs(coords[2] - z).max() < 1.e-6)
+
+        ####################
+
+        ground = CentricEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        limb = Limb(ground)
+
+        obs = Vector3([4*REQ,0,0])
+
+        los_vals = np.empty((220,220,3))
+        los_vals[:,:,0] = -4 *REQ
+        los_vals[:,:,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+        los_vals[:,:,2] = np.arange(-1.10,1.10,0.01) * REQ
+        los = Vector3(los_vals)
+
+        (cept,t, track) = limb.intercept(obs, los, groundtrack=True)
+        normal = limb.normal(cept, groundtrack=track)
+
+        self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
+
+        lon = np.random.random(10) * TWOPI
+        lat = np.arcsin(np.random.random(10) * 2. - 1.)
+        z = np.random.random(10) * 10000.
+
+        pos = limb.vector3_from_coords((lon,lat,z))
+        coords = limb.coords_from_vector3(pos, axes=3)
+
+        diffs = abs(coords[0] - lon)
+        diffs = (diffs + PI) % TWOPI - PI
+        self.assertTrue(diffs.max() < 1.e-12)
+        self.assertTrue(abs(coords[1] - lat).max() < 1.e-12)
+        self.assertTrue(abs(coords[2] - z).max() < 1.e-6)
+
+        ####################
+
+        ground = GraphicEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        limb = Limb(ground)
+
+        obs = Vector3([4*REQ,0,0])
+
+        los_vals = np.empty((220,220,3))
+        los_vals[:,:,0] = -4 *REQ
+        los_vals[:,:,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+        los_vals[:,:,2] = np.arange(-1.10,1.10,0.01) * REQ
+        los = Vector3(los_vals)
+
+        (cept,t, track) = limb.intercept(obs, los, groundtrack=True)
+        normal = limb.normal(cept, groundtrack=track)
+
+        self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
+
+        lon = np.random.random(10) * TWOPI
+        lat = np.arcsin(np.random.random(10) * 2. - 1.)
+        z = np.random.random(10) * 10000.
+
+        pos = limb.vector3_from_coords((lon,lat,z))
+        coords = limb.coords_from_vector3(pos, axes=3)
+
+        diffs = abs(coords[0] - lon)
+        diffs = (diffs + PI) % TWOPI - PI
+        self.assertTrue(diffs.max() < 1.e-12)
+        self.assertTrue(abs(coords[1] - lat).max() < 1.e-12)
+        self.assertTrue(abs(coords[2] - z).max() < 1.e-6)
 
         Path.reset_registry()
         Frame.reset_registry()

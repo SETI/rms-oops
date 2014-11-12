@@ -18,12 +18,12 @@ class Ellipsoid(Surface):
     X-axis.
 
     The coordinates defining the surface grid are (longitude, latitude).
-    Latitudes are based on the assumption that a spherical body has been
-    "squashed" along the Y- and Z-axes. The latitudes are defined in this manner
-    are neither planetocentric nor planetographic; functions are provided to
-    perform the conversion to either choice. Longitudes are planetocentric,
-    measured in a right-handed manner, increasing toward the east; values range
-    from 0 to 2*pi.
+    Both are based on the assumption that a spherical body has been
+    "squashed" along the Y- and Z-axes. The latitudes and longitudes defined in
+    this manner are neither planetocentric nor planetographic; functions are
+    provided to perform conversions to either choice. Longitudes are measured
+    in a right-handed manner, increasing toward the east; values range from 0 to
+    2*pi.
 
     Elevations are defined by "unsquashing" the radial vectors and then
     subtracting off the equatorial radius of the body. Thus, the surface is
@@ -108,11 +108,12 @@ class Ellipsoid(Surface):
         r = unsquashed.norm()
         (x,y,z) = unsquashed.to_scalars()
         lat = (z/r).arcsin()
-        lon_unsquashed = y.arctan2(x) % TWOPI
+#        lon_unsquashed = y.arctan2(x) % TWOPI
+        lon = y.arctan2(x) % TWOPI
 
         # Convert longitude from "unsquashed" to planetocentric
-        lon = (lon_unsquashed.tan() * self.squash_y).arctan()   # -pi/2 to pi/2
-        lon += np.pi * ((lon_unsquashed.vals + np.pi/2) // np.pi)
+#         lon = (lon_unsquashed.tan() * self.squash_y).arctan()   # -pi/2 to pi/2
+#         lon += np.pi * ((lon_unsquashed.vals + np.pi/2) // np.pi)
 
         if axes == 2:
             return (lon, lat)
@@ -142,8 +143,8 @@ class Ellipsoid(Surface):
         lat = Scalar.as_scalar(coords[1], derivs)
 
         # Convert longitude from planetocentric to "unsquashed"
-        lon_unsquashed = (lon.tan() * self.unsquash_y).arctan()
-        lon_unsquashed = lon_unsquashed + PI * ((lon.vals + HALFPI) // PI)
+#         lon_unsquashed = (lon.tan() * self.unsquash_y).arctan()
+#         lon_unsquashed = lon_unsquashed + PI * ((lon.vals + HALFPI) // PI)
 
         if len(coords) == 2:
             r = Scalar(self.req)
@@ -151,8 +152,10 @@ class Ellipsoid(Surface):
             r = Scalar(coords[2], derivs) + self.req
 
         r_coslat = r * lat.cos()
-        x = r_coslat * lon_unsquashed.cos()
-        y = r_coslat * lon_unsquashed.sin() * self.squash_y
+#         x = r_coslat * lon_unsquashed.cos()
+#         y = r_coslat * lon_unsquashed.sin() * self.squash_y
+        x = r_coslat * lon.cos()
+        y = r_coslat * lon.sin() * self.squash_y
         z = r * lat.sin() * self.squash_z
 
         return Vector3.from_scalars(x,y,z)
@@ -468,32 +471,86 @@ class Ellipsoid(Surface):
             return pos * Scalar(factor, mask)
 
     ############################################################################
-    # Latitude conversions
+    # Longitude and latitude conversions
     ############################################################################
 
-    def lat_to_centric(self, lat, derivs=False):
-        """Convert latitude in internal spheroid coordinates to planetocentric.
+    def lon_to_centric(self, lon, derivs=False):
+        """Convert longitude in internal ellipsoid coordinates to
+        planetocentric.
         """
 
-        return (lat.tan(derivs) * self.squash_z).arctan()
+        lon = Scalar.as_scalar(lon)
+        return (lon.sin(derivs) * self.squash_y).arctan2(lon.cos(derivs))
 
-    def lat_to_graphic(self, lat, derivs=False):
-        """Convert latitude in internal spheroid coordinates to planetographic.
+    def lon_from_centric(self, lon, derivs=False):
+        """Convert planetocentric longitude to internal ellipsoid longitude.
         """
 
-        return (lat.tan(derivs) * self.unsquash_z).arctan()
+        lon = Scalar.as_scalar(lon)
+        return (lon.sin(derivs) * self.unsquash_y).arctan2(lon.cos(derivs))
 
-    def lat_from_centric(self, lat, derivs=False):
-        """Convert planetocentric latitude to internal spheroid latitude.
+    def lon_to_graphic(self, lon, derivs=False):
+        """Convert longitude in internal ellipsoid coordinates to
+        planetographic.
         """
 
-        return (lat.tan(derivs) * self.unsquash_z).arctan()
+        lon = Scalar.as_scalar(lon)
+        return (lon.sin(derivs) * self.unsquash_y).arctan2(lon.cos(derivs))
 
-    def lat_from_graphic(self, lat, derivs=False):
-        """Convertsa planetographic latitude to internal spheroid latitude.
+    def lon_from_graphic(self, lon, derivs=False):
+        """Convert planetographic longitude to internal ellipsoid longitude.
         """
 
-        return (lat.tan(derivs) * self.squash_z).arctan()
+        lon = Scalar.as_scalar(lon)
+        return (lon.sin(derivs) * self.squash_y).arctan2(lon.cos(derivs))
+
+    def lat_to_centric(self, lat, lon, derivs=False):
+        """Convert latitude in internal ellipsoid coordinates to planetocentric.
+        """
+
+        lon = Scalar.as_scalar(lon)
+        lat = Scalar.as_scalar(lat)
+
+        denom = ( lon.cos(derivs)**2 +
+                 (lon.sin(derivs) * self.squash_y)**2).sqrt()
+
+        return (lat.tan(derivs) * self.squash_z / denom).arctan()
+
+    def lat_from_centric(self, lat, lon, derivs=False):
+        """Convert planetocentric latitude to internal ellipsoid latitude.
+        """
+
+        lon = Scalar.as_scalar(lon)
+        lat = Scalar.as_scalar(lat)
+
+        factor = ( lon.cos(derivs)**2 +
+                  (lon.sin(derivs) * self.squash_y)**2).sqrt()
+
+        return (lat.tan(derivs) * self.unsquash_z * factor).arctan()
+
+    def lat_to_graphic(self, lat, lon, derivs=False):
+        """Convert latitude in internal ellipsoid coordinates to planetographic.
+        """
+
+        lon = Scalar.as_scalar(lon)
+        lat = Scalar.as_scalar(lat)
+
+        denom = ( lon.cos(derivs)**2 +
+                 (lon.sin(derivs) * self.unsquash_y)**2).sqrt()
+
+        return (lat.tan(derivs) * self.unsquash_z / denom).arctan()
+
+    def lat_from_graphic(self, lat, lon, derivs=False):
+        """Convert planetographic latitude to internal ellipsoid latitude.
+        """
+
+        lon = Scalar.as_scalar(lon)
+        lat = Scalar.as_scalar(lat)
+
+        factor = ( lon.cos(derivs)**2 +
+                  (lon.sin(derivs) * self.unsquash_y)**2).sqrt()
+
+        return (lat.tan(derivs) * self.squash_z * factor).arctan()
 
 ################################################################################
 # UNIT TESTS
@@ -521,9 +578,42 @@ class Test_Ellipsoid(unittest.TestCase):
         test = planet.vector3_from_coords((lon,lat,elev))
         self.assertTrue(abs(test - pos).max() < 1.e-8)
 
-        # Make sure longitudes are planetocentric
-        test_lon = np.arctan2(pos[...,1], pos[...,0]) % TWOPI
-        self.assertTrue(abs(lon - test_lon).max() < 1.e-8)
+        # Make sure longitudes convert to planetocentric and back
+        test_lon = np.arctan2(pos[...,1], pos[...,0])
+        centric_lon = planet.lon_to_centric(lon)
+        diffs = (centric_lon - test_lon + HALFPI) % PI - HALFPI
+        self.assertTrue(abs(diffs).max() < 1.e-8)
+
+        test_lon2 = planet.lon_from_centric(centric_lon)
+        diffs = (test_lon2 - lon + HALFPI) % PI - HALFPI
+        self.assertTrue(abs(diffs).max() < 1.e-8)
+
+        # Make sure latitudes convert to planetocentric and back
+        test_lat = np.arcsin(pos[...,2] / np.sqrt(np.sum(pos**2, axis=-1)))
+        centric_lat = planet.lat_to_centric(lat,lon)
+        self.assertTrue(abs(centric_lat - test_lat).max() < 1.e-8)
+
+        test_lat2 = planet.lat_from_centric(centric_lat, lon)
+        self.assertTrue(abs(test_lat2 - lat).max() < 1.e-8)
+
+        # Make sure longitudes convert to planetographic and back
+        normals = planet.normal(pos)
+        test_lon = np.arctan2(normals.vals[...,1], normals.vals[...,0])
+        graphic_lon = planet.lon_to_graphic(lon)
+        diffs = (graphic_lon - test_lon + HALFPI) % PI - HALFPI
+        self.assertTrue(abs(diffs).max() < 1.e-8)
+
+        test_lon2 = planet.lon_from_centric(centric_lon)
+        diffs = (test_lon2 - lon + HALFPI) % PI - HALFPI
+        self.assertTrue(abs(diffs).max() < 1.e-8)
+
+        # Make sure latitudes convert to planetographic and back
+        test_lat = np.arcsin(normals.vals[...,2] / normals.norm().vals)
+        graphic_lat = planet.lat_to_graphic(lat,lon)
+        self.assertTrue(abs(graphic_lat - test_lat).max() < 1.e-8)
+
+        test_lat2 = planet.lat_from_graphic(graphic_lat, lon)
+        self.assertTrue(abs(test_lat2 - lat).max() < 1.e-8)
 
         # Ellipsoid intercepts & normals
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
@@ -642,7 +732,8 @@ class Test_Ellipsoid(unittest.TestCase):
         cept = planet.intercept_normal_to(pos)
         sep = (pos - cept).sep(planet.normal(cept))
         self.assertTrue(sep.max() < 3.e-12)
-        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() - planet.req).max() < 1.e-6)
+        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
+                        planet.req).max() < 1.e-6)
 
         # Test normal() derivative
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
@@ -661,7 +752,8 @@ class Test_Ellipsoid(unittest.TestCase):
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
         (cept,t) = planet.intercept_normal_to(pos, derivs=True, t_guess=False)
-        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() - planet.req).max() < 1.e-6)
+        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
+                        planet.req).max() < 1.e-6)
 
         eps = 1.
         dpos = ((eps,0,0), (0,eps,0), (0,0,eps))
