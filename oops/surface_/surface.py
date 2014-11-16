@@ -53,7 +53,7 @@ class Surface(object):
                         into the returned coordinates.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
+                        three Scalars, one for each coordinate.
         """
 
         pass
@@ -69,7 +69,7 @@ class Surface(object):
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
-        Return:         a unitless Vector3 of intercept points defined by the
+        Return:         a Vector3 of intercept points defined by the
                         coordinates.
 
         Note that the coordinates can all have different shapes, but they must
@@ -78,7 +78,7 @@ class Surface(object):
 
         pass
 
-    def intercept(self, obs, los, derivs=False, t_guess=False):
+    def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
@@ -86,12 +86,13 @@ class Surface(object):
             los         line of sight as a Vector3.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            t_guess     initial guess at the t array, optional.
+            guess       optional initial guess at the coefficient t such that:
+                            intercept = obs + t * los
 
         Return:         a tuple (pos, t) where
             pos         a Vector3 of intercept points on the surface, in km.
-            t           a unitless Scalar such that:
-                            position = obs + t * los
+            t           a Scalar such that:
+                            intercept = obs + t * los
         """
 
         pass
@@ -114,51 +115,49 @@ class Surface(object):
     # Optional Methods...
     ########################################
 
-    def intercept_with_normal(self, normal, derivs=False, t_guess=None):
+    def intercept_with_normal(self, normal, derivs=False, guess=None):
         """Intercept point where the normal vector parallels the given vector.
-
-        This is only used by a limited set of subclasses such as Spheroid.
 
         Input:
             normal      a Vector3 of normal vectors.
             derivs      True to propagate derivatives in the normal vector into
                         the returned intercepts.
-            t_guess     optional initial guess at the t array. This is the
-                        scalar such that
-                            intercept + t * normal(intercept) = pos
-                        A value other than None changes the returned result to
-                        a tuple; use t_guess=True to get both return results
-                        without providing an initial guess.
+            guess       optional initial guess a coefficient array p such that:
+                            pos = intercept + p * normal(intercept);
+                        use guess=False for the converged value of p to be
+                        returned even if an initial guess was not provided.
 
         Return:         a Vector3 of surface intercept points, in km. Where no
                         solution exists, the returned Vector3 will be masked.
 
-                        if t_guess is not None, then instead it returns a tuple
-                        (intercepts, t), where t is the converged solution to
-                        the t array.
+                        If guess is not None, then it instead returns a tuple
+                        (intercepts, p), where p is the converged solution such
+                        that 
+                            pos = intercept + p * normal(intercept).
         """
 
         raise NotImplementedError("intercept_with_normal() not implemented " +
                                   "for class " + type(self).__name__)
 
-    def intercept_normal_to(self, pos, derivs=False, t_guess=None):
+    def intercept_normal_to(self, pos, derivs=False, guess=None):
         """Intercept point whose normal vector passes through a given position.
-
-        This is only used by a limited set of subclasses such as Spheroid.
 
         Input:
             pos         a Vector3 of positions near the surface.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
-            t_guess     optional initial guess at the t array. This is the
-                        scalar such that
-                            intercept + t * normal(intercept) = pos
-                        A value other than None changes the returned result to
-                        a tuple; use t_guess=True to get both return results
-                        without providing an initial guess.
+            guess       optional initial guess a coefficient array p such that:
+                            intercept = pos + p * normal(intercept);
+                        use guess=False for the converged value of p to be
+                        returned even if an initial guess was not provided.
 
         Return:         a vector3 of surface intercept points, in km. Where no
                         solution exists, the returned vector will be masked.
+
+                        If guess is not None, then it instead returns a tuple
+                        (intercepts, p), where p is the converged solution such
+                        that 
+                            intercept = pos + p * normal(intercept).
         """
 
         raise NotImplementedError("intercept_normal_to() not implemented " +
@@ -173,7 +172,7 @@ class Surface(object):
         Input:
             pos         a Vector3 of positions at or near the surface.
 
-        Return:         a unitless Vector3 of velocities, in units of km/s.
+        Return:         a Vector3 of velocities, in units of km/s.
         """
 
         return Vector3.ZERO
@@ -367,7 +366,7 @@ class Surface(object):
             (pos_wrt_surface, new_lt) = self.intercept(obs_wrt_surface,
                                                        los_wrt_surface,
                                                        derivs=False,
-                                                       t_guess=new_lt)
+                                                       guess=new_lt)
 
             new_lt = new_lt.clip(lt_min, lt_max, False)
             
@@ -439,7 +438,7 @@ class Surface(object):
         (pos_wrt_surface, lt) = self.intercept(obs_wrt_surface,
                                                los_wrt_surface,
                                                derivs=derivs,
-                                               t_guess=lt)
+                                               guess=lt)
 
         # Update the mask on light time to hide intercepts behind the observer
         # or outside the defined limits

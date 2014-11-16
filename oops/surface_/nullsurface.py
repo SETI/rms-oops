@@ -43,15 +43,11 @@ class NullSurface(Surface):
                         into the returned coordinates.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
+                        three Scalars, one for each coordinate.
         """
 
-        # Derivatives are not supported
-        if np.any(derivs):
-            raise ValueError('Derivatives are not supported for a NullSurface')
-
         # Simple rectangular coordinates
-        pos = Vector3.as_vector3(pos)
+        pos = Vector3.as_vector3(pos, derivs)
         return pos.to_scalars(derivs)[:axes]
 
     def vector3_from_coords(self, coords, obs=None, derivs=False):
@@ -65,7 +61,7 @@ class NullSurface(Surface):
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
-        Return:         a unitless Vector3 of intercept points defined by the
+        Return:         a Vector3 of intercept points defined by the
                         coordinates.
 
         Note that the coordinates can all have different shapes, but they must
@@ -84,7 +80,7 @@ class NullSurface(Surface):
         # Convert to a Vector3 and return
         return Vector3.from_scalars(x, y, z)
 
-    def intercept(self, obs, los, derivs=False):
+    def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
@@ -92,17 +88,17 @@ class NullSurface(Surface):
             los         line of sight as a Vector3.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            t_guess     initial guess at the t array, optional.
+            guess       unused.
 
         Return:         a tuple (pos, t) where
             pos         a Vector3 of intercept points on the surface, in km.
-            t           a unitless Scalar such that:
-                            position = obs + t * los
+            t           a Scalar such that:
+                            intercept = obs + t * los
         """
 
         obs = Vector3.as_scalar(obs, derivs)
         los = Vector3.as_scalar(los, derivs)
-        shape = Qube.broadcasted_shape(obs, los, derivs=False)
+        shape = Qube.broadcasted_shape(obs, los)
 
         t = obs.to_scalar(0, derivs)
         t = t.all_masked(derivs)
@@ -122,10 +118,8 @@ class NullSurface(Surface):
                         that pass through the position. Lengths are arbitrary.
         """
 
-        pos = Vector3.as_vector3(pos, derivs)
-
         # Always the Z-axis
-        return pos.all_constant((0.,0.,1.), derivs)
+        return Vector3.ZAXIS
 
     def velocity(self, pos):
         """The local velocity vector at a point within the surface.
@@ -136,13 +130,11 @@ class NullSurface(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface.
 
-        Return:         a unitless Vector3 of velocities, in units of km/s.
+        Return:         a Vector3 of velocities, in units of km/s.
         """
 
-        pos = Vector3.as_vector3(pos, False)
-
         # Always zero
-        return pos.all_constant((0.,0.,0.), False)
+        return Vector3.ZERO
 
 ################################################################################
 # UNIT TESTS

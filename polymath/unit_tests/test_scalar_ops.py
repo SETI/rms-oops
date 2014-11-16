@@ -1217,7 +1217,7 @@ class Test_Scalar_ops(unittest.TestCase):
     b = a % (3,4,5)
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
-    self.assertTrue(abs(b.d_dt - a.d_dt/(3,4,5)).max() < 1.e-12)
+    self.assertEqual(a.d_dt, b.d_dt)
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
 
@@ -1225,7 +1225,7 @@ class Test_Scalar_ops(unittest.TestCase):
     b = a % (3,4,5)
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
-    self.assertTrue(abs(b.d_dt - a.d_dt/(3,4,5)).max() < 1.e-12)
+    self.assertTrue(a.d_dt, b.d_dt)
     self.assertTrue(a.readonly)
     self.assertFalse(b.readonly)
 

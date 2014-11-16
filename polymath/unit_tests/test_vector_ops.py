@@ -1062,7 +1062,7 @@ class Test_Vector_ops(unittest.TestCase):
     b = a % 2
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
-    self.assertEqual(b.d_dt, a.d_dt/2)
+    self.assertEqual(b.d_dt, a.d_dt)
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
 

@@ -2790,11 +2790,6 @@ class Qube(object):
             self.__mask_ = self.__mask_ | divisor.__mask_
             self.__units_ = Units.div_units(self.__units_, arg.__units_)
 
-            for (key,deriv) in self.derivs.iteritems():
-                deriv.__values_ /= div_values
-                deriv.__mask_ = deriv.__mask_ | divisor.__mask_
-                deriv.__units_ = Units.div_units(self.__units_, arg.__units_)
-
             return self
 
         # Nothing else is implemented
@@ -2814,7 +2809,7 @@ class Qube(object):
 
         if recursive and self.__derivs_:
             for (key, deriv) in self.__derivs_.iteritems():
-                obj.insert_deriv(key, deriv.div_by_number(arg, False))
+                obj.insert_deriv(key, deriv)
 
         return obj
 
@@ -2838,8 +2833,9 @@ class Qube(object):
                      derivs = {},
                      example = self)
 
-        if recursive:
-            obj.insert_derivs(self.div_derivs(arg, nozeros=True))
+        if recursive and self.__derivs_:
+            for (key, deriv) in self.__derivs_.iteritems():
+                obj.insert_deriv(key, deriv)
 
         return obj
 

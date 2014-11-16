@@ -90,15 +90,15 @@ class Ellipsoid(Surface):
 
         Input:
             pos         a Vector3 of positions at or near the surface.
-            obs         a Vector3 of observer observer positions. Ignored for
-                        solid surfaces but needed for virtual surfaces.
+            obs         a Vector3 of observer positions. Ignored for solid
+                        surfaces but needed for virtual surfaces.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
+                        three Scalars, one for each coordinate.
         """
 
         pos = Vector3.as_vector3(pos, derivs)
@@ -131,7 +131,7 @@ class Ellipsoid(Surface):
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
-        Return:         a unitless Vector3 of intercept points defined by the
+        Return:         a Vector3 of intercept points defined by the
                         coordinates.
 
         Note that the coordinates can all have different shapes, but they must
@@ -160,7 +160,7 @@ class Ellipsoid(Surface):
 
         return Vector3.from_scalars(x,y,z)
 
-    def intercept(self, obs, los, derivs=False, t_guess=None):
+    def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
@@ -168,12 +168,13 @@ class Ellipsoid(Surface):
             los         line of sight as a Vector3.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            t_guess     initial guess at the t array, optional.
+            guess       optional initial guess at the coefficient t such that:
+                            intercept = obs + t * los
 
         Return:         a tuple (pos, t) where
             pos         a Vector3 of intercept points on the surface, in km.
-            t           a unitless Scalar such that:
-                            position = obs + t * los
+            t           a Scalar such that:
+                            intercept = obs + t * los
         """
 
         # Convert to Vector3 and un-squash
@@ -206,6 +207,7 @@ class Ellipsoid(Surface):
 
         bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
         t = (bsign_sqrtd_div2 - b_div2) / a
+
         pos = obs + t*los
         pos = self._apply_exclusion(pos)
 
@@ -226,51 +228,49 @@ class Ellipsoid(Surface):
         pos = Vector3.as_vector3(pos, derivs)
         return pos.element_mul(self.unsquash_sq)
 
-    def intercept_with_normal(self, normal, derivs=False, t_guess=None):
+    def intercept_with_normal(self, normal, derivs=False, guess=None):
         """Intercept point where the normal vector parallels the given vector.
 
         Input:
             normal      a Vector3 of normal vectors.
             derivs      True to propagate derivatives in the normal vector into
                         the returned intercepts.
-            t_guess     optional initial guess at the t array. This is the
-                        scalar such that
-                            intercept + t * normal(intercept) = pos
-                        A value other than None changes the returned result to
-                        a tuple; use t_guess=False to get both return results
-                        without providing an initial guess.
+            guess       optional initial guess a coefficient array p such that:
+                            pos = intercept + p * normal(intercept);
+                        use guess=False for the converged value of p to be
+                        returned even if an initial guess was not provided.
 
         Return:         a Vector3 of surface intercept points, in km. Where no
                         solution exists, the returned Vector3 will be masked.
 
-                        if t_guess is not None, then instead it returns a tuple
-                        (intercepts, t), where t is the converged solution to
-                        the t array.
+                        If guess is not None, then it instead returns a tuple
+                        (intercepts, p), where p is the converged solution such
+                        that 
+                            pos = intercept + p * normal(intercept).
         """
 
         normal = Vector3.as_vector3(normal, derivs)
         return normal.element_mul(self.squash).unit().element_mul(self.radii)
 
-    def intercept_normal_to(self, pos, derivs=False, t_guess=None):
+    def intercept_normal_to(self, pos, derivs=False, guess=None):
         """Intercept point whose normal vector passes through a given position.
 
         Input:
             pos         a Vector3 of positions near the surface.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
-            t_guess     optional initial guess at the t array. This is the
-                        scalar such that
-                            intercept + t * normal(intercept) = pos
-                        A value other than None changes the returned result to
-                        a tuple; use t_guess=False to get both return results
-                        without providing an initial guess.
+            guess       optional initial guess a coefficient array p such that:
+                            intercept = pos + p * normal(intercept);
+                        use guess=False for the converged value of p to be
+                        returned even if an initial guess was not provided.
 
         Return:         a vector3 of surface intercept points, in km. Where no
                         solution exists, the returned vector will be masked.
 
-                        if t_guess is not None, then instead it returns a tuple
-                        (intercepts, t), where t is the converged solution to
-                        the t array.
+                        If guess is not None, then it instead returns a tuple
+                        (intercepts, p), where p is the converged solution such
+                        that 
+                            intercept = pos + p * normal(intercept).
         """
 
         pos_with_derivs = Vector3.as_vector3(pos, derivs)
@@ -322,11 +322,11 @@ class Ellipsoid(Surface):
         # df/dt = -2 (pos * scale) dot (pos * unsquash/denom)
 
         # Make an initial guess at t, if necessary
-        if t_guess in (None, False):
+        if guess in (None, False):
             cept = pos.element_mul(self.unsquash).unit().element_mul(self.radii)
             t = (pos - cept).norm() / self.normal(cept).norm()
         else:
-            t = t_guess.copy(readonly=False, recursive=False)
+            t = guess.copy(readonly=False, recursive=False)
 
         # Terminate when accuracy stops improving by at least a factor of 2
         max_dt = 1.e99
@@ -432,7 +432,7 @@ class Ellipsoid(Surface):
                 cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
                 t.insert_deriv(key, dt_dpos.chain(deriv), override=True)
 
-        if t_guess is None:
+        if guess is None:
             return cept
         else:
             return (cept, t)
@@ -479,78 +479,74 @@ class Ellipsoid(Surface):
         planetocentric.
         """
 
-        lon = Scalar.as_scalar(lon)
-        return (lon.sin(derivs) * self.squash_y).arctan2(lon.cos(derivs))
+        lon = Scalar.as_scalar(lon, derivs)
+        return (lon.sin() * self.squash_y).arctan2(lon.cos())
 
     def lon_from_centric(self, lon, derivs=False):
         """Convert planetocentric longitude to internal ellipsoid longitude.
         """
 
-        lon = Scalar.as_scalar(lon)
-        return (lon.sin(derivs) * self.unsquash_y).arctan2(lon.cos(derivs))
+        lon = Scalar.as_scalar(lon, derivs)
+        return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
 
     def lon_to_graphic(self, lon, derivs=False):
         """Convert longitude in internal ellipsoid coordinates to
         planetographic.
         """
 
-        lon = Scalar.as_scalar(lon)
-        return (lon.sin(derivs) * self.unsquash_y).arctan2(lon.cos(derivs))
+        lon = Scalar.as_scalar(lon, derivs)
+        return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
 
     def lon_from_graphic(self, lon, derivs=False):
         """Convert planetographic longitude to internal ellipsoid longitude.
         """
 
-        lon = Scalar.as_scalar(lon)
-        return (lon.sin(derivs) * self.squash_y).arctan2(lon.cos(derivs))
+        lon = Scalar.as_scalar(lon, derivs)
+        return (lon.sin() * self.squash_y).arctan2(lon.cos())
 
     def lat_to_centric(self, lat, lon, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetocentric.
         """
 
-        lon = Scalar.as_scalar(lon)
-        lat = Scalar.as_scalar(lat)
+        lon = Scalar.as_scalar(lon, derivs)
+        lat = Scalar.as_scalar(lat, derivs)
 
-        denom = ( lon.cos(derivs)**2 +
-                 (lon.sin(derivs) * self.squash_y)**2).sqrt()
+        denom = (lon.cos()**2 + (lon.sin() * self.squash_y)**2).sqrt()
 
-        return (lat.tan(derivs) * self.squash_z / denom).arctan()
+        return (lat.tan() * self.squash_z / denom).arctan()
 
     def lat_from_centric(self, lat, lon, derivs=False):
         """Convert planetocentric latitude to internal ellipsoid latitude.
         """
 
-        lon = Scalar.as_scalar(lon)
-        lat = Scalar.as_scalar(lat)
+        lon = Scalar.as_scalar(lon, derivs)
+        lat = Scalar.as_scalar(lat, derivs)
 
-        factor = ( lon.cos(derivs)**2 +
-                  (lon.sin(derivs) * self.squash_y)**2).sqrt()
+        factor = (lon.cos()**2 + (lon.sin(derivs) * self.squash_y)**2).sqrt()
 
-        return (lat.tan(derivs) * self.unsquash_z * factor).arctan()
+        return (lat.tan() * self.unsquash_z * factor).arctan()
 
     def lat_to_graphic(self, lat, lon, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetographic.
         """
 
-        lon = Scalar.as_scalar(lon)
-        lat = Scalar.as_scalar(lat)
+        lon = Scalar.as_scalar(lon, derivs)
+        lat = Scalar.as_scalar(lat, derivs)
 
-        denom = ( lon.cos(derivs)**2 +
-                 (lon.sin(derivs) * self.unsquash_y)**2).sqrt()
+        denom = (lon.cos()**2 + (lon.sin() * self.unsquash_y)**2).sqrt()
 
-        return (lat.tan(derivs) * self.unsquash_z / denom).arctan()
+        return (lat.tan() * self.unsquash_z / denom).arctan()
 
     def lat_from_graphic(self, lat, lon, derivs=False):
         """Convert planetographic latitude to internal ellipsoid latitude.
         """
 
-        lon = Scalar.as_scalar(lon)
-        lat = Scalar.as_scalar(lat)
+        lon = Scalar.as_scalar(lon, derivs)
+        lat = Scalar.as_scalar(lat, derivs)
 
-        factor = ( lon.cos(derivs)**2 +
-                  (lon.sin(derivs) * self.unsquash_y)**2).sqrt()
+        factor = (lon.cos()**2 + (lon.sin() * self.unsquash_y)**2).sqrt()
 
-        return (lat.tan(derivs) * self.squash_z * factor).arctan()
+        return (lat.tan() * self.squash_z * factor).arctan()
 
 ################################################################################
 # UNIT TESTS
@@ -751,7 +747,7 @@ class Test_Ellipsoid(unittest.TestCase):
         # Test intercept_normal_to() derivative
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
-        (cept,t) = planet.intercept_normal_to(pos, derivs=True, t_guess=False)
+        (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=False)
         self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
                         planet.req).max() < 1.e-6)
 
@@ -760,9 +756,9 @@ class Test_Ellipsoid(unittest.TestCase):
         perp = planet.normal(cept)
         for i in range(3):
             (cept1,t1) = planet.intercept_normal_to(pos + dpos[i], derivs=False,
-                                                    t_guess=t)
+                                                    guess=t)
             (cept2,t2) = planet.intercept_normal_to(pos - dpos[i], derivs=False,
-                                                    t_guess=t)
+                                                    guess=t)
             dcept_dpos = (cept1 - cept2) / (2*eps)
             self.assertTrue(abs(dcept_dpos.sep(perp) - HALFPI).max() < 1.e-5)
 

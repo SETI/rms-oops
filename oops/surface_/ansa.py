@@ -79,7 +79,7 @@ class Ansa(Surface):
                         into the returned coordinates.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
+                        three Scalars, one for each coordinate.
         """
 
         pos = Vector3.as_vector3(pos, derivs)
@@ -120,7 +120,7 @@ class Ansa(Surface):
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
-        Return:         a unitless Vector3 of intercept points defined by the
+        Return:         a Vector3 of intercept points defined by the
                         coordinates.
 
         Note that the coordinates can all have different shapes, but they must
@@ -185,7 +185,7 @@ class Ansa(Surface):
                                    rabs * pos_lon.sin(), z)
         return pos
 
-    def intercept(self, obs, los, derivs=False, t_guess=None):
+    def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
@@ -193,12 +193,12 @@ class Ansa(Surface):
             los         line of sight as a Vector3.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            t_guess     initial guess at the t array, optional.
+            guess       Unused.
 
         Return:         a tuple (pos, t) where
             pos         a Vector3 of intercept points on the surface, in km.
-            t           a unitless Scalar such that:
-                            position = obs + t * los
+            t           a Scalar such that:
+                            intercept = obs + t * los
         """
 
         obs = Vector3.as_vector3(obs, derivs)
@@ -236,7 +236,6 @@ class Ansa(Surface):
 
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
-
 
         NOTE: Counterintuitively, we define this as the ring plane normal for
         the Ansa surface, so that incidence and emission angles work out as the

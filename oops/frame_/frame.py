@@ -290,7 +290,7 @@ class Frame(object):
         return Frame.WAYFRAME_REGISTRY[frame]
 
     @staticmethod
-    def as_frame_id(path):
+    def as_frame_id(frame):
         """Return a frame ID given the object or a registered ID."""
 
         if frame is None: return None

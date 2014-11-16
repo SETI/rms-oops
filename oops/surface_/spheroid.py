@@ -98,7 +98,7 @@ class Spheroid(Surface):
                         into the returned coordinates.
 
         Return:         coordinate values packaged as a tuple containing two or
-                        three unitless Scalars, one for each coordinate.
+                        three Scalars, one for each coordinate.
         """
 
         pos = Vector3.as_vector3(pos, derivs)
@@ -126,7 +126,7 @@ class Spheroid(Surface):
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
-        Return:         a unitless Vector3 of intercept points defined by the
+        Return:         a Vector3 of intercept points defined by the
                         coordinates.
 
         Note that the coordinates can all have different shapes, but they must
@@ -149,7 +149,7 @@ class Spheroid(Surface):
 
         return Vector3.from_scalars(x,y,z)
 
-    def intercept(self, obs, los, derivs=False, t_guess=None):
+    def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
@@ -157,12 +157,13 @@ class Spheroid(Surface):
             los         line of sight as a Vector3.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            t_guess     initial guess at the t array, optional.
+            guess       optional initial guess at the coefficient t such that:
+                            intercept = obs + t * los
 
         Return:         a tuple (pos, t) where
             pos         a Vector3 of intercept points on the surface, in km.
-            t           a unitless Scalar such that:
-                            position = obs + t * los
+            t           a Scalar such that:
+                            intercept = obs + t * los
         """
 
         # Convert to Vector3 and un-squash
@@ -215,51 +216,49 @@ class Spheroid(Surface):
         pos = Vector3.as_vector3(pos, derivs)
         return pos.element_mul(self.unsquash_sq)
 
-    def intercept_with_normal(self, normal, derivs=False, t_guess=None):
+    def intercept_with_normal(self, normal, derivs=False, guess=None):
         """Intercept point where the normal vector parallels the given vector.
 
         Input:
             normal      a Vector3 of normal vectors.
             derivs      True to propagate derivatives in the normal vector into
                         the returned intercepts.
-            t_guess     optional initial guess at the t array. This is the
-                        scalar such that
-                            intercept + t * normal(intercept) = pos
-                        A value other than None changes the returned result to
-                        a tuple; use t_guess=False to get both return results
-                        without providing an initial guess.
+            guess       optional initial guess a coefficient array p such that:
+                            pos = intercept + p * normal(intercept);
+                        use guess=False for the converged value of p to be
+                        returned even if an initial guess was not provided.
 
         Return:         a Vector3 of surface intercept points, in km. Where no
                         solution exists, the returned Vector3 will be masked.
 
-                        if t_guess is not None, then instead it returns a tuple
-                        (intercepts, t), where t is the converged solution to
-                        the t array.
+                        If guess is not None, then it instead returns a tuple
+                        (intercepts, p), where p is the converged solution such
+                        that 
+                            pos = intercept + p * normal(intercept).
         """
 
         normal = Vector3.as_vector3(normal, derivs)
         return normal.element_mul(self.squash).unit().element_mul(self.radii)
 
-    def intercept_normal_to(self, pos, derivs=False, t_guess=None):
+    def intercept_normal_to(self, pos, derivs=False, guess=None):
         """Intercept point whose normal vector passes through a given position.
 
         Input:
             pos         a Vector3 of positions near the surface.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
-            t_guess     optional initial guess at the t array. This is the
-                        scalar such that
-                            intercept + t * normal(intercept) = pos
-                        A value other than None changes the returned result to
-                        a tuple; use t_guess=False to get both return results
-                        without providing an initial guess.
+            guess       optional initial guess a coefficient array p such that:
+                            intercept = pos + p * normal(intercept);
+                        use guess=False for the converged value of p to be
+                        returned even if an initial guess was not provided.
 
         Return:         a vector3 of surface intercept points, in km. Where no
                         solution exists, the returned vector will be masked.
 
-                        if t_guess is not None, then instead it returns a tuple
-                        (intercepts, t), where t is the converged solution to
-                        the t array.
+                        If guess is not None, then it instead returns a tuple
+                        (intercepts, p), where p is the converged solution such
+                        that 
+                            intercept = pos + p * normal(intercept).
         """
 
         pos_with_derivs = Vector3.as_vector3(pos, derivs)
@@ -309,11 +308,11 @@ class Spheroid(Surface):
         # df/dt = -2 (pos * scale) dot (pos * scale * unsquash_sq/denom)
 
         # Make an initial guess at t, if necessary
-        if t_guess in (None, False):
+        if guess in (None, False):
             cept = pos.element_mul(self.unsquash).unit().element_mul(self.radii)
             t = (pos - cept).norm() / self.normal(cept).norm()
         else:
-            t = t_guess.copy(readonly=False, recursive=False)
+            t = guess.copy(readonly=False, recursive=False)
 
         # Terminate when accuracy stops improving by at least a factor of 2
         max_dt = 1.e99
@@ -408,7 +407,7 @@ class Spheroid(Surface):
         # Mask as needed
         self._apply_exclusion(cept)
 
-        if t_guess is None:
+        if guess is None:
             return cept
         else:
             return (cept, t)
@@ -638,7 +637,7 @@ class Test_Spheroid(unittest.TestCase):
         # Test intercept_normal_to() derivative
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
-        (cept,t) = planet.intercept_normal_to(pos, derivs=True, t_guess=False)
+        (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=False)
         self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
                             planet.req).max() < 1.e-6)
 
@@ -647,9 +646,9 @@ class Test_Spheroid(unittest.TestCase):
         perp = planet.normal(cept)
         for i in range(3):
             (cept1,t1) = planet.intercept_normal_to(pos + dpos[i], derivs=False,
-                                                    t_guess=t)
+                                                    guess=t)
             (cept2,t2) = planet.intercept_normal_to(pos - dpos[i], derivs=False,
-                                                    t_guess=t)
+                                                    guess=t)
             dcept_dpos = (cept1 - cept2) / (2*eps)
             self.assertTrue(abs(dcept_dpos.sep(perp) - HALFPI).max() < 1.e-5)
 
