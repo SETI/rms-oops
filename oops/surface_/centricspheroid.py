@@ -37,6 +37,8 @@ class CentricSpheroid(Surface):
         self.spheroid = Spheroid(origin, frame, radii, exclusion)
         self.origin = self.spheroid.origin
         self.frame  = self.spheroid.frame
+        self.req_sq = self.spheroid.req_sq
+        self.unsquash = self.spheroid.unsquash
 
         self.squash_sq = self.spheroid.squash_z**2
         self.unsquash_sq = self.spheroid.unsquash_z**2

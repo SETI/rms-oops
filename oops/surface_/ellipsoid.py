@@ -274,12 +274,12 @@ class Ellipsoid(Surface):
         """
 
         pos_with_derivs = Vector3.as_vector3(pos, derivs)
+        pos_with_derivs = self._apply_exclusion(pos_with_derivs)
 
         pos = pos_with_derivs.without_derivs()
-        pos = self._apply_exclusion(pos)
 
         # The intercept point satisfies:
-        #   cept + t * perp(cept) = pos
+        #   cept + p * perp(cept) = pos
         # where
         #   perp(cept) = cept * unsquash_sq
         #
@@ -289,9 +289,9 @@ class Ellipsoid(Surface):
         # Let C2 == unsquash_z**2
         #
         # Expanding,
-        #   pos_x = (1 + t) cept_x
-        #   pos_y = (1 + B2 t) cept_y
-        #   pos_z = (1 + C2 t) cept_z
+        #   pos_x = (1 + p) cept_x
+        #   pos_y = (1 + B2 p) cept_y
+        #   pos_z = (1 + C2 p) cept_z
         #
         # The intercept point must also satisfy
         #   |cept * unsquash| = req
@@ -301,141 +301,141 @@ class Ellipsoid(Surface):
         # Solve:
         #   cept_x**2 + B2 cept_y**2 + C2 cept_z**2 - req_sq = 0
         #
-        #   pos_x**2 / (1 + t)**2 +
-        #   pos_y**2 / (1 + B2 t)**2 * B2 +
-        #   pos_z**2 / (1 + C2 t)**2 * C2 - req_sq = 0
+        #   pos_x**2 / (1 + p)**2 +
+        #   pos_y**2 / (1 + B2 p)**2 * B2 +
+        #   pos_z**2 / (1 + C2 p)**2 * C2 - req_sq = 0
         #
-        # f(t) = the above expression
+        # f(p) = the above expression
         #
-        # df/dt = -2 pos_x**2 / (1 + t)**3 +
-        #       = -2 pos_y**2 / (1 + B2 t)**3 B2**2 +
-        #       = -2 pos_z**2 / (1 + C2 t)**3 C2**2
+        # df/dt = -2 pos_x**2 / (1 + p)**3 +
+        #       = -2 pos_y**2 / (1 + B2 p)**3 B2**2 +
+        #       = -2 pos_z**2 / (1 + C2 p)**3 C2**2
         #
-        # Let denom = [1 + t, 1 + B2 t, 1 + C2 t]
+        # Let denom = [1 + p, 1 + B2 p, 1 + C2 p]
         # Let unsquash = [1, B1, C1]
         # Let unsquash_sq = [1, B2, C2]
         #
-        # Let scale = [1, B1, C1] / [1 + t, 1 + B2 t, 1 + C2 t]
+        # Let scale = [1, B1, C1] / [1 + p, 1 + B2 p, 1 + C2 p]
         #
-        # f(t) = (pos * scale) dot (pos * scale) - req_sq
+        # f(p) = (pos * scale) dot (pos * scale) - req_sq
         #
         # df/dt = -2 (pos * scale) dot (pos * unsquash/denom)
 
-        # Make an initial guess at t, if necessary
+        # Make an initial guess at p, if necessary
         if guess in (None, False):
             cept = pos.element_mul(self.unsquash).unit().element_mul(self.radii)
-            t = (pos - cept).norm() / self.normal(cept).norm()
+            p = (pos - cept).norm() / self.normal(cept).norm()
         else:
-            t = guess.copy(readonly=False, recursive=False)
+            p = guess.copy(readonly=False, recursive=False)
 
         # Terminate when accuracy stops improving by at least a factor of 2
-        max_dt = 1.e99
+        max_dp = 1.e99
         for iter in range(SURFACE_PHOTONS.max_iterations):
-            denom = Vector3.ONES + t * self.unsquash_sq
+            denom = Vector3.ONES + p * self.unsquash_sq
 
             pos_scale = pos.element_mul(self.unsquash.element_div(denom))
             f = pos_scale.dot(pos_scale) - self.req_sq
 
             ratio = self.unsquash_sq.element_div(denom)
-            df_dt_div_neg2 = pos_scale.dot(pos_scale.element_mul(ratio))
+            df_dp_div_neg2 = pos_scale.dot(pos_scale.element_mul(ratio))
 
-            dt = -0.5 * f/df_dt_div_neg2
-            t -= dt
+            dt = -0.5 * f/df_dp_div_neg2
+            p -= dt
 
-            prev_max_dt = max_dt
-            max_dt = abs(dt).max()
+            prev_max_dp = max_dp
+            max_dp = abs(dt).max()
 
             if LOGGING.surface_iterations or Ellipsoid.DEBUG:
                 print LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
-                print iter, max_dt
+                print iter, max_dp
 
-            if (np.all(Scalar.as_scalar(max_dt).mask) or
-                max_dt <= SURFACE_PHOTONS.dlt_precision or
-                max_dt >= prev_max_dt * 0.5): break
+            if (np.all(Scalar.as_scalar(max_dp).mask) or
+                max_dp <= SURFACE_PHOTONS.dlt_precision or
+                max_dp >= prev_max_dp * 0.5): break
 
-        denom = Vector3.ONES + t * self.unsquash_sq
+        denom = Vector3.ONES + p * self.unsquash_sq
         cept = pos.element_div(denom)
 
         if derivs:
             # First, we need dt/dpos
             #
-            # pos_x**2 / (1 + t)**2 +
-            # pos_y**2 / (1 + B2 t)**2 * B2 +
-            # pos_z**2 / (1 + C2 t)**2 * C2 - req_sq = 0
+            # pos_x**2 / (1 + p)**2 +
+            # pos_y**2 / (1 + B2 p)**2 * B2 +
+            # pos_z**2 / (1 + C2 p)**2 * C2 - req_sq = 0
             #
             # Derive dt/dpos_x...
             #
-            # 2 pos_x / (1+t)**2
-            #   + pos_x**2 * (-2)/(1+t)**3 dt/dpos_x
-            #   + pos_y**2 * (-2)/(1+B2 t)**3 B2**2 dt/dpos_x
-            #   + pos_z**2 * (-2)/(1+C2 t)**3 C2**2 dt/dpos_x = 0
+            # 2 pos_x / (1+p)**2
+            #   + pos_x**2 * (-2)/(1+p)**3 dt/dpos_x
+            #   + pos_y**2 * (-2)/(1+B2 p)**3 B2**2 dt/dpos_x
+            #   + pos_z**2 * (-2)/(1+C2 p)**3 C2**2 dt/dpos_x = 0
             #
-            # dt/dpos_x [pos_x**2 / (1+t)**3 +
-            #            pos_y**2 * B2**2/(1 + B2 t)**3] +
-            #            pos_z**2 * C2**2/(1 + C2 t)**3] = pos_x / (1+t)**2
+            # dt/dpos_x [pos_x**2 / (1+p)**3 +
+            #            pos_y**2 * B2**2/(1 + B2 p)**3] +
+            #            pos_z**2 * C2**2/(1 + C2 p)**3] = pos_x / (1+p)**2
             #
             # Derive dt/dpos_y...
             #
-            # pos_x**2 * (-2)/(1+t)**3 dt/dpos_y
-            #   + 2 pos_y * (1 + B2 t)**2 * B2 +
-            #   + pos_y**2 * (-2)/(1 + B2 t)**3 B2**2 dt/dpos_y
-            #   + pos_z**2 * (-2)/(1 + C2 t)**3 C2**2 dt/dpos_y = 0
+            # pos_x**2 * (-2)/(1+p)**3 dt/dpos_y
+            #   + 2 pos_y * (1 + B2 p)**2 * B2 +
+            #   + pos_y**2 * (-2)/(1 + B2 p)**3 B2**2 dt/dpos_y
+            #   + pos_z**2 * (-2)/(1 + C2 p)**3 C2**2 dt/dpos_y = 0
             #
-            # dt/dpos_y [pos_x**2 / (1+t)**3 +
-            #            pos_y**2 * B2**2/(1 + B2 t)**3] +
-            #            pos_z**2 * C2**2/(1 + C2 t)**3] =
-            #                                       pos_y B2/(1 + B2 t)**2
+            # dt/dpos_y [pos_x**2 / (1+p)**3 +
+            #            pos_y**2 * B2**2/(1 + B2 p)**3] +
+            #            pos_z**2 * C2**2/(1 + C2 p)**3] =
+            #                                       pos_y B2/(1 + B2 p)**2
             #
             # Derive dt/dpos_z using similar math...
             #
-            # dt/dpos_z [pos_x**2 / (1+t)**3 +
-            #            pos_y**2 * B2**2/(1 + B2 t)**3] +
-            #            pos_z**2 * C2**2/(1 + C2 t)**3] =
-            #                                       pos_z C2/(1 + C2 t)**2
+            # dt/dpos_z [pos_x**2 / (1+p)**3 +
+            #            pos_y**2 * B2**2/(1 + B2 p)**3] +
+            #            pos_z**2 * C2**2/(1 + C2 p)**3] =
+            #                                       pos_z C2/(1 + C2 p)**2
             #
-            # Let denom = [1 + t, 1 + B2 t, 1 + C2 t]
+            # Let denom = [1 + p, 1 + B2 p, 1 + C2 p]
             # Let unsquash_sq = [1, B2, C2]
             #
-            # Let denom1 = [pos_x**2 / (1+t)**3 +
-            #               pos_y**2 * B2**2 / (1 + B2 t)**3]
-            #               pos_z**2 * C2**2 / (1 + C2 t)**3]
+            # Let denom1 = [pos_x**2 / (1+p)**3 +
+            #               pos_y**2 * B2**2 / (1 + B2 p)**3]
+            #               pos_z**2 * C2**2 / (1 + C2 p)**3]
             # in the expressions for dt/dpos. Note that this is identical to
-            # df_dt_div_neg2 in the expressions above.
+            # df_dp_div_neg2 in the expressions above.
             #
-            # dt/dpos_x * denom1 = pos_x / (1+t)**2
-            # dt/dpos_y * denom1 = pos_y * B2 / (1 + B2 t)**2
-            # dt/dpos_z * denom1 = pos_z * C2 / (1 + C2 t)**2
+            # dt/dpos_x * denom1 = pos_x / (1+p)**2
+            # dt/dpos_y * denom1 = pos_y * B2 / (1 + B2 p)**2
+            # dt/dpos_z * denom1 = pos_z * C2 / (1 + C2 p)**2
 
             stretch = self.unsquash_sq.element_div(denom.element_mul(denom))
-            dt_dpos = pos.element_mul(stretch) / df_dt_div_neg2
-            dt_dpos = dt_dpos.swap_items([Scalar])
+            dp_dpos = pos.element_mul(stretch) / df_dp_div_neg2
+            dp_dpos = dp_dpos.swap_items([Scalar])
 
             # Now we can proceed with dcept/dpos
             #
-            # cept + perp(cept) * t = pos
+            # cept + perp(cept) * p = pos
             #
-            # dcept/dpos + perp(cept) dt/dpos + t dperp/dcept dcept/dpos = I
+            # dcept/dpos + perp(cept) dt/dpos + p dperp/dcept dcept/dpos = I
             #
-            # (I + t dperp/dcept) dcept/dpos = I - perp(cept) dt/dpos
+            # (I + p dperp/dcept) dcept/dpos = I - perp(cept) dt/dpos
             #
-            # dcept/dpos = (I + t dperp/dcept)**(-1) * (I - perp dt/dpos)
+            # dcept/dpos = (I + p dperp/dcept)**(-1) * (I - perp dt/dpos)
 
             cept_with_derivs = cept.copy(readonly=False, recursive=False)
             cept_with_derivs.insert_deriv('cept', Vector3.IDENTITY)
             perp = self.normal(cept_with_derivs, derivs=True)
 
-            mat = Matrix.as_matrix(Vector3.IDENTITY + t * perp.d_dcept)
+            mat = Matrix.as_matrix(Vector3.IDENTITY + p * perp.d_dcept)
             dcept_dpos = mat.reciprocal() * (Vector3.IDENTITY -
-                                             perp.without_derivs() * dt_dpos)
+                                             perp.without_derivs() * dp_dpos)
 
             for (key,deriv) in pos_with_derivs.derivs.iteritems():
                 cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
-                t.insert_deriv(key, dt_dpos.chain(deriv), override=True)
+                p.insert_deriv(key, dp_dpos.chain(deriv), override=True)
 
         if guess is None:
             return cept
         else:
-            return (cept, t)
+            return (cept, p)
 
     def _apply_exclusion(self, pos):
         """This internal method is used by intercept_normal_to() to exclude any

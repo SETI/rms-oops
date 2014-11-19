@@ -38,6 +38,8 @@ class CentricEllipsoid(Surface):
         self.ellipsoid = Ellipsoid(origin, frame, radii, exclusion)
         self.origin = self.ellipsoid.origin
         self.frame  = self.ellipsoid.frame
+        self.req_sq = self.ellipsoid.req_sq
+        self.unsquash = self.ellipsoid.unsquash
 
         self.squash_z_sq = self.ellipsoid.squash_z**2
         self.unsquash_z_sq = self.ellipsoid.unsquash_z**2

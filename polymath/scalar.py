@@ -574,7 +574,7 @@ class Scalar(Qube):
         else:
             return Scalar(minval, False, self.units)
 
-    def mean(self, recursive=False):
+    def mean(self, recursive=False, operator=np.mean):
         """Return the mean of the unmasked values.
 
         Denominators are supported and derivatives are supported. The value is
@@ -611,7 +611,7 @@ class Scalar(Qube):
             values = self.values.reshape((self.size,) + self.denom)
 
         # Average over the first axis
-        meanval = np.mean(values, axis=0)
+        meanval = operator(values, axis=0)
 
         # Convert to int(s) if appropriate
         if self.is_int() and np.all(meanval % 1 == 0):
@@ -632,6 +632,15 @@ class Scalar(Qube):
                 obj.insert_deriv(key, Scalar.as_scalar(deriv.mean(False)))
 
         return obj
+
+    def median(self, recursive=False):
+        """Return the median of the unmasked values.
+
+        Denominators are supported and derivatives are supported. The value is
+        returned as a single Python scalar if possible
+        """
+
+        return self.mean(recursive=False, operator=np.median)
 
     def sum(self, recursive=False):
         """Return the sum of the unmasked values.
