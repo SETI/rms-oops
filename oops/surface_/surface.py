@@ -300,7 +300,7 @@ class Surface(object):
             surface_key = 'arr'
 
         # If the link is entirely masked...
-        if np.all(link.mask):
+        if np.all(link.time.mask):
             surface_event = link.all_masked(origin=self.origin,
                                             frame=self.frame.wayframe,
                                             derivs=derivs)
@@ -598,7 +598,7 @@ class Surface(object):
             surface_key = 'arr'
 
         # If the link is entirely masked...
-        if np.all(link.mask):
+        if np.all(link.time.mask):
             surface_event = link.all_masked(origin=self.origin,
                                             frame=self.frame.wayframe,
                                             derivs=derivs)
