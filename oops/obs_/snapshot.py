@@ -9,6 +9,7 @@ from oops.obs_.observation   import Observation
 from oops.cadence_.metronome import Metronome
 from oops.path_.path         import Path
 from oops.frame_.frame       import Frame
+from oops.event              import Event
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
@@ -76,8 +77,6 @@ class Snapshot(Observation):
         Input:
             indices     a Tuple of array indices.
             fovmask     True to mask values outside the field of view.
-            keywords    optional additional keyword values required to define
-                        the FOV and the relationship between (u,v) and time.
 
         Return:         (uv, time)
             uv          a Pair defining the values of (u,v) associated with the
@@ -110,8 +109,6 @@ class Snapshot(Observation):
         Input:
             indices     a Tuple of integer array indices.
             fovmask     True to mask values outside the field of view.
-            keywords    optional additional keyword values, based on the
-                        requirements of the observation and its attributes.
 
         Return:         (uv_min, uv_max, time_min, time_max)
             uv_min      a Pair defining the minimum values of (u,v) associated
@@ -196,8 +193,6 @@ class Snapshot(Observation):
                         field of view. The coordinates need not be integers, but
                         any fractional part is truncated.
             fovmask     True to mask values outside the field of view.
-            keywords    optional additional keyword values, based on the
-                        requirements of the observation and its attributes.
 
         Return:         a tuple containing Scalars of the start time and stop
                         time of each (u,v) pair, as seconds TDB.
@@ -257,13 +252,11 @@ class Snapshot(Observation):
 # 
 #         return (uv_min, uv_max)
 
-    def sweep_duv_dt(self, uv_pair, extras=None):
+    def sweep_duv_dt(self, uv_pair):
         """Return the mean local sweep speed of the instrument along (u,v) axes.
 
         Input:
             uv_pair     a Pair of spatial indices (u,v).
-            keywords    optional additional keyword values, based on the
-                        requirements of the observation and its attributes.
 
         Return:         a Pair containing the local sweep speed in units of
                         pixels per second in the (u,v) directions.
@@ -293,8 +286,7 @@ class Snapshot(Observation):
 # Overrides of Observation methods
 ################################################################################
 
-    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
-                                 **keywords):
+    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={}):
         """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
@@ -309,8 +301,6 @@ class Snapshot(Observation):
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
                         default configuration is defined in config.py.
-            keywords    optional additional keyword values, based on the
-                        requirements of the observation and its attributes.
 
         Return:         a Pair of (u,v) coordinates.
 
@@ -320,35 +310,82 @@ class Snapshot(Observation):
         """
 
         return Observation.uv_from_ra_and_dec(self, ra, dec, derivs, 1,
-                                              quick, **keywords)
+                                              quick)
         
-    def uv_from_path(self, path, derivs=False, quick=False, converge={},
-                           **keywords):
+    def uv_from_path(self, path, derivs=False, quick={}, converge={}):
         """Return the (u,v) indices of an object in the FOV, given its path.
+
+        Note: This procedure assumes that movement along a path is very limited
+        during the exposure time of an individual pixel. It could fail to
+        converge if there is a large gap in timing between adjacent pixels at a
+        time when the object is crossing that gap. However, even then, it should
+        select roughly the correct location. It could also fail to converge
+        during a fast slew.
 
         Input:
             path        a Path object.
-            extras      a tuple of Scalar index values defining any extra
-                        indices into the observation's array, should these
-                        values be relevant.
-            quick       defines how to use QuickPaths and QuickFrames.
-            derivs      True to include derivatives d(u,v)/dt, neglecting any
-                        sweep motion within the observation.
-            keywords    optional additional keyword values, based on the
-                        requirements of the observation and its attributes.
+            derivs      True to propagate derivatives of the link time and
+                        position into the returned event.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+            converge    an optional dictionary of parameters to override the
+                        configured default convergence parameters. The default
+                        configuration is defined in config.py.
 
-        Return:
-            uv_pair     the (u,v) indices of the pixel in which the point was
+        Return:         the (u,v) indices of the pixel in which the point was
                         found. The path is evaluated at the mid-time of this
                         pixel.
         """
 
-        # Snapshots are easy and require zero iterations
-        converge = converge.copy()
-        converge.update({'max_iterations': 0})
+        obs_event = Event(self.midtime, (Vector3.ZERO,Vector3.ZERO),
+                          self.path, self.frame)
+        (path_event, obs_event) = path.photon_to_event(obs_event,
+                                    derivs=False, guess=guess,
+                                    quick=quick, converge=converge)
 
-        return Observation.uv_from_path(self, path, derivs, quick, converge,
-                                              **keywords)
+        return self.fov.uv_from_los(-obs_event.arr, derivs=derivs)
+
+    def uv_from_coords(self, surface, coords, underside=False, derivs=False,
+                             quick={}, converge={}):
+        """The (u,v) indices of a surface point, given its coordinates.
+
+        Input:
+            surface     a Surface object.
+            coords      a tuple containing two or three Scalars of surface
+                        coordinates. The Scalars need not be the same shape,
+                        but must broadcast to the same shape.
+            underside   True for the underside of the surface (emission > 90
+                        degrees) to be unmasked.
+            derivs      True to propagate derivatives of the link time and
+                        position into the returned event.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+            converge    an optional dictionary of parameters to override the
+                        configured default convergence parameters. The default
+                        configuration is defined in config.py.
+
+        Return:         the (u,v) indices of the pixel in which the point was
+                        found. The path is evaluated at the mid-time of this
+                        pixel.
+        """
+
+        obs_event = Event(self.midtime, (Vector3.ZERO,Vector3.ZERO),
+                          self.path, self.frame)
+        (surface_event,
+         obs_event) = surface.photon_to_event_by_coords(obs_event, coords,
+                                derivs=derivs, quick=quick, converge=converge)
+
+        if underside:
+            arr = obs_event.arr
+        else:
+            normal = surface.normal(surface_event.pos)
+            arr = obs_event.arr.mask_where(normal.dot(surface_event.dep) < 0)
+
+        return self.fov.uv_from_los(-arr, derivs=derivs)
 
 ################################################################################
 # UNIT TESTS

@@ -1,44 +1,24 @@
 ################################################################################
-# oops/surface_/ellipsoid.py: Ellipsoid subclass of class Surface
+# oops/surface_/graphicellipsoid.py: GraphicEllipsoid subclass of class Surface
 ################################################################################
 
 import numpy as np
 from polymath import *
 
-from oops.surface_.surface import Surface
-from oops.path_.path       import Path
-from oops.frame_.frame     import Frame
-from oops.config           import SURFACE_PHOTONS, LOGGING
-from oops.constants        import *
+from oops.surface_.surface   import Surface
+from oops.surface_.ellipsoid import Ellipsoid
+from oops.constants import *
 
-class Ellipsoid(Surface):
-    """Ellipsoid defines a ellipsoidal surface centered on the given path and
-    fixed with respect to the given frame. The short radius of the ellipsoid is
-    oriented along the Z-axis of the frame and the long radius is along the
-    X-axis.
-
-    The coordinates defining the surface grid are (longitude, latitude).
-    Both are based on the assumption that a spherical body has been
-    "squashed" along the Y- and Z-axes. The latitudes and longitudes defined in
-    this manner are neither planetocentric nor planetographic; functions are
-    provided to perform conversions to either choice. Longitudes are measured
-    in a right-handed manner, increasing toward the east; values range from 0 to
-    2*pi.
-
-    Elevations are defined by "unsquashing" the radial vectors and then
-    subtracting off the equatorial radius of the body. Thus, the surface is
-    defined as the locus of points where elevation equals zero. However, note
-    that with this definition, the gradient of the elevation value is not
-    exactly normal to the surface.
+class GraphicEllipsoid(Surface):
+    """GraphicEllipsoid is a variant of Ellipsoid in which latitudes are
+    planetographic.
     """
 
     COORDINATE_TYPE = "spherical"
     IS_VIRTUAL = False
 
-    DEBUG = False       # True for convergence testing in intercept_normal_to()
-
     def __init__(self, origin, frame, radii, exclusion=0.95):
-        """Constructor for an Ellipsoid object.
+        """Constructor for a GraphicEllipsoid object.
 
         Input:
             origin      the Path object or ID defining the center of the
@@ -55,35 +35,19 @@ class Ellipsoid(Surface):
                         the problem becomes numerically unstable.
         """
 
-        self.origin = Path.as_waypoint(origin)
-        self.frame  = Frame.as_wayframe(frame)
+        self.ellipsoid = Ellipsoid(origin, frame, radii, exclusion)
+        self.origin = self.ellipsoid.origin
+        self.frame  = self.ellipsoid.frame
+        self.req_sq = self.ellipsoid.req_sq
+        self.unsquash = self.ellipsoid.unsquash
 
-        self.radii  = np.asfarray(radii)
-        self.radii_sq = self.radii**2
-        self.req    = self.radii[0]
-        self.req_sq = self.req**2
-        self.rpol   = self.radii[2]
+        self.squash_z_sq = self.ellipsoid.squash_z**2
+        self.unsquash_z_sq = self.ellipsoid.unsquash_z**2
 
-        self.squash_y   = self.radii[1] / self.radii[0]
-        self.unsquash_y = self.radii[0] / self.radii[1]
+        self.squash_y_sq = self.ellipsoid.squash_y**2
+        self.unsquash_y_sq = self.ellipsoid.unsquash_y**2
 
-        self.squash_z   = self.radii[2] / self.radii[0]
-        self.unsquash_z = self.radii[0] / self.radii[2]
-
-        self.squash    = Vector3((1., self.squash_y, self.squash_z))
-        self.squash_sq = self.squash.element_mul(self.squash)
-        self.unsquash  = Vector3((1., 1./self.squash_y, 1./self.squash_z))
-        self.unsquash_sq = self.unsquash.element_mul(self.unsquash)
-
-        self.unsquash_sq_2d = Matrix(([1,0,0],
-                                      [0,self.unsquash_y**2,0],
-                                      [0,0,self.unsquash_z**2]))
-
-        # This is the exclusion zone radius, within which calculations of
-        # intercept_normal_to() are automatically masked due to the ill-defined
-        # geometry.
-
-        self.exclusion = exclusion * self.rpol
+        self.radii = self.ellipsoid.radii
 
     def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Convert positions in the internal frame to surface coordinates.
@@ -101,24 +65,12 @@ class Ellipsoid(Surface):
                         three Scalars, one for each coordinate.
         """
 
-        pos = Vector3.as_vector3(pos, derivs)
-
-        unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
-
-        r = unsquashed.norm()
-        (x,y,z) = unsquashed.to_scalars()
-        lat = (z/r).arcsin()
-#        lon_unsquashed = y.arctan2(x) % TWOPI
-        lon = y.arctan2(x) % TWOPI
-
-        # Convert longitude from "unsquashed" to planetocentric
-#         lon = (lon_unsquashed.tan() * self.squash_y).arctan()   # -pi/2 to pi/2
-#         lon += np.pi * ((lon_unsquashed.vals + np.pi/2) // np.pi)
-
-        if axes == 2:
-            return (lon, lat)
-        else:
-            return (lon, lat, r - self.req)
+        coords = self.ellipsoid.coords_from_vector3(pos, obs=obs, axes=axes,
+                                                    derivs=derivs)
+        graphic_lon = self.ellipsoid.lon_to_graphic(coords[0], derivs=derivs)
+        graphic_lat = self.ellipsoid.lat_to_graphic(coords[1], coords[0],
+                                                    derivs=derivs)
+        return (graphic_lon, graphic_lat,) + coords[2:]
 
     def vector3_from_coords(self, coords, obs=None, derivs=False):
         """Convert surface coordinates to positions in the internal frame.
@@ -138,27 +90,13 @@ class Ellipsoid(Surface):
         be broadcastable to a single shape.
         """
 
-        # Convert to Scalars
-        lon = Scalar.as_scalar(coords[0], derivs)
-        lat = Scalar.as_scalar(coords[1], derivs)
+        squashed_lon = self.ellipsoid.lon_from_graphic(coords[0], derivs=derivs)
+        squashed_lat = self.ellipsoid.lat_from_graphic(coords[1], squashed_lon,
+                                                       derivs=derivs)
+        new_coords = (squashed_lon, squashed_lat,) + coords[2:]
 
-        # Convert longitude from planetocentric to "unsquashed"
-#         lon_unsquashed = (lon.tan() * self.unsquash_y).arctan()
-#         lon_unsquashed = lon_unsquashed + PI * ((lon.vals + HALFPI) // PI)
-
-        if len(coords) == 2:
-            r = Scalar(self.req)
-        else:
-            r = Scalar(coords[2], derivs) + self.req
-
-        r_coslat = r * lat.cos()
-#         x = r_coslat * lon_unsquashed.cos()
-#         y = r_coslat * lon_unsquashed.sin() * self.squash_y
-        x = r_coslat * lon.cos()
-        y = r_coslat * lon.sin() * self.squash_y
-        z = r * lat.sin() * self.squash_z
-
-        return Vector3.from_scalars(x,y,z)
+        return self.ellipsoid.vector3_from_coords(new_coords, obs=obs,
+                                                  derivs=derivs)
 
     def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
@@ -177,41 +115,7 @@ class Ellipsoid(Surface):
                             intercept = obs + t * los
         """
 
-        # Convert to Vector3 and un-squash
-        obs = Vector3.as_vector3(obs, derivs)
-        los = Vector3.as_vector3(los, derivs)
-
-        obs_unsquashed = obs.element_mul(self.unsquash)
-        los_unsquashed = los.element_mul(self.unsquash)
-
-        # Solve for the intercept distance, masking lines of sight that miss
-
-        # Use the quadratic formula...
-        # The use of b.sign() below always selects the closer intercept point
-
-        # a = los_unsquashed.dot(los_unsquashed)
-        # b = los_unsquashed.dot(obs_unsquashed) * 2.
-        # c = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
-        # d = b**2 - 4. * a * c
-        #
-        # t = (-b + b.sign() * d.sqrt()) / (2*a)
-        # pos = obs + t*los
-
-        # This is the same algorithm as is commented out above, but avoids a
-        # few unnecessary math operations
-
-        a      = los_unsquashed.dot(los_unsquashed)
-        b_div2 = los_unsquashed.dot(obs_unsquashed)
-        c      = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
-        d_div4 = b_div2**2 - a * c
-
-        bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
-        t = (bsign_sqrtd_div2 - b_div2) / a
-
-        pos = obs + t*los
-        pos = self._apply_exclusion(pos)
-
-        return (pos, t)
+        return self.ellipsoid.intercept(obs, los, derivs=derivs, guess=guess)
 
     def normal(self, pos, derivs=False):
         """The normal vector at a position at or near a surface.
@@ -225,8 +129,7 @@ class Ellipsoid(Surface):
                         that pass through the position. Lengths are arbitrary.
         """
 
-        pos = Vector3.as_vector3(pos, derivs)
-        return pos.element_mul(self.unsquash_sq)
+        return self.ellipsoid.normal(pos, derivs=derivs)
 
     def intercept_with_normal(self, normal, derivs=False, guess=None):
         """Intercept point where the normal vector parallels the given vector.
@@ -249,8 +152,8 @@ class Ellipsoid(Surface):
                             pos = intercept + p * normal(intercept).
         """
 
-        normal = Vector3.as_vector3(normal, derivs)
-        return normal.element_mul(self.squash).unit().element_mul(self.radii)
+        return self.ellipsoid.intercept_with_normal(normal, derivs=derivs,
+                                                    guess=guess)
 
     def intercept_normal_to(self, pos, derivs=False, guess=None):
         """Intercept point whose normal vector passes through a given position.
@@ -273,280 +176,77 @@ class Ellipsoid(Surface):
                             intercept = pos + p * normal(intercept).
         """
 
-        pos_with_derivs = Vector3.as_vector3(pos, derivs)
-        pos_with_derivs = self._apply_exclusion(pos_with_derivs)
-
-        pos = pos_with_derivs.without_derivs()
-
-        # The intercept point satisfies:
-        #   cept + p * perp(cept) = pos
-        # where
-        #   perp(cept) = cept * unsquash_sq
-        #
-        # Let B1 == unsquash_y
-        # Let B2 == unsquash_y**2
-        # Let C1 == unsquash_z
-        # Let C2 == unsquash_z**2
-        #
-        # Expanding,
-        #   pos_x = (1 + p) cept_x
-        #   pos_y = (1 + B2 p) cept_y
-        #   pos_z = (1 + C2 p) cept_z
-        #
-        # The intercept point must also satisfy
-        #   |cept * unsquash| = req
-        # or
-        #   cept_x**2 + B2 cept_y**2 + C2 cept_z**2 = req_sq
-        #
-        # Solve:
-        #   cept_x**2 + B2 cept_y**2 + C2 cept_z**2 - req_sq = 0
-        #
-        #   pos_x**2 / (1 + p)**2 +
-        #   pos_y**2 / (1 + B2 p)**2 * B2 +
-        #   pos_z**2 / (1 + C2 p)**2 * C2 - req_sq = 0
-        #
-        # f(p) = the above expression
-        #
-        # df/dt = -2 pos_x**2 / (1 + p)**3 +
-        #       = -2 pos_y**2 / (1 + B2 p)**3 B2**2 +
-        #       = -2 pos_z**2 / (1 + C2 p)**3 C2**2
-        #
-        # Let denom = [1 + p, 1 + B2 p, 1 + C2 p]
-        # Let unsquash = [1, B1, C1]
-        # Let unsquash_sq = [1, B2, C2]
-        #
-        # Let scale = [1, B1, C1] / [1 + p, 1 + B2 p, 1 + C2 p]
-        #
-        # f(p) = (pos * scale) dot (pos * scale) - req_sq
-        #
-        # df/dt = -2 (pos * scale) dot (pos * unsquash/denom)
-
-        # Make an initial guess at p, if necessary
-        if guess in (None, False):
-            cept = pos.element_mul(self.unsquash).unit().element_mul(self.radii)
-            p = (pos - cept).norm() / self.normal(cept).norm()
-        else:
-            p = guess.copy(readonly=False, recursive=False)
-
-        # Terminate when accuracy stops improving by at least a factor of 2
-        max_dp = 1.e99
-        for iter in range(SURFACE_PHOTONS.max_iterations):
-            denom = Vector3.ONES + p * self.unsquash_sq
-
-            pos_scale = pos.element_mul(self.unsquash.element_div(denom))
-            f = pos_scale.dot(pos_scale) - self.req_sq
-
-            ratio = self.unsquash_sq.element_div(denom)
-            df_dp_div_neg2 = pos_scale.dot(pos_scale.element_mul(ratio))
-
-            dt = -0.5 * f/df_dp_div_neg2
-            p -= dt
-
-            prev_max_dp = max_dp
-            max_dp = abs(dt).max()
-
-            if LOGGING.surface_iterations or Ellipsoid.DEBUG:
-                print LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
-                print iter, max_dp
-
-            if (np.all(Scalar.as_scalar(max_dp).mask) or
-                max_dp <= SURFACE_PHOTONS.dlt_precision or
-                max_dp >= prev_max_dp * 0.5): break
-
-        denom = Vector3.ONES + p * self.unsquash_sq
-        cept = pos.element_div(denom)
-
-        if derivs:
-            # First, we need dt/dpos
-            #
-            # pos_x**2 / (1 + p)**2 +
-            # pos_y**2 / (1 + B2 p)**2 * B2 +
-            # pos_z**2 / (1 + C2 p)**2 * C2 - req_sq = 0
-            #
-            # Derive dt/dpos_x...
-            #
-            # 2 pos_x / (1+p)**2
-            #   + pos_x**2 * (-2)/(1+p)**3 dt/dpos_x
-            #   + pos_y**2 * (-2)/(1+B2 p)**3 B2**2 dt/dpos_x
-            #   + pos_z**2 * (-2)/(1+C2 p)**3 C2**2 dt/dpos_x = 0
-            #
-            # dt/dpos_x [pos_x**2 / (1+p)**3 +
-            #            pos_y**2 * B2**2/(1 + B2 p)**3] +
-            #            pos_z**2 * C2**2/(1 + C2 p)**3] = pos_x / (1+p)**2
-            #
-            # Derive dt/dpos_y...
-            #
-            # pos_x**2 * (-2)/(1+p)**3 dt/dpos_y
-            #   + 2 pos_y * (1 + B2 p)**2 * B2 +
-            #   + pos_y**2 * (-2)/(1 + B2 p)**3 B2**2 dt/dpos_y
-            #   + pos_z**2 * (-2)/(1 + C2 p)**3 C2**2 dt/dpos_y = 0
-            #
-            # dt/dpos_y [pos_x**2 / (1+p)**3 +
-            #            pos_y**2 * B2**2/(1 + B2 p)**3] +
-            #            pos_z**2 * C2**2/(1 + C2 p)**3] =
-            #                                       pos_y B2/(1 + B2 p)**2
-            #
-            # Derive dt/dpos_z using similar math...
-            #
-            # dt/dpos_z [pos_x**2 / (1+p)**3 +
-            #            pos_y**2 * B2**2/(1 + B2 p)**3] +
-            #            pos_z**2 * C2**2/(1 + C2 p)**3] =
-            #                                       pos_z C2/(1 + C2 p)**2
-            #
-            # Let denom = [1 + p, 1 + B2 p, 1 + C2 p]
-            # Let unsquash_sq = [1, B2, C2]
-            #
-            # Let denom1 = [pos_x**2 / (1+p)**3 +
-            #               pos_y**2 * B2**2 / (1 + B2 p)**3]
-            #               pos_z**2 * C2**2 / (1 + C2 p)**3]
-            # in the expressions for dt/dpos. Note that this is identical to
-            # df_dp_div_neg2 in the expressions above.
-            #
-            # dt/dpos_x * denom1 = pos_x / (1+p)**2
-            # dt/dpos_y * denom1 = pos_y * B2 / (1 + B2 p)**2
-            # dt/dpos_z * denom1 = pos_z * C2 / (1 + C2 p)**2
-
-            stretch = self.unsquash_sq.element_div(denom.element_mul(denom))
-            dp_dpos = pos.element_mul(stretch) / df_dp_div_neg2
-            dp_dpos = dp_dpos.swap_items([Scalar])
-
-            # Now we can proceed with dcept/dpos
-            #
-            # cept + perp(cept) * p = pos
-            #
-            # dcept/dpos + perp(cept) dt/dpos + p dperp/dcept dcept/dpos = I
-            #
-            # (I + p dperp/dcept) dcept/dpos = I - perp(cept) dt/dpos
-            #
-            # dcept/dpos = (I + p dperp/dcept)**(-1) * (I - perp dt/dpos)
-
-            cept_with_derivs = cept.copy(readonly=False, recursive=False)
-            cept_with_derivs.insert_deriv('cept', Vector3.IDENTITY)
-            perp = self.normal(cept_with_derivs, derivs=True)
-
-            mat = Matrix.as_matrix(Vector3.IDENTITY + p * perp.d_dcept)
-            dcept_dpos = mat.reciprocal() * (Vector3.IDENTITY -
-                                             perp.without_derivs() * dp_dpos)
-
-            for (key,deriv) in pos_with_derivs.derivs.iteritems():
-                cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
-                p.insert_deriv(key, dp_dpos.chain(deriv), override=True)
-
-        if guess is None:
-            return cept
-        else:
-            return (cept, p)
-
-    def _apply_exclusion(self, pos):
-        """This internal method is used by intercept_normal_to() to exclude any
-        positions that fall too close to the center of the surface. The math
-        is poorly-behaved in this region.
-
-        (1) It sets the mask on any of these points to True.
-        (2) It sets the magnitude of any of these points to the edge of the
-            exclusion zone, in order to avoid runtime errors in the math
-            libraries.
-        """
-
-        replacement = Vector3((0.,0.,self.exclusion/2.))
-
-        # Replace NaNs and zeros
-        nans = np.any(np.isnan(pos.vals), axis=-1)
-        zeros = np.all(pos.vals == 0, axis=-1)
-        pos = pos.mask_where(nans | zeros, replace=replacement)
-
-        # Define the exclusion zone as a NumPy boolean array
-        pos_unsquashed = pos.element_mul(self.unsquash)
-        pos_sq_vals = pos_unsquashed.dot(pos_unsquashed).vals
-        mask = (pos_sq_vals <= self.exclusion**2)
-
-        if not np.any(mask): return pos
-
-        # Scale all masked vectors out to the exclusion radius
-        if mask is True:
-            return pos * self.exclusion / np.sqrt(pos_sq_vals)
-        else:
-            factor = np.ones(pos.shape)
-            factor[mask] = self.exclusion / np.sqrt(pos_sq_vals[mask])
-            return pos * Scalar(factor, mask)
+        return self.ellipsoid.intercept_normal_to(pos, derivs=derivs,
+                                                  guess=guess)
 
     ############################################################################
     # Longitude and latitude conversions
     ############################################################################
 
     def lon_to_centric(self, lon, derivs=False):
-        """Convert longitude in internal ellipsoid coordinates to
+        """Convert longitude in planetocentric ellipsoid coordinates to
         planetocentric.
         """
 
         lon = Scalar.as_scalar(lon, derivs)
-        return (lon.sin() * self.squash_y).arctan2(lon.cos())
+        return (lon.sin() * self.squash_y_sq).arctan2(lon.cos())
 
     def lon_from_centric(self, lon, derivs=False):
-        """Convert planetocentric longitude to internal ellipsoid longitude.
+        """Convert planetocentric longitude to planetocentric ellipsoid
+        longitude.
         """
 
         lon = Scalar.as_scalar(lon, derivs)
-        return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
+        return (lon.sin() * self.unsquash_y_sq).arctan2(lon.cos())
 
     def lon_to_graphic(self, lon, derivs=False):
-        """Convert longitude in internal ellipsoid coordinates to
+        """Convert longitude in planetocentric ellipsoid coordinates to
         planetographic.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
-        return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
+        return Scalar.as_scalar(lon, derivs)
 
     def lon_from_graphic(self, lon, derivs=False):
-        """Convert planetographic longitude to internal ellipsoid longitude.
+        """Convert planetographic longitude to planetocentric ellipsoid
+        longitude.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
-        return (lon.sin() * self.squash_y).arctan2(lon.cos())
+        return Scalar.as_scalar(lon, derivs)
 
     def lat_to_centric(self, lat, lon, derivs=False):
-        """Convert latitude in internal ellipsoid coordinates to planetocentric.
+        """Convert latitude in planetocentric coordinates to planetocentric.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
-        lat = Scalar.as_scalar(lat, derivs)
+        # This could be done more efficiently I'm sure
+        squashed_lon = self.ellipsoid.lon_from_graphic(lon, derivs=derivs)
+        squashed_lat = self.ellipsoid.lat_from_graphic(lat, squashed_lon,
+                                                       derivs=derivs)
 
-        denom = (lon.cos()**2 + (lon.sin() * self.squash_y)**2).sqrt()
-
-        return (lat.tan() * self.squash_z / denom).arctan()
+        return self.ellipsoid.lat_to_centric(squashed_lat, squashed_lon,
+                                             derivs=derivs)
 
     def lat_from_centric(self, lat, lon, derivs=False):
-        """Convert planetocentric latitude to internal ellipsoid latitude.
+        """Convert planetocentric latitude to planetocentric latitude.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
-        lat = Scalar.as_scalar(lat, derivs)
+        squashed_lon = self.ellipsoid.lon_from_graphic(lon, derivs=derivs)
+        squashed_lat = self.ellipsoid.lat_from_centric(lat, squashed_lon,
+                                                       derivs=derivs)
 
-        factor = (lon.cos()**2 + (lon.sin(derivs) * self.squash_y)**2).sqrt()
-
-        return (lat.tan() * self.unsquash_z * factor).arctan()
+        return self.ellipsoid.lat_to_graphic(squashed_lat, squashed_lon,
+                                             derivs=derivs)
 
     def lat_to_graphic(self, lat, lon, derivs=False):
-        """Convert latitude in internal ellipsoid coordinates to planetographic.
+        """Convert latitude in planetocentric coordinates to planetographic.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
-        lat = Scalar.as_scalar(lat, derivs)
-
-        denom = (lon.cos()**2 + (lon.sin() * self.unsquash_y)**2).sqrt()
-
-        return (lat.tan() * self.unsquash_z / denom).arctan()
+        return Scalar.as_scalar(lat, derivs)
 
     def lat_from_graphic(self, lat, lon, derivs=False):
-        """Convert planetographic latitude to internal ellipsoid latitude.
+        """Convert a planetographic latitude to planetocentric latitude.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
-        lat = Scalar.as_scalar(lat, derivs)
-
-        factor = (lon.cos()**2 + (lon.sin() * self.unsquash_y)**2).sqrt()
-
-        return (lat.tan() * self.squash_z * factor).arctan()
+        return Scalar.as_scalar(lat, derivs)
 
 ################################################################################
 # UNIT TESTS
@@ -554,7 +254,7 @@ class Ellipsoid(Surface):
 
 import unittest
 
-class Test_Ellipsoid(unittest.TestCase):
+class Test_GraphicEllipsoid(unittest.TestCase):
 
     def runTest(self):
 
@@ -564,7 +264,7 @@ class Test_Ellipsoid(unittest.TestCase):
         REQ  = 60268.
         RMID = 54364.
         RPOL = 50000.
-        planet = Ellipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        planet = GraphicEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
 
         # Coordinate/vector conversions
         NPTS = 10000
@@ -699,8 +399,8 @@ class Test_Ellipsoid(unittest.TestCase):
         # Test normal()
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
         perp = planet.normal(cept)
-        test1 = cept.element_mul(planet.unsquash).unit()
-        test2 = perp.element_mul(planet.squash).unit()
+        test1 = cept.element_mul(planet.ellipsoid.unsquash).unit()
+        test2 = perp.element_mul(planet.ellipsoid.squash).unit()
 
         self.assertTrue(abs(test1 - test2).max() < 1.e-12)
 
@@ -728,8 +428,8 @@ class Test_Ellipsoid(unittest.TestCase):
         cept = planet.intercept_normal_to(pos)
         sep = (pos - cept).sep(planet.normal(cept))
         self.assertTrue(sep.max() < 3.e-12)
-        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
-                        planet.req).max() < 1.e-6)
+        self.assertTrue(abs(cept.element_mul(planet.ellipsoid.unsquash).norm() -
+                        planet.ellipsoid.req).max() < 1.e-6)
 
         # Test normal() derivative
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
@@ -748,8 +448,8 @@ class Test_Ellipsoid(unittest.TestCase):
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
         (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=False)
-        self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
-                        planet.req).max() < 1.e-6)
+        self.assertTrue(abs(cept.element_mul(planet.ellipsoid.unsquash).norm() -
+                        planet.ellipsoid.req).max() < 1.e-6)
 
         eps = 1.
         dpos = ((eps,0,0), (0,eps,0), (0,0,eps))
