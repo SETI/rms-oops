@@ -471,38 +471,64 @@ class Ellipsoid(Surface):
             return pos * Scalar(factor, mask)
 
     ############################################################################
-    # Longitude and latitude conversions
+    # Longitude conversions
     ############################################################################
 
     def lon_to_centric(self, lon, derivs=False):
-        """Convert longitude in internal ellipsoid coordinates to
-        planetocentric.
+        """Convert longitude in internal coordinates to planetocentric.
+
+        Input:
+            lon         squashed longitude in radians.
+            derivs      True to include derivatives in returned result.
+
+        Return          planetocentric longitude.
         """
 
         lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.squash_y).arctan2(lon.cos())
 
     def lon_from_centric(self, lon, derivs=False):
-        """Convert planetocentric longitude to internal ellipsoid longitude.
+        """Convert planetocentric longitude to internal coordinates.
+
+        Input:
+            lon         planetocentric longitude in radians.
+            derivs      True to include derivatives in returned result.
+
+        Return          squashed longitude.
         """
 
         lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
 
     def lon_to_graphic(self, lon, derivs=False):
-        """Convert longitude in internal ellipsoid coordinates to
-        planetographic.
+        """Convert longitude in internal coordinates to planetographic.
+
+        Input:
+            lon         squashed longitude in radians.
+            derivs      True to include derivatives in returned result.
+
+        Return          planetographic longitude.
         """
 
         lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
 
     def lon_from_graphic(self, lon, derivs=False):
-        """Convert planetographic longitude to internal ellipsoid longitude.
+        """Convert planetographic longitude to internal coordinates.
+
+        Input:
+            lon         planetographic longitude in radians.
+            derivs      True to include derivatives in returned result.
+
+        Return          squashed longitude.
         """
 
         lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.squash_y).arctan2(lon.cos())
+
+    ############################################################################
+    # Latitude conversions
+    ############################################################################
 
     def lat_to_centric(self, lat, lon, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetocentric.

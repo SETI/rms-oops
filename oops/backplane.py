@@ -212,9 +212,8 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         # If the event already exists, return it
-        try:
+        if event_key in self.surface_events:
             return self.surface_events[event_key]
-        except KeyError: pass
 
         # The Sun is treated as a path, not a surface, unless it is listed first
         if event_key[0].upper() == 'SUN' and len(event_key) > 1:
@@ -250,9 +249,8 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         # If the event already exists, return it
-        try:
+        if event_key in self.surface_events_w_derivs:
             return self.surface_events_w_derivs[event_key]
-        except KeyError: pass
 
         # Create the event
         dest = self.get_surface_event(event_key[1:])
@@ -288,9 +286,8 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         # If the event already exists, return it
-        try:
+        if event_key in self.path_events:
             return self.path_events[event_key]
-        except KeyError: pass
 
         # Create the event
         dest = self.get_surface_event(event_key[1:])
@@ -327,9 +324,8 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         # If the event already exists, return it
-        try:
+        if event_key in self.gridless_events:
             return self.gridless_events[event_key]
-        except KeyError: pass
 
         # Create the event and save it in the dictionary
         dest = self.get_gridless_event(event_key[1:])
@@ -488,12 +484,11 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('celestial_north_angle', event_key)
-        try:
+        if key in self.backplanes:
             return self.backplanes[key]
-        except KeyError: pass
 
         temp_key = ('dlos_ddec', event_key)
-        if not self.backplanes.has_key(temp_key):
+        if temp_key not in self.backplanes:
             self._fill_dlos_dradec(event_key)
 
         dlos_ddec = self.backplanes[temp_key]
@@ -520,12 +515,11 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('celestial_east_angle', event_key)
-        try:
+        if key in self.backplanes:
             return self.backplanes[key]
-        except KeyError: pass
 
         temp_key = ('dlos_dra', event_key)
-        if not self.backplanes.has_key(temp_key):
+        if temp_key not in self.backplanes:
             self._fill_dlos_dradec(event_key)
 
         dlos_dra = self.backplanes[temp_key]
@@ -1067,7 +1061,7 @@ class Backplane(object):
     ############################################################################
 
     def longitude(self, event_key, reference='iau', direction='west',
-                                                    minimum=0):
+                                   minimum=0, lon_type='centric'):
         """Longitude at the surface intercept point in the image.
 
         Input:
@@ -1083,41 +1077,66 @@ class Backplane(object):
                             'east' or 'west'.
             minimum         the smallest numeric value of longitude, either 0
                             or -180.
+            lon_type        defines the type of longitude measurement:
+                            'centric'   for planetocentric;
+                            'graphic'   for planetographic;
+                            'squashed'  for an intermediate longitude type used
+                                        internally.
+                            Note that lon_type is irrelevant to Spheroids but
+                            matters for Ellipsoids.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
         assert reference in ('iau', 'sun', 'sha', 'obs', 'oha')
         assert direction in ('east', 'west')
         assert minimum in (0, -180)
+        assert lon_type in ('centric', 'graphic', 'squashed')
 
         # Look up under the desired reference
         key0 = ('longitude', event_key)
-        key = key0 + (reference, direction, minimum)
-        if self.backplanes.has_key(key):
+        key = key0 + (reference, direction, minimum, lon_type)
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # If it is not found with default keys, fill in those backplanes
         # Note that longitudes default to eastward for right-handed coordinates
-        key_default = key0 + ('iau', 'east', 0)
-        if not self.backplanes.has_key(key_default):
+        key_default = key0 + ('iau', 'east', 0, 'squashed')
+        if key_default not in self.backplanes:
             self._fill_surface_intercepts(event_key)
 
-        # Fill in the values for this key
-        if reference == 'iau':
-            ref_lon = 0.
-        elif reference == 'sun':
-            ref_lon = self.sub_solar_longitude(event_key)
-        elif reference == 'sha':
-            ref_lon = self.sub_solar_longitude(event_key) - constants.PI
-        elif reference == 'obs':
-            ref_lon = self.sub_observer_longitude(event_key)
-        elif reference == 'oha':
-            ref_lon = self.sub_observer_longitude(event_key) - constants.PI
+        # Fill in the required longitude type if necessary
+        key_typed = key0 + ('iau', 'east', 0, lon_type)
+        if key_typed in self.backplanes:
+            lon = self.backplanes[key_typed]
 
-        lon = self.backplanes[key_default] - ref_lon
+        else:
+            lon_squashed = self.backplanes[key_default]
+            event = self.get_surface_event(event_key)
 
+            if lon_type == 'centric':
+                lon = event.surface.lon_to_centric(lon_squashed)
+                self.register_backplane(key_typed, lon)
+            else:
+                lon = event.surface.lon_to_graphic(lon_squashed)
+                self.register_backplane(key_typed, lon)
+
+        # Define the longitude relative to the reference value
+        if reference != 'iau':
+            if reference == 'sun':
+                ref_lon = self.sub_solar_longitude(event_key)
+            elif reference == 'sha':
+                ref_lon = self.sub_solar_longitude(event_key) - constants.PI
+            elif reference == 'obs':
+                ref_lon = self.sub_observer_longitude(event_key)
+            elif reference == 'oha':
+                ref_lon = self.sub_observer_longitude(event_key) - constants.PI
+
+            lon = lon - ref_lon
+
+        # Reverse if necessary
         if direction == 'west': lon = -lon
 
+        # Re-define the minimum
         if minimum == 0:
             lon = lon % constants.TWOPI
         else:
@@ -1144,12 +1163,12 @@ class Backplane(object):
         # Look up under the desired reference
         key0 = ('latitude', event_key)
         key = key0 + (lat_type,)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # If it is not found with default keys, fill in those backplanes
         key_default = key0 + ('squashed',)
-        if not self.backplanes.has_key(key_default):
+        if key_default not in self.backplanes:
             self._fill_surface_intercepts(event_key)
 
         # Fill in the values for this key
@@ -1160,10 +1179,14 @@ class Backplane(object):
         event = self.get_surface_event(event_key)
         assert event.surface.COORDINATE_TYPE in ('spherical', 'limb')
 
+        # Fill in the right lon_type if necessary
+        lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
+        lon = self.backplanes[lon_key]
+
         if lat_type == 'centric':
-            lat = event.surface.lat_to_centric(lat)
+            lat = event.surface.lat_to_centric(lat, lon)
         else:
-            lat = event.surface.lat_to_graphic(lat)
+            lat = event.surface.lat_to_graphic(lat, lon)
 
         self.register_backplane(key, lat)
         return self.backplanes[key]
@@ -1183,8 +1206,8 @@ class Backplane(object):
 
         assert event.surface.COORDINATE_TYPE == 'spherical'
 
-        self.register_backplane(('longitude', event_key, 'iau', 'east', 0),
-                                event.coord1)
+        self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
+                                 'squashed'), event.coord1)
         self.register_backplane(('latitude', event_key, 'squashed'),
                                 event.coord2)
 
@@ -1504,12 +1527,12 @@ class Backplane(object):
 
         # Look up under the desired reference
         key = ('ring_longitude', event_key, reference)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # If it is not found with reference='node', fill in those backplanes
         key_node = key[:-1] + ('node',)
-        if not self.backplanes.has_key(key_node):
+        if key_node not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
         # Now apply the reference longitude
@@ -1584,11 +1607,11 @@ class Backplane(object):
 
         # Look up under the desired reference
         key = ('ring_azimuth', event_key, reference)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # If not found, fill in the ring events if necessary
-        if not self.backplanes.has_key(('ring_radius', event_key)):
+        if ('ring_radius', event_key) not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
         # reference = 'obs'
@@ -1629,11 +1652,11 @@ class Backplane(object):
 
         # Look up under the desired reference
         key = ('ring_elevation', event_key, reference)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # If not found, fill in the ring events if necessary
-        if not self.backplanes.has_key(('ring_radius', event_key)):
+        if ('ring_radius', event_key) not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
         # reference = 'obs'
@@ -1673,7 +1696,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('_sub_observer_ring_longitude', event_key)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # At each intercept time, determine the outgoing direction to the
@@ -1699,7 +1722,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('_sub_solar_ring_longitude', event_key)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # At each intercept time, determine the incoming direction from the Sun
@@ -1747,12 +1770,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ('ring_incidence_angle', event_key, pole)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # Derive the prograde incidence angle if necessary
         key_prograde = key[:-1] + ('prograde',)
-        if not self.backplanes.has_key(key_prograde):
+        if key_prograde not in self.backplanes:
             event = self.get_surface_event_with_arr(event_key)
             incidence = event.incidence_angle()
             self.register_backplane(key_prograde, incidence)
@@ -1797,12 +1820,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ('ring_emission_angle', event_key, pole)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # Derive the prograde emission angle if necessary
         key_prograde = key[:-1] + ('prograde',)
-        if not self.backplanes.has_key(key_prograde):
+        if key_prograde not in self.backplanes:
             event = self.get_surface_event(event_key)
             emission = event.emission_angle()
             self.register_backplane(key_prograde, emission)
@@ -1856,7 +1879,7 @@ class Backplane(object):
 
         # Return a cached backplane if it exists
         key = ('sub_ring_longitude', event_key, reference, origin)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # Otherwise, create the backplane
@@ -1891,12 +1914,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ('ring_center_incidence_angle', event_key, pole)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # Derive the prograde incidence angle if necessary
         key_prograde = key[:-1] + ('prograde',)
-        if not self.backplanes.has_key(key_prograde):
+        if key_prograde not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
 
             # Sign on event.arr is negative because photon is incoming
@@ -1946,12 +1969,12 @@ class Backplane(object):
 
         # Return the cached copy if it exists
         key = ('ring_center_emission_angle', event_key, pole)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # Derive the prograde emission angle if necessary
         key_prograde = key[:-1] + ('prograde',)
-        if not self.backplanes.has_key(key_prograde):
+        if key_prograde not in self.backplanes:
             event = self.get_gridless_event(event_key)
 
             latitude = (event.dep.to_scalar(2) / event.dep.norm()).arcsin()
@@ -1988,9 +2011,8 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('ring_radial_resolution', event_key)
-        try:
+        if key in self.backplanes:
             return self.backplanes[key]
-        except KeyError: pass
 
         event = self.get_surface_event_w_derivs(event_key)
         assert event.surface.COORDINATE_TYPE == 'polar'
@@ -2011,9 +2033,8 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('ring_angular_resolution', event_key)
-        try:
+        if key in self.backplanes:
             return self.backplanes[key]
-        except KeyError: pass
 
         event = self.get_surface_event_w_derivs(event_key)
         assert event.surface.COORDINATE_TYPE == 'polar'
@@ -2043,14 +2064,14 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
         key0 = ('ansa_radius', event_key)
         key = key0 + (radius_type,)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # If not found, look up the default 'right'
         assert radius_type in ('right', 'left', 'positive')
 
         key_default = key0 + ('right',)
-        if not self.backplanes.has_key(key_default):
+        if key_default not in self.backplanes:
             self._fill_ansa_intercepts(event_key)
 
             backplane = self.backplanes[key_default]
@@ -2103,12 +2124,12 @@ class Backplane(object):
         # Look up under the desired reference
         key0 = ('ansa_longitude', event_key)
         key = key0 + (reference,)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # If it is not found with reference J2000, fill in those backplanes
         key_node = key0 + ('node',)
-        if not self.backplanes.has_key(key_node):
+        if key_node not in self.backplanes:
             self._fill_ansa_longitudes(event_key)
 
         # Now apply the reference longitude
@@ -2179,7 +2200,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('_sub_observer_ansa_longitude', event_key)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # At each intercept time, determine the outgoing direction to the
@@ -2205,7 +2226,7 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('_sub_solar_ansa_longitude', event_key)
-        if self.backplanes.has_key(key):
+        if key in self.backplanes:
             return self.backplanes[key]
 
         # At each intercept time, determine the incoming direction from the Sun
@@ -2238,9 +2259,8 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('ansa_radial_resolution', event_key)
-        try:
+        if key in self.backplanes:
             return self.backplanes[key]
-        except KeyError: pass
 
         event = self.get_surface_event_w_derivs(event_key)
         assert event.surface.COORDINATE_TYPE == 'cylindrical'
@@ -2261,9 +2281,8 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         key = ('ansa_vertical_resolution', event_key)
-        try:
+        if key in self.backplanes:
             return self.backplanes[key]
-        except KeyError: pass
 
         event = self.get_surface_event_w_derivs(event_key)
         assert event.surface.COORDINATE_TYPE == 'cylindrical'

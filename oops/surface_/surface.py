@@ -407,7 +407,7 @@ class Surface(object):
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        lt = lt.remask(mask)
+        if lt.shape != (): lt = lt.remask(mask)
         surface_time = link_time + lt
 
         # Put the derivatives back if necessary
@@ -446,7 +446,7 @@ class Surface(object):
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        lt = lt.remask(mask)
+        if lt.shape != (): lt = lt.remask(mask)
         pos_wrt_surface = pos_wrt_surface.remask(mask)
 
         # Create the surface event in its own frame
@@ -704,7 +704,7 @@ class Surface(object):
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        lt = lt.remask(mask)
+        if lt.shape != (): lt = lt.remask(mask)
         surface_time = link_time + lt
 
         # Determine the line of sight vector in J2000
