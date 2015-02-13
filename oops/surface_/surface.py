@@ -407,7 +407,12 @@ class Surface(object):
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        if lt.shape != (): lt = lt.remask(mask)
+        # The remasking will fail if lt has been time-collapsed
+        try:
+            lt = lt.remask(mask)
+        except ValueError:
+            pass
+        
         surface_time = link_time + lt
 
         # Put the derivatives back if necessary
@@ -446,7 +451,12 @@ class Surface(object):
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        if lt.shape != (): lt = lt.remask(mask)
+        # The remasking will fail if lt has been time-collapsed
+        try:
+            lt = lt.remask(mask)
+        except ValueError:
+            pass
+
         pos_wrt_surface = pos_wrt_surface.remask(mask)
 
         # Create the surface event in its own frame

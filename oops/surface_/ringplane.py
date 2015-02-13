@@ -123,7 +123,8 @@ class RingPlane(Surface):
             los         line of sight as a Vector3.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            guess       initial guess at the t array, optional.
+            guess       optional initial guess at the coefficient t such that:
+                            intercept = obs + t * los
 
         Return:         a tuple (pos, t) where
             pos         a Vector3 of intercept points on the surface, in km.

@@ -494,6 +494,10 @@ class Observation(object):
                                            body (clipped to the FOV size)
                 body_data['v_max']         The maximum V value covered by the
                                            body (clipped to the FOV size)
+                body_data['u_min_unclipped']  Same as above, but not clipped
+                body_data['u_max_unclipped']  to the FOV size.
+                body_data['v_min_unclipped']
+                body_data['v_max_unclipped']
         """
 
         assert return_type in ('list', 'flags', 'full')
@@ -572,18 +576,22 @@ class Observation(object):
                 body_data['inner_radius'] = inner_radii[i]
                 u = body_uv[i][0]
                 v = body_uv[i][1]
-                body_data['u_min'] = np.clip(np.floor(u-radius_angles[i].vals/
-                                                      u_scale), 0,
-                                             self.data.shape[1]-1)
-                body_data['u_max'] = np.clip(np.ceil(u+radius_angles[i].vals/
-                                                     u_scale), 0,
-                                             self.data.shape[1]-1)
-                body_data['v_min'] = np.clip(np.floor(v-radius_angles[i].vals/
-                                                      v_scale), 0,
-                                             self.data.shape[0]-1)
-                body_data['v_max'] = np.clip(np.ceil(v+radius_angles[i].vals/
-                                                     v_scale), 0,
-                                             self.data.shape[0]-1)
+                body_data['u_min_unclipped'] = np.floor(
+                                    u-radius_angles[i].vals/u_scale)
+                body_data['u_max_unclipped'] = np.ceil(
+                                    u+radius_angles[i].vals/u_scale)
+                body_data['v_min_unclipped'] = np.floor(
+                                    v-radius_angles[i].vals/v_scale)
+                body_data['v_max_unclipped'] = np.ceil(
+                                    v+radius_angles[i].vals/v_scale)
+                body_data['u_min'] = np.clip(body_data['u_min_unclipped'],
+                                             0, self.data.shape[1]-1)
+                body_data['u_max'] = np.clip(body_data['u_max_unclipped'],
+                                             0, self.data.shape[1]-1)
+                body_data['v_min'] = np.clip(body_data['v_min_unclipped'],
+                                             0, self.data.shape[0]-1)
+                body_data['v_max'] = np.clip(body_data['v_max_unclipped'],
+                                             0, self.data.shape[0]-1)
                 ret_dict[body_names[i]] = body_data
 
         return ret_dict

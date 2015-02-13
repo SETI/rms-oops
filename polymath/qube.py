@@ -286,7 +286,7 @@ class Qube(object):
                 raise ValueError("unsupported data type: %s" % str(arg.dtype))
 
         else:
-            if isinstance(arg, bool):
+            if isinstance(arg, bool) or type(arg) == np.bool_:
                 if not self.BOOLS_OK:
                     if self.INTS_OK:
                         arg = int(arg)

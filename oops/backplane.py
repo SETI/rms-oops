@@ -375,7 +375,8 @@ class Backplane(object):
         If the backplane contains just a single value, it is expanded to the
         overall shape of the backplane."""
 
-        if isinstance(backplane, np.ndarray):
+        if (isinstance(backplane, np.ndarray) or
+            type(backplane) == np.bool_):
             backplane = Scalar(backplane)
 
         # Under some circumstances a derived backplane can be a scalar

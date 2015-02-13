@@ -16,7 +16,10 @@ from oops.inst.cassini.cassini_ import Cassini
 
 def from_file(filespec, fast_distortion=True, **parameters):
     """A general, static method to return a Snapshot object based on a given
-    Cassini ISS image file."""
+    Cassini ISS image file.
+    
+    fast_distortion is True to use a pre-inverted polynomial, False to use
+    a dynamically solved polynomial, and None is use a FlatFOV."""
 
     ISS.initialize()    # Define everything the first time through
 
@@ -258,6 +261,9 @@ class ISS(object):
             yfov = info["FOV_CROSS_ANGLE"]
             assert info["FOV_ANGLE_UNITS"] == "DEGREES"
             
+            uscale = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
+            vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
+            
             # Display directions: [u,v] = [right,down]
             full_fov = oops.fov.Polynomial((samples,lines),
                                            coefft_uv_from_xy=
@@ -268,6 +274,7 @@ class ISS(object):
                                    ISS.DISTORTION_COEFF_XY_TO_UV[detector],
                                            coefft_xy_from_uv=
                                    ISS.DISTORTION_COEFF_UV_TO_XY[detector])
+            full_fov_none = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
 
             # Load the dictionary, include the subsampling modes
             ISS.fovs[detector, "FULL", False] = full_fov
@@ -276,6 +283,9 @@ class ISS(object):
             ISS.fovs[detector, "FULL", True] = full_fov_fast
             ISS.fovs[detector, "SUM2", True] = oops.fov.Subsampled(full_fov_fast, 2)
             ISS.fovs[detector, "SUM4", True] = oops.fov.Subsampled(full_fov_fast, 4)
+            ISS.fovs[detector, "FULL", None] = full_fov_none
+            ISS.fovs[detector, "SUM2", None] = oops.fov.Subsampled(full_fov_none, 2)
+            ISS.fovs[detector, "SUM4", None] = oops.fov.Subsampled(full_fov_none, 4)
 
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal coordinate system is
