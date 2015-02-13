@@ -2,6 +2,9 @@
 # oops/inst/cassini/vims.py
 #
 # 7/24/12 MRS -- First working version
+# 1/9/15 MRS -- All delta-times multiplied by 1.01725 to correct error reported
+#   in document "VIMS IR Pixel Timing_final.pdf". Special case of packing
+#   multiple frames with swath_length = 1 as one frame with multiple lines.
 #
 # Known shortcomings:
 #
@@ -24,8 +27,11 @@ import oops
 
 from oops.inst.cassini.cassini_ import Cassini
 
-EXTRA_INTERSAMPLE_DELAY =  0.000363     # observed empirically in V1555349441
-TIME_CORRECTION         = -0.337505
+# Timing correction as of 1/9/15 -- MRS
+# EXTRA_INTERSAMPLE_DELAY =  0.000363     # observed empirically in V1555349441
+# TIME_CORRECTION         = -0.337505
+
+TIME_FACTOR = 1.01725
 
 # From Matt Hedman's IDL program navims.pro
 #
@@ -71,8 +77,8 @@ VIS_HIRES_SCALE = oops.Pair((VIS_NORMAL_PIXEL/VIS_HIRES_FACTOR,
 
 IR_OVER_VIS = IR_NORMAL_PIXEL / VIS_NORMAL_PIXEL
 
-IR_FULL_FOV  = oops.fov.Flat(IR_NORMAL_SCALE,  oops.Pair((64,64)))
-VIS_FULL_FOV = oops.fov.Flat(VIS_NORMAL_SCALE, oops.Pair((64,64)))
+IR_FULL_FOV  = oops.fov.FlatFOV(IR_NORMAL_SCALE,  oops.Pair((64,64)))
+VIS_FULL_FOV = oops.fov.FlatFOV(VIS_NORMAL_SCALE, oops.Pair((64,64)))
 
 ################################################################################
 # Standard class methods
@@ -182,6 +188,18 @@ def from_file(filespec, fast=False, **parameters):
 
     swath_width = info["SWATH_WIDTH"]
     swath_length = info["SWATH_LENGTH"]
+
+    frame_size = swath_width * swath_length
+    frames = (samples * lines) / frame_size
+    assert samples * lines == frames * frame_size
+
+    # Replace multiple one-line frames by one frame, multiple lines
+    if frames > 1:
+        assert swath_length == 1
+        swath_length = frames
+        lines = frames
+        frame_size = swath_width * swath_length
+
     uv_shape = (swath_width, swath_length)
 
     x_offset = info["X_OFFSET"]
@@ -193,7 +211,7 @@ def from_file(filespec, fast=False, **parameters):
 
     # VIS FOV
     if vis_sampling == "HI-RES":
-        vis_fov = oops.fov.Flat(VIS_HIRES_SCALE, uv_shape,
+        vis_fov = oops.fov.FlatFOV(VIS_HIRES_SCALE, uv_shape,
                     (VIS_HIRES_FACTOR * uv_los[0] - uv_shape[0],
                      VIS_HIRES_FACTOR * uv_los[1] - uv_shape[1]))
 
@@ -201,25 +219,25 @@ def from_file(filespec, fast=False, **parameters):
         vis_fov = VIS_FULL_FOV
 
     else:
-        vis_fov = oops.fov.Flat(VIS_NORMAL_SCALE, uv_shape,
+        vis_fov = oops.fov.FlatFOV(VIS_NORMAL_SCALE, uv_shape,
                     (IR_OVER_VIS * uv_los[0], IR_OVER_VIS * uv_los[1]))
 
     # IR FOV
     if info["INSTRUMENT_MODE_ID"] == "OCCULTATION":
         if ir_sampling == "NORMAL":
-            ir_fov = oops.fov.Flat(IR_NORMAL_SCALE, uv_shape, uv_los)
+            ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
         else:
-            ir_fov = oops.fov.Flat(IR_HIRES_SCALE, uv_shape, uv_los)
+            ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape, uv_los)
 
     elif ir_sampling in ("HI-RES","UNDER"):
-        ir_fov = oops.fov.Flat(IR_HIRES_SCALE, uv_shape,
+        ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape,
                     (IR_HIRES_FACTOR * uv_los[0] - uv_shape[0]/2., uv_los[1]))
 
     elif uv_shape == (64,64):
         ir_fov = IR_FULL_FOV
 
     else:
-        ir_fov = oops.fov.Flat(IR_NORMAL_SCALE, uv_shape, uv_los)
+        ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
 
     if ir_sampling == "UNDER":
         ir_det_size = 2.
@@ -231,22 +249,23 @@ def from_file(filespec, fast=False, **parameters):
     ########################################
 
     # Define cadences based on header parameters
-    ir_texp  = info["EXPOSURE_DURATION"][0] * 0.001
-    vis_texp = info["EXPOSURE_DURATION"][1] * 0.001
+    ir_texp  = info["EXPOSURE_DURATION"][0] * 0.001 * TIME_FACTOR
+    vis_texp = info["EXPOSURE_DURATION"][1] * 0.001 * TIME_FACTOR
     vis_texp_nonzero = max(vis_texp, 1.e-8) # avoids divide-by-zero in cadences
 
-    interframe_delay = info["INTERFRAME_DELAY_DURATION"] * 0.001
-    interline_delay  = info["INTERLINE_DELAY_DURATION"]  * 0.001
+    interframe_delay = info["INTERFRAME_DELAY_DURATION"] * 0.001 * TIME_FACTOR
+    interline_delay  = info["INTERLINE_DELAY_DURATION"]  * 0.001 * TIME_FACTOR
+
+    # Adjust the timing of one line, multiple frames
+    if frames > 1:
+        interline_delay = interframe_delay
 
     length_stride = max(ir_texp * swath_width, vis_texp) + interline_delay
-    frame_stride = swath_length * length_stride + (interframe_delay -
-                                                  interline_delay)
 
-    frame_size = swath_width * swath_length
-    frames = (samples * lines) / frame_size
-    assert samples * lines == frames * frame_size
+# 1/9/15 no longer needed
+#     frame_stride = swath_length * length_stride + (interframe_delay -
+#                                                    interline_delay)
 
-    frame_cadence = None
     backplane_cadence = None
 
     # Define a cadence based on the time backplane, if it is present
@@ -277,17 +296,11 @@ def from_file(filespec, fast=False, **parameters):
     ir_header_cadence = oops.cadence.DualCadence(vis_header_cadence,
                                 ir_fast_cadence)
 
-    if frames > 1:
-        frame_cadence = oops.cadence.Metronome(tstart,
-                                frame_stride, frame_stride, frames)
-
     # At this point...
     #   vis_header_cadence  always defined, always 1-D.
     #   ir_fast_cadence     always defined, always 1-D.
     #   ir_header_cadence   always defined, always 2-D.
     #   backplane_cadence   defined if timing was recorded, always 1-D.
-    #   frame_cadence       defined if multiple objects are packed into a single
-    #                       file, always 1-D.
 
     ########################################
     # Define the coordinate frames
@@ -331,7 +344,7 @@ def from_file(filespec, fast=False, **parameters):
                                 "CASSINI", ir_frame_id)
 
     # Single LINE case
-    elif swath_length == 1 and frames == 1:
+    elif swath_length == 1:
         if not vis_is_off:
             if vis_data is not None: vis_data = vis_data.reshape((samples, 96))
 
@@ -388,54 +401,81 @@ def from_file(filespec, fast=False, **parameters):
                                 ir_cadence, ir_fov,
                                 "CASSINI", ir_frame_id)
 
-    # Multiple 2-D IMAGE case
-    elif lines == frames and samples == swath_width * swath_length:
-        if not vis_is_off:
-
-            # Reshape the data array
-            if vis_data is not None:
-                vis_data = vis_data.reshape(frames, swath_length, swath_width,
-                                vis_data.shape[-1])
-
-            # Define the first 2-D pushbroom observation
-            vis_first_obs = oops.obs.Pushbroom(("t", "vt","u","b"), (1.,1.),
-                                vis_header_cadence, vis_fov,
-                                "CASSINI", vis_frame_id)
-
-            # Define the movie
-            movie_cadence = oops.cadence.DualCadence(frame_cadence,
-                                vis_header_cadence)
-
-            vis_obs = oops.obs.Movie(("t","vt","u","b"), vis_first_obs,
-                                movie_cadence)
-
-        if not vis_is_off:
-
-            # Reshape the data array
-            if ir_data is not None:
-                ir_data = ir_data.reshape(frames, swath_length, swath_width,
-                                          ir_data.shape[-1])
-
-            # Define the first 2-D raster-scan observation
-            ir_first_obs = oops.obs.RasterScan(("vslow","ufast","b"),
-                                (1., ir_det_size),
-                                ir_first_cadence, ir_fov,
-                                "CASSINI", ir_frame_id)
-
-            # Define the 3-D cadence
-            if backplane_cadence is None:
-                ir_first_cadence = oops.cadence.DualCadence(vis_header_cadence,
-                                ir_fast_cadence)
-
-                ir_cadence = oops.cadence.DualCadence(frame_cadence,
-                                ir_first_cadence)
-            else:
-                ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
-                                (frames,lines,samples))
-
-            # Define the movie
-            ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
-                                ir_cadence)
+# 1/9/15 broken code no longer needed
+#     # Multiple 2-D IMAGE case
+#     elif lines == frames and samples == swath_width * swath_length:
+#         if not vis_is_off:
+# 
+#             # Reshape the data array
+#             if vis_data is not None:
+#                 vis_data = vis_data.reshape(frames, swath_length, swath_width,
+#                                 vis_data.shape[-1])
+# 
+#             # Define the first 2-D pushbroom observation
+#             vis_first_obs = oops.obs.Pushbroom(("t", "vt","u","b"), (1.,1.),
+#                                 vis_header_cadence, vis_fov,
+#                                 "CASSINI", vis_frame_id)
+# 
+#             # Define the movie
+#             movie_cadence = oops.cadence.DualCadence(frame_cadence,
+#                                 vis_header_cadence)
+# 
+#             vis_obs = oops.obs.Movie(("t","vt","u","b"), vis_first_obs,
+#                                 movie_cadence)
+# 
+#         if not ir_is_off:
+# 
+#             # Reshape the data array
+#             if ir_data is not None:
+#                 ir_data = ir_data.reshape(frames, swath_length, swath_width,
+#                                           ir_data.shape[-1])
+# 
+#             # Define the first 2-D raster-scan observation
+#             ir_first_obs = oops.obs.RasterScan(("vslow","ufast","b"),
+#                                 (1., ir_det_size),
+#                                 ir_first_cadence, ir_fov,
+#                                 "CASSINI", ir_frame_id)
+# 
+#             # Define the 3-D cadence
+#             if backplane_cadence is None:
+#                 ir_first_cadence = oops.cadence.DualCadence(vis_header_cadence,
+#                                 ir_fast_cadence)
+# 
+#                 ir_cadence = oops.cadence.DualCadence(frame_cadence,
+#                                 ir_first_cadence)
+#             else:
+#                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
+#                                 (frames,lines,samples))
+# 
+#             # Define the movie
+#             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
+#                                 ir_cadence)
+# 
+#             # Reshape the data array
+#             if ir_data is not None:
+#                 ir_data = ir_data.reshape(frames, swath_length, swath_width,
+#                                           ir_data.shape[-1])
+# 
+#             # Define the first 2-D raster-scan observation
+#             ir_first_obs = oops.obs.RasterScan(("vslow","ufast","b"),
+#                                 (1., ir_det_size),
+#                                 ir_first_cadence, ir_fov,
+#                                 "CASSINI", ir_frame_id)
+# 
+#             # Define the 3-D cadence
+#             if backplane_cadence is None:
+#                 ir_first_cadence = oops.cadence.DualCadence(vis_header_cadence,
+#                                 ir_fast_cadence)
+# 
+#                 ir_cadence = oops.cadence.DualCadence(frame_cadence,
+#                                 ir_first_cadence)
+#             else:
+#                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
+#                                 (frames,lines,samples))
+# 
+#             # Define the movie
+#             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
+#                                 ir_cadence)
 
     else:
         raise ValueError("unsupported VIMS format in file " + filespec)

@@ -33,17 +33,21 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
     the Sun to the target body (in AU) for calibration purposes.
 
     Inputs:
-        geom        'spice' to use a SPICE SPK for the geometry;
-                    'fits'  to read the geoemtry info from the header.
-        pointing    'spice' to use a SPICE CK for the pointing;
-                    'fits'  to use the pointing info in the FITS header;
-                    'fits90' to use the pointing info in the FITS header but
-                            add a 90 degree rotation; this is needed to correct
-                            an error in the first PDS delivery of the data set.
+        geom        'spice'     to use a SPICE SPK for the geometry;
+                    'fits'      to read the geoemtry info from the header.
+        pointing    'spice'     to use a SPICE CK for the pointing;
+                    'fits'      to use the pointing info in the FITS header;
+                    'fitsapp'   to use the pointing info in the FITS header, but
+                                to treat it as apparent pointing rather than
+                                pointing in the SSB frame.
+                    'fits90'    to use the pointing info in the FITS header but
+                                add a 90 degree rotation; this is needed to
+                                correct an error in the first PDS delivery of
+                                the data set.
     """
 
     assert geom in {'spice', 'fits'}
-    assert pointing in {'spice', 'fits', 'fits90'}
+    assert pointing in {'spice', 'fits', 'fitsapp', 'fits90'}
 
     LORRI.initialize()    # Define everything the first time through
 
@@ -98,20 +102,36 @@ def from_file(filespec, geom='spice', pointing='spice', **parameters):
         frame = oops.Frame.as_wayframe('NH_LORRI')
     else:
         # Create a frame based on the boresight
-        ra = nh_file[0].header['SPCBRRA']
-        dec = nh_file[0].header['SPCBRDEC']
-        north_clk = nh_file[0].header['SPCEMEN']
+        ra_deg = nh_file[0].header['SPCBRRA']
+        dec_deg = nh_file[0].header['SPCBRDEC']
+        north_clock_deg = nh_file[0].header['SPCEMEN']
 
-        # OH, THE HORROR
-        if pointing == 'fits90':
+        # Apply the correction for apparent geometry if necessary
+        if pointing == 'fitsapp':
+            path_wrt_ssb = path.wrt(oops.Path.SSB)
+            event_wrt_ssb = path_wrt_ssb.event_at_time(tdb_midtime)
+            vel_wrt_ssb = event_wrt_ssb.vel
+
+            ra  = ra_deg  * oops.RPD
+            dec = dec_deg * oops.RPD
+            ray_app = oops.Vector3.from_ra_dec_length(ra, dec, recursive=False)
+            ray_ssb = ray_app + vel_wrt_ssb / oops.C
+
+            (ra, dec, length) = ray_ssb.to_ra_dec_length(recursive=False)
+            ra_deg  = ra  * oops.DPR
+            dec_deg = dec * oops.DPR
+
+        # Apply the 90-degree rotation if necessary
+        elif pointing == 'fits90':
             year = int(nh_file[0].header['SPCUTCID'][:4])
             if year <= 2012:
-                north_clk += 90.
+                north_clock_deg += 90.
 
         scet = nh_file[0].header['SPCSCET']
 
         frame_id = '.NH_FRAME_' + filename
-        lorri_frame = oops.frame.Cmatrix.from_ra_dec(ra, dec, north_clk,
+        lorri_frame = oops.frame.Cmatrix.from_ra_dec(ra_deg, dec_deg,
+                                                     north_clock_deg,
                                                      oops.Frame.J2000,
                                                      id=frame_id)
         frame = oops.Frame.as_wayframe(lorri_frame)

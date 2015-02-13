@@ -89,6 +89,35 @@ class Frame(object):
 
         pass
 
+    def transform_at_time_if_possible(self, time, quick={}):
+        """Transform that rotates coordinates from the reference to this frame.
+
+        If the frame is rotating, then the coordinates must be given relative to
+        the center of rotation.
+
+        Unlike method transform_at_time(), this variant tolerates times that
+        raise RuntimeErrors. It returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform
+        could not be evaluated.
+
+        Default behavior is to call transform_at_time and raise the error
+        anyway. This behavior is overridden by SpiceFrame, where occasional
+        short gaps in a C-kernel can be tolerated as long as a QuickFrame
+        interpolates across them.
+
+        Input:
+            time            a Scalar time, which must be 0-D or 1-D.
+
+        Return:             (newtimes, transform)
+            newtimes        a Scalar time, possibly containing a subset of the
+                            times given.
+            transform       the corresponding Tranform applicable at the new
+                            time(s).
+        """
+
+        time = Scalar.as_scalar(time)
+        return (time, self.transform_at_time(time, quick=quick))
+
     @property
     def reference_id(self): return self.reference.frame_id
 
@@ -547,6 +576,9 @@ class AliasFrame(Frame):
     def transform_at_time(self, time, quick={}):
         return self.alias.transform_at_time(time, quick=quick)
 
+    def transform_at_time_if_possible(self, time, quick={}):
+        return self.alias.transform_at_time_if_possible(time, quick=quick)
+
 ################################################################################
 
 class LinkedFrame(Frame):
@@ -597,6 +629,16 @@ class LinkedFrame(Frame):
 
         return transform
 
+    def transform_at_time_if_possible(self, time, quick={}):
+
+        (time1, parent) = self.parent.transform_at_time_if_possible(time)
+        (time2, xform) = self.frame.transform_at_time_if_possible(time1)
+
+        if time1.shape != time2.shape:
+            parent = self.parent.transform_at_time(time2)
+
+        return (time2, xform.rotate_transform(parent))
+
 ################################################################################
 
 class RelativeFrame(Frame):
@@ -636,6 +678,16 @@ class RelativeFrame(Frame):
 
         return xform1.rotate_transform(xform2.invert())
 
+    def transform_at_time_if_possible(self, time, quick=None):
+
+        (time1, xform1) = self.frame1.transform_at_time_if_possible(time)
+        (time2, xform2) = self.frame2.transform_at_time_if_possible(time1)
+
+        if time1.shape != time2.shape:
+            xform1 = self.frame1.transform_at_time(time2)
+
+        return (time2, xform1.rotate_transform(xform2.invert()))
+
 ################################################################################
 
 class ReversedFrame(Frame):
@@ -660,6 +712,11 @@ class ReversedFrame(Frame):
     def transform_at_time(self, time, quick={}):
 
         return self.oldframe.transform_at_time(time).invert()
+
+    def transform_at_time_if_possible(self, time, quick={}):
+
+        (time, xform) = self.oldframe.transform_at_time_if_possible(time)
+        return (time, xform.invert())
 
 ################################################################################
 
@@ -701,7 +758,10 @@ class QuickFrame(Frame):
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
 
-        self.transforms = self.slowframe.transform_at_time(self.times)
+        (new_times, self.transforms) = \
+                    self.slowframe.transform_at_time_if_possible(self.times)
+        self.times = new_times.values
+
         self._spline_setup()
 
         # Test the precision
@@ -729,6 +789,10 @@ class QuickFrame(Frame):
     def transform_at_time(self, time, quick=False):
         (matrix, omega) = self._interpolate_matrix_omega(time)
         return Transform(matrix, omega, self, self.reference, self.origin)
+
+    def transform_at_time_if_possible(self, time, quick=False):
+        xform = self.transform_at_time(time, quick=False)
+        return (time, xform)
 
     def register(self):
         raise TypeError('a QuickFrame cannot be registered')

@@ -108,6 +108,71 @@ class SpiceFrame(Frame):
 
         return Transform(matrix, omega, self, self.reference)
 
+########################################
+
+    def transform_at_time_if_possible(self, time, quick={}):
+        """A Transform that rotates from the reference frame into this frame.
+
+        Unlike method transform_at_time(), this variant tolerates times that
+        raise RuntimeErrors. It returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform
+        could not be evaluated.
+
+        Input:
+            time            a Scalar time, which must be 0-D or 1-D.
+
+        Return:             (newtimes, transform)
+            newtimes        a Scalar time, possibly containing a subset of the
+                            times given.
+            transform       the corresponding Tranform applicable at the new
+                            time(s).
+        """
+
+        # A single input time can be handled quickly
+        time = Scalar.as_scalar(time)
+        if time.shape == ():
+            matrix6 = cspice.sxform(self.spice_reference_name,
+                                    self.spice_frame_name,
+                                    float(time.values))
+            (matrix, omega) = cspice.xf2rav(matrix6)
+            return (time, Transform(matrix, omega, self, self.reference))
+
+        # Create the buffers
+        matrix = np.empty(time.shape + (3,3))
+        omega  = np.empty(time.shape + (3,))
+
+        # Fill in the matrix and omega using CSPICE
+        new_time = []
+        matrix_list = []
+        omega_list = []
+
+        error_found = False
+        for i,t in np.ndenumerate(time.values):
+            try:
+                matrix6 = cspice.sxform(self.spice_reference_name,
+                                        self.spice_frame_name,
+                                        t)
+                (matrix[i], omega[i]) = cspice.xf2rav(matrix6)
+
+                new_time.append(t)
+                matrix_list.append(matrix[i])
+                omega_list.append(omega[i])
+
+            except RuntimeError as e:
+                if len(time.shape) > 1: raise e
+                error_found = True
+
+        # Deal with errors if found
+        if error_found:
+            if len(new_time) == 0: raise e
+
+            time = Scalar(new_time)
+            matrix = Matrix3(matrix_list)
+            omega = Vector3(omega_list)
+
+        return (time,
+                Transform(matrix, omega, self, self.reference))
+
 ################################################################################
 # UNIT TESTS
 ################################################################################

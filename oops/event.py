@@ -850,13 +850,7 @@ class Event(object):
                 ray_ssb = -self.wrt_ssb().arr.without_derivs()
 
         # Convert to RA and dec
-        (x,y,z) = ray_ssb.to_scalars(derivs)
-        ra = y.arctan2(x,derivs) % TWOPI
-
-        r = ray_ssb.norm(derivs)
-        dec = (z/r).arcsin(derivs)
-
-        return (ra, dec)
+        return ray_ssb.to_ra_dec_length(derivs)[:2]
 
 ################################################################################
 # UNIT TESTS

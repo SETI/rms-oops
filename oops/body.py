@@ -163,7 +163,7 @@ class Body(object):
                 self.keywords.append(keyword)
 
     ############################################################################
-    # Tools for selecting the children of an body
+    # Tools for selecting the children of a body
     ############################################################################
 
     def select_children(self, include_all=None, include_any=None,
@@ -392,7 +392,7 @@ class Body(object):
     def lookup(key):
         """Return a body from the registry given its name."""
 
-        return Body.BODY_REGISTRY[key]
+        return Body.BODY_REGISTRY[key.upper()]
 
     @staticmethod
     def as_body(body):

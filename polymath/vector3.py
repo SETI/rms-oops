@@ -12,6 +12,8 @@ from scalar import Scalar
 from vector import Vector
 from units  import Units
 
+TWOPI = 2. * np.pi
+
 class Vector3(Vector):
     """A vector with a fixed length of three."""
 
@@ -53,19 +55,65 @@ class Vector3(Vector):
         """A Vector3 constructed by combining three scalars.
 
         Inputs:
-            args        any number of Scalars or arguments that can be casted
-                        to Scalars. They need not have the same shape, but it
+            x, y, z     Three Scalars defining the vector's x, y and z
+                        components. They need not have the same shape, but it
                         must be possible to cast them to the same shape. A value
                         of None is converted to a zero-valued Scalar that
                         matches the denominator shape of the other arguments.
 
             recursive   True to include all the derivatives. The returned object
                         will have derivatives representing the union of all the
-                        derivatives found amongst the scalars. Default is True.
+                        derivatives found among x, y and z. Default is True.
         """
 
         return Vector.from_scalars(x, y, z, recursive=recursive,
                                             classes=[Vector3])
+
+    @staticmethod
+    def from_ra_dec_length(ra, dec, length=1., recursive=True):
+        """A unit Vector3 constructed from right ascension and declination.
+
+        Inputs:
+            ra, dec     Scalars of right ascension and declination, in radians.
+                        They need not have the same shape, but it must be
+                        possible to cast them to the same shape.
+
+            length      A Scalar of lengths; default 1.
+
+            recursive   True to include all the derivatives. The returned object
+                        will have derivatives representing the union of all the
+                        derivatives in ra, dec and length. Default is True.
+        """
+
+        ra  = Scalar.as_scalar(ra, recursive)
+        dec = Scalar.as_scalar(dec, recursive)
+
+        cos_dec = dec.cos()
+        x = cos_dec * ra.cos()
+        y = cos_dec * ra.sin()
+        z = dec.sin()
+
+        result = Vector3.from_scalars(x, y, z, recursive)
+
+        if length is 1.:
+            return result
+        else:
+            return Scalar.as_scalar(length, recursive) * result
+
+    def to_ra_dec_length(self, recursive=True):
+        """A tuple (ra, dec, length) from this Vector3.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        (x,y,z) = self.to_scalars(recursive)
+        length = self.norm(recursive)
+
+        ra = y.arctan2(x) % TWOPI
+        dec = (z/length).arcsin()
+
+        return (ra, dec, length)
 
     ### Most operations are inherited from Vector. These include:
     #     def extract_scalar(self, axis, recursive=True)
