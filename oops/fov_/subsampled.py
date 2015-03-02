@@ -35,7 +35,7 @@ class Subsampled(FOV):
                                    [0., 1./self.rescale.vals[1]]])
 
         # Required fields
-        self.uv_scale = self.fov.uv_scale.element_div(self.rescale)
+        self.uv_scale = self.fov.uv_scale.element_mul(self.rescale)
         self.uv_los   = self.fov.uv_los.element_div(self.rescale)
         self.uv_area  = self.fov.uv_area  * self.rescale2
 

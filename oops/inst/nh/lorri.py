@@ -430,9 +430,9 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
 
         fov_1024 = snapshot.fov
 
-        for geom, pointing, offset in [('spice', 'fits90', (-49,-28)),
+        for geom, pointing, offset in [('spice', 'fits90', (-48,-29)),
                                        ('fits', 'spice', (-4,-12)),
-                                       ('fits', 'fits90', (-48,-27))]:
+                                       ('fits', 'fits90', (-48,-29))]:
             snapshot_fits = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
                             "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                             geom=geom, pointing=pointing, fast_distortion=True)
@@ -452,22 +452,24 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
 
             self.assertAlmostEqual(ra, ra_fits, places=2)
             self.assertAlmostEqual(dec, dec_fits, places=2)
-            self.assertEqual(europa, 0.0)
-            self.assertEqual(europa_fits, 0.0)
+            self.assertEqual(europa, False)
+            self.assertEqual(europa_fits, False)
 
             # Adjust offset as CSPICE kernels change
             orig_fov = snapshot.fov
             orig_fits_fov = snapshot_fits.fov
-            snapshot.fov = oops.fov.OffsetFOV(orig_fov, (-4,-13))
+            snapshot.fov = oops.fov.OffsetFOV(orig_fov, (-4,-12))
             snapshot_fits.fov = oops.fov.OffsetFOV(orig_fits_fov, offset)
 
-            europa_uv = (500,440)
-            meshgrid = oops.Meshgrid.for_fov(snapshot.fov, europa_uv,
-                                             limit=europa_uv, swap=True)
-            meshgrid_fits = oops.Meshgrid.for_fov(snapshot_fits.fov, europa_uv,
-                                                  limit=europa_uv, swap=True)
+            europa_uv = (500.5,425.5)
+            meshgrid = oops.Meshgrid.for_fov(snapshot.fov,
+                                             origin=europa_uv,
+                                             limit=europa_uv)
+            meshgrid_fits = oops.Meshgrid.for_fov(snapshot_fits.fov,
+                                                  origin=europa_uv, 
+                                                  limit=europa_uv)
             bp = oops.Backplane(snapshot, meshgrid=meshgrid)
-            bp_fits = oops.Backplane(snapshot_fits, meshgrid=meshgrid)
+            bp_fits = oops.Backplane(snapshot_fits, meshgrid=meshgrid_fits)
             long =        bp.longitude("europa").vals.astype('float')
             long_fits =   bp_fits.longitude("europa").vals.astype('float')
             lat =         bp.latitude("europa").vals.astype('float')
@@ -477,11 +479,14 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
             snapshot.fov = orig_fov
             snapshot_fits.fov = orig_fits_fov
 
-#             self.assertAlmostEqual(long, long_fits, places=1)
-#             self.assertAlmostEqual(lat, lat_fits, places=1)
+            self.assertAlmostEqual(long, long_fits, places=1)
+            self.assertAlmostEqual(lat, lat_fits, places=1)
             self.assertEqual(europa, True)
             self.assertEqual(europa_fits, True)
 
+            snapshot.fov = orig_fov
+            snapshot_fits.fov = orig_fits_fov
+            
         europa_ext_iof = (snapshot.extended_calib["CHARON"].
                           value_from_dn(snapshot.data[440,606])).vals
         europa_pt_iof = (snapshot.point_calib["CHARON"].
