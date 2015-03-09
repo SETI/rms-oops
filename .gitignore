@@ -1,11 +1,8 @@
-*~
-*.pyc
+.gitignore
 .project
 .pydevproject
-/cspice/cspice/
-cspice/_cspice.so
-cspice/_cspice.pyd
-cspice-w32/
-cspice-w64/
-_cspice*.so
-*.bbprojectd
+*~
+*.pyc
+*.o
+*.log
+test_data/
