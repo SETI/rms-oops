@@ -955,7 +955,7 @@ class QuickFrame(Frame):
             omega_vals[count0+old_size:,:] = transform1.omega.vals
 
         # Generate the new transforms
-        self.times = np.arange(new_t0, new_t1 + self.dt/2., self.dt)
+        self.times = np.arange(new_size) * self.dt + new_t0
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
 
