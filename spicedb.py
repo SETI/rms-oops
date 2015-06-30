@@ -24,6 +24,8 @@
 #     Results of unit tests should NOT change as the database is updated. This
 #     is important because we want the results of database query to be stable
 #     when using selection options such as "as of"
+#
+# 6/10/15 (MRS) Added support for metakernels and star kernels
 ################################################################################
 
 from __future__ import division
@@ -53,6 +55,8 @@ FURNISHED_NAMES = {
     'PCK':  [],
     'SCLK': [],
     'SPK':  [],
+    'STARS': [],
+    'META':  [],
 }
 
 FURNISHED_FILES = {
@@ -94,8 +98,9 @@ FULL_NAME_INDEX      = COLUMN_NAMES.index("FULL_NAME")
 FILE_NO_INDEX        = COLUMN_NAMES.index("FILE_NO")
 
 KERNEL_TYPE_SORT_DICT = {'LSK': 0, 'SCLK': 1, 'FK': 2, 'IK': 3, 'PCK': 4,
-                          'SPK': 5, 'CK': 6}
-KERNEL_TYPE_SORT_ORDER = ['LSK', 'SCLK', 'FK', 'IK', 'PCK', 'SPK', 'CK']
+                          'SPK': 5, 'CK': 6, 'STARS': 7, 'META': 8}
+KERNEL_TYPE_SORT_ORDER = ['LSK', 'SCLK', 'FK', 'IK', 'PCK', 'SPK', 'CK',
+                          'STARS', 'META']
 
 class KernelInfo(object):
 
@@ -729,6 +734,91 @@ def _sql_query_by_name(name, time=None):
 
     return "".join(query_list)
 
+def _query_by_filespec(filespecs, time=None):
+    """Return a list of KernelInfo objects based on a filename or pattern.
+
+    Input:
+        filespec    one file path or match pattern.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000. Use None to return kernels regardless
+                    of the time.
+
+    Return:         A list of KernelInfo objects describing the files that match
+                    the pattern.
+    """
+
+    # Normalize the input
+    if type(filespecs) == str: filespecs = [filespecs]
+
+    # Loop through names...
+    kernel_info = []
+
+    for filespec in filespecs:
+
+        # Query the database
+        sql_string = _sql_query_by_filespec(filespec, time)
+
+        table = db.query(sql_string)
+
+        # If we have nothing, raise an exception
+        if len(table) == 0:
+            if time is not None:        # Maybe it's jut out of time range
+                sql_string = _sql_query_by_filespec(filespec)
+                table2 = db.query(sql_string)
+                if len(table2) > 0: continue
+
+            raise ValueError("no results found matching query")
+
+        for row in table:
+            kernel_info.append(KernelInfo(row))
+
+    return kernel_info
+
+def _sql_query_by_filespec(filespec, time=None):
+    """Generate a query string based on a kernel name.
+
+    Input:
+        name        a name or match pattern for a SPICE kernel. The name or
+                    pattern need not include the directory path.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000. Use None to return kernels regardless
+                    of the time.
+
+    Return:         A list of KernelInfo objects describing the files that match
+                    the requirements.
+    """
+
+    # Begin query
+    query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
+    query_list += ["WHERE FILESPEC like '%", filespec, "'\n"]
+
+    # Insert start and stop times
+    if time is None: time = (None, None)
+
+    (time0, time1) = time
+    if time0 is not None:
+        if type(time0) != str:
+            time0 = julian.ymdhms_format_from_tai(time0, sep="T", digits=0,
+                                                         suffix="")
+        query_list += ["AND STOP_TIME  >= '", time0, "'\n"]
+
+    if time1 is not None:
+        if type(time1) != str:
+            time1 = julian.ymdhms_format_from_tai(time1, sep="T", digits=0,
+                                                         suffix="")
+
+        query_list += ["AND START_TIME <= '", time1, "'\n"]
+
+    query_list += ["ORDER BY LOAD_PRIORITY ASC, RELEASE_DATE ASC\n"]
+
+    return "".join(query_list)
+
 ################################################################################
 ################################################################################
 # Public API
@@ -1028,6 +1118,22 @@ def select_by_name(names, time=None):
     # Sort the kernels
     return _sort_kernels(kernel_list)
 
+def select_by_filespec(filespecs, time=None):
+    """Return a list of kernel objects associated with a list of names.
+
+    Input:
+        names       A list of file specifications or match patterns. The file
+                    specification need not contain the directory path.
+
+        time        an optional tuple containing the start and stop times. Each
+                    time is expressed in either ISO format "yyyy-mm-ddThh:mm:ss"
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+                    Use None to load all the matching kernels.
+    """
+
+    # Search database, DO NOT sort!
+    return _query_by_filespec(filespecs, time)
+
 ################################################################################
 # Public API for returning text kernels as dictionaries
 ################################################################################
@@ -1060,10 +1166,10 @@ def as_dict(kernel_list):
 ################################################################################
 
 def furnish_kernels(kernel_list, fast=True):
-    """Furnish a sorted list of kernels for use by the CSPICE toolkit.
+    """Furnish a pre-sorted list of kernels for use by the CSPICE toolkit.
 
     Input:
-        kernel_list a list of one or more KernelInfo objects
+        kernel_list a pre-sorted list of one or more KernelInfo objects
 
         fast        True to skip the loading kernels that have already been
                     loaded. False to unload and load them again, thereby raising
@@ -1099,7 +1205,8 @@ def furnish_kernels(kernel_list, fast=True):
             if name not in fileno_dict:
                 fileno_dict[name] = []
 
-            fileno_dict[name].append(kernel.file_no)
+            if kernel.file_no not in fileno_dict[name]:
+                fileno_dict[name].append(kernel.file_no)
 
         # Update the list of files to furnish
         files = kernel.filespec.split(',')
@@ -1232,7 +1339,8 @@ def furnish_pck(bodies=None, asof=None, after=None, redo=True, fast=True):
     # Load the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
 
-def furnish_spk(bodies, time=None, asof=None, after=None, redo=True, fast=True):
+def furnish_spk(bodies, time=None, asof=None, after=None, redo=True, fast=True,
+                name=None):
     """Furnish SPKs for one or more bodies and spacecrafts.
 
     Input:
@@ -1267,7 +1375,8 @@ def furnish_spk(bodies, time=None, asof=None, after=None, redo=True, fast=True):
     """
 
     # Search database
-    kernel_list = select_spk(bodies, time, asof, after, redo)
+    kernel_list = select_spk(bodies, time=time, name=name, asof=asof,
+                             after=after, redo=redo)
 
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
