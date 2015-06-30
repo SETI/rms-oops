@@ -449,11 +449,10 @@ class Event(object):
 
         # Now it is safe to rotate to the new frame
         event = event.wrt_frame(frame, derivs, quick)
+        path = path.wrt(path, event.frame)
 
         # Now it is safe to shift to the new path
-        event = event.wrt_path(path, derivs, quick)
-
-        return event
+        return event.wrt_path(path, derivs, quick)
 
     def wrt_path(self, path, derivs=True, quick=False):
         """This event defined relative to a different origin path.
