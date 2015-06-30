@@ -217,7 +217,7 @@ class CentricEllipsoid(Surface):
         Return          planetographic longitude.
         """
 
-        return Scalar.as_scalar(lon, derivs)
+        lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.unsquash_y_sq).arctan2(lon.cos())
 
     def lon_from_graphic(self, lon, derivs=False):
@@ -230,7 +230,7 @@ class CentricEllipsoid(Surface):
         Return          planetocentric longitude.
         """
 
-        return Scalar.as_scalar(lon, derivs)
+        lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.squash_y_sq).arctan2(lon.cos())
 
     ############################################################################
@@ -320,6 +320,7 @@ class Test_CentricEllipsoid(unittest.TestCase):
 
         # Coordinate/vector conversions
         NPTS = 10000
+        NPTS = 10
         pos = (2 * np.random.rand(NPTS,3) - 1.) * REQ   # range is -REQ to REQ
 
         (lon,lat,elev) = planet.coords_from_vector3(pos, axes=3)
