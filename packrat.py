@@ -13,8 +13,8 @@ class Packrat(object):
     attributes.
 
     Attributes and their values are saved in a readable, reasonably compact XML
-    file. When necessary, large objects are stored in a pickle file of the same
-    name but extension '.pickle', with a pointer in the XML file.
+    file. When necessary, large objects are stored in a NumPy "savez" file of
+    the same name but extension '.npz', with a pointer in the XML file.
 
     The procedure handles the reading and writing of all the standard Python
     types: int, float, bool, str, list, tuple, dict and set.
@@ -48,20 +48,20 @@ class Packrat(object):
     """
 
     class Session(object):
-        """Subclass to logically grouped information.
+        """Subclass for logically grouped information.
 
         Values are saved by name as session attributes. Sessions can also be
         indexed to return (name,value) tuples in order.
         """
 
-        def __init__(self, node, picklefile):
-            self.list = []
-            self.dict = {}
+        def __init__(self, node, pack):
+            self._mylist = []
+            self._mydict = {}
 
             for subnode in node:
-                (key, value) = Packrat._read_node(subnode, picklefile)
-                self.list.append((key, value))
-                self.dict[key] = value
+                (key, value) = pack._read_node(subnode)
+                self._mylist.append((key, value))
+                self._mydict[key] = value
                 self.__dict__[key] = value
 
             self.user = node.attrib['user']
@@ -70,9 +70,9 @@ class Packrat(object):
 
         def __getitem__(self, i):
             if type(i) == int:
-                return self.list[i]
+                return self._mylist[i]
             else:
-                return self.dict[i]
+                return self._mydict[i]
 
         def __str__(self):
             return 'Session(user="%s", time="%s")' % (self.user, self.time)
@@ -89,7 +89,7 @@ class Packrat(object):
         """Create a Packrat object for write or append.
 
         It opens a new file of the given name. Use the close() method when
-        finished. An associated pickle file is opened only if it is needed.
+        finished. An associated .npz file is opened only if it is needed.
 
         Input:
             filename    the name of the file to open. It should end in ".xml"
@@ -100,12 +100,12 @@ class Packrat(object):
                         hierarchy.
             savings     a tuple containing two values:
                 savings[0]  the approximate minimum number of bytes that need to
-                            be saved before data values will be written using
-                            base64 encoding.
+                            be saved before data values will be written into the
+                            XML file using base64 encoding.
                 savings[1]  the approximate minimum number of bytes that need to
                             be saved before data values will be written into an
-                            associated pickle file. None to prevent the use of a
-                            pickle file.
+                            associated .npz file. None to prevent the use of an
+                            .npz file.
                         Either value can be None to disable that option.
             crlf        True to use Windows <cr><lf> line terminators; False to
                         use Unix/MacOS <lf> line terminators. Use None (the
@@ -125,8 +125,9 @@ class Packrat(object):
         self.file = None
         self.access = access
         self._version = Packrat.VERSION
-        self.tuples = ()
-        self.tuple_no = 0
+        self.tuples = []
+        self.tuple_no = 0       # To emulate sequential read operations
+        self.indent = indent
 
         if crlf is None:
             self.linesep = os.linesep
@@ -135,11 +136,6 @@ class Packrat(object):
         else:
             self.linesep = '\n'
 
-        self.pickle_filename = os.path.splitext(filename)[0] + '.pickle'
-        self.pickle = None
-
-        self.indent = indent
-
         try:
             if len(savings) == 1:
                 savings = (savings[0], savings[0])
@@ -147,7 +143,23 @@ class Packrat(object):
             savings = (savings, savings)
 
         self.base64_savings = savings[0] or np.inf
-        self.pickle_savings = savings[1] or np.inf
+        self.npz_savings = savings[1] or np.inf
+
+        self.npz_filename = os.path.splitext(filename)[0] + '.npz'
+        self.npz_list = []
+        self.npz_no = 0
+
+        # Handle the existing npz file if necessary
+        if os.path.exists(self.npz_filename):
+            if access in ('a', 'r'):
+                npz_dict = np.load(self.npz_filename)
+                count = len(npz_dict.keys())
+                for i in range(count):
+                    key = 'arr_' + str(i)
+                    self.npz_list.append(npz_dict[key])
+
+            else:
+                os.remove(self.npz_filename)
 
         # When opening for read, load the whole file initially
         if access == 'r':
@@ -158,19 +170,16 @@ class Packrat(object):
             # On read, use the file's Packrat version number
             self._version = root.attrib['version']
 
-            if os.path.exists(self.pickle_filename):
-                pf = open(self.pickle_filename, 'rb')
-            else:
-                pf = None
-
+            # Load the tree recursively
             self.tuples = []
             for node in root:
-                self.tuples.append(Packrat._read_node(node, pf))
+                self.tuples.append(self._read_node(node))
 
-            if pf is not None: pf.close()
+            # Check the npz count
+            if len(self.npz_list) != self.npz_no:
+                raise IOError('Packrat file %s does not match its .npz file' %
+                              filename)
 
-            # Emulate read operations by incrementing a pointer
-            self.tuple_no = 0
             return
 
         # When opening for write, initialize the file
@@ -183,9 +192,6 @@ class Packrat(object):
             self.file.write('<packrat version="%s">' % Packrat.VERSION)
             self.file.write(self.linesep)
             self.begun = ['packrat']
-
-            if os.path.exists(self.pickle_filename):
-                os.remove(self.pickle_filename)
 
         # When opening for append, position before the last line
         else:
@@ -214,7 +220,7 @@ class Packrat(object):
         This is an alternative to calling the constructor directly.
 
         It opens a new file of the given name. Use the close() method when
-        finished. An associated pickle file is opened only if it is needed.
+        finished. An associated .npz file is opened only if it is needed.
 
         Input:
             filename    the name of the file to open. It should end in ".xml"
@@ -225,12 +231,12 @@ class Packrat(object):
                         hierarchy.
             savings     a tuple containing two values:
                 savings[0]  the approximate minimum number of bytes that need to
-                            be saved before data values will be written using
-                            base64 encoding.
+                            be saved before data values will be written into the
+                            XML file using base64 encoding.
                 savings[1]  the approximate minimum number of bytes that need to
                             be saved before data values will be written into an
-                            associated pickle file. None to prevent the use of a
-                            pickle file.
+                            associated .npz file. None to prevent the use of an
+                            .npz file.
                         Either value can be None to disable that option.
             crlf        True to use Windows <cr><lf> line terminators; False to
                         use Unix/MacOS <lf> line terminators. Use None (the
@@ -257,27 +263,16 @@ class Packrat(object):
             self.file.close()
             self.file = None
 
-            if self.pickle:
-                self.pickle.close
-                self.pickle = None
+            if self.npz_no > 0:
+                np.savez(self.npz_filename, *tuple(self.npz_list))
 
-        # Close a file open for read
+       # Close a file open for read
         else:
             self.tuples = ()
             self.tuple_no = 0
 
-    def _open_pickle(self):
-        """Utility to open the pickle file associated with this object.
-
-        This is only called when it is needed for writing or appending.
-        """
-
-        if self.pickle: return
-
-        if self.access == 'w':
-            self.pickle = open(self.pickle_filename, 'wb')
-        elif self.access == 'a':
-            self.pickle = open(self.pickle_filename, 'a+b')
+            self.npz_list = []
+            self.npz_no = 0
 
     ############################################################################
     # Write methods
@@ -332,15 +327,14 @@ class Packrat(object):
 
             b64_bytes = int(1.3 * raw_bytes)
 
-            # Write data to a pickle file if the savings is large enough
-            if min(xml_bytes, b64_bytes) > raw_bytes + self.pickle_savings:
+            # Hold the data for the npz file if the savings is large enough
+            if min(xml_bytes, b64_bytes) > raw_bytes + self.npz_savings:
 
-                # Open the pickle file and append; create if necessary
-                self._open_pickle()
-                pickle.dump(value, self.pickle)
+                self.npz_list.append(value)
+                self.npz_no += 1
 
                 self.file.write(' first="%s"' % first)
-                self.file.write(' encoding="pickle"/>' + self.linesep)
+                self.file.write(' encoding="npz"/>' + self.linesep)
                 close_element = False
 
             # Otherwise, write data as base64 if the savings is large enough
@@ -575,8 +569,7 @@ class Packrat(object):
 
         return result
 
-    @staticmethod
-    def _read_node(node, pf):
+    def _read_node(self, node):
         """Interprets one node of the XML tree recursively."""
 
         node_type = node.attrib['type']
@@ -601,7 +594,7 @@ class Packrat(object):
         if node_type in ('list', 'tuple', 'set'):
             result = []
             for subnode in node:
-                result.append(Packrat._read_node(subnode, pf)[1])
+                result.append(self._read_node(subnode)[1])
 
             if node_type == 'tuple':
                 return (node.tag, tuple(result))
@@ -614,8 +607,8 @@ class Packrat(object):
         if node_type == 'dict':
             result = {}
             for subnode in node:
-                key = Packrat._read_node(subnode[0], pf)[1]
-                value = Packrat._read_node(subnode[1], pf)[1]
+                key = self._read_node(subnode[0])[1]
+                value = self._read_node(subnode[1])[1]
                 result[key] = value
 
             return (node.tag, result)
@@ -635,10 +628,11 @@ class Packrat(object):
             else:
                 first = None
 
-            if node.attrib['encoding'] == 'pickle':
-                result = pickle.load(pf)
+            if node.attrib['encoding'] == 'npz':
+                result = self.npz_list[self.npz_no]
+                self.npz_no += 1
                 flattened = result.ravel()
-                source = 'pickle file'
+                source = 'npz file'
 
             elif node.attrib['encoding'] == 'base64':
                 decoded = base64.b64decode(unescape(node.text,
@@ -689,7 +683,7 @@ class Packrat(object):
             # Create a dictionary of elements
             object_dict = {}
             for subnode in node:
-                (key, value) = Packrat._read_node(subnode, pf)
+                (key, value) = self._read_node(subnode)
                 object_dict[key] = value
 
             # For an unrecognized class, just return the attribute dictionary
@@ -714,7 +708,7 @@ class Packrat(object):
             return (node.tag, obj)
 
         if node_type == 'session':
-            return Packrat.Session(node, pf)
+            return Packrat.Session(node, self)
 
         raise TypeError('unrecognized Packrat element type: ' + node_type)
 
@@ -1025,8 +1019,8 @@ class test_packrat(unittest.TestCase):
 
     self.assertEqual(len(recs), 2)
     self.assertEqual(type(recs[1]), Packrat.Session)
-    self.assertEqual(len(recs[1].list), 2)
-    self.assertEqual(len(recs[1].dict), 2)
+    self.assertEqual(len(recs[1]._mylist), 2)
+    self.assertEqual(len(recs[1]._mydict), 2)
 
     self.assertEqual(recs[1][0][0], 'four56')
     self.assertEqual(recs[1][0][1], [4,5,6])
