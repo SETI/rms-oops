@@ -199,18 +199,22 @@ class Observation(object):
     def delete_subfield(self, key):
         """Deletes a subfield, but not arr or dep."""
 
-        if key in ('arr','dep'):
-            self.subfields[key] = Empty()
-            self.__dict__[key] = self.subfields[key]
-        elif self.subfields.has_key(key):
+#         if key in ('arr','dep'):
+#             self.subfields[key] = Empty()
+#             self.__dict__[key] = self.subfields[key]
+#         elif self.subfields.has_key(key):
+#             del self.subfields[key]
+#             del self.__dict__[key]
+
+        if key in self.subfields:
             del self.subfields[key]
             del self.__dict__[key]
 
     def delete_subfields(self):
         """Deletes all subfields."""
 
-        for key in self.subfields.keys():
-            if key not in ('arr','dep'):
+        for key in self.subfields:
+#            if key not in ('arr','dep'):
                 del self.subfields[key]
                 del self.__dict__[key]
 
@@ -261,7 +265,7 @@ class Observation(object):
         event = Event(time, (Vector3.ZERO,Vector3.ZERO), self.path, self.frame)
 
         # Insert the arrival directions
-        event.insert_subfield('arr', -meshgrid.los)
+        event.neg_arr_ap = meshgrid.los
 
         return event
 
@@ -289,7 +293,8 @@ class Observation(object):
 
         return event
 
-    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={}):
+    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
+                           apparent=False):
         """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
@@ -304,6 +309,9 @@ class Observation(object):
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
                         default configuration is defined in config.py.
+            apparent    True to interpret the (RA,dec) values as apparent
+                        coordinates; False to interpret them as actual
+                        coordinates. Default is False.
 
         Return:         a Pair of (u,v) coordinates.
 
@@ -312,17 +320,9 @@ class Observation(object):
         would ever be significant.
         """
 
-        # Convert to scalar; strip derivatives if necessary
-        ra = Scalar.as_scalar(ra, derivs)
-        dec = Scalar.as_scalar(dec, derivs)
-
         # Convert to line of sight in SSB/J2000 frame
-        cos_dec = dec.cos()
-        x = cos_dec * ra.cos()
-        y = cos_dec * ra.sin()
-        z = dec.sin()
-        los = Vector3.from_scalars(x,y,z)
-        
+        neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec, recursive=derivs)
+
         # Define the rotation from J2000 to the observer's frame
         rotation = self.frame.wrt(Frame.J2000)
 
@@ -339,13 +339,13 @@ class Observation(object):
 
             # Rotate the line of sight to the observer's frame
             xform = rotation.transform_at_time(obs_time)
-            obs_event.insert_subfield("arr", xform.rotate(los))
-
-            # Get the apparent direction, allowing for stellar aberration
-            apparent_arr = obs_event.apparent_arr(quick=quick)
+            if apparent:
+                obs_event.neg_arr_ap_j2000 = xform.rotate(neg_arr_j2000)
+            else:
+                obs_event.neg_arr_j2000 = xform.rotate(neg_arr_j2000)
 
             # Convert to FOV coordinates
-            uv = self.fov.uv_from_los(apparent_arr)
+            uv = self.fov.uv_from_los(obs_event.neg_arr_ap)
 
             # Update the time
             obs_time = self.midtime_at_uv(uv)
@@ -430,7 +430,7 @@ class Observation(object):
                                         derivs=derivs, guess=guess,
                                         quick=quick, converge=converge)
 
-        return self.fov.uv_from_los(-obs_event.arr, derivs=derivs)
+        return self.fov.uv_from_los(obs_event.neg_arr_ap, derivs=derivs)
 
     ### NOTE: This general version of uv_from_path() has not been tested!
     ### This method will at least need an override for the Pixel class.
@@ -516,9 +516,9 @@ class Observation(object):
                           self.path, self.frame)
         _, obs_event = multipath.photon_to_event(
                                     obs_event, quick=quick,
-                                    converge=converge)   # insert photon arrivals
+                                    converge=converge)  # insert photon arrivals
 
-        centers = -obs_event.arr
+        centers = obs_event.neg_arr_ap
         ranges = centers.norm()
         radii = Scalar([body.radius for body in bodies])
         radius_angles = (radii / ranges).arcsin()
@@ -564,7 +564,7 @@ class Observation(object):
 
         u_scale = fov.uv_scale.vals[0]
         v_scale = fov.uv_scale.vals[1]
-        body_uv = fov.uv_from_los(-obs_event.arr).vals
+        body_uv = fov.uv_from_los(obs_event.neg_arr_ap).vals
         for i in range(nbodies):
             if flags[i]:
                 body_data = {}

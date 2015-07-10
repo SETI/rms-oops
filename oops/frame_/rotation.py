@@ -49,7 +49,7 @@ class Rotation(Frame, Fittable):
 
         # We need a wayframe before we can create the transform
         self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
-                                   self.reference, self.origin)
+                                   self.wayframe, self.reference, self.origin)
 
     ########################################
 

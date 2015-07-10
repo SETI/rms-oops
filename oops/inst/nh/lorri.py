@@ -197,16 +197,15 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
 
         # Apply the correction for apparent geometry if necessary
         if pointing == 'fitsapp':
-            path_wrt_ssb = path.wrt(oops.Path.SSB)
-            event_wrt_ssb = path_wrt_ssb.event_at_time(tdb_midtime)
-            vel_wrt_ssb = event_wrt_ssb.vel
-
             ra  = ra_deg  * oops.RPD
             dec = dec_deg * oops.RPD
-            ray_app = oops.Vector3.from_ra_dec_length(ra, dec, recursive=False)
-            ray_ssb = ray_app + vel_wrt_ssb / oops.C
 
-            (ra, dec, length) = ray_ssb.to_ra_dec_length(recursive=False)
+            event = path.event_at_time(tdb_midtime)
+
+            # Insert apparent vector as actual to reverse the aberration effect
+            event.neg_arr_j2000 = oops.Vector3.from_ra_dec_length(ra, dec,
+                                                                recursive=False)
+            (ra, dec) = event.ra_and_dec(apparent=True)
             ra_deg  = ra  * oops.DPR
             dec_deg = dec * oops.DPR
 
@@ -224,6 +223,10 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
                                                      oops.Frame.J2000,
                                                      id=frame_id)
         frame = oops.Frame.as_wayframe(lorri_frame)
+
+        event = oops.Event(tdb_midtime, (oops.Vector3.ZERO,)*2, path, frame)
+        event.neg_arr_ap = oops.Vector3.ZAXIS
+        los = event.neg_arr_ap_j2000
 
     # Create a Snapshot
     snapshot = oops.obs.Snapshot(('v','u'), tstart, texp, fov, path, frame,

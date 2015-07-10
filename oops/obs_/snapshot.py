@@ -286,7 +286,8 @@ class Snapshot(Observation):
 # Overrides of Observation methods
 ################################################################################
 
-    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={}):
+    def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=1, quick={},
+                           apparent=False):
         """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
@@ -301,16 +302,20 @@ class Snapshot(Observation):
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
                         default configuration is defined in config.py.
+            apparent    True to interpret the (RA,dec) values as apparent
+                        coordinates; False to interpret them as actual
+                        coordinates. Default is False.
 
         Return:         a Pair of (u,v) coordinates.
 
         Note: The only reasons for iteration are that the C-matrix and the
-        velocity WRT the SSB could vary during the observation. I doubt this
-        would ever be significant.
+        velocity WRT the SSB could vary during the observation. This can be
+        neglected for a Snapshot.
         """
 
-        return Observation.uv_from_ra_and_dec(self, ra, dec, derivs, 1,
-                                              quick)
+        return Observation.uv_from_ra_and_dec(self, ra, dec, derivs=derivs,
+                                              iters=1, quick=quick,
+                                              apparent=apparent)
         
     def uv_from_path(self, path, derivs=False, quick={}, converge={}):
         """Return the (u,v) indices of an object in the FOV, given its path.
@@ -345,7 +350,7 @@ class Snapshot(Observation):
                                     derivs=False, guess=guess,
                                     quick=quick, converge=converge)
 
-        return self.fov.uv_from_los(-obs_event.arr, derivs=derivs)
+        return self.fov.uv_from_los(obs_event.neg_arr_ap, derivs=derivs)
 
     def uv_from_coords(self, surface, coords, underside=False, derivs=False,
                              quick={}, converge={}):
@@ -379,13 +384,13 @@ class Snapshot(Observation):
          obs_event) = surface.photon_to_event_by_coords(obs_event, coords,
                                 derivs=derivs, quick=quick, converge=converge)
 
-        if underside:
-            arr = obs_event.arr
-        else:
+        neg_arr_ap = obs_event.neg_arr_ap
+        if not underside:
             normal = surface.normal(surface_event.pos)
-            arr = obs_event.arr.mask_where(normal.dot(surface_event.dep) < 0)
+            neg_arr_ap = neg_arr_ap.mask_where(normal.dot(surface_event.dep_ap)
+                                               > 0)
 
-        return self.fov.uv_from_los(-arr, derivs=derivs)
+        return self.fov.uv_from_los(neg_arr_ap, derivs=derivs)
 
 ################################################################################
 # UNIT TESTS

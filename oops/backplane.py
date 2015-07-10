@@ -256,8 +256,9 @@ class Backplane(object):
         dest = self.get_surface_event(event_key[1:])
         surface = Backplane.get_surface(event_key[0])
 
-        dest = dest.clone(subfields=True, recursive=True)
-        dest.arr.insert_deriv('los', Vector3.IDENTITY, override=True)
+        new_arr_ap = dest.arr_ap.insert_deriv('los', Vector3.IDENTITY,
+                                                     override=True)
+        dest = dest.replace('arr_ap', new_arr_ap)
         event = surface.photon_to_event(dest, derivs=True)[0]
 
         # Save extra information in the event object
@@ -974,7 +975,8 @@ class Backplane(object):
             event = self.get_gridless_event_with_arr(event_key)
 
             # Sign on event.arr is negative because photon is incoming
-            latitude = (-event.arr.to_scalar(2) / event.arr.norm()).arcsin()
+            latitude = (event.neg_arr_ap.to_scalar(2) /
+                        event.arr_ap.norm()).arcsin()
             incidence = constants.HALFPI - latitude
 
             # Ring incidence angles are always 0-90 degrees
@@ -1007,7 +1009,8 @@ class Backplane(object):
         if key not in self.backplanes:
             event = self.get_gridless_event(event_key)
 
-            latitude = (event.dep.to_scalar(2) / event.dep.norm()).arcsin()
+            latitude = (event.dep_ap.to_scalar(2) /
+                        event.dep_ap.norm()).arcsin()
             emission = constants.HALFPI - latitude
 
             # Ring emission angles are always measured from the lit side normal
@@ -1261,8 +1264,9 @@ class Backplane(object):
 
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
-            arr = -event.apparent_arr()
-            lon = arr.to_scalar(1).arctan2(arr.to_scalar(0)) % constants.TWOPI
+            arr_ap = event.neg_arr_ap
+            lon = arr_ap.to_scalar(1).arctan2(arr_ap.to_scalar(0)) % \
+                  constants.TWOPI
 
             self.register_gridless_backplane(key, lon)
 
@@ -1280,8 +1284,9 @@ class Backplane(object):
 
         if key not in self.backplanes:
             event = self.get_gridless_event(event_key)
-            dep = event.apparent_dep()
-            lon = dep.to_scalar(1).arctan2(dep.to_scalar(0)) % constants.TWOPI
+            dep_ap = event.dep_ap
+            lon = dep_ap.to_scalar(1).arctan2(dep_ap.to_scalar(0)) % \
+                  constants.TWOPI
 
             self.register_gridless_backplane(key, lon)
 
@@ -1314,12 +1319,12 @@ class Backplane(object):
         key = ('sub_solar_latitude', event_key, lat_type)
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
-            arr = -event.apparent_arr()
+            arr_ap = -event.apparent_arr()
 
             if lat_type == 'graphic':
-                arr = arr.element_mul(event.surface.unsquash_sq)
+                arr_ap = arr_ap.element_mul(event.surface.unsquash_sq)
 
-            lat = (arr.to_scalar(2) / arr.norm()).arcsin()
+            lat = (arr_ap.to_scalar(2) / arr_ap.norm()).arcsin()
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
@@ -1333,12 +1338,12 @@ class Backplane(object):
         key = ('sub_observer_latitude', event_key, lat_type)
         if key not in self.backplanes:
             event = self.get_gridless_event(event_key)
-            dep = event.apparent_dep()
+            dep_ap = event.apparent_dep()
 
             if lat_type == 'graphic':
-                dep = dep.element_mul(event.surface.unsquash_sq)
+                dep_ap = dep_ap.element_mul(event.surface.unsquash_sq)
 
-            lat = (dep.to_scalar(2) / dep.norm()).arcsin()
+            lat = (dep_ap.to_scalar(2) / dep_ap.norm()).arcsin()
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
@@ -1362,14 +1367,14 @@ class Backplane(object):
             pole_j2000 = xform.rotate(Vector3.ZAXIS)
 
             # Define the vector to the observer in the J2000 frame
-            dep = event.aberrated_dep_ssb()
+            dep_ap = event.apparent_dep_ssb()
 
             # Construct a rotation matrix from J2000 to a frame in which the
             # Z-axis points along -dep and the J2000 pole is in the X-Z plane.
             # As it appears to the observer, the Z-axis points toward the body,
             # the X-axis points toward celestial north as projected on the sky,
             # and the Y-axis points toward celestial west (not east!).
-            rotmat = Matrix3.twovec(-dep, 2, Vector3.ZAXIS, 0)
+            rotmat = Matrix3.twovec(-dep_ap, 2, Vector3.ZAXIS, 0)
 
             # Rotate the body frame's Z-axis to this frame.
             pole = rotmat * pole_j2000
@@ -1923,8 +1928,9 @@ class Backplane(object):
         if key_prograde not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
 
-            # Sign on event.arr is negative because photon is incoming
-            latitude = (-event.arr.to_scalar(2) / event.arr.norm()).arcsin()
+            # Sign on event.arr_ap is negative because photon is incoming
+            latitude = (event.neg_arr_ap.to_scalar(2) /
+                        event.arr_ap.norm()).arcsin()
             incidence = constants.HALFPI - latitude
 
             self.register_gridless_backplane(key, incidence)
@@ -1978,7 +1984,8 @@ class Backplane(object):
         if key_prograde not in self.backplanes:
             event = self.get_gridless_event(event_key)
 
-            latitude = (event.dep.to_scalar(2) / event.dep.norm()).arcsin()
+            latitude = (event.dep_ap.to_scalar(2) /
+                        event.dep_ap.norm()).arcsin()
             emission = constants.HALFPI - latitude
 
             self.register_gridless_backplane(key, emission)

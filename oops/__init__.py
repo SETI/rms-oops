@@ -33,7 +33,6 @@ import oops.surface_.all as surface
 from oops.backplane   import *
 from oops.body        import *
 from oops.constants   import *
-from oops.edelta      import *
 from oops.event       import *
 from oops.fittable    import *
 from oops.meshgrid    import *

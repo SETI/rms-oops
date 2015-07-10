@@ -317,7 +317,7 @@ class Test_CentricSpheroid(unittest.TestCase):
 
         (lon,lat,elev) = planet.coords_from_vector3(pos, axes=3)
         test = planet.vector3_from_coords((lon,lat,elev))
-        self.assertTrue(abs(test - pos).max() < 1.e-8)
+        self.assertTrue(abs(test - pos).max() < 3.e-8)
 
         # Spheroid intercepts & normals
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ

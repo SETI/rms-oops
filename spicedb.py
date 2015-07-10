@@ -1506,6 +1506,49 @@ def furnish_by_name(names, time=None, fast=True):
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
 
+def furnish_by_metafile(metafile, time=None, asof=None):
+    """Furnish kernels identified by the path to a metakernel.
+
+    Input:
+        metafile    a file path to a metafile, or the name of a metafile in
+                    the SPICE database, or the filespec of a meta kernel in
+                    the SPICE database.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000. Use None to return kernels regardless
+                    of the time.
+
+        asof        an optional date earlier than today for which values should
+                    be returned. Wherever possible, the kernels selected will
+                    have release dates earlier than this date. The date is
+                    expressed as a string in ISO format or as a number of
+                    seconds TAI elapsed since January 1, 2000.
+
+    Return:         A list of kernel names in load order.
+    """
+
+    # Search database
+    kernel_names = []
+    if not os.path.exists(metafile):
+        spice_path = get_spice_path()
+        try:
+            kernel_list = _query_kernels('META', name=metafile, asof=asof)
+            metafile = os.path.join(spice_path, kernel_list[-1].filespec)
+            kernel_names = [kernel_list[-1].full_name]
+        except ValueError:
+            kernel_list = _query_kernels('META', path=metafile, asof=asof)
+            metafile = os.path.join(spice_path, kernel_list[-1].filespec)
+            kernel_names = [kernel_list[-1].full_name]
+
+    filespecs = textkernel.from_file(metafile)['KERNELS_TO_LOAD']
+
+    kernel_list = select_by_filespec(filespecs, time=time)
+
+    # Furnish the kernels and return the names
+    return furnish_kernels(kernel_list, fast=False) + kernel_names
+
 ################################################################################
 # Public API for unloading kernels
 ################################################################################

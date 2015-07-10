@@ -248,6 +248,7 @@ class Surface(object):
             If sign is +1, then these subfields and derivatives are defined.
                 In path_event:
                     arr         direction of the arriving photon at the surface.
+                    arr_ap      apparent direction of the arriving photon.
                     arr_lt      (negative) light travel time from the link
                                 event to the surface.
                 In link_event:
@@ -307,8 +308,7 @@ class Surface(object):
             surface_event.insert_subfield(surface_key, Vector3.MASKED)
             surface_event.insert_subfield(surface_key + '_lt', Scalar.MASKED)
 
-            new_link = link.clone()
-            new_link.insert_subfield(link_key + '_lt', Scalar.MASKED)
+            new_link = link.replace(link_key + '_lt', Scalar.MASKED)
 
             return (surface_event, new_link)
 
@@ -317,7 +317,7 @@ class Surface(object):
         link_time = link_wod.time
         link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
         obs_wrt_ssb = link_wrt_ssb.pos
-        los_wrt_ssb = link_wrt_ssb.subfields[link_key].without_derivs()
+        los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).without_derivs()
         los_wrt_ssb = los_wrt_ssb.unit() * constants.C  # scale factor is lt
 
         # Define the surface path and frame relative to the SSB in J2000
@@ -418,7 +418,8 @@ class Surface(object):
         # Put the derivatives back if necessary
         if derivs:
             obs_wrt_ssb = link_wrt_ssb.state
-            los_wrt_ssb = link_wrt_ssb.subfields[link_key].unit() * constants.C
+            los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).unit() * \
+                                                        constants.C
             pos_in_j2000 = (obs_wrt_ssb + lt * los_wrt_ssb -
                             origin_wrt_ssb.event_at_time(surface_time,
                                                          quick=False).state)
@@ -482,8 +483,7 @@ class Surface(object):
         surface_event.insert_subfield('coord3', coord3)
 
         # Constructed the updated link_event
-        new_link = link.clone()
-        new_link.insert_subfield(link_key + '_lt', lt)
+        new_link = link.replace(link_key + '_lt', lt)
 
         return (surface_event, new_link)
 
@@ -556,6 +556,7 @@ class Surface(object):
             If sign is +1, then these subfields and derivatives are defined.
                 In path_event:
                     arr         direction of the arriving photon at the surface.
+                    arr_ap      apparent direction of the arriving photon.
                     arr_lt      (negative) light travel time from the link
                                 event to the surface.
                 In link_event:
@@ -615,9 +616,8 @@ class Surface(object):
             surface_event.insert_subfield(surface_key, Vector3.MASKED)
             surface_event.insert_subfield(surface_key + '_lt', Scalar.MASKED)
 
-            new_link = link.clone()
-            new_link.insert_subfield(link_key, Vector3.MASKED)
-            new_link.insert_subfield(link_key + '_lt', Scalar.MASKED)
+            new_link = link.replace(link_key, Vector3.MASKED,
+                                    link_key + '_lt', Scalar.MASKED)
 
             return (surface_event, new_link)
 
@@ -728,7 +728,7 @@ class Surface(object):
 
         los_in_frame = surface_xform.rotate(los_in_j2000)
         surface_event.insert_subfield(surface_key, los_in_frame)
-        surface_event.insert_subfield(surface_key + 'lt', -lt)
+        surface_event.insert_subfield(surface_key + '_lt', -lt)
 
         surface_event.insert_subfield('perp',
                                       self.normal(pos_wrt_origin_frame))
@@ -741,19 +741,8 @@ class Surface(object):
                                           "for _solve_photon_by_coords()")
 
         # Constructed the updated link_event
-        new_link = link.clone()
-
-        link_frame = link.frame.wrt(Frame.J2000)
-        link_xform = link_frame.transform_at_time(link.time, quick=quick)
-        los_wrt_link = link_xform.rotate(los_in_j2000)
-
-        new_link.insert_subfield(link_key, los_wrt_link)
-        new_link.insert_subfield(link_key + "_lt", lt)
-
-        # The new subfields are already determined wrt SSB, so save them
-        link_wrt_ssb.insert_subfield(link_key, los_in_j2000)
-        link_wrt_ssb.insert_subfield(link_key + "_lt", lt)
-        new_link.filled_ssb = link_wrt_ssb
+        new_link = link.replace(link_key + '_j2000', los_in_j2000,
+                                link_key + '_lt', lt)
 
         return (surface_event, new_link)
 

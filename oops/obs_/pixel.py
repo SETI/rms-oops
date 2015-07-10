@@ -242,7 +242,7 @@ class Pixel(Observation):
                             self.path_id, self.frame_id)
 
         # Insert the arrival directions
-        event.insert_subfield("arr", -meshgrid.los)
+        event.neg_arr_ap = meshgrid.los
 
         return event
 

@@ -163,6 +163,12 @@ class Transform(object):
 
     def __repr__(self): return self.__str__()
 
+    @staticmethod
+    def identity(frame):
+        """An identity transform from a frame to itself."""
+
+        return Transform(Matrix3.IDENTITY, Vector3.ZERO, frame, frame)
+
     ############################################################################
     # Vector operations
     ############################################################################
@@ -229,7 +235,7 @@ class Transform(object):
 
         return (pos_target, vel_target)
 
-    def unrotate(self, pos, derivs=False):
+    def unrotate(self, pos, derivs=True):
         """Un-rotate the coordinates of a position into the reference frame.
 
         Input:
@@ -320,6 +326,8 @@ class Transform(object):
         #      = N M [(V0 - omega x P0) - MT M ([MT kappa] x P0)]
         #      = N M [(V0 - [omega + MT kappa] x P0)]
 
+        assert self.reference == arg.frame
+
         if self.origin is None:
             origin = arg.origin
         elif arg.origin is None:
@@ -407,8 +415,11 @@ class Test_Transform(unittest.TestCase):
 
         tr = Transform(m, omega, "TEST", "J2000")
 
-        self.assertEqual(tr.unrotate(p), tr.invert().rotate(p))
-        self.assertEqual(tr.rotate(p), tr.invert().unrotate(p))
+#         self.assertEqual(tr.unrotate(p), tr.invert().rotate(p))
+#         self.assertEqual(tr.rotate(p), tr.invert().unrotate(p))
+        eps = 1.e-15
+        self.assertTrue(np.all(np.abs(tr.unrotate(p).vals - tr.invert().rotate(p).vals)) < eps)
+        self.assertTrue(np.all(np.abs(tr.rotate(p).vals - tr.invert().unrotate(p).vals)) < eps)
 
         eps = 1.e-15
         diff = tr.unrotate_pos_vel(p,v)[1] - tr.invert().rotate_pos_vel(p,v)[1]

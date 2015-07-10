@@ -23,7 +23,8 @@ from oops.surface_.ringplane   import RingPlane
 from oops.surface_.orbitplane  import OrbitPlane
 from oops.surface_.spicebody   import spice_body
 
-import oops.constants    as constants
+import oops.constants     as constants
+import oops.spice_support as spice_support
 
 class Body(object):
     """Defines the properties and relationships of solar system bodies.
@@ -419,6 +420,11 @@ class Body(object):
 
         Body.BODY_REGISTRY.clear()
 
+        spice_support.initialize()
+
+        Path.reset_registry()
+        Frame.reset_registry()
+
 ################################################################################
 # General function to load Solar System components
 ################################################################################
@@ -634,6 +640,7 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [], retrograde=True)
 
     URANUS_EPOCH = cspice.utc2et("1977-03-10T20:00:00")
+
     uranus_wrt_b1950 = AliasFrame("IAU_URANUS").wrt("B1950")
     ignore = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
                        id="URANUS_RINGS_B1950")
@@ -884,7 +891,7 @@ class Test_Body(unittest.TestCase):
         moons = saturn.select_children(include_all=["CLASSICAL", "IRREGULAR"])
         self.assertEqual(len(moons), 1)     # Phoebe
 
-        moons = saturn.select_children(exclude=["IRREGULAR","RING"], radius=170)
+        moons = saturn.select_children(exclude=["IRREGULAR","RING"], radius=160)
         self.assertEqual(len(moons), 8)     # Mimas-Iapetus
 
         rings = saturn.select_children(include_any=("RING"))

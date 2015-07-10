@@ -462,13 +462,13 @@ class Test_CentricEllipsoid(unittest.TestCase):
         cept1 = planet.vector3_from_coords((lon+eps,lat,0.))
         cept2 = planet.vector3_from_coords((lon-eps,lat,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 3.e-8)
 
         (lon,lat) = planet.coords_from_vector3(cept, axes=2)
         cept1 = planet.vector3_from_coords((lon,lat+eps,0.))
         cept2 = planet.vector3_from_coords((lon,lat-eps,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 3.e-8)
 
         # Test intercept_with_normal()
         vector = Vector3(np.random.random((100,3)))

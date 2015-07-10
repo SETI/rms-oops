@@ -6,6 +6,7 @@ import numpy as np
 from polymath import *
 
 from oops.frame_.frame import Frame
+from oops.path_.path   import Path
 from oops.transform    import Transform
 
 class SpinFrame(Frame):
@@ -49,7 +50,7 @@ class SpinFrame(Frame):
         # Required attributes
         self.frame_id  = id
         self.reference = Frame.as_wayframe(reference)
-        self.origin    = self.reference.origin
+        self.origin    = self.reference.origin or Path.SSB
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
@@ -74,7 +75,8 @@ class SpinFrame(Frame):
         mat[..., self.axis1, self.axis0] = -mat[...,self.axis0,self.axis1]
 
         matrix = Matrix3(mat, angle.mask)
-        return Transform(matrix, self.omega, self.reference, self.origin)
+        return Transform(matrix, self.omega, self.wayframe, self.reference,
+                                 self.origin)
 
 ################################################################################
 # UNIT TESTS
@@ -91,6 +93,7 @@ class Test_SpinFrame(unittest.TestCase):
         from oops.transform import Transform
 
         Frame.reset_registry()
+        Path.reset_registry()
 
         spin1  = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
         spin2  = SpinFrame(0., 2., 0., 2, "J2000", "spin2")

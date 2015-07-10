@@ -51,7 +51,7 @@ class Tracker(Frame):
         obs_event = Event(epoch, (Vector3.ZERO,Vector3.ZERO),
                           self.observer_path, Frame.J2000)
         (path_event,obs_event) = self.target_path.photon_to_event(obs_event)
-        self.trackpoint = -obs_event.arr.unit()
+        self.trackpoint = obs_event.neg_arr_ap.unit()
 
         fixed_xform = self.fixed_frame.transform_at_time(self.epoch)
         self.reference_xform = Transform(fixed_xform.matrix, Vector3.ZERO,
@@ -78,7 +78,7 @@ class Tracker(Frame):
         obs_event = Event(time, (Vector3.ZERO,Vector3.ZERO),
                           self.observer_path, Frame.J2000)
         (path_event,obs_event) = self.target_path.photon_to_event(obs_event)
-        newpoint = -obs_event.arr.unit()
+        newpoint = obs_event.neg_arr_ap.unit()
 
         rotation = self.trackpoint.cross(newpoint)
         rotation = rotation.reshape(rotation.shape + (1,))
@@ -107,33 +107,28 @@ class Test_Tracker(unittest.TestCase):
         import oops.body as body
         import oops.spice_support as spice
 
-        Path.reset_registry()
-        Frame.reset_registry()
-
-        body.define_solar_system("1999-01-01", "2002-01-01")
+        body.Body.reset_registry()
+        body.define_solar_system("1990-01-01", "2020-01-01")
 
         tracker = Tracker("J2000", "MARS", "EARTH", 0., id="TEST")
         mars = AliasPath("MARS")
 
         obs_event = Event(0., (Vector3.ZERO,Vector3.ZERO), "EARTH", "J2000")
         (path_event, obs_event) = mars.photon_to_event(obs_event)
-        start_arr = obs_event.arr.unit()
+        start_arr = obs_event.arr_ap.unit()
 
         # Track Mars for 30 days
         DAY = 86400
         for t in range(0,30*DAY,DAY):
             obs_event = Event(t, (Vector3.ZERO,Vector3.ZERO), "EARTH", "TEST")
             (path_event, obs_event) = mars.photon_to_event(obs_event)
-            self.assertTrue(abs(obs_event.arr.unit() - start_arr) < 1.e-6)
+            self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr) < 1.e-6)
 
         # Try the test all at once
         t = np.arange(0,30*DAY,DAY/40)
         obs_event = Event(t, (Vector3.ZERO,Vector3.ZERO), "EARTH", "TEST")
         (path_event, obs_event) = mars.photon_to_event(obs_event)
-        self.assertTrue(abs(obs_event.arr.unit() - start_arr).max() < 1.e-6)
-
-        Path.reset_registry()
-        Frame.reset_registry()
+        self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr).max() < 1.e-6)
 
 #########################################
 if __name__ == '__main__':
