@@ -39,3 +39,6 @@ swift/main/swift.inc
 swift/fxdr_2.1c/test.exe
 swift/fxdr_2.1c/libfxdr.a
 swift/fxdr_2.1c/Makefile
+rf-research/astrometry/tinytim-7.4/*.txt
+rf-research/astrometry/tinytim-7.4/*.tt3
+rf-research/astrometry/tinytim-7.4/temp*
