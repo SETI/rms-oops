@@ -468,6 +468,8 @@ def define_solar_system(start_time=None, stop_time=None, asof=None):
     _define_neptune(start_time, stop_time, asof)
     _define_pluto(start_time, stop_time, asof)
 
+    return names
+
 ################################################################################
 # Mars System
 ################################################################################

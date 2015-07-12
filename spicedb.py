@@ -24,6 +24,8 @@
 #     Results of unit tests should NOT change as the database is updated. This
 #     is important because we want the results of database query to be stable
 #     when using selection options such as "as of"
+#
+# 6/10/15 (MRS) Added support for metakernels and star kernels
 ################################################################################
 
 from __future__ import division
@@ -53,6 +55,8 @@ FURNISHED_NAMES = {
     'PCK':  [],
     'SCLK': [],
     'SPK':  [],
+    'STARS': [],
+    'META':  [],
 }
 
 FURNISHED_FILES = {
@@ -63,6 +67,8 @@ FURNISHED_FILES = {
     'PCK':  [],
     'SCLK': [],
     'SPK':  [],
+    'STARS': [],
+    'META':  [],
 }
 
 FURNISHED_FILENOS = {}
@@ -94,8 +100,9 @@ FULL_NAME_INDEX      = COLUMN_NAMES.index("FULL_NAME")
 FILE_NO_INDEX        = COLUMN_NAMES.index("FILE_NO")
 
 KERNEL_TYPE_SORT_DICT = {'LSK': 0, 'SCLK': 1, 'FK': 2, 'IK': 3, 'PCK': 4,
-                          'SPK': 5, 'CK': 6}
-KERNEL_TYPE_SORT_ORDER = ['LSK', 'SCLK', 'FK', 'IK', 'PCK', 'SPK', 'CK']
+                          'SPK': 5, 'CK': 6, 'STARS': 7, 'META': 8}
+KERNEL_TYPE_SORT_ORDER = ['LSK', 'SCLK', 'FK', 'IK', 'PCK', 'SPK', 'CK',
+                          'STARS', 'META']
 
 class KernelInfo(object):
 
@@ -729,6 +736,90 @@ def _sql_query_by_name(name, time=None):
 
     return "".join(query_list)
 
+def _query_by_filespec(filespecs, time=None):
+    """Return a list of KernelInfo objects based on a filename or pattern.
+
+    Input:
+        filespec    one file path or match pattern.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000. Use None to return kernels regardless
+                    of the time.
+
+    Return:         A list of KernelInfo objects describing the files that match
+                    the pattern.
+    """
+
+    # Normalize the input
+    if type(filespecs) == str: filespecs = [filespecs]
+
+    # Loop through names...
+    kernel_info = []
+
+    for filespec in filespecs:
+
+        # Query the database
+        sql_string = _sql_query_by_filespec(filespec, time)
+
+        table = db.query(sql_string)
+
+        # If we have nothing, raise an exception
+        if len(table) == 0:
+            if time is not None:        # Maybe it's jut out of time range
+                sql_string = _sql_query_by_filespec(filespec)
+                table2 = db.query(sql_string)
+                if len(table2) > 0: continue
+
+            raise ValueError("no results found matching query")
+
+        for row in table:
+            kernel_info.append(KernelInfo(row))
+
+    return kernel_info
+
+def _sql_query_by_filespec(filespec, time=None):
+    """Generate a query string based on a kernel name.
+
+    Input:
+        filespec    one file path or match pattern.
+
+        time        a tuple consisting of a start and stop time, each expressed
+                    as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
+                    Alternatively, times may be given as elapsed seconds TAI
+                    since January 1, 2000. Use None to return kernels regardless
+                    of the time.
+
+    Return:         A list of KernelInfo objects describing the files that match
+                    the requirements.
+    """
+
+    # Begin query
+    query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
+    query_list += ["WHERE FILESPEC like '%", filespec, "'\n"]
+
+    # Insert start and stop times
+    if time is None: time = (None, None)
+
+    (time0, time1) = time
+    if time0 is not None:
+        if type(time0) != str:
+            time0 = julian.ymdhms_format_from_tai(time0, sep="T", digits=0,
+                                                         suffix="")
+        query_list += ["AND STOP_TIME  >= '", time0, "'\n"]
+
+    if time1 is not None:
+        if type(time1) != str:
+            time1 = julian.ymdhms_format_from_tai(time1, sep="T", digits=0,
+                                                         suffix="")
+
+        query_list += ["AND START_TIME <= '", time1, "'\n"]
+
+    query_list += ["ORDER BY LOAD_PRIORITY ASC, RELEASE_DATE ASC\n"]
+
+    return "".join(query_list)
+
 ################################################################################
 ################################################################################
 # Public API
@@ -807,12 +898,15 @@ def select_lsk(asof=None, after=None, redo=True):
     # Load the kernels and return the names
     return _sort_kernels(kernel_list)
 
-def select_pck(bodies=None, asof=None, after=None, redo=True):
+def select_pck(bodies=None, name=None, asof=None, after=None, redo=True):
     """Return a sorted list of PCKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
                     planetary bodies.
+
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
 
         asof        an optional earlier date for which values should be
                     returned. Wherever possible, the kernels selected will have
@@ -832,19 +926,22 @@ def select_pck(bodies=None, asof=None, after=None, redo=True):
     """
 
     # Search database
-    kernel_list = _query_kernels("PCK", body=bodies,
-                                         asof=asof, after=after, redo=redo,
-                                         limit=False)
+    kernel_list = _query_kernels("PCK", name=name, body=bodies,
+                                        asof=asof, after=after, redo=redo,
+                                        limit=False)
 
     # Sort the kernels and return
     return _sort_kernels(kernel_list)
 
-def select_spk(bodies, time=None, asof=None, after=None, redo=True):
+def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
     """Return a sorted list of SPKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
                     planetary bodies.
+
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
 
         time        a tuple containing the start and stop times. Each time is
                     expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
@@ -877,19 +974,20 @@ def select_spk(bodies, time=None, asof=None, after=None, redo=True):
     kernel_list = []
     for body in bodies:
         if body > 0: spacecraft_only = False
-        kernel_list += _query_kernels("SPK", body=body, time=time,
-                                              asof=asof, after=after, redo=redo,
-                                              limit=False)
+        kernel_list += _query_kernels("SPK", name=name, body=body, time=time,
+                                             asof=asof, after=after, redo=redo,
+                                             limit=False)
 
     # Remove kernels with overlapping time limits
     if time is None: time = (None, None)
     kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
 
     # One DE kernel is always required unless only spacecrafts were selected
-    if (not spacecraft_only) and (kernel_list[-1].load_priority < 200): # kludge
+    if (not spacecraft_only) and (name is None) and \
+       (kernel_list[-1].load_priority < 200): # kludge
         kernel_list += _query_kernels("SPK", name="DE%", time=time,
-                                              asof=asof, after=after, redo=redo,
-                                              limit=True)
+                                             asof=asof, after=after, redo=redo,
+                                             limit=True)
 
         kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
 
@@ -965,11 +1063,14 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
     # Sort the kernels and return
     return _sort_kernels(kernel_list)
 
-def select_ck(ids, time=None, asof=None, after=None, redo=True):
+def select_ck(ids, name=None, time=None, asof=None, after=None, redo=True):
     """Return a sorted list of CKs for one or more spacecrafts.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
+
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
 
         time        a tuple containing the start and stop times. Each time is
                     expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
@@ -1001,7 +1102,7 @@ def select_ck(ids, time=None, asof=None, after=None, redo=True):
     for id in ids:
 
         # Select the C kernels
-        kernel_list += _query_kernels("CK", time=time,
+        kernel_list += _query_kernels("CK", name=name, time=time,
                                             body=id, asof=asof, after=after,
                                             limit=False)
 
@@ -1027,6 +1128,22 @@ def select_by_name(names, time=None):
 
     # Sort the kernels
     return _sort_kernels(kernel_list)
+
+def select_by_filespec(filespecs, time=None):
+    """Return a list of kernel objects associated with a list of names.
+
+    Input:
+        names       A list of file specifications or match patterns. The file
+                    specification need not contain the directory path.
+
+        time        an optional tuple containing the start and stop times. Each
+                    time is expressed in either ISO format "yyyy-mm-ddThh:mm:ss"
+                    or as a number of seconds TAI elapsed since January 1, 2000.
+                    Use None to load all the matching kernels.
+    """
+
+    # Search database, DO NOT sort!
+    return _query_by_filespec(filespecs, time)
 
 ################################################################################
 # Public API for returning text kernels as dictionaries
@@ -1060,10 +1177,10 @@ def as_dict(kernel_list):
 ################################################################################
 
 def furnish_kernels(kernel_list, fast=True):
-    """Furnish a sorted list of kernels for use by the CSPICE toolkit.
+    """Furnish a pre-sorted list of kernels for use by the CSPICE toolkit.
 
     Input:
-        kernel_list a list of one or more KernelInfo objects
+        kernel_list a pre-sorted list of one or more KernelInfo objects
 
         fast        True to skip the loading kernels that have already been
                     loaded. False to unload and load them again, thereby raising
@@ -1099,7 +1216,8 @@ def furnish_kernels(kernel_list, fast=True):
             if name not in fileno_dict:
                 fileno_dict[name] = []
 
-            fileno_dict[name].append(kernel.file_no)
+            if kernel.file_no not in fileno_dict[name]:
+                fileno_dict[name].append(kernel.file_no)
 
         # Update the list of files to furnish
         files = kernel.filespec.split(',')
@@ -1193,17 +1311,21 @@ def furnish_lsk(asof=None, after=None, redo=True, fast=True):
     """
 
     # Search the database
-    kernel_list = select_lsk(asof, after, redo)
+    kernel_list = select_lsk(asof=asof, after=after, redo=redo)
 
     # Load the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
 
-def furnish_pck(bodies=None, asof=None, after=None, redo=True, fast=True):
+def furnish_pck(bodies=None, name=None, asof=None, after=None, redo=True,
+                fast=True):
     """Furnish selected PCKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
                     planetary bodies.
+
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
 
         asof        an optional earlier date for which values should be
                     returned. Wherever possible, the kernels selected will have
@@ -1227,17 +1349,22 @@ def furnish_pck(bodies=None, asof=None, after=None, redo=True, fast=True):
     """
 
     # Search database
-    kernel_list = select_pck(bodies, asof, after, redo)
+    kernel_list = select_pck(bodies=bodies, name=name,
+                             asof=asof, after=after, redo=redo)
 
     # Load the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
 
-def furnish_spk(bodies, time=None, asof=None, after=None, redo=True, fast=True):
+def furnish_spk(bodies, name=None, time=None, asof=None, after=None, redo=True,
+                fast=True):
     """Furnish SPKs for one or more bodies and spacecrafts.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
                     planetary bodies.
+
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
 
         time        a tuple containing the start and stop times. Each time is
                     expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
@@ -1267,7 +1394,8 @@ def furnish_spk(bodies, time=None, asof=None, after=None, redo=True, fast=True):
     """
 
     # Search database
-    kernel_list = select_spk(bodies, time, asof, after, redo)
+    kernel_list = select_spk(bodies, name=name, time=time, asof=asof,
+                             after=after, redo=redo)
 
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
@@ -1308,11 +1436,15 @@ def furnish_inst(ids, inst=None, types=None, asof=None, after=None, redo=True,
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
 
-def furnish_ck(ids, time=None, asof=None, after=None, redo=True, fast=True):
+def furnish_ck(ids, name=None, time=None, asof=None, after=None, redo=True,
+                    fast=True):
     """Furnish CKs for one or more spacecrafts.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
+
+        name        a SQL match string for the name of the kernel; use "%" for
+                    multiple wildcards and "_" for a single wildcard.
 
         time        a tuple containing the start and stop times. Each time is
                     expressed in either ISO format "yyyy-mm-ddThh:mm:ss" or as a
@@ -1341,7 +1473,8 @@ def furnish_ck(ids, time=None, asof=None, after=None, redo=True, fast=True):
     """
 
     # Search database
-    kernel_list = select_ck(ids, time, asof, after, redo)
+    kernel_list = select_ck(ids, name=name, time=time,
+                            asof=asof, after=after, redo=redo)
 
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=fast)
@@ -2183,7 +2316,10 @@ class test_spicedb(unittest.TestCase):
         ########
         FILE_LIST = []
         kernels = furnish_spk([601], after='3000-01-01', redo=True)
-        self.assertEqual(kernels, ['SAT360', 'DE430'])
+        self.assertTrue(kernels[0][:3] == 'SAT')
+        self.assertTrue(kernels[0][3:] >= '360')
+        self.assertTrue(kernels[1][:2] == 'DE')
+        self.assertTrue(kernels[1][2:] >= '430')
 
         F1 = FILE_LIST
         k1 = kernels
@@ -2194,11 +2330,11 @@ class test_spicedb(unittest.TestCase):
 
         ########
         FILE_LIST = []
-        kernels = furnish_spk([-82], asof='2014-03-10', time=None)
+        kernels = furnish_spk([-82], asof='2013-12-13', time=None)
         self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-135]'])
         self.assertEqual(len(FILE_LIST), 135)
         self.assertTrue(FILE_LIST[ 0].endswith('/000331R_SK_LP0_V1P32.bsp'))
-        self.assertTrue(FILE_LIST[-1].endswith('/140219R_SCPSE_13352_14025.bsp'))
+        self.assertTrue(FILE_LIST[-1].endswith('/131212R_SCPSE_13273_13314.bsp'))
 
         F1 = FILE_LIST
         k1 = kernels
@@ -2211,7 +2347,7 @@ class test_spicedb(unittest.TestCase):
         FILE_LIST = []
         kernels = furnish_spk([-82], asof='2014-03-10',
                                      time=(12*365.25*86400., '2012-04-01'))
-        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[114-117]'])
+        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[115-118]'])
         self.assertEqual(len(FILE_LIST), 4)
         self.assertTrue(FILE_LIST[0].endswith('/120227R_SCPSE_11357_12016.bsp'))
         self.assertTrue(FILE_LIST[1].endswith('/120312R_SCPSE_12016_12042.bsp'))
@@ -2230,7 +2366,7 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_spk([-82], asof='2012-04-01',
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18',
-                                   'CAS-SPK-RECONSTRUCTED-V01[114,115]'])
+                                   'CAS-SPK-RECONSTRUCTED-V01[115,116]'])
         self.assertEqual(len(FILE_LIST), 3)
         self.assertTrue(FILE_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
         self.assertTrue(FILE_LIST[1].endswith('120227R_SCPSE_11357_12016.bsp'))
@@ -2281,11 +2417,11 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_spk([-32,601,699], asof='2014-08-01',
                               time=('1981-08-14', '1981-08-24'))
         self.assertEqual(kernels, ['SAT360', 'SAT363', 'VG2-SPK-SAT337',
-                                   'DE430'])
+                                   'DE432'])
         self.assertEqual(len(FILE_LIST), 5)
         self.assertTrue(FILE_LIST[-3].endswith('/sat337.bsp'))
         self.assertTrue(FILE_LIST[-2].endswith('/vgr2_sat337.bsp'))
-        self.assertTrue(FILE_LIST[-1].endswith('/de430.bsp'))
+        self.assertTrue('de432' in FILE_LIST[-1])
 
         self.assertRaises(ValueError, furnish_spk, [-82], after='3000-01-01',
                                                           redo=False)
@@ -2384,6 +2520,19 @@ class test_spicedb(unittest.TestCase):
 
         FILE_LIST = []
         kernels = furnish_ck(-82)
+        self.assertEqual(kernels[0], 'CAS-CK-JUP-V01[1-64]')
+        self.assertTrue(kernels[1].startswith('CAS-CK-RECONSTRUCTED-V01[1-'))
+
+        F1 = FILE_LIST
+        k1 = kernels
+        FILE_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, FILE_LIST)
+
+        ########
+        FILE_LIST = []
+        kernels = furnish_ck(-82, asof='2014-02-18')
         self.assertEqual(kernels, ['CAS-CK-JUP-V01[1-64]',
                                    'CAS-CK-RECONSTRUCTED-V01[1-744]'])
         self.assertEqual(len(FILE_LIST), 808)
@@ -2425,7 +2574,7 @@ class test_spicedb(unittest.TestCase):
         FILE_LIST = []
         kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
                                   asof='2005-02-01')
-        self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[70-74]'])
+        self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[69-73]'])
         self.assertEqual(len(FILE_LIST), 5)
         self.assertTrue(FILE_LIST[0].endswith('/05002_05007ra.bc'))
         self.assertTrue(FILE_LIST[1].endswith('/05007_05012ra.bc'))

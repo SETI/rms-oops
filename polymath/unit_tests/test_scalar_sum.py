@@ -56,7 +56,7 @@ class Test_Scalar_sum(unittest.TestCase):
         if not x.mask[i]:
             sumval += x.values[i]
 
-    self.assertEqual(sumval, x.sum())
+    self.assertTrue(abs((sumval - x.sum()) / sumval) < 4.e-15)
 
     masked = Scalar(x, mask=True)
     self.assertTrue(masked.sum().mask)

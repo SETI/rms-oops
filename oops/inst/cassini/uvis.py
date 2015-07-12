@@ -58,9 +58,9 @@ def from_file(filespec, data=False, enclose=False, **parameters):
     Cassini.load_spks(tstart, tstop)
 
     # Figure out the PDS object class and return the observation(s)
-    if label.has_key("QUBE"):
+    if "QUBE" in label:
         return get_qube(filespec, tstart, label, data, enclose)
-    elif label.has_key("TIME_SERIES"):
+    elif "TIME_SERIES" in label:
         return get_time_series(filespec, tstart, label, data)
     else:
         return get_spectrum(filespec, tstart, label, data)
@@ -106,7 +106,7 @@ def get_qube(filespec, tstart, label, data, enclose):
 
     if data:
         array_null = 65535                  # Incorrectly -1 in many labels
-        array = load_data(filespec, ">u2")
+        array = load_data(filespec, label["^QUBE"], ">u2")
 
         # Re-shape into something sensible
         # Note that the axis order in the label is first-index-fastest
@@ -308,7 +308,7 @@ def get_time_series(filespec, tstart, label, data):
         assert column["DATA_TYPE"] == "MSB_UNSIGNED_INTEGER"
         assert column["BYTES"] == 2
 
-        array = load_data(filespec, ">u2")
+        array = load_data(filespec, label["^TIME_SERIES"], ">u2")
         obs.insert_subfield("data", array)
 
     # Update the observation shape
@@ -374,7 +374,7 @@ def get_spectrum(filespec, tstart, label, data):
         assert column["DATA_TYPE"] == "MSB_UNSIGNED_INTEGER"
         assert column["BYTES"] == 2
 
-        array = load_data(filespec, ">u2")
+        array = load_data(filespec, label["^SPECTRUM"], ">u2")
         obs.insert_subfield("data", array)
 
     # Update the observation shape
@@ -384,15 +384,14 @@ def get_spectrum(filespec, tstart, label, data):
 
 ########################################
 
-def load_data(filespec, dtype):
+def load_data(filespec, body, dtype):
 
     head = os.path.split(filespec)[0]
-    body = label["^" + object]
 
     data_filespec = os.path.join(head, body)
     if not os.path.exists(data_filespec):
-        test_filespec = os.path.join(head, body.lower())
-    if not os.path.exists(test_filespec):
+        data_filespec = os.path.join(head, body.lower())
+    if not os.path.exists(data_filespec):
         f = open(data_filespec,"r")     # raise IOError
 
     return np.fromfile(data_filespec, sep="", dtype=dtype)

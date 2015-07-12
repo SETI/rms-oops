@@ -3165,9 +3165,18 @@ class Qube(object):
         # Interpret and adapt the index
         (i,imask,idxmask) = self.prep_index(i, remove_masked=True)
 
-        if i is None or (np.shape(i) != () and None in i):
-            # Fully flattened index along at least one dimension; nothing to do
+# Annoyingly, "None in i" raises a FutureWarning and also just doesn't work
+#         if i is None or (np.shape(i) != () and None in i):
+#             # Fully flattened index along at least one dimension; nothing to do
+#             return
+
+        # Fully flattened index along at least one dimension; nothing to do
+        if i is None:
             return
+
+        if np.shape(i) != ():
+            for element in i:
+                if element is None: return
 
         # Insert the values
         if (idxmask is None or (np.shape(idxmask) == () and idxmask == False) or
@@ -3205,7 +3214,7 @@ class Qube(object):
         If remove_masked is True:
             If the index is a single Qube object, then any masked items are
             removed.
-        
+
         If the index contains a Ellipsis, we need to append additional null
         slices for the item elements of the array in order to make the axes
         align properly.
@@ -3214,8 +3223,8 @@ class Qube(object):
             if Ellipsis in index
         fail when the index contains a NumPy array.
 
-        The code also replaces a Qube with the result of its
-        as_index_and_mask() method.
+        The code also replaces a Qube with the result of its as_index_and_mask()
+        method.
         """
 
         # Replace a Qube with its index equivalent
