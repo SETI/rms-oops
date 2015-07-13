@@ -486,6 +486,8 @@ class Observation(object):
                 body_data['range']         The range in km
                 body_data['outer_radius']  The outer radius of the body in km
                 body_data['inner_radius']  The inner radius of the body in km
+                body_data['resolution']    The resolution (km/pix) in the (U,V)
+                                           directions at the given range.
                 body_data['u_min']         The minimum U value covered by the
                                            body (clipped to the FOV size) 
                 body_data['u_max']         The maximum U value covered by the
@@ -574,6 +576,9 @@ class Observation(object):
                 body_data['range'] = ranges[i]
                 body_data['outer_radius'] = radii[i]
                 body_data['inner_radius'] = inner_radii[i]
+                u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
+                v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
+                body_data['resolution'] = Pair.from_scalars(u_res, v_res)
                 u = body_uv[i][0]
                 v = body_uv[i][1]
                 body_data['u_min_unclipped'] = np.floor(

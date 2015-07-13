@@ -62,6 +62,7 @@ class OffsetFOV(FOV, Fittable):
         self.uv_shape = self.fov.uv_shape
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
+        self.uv_los = self.fov.uv_los - self.uv_offset
 
         # Required attributes for Fittable
         self.nparams = 2

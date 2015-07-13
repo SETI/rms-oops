@@ -48,6 +48,7 @@ class PosTarg(Frame):
         self.frame_id  = id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
+        self.shape     = self.reference.shape
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
