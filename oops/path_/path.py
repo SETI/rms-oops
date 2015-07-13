@@ -1300,7 +1300,7 @@ class QuickPath(Path):
             vel_values[count0+old_size:,:] = event1.vel.values
 
         # Generate the new events
-        self.times = np.arange(new_t0, new_t1 + self.dt/2., self.dt)
+        self.times = np.arange(new_size) * self.dt + new_t0
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
 

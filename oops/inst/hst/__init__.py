@@ -294,7 +294,9 @@ class HST(object):
         # Don't forget to rotate POS TARG values to the proper y-axis!
         # The values of POS TARG are defined relative to the y-axis of the
         # aperture (aka "v"), not the y-axis of the frame.
+
         uv_center = fov.uv_from_xy((0,0))
+        uv_center.insert_deriv('uv', Pair.IDENTITY, override=True)
         xy_center = fov.xy_from_uv(uv_center, derivs=True)
 
         v_wrt_y = np.arctan(xy_center.d_duv.vals[0,1] /
@@ -308,7 +310,7 @@ class HST(object):
 
         frame_id = hst_file[0].header["FILENAME"]
         frame = oops.frame.PosTarg(xpos_corrected, ypos_corrected,
-                                   reference.frame_id, frame_id)
+                                   reference.frame, frame_id)
 
         return frame_id
 
