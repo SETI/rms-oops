@@ -114,4 +114,12 @@ class LOGGING(object):
         LOGGING.prefix = prefix
 
 ################################################################################
+# Aberration method (for backward compatibility)
+################################################################################
+
+class ABERRATION(object):
+    old = False                 # Change to True for previous, incorrect
+                                # interpretation of the C matrices.
+
+################################################################################
 

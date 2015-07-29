@@ -256,8 +256,8 @@ class Backplane(object):
         dest = self.get_surface_event(event_key[1:])
         surface = Backplane.get_surface(event_key[0])
 
-        new_arr_ap = dest.arr_ap.insert_deriv('los', Vector3.IDENTITY,
-                                                     override=True)
+        new_arr_ap = dest.arr_ap.clone()
+        new_arr_ap.insert_deriv('los', Vector3.IDENTITY, override=True)
         dest = dest.replace('arr_ap', new_arr_ap)
         event = surface.photon_to_event(dest, derivs=True)[0]
 
@@ -309,7 +309,7 @@ class Backplane(object):
         """Return the specified event with arrival photons filled in."""
 
         event = self.get_surface_event(event_key)
-        if event.arr == Empty():
+        if event.arr is None:
             new_event = AliasPath('SUN').photon_to_event(event)[1]
             new_event.event_key = event.event_key
             new_event.surface = event.surface
@@ -350,7 +350,7 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         event = self.get_gridless_event(event_key)
-        if event.arr == Empty():
+        if event.arr is None:
             new_event = AliasPath('SUN').photon_to_event(event)[1]
             new_event.event_key = event.event_key
             new_event.surface = event.surface
@@ -688,7 +688,7 @@ class Backplane(object):
             else:
                 event = self.get_surface_event(event_key)
 
-            lt = event.subfields[direction + '_lt']
+            lt = event.get_subfield(direction + '_lt')
             self.register_backplane(key, abs(lt))
 
         return self.backplanes[key]
@@ -1264,8 +1264,8 @@ class Backplane(object):
 
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
-            arr_ap = event.neg_arr_ap
-            lon = arr_ap.to_scalar(1).arctan2(arr_ap.to_scalar(0)) % \
+            neg_arr_ap = -event.apparent_arr()  # for ABERRATION=old or new
+            lon = neg_arr_ap.to_scalar(1).arctan2(neg_arr_ap.to_scalar(0)) % \
                   constants.TWOPI
 
             self.register_gridless_backplane(key, lon)
@@ -1284,7 +1284,7 @@ class Backplane(object):
 
         if key not in self.backplanes:
             event = self.get_gridless_event(event_key)
-            dep_ap = event.dep_ap
+            dep_ap = event.apparent_dep()  # for ABERRATION=old or new
             lon = dep_ap.to_scalar(1).arctan2(dep_ap.to_scalar(0)) % \
                   constants.TWOPI
 
@@ -1319,7 +1319,7 @@ class Backplane(object):
         key = ('sub_solar_latitude', event_key, lat_type)
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
-            arr_ap = -event.apparent_arr()
+            arr_ap = -event.apparent_arr()  # for ABERRATION=old or new
 
             if lat_type == 'graphic':
                 arr_ap = arr_ap.element_mul(event.surface.unsquash_sq)
@@ -1367,14 +1367,14 @@ class Backplane(object):
             pole_j2000 = xform.rotate(Vector3.ZAXIS)
 
             # Define the vector to the observer in the J2000 frame
-            dep_ap = event.apparent_dep_ssb()
+            dep_j2000 = event.wrt_ssb().apparent_dep()
 
             # Construct a rotation matrix from J2000 to a frame in which the
             # Z-axis points along -dep and the J2000 pole is in the X-Z plane.
             # As it appears to the observer, the Z-axis points toward the body,
             # the X-axis points toward celestial north as projected on the sky,
             # and the Y-axis points toward celestial west (not east!).
-            rotmat = Matrix3.twovec(-dep_ap, 2, Vector3.ZAXIS, 0)
+            rotmat = Matrix3.twovec(-dep_j2000, 2, Vector3.ZAXIS, 0)
 
             # Rotate the body frame's Z-axis to this frame.
             pole = rotmat * pole_j2000
@@ -2698,8 +2698,9 @@ import unittest
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 UNITTEST_PRINT = True
-UNITTEST_LOGGING = True
-UNITTEST_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/W1573721822_1.IMG")
+UNITTEST_LOGGING = False
+UNITTEST_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                 "cassini/ISS/W1573721822_1.IMG")
 UNITTEST_UNDERSAMPLE = 16
 
 def show_info(title, array):
@@ -2745,6 +2746,9 @@ def show_info(title, array):
 ####################################################
 
 class Test_Backplane(unittest.TestCase):
+
+    from oops.config import ABERRATION
+    ABERRATION.old = False
 
     def runTest(self):
 

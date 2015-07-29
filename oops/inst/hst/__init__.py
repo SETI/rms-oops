@@ -117,6 +117,12 @@ class HST(object):
         """Returns the full directory path and name of the file."""
 
         # Found by poking around inside a pyfits object
+
+        # astropy case
+        if hasattr(hst_file, '_file'):
+            return hst_file._file.name
+
+        # pyfits case
         return hst_file._HDUList__file._File__file.name
 
     def telescope_name(self, hst_file):

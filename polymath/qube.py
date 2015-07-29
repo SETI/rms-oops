@@ -175,6 +175,10 @@ class Qube(object):
 
         # Interpret the arg if it is a PolyMath object
         if isinstance(arg, Qube):
+            if (type(self).__name__ == 'Empty') ^ \
+               (type(arg).__name__ == 'Empty'):
+                raise ValueError('class %s cannot be converted to class %s' %
+                                 (type(arg).__name__, type(self).__name__))
             obj = arg
             arg = obj.__values_
 
@@ -2974,6 +2978,22 @@ class Qube(object):
         result = Qube.BOOLEAN_CLASS(compare)
         result.__truth_if_any_ = True
         return result
+
+    def __lt__(self, arg):
+        raise ValueError('comparison operators are not supported for class ' +
+                         type(self).__name__)
+
+    def __gt__(self, arg):
+        raise ValueError('comparison operators are not supported for class ' +
+                         type(self).__name__)
+
+    def __le__(self, arg):
+        raise ValueError('comparison operators are not supported for class ' +
+                         type(self).__name__)
+
+    def __gt__(self, arg):
+        raise ValueError('comparison operators are not supported for class ' +
+                         type(self).__name__)
 
     def __nonzero__(self):
         """Supports 'if a == b: ...' and 'if a != b: ...' statements.

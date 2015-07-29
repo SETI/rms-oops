@@ -326,7 +326,7 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(aa.shape, (2,3,4,3))
     self.assertEqual(bb.shape, (2,3,4,3))
     self.assertEqual(cc.shape, (2,3,4,3))
-    self.assertEqual(d, Empty)
+    self.assertEqual(d, Empty())
     self.assertEqual(ee.shape, (2,3,4,3))
     self.assertEqual(ff, None)
 

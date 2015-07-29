@@ -836,8 +836,10 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     # Note that this will overwrite any registered ring of the same name
     body = Body(ring_name, barycenter.path, parent.ring_frame,
                 parent, parent)
+    body.apply_gravity(barycenter.gravity)
+
     shape = RingPlane(barycenter.path, parent.ring_frame, radii,
-                      gravity=parent.gravity)
+                      gravity=barycenter.gravity)
 
     body.apply_surface(shape, rmax, 0.)
 

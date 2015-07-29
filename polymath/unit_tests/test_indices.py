@@ -3,6 +3,7 @@
 ################################################################################
 
 from __future__ import division
+import warnings
 import numpy as np
 import unittest
 
@@ -21,6 +22,9 @@ class Test_Indices(unittest.TestCase):
             ret = []
             for index in indices:
                 ret.append(a[index])
+
+            # NOTE: can raise UserWarning:
+            #    Warning: converting a masked element to nan.
             return np.ma.array(ret)
 
         #
@@ -425,7 +429,8 @@ class Test_Indices(unittest.TestCase):
                                     (((0,0),(0,0)), ((1,2),(3,4)))),
                                    ((((False,True), (False,False))))))
 
-        self.assertRaises(ValueError, a.__getitem__, [slice(Ellipsis),Scalar(1,True)])
+        self.assertRaises(ValueError, a.__getitem__, [slice(Ellipsis),
+                                                      Scalar(1,True)])
 
 ################################################################################
 # Execute from command line...

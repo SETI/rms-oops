@@ -12,7 +12,7 @@ from qube import Qube
 class Empty(Qube):
     """An Empty object needed in some situations as the moral equivalent of
     "None", indicating that something is undefined or inapplicable. However, an
-    Empty object still responds to basic PolyMath methods. Any operation
+    Empty object still responds to basic PolyMath methods. Any math operation
     involving an Empty object returns an Empty object."""
 
     NRANK = 0           # the number of numerator axes.
@@ -89,6 +89,17 @@ class Empty(Qube):
     def __iand__(self, arg): return self
     def __ior__(self, arg): return self
     def __ixor__(self, arg): return self
+
+    # Comparison operators behave as expected
+
+    def __eq__(self, arg):
+        return isinstance(arg, Empty)
+
+    def __ne__(self, arg):
+        return not isinstance(arg, Empty)
+
+    def __nonzero__(self):
+        return False
 
 # Useful class constants
 

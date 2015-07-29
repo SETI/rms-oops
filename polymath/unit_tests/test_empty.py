@@ -46,27 +46,27 @@ class Test_Empty(unittest.TestCase):
 
         test = Scalar((1,2,3))
         test += empty
-        self.assertEqual(test, Empty)
+        self.assertEqual(test, Empty())
 
         test = Scalar((1,2,3))
         test -= empty
-        self.assertEqual(test, Empty)
+        self.assertEqual(test, Empty())
 
         test = Scalar((1,2,3))
         test *= empty
-        self.assertEqual(test, Empty)
+        self.assertEqual(test, Empty())
 
         test = Scalar((1,2,3))
         test /= empty
-        self.assertEqual(test, Empty)
+        self.assertEqual(test, Empty())
 
         test = Scalar((1,2,3))
         test //= empty
-        self.assertEqual(test, Empty)
+        self.assertEqual(test, Empty())
 
         test = Scalar((1,2,3))
         test %= empty
-        self.assertEqual(test, Empty)
+        self.assertEqual(test, Empty())
 
         self.assertEqual(empty + 0, Empty())
         self.assertEqual(empty - 0, Empty())
@@ -93,13 +93,13 @@ class Test_Empty(unittest.TestCase):
         self.assertEqual(bool ^ empty, Empty())
 
         empty &= bool
-        self.assertEqual(empty, Empty)
+        self.assertEqual(empty, Empty())
 
         empty |= bool
-        self.assertEqual(empty, Empty)
+        self.assertEqual(empty, Empty())
 
         empty ^= bool
-        self.assertEqual(empty, Empty)
+        self.assertEqual(empty, Empty())
 
         test = Boolean((True,False))
         test &= empty

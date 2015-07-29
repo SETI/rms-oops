@@ -439,7 +439,7 @@ class Frame(object):
             quickdict = quickdict.copy()
             quickdict.update(quick)
 
-        if not quickdict['use_quickframes']: return slowpath
+        if not quickdict['use_quickframes']: return self
 
         # Determine the time interval
         if type(time) in (list,tuple):

@@ -211,6 +211,7 @@ class SpicePath(Path):
             uses_spiceframe = True
         else:
             uses_spiceframe = False     # not a SpiceFrame
+            spice_frame_name = 'J2000'
 
         if uses_spiceframe:
             frame_id = spice.FRAME_TRANSLATION[spice_frame_name]

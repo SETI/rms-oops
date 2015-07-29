@@ -8,7 +8,7 @@ from polymath import *
 
 from oops.frame_.frame import Frame
 from oops.transform    import Transform
-from oops.config       import EVENT_CONFIG, LOGGING
+from oops.config       import EVENT_CONFIG, LOGGING, ABERRATION
 from oops.constants    import *
 
 class Event(object):
@@ -274,11 +274,8 @@ class Event(object):
         if self.__arr_ is None:
           if self.__arr_ap_ is not None:
             ignore = self.actual_arr(self)  # fills in the internal attribute
-          else:
-            self.__arr_ = Empty.EMPTY
-            self.__arr_ap_ = Empty.EMPTY
 
-        return self.__arr_      # returns Empty.EMPTY if still undefined
+        return self.__arr_                  # returns None if still undefined
 
     @arr.setter
     def arr(self, value):
@@ -288,6 +285,8 @@ class Event(object):
 
         self.__arr_ = Vector3.as_vector3(value).as_readonly()
 
+        if ABERRATION.old: self.__arr_ap_ = self.__arr_
+
         # Raise a ValueError if the shape is incompatible
         ignore = Qube.broadcasted_shape(self.shape, self.__arr_)
 
@@ -296,17 +295,20 @@ class Event(object):
 
     @property
     def arr_ap(self):
+        if ABERRATION.old: return self.__arr_
+
         if self.__arr_ap_ is None:
           if self.__arr_ is not None:
-            ignore = self.apparent_arr(self)  # fills in the internal attribute
-          else:
-            self.__arr_ = Empty.EMPTY
-            self.__arr_ap_ = Empty.EMPTY
+            ignore = self.apparent_arr()    # fills in the internal attribute
 
-        return self.__arr_ap_      # returns Empty.EMPTY if still undefined
+        return self.__arr_ap_               # returns None if still undefined
 
     @arr_ap.setter
     def arr_ap(self, value):
+        if ABERRATION.old:
+            self.arr = value
+            return
+
         if (self.__arr_ap_ is not None) or (self.__arr_ is not None):
             raise ValueError('arriving photons were already defined in ' + 
                              str(self))
@@ -336,10 +338,16 @@ class Event(object):
 
     @property
     def arr_ap_j2000(self):
+        if ABERRATION.old: return self.arr_j2000
+
         return self.ssb.arr_ap
 
     @arr_ap_j2000.setter
     def arr_ap_j2000(self, value):
+        if ABERRATION.old:
+            self.arr_j2000 = value
+            return
+
         ssb_event = self.ssb
 
         if self is ssb_event:
@@ -351,10 +359,7 @@ class Event(object):
 
     @property
     def arr_lt(self):
-        if self.__arr_lt_ is None:
-            self.__arr_lt_ = Empty.EMPTY
-
-        return self.__arr_lt_       # returns Empty.EMPTY if still undefined
+        return self.__arr_lt_               # returns None if still undefined
 
     @arr_lt.setter
     def arr_lt(self, value):
@@ -379,11 +384,8 @@ class Event(object):
         if self.__dep_ is None:
           if self.__dep_ap_ is not None:
             ignore = self.actual_dep(self)  # fills in the internal attribute
-          else:
-            self.__dep_ = Empty.EMPTY
-            self.__dep_ap_ = Empty.EMPTY
 
-        return self.__dep_          # returns Empty.EMPTY if still undefined
+        return self.__dep_                  # returns None if still undefined
 
     @dep.setter
     def dep(self, value):
@@ -393,6 +395,8 @@ class Event(object):
 
         self.__dep_ = Vector3.as_vector3(value).as_readonly()
 
+        if ABERRATION.old: self.__dep_ap_ = self.__dep_
+
         # Raise a ValueError if the shape is incompatible
         ignore = Qube.broadcasted_shape(self.shape, self.__dep_)
 
@@ -401,17 +405,18 @@ class Event(object):
 
     @property
     def dep_ap(self):
+        if ABERRATION.old: return self.__dep_
+
         if self.__dep_ap_ is None:
           if self.__dep_ is not None:
-            ignore = self.apparent_dep(self)  # fills in the internal attribute
-          else:
-            self.__dep_ = Empty.EMPTY
-            self.__dep_ap_ = Empty.EMPTY
+            ignore = self.apparent_dep()    # fills in the internal attribute
 
         return self.__dep_ap_
 
     @dep_ap.setter
     def dep_ap(self, value):
+        if ABERRATION.old: return self.__dep_
+
         if (self.__dep_ap_ is not None) or (self.__dep_ is not None):
             raise ValueError('departing photons were already defined in ' + 
                              str(self))
@@ -428,7 +433,7 @@ class Event(object):
     def dep_j2000(self):
         return self.ssb.dep
 
-    @arr_j2000.setter
+    @dep_j2000.setter
     def dep_j2000(self, value):
         ssb_event = self.ssb
 
@@ -441,10 +446,16 @@ class Event(object):
 
     @property
     def dep_ap_j2000(self):
+        if ABERRATION.old: return self.dep_j2000
+
         return self.ssb.dep_ap
 
     @dep_ap_j2000.setter
     def dep_ap_j2000(self, value):
+        if ABERRATION.old:
+            self.dep_j2000 = value
+            return
+
         ssb_event = self.ssb
 
         if self is ssb_event:
@@ -456,9 +467,6 @@ class Event(object):
 
     @property
     def dep_lt(self):
-        if self.__dep_lt_ is None:
-            self.__dep_lt_ = Empty.EMPTY
-
         return self.__dep_lt_
 
     @dep_lt.setter
@@ -494,6 +502,8 @@ class Event(object):
 
     @property
     def neg_arr_ap(self):
+        if ABERRATION.old: return self.neg_arr
+
         if self.__neg_arr_ap_ is None:
           self.__neg_arr_ap_ = -self.arr_ap
 
@@ -501,6 +511,10 @@ class Event(object):
 
     @neg_arr_ap.setter
     def neg_arr_ap(self, value):
+        if ABERRATION.old:
+            self.neg_arr = value
+            return
+
         value = Vector3.as_vector3(value).as_readonly()
         self.arr_ap = -value
         self.__neg_arr_ap_ = value
@@ -520,10 +534,16 @@ class Event(object):
 
     @property
     def neg_arr_ap_j2000(self):
+        if ABERRATION.old: return self.neg_arr_j2000
+
         return self.ssb.neg_arr_ap
 
     @neg_arr_ap_j2000.setter
     def neg_arr_ap_j2000(self, value):
+        if ABERRATION.old:
+            self.neg_arr_j2000 = value
+            return
+
         value = Vector3.as_vector3(value).as_readonly()
         self.ssb.arr_ap = -value
         self.ssb.__neg_arr_ap_ = value
@@ -537,9 +557,6 @@ class Event(object):
 
     @property
     def perp(self):
-        if self.__perp_ is None:
-            self.__perp_ = Empty.EMPTY
-
         return self.__perp_
 
     @perp.setter
@@ -1345,6 +1362,10 @@ class Event(object):
                         EVENT_CONFIG.
         """
 
+        def without_derivs(arg):
+            if arg is None: return arg
+            return arg.without_derivs()
+
         if self.__time_.shape == (): return self
         if self.__time_.derivs: return self
 
@@ -1364,8 +1385,38 @@ class Event(object):
             print tmin, tmax - tmin
 
         midtime = Scalar((tmin + tmax)/2., collapsed_mask, self.__time_.units)
-        return Event(midtime, self.__state_, self.__origin_, self.__frame_,
-                              **self.__subfields_)
+
+        result = Event(midtime, self.__state_, self.__origin_, self.__frame_,
+                                **self.__subfields_)
+
+        if recursive:
+            result.__arr_    = self.__arr_
+            result.__dep_    = self.__dep_
+            result.__arr_ap_ = self.__arr_ap_
+            result.__dep_ap_ = self.__dep_ap_
+            result.__arr_lt_ = self.__arr_lt_
+            result.__dep_lt_ = self.__dep_lt_
+            result.__vflat_  = self.__vflat_
+            result.__perp_   = self.__perp_
+        else:
+            result.__arr_    = without_derivs(self.__arr_)
+            result.__dep_    = without_derivs(self.__dep_)
+            result.__arr_ap_ = without_derivs(self.__arr_ap_)
+            result.__dep_ap_ = without_derivs(self.__dep_ap_)
+            result.__arr_lt_ = without_derivs(self.__arr_lt_)
+            result.__dep_lt_ = without_derivs(self.__dep_lt_)
+            result.__vflat_  = without_derivs(self.__vflat_)
+            result.__perp_   = without_derivs(self.__perp_)
+
+        if self.__ssb_ is None:
+            result.__ssb_ = None
+        elif self.__ssb_ is self:
+            result.__ssb_ = result
+        else:
+            result.__ssb_ = self.collapse_time(self.__ssb_, threshold=threshold,
+                                                            recursive=recursive)
+
+        return result
 
     ############################################################################
     # Event subtraction
@@ -1428,7 +1479,7 @@ class Event(object):
     ############################################################################
 
     def apparent_ray_ssb(self, ray_ssb, derivs=False, quick={}):
-        """Apparent direction of a photon in the SSB/J2000 frame.
+        """Apparent direction of a photon in the SSB/J2000 frame. Not cached.
 
         Input:
             ray_ssb     the true direction of a light ray in the SSB/J2000
@@ -1473,7 +1524,7 @@ class Event(object):
         return ray_ssb - (factor * C_INVERSE) * ray_ssb_norm * vel_ssb
 
     def actual_ray_ssb(self, ray_ap_ssb, derivs=False, quick={}):
-        """Actual direction of a photon in the SSB/J2000 frame.
+        """Actual direction of a photon in the SSB/J2000 frame. Not cached.
 
         Input:
             ray_ap_ssb  the apparent direction of a light ray in the SSB/J2000
@@ -1517,7 +1568,7 @@ class Event(object):
         return ray_ssb
 
     def apparent_arr(self, derivs=False, quick={}):
-        """Apparent direction of an arriving ray in the event frame.
+        """Apparent direction of an arriving ray in the event frame. Cached.
 
         Input:
             derivs      True to include the derivatives of the light ray in the
@@ -1529,7 +1580,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if self.__arr_ap_ is not None:
+        if not ABERRATION.old and self.__arr_ap_ is not None:
             if derivs:
                 return self.__arr_ap_
             else:
@@ -1547,7 +1598,8 @@ class Event(object):
             arr_ap = arr_ap_ssb
 
         # Cache the result
-        self.__arr_ap_ = arr_ap
+        if not ABERRATION.old:
+            self.__arr_ap_ = arr_ap
 
         if derivs:
             return arr_ap
@@ -1555,7 +1607,7 @@ class Event(object):
             return arr_ap.without_derivs()
 
     def actual_arr(self, derivs=False, quick={}):
-        """Actual direction of an arriving ray in the event frame.
+        """Actual direction of an arriving ray in the event frame. Cached
 
         Input:
             derivs      True to include the derivatives of the light ray in the
@@ -1567,7 +1619,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if self.__arr_ is not None:
+        if not ABERRATION.old and self.__arr_ is not None:
             if derivs:
                 return self.__arr_
             else:
@@ -1585,7 +1637,8 @@ class Event(object):
             arr = arr_ssb
 
         # Cache the result
-        self.__arr_ = arr
+        if not ABERRATION.old:
+            self.__arr_ = arr
 
         if derivs:
             return arr
@@ -1593,7 +1646,7 @@ class Event(object):
             return arr.without_derivs()
 
     def apparent_dep(self, derivs=False, quick={}):
-        """Apparent direction of a departing ray in the event frame.
+        """Apparent direction of a departing ray in the event frame. Cached.
 
         Input:
             derivs      True to include the derivatives of the light ray in the
@@ -1605,7 +1658,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if self.__dep_ap_ is not None:
+        if not ABERRATION.old and self.__dep_ap_ is not None:
             if derivs:
                 return self.__dep_ap_
             else:
@@ -1623,7 +1676,8 @@ class Event(object):
             dep_ap = dep_ap_ssb
 
         # Cache the result
-        self.__dep_ap_ = dep_ap
+        if not ABERRATION.old:
+            self.__dep_ap_ = dep_ap
 
         if derivs:
             return dep_ap
@@ -1631,7 +1685,7 @@ class Event(object):
             return dep_ap.without_derivs()
 
     def actual_dep(self, derivs=False, quick={}):
-        """Actual direction of a departing ray in the event frame.
+        """Actual direction of a departing ray in the event frame. Cached.
 
         Input:
             derivs      True to include the derivatives of the light ray in the
@@ -1643,7 +1697,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if self.__dep_ is not None:
+        if not ABERRATION.old and self.__dep_ is not None:
             if derivs:
                 return self.__dep_
             else:
@@ -1661,14 +1715,15 @@ class Event(object):
             dep = dep_ssb
 
         # Cache the result
-        self.__dep_ = dep
+        if not ABERRATION.old:
+            self.__dep_ = dep
 
         if derivs:
             return dep
         else:
             return dep.without_derivs()
 
-    def incidence_angle(self, apparent=True, derivs=False, quick={}):
+    def incidence_angle(self, apparent=False, derivs=False, quick={}):
         """The incidence angle.
 
         The incidence angle is measured between the surface normal and the
@@ -1685,6 +1740,12 @@ class Event(object):
         """
 
         ignore = self.wrt_ssb(derivs=True, quick=quick)
+
+        if self.arr is None:
+            raise ValueError('Undefined arrival vector in ' + str(self))
+
+        if self.perp is None:
+            raise ValueError('Undefined perpendicular vector in ' + str(self))
 
         if apparent:
             arr = self.arr_ap
@@ -1711,6 +1772,12 @@ class Event(object):
 
         ignore = self.wrt_ssb(derivs=True, quick=quick)
 
+        if self.dep is None:
+            raise ValueError('Undefined departure vector in ' + str(self))
+
+        if self.perp is None:
+            raise ValueError('Undefined perpendicular vector in ' + str(self))
+
         if apparent:
             dep = self.dep_ap
         else:
@@ -1735,6 +1802,12 @@ class Event(object):
         """
 
         ignore = self.wrt_ssb(derivs=True, quick=quick)
+
+        if self.arr is None:
+            raise ValueError('Undefined arrival vector in ' + str(self))
+
+        if self.dep is None:
+            raise ValueError('Undefined departure vector in ' + str(self))
 
         if apparent:
             dep = self.dep_ap
@@ -1778,16 +1851,24 @@ class Event(object):
             event = self.wrt_frame(frame, derivs=derivs, quick=quick)
 
         # Calculate the ray in J2000
-        if apparent:
-            if subfield == 'arr':
-                ray = event.neg_arr_ap
-            else:
-                ray = event.dep_ap
-        else:
+        if not apparent:
             if subfield == 'arr':
                 ray = event.neg_arr
             else:
                 ray = event.dep
+        elif ABERRATION.old:
+            if subfield == 'arr':
+                ray = -event.apparent_arr(derivs=derivs, quick=quick)
+            else:
+                ray = event.apparent_dep(derivs=derivs, quick=quick)
+        else:
+            if subfield == 'arr':
+                ray = event.neg_arr_ap
+            else:
+                ray = event.dep_ap
+
+        if ray is None:
+            raise ValueError('Undefined light ray vector in ' + str(self))
 
         # Convert to RA and dec
         return ray.to_ra_dec_length(derivs)[:2]
@@ -1849,6 +1930,7 @@ class Test_Event(unittest.TestCase):
         # Incoming aberration in the side direction
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.arr = -Vector3.YAXIS
+        print 11111, Vector3.XAXIS.sep(ev.neg_arr_ap) - (HALFPI-BETA)
         self.assertTrue(abs(Vector3.XAXIS.sep(ev.neg_arr_ap) - (HALFPI-BETA)) < DEL)
 
         # Outgoing aberration in the forward direction

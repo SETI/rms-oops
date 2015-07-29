@@ -379,7 +379,7 @@ class Surface(object):
             if span <= collapse_threshold:
                 if LOGGING.surface_time_collapse:
                     print LOGGING.prefix, "Surface.collapse_time()",
-                    print tmin, tmax - tmin    
+                    print tmin, tmax - tmin
                 new_lt = Scalar((tmin + tmax)/2., collapsed_mask, new_lt.units)
             
             dlt = new_lt - lt

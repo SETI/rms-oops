@@ -193,7 +193,6 @@ class Transform(object):
         """
 
         if pos is None: return None
-        if pos == Empty(): return pos
 
         if not isinstance(pos, Qube):
             pos = Vector3.as_vector3(pos)
@@ -255,7 +254,6 @@ class Transform(object):
         """
 
         if pos is None: return None
-        if pos == Empty(): return pos
 
         if not isinstance(pos, Qube):
             pos = Vector3.as_vector3(pos)

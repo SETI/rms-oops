@@ -262,7 +262,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
 
     if include_calibration:
         spectral_name = target_name
-        if parameters.has_key('calib_body'):
+        if 'calib_body' in parameters:
             spectral_name = parameters['calib_body']
 
         # Look up the solar range...
@@ -336,12 +336,12 @@ class LORRI(object):
     #   August 2006. JPL IOM 343L-11-002.
     # These polynomials convert from X,Y (radians) to U,V (pixels).
 
-    LORRI_F = 2619.008    # mm
-    LORRI_E2 = 2.696e-5   # / mm2
-    LORRI_E5 = 1.988e-5   # / mm
-    LORRI_E6 = -2.864e-5  # / mm
-    LORRI_KX = 76.9231    # samples/mm
-    LORRI_KY = -76.9231   # lines/mm
+    LORRI_F  =  2619.008    # mm
+    LORRI_E2 =  2.696e-5    # / mm2
+    LORRI_E5 =  1.988e-5    # / mm
+    LORRI_E6 = -2.864e-5    # / mm
+    LORRI_KX =  76.9231     # samples/mm
+    LORRI_KY = -76.9231     # lines/mm
     
     LORRI_COEFF = np.zeros((4,4,2))
     LORRI_COEFF[1,0,0] = LORRI_KX          * LORRI_F
@@ -366,14 +366,16 @@ class LORRI(object):
     #   V DIFF MIN MAX -0.00263250108583 0.00209864359397
 
     LORRI_INV_COEFF = np.zeros((4,4,2))
-    LORRI_INV_COEFF[:,:,0] = [[  5.62144901e-10,  1.80741669e-15, -3.62872755e-15, -7.65201036e-21],
-                              [  4.96369475e-06,  1.27370808e-12, -2.24498555e-14,  0.00000000e+00],
-                              [  1.83505816e-12,  1.87593608e-18,  0.00000000e+00,  0.00000000e+00],
-                              [ -2.24714913e-14,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-    LORRI_INV_COEFF[:,:,1] = [[ -3.90196341e-10, -4.96369475e-06, -1.27377633e-12,  2.24721956e-14],
-                              [ -1.96689309e-15, -1.83495964e-12, -1.87499462e-18,  0.00000000e+00],
-                              [  2.51861242e-15,  2.24491504e-14,  0.00000000e+00,  0.00000000e+00],
-                              [  7.85425602e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+    LORRI_INV_COEFF[:,:,0] = [
+        [  5.62144901e-10,  1.80741669e-15, -3.62872755e-15, -7.65201036e-21],
+        [  4.96369475e-06,  1.27370808e-12, -2.24498555e-14,  0.00000000e+00],
+        [  1.83505816e-12,  1.87593608e-18,  0.00000000e+00,  0.00000000e+00],
+        [ -2.24714913e-14,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+    LORRI_INV_COEFF[:,:,1] = [
+        [ -3.90196341e-10, -4.96369475e-06, -1.27377633e-12,  2.24721956e-14],
+        [ -1.96689309e-15, -1.83495964e-12, -1.87499462e-18,  0.00000000e+00],
+        [  2.51861242e-15,  2.24491504e-14,  0.00000000e+00,  0.00000000e+00],
+        [  7.85425602e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
 
     @staticmethod
     def initialize(asof=None, time=None, meta=None):

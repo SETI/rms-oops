@@ -200,7 +200,7 @@ class Observation(object):
         """Deletes a subfield, but not arr or dep."""
 
 #         if key in ('arr','dep'):
-#             self.subfields[key] = Empty()
+#             self.subfields[key] = None
 #             self.__dict__[key] = self.subfields[key]
 #         elif self.subfields.has_key(key):
 #             del self.subfields[key]

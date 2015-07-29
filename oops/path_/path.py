@@ -634,31 +634,24 @@ class Path(object):
 
         # Fill in the key subfields
         if sign > 0:
-            ray_vector = (path_pos_ssb - link_pos_ssb).as_readonly()
+            ray_vector_ssb = (path_pos_ssb - link_pos_ssb).as_readonly()
         else:
-            ray_vector = (link_pos_ssb - path_pos_ssb).as_readonly()
+            ray_vector_ssb = (link_pos_ssb - path_pos_ssb).as_readonly()
 
-        path_event_ssb.insert_subfield(path_key, ray_vector)
-        link_event_ssb.insert_subfield(link_key, ray_vector)
+        path_event_ssb.insert_subfield(path_key, ray_vector_ssb)
+        link_event_ssb.insert_subfield(link_key, ray_vector_ssb)
 
-        lt = ray_vector.norm(derivs) / signed_c
+        lt = ray_vector_ssb.norm(derivs) / signed_c
         path_event_ssb.insert_subfield(path_key + '_lt', -lt)
         link_event_ssb.insert_subfield(link_key + '_lt',  lt)
 
         # Transform the path event into its origin and frame
-        path_event = path_event_ssb.wrt(self, self.frame,
-                                        derivs=derivs, quick=quick)
-        path_event.filled_ssb = path_event_ssb
+        path_event = path_event_ssb.from_ssb(self, self.frame,
+                                             derivs=derivs, quick=quick)
 
         # Transform the light ray into the link's frame
-        link_frame = link.frame.wrt(Frame.J2000)
-        link_xform = link_frame.transform_at_time(link.time, quick=quick)
-        ray_rotated = link_xform.rotate(ray_vector, derivs=derivs)
-
-        new_link = link.clone()
-        new_link.insert_subfield(link_key, ray_rotated)
-        new_link.insert_subfield(link_key + '_lt', lt)
-        new_link.filled_ssb = link_event_ssb
+        new_link = link.replace(link_key + '_j2000', ray_vector_ssb,
+                                link_key + '_lt', lt)
 
         return (path_event, new_link)
 
@@ -888,8 +881,8 @@ class Waypoint(Path):
         self.keys     = set()
 
     def event_at_time(self, time, quick=False):
-        return Event(time, (Vector3.ZERO, Vector3.ZERO),
-                           self.origin, self.frame)
+        return Event(time, (Vector3.ZERO, Vector3.ZERO), self.origin,
+                                                         self.frame)
 
     # Registration does nothing
     def register(self):
