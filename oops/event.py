@@ -1930,7 +1930,6 @@ class Test_Event(unittest.TestCase):
         # Incoming aberration in the side direction
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.arr = -Vector3.YAXIS
-        print 11111, Vector3.XAXIS.sep(ev.neg_arr_ap) - (HALFPI-BETA)
         self.assertTrue(abs(Vector3.XAXIS.sep(ev.neg_arr_ap) - (HALFPI-BETA)) < DEL)
 
         # Outgoing aberration in the forward direction

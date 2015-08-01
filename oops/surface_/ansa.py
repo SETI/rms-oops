@@ -220,10 +220,6 @@ class Ansa(Surface):
 
         pos = obs + t * los
 
-        mask = (t < 0.)
-        pos = pos.mask_where(mask)
-        t = t.mask_where(mask)
-
         return (pos, t)
 
     def normal(self, pos, derivs=False):

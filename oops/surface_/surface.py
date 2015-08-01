@@ -284,7 +284,7 @@ class Surface(object):
         precision = converge['dlt_precision']
         limit = converge['dlt_limit']
         collapse_threshold = converge['collapse_threshold']
-        
+
         # Interpret the quick parameters
         if type(quick) == dict:
             quick = quick.copy()
@@ -369,7 +369,7 @@ class Surface(object):
                                                        guess=new_lt)
 
             new_lt = new_lt.clip(lt_min, lt_max, False)
-            
+
             tmin = new_lt.min()
             tmax = new_lt.max()
             span = tmax - tmin
@@ -381,7 +381,7 @@ class Surface(object):
                     print LOGGING.prefix, "Surface.collapse_time()",
                     print tmin, tmax - tmin
                 new_lt = Scalar((tmin + tmax)/2., collapsed_mask, new_lt.units)
-            
+
             dlt = new_lt - lt
             lt = new_lt
 
@@ -390,7 +390,8 @@ class Surface(object):
             max_dlt = abs(dlt).max()
 
             if LOGGING.surface_iterations:
-                print LOGGING.prefix, "Surface._solve_photon", iter, max_dlt
+                print LOGGING.prefix, "Surface._solve_photon_by_los",
+                print iter, max_dlt
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt or \
                max_dlt == Scalar.MASKED:
@@ -412,7 +413,7 @@ class Surface(object):
             lt = lt.remask(mask)
         except ValueError:
             pass
-        
+
         surface_time = link_time + lt
 
         # Put the derivatives back if necessary
@@ -699,7 +700,8 @@ class Surface(object):
             max_dlt = abs(dlt).max()
 
             if LOGGING.surface_iterations:
-                print LOGGING.prefix, "Surface._solve_photon", iter, max_dlt
+                print LOGGING.prefix, "Surface._solve_photon_by_coords",
+                print iter, max_dlt
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt or \
                max_dlt == Scalar.MASKED:

@@ -878,6 +878,8 @@ class Test_Body(unittest.TestCase):
         Frame.reset_registry()
         Body.reset_registry()
 
+        from body import define_solar_system
+
         define_solar_system("2000-01-01", "2010-01-01")
 
         self.assertEqual(Body.lookup("DAPHNIS").barycenter.name,

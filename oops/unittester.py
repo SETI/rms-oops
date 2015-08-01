@@ -12,7 +12,7 @@ from oops.obs_.unittester     import *
 from oops.path_.unittester    import *
 from oops.surface_.unittester import *
 
-# from oops.backplane  import Test_Backplane
+from oops.backplane  import Test_Backplane
 from oops.body       import Test_Body
 from oops.event      import Test_Event
 from oops.transform  import Test_Transform
