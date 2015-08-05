@@ -15,7 +15,7 @@ class PosTarg(Frame):
     """
 
     def __init__(self, xpos, ypos, reference, id=None):
-        """Constructor for a Rotation Frame.
+        """Constructor for a PosTarg Frame.
 
         Input:
             xpos        the X-position of the reference frame's Z-axis in this

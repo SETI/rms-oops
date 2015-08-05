@@ -210,7 +210,7 @@ class OrbitPlane(Surface):
 
         return self.ringplane.vector3_from_coords(coords, obs, derivs=derivs)
 
-    def intercept(self, obs, los, derivs=False, t_guess=None):
+    def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
@@ -226,7 +226,7 @@ class OrbitPlane(Surface):
                             position = obs + t * los
         """
 
-        return self.ringplane.intercept(obs, los, derivs=derivs, t_guess=None)
+        return self.ringplane.intercept(obs, los, derivs=derivs, guess=None)
 
     def normal(self, pos, derivs=False):
         """The normal vector at a position at or near a surface.
@@ -285,11 +285,11 @@ class OrbitPlane(Surface):
             cos_lon_sub_peri = x/r
             sin_lon_sub_peri = y/r
 
-            dr_dt = (self.ae * self.n_sub_prec) * sin_lon_sub_peri
-            r_dlon_dt = self.n_sub_prec * r * (1 + 2*self.ae * cos_lon_sub_peri)
+            dr_dt = sin_lon_sub_peri * (self.ae * self.n_sub_prec)
+            r_dlon_dt = (cos_lon_sub_peri * 2*self.ae + 1) * self.n_sub_prec * r
 
-            dx_dt = dr_dt * cos_lon_sub_peri - r_dlon_dt * sin_lon_sub_peri
-            dy_dt = dr_dt * sin_lon_sub_peri + r_dlon_dt * cos_lon_sub_peri
+            dx_dt = cos_lon_sub_peri * dr_dt - sin_lon_sub_peri * r_dlon_dt
+            dy_dt = sin_lon_sub_peri * dr_dt + cos_lon_sub_peri * r_dlon_dt
 
             return Vector3.from_scalars(dx_dt, dy_dt, 0.)
 
