@@ -33,7 +33,7 @@ class Path(object):
                         registered paths, this is the Waypoint object with
                         the same ID, as it appears in the WAYPOINT_REGISTRY
                         dictionary. If a path is not registered, then its
-                        wayframe attribute should point to itself.
+                        waypoint attribute should point to itself.
             origin      the origin waypoint, relative to which this Path is
                         defined.
             frame       the wayframe identifying the frame used by the event

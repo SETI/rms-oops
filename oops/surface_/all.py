@@ -9,7 +9,7 @@ from oops.surface_.ansa         import Ansa
 from oops.surface_.ellipsoid    import Ellipsoid
 from oops.surface_.limb         import Limb
 from oops.surface_.nullsurface  import NullSurface
-# from oops.surface_.orbitplane   import OrbitPlane
+from oops.surface_.orbitplane   import OrbitPlane
 from oops.surface_.polarlimb    import PolarLimb
 from oops.surface_.ringplane    import RingPlane
 from oops.surface_.spheroid     import Spheroid

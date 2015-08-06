@@ -746,6 +746,22 @@ class Qube(object):
         # Return a fast copy without derivatives
         return self.clone(False)
 
+    def without_deriv(self, key):
+        """Return a shallow copy of this object without a particular derivative.
+
+        A read-only object remains read-only.
+
+        Input:
+            key         the key of the derivative to remove.
+        """
+
+        if key not in self.__derivs_: return self
+
+        result = self.clone(recursive=True)
+        del result.__derivs_[key]
+
+        return result
+
     ############################################################################
     # Unit operations
     ############################################################################

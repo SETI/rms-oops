@@ -63,8 +63,8 @@ class OrbitPlane(Surface):
             id          the ID under which to register the orbit path; None to
                         leave it unregistered
 
-        Note that the origin_id and frame_id used by the returned OrbitPlane
-        object will differ from those used to define it here. 
+        Note that the origin and frame used by the returned OrbitPlane object
+        will differ from those used to define it here.
         """
 
         # Save the initial center path and frame. The frame should be inertial.
@@ -103,7 +103,7 @@ class OrbitPlane(Surface):
                                                 self.internal_frame,
                                                 True,         # despin
                                                 id = frame_id)
-            self.internal_frame = self.inclined_frame.wayframe
+            self.internal_frame = self.inclined_frame
         else:
             self.inclined_frame = None
 
@@ -129,15 +129,14 @@ class OrbitPlane(Surface):
             else:
                path_id = id + "_ECCENTRICITY"
 
-            self.peri_path = CirclePath(
-                                    elements[0] * elements[3],  # a*e
-                                    elements[4] + PI,           # apocenter
-                                    elements[5],                # precession
-                                    self.epoch,                 # epoch
-                                    self.internal_origin,       # origin
-                                    self.internal_frame,        # reference
-                                    id = path_id)
-            self.internal_origin = self.peri_path.waypoint
+            self.peri_path = CirclePath(elements[0] * elements[3],  # a*e
+                                        elements[4] + PI,           # apocenter
+                                        elements[5],                # precession
+                                        self.epoch,                 # epoch
+                                        self.internal_origin,       # origin
+                                        self.internal_frame,        # reference
+                                        id = path_id)
+            self.internal_origin = self.peri_path
 
             # The peri_path circulates around the initial origin but does not
             # rotate.
@@ -147,13 +146,13 @@ class OrbitPlane(Surface):
             else:
                 frame_id = id + "_PERICENTER"
 
-            self.spin_frame = SpinFrame(elements[4],            # pericenter
-                                        elements[5],            # precession
-                                        self.epoch,             # epoch
-                                        2,                      # z-axis
-                                        self.internal_frame,    # reference
+            self.spin_frame = SpinFrame(elements[4],                # pericenter
+                                        elements[5],                # precession
+                                        self.epoch,                 # epoch
+                                        2,                          # z-axis
+                                        self.internal_frame,        # reference
                                         id = frame_id)
-            self.internal_frame = self.spin_frame.wayframe
+            self.internal_frame = self.spin_frame
 
         else:
             self.peri_path = None
@@ -171,7 +170,7 @@ class OrbitPlane(Surface):
         self.origin = self.internal_origin.waypoint
         self.frame = self.internal_frame.wayframe
 
-    def coords_from_vector3(self, pos, obs, axes=2, derivs=False):
+    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
         """Convert positions in the internal frame to surface coordinates.
 
         Input:
@@ -279,14 +278,14 @@ class OrbitPlane(Surface):
             # dy/dy = dr/dt * sin(lon) + r cos(lon) dlon/dt
 
             (x,y,z) = pos.to_scalars()
-            x = x + self.ae        # shift origin to center of planet
+            x = x + self.ae         # shift origin to center of planet
 
             r = (x**2 + y**2).sqrt()
             cos_lon_sub_peri = x/r
             sin_lon_sub_peri = y/r
 
-            dr_dt = (self.ae * self.n_sub_prec) * sin_lon_sub_peri
-            r_dlon_dt = self.n_sub_prec * r * (1 + 2*self.ae * cos_lon_sub_peri)
+            dr_dt = sin_lon_sub_peri * (self.ae * self.n_sub_prec)
+            r_dlon_dt = r * self.n_sub_prec * (cos_lon_sub_peri * 2*self.ae + 1)
 
             dx_dt = dr_dt * cos_lon_sub_peri - r_dlon_dt * sin_lon_sub_peri
             dy_dt = dr_dt * sin_lon_sub_peri + r_dlon_dt * cos_lon_sub_peri
@@ -340,7 +339,7 @@ class OrbitPlane(Surface):
         prev_max_abs_dx = TWOPI
         max_abs_dx = PI
         while (max_abs_dx < prev_max_abs_dx):
-            dx = (lon - x - ae_x2 * x.sin()) / (1 + ae_x2 * x.cos())
+            dx = (lon - x - ae_x2 * x.sin()) / (x.cos() * ae_x2 + 1)
             x += dx
 
             prev_max_abs_dx = max_abs_dx
@@ -372,9 +371,9 @@ class Test_OrbitPlane(unittest.TestCase):
         l_true = Scalar([0, 0, PI, HALFPI])
         z_true = Scalar([0,0,0,0.1])
 
-        self.assertTrue(np.all(abs(r - r_true) < 1.e-12))
-        self.assertTrue(np.all(abs(l - l_true) < 1.e-12))
-        self.assertTrue(np.all(abs(z - z_true) < 1.e-12))
+        self.assertTrue(abs(r - r_true).max() < 1.e-12)
+        self.assertTrue(abs(l - l_true).max() < 1.e-12)
+        self.assertTrue(abs(z - z_true).max() < 1.e-12)
 
         # Circular orbit, no derivatives, reverse
         pos2 = orbit.vector3_from_coords((r, l, z), None, derivs=False)
@@ -435,19 +434,19 @@ class Test_OrbitPlane(unittest.TestCase):
         delta = 1.e-5
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        event = Event(0., (pos,Vector3.ZERO), "SSB", "J2000")
-        (r,l,z) = orbit.event_as_coords(event, derivs=False)
+        event = Event(0., (pos, Vector3.ZERO), "SSB", "J2000")
+        (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
         r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
         l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,ae)])
         z_true = Scalar([0,0,0,0.1])
 
-        self.assertTrue(abs(r - r_true) < delta)
-        self.assertTrue(abs(l - l_true) < delta)
-        self.assertTrue(abs(z - z_true) < delta)
+        self.assertTrue(abs(r - r_true).max() < delta)
+        self.assertTrue(abs(l - l_true).max() < delta)
+        self.assertTrue(abs(z - z_true).max() < delta)
 
         # Eccentric orbit, no derivatives, reverse
-        event2 = orbit.coords_as_event(event.time, (r,l,z))
+        event2 = orbit.event_at_coords(event.time, (r,l,z))
         self.assertTrue((pos - event.pos).norm().max() < 1.e-10)
         self.assertTrue((event.vel).norm().max() < 1.e-10)
 
@@ -464,18 +463,20 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
-            event = Event(0., (pos,vel), "SSB", "J2000")
-            (r,l,z) = orbit.event_as_coords(event, derivs=True)
+            event = Event(0., (pos, vel), "SSB", "J2000")
+            (r,l,z) = orbit.coords_of_event(event, derivs=True)
 
             event = Event(eps, (pos + vel*eps, vel), "SSB", "J2000")
-            (r1,l1,z1) = orbit.event_as_coords(event, derivs=False)
+            (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = (l1 - l) / eps
             dz_dt_test = (z1 - z) / eps
 
-            self.assertTrue(abs(r.d_dt - dr_dt_test).unmasked() < delta)
-            self.assertTrue(abs(l.d_dt - dl_dt_test).unmasked() < delta)
-            self.assertTrue(abs(z.d_dt - dz_dt_test).unmasked() < delta)
+            self.assertTrue(abs(r.d_dt - dr_dt_test).max() < delta)
+            self.assertTrue(abs(z.d_dt - dz_dt_test).max() < delta)
+
+            d_dl_dt = ((l.d_dt*eps - dl_dt_test*eps + PI) % TWOPI - PI) / eps
+            self.assertTrue(abs(d_dl_dt).max() < delta)
 
         # Eccentric orbit, with derivatives, reverse
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
@@ -483,18 +484,21 @@ class Test_OrbitPlane(unittest.TestCase):
         eps = 1.e-6
         delta = 1.e-5
 
+        r.insert_deriv('r', Scalar.ONE)
+        l.insert_deriv('l', Scalar.ONE)
+        z.insert_deriv('z', Scalar.ONE)
         pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
 
         pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
+        pos1_test = pos0 + eps * pos0.d_dr
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
+        pos1_test = pos0 + eps * pos0.d_dl
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
+        pos1_test = pos0 + eps * pos0.d_dz
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         # elements = (a, lon, n, e, peri, prec, i, node, regr)
@@ -515,20 +519,20 @@ class Test_OrbitPlane(unittest.TestCase):
         dz = 0.1
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
         event = Event(0., (pos, Vector3.ZERO), "SSB", "J2000")
-        (r,l,z) = orbit.event_as_coords(event, derivs=False)
+        (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
         r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])
         l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,dz*sini)])
         z_true = Scalar([-sini, -2*sini, sini, dz*cosi])
 
-        self.assertTrue(abs(r - r_true) < delta)
-        self.assertTrue(abs(l - l_true) < delta)
-        self.assertTrue(abs(z - z_true) < delta)
+        self.assertTrue(abs(r - r_true).max() < delta)
+        self.assertTrue(abs(l - l_true).max() < delta)
+        self.assertTrue(abs(z - z_true).max() < delta)
 
         # Inclined orbit, no derivatives, reverse
-        event2 = orbit.coords_as_event(event.time, (r,l,z))
-        self.assertTrue(abs(pos - event.pos) < 1.e-10)
-        self.assertTrue(abs(event.vel) < 1.e-10)
+        event2 = orbit.event_at_coords(event.time, (r,l,z))
+        self.assertTrue((pos - event.pos).norm().max() < 1.e-10)
+        self.assertTrue(event.vel.norm().max() < 1.e-10)
 
         # Inclined orbit, with derivatives, forward
         inc = 0.1
@@ -549,17 +553,17 @@ class Test_OrbitPlane(unittest.TestCase):
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
             event = Event(0., (pos, vel), "SSB", "J2000")
-            (r,l,z) = orbit.event_as_coords(event, derivs=True)
+            (r,l,z) = orbit.coords_of_event(event, derivs=True)
 
             event = Event(eps, (pos + vel*eps, vel), "SSB", "J2000")
-            (r1,l1,z1) = orbit.event_as_coords(event, derivs=False)
+            (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = ((l1 - l + PI) % TWOPI - PI) / eps
             dz_dt_test = (z1 - z) / eps
 
-            self.assertTrue(abs(r.d_dt - dr_dt_test).unmasked() < delta)
-            self.assertTrue(abs(l.d_dt - dl_dt_test).unmasked() < delta)
-            self.assertTrue(abs(z.d_dt - dz_dt_test).unmasked() < delta)
+            self.assertTrue(abs(r.d_dt - dr_dt_test).max() < delta)
+            self.assertTrue(abs(l.d_dt - dl_dt_test).max() < delta)
+            self.assertTrue(abs(z.d_dt - dz_dt_test).max() < delta)
 
         # Inclined orbit, with derivatives, reverse
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
@@ -567,18 +571,21 @@ class Test_OrbitPlane(unittest.TestCase):
         eps = 1.e-6
         delta = 1.e-5
 
+        r.insert_deriv('r', Scalar.ONE)
+        l.insert_deriv('l', Scalar.ONE)
+        z.insert_deriv('z', Scalar.ONE)
         pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
 
         pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(0)).as_vector3()
+        pos1_test = pos0 + eps * pos0.d_dr
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(1)).as_vector3()
+        pos1_test = pos0 + eps * pos0.d_dl
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
-        pos1_test = pos0 + (eps * pos0.d_dcoord.as_row(2)).as_vector3()
+        pos1_test = pos0 + eps * pos0.d_dz
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
         # From/to mean anomaly
@@ -590,7 +597,7 @@ class Test_OrbitPlane(unittest.TestCase):
         anoms = orbit.to_mean_anomaly(l)
 
         lons = orbit.from_mean_anomaly(anoms)
-        self.assertTrue(abs(lons - l) < 1.e-15)
+        self.assertTrue(abs(lons - l).max() < 1.e-15)
 
 ########################################
 if __name__ == '__main__':

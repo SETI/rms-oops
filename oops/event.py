@@ -153,7 +153,9 @@ class Event(object):
         else:
             self.__state_ = Vector3.as_vector3(state).as_readonly()
 
-        assert 't' in self.__state_.derivs.keys()
+        assert 't' in self.__state_.derivs
+
+        self.__pos_ = self.__state_.without_deriv('t')
 
         self.__origin_ = Event.PATH_CLASS().as_waypoint(origin)
         self.__frame_ = Frame.as_wayframe(frame) or origin.frame
@@ -199,7 +201,7 @@ class Event(object):
 
     @property
     def pos(self):
-        return self.__state_.without_derivs()
+        return self.__pos_
 
     @property
     def vel(self):
@@ -877,11 +879,11 @@ class Event(object):
         result.__dep_ap_  = remove_derivs(self.__dep_ap_)
         result.__dep_lt_  = remove_derivs(self.__dep_lt_)
 
-        result.__perp_    = remove_derivs(self.__perp_)
-        result.__vflat_   = remove_derivs(self.__vflat_)
-
         result.__neg_arr_    = remove_derivs(self.__neg_arr_)
         result.__neg_arr_ap_ = remove_derivs(self.__neg_arr_ap_)
+
+        result.__perp_    = remove_derivs(self.__perp_)
+        result.__vflat_   = remove_derivs(self.__vflat_)
 
         result.__shape_   = self.__shape_
         result.__mask_    = self.__mask_
@@ -917,11 +919,16 @@ class Event(object):
                        self.__origin_, self.__frame_)
 
         result.__arr_     = remove_mask(self.__arr_)
-        result.__dep_     = remove_mask(self.__dep_)
         result.__arr_ap_  = remove_mask(self.__arr_ap_)
-        result.__dep_ap_  = remove_mask(self.__dep_ap_)
         result.__arr_lt_  = remove_mask(self.__arr_lt_)
+
+        result.__dep_     = remove_mask(self.__dep_)
+        result.__dep_ap_  = remove_mask(self.__dep_ap_)
         result.__dep_lt_  = remove_mask(self.__dep_lt_)
+
+        result.__neg_arr_    = remove_mask(self.__neg_arr_)
+        result.__neg_arr_ap_ = remove_mask(self.__neg_arr_ap_)
+
         result.__perp_    = remove_mask(self.__perp_)
         result.__vflat_   = remove_mask(self.__vflat_)
 
@@ -967,11 +974,16 @@ class Event(object):
                        self.__origin_, self.__frame_)
 
         result.__arr_     = fully_masked(self.__arr_)
-        result.__dep_     = fully_masked(self.__dep_)
         result.__arr_ap_  = fully_masked(self.__arr_ap_)
-        result.__dep_ap_  = fully_masked(self.__dep_ap_)
         result.__arr_lt_  = fully_masked(self.__arr_lt_)
+
+        result.__dep_     = fully_masked(self.__dep_)
+        result.__dep_ap_  = fully_masked(self.__dep_ap_)
         result.__dep_lt_  = fully_masked(self.__dep_lt_)
+
+        result.__neg_arr_    = fully_masked(self.__neg_arr_)
+        result.__neg_arr_ap_ = fully_masked(self.__neg_arr_ap_)
+
         result.__perp_    = fully_masked(self.__perp_)
         result.__vflat_   = fully_masked(self.__vflat_)
 
@@ -1156,21 +1168,32 @@ class Event(object):
             else:
                 return self.without_derivs()
 
-        new_path = self.__origin_.wrt(path, path.frame)
-        result = new_path.add_to_event(self, derivs=derivs, quick=quick)
+        # Make sure frames match; make recursive calls to wrt() if needed
+        event = self
+        if self.frame.wayframe != path.frame.wayframe:
+            event = event.wrt(path, path.frame, derivs=derivs, quick=quick)
 
-        result.__arr_    = self.__arr_
-        result.__dep_    = self.__dep_
-        result.__arr_ap_ = self.__arr_ap_
-        result.__dep_ap_ = self.__dep_ap_
-        result.__arr_lt_ = self.__arr_lt_
-        result.__dep_lt_ = self.__dep_lt_
-        result.__vflat_  = self.__vflat_
-        result.__perp_   = self.__perp_
-        result.__ssb_    = self.__ssb_
+        new_path = event.__origin_.wrt(path, path.frame)
+        result = new_path.add_to_event(event, derivs=derivs, quick=quick)
 
-        result.__shape_ = self.__shape_
-        result.__mask_  = self.__mask_
+        result.__arr_    = event.__arr_
+        result.__arr_ap_ = event.__arr_ap_
+        result.__arr_lt_ = event.__arr_lt_
+
+        result.__dep_    = event.__dep_
+        result.__dep_ap_ = event.__dep_ap_
+        result.__dep_lt_ = event.__dep_lt_
+
+        result.__neg_arr_    = event.__neg_arr_
+        result.__neg_arr_ap_ = event.__neg_arr_ap_
+
+        result.__vflat_  = event.__vflat_
+        result.__perp_   = event.__perp_
+
+        result.__ssb_    = event.__ssb_
+
+        result.__shape_ = event.__shape_
+        result.__mask_  = event.__mask_
 
         if derivs:
             return result

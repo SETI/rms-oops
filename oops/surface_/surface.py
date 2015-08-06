@@ -178,6 +178,112 @@ class Surface(object):
         return Vector3.ZERO
 
     ############################################################################
+    # Event-coordinate conversions. Generally should not require overrides
+    ############################################################################
+
+    def coords_of_event(self, event, obs=None, axes=3, derivs=False):
+        """Coordinate values associated with an event near the surface.
+
+        Input:
+            event       an event occurring at or near the surface.
+            obs         observing event, which may occur at a different time.
+            axes        2 or 3, indicating whether to return a tuple of two or
+                        three Scalar objects.
+            derivs      a boolean or tuple of booleans. If True, then the
+                        partial derivatives of each coordinate are returned as
+                        well. Using a tuple, you can indicate whether to return
+                        time derivatives on a coordinate-by-coordinate basis.
+
+        Return:         coordinate values packaged as a tuple containing two or
+                        three unitless Scalars, one for each coordinate.
+        """
+
+        any_derivs = np.any(derivs)
+
+        # Locate the events WRT the surface frame
+        pos_wrt_surface = event.wrt(self.origin, self.frame,
+                                    derivs=any_derivs).state
+        if any_derivs:
+            pos_wrt_surface.insert_deriv('pos', Vector3.IDENTITY)
+        else:
+            pos_wrt_surface = pos_wrt_surface.without_derivs()
+
+        if obs is not None:
+            obs_wrt_surface = obs.wrt(self.origin, self.frame,
+                                      derivs=any_derivs).state
+            if any_derivs:
+                obs_wrt_surface.insert_deriv('obs', Vector3.IDENTITY)
+            else:
+                obs_wrt_surface = obs_wrt_surface.without_derivs()
+        else:
+            obs_wrt_surface = None
+
+        # Evaluate the coords and optional derivatives
+        coords = self.coords_from_vector3(pos_wrt_surface, obs=obs_wrt_surface,
+                                          axes=axes, derivs=any_derivs)
+
+        if not any_derivs: return coords
+
+        # Update the derivatives if necessary
+        if type(derivs) not in (tuple, list):
+            derivs = (derivs, derivs, derivs)
+
+        for i in range(3):
+            if not derivs[i]:
+                coords[i] = coords[i].without_derivs()
+
+        return coords
+
+    def event_at_coords(self, time, coords, obs=None, derivs=False):
+        """Converts a time and coordinates in the surface's internal coordinate
+        system into an event object.
+
+        Input:
+            time        the Scalar of time values at which to evaluate the
+                        coordinates.
+            coords      a tuple containing the two or three coordinate values.
+                        If only two are provided, the third is assumed to be
+                        zero.
+            obs         a Vector3 of observer positions. Needed for virtual
+                        surfaces; can be None otherwise.
+            derivs      If True, then the partial derivatives of the event
+                        position are returned as well.
+
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
+
+        Return:         an event object relative to the origin and frame of the
+                        surface.
+        """
+
+        # Interpret coords
+        if len(coords) == 2:
+            (coord1, coord2) = coords
+            coord3 = Scalar.ZERO
+        else:
+            (coord1, coord2, coord3) = coords
+
+        # Strip derivatives is necessary, but not d_dt
+        if not derivs:
+            coord1 = coord1.without_derivs(preserve='t')
+            coord2 = coord2.without_derivs(preserve='t')
+            coord3 = coord3.without_derivs(preserve='t')
+
+            if obs is not None:
+                obs = obs.without_derivs(preserve='t')
+
+        # Determine position and velocity
+        pos = self.vector3_from_coords((coord1, coord2, coord3), obs=obs,
+                                                                 derivs=True)
+        pos2 = Vector3(np.zeros(pos.values.shape))
+        pos2.insert_deriv('t', self.velocity(pos))
+
+        state = pos + pos2
+
+        # Return the event
+        return Event(time, state, self.origin, self.frame)
+
+    ############################################################################
     # Photon Solver based on line of sight
     ############################################################################
 
