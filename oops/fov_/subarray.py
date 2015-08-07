@@ -56,25 +56,32 @@ class Subarray(FOV):
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, derivs=False, **keywords):
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         If derivs is True, then any derivatives in (x,y) get propagated into
         the (u,v) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
         old_xy = self.fov.xy_from_uv(self.new_origin_in_old_uv + uv_pair,
-                                     derivs)
+                                     derivs, **keywords)
         return old_xy - self.new_los_wrt_old_xy
 
-    def uv_from_xy(self, xy_pair, derivs=False):
+    def uv_from_xy(self, xy_pair, derivs=False, **keywords):
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
-        old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair, derivs)
+        old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair,
+                                     derivs, **keywords)
         return old_uv - self.new_origin_in_old_uv
 
 ################################################################################

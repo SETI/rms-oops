@@ -199,13 +199,6 @@ class Observation(object):
     def delete_subfield(self, key):
         """Deletes a subfield, but not arr or dep."""
 
-#         if key in ('arr','dep'):
-#             self.subfields[key] = None
-#             self.__dict__[key] = self.subfields[key]
-#         elif self.subfields.has_key(key):
-#             del self.subfields[key]
-#             del self.__dict__[key]
-
         if key in self.subfields:
             del self.subfields[key]
             del self.__dict__[key]
@@ -214,9 +207,8 @@ class Observation(object):
         """Deletes all subfields."""
 
         for key in self.subfields:
-#            if key not in ('arr','dep'):
-                del self.subfields[key]
-                del self.__dict__[key]
+            del self.subfields[key]
+            del self.__dict__[key]
 
     ####################################################
     # Methods probably not requiring overrides

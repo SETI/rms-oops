@@ -25,6 +25,7 @@ class SliceFOV(FOV):
 
             shape       a single value, tuple or Pair defining the new shape of
                         the field of view in pixels.
+
         """
 
         self.fov = fov
@@ -36,23 +37,31 @@ class SliceFOV(FOV):
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, derivs=False, **keywords):
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         If derivs is True, then any derivatives in (x,y) get propagated into
         the (u,v) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
-        return self.fov.xy_from_uv(uv_pair + self.uv_origin, derivs=derivs)
+        return self.fov.xy_from_uv(uv_pair + self.uv_origin, derivs=derivs,
+                                                             **keywords)
 
-    def uv_from_xy(self, xy_pair, extras=(), derivs=False):
+    def uv_from_xy(self, xy_pair, extras=(), derivs=False, **keywords):
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
-        return self.fov.uv_from_xy(xy_pair, derivs=derivs) - self.origin
+        return self.fov.uv_from_xy(xy_pair, derivs=derivs, **keywords) - \
+               self.origin
 
 ################################################################################
 # UNIT TESTS

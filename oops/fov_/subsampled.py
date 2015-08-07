@@ -43,25 +43,33 @@ class Subsampled(FOV):
 
         assert self.rescale.element_mul(self.uv_shape) == self.fov.uv_shape
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, derivs=False, **keywords):
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         If derivs is True, then any derivatives in (x,y) get propagated into
         the (u,v) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
         uv_pair = Pair.as_pair(uv_pair, derivs)
-        return self.fov.xy_from_uv(self.rescale.element_mul(uv_pair), derivs)
+        return self.fov.xy_from_uv(self.rescale.element_mul(uv_pair),
+                                   derivs, **keywords)
 
-    def uv_from_xy(self, xy_pair, derivs=False):
+    def uv_from_xy(self, xy_pair, derivs=False, **keywords):
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
         xy_pair = Pair.as_pair(xy_pair, derivs)
-        return self.fov.uv_from_xy(xy_pair, derivs).element_div(self.rescale)
+        uv_pair = self.fov.uv_from_xy(xy_pair, derivs, **keywords)
+        uv_new = uv_pair.element_div(self.rescale)
 
         return uv_new
 

@@ -16,7 +16,7 @@ class OffsetFOV(FOV, Fittable):
     corrections.
     """
 
-    def __init__(self, fov, uv_offset=None, xy_offset=None, **keywords):
+    def __init__(self, fov, uv_offset=None, xy_offset=None):
         """Constructor for an OffsetFOV.
 
         Inputs:
@@ -30,15 +30,11 @@ class OffsetFOV(FOV, Fittable):
             xy_offset   an alternative input, in which the offset is given in
                         (x,y) coordinates rather than (u,v) coordinates.
 
-            **keywords  any additional keyword arguments needed by the reference
-                        FOV.
-
         Note that the Fittable interface uses the uv_offset, not the alternative
         xy_offset input parameters.
         """
 
         self.fov = fov
-        self.keywords = keywords
 
         # Deal with alternative inputs:
         assert (uv_offset is None) or (xy_offset is None)
@@ -69,27 +65,33 @@ class OffsetFOV(FOV, Fittable):
         self.param_name = 'uv_offset'
         self.cache = {}     # not used
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+    def xy_from_uv(self, uv_pair, derivs=False, **keywords):
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
         uv_pair = Pair.as_pair(uv_pair, derivs)
-        old_xy = self.fov.xy_from_uv(uv_pair, derivs, **self.keywords)
+        old_xy = self.fov.xy_from_uv(uv_pair, derivs, **keywords)
         return old_xy - self.xy_offset
 
-    def uv_from_xy(self, xy_pair, derivs=False):
+    def uv_from_xy(self, xy_pair, derivs=False, **keywords):
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         If derivs is True, then any derivatives in (x,y) get propagated into
         the (u,v) returned.
+
+        Additional parameters that might affect the transform can be included
+        as keyword arguments.
         """
 
         xy_pair = Pair.as_pair(xy_pair, derivs)
         return self.fov.uv_from_xy(xy_pair + self.xy_offset, derivs,
-                                   **self.keywords)
+                                   **keywords)
 
     ########################################
     # Fittable interface
@@ -105,8 +107,7 @@ class OffsetFOV(FOV, Fittable):
         """
 
         self.uv_offset = Pair.as_pair(params)
-        self.xy_offset = self.fov.xy_from_uv(self.uv_offset - self.fov.uv_los,
-                                             **self.keywords)
+        self.xy_offset = self.fov.xy_from_uv(self.uv_offset - self.fov.uv_los)
 
     def copy(self):
         """Return a deep copy of the Fittable object.
@@ -114,8 +115,7 @@ class OffsetFOV(FOV, Fittable):
         The copy can be safely modified without affecting the original.
         """
 
-        return OffsetFOV(self.fov, self.uv_offset.copy(),
-                         xy_offset=None, **self.keywords)
+        return OffsetFOV(self.fov, self.uv_offset.copy(), xy_offset=None)
 
 ################################################################################
 # UNIT TESTS

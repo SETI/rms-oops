@@ -15,16 +15,15 @@ class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
     all exposed at the same time."""
 
-    def __init__(self, axes, tstart, texp,
-                       fov, path, frame, **subfields):
+    def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
         """Constructor for a Snapshot.
 
         Input:
             axes        a list or tuple of strings, with one value for each axis
-                        in the associated data array. A value of "u" should
-                        appear at the location of the array's u-axis; "v" should
+                        in the associated data array. A value of 'u' should
+                        appear at the location of the array's u-axis; 'v' should
                         appear at the location of the array's v-axis. For
-                        example, ("v","u"), is correct for a 2-D array read from
+                        example, ('v','u'), is correct for a 2-D array read from
                         an image file in FITS or VICAR format.
             tstart      the start time of the observation in seconds TDB.
             texp        exposure time of the observation in seconds.
@@ -97,9 +96,9 @@ class Snapshot(Observation):
                 if np.any(mask != uv.mask):
                     uv = uv.remask(mask)
 
-                    time_vals = np.empty(uv.shape)
-                    time_vals[...] = self.midtime
-                    time = Scalar(time_vals, mask)
+                    time_values = np.empty(uv.shape)
+                    time_values[...] = self.midtime
+                    time = Scalar(time_values, mask)
 
         return (uv, time)
 
@@ -185,7 +184,7 @@ class Snapshot(Observation):
 # 
 #         return Vector(index_vals, mask)
 
-    def times_at_uv(self, uv_pair, fovmask=False, extras=None):
+    def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).
 
         Input:
@@ -215,7 +214,7 @@ class Snapshot(Observation):
         return self.scalar_time
 
 # Untested but not needed as of 7/7/12...
-#     def uv_at_time(self, time, fovmask=False, extras=None):
+#     def uv_at_time(self, time, fovmask=False):
 #         """Returns the (u,v) ranges of spatial pixel observed at the specified
 #         time.
 # 
@@ -223,9 +222,6 @@ class Snapshot(Observation):
 #             uv_pair     a Scalar of time values in seconds TDB.
 #             fovmask     True to mask values outside the time limits and/or the
 #                         field of view.
-#             extras      an optional tuple or dictionary containing any extra
-#                         parameters required for the conversion from (u,v) to
-#                         time.
 # 
 #         Return:         (uv_min, uv_max)
 #             uv_min      the lower (u,v) corner of the area observed at the
@@ -405,8 +401,8 @@ class Test_Snapshot(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (10,20))
-        obs = Snapshot(axes=("u","v"), tstart=98., texp=2.,
-                       fov=fov, path="SSB", frame="J2000")
+        obs = Snapshot(axes=('u','v'), tstart=98., texp=2.,
+                       fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
 
@@ -481,9 +477,9 @@ class Test_Snapshot(unittest.TestCase):
         self.assertEqual(time0[:4],  98.)
         self.assertEqual(time1[:4], 100.)
 
-        # Alternative axis order ("v","u")
-        obs = Snapshot(axes=("v","u"), tstart=98., texp=2.,
-                       fov=fov, path="SSB", frame="J2000")
+        # Alternative axis order ('v','u')
+        obs = Snapshot(axes=('v','u'), tstart=98., texp=2.,
+                       fov=fov, path='SSB', frame='J2000')
         indices = Pair([(0,0),(0,10),(20,0),(20,10),(20,11)])
 
         (uv,time) = obs.uvt(indices)
@@ -495,9 +491,9 @@ class Test_Snapshot(unittest.TestCase):
         self.assertEqual(uv[:4], indices.to_pair((1,0))[:4])
         self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
 
-        # Alternative axis order ("v", "a", "u")
-        obs = Snapshot(axes=("v","a","u"), tstart=98., texp=2.,
-                       fov=fov, path="SSB", frame="J2000")
+        # Alternative axis order ('v', 'a', 'u')
+        obs = Snapshot(axes=('v','a','u'), tstart=98., texp=2.,
+                       fov=fov, path='SSB', frame='J2000')
         indices = Vector([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
         (uv,time) = obs.uvt(indices)
 

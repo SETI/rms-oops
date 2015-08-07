@@ -6,6 +6,9 @@ import numpy as np
 from polymath import *
 
 from oops.obs_.observation import Observation
+from oops.path_.path       import Path
+from oops.frame_.frame     import Frame
+from oops.event            import Event
 
 class RasterScan(Observation):
     """A RasterScan is subclass of Observation consisting of a 2-D image
@@ -16,17 +19,16 @@ class RasterScan(Observation):
     by a 2-D cadence.
     """
 
-    def __init__(self, axes, uv_size,
-                       cadence, fov, path_id, frame_id, **subfields):
+    def __init__(self, axes, uv_size, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterScan observation.
 
         Input:
             axes        a list or tuple of strings, with one value for each axis
-                        in the associated data array. A value of "ufast" or
-                        "uslow" should appear at the location of the array's
-                        u-axis; "vslow" or "vfast" should appear at the location
-                        of the array's v-axis. The "fast" suffix identifies
-                        which of these is in the fast-scan direction; the "slow"
+                        in the associated data array. A value of 'ufast' or
+                        'uslow' should appear at the location of the array's
+                        u-axis; 'vslow' or 'vfast' should appear at the location
+                        of the array's v-axis. The 'fast' suffix identifies
+                        which of these is in the fast-scan direction; the 'slow'
                         suffix identifies the slow-scan direction.
             uv_size     the size of the detector in units of the FOV along the
                         (u,v) axes. A value of (1,1) would indicate that there
@@ -41,12 +43,11 @@ class RasterScan(Observation):
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y).
-            path_id     the registered ID of a path co-located with the
-                        instrument.
-            frame_id    the registered ID of a coordinate frame fixed to the
-                        optics of the instrument. This frame should have its
-                        Z-axis pointing outward near the center of the line of
-                        sight, with the X-axis pointing rightward and the y-axis
+            path        the path waypoint co-located with the instrument.
+            frame       the wayframe of a coordinate frame fixed to the optics
+                        of the instrument. This frame should have its Z-axis
+                        pointing outward near the center of the line of sight,
+                        with the X-axis pointing rightward and the y-axis
                         pointing downward.
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
@@ -54,23 +55,23 @@ class RasterScan(Observation):
 
         self.cadence = cadence
         self.fov = fov
-        self.path_id = path_id
-        self.frame_id = frame_id
+        self.path = Path.as_waypoint(path)
+        self.frame = Frame.as_wayframe(frame)
 
         self.axes = list(axes)
-        assert (("ufast" in self.axes and "vslow" in self.axes) or
-                ("vfast" in self.axes and "uslow" in self.axes))
+        assert (('ufast' in self.axes and 'vslow' in self.axes) or
+                ('vfast' in self.axes and 'uslow' in self.axes))
 
-        if "ufast" in self.axes:
-            self.u_axis = self.axes.index("ufast")
-            self.v_axis = self.axes.index("vslow")
+        if 'ufast' in self.axes:
+            self.u_axis = self.axes.index('ufast')
+            self.v_axis = self.axes.index('vslow')
             self.fast_axis = self.u_axis
             self.slow_axis = self.v_axis
             self.fast_uv_axis = 0
             self.slow_uv_axis = 1
         else:
-            self.u_axis = self.axes.index("uslow")
-            self.v_axis = self.axes.index("vfast")
+            self.u_axis = self.axes.index('uslow')
+            self.v_axis = self.axes.index('vfast')
             self.fast_axis = self.v_axis
             self.slow_axis = self.u_axis
             self.fast_uv_axis = 1
@@ -80,7 +81,7 @@ class RasterScan(Observation):
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
-        self.uv_shape = list(self.fov.uv_shape.vals)
+        self.uv_shape = tuple(self.fov.uv_shape.vals)
         assert len(self.cadence.shape) == 2
         assert self.cadence.shape[0] == self.uv_shape[self.slow_uv_axis]
         assert self.cadence.shape[1] == self.uv_shape[self.fast_uv_axis]
@@ -99,9 +100,9 @@ class RasterScan(Observation):
         return
 
     def uvt(self, indices, fovmask=False):
-        """Returns the FOV coordinates (u,v) and the time in seconds TDB
-        associated with the given indices into the data array. This method
-        supports non-integer index values.
+        """Return coordinates (u,v) and time t for indices into the data array.
+
+        This method supports non-integer index values.
 
         Input:
             indices     a Tuple of array indices.
@@ -115,28 +116,49 @@ class RasterScan(Observation):
         """
 
         indices = Vector.as_vector(indices)
-
         uv = indices.to_pair((self.u_axis,self.v_axis))
+
+        # Handle discontinuous detectors
         if self.uv_is_discontinuous:
+
+            # Identify indices at exact upper limits; treat these as inside
+            at_upper_u = (uv.values[...,0] == self.uv_shape[0])
+            at_upper_v = (uv.values[...,1] == self.uv_shape[1])
+
+            # Map continuous index to discontinuous (u,v)
             uv_int = Pair.as_int(uv)
-            uv = uv_int + (uv - uv_int) * self.uv_size
+            uv = uv_int + (uv - uv_int).element_mul(self.uv_size)
 
+            # Adjust values at upper limits
+            u = uv.to_scalar(0).mask_where(at_upper_u,
+                    replace = self.uv_shape[0] + self.uv_size.values[0] - 1,
+                    remask = False)
+            v = uv.to_scalar(1).mask_where(at_upper_v,
+                    replace = self.uv_shape[1] + self.uv_size.values[1] - 1,
+                    remask = False)
+
+            # Re-create Pair
+            uv_values = np.empty(u.shape + (2,))
+            uv_values[...,0] = u.values
+            uv_values[...,1] = v.values
+
+            uv = Pair(uv_values, indices.mask)
+
+        # Create the time Scalar
         tstep = indices.to_pair(self.t_axis)
-        time = self.cadence.time_at_tstep(tstep)
+        time = self.cadence.time_at_tstep(tstep, mask=fovmask)
 
+        # Apply mask if necessary
         if fovmask:
-            is_inside = self.uv_is_inside(uv, inclusive=True)
-            if not np.all(is_inside):
-                mask = indices.mask | np.logical_not(is_inside)
-                uv.mask = mask
-                time.mask = mask
+            is_outside = self.uv_is_outside(uv, inclusive=True)
+            if np.any(is_outside):
+                uv = uv.mask_where(is_outside)
+                time = time.mask_where(is_outside)
 
         return (uv, time)
 
     def uvt_range(self, indices, fovmask=False):
-        """Returns the ranges of FOV coordinates (u,v) and the time range in
-        seconds TDB associated with the given integer indices into the data
-        array.
+        """Return ranges of coordinates and time for integer array indices.
 
         Input:
             indices     a Tuple of integer array indices.
@@ -157,63 +179,54 @@ class RasterScan(Observation):
         uv_max = uv_min + self.uv_size
 
         tstep = indices.to_pair(self.t_axis)
-        (time_min, time_max) = self.cadence.time_range_at_tstep(tstep)
+        (time_min, time_max) = self.cadence.time_range_at_tstep(tstep,
+                                                                mask=fovmask)
 
         if fovmask:
-            is_inside = self.uv_is_inside(uv_min, inclusive=False)
-            if not np.all(is_inside):
-                mask = indices.mask | np.logical_not(is_inside)
-                uv_min.mask = mask
-                uv_max.mask = mask
-                time_min.mask = mask
-                time_max.mask = mask
+            is_outside = self.uv_is_outside(uv_min, inclusive=False)
+            if np.any(is_outside):
+                uv_min = uv_min.mask_where(is_outside)
+                uv_max = uv_max.mask_where(is_outside)
+                time_min = time_min.mask_where(is_outside)
+                time_max = time_max.mask_where(is_outside)
 
         return (uv_min, uv_max, time_min, time_max)
 
-    def times_at_uv(self, uv_pair, fovmask=False, extras=None):
-        """Returns the start and stop times of the specified spatial pixel
-        (u,v).
+    def times_at_uv(self, uv_pair, fovmask=False):
+        """Return start and stop times of the specified spatial pixel (u,v).
 
         Input:
             uv_pair     a Pair of spatial (u,v) coordinates in and observation's
                         field of view. The coordinates need not be integers, but
                         any fractional part is truncated.
             fovmask     True to mask values outside the field of view.
-            extras      an optional tuple or dictionary containing any extra
-                        parameters required for the conversion from (u,v) to
-                        time.
 
         Return:         a tuple containing Scalars of the start time and stop
                         time of each (u,v) pair, as seconds TDB.
         """
 
-        uv_tuple = Pair.as_int(uv_pair).as_tuple()
-        tstep = uv_tuple.to_pair((self.slow_uv_axis, self.fast_uv_axis))
+        uv_pair = Pair.as_pair(uv_pair).as_int()
+        tstep = uv_pair.to_pair((self.slow_uv_axis, self.fast_uv_axis))
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
-    def sweep_duv_dt(self, uv_pair, extras=None):
-        """Returns the mean local sweep speed of the instrument in the (u,v)
-        directions.
+    def sweep_duv_dt(self, uv_pair):
+        """Return the mean local sweep speed of the instrument along (u,v) axes.
 
         Input:
             uv_pair     a Pair of spatial indices (u,v).
-            extras      an optional tuple or dictionary containing any extra
-                        parameters required to define the timing of array
-                        elements.
 
         Return:         a Pair containing the local sweep speed in units of
                         pixels per second in the (u,v) directions.
         """
 
-        uv_tuple = Pair.as_pair(uv_pair).as_tuple()
-        tstep = uv_tuple.as_pair((self.slow_uv_axis, self.fast_uv_axis))
+        uv_pair = Pair.as_pair(uv_pair).as_int()
+        tstep = uv_pair.as_pair((self.slow_uv_axis, self.fast_uv_axis))
 
         return Pair.ONES / self.cadence.tstride_at_tstep(tstep)
 
     def time_shift(self, dtime):
-        """Returns a copy of the observation object in which times have been
-        shifted by a constant value.
+        """Return a copy of the observation object with a time-shift.
 
         Input:
             dtime       the time offset to apply to the observation, in units of
@@ -224,7 +237,7 @@ class RasterScan(Observation):
 
         obs = RasterScan(self.axes, self.uv_size,
                          self.cadence.time_shift(dtime),
-                         self.fov, self.path_id, self.frame_id)
+                         self.fov, self.path, self.frame)
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -249,17 +262,16 @@ class Test_RasterScan(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=1., steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = RasterScan(axes=("ufast","vslow"), uv_size=(1,1),
-                         cadence=cadence, fov=fov,
-                         path_id="SSB", frame_id="J2000")
+        obs = RasterScan(axes=('ufast','vslow'), uv_size=(1,1),
+                         cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
         # uvt() with fovmask == False
         (uv,time) = obs.uvt(indices)
 
-        self.assertFalse(uv.mask)
-        self.assertFalse(time.mask)
+        self.assertFalse(np.any(uv.mask))
+        self.assertFalse(np.any(time.mask))
         self.assertEqual(time, slow_cadence.tstride * indices.to_scalar(1) +
                                fast_cadence.tstride * indices.to_scalar(0))
         self.assertEqual(uv, Pair.as_pair(indices))
@@ -277,10 +289,10 @@ class Test_RasterScan(unittest.TestCase):
         # uvt_range() with fovmask == False
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
-        self.assertFalse(uv_min.mask)
-        self.assertFalse(uv_max.mask)
-        self.assertFalse(time_min.mask)
-        self.assertFalse(time_max.mask)
+        self.assertFalse(np.any(uv_min.mask))
+        self.assertFalse(np.any(uv_max.mask))
+        self.assertFalse(np.any(time_min.mask))
+        self.assertFalse(np.any(time_max.mask))
 
         self.assertEqual(uv_min, Pair.as_pair(indices))
         self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
@@ -292,10 +304,10 @@ class Test_RasterScan(unittest.TestCase):
         # uvt_range() with fovmask == False, new indices
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9))
 
-        self.assertFalse(uv_min.mask)
-        self.assertFalse(uv_max.mask)
-        self.assertFalse(time_min.mask)
-        self.assertFalse(time_max.mask)
+        self.assertFalse(np.any(uv_min.mask))
+        self.assertFalse(np.any(uv_max.mask))
+        self.assertFalse(np.any(time_min.mask))
+        self.assertFalse(np.any(time_max.mask))
 
         self.assertEqual(uv_min, Pair.as_pair(indices))
         self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
@@ -339,13 +351,12 @@ class Test_RasterScan(unittest.TestCase):
         self.assertEqual(time1[:4], time0[:4] + fast_cadence.texp)
 
         # Alternative tstride (10,1)
-        fov = Flat((0.001,0.001), (10,20))
+        fov = FlatFOV((0.001,0.001), (10,20))
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=1., steps=20)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = RasterScan(axes=("uslow","vfast"), uv_size=(1,1),
-                         cadence=cadence, fov=fov,
-                         path_id="SSB", frame_id="J2000")
+        obs = RasterScan(axes=('uslow','vfast'), uv_size=(1,1),
+                         cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         indices = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
 
@@ -370,13 +381,12 @@ class Test_RasterScan(unittest.TestCase):
         self.assertEqual(time1, time0 + fast_cadence.texp)
 
         # Alternative uv_size and texp for discontinuous indices
-        fov = Flat((0.001,0.001), (10,20))
+        fov = FlatFOV((0.001,0.001), (10,20))
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = RasterScan(axes=("ufast","vslow"), uv_size=(0.5,0.8),
-                         cadence=cadence, fov=fov,
-                         path_id="SSB", frame_id="J2000")
+        obs = RasterScan(axes=('ufast','vslow'), uv_size=(0.5,0.8),
+                         cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 199.8)
 
@@ -415,13 +425,12 @@ class Test_RasterScan(unittest.TestCase):
         self.assertTrue(abs(obs.uvt((5, 5.     ))[0] - (5.,5.0)) < delta)
 
         # Alternative tstride for even more discontinuous indices
-        fov = Flat((0.001,0.001), (10,20))
+        fov = FlatFOV((0.001,0.001), (10,20))
         slow_cadence = Metronome(tstart=0., tstride=11., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = RasterScan(axes=("ufast","vslow"), uv_size=(0.5,0.8),
-                         cadence=cadence, fov=fov,
-                         path_id="SSB", frame_id="J2000")
+        obs = RasterScan(axes=('ufast','vslow'), uv_size=(0.5,0.8),
+                         cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 218.8)
 
@@ -432,7 +441,7 @@ class Test_RasterScan(unittest.TestCase):
         self.assertEqual(obs.uvt((5.5, 5.0))[1], 60.4)
         self.assertEqual(obs.uvt((5.5, 5.5))[1], 60.4)
 
-        eps = 1.e-15
+        eps = 1.e-14
         delta = 1.e-13
         self.assertTrue(abs(obs.uvt((6      ,0))[1] - 6. ) < delta)
         self.assertTrue(abs(obs.uvt((6.25   ,0))[1] - 6.2) < delta)
@@ -454,14 +463,44 @@ class Test_RasterScan(unittest.TestCase):
         self.assertTrue(abs(obs.uvt((6.25, 2-eps))[1] - 17.2) < delta)
         self.assertTrue(abs(obs.uvt((6.25, 2    ))[1] - 28.2) < delta)
 
+        # Test the upper edge
+        pair = (10-eps,20-eps)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        pair = (10,20-eps)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        pair = (10-eps,20)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        pair = (10,20)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        self.assertTrue(obs.uvt((10+eps,20), True)[0].mask)
+        self.assertTrue(obs.uvt((10,20+eps), True)[0].mask)
+
+        # Try all at once
+        indices = Pair([(10-eps,20-eps), (10,20-eps), (10-eps,20), (10,20),
+                        (10+eps,20), (10,20+eps)])
+
+        (uv,t) = obs.uvt(indices, fovmask=True)
+        self.assertTrue(np.all(t.mask == np.array(4*[False] + 2*[True])))
+
         # Alternative with uv_size and texp and axes
-        fov = Flat((0.001,0.001), (10,20))
+        fov = FlatFOV((0.001,0.001), (10,20))
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = RasterScan(axes=("a","vslow","b","ufast","c"), uv_size=(0.5,0.8),
-                         cadence=cadence, fov=fov,
-                         path_id="SSB", frame_id="J2000")
+        obs = RasterScan(axes=('a','vslow','b','ufast','c'), uv_size=(0.5,0.8),
+                         cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 199.8)
 

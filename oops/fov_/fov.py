@@ -199,11 +199,14 @@ class FOV(object):
         (umax, vmax) = self.uv_shape.values
 
         if inclusive:
-            result = (u < 0) |( v < 0) | (u > umax) | (v > vmax)
+            result = (u < 0) | ( v < 0) | (u > umax) | (v > vmax)
         else:
             result = (u < 0) | (v < 0) | (u >= umax) | (v >= vmax)
 
-        return result.values        # Convert to NumPy
+        if isinstance(result, Qube):
+            return result.values        # Convert to NumPy
+        else:
+            return result               # bool
 
     def u_or_v_is_outside(self, uv_coord, uv_index, inclusive=True):
         """Return a boolean mask identifying coordinates outside the FOV.
@@ -226,7 +229,10 @@ class FOV(object):
         else:
             result = (uv_coord < 0) | (uv_coord >= shape[uv_index])
 
-        return result.values        # Convert to NumPy
+        if isinstance(result, Qube):
+            return result.values        # Convert to NumPy
+        else:
+            return result               # bool
 
     def nearest_uv(self, uv_pair, remask=False):
         """Return the closest (u,v) coordinates inside the FOV.
