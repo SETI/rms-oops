@@ -209,7 +209,7 @@ class OrbitPlane(Surface):
 
         return self.ringplane.vector3_from_coords(coords, obs, derivs=derivs)
 
-    def intercept(self, obs, los, derivs=False, t_guess=None):
+    def intercept(self, obs, los, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
@@ -225,7 +225,7 @@ class OrbitPlane(Surface):
                             position = obs + t * los
         """
 
-        return self.ringplane.intercept(obs, los, derivs=derivs, t_guess=None)
+        return self.ringplane.intercept(obs, los, derivs=derivs, guess=None)
 
     def normal(self, pos, derivs=False):
         """The normal vector at a position at or near a surface.
