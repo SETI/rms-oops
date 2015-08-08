@@ -359,6 +359,11 @@ class Frame(object):
             reference   a reference Frame object or its wayframe or ID.
         """
 
+        # Convert a Wayframe to its registered version
+        # Sorry for the ugly use of "self"!
+        if isinstance(self, Wayframe):
+            self = Frame.WAYFRAME_REGISTRY[self.frame_id]
+
         # Convert the reference to a frame
         reference = Frame.as_frame(reference)
 

@@ -13,7 +13,7 @@ except ImportError:
 import solar
 
 import oops
-from oops.inst.nh.nh_  import NewHorizons
+from oops.inst.nh.nh_ import NewHorizons
 
 ################################################################################
 # Standard routines for interpreting WCS parameters, adapted from STSCI source.

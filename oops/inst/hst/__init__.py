@@ -232,6 +232,24 @@ class HST(object):
         ra  = header1["CRVAL1"]     # applies at the observation start time
         dec = header1["CRVAL2"]
 
+        # New aberration handling must subtract the aberration already present
+        # in the FITS file's pointing information. MRS 8/7/15.
+        if not oops.config.ABERRATION.old:
+            ra_rad  = ra  * oops.RPD
+            dec_rad = dec * oops.RPD
+
+            tdb_midtime = np.mean(self.time_limits(hst_file, **parameters))
+            path = oops.path.Path.as_waypoint('EARTH').wrt('SSB','J2000')
+            event = path.event_at_time(tdb_midtime)
+
+            # Insert apparent vector as actual to reverse the aberration effect
+            event.neg_arr_j2000 = oops.Vector3.from_ra_dec_length(
+                                                            ra_rad, dec_rad,
+                                                            recursive=False)
+            (ra_rad, dec_rad) = event.ra_and_dec(apparent=True)
+            ra  = ra_rad  * oops.DPR
+            dec = dec_rad * oops.DPR
+
         # v_wrt_y_deg is the angle from the y-axis of the camera frame to the
         # v-axis of the pixel grid, in degrees. I find this to be nonzero in HST
         # distortion models. Because the camera ORIENT is defined relative to
@@ -272,7 +290,7 @@ class HST(object):
         # Applies for the duration of the observation
         time_limits = self.time_limits(hst_file)
         tracker = oops.frame.Tracker(cmatrix,
-                                     self.target_body(hst_file).path.path_id,
+                                     self.target_body(hst_file).path,
                                      "EARTH", time_limits[0], frame_id)
 
         return frame_id
@@ -371,7 +389,7 @@ class HST(object):
         # If necessary, get the solar range from the target name
         if solar_range is None:
             target_body = self.target_body(hst_file)
-            target = oops.Path.as_path(target_body.path.path_id)
+            target = oops.Path.as_path(target_body.path)
             target_sun_path = target.wrt("SUN")
             # Paths of the relevant bodies need to be defined in advance!
 

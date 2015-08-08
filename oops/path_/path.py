@@ -671,6 +671,11 @@ class Path(object):
                         the frame of the origin's path.
         """
 
+        # Convert a Waypoint to its registered version
+        # Sorry for the ugly use of "self"!
+        if isinstance(self, Waypoint):
+            self = Path.WAYPOINT_REGISTRY[self.path_id]
+
         # Convert the origin to a path
         origin = Path.as_path(origin)
 
