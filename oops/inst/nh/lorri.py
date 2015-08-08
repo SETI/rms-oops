@@ -224,7 +224,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
                                                      id=frame_id)
         frame = oops.Frame.as_wayframe(lorri_frame)
 
-        event = oops.Event(tdb_midtime, (oops.Vector3.ZERO,)*2, path, frame)
+        event = oops.Event(tdb_midtime, oops.Vector3.ZERO, path, frame)
         event.neg_arr_ap = oops.Vector3.ZAXIS
         los = event.neg_arr_ap_j2000
 

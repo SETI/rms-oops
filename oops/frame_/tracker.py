@@ -48,8 +48,7 @@ class Tracker(Frame):
         # Update wayframe and frame_id; register if not temporary
         self.register()
 
-        obs_event = Event(epoch, (Vector3.ZERO,Vector3.ZERO),
-                          self.observer_path, Frame.J2000)
+        obs_event = Event(epoch, Vector3.ZERO, self.observer_path, Frame.J2000)
         (path_event,obs_event) = self.target_path.photon_to_event(obs_event)
         self.trackpoint = obs_event.neg_arr_ap.unit()
 
@@ -75,8 +74,7 @@ class Tracker(Frame):
         if time == self.cached_time: return self.cached_xform
 
         # Determine the needed rotation
-        obs_event = Event(time, (Vector3.ZERO,Vector3.ZERO),
-                          self.observer_path, Frame.J2000)
+        obs_event = Event(time, Vector3.ZERO, self.observer_path, Frame.J2000)
         (path_event,obs_event) = self.target_path.photon_to_event(obs_event)
         newpoint = obs_event.neg_arr_ap.unit()
 
@@ -113,20 +111,20 @@ class Test_Tracker(unittest.TestCase):
         tracker = Tracker("J2000", "MARS", "EARTH", 0., id="TEST")
         mars = AliasPath("MARS")
 
-        obs_event = Event(0., (Vector3.ZERO,Vector3.ZERO), "EARTH", "J2000")
+        obs_event = Event(0., Vector3.ZERO, "EARTH", "J2000")
         (path_event, obs_event) = mars.photon_to_event(obs_event)
         start_arr = obs_event.arr_ap.unit()
 
         # Track Mars for 30 days
         DAY = 86400
         for t in range(0,30*DAY,DAY):
-            obs_event = Event(t, (Vector3.ZERO,Vector3.ZERO), "EARTH", "TEST")
+            obs_event = Event(t, Vector3.ZERO, "EARTH", "TEST")
             (path_event, obs_event) = mars.photon_to_event(obs_event)
             self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr) < 1.e-6)
 
         # Try the test all at once
         t = np.arange(0,30*DAY,DAY/40)
-        obs_event = Event(t, (Vector3.ZERO,Vector3.ZERO), "EARTH", "TEST")
+        obs_event = Event(t, Vector3.ZERO, "EARTH", "TEST")
         (path_event, obs_event) = mars.photon_to_event(obs_event)
         self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr).max() < 1.e-6)
 

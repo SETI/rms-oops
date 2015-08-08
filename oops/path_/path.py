@@ -886,8 +886,7 @@ class Waypoint(Path):
         self.keys     = set()
 
     def event_at_time(self, time, quick=False):
-        return Event(time, (Vector3.ZERO, Vector3.ZERO), self.origin,
-                                                         self.frame)
+        return Event(time, Vector3.ZERO, self.origin, self.frame)
 
     # Registration does nothing
     def register(self):

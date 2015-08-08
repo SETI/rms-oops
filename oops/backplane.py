@@ -1710,7 +1710,7 @@ class Backplane(object):
         # At each intercept time, determine the outgoing direction to the
         # observer from the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (Vector3.ZERO, Vector3.ZERO),
+        center_event = Event(event.time, Vector3.ZERO,
                                          event.origin, event.frame)
         center_event = self.obs_event.origin.photon_from_event(center_event)[1]
 
@@ -1736,7 +1736,7 @@ class Backplane(object):
         # At each intercept time, determine the incoming direction from the Sun
         # to the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (Vector3.ZERO, Vector3.ZERO),
+        center_event = Event(event.time, Vector3.ZERO,
                                          event.origin, event.frame)
         center_event = AliasPath("SUN").photon_to_event(center_event)[1]
         surface = Backplane.get_surface(event_key[0])
@@ -2216,7 +2216,7 @@ class Backplane(object):
         # At each intercept time, determine the outgoing direction to the
         # observer from the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (Vector3.ZERO, Vector3.ZERO),
+        center_event = Event(event.time, Vector3.ZERO,
                                          event.origin, event.frame)
         center_event = self.obs_event.origin.photon_from_event(center_event)[1]
 
@@ -2242,7 +2242,7 @@ class Backplane(object):
         # At each intercept time, determine the incoming direction from the Sun
         # to the center of the planet
         event = self.get_surface_event(event_key)
-        center_event = Event(event.time, (Vector3.ZERO, Vector3.ZERO),
+        center_event = Event(event.time, Vector3.ZERO,
                                          event.origin, event.frame)
         center_event = AliasPath('SUN').photon_to_event(center_event)[1]
 
@@ -3278,8 +3278,7 @@ class Test_Backplane(unittest.TestCase):
         ra = bp.right_ascension(apparent=False)
         dec = bp.declination(apparent=False)
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         ev.neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec)
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
@@ -3290,8 +3289,7 @@ class Test_Backplane(unittest.TestCase):
             ra = bp.right_ascension(apparent=True)
             dec = bp.declination(apparent=True)
 
-            ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                                   snap.frame)
+            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
             ev.neg_arr_ap_j2000 = Vector3.from_ra_dec_length(ra, dec)
             uv = snap.fov.uv_from_los(ev.neg_arr_ap)
 
@@ -3302,8 +3300,7 @@ class Test_Backplane(unittest.TestCase):
         rad = bp.ring_radius('saturn:ring')
         lon = bp.ring_longitude('saturn:ring', reference='node')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('SATURN_RING_PLANE')
         (surface_ev, ev) = body.surface.photon_to_event_by_coords(ev, (rad,lon))
 
@@ -3315,8 +3312,7 @@ class Test_Backplane(unittest.TestCase):
         rad = bp.ansa_radius('saturn:ansa', radius_type='right')
         alt = bp.ansa_altitude('saturn:ansa')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('SATURN_RING_PLANE')
         surface = Ansa.for_ringplane(body.surface)
         (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (rad,alt))
@@ -3330,8 +3326,7 @@ class Test_Backplane(unittest.TestCase):
         lon = bp.longitude('saturn', reference='iau', direction='east',
                                      lon_type='centric')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('SATURN')
         (surface_ev, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
 
@@ -3344,8 +3339,7 @@ class Test_Backplane(unittest.TestCase):
         lon = bp.longitude('saturn', reference='iau', direction='east',
                                      lon_type='centric')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('SATURN')
         surface = CentricSpheroid(body.path, body.frame, body.surface.radii)
         (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
@@ -3359,8 +3353,7 @@ class Test_Backplane(unittest.TestCase):
         lon = bp.longitude('saturn', reference='iau', direction='east',
                                      lon_type='centric')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('SATURN')
         surface = GraphicSpheroid(body.path, body.frame, body.surface.radii)
         (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
@@ -3383,8 +3376,7 @@ class Test_Backplane(unittest.TestCase):
         lon = bp.longitude('rhea', reference='iau', direction='east',
                                      lon_type='squashed')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('RHEA')
         (surface_ev, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
 
@@ -3398,8 +3390,7 @@ class Test_Backplane(unittest.TestCase):
         lon = bp.longitude('rhea', reference='iau', direction='east',
                                      lon_type='centric')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('RHEA')
         surface = CentricEllipsoid(body.path, body.frame, body.surface.radii)
         (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
@@ -3414,8 +3405,7 @@ class Test_Backplane(unittest.TestCase):
         lon = bp.longitude('rhea', reference='iau', direction='east',
                                      lon_type='graphic')
 
-        ev = Event(snap.midtime, (Vector3.ZERO, Vector3.ZERO), snap.path,
-                                                               snap.frame)
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
         body = Body.as_body('RHEA')
         surface = GraphicEllipsoid(body.path, body.frame, body.surface.radii)
         (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))

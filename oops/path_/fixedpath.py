@@ -27,8 +27,9 @@ class FixedPath(Path):
         """
 
         # Interpret the position
-        self.pos = Vector3.as_vector3(pos).as_readonly()
-        self.pos.insert_deriv('t', Vector3.ZERO, override=True)
+        pos = Vector3.as_vector3(pos)
+        pos = pos.with_deriv('t', Vector3.ZERO, 'replace')
+        self.pos = pos.as_readonly()
 
         # Required attributes
         self.path_id = id

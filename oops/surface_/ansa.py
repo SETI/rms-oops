@@ -340,7 +340,7 @@ class Test_Ansa(unittest.TestCase):
         self.assertTrue(abs(test_pos - pos).max() < 1.e-5)
 
         # intercept() derivatives
-        obs = Vector3( np.random.rand(10,3))
+        obs = Vector3(np.random.rand(10,3))
         obs.insert_deriv('obs', Vector3.IDENTITY)
         los = Vector3(-np.random.rand(10,3))
         los.insert_deriv('los', Vector3.IDENTITY)

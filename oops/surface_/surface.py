@@ -204,7 +204,7 @@ class Surface(object):
         pos_wrt_surface = event.wrt(self.origin, self.frame,
                                     derivs=any_derivs).state
         if any_derivs:
-            pos_wrt_surface.insert_deriv('pos', Vector3.IDENTITY)
+            pos_wrt_surface.insert_deriv('pos', Vector3.IDENTITY, override=True)
         else:
             pos_wrt_surface = pos_wrt_surface.without_derivs()
 
@@ -212,7 +212,8 @@ class Surface(object):
             obs_wrt_surface = obs.wrt(self.origin, self.frame,
                                       derivs=any_derivs).state
             if any_derivs:
-                obs_wrt_surface.insert_deriv('obs', Vector3.IDENTITY)
+                obs_wrt_surface.insert_deriv('obs', Vector3.IDENTITY,
+                                                    override=True)
             else:
                 obs_wrt_surface = obs_wrt_surface.without_derivs()
         else:
@@ -568,7 +569,7 @@ class Surface(object):
         pos_wrt_surface = pos_wrt_surface.remask(mask)
 
         # Create the surface event in its own frame
-        surface_event = Event(link.time + lt, (pos_wrt_surface,Vector3.ZERO),
+        surface_event = Event(link.time + lt, pos_wrt_surface,
                               self.origin, self.frame)
         surface_event.collapse_time()
 
@@ -830,7 +831,7 @@ class Surface(object):
             los_in_j2000 = -los_in_j2000
 
         # Create the surface event in its own frame
-        surface_event = Event(surface_time, (pos_wrt_origin_frame,Vector3.ZERO),
+        surface_event = Event(surface_time, pos_wrt_origin_frame,
                               self.origin, self.frame)
         surface_event.collapse_time()
 

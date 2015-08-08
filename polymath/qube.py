@@ -762,6 +762,39 @@ class Qube(object):
 
         return result
 
+    def with_deriv(self, key, value, method='insert'):
+        """Return a shallow copy of this object with a derivative inserted or
+        added.
+
+        A read-only object remains read-only.
+
+        Input:
+            key         the key of the derivative to insert.
+            value       value for this derivative.
+            method      how to insert the derivative:
+                        'insert'  inserts the new derivative, raising a
+                                  ValueError if a derivative of the same name
+                                  already exists.
+                        'replace' replaces an existing derivative of the same
+                                  name.
+                        'add'     adds this derivative to an existing derivative
+                                  of the same name.
+        """
+
+        result = self.clone(recursive=True)
+
+        assert method in ('insert', 'replace', 'add')
+
+        if key in result.__derivs_:
+            if method == 'insert':
+                raise ValueError('derivative d_d%s already exists' % key)
+
+            if method == 'add':
+                value = value + result.__derivs_[key]
+
+        result.insert_deriv(key, value)
+        return result
+
     ############################################################################
     # Unit operations
     ############################################################################

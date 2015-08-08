@@ -102,8 +102,7 @@ class SpicePath(Path):
 
         # A fully-masked time can be handled quickly
         if time.mask is True:
-            return Event(time, (Vector3.ZERO,Vector3.ZERO), self.origin,
-                                                            self.frame)
+            return Event(time, Vector3.ZERO, self.origin, self.frame)
 
         # A single unmasked time can be handled quickly
         if time.shape == ():

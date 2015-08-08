@@ -179,13 +179,12 @@ class Test_RingFrame(unittest.TestCase):
         self.assertTrue(np.all(np.abs(diff.values < 1.e-14)))
 
         # Confirm X-axis is always in the J2000 equator
-        xaxis = Event(time, (Vector3.XAXIS, Vector3.ZERO),
-                            "SSB", rings.frame_id)
+        xaxis = Event(time, Vector3.XAXIS, "SSB", rings.frame_id)
         test = xaxis.wrt_frame("J2000")
         self.assertTrue(np.all(np.abs(test.pos.mvals[...,2] < 1.e-14)))
 
         # Confirm it's at the ascending node
-        xaxis = Event(time, ((1,1.e-13,0), Vector3.ZERO), "SSB", rings.frame_id)
+        xaxis = Event(time, (1,1.e-13,0), "SSB", rings.frame_id)
         test = xaxis.wrt_frame("J2000")
         self.assertTrue(np.all(test.pos.mvals[...,1] > 0.))
 

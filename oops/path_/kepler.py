@@ -83,13 +83,13 @@ class Kepler(Path, Fittable):
             self.origin = self.planet.path
             self.frame  = body.ring_frame
             self.to_j2000 = Matrix3.UNIT
-        else:
-            self.observer = Registry.as_path(observer)
-            assert self.observer.shape == []
-            self.center = Path.connect(self.planet.path_id, observer, "J2000")
-            self.frame_id = "J2000"
-            frame = Registry.connect_frames("J2000", body.ring_frame_id)
-            self.to_j2000 = frame.transform_at_time(epoch).matrix
+#         else:
+#             self.observer = Registry.as_path(observer)
+#             assert self.observer.shape == []
+#             self.center = Path.connect(self.planet.path_id, observer, "J2000")
+#             self.frame_id = "J2000"
+#             frame = Registry.connect_frames("J2000", body.ring_frame_id)
+#             self.to_j2000 = frame.transform_at_time(epoch).matrix
 
         self.epoch = epoch
 
@@ -454,17 +454,17 @@ class Kepler(Path, Fittable):
 
         if self.observer is None:
             (pos, vel) = self.xyz_planet(time, partials=partials)
-            return Event(time, pos, vel, self.origin_id, self.frame_id)
+            return Event(time, (pos, vel), self.origin, self.frame)
 
-            observer_event = Event(time, Vector3.ZERO, Vector3.ZERO,
-                                   self.observer.path_id, self.frame_id)
+            observer_event = Event(time, Vector3.ZERO,
+                                   self.observer.path, self.frame)
             planet_event = self.center.photon_to_event(observer_event,
                                                        quick=quick)
 
         xyz_observed = self.xyz_observed(time, planet_event, partials)
 
-        event = Event(time, xyz_observed[0], xyz_observed[1],
-                            self.observer.path_id, self.frame_id)
+        event = Event(time, (xyz_observed[0], xyz_observed[1]),
+                            self.observer.path, self.frame)
 
         if partials:
             event.pos.insert_subfield("d_dpath", xyz_observed[2])

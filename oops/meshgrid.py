@@ -115,8 +115,7 @@ class Meshgrid(object):
     @property
     def los_w_derivs(self):
         if self.filled_los_w_derivs is None:
-            uv = self.uv.clone(False)
-            uv.insert_deriv('uv', Pair.IDENTITY, override=True)
+            uv = self.uv.with_deriv('uv', Pair.IDENTITY, 'insert')
             los = self.fov.los_from_uv(uv, derivs=True, **self.fov_keywords)
             self.filled_los_w_derivs = los
 
@@ -140,12 +139,9 @@ class Meshgrid(object):
     @property
     def uv_w_derivs(self):
         if self.filled_uv_w_derivs is None:
-            los = los.clone()
-            los.insert_deriv('los', Vector3.IDENTITY, override=True)
-            uv = self.fov.uv_from_los(self.los, derivs=True,
-                                      **self.fov_keywords)
-            self.filled_uv_w_derivs = self.uv.clone()
-            self.filled_uv_w_derivs.insert_subfield('los', uv.d_dlos)
+            los = self.los.with_deriv('los', Vector3.IDENTITY, 'insert')
+            uv = self.fov.uv_from_los(los, derivs=True, **self.fov_keywords)
+            self.filled_uv_w_derivs = self.uv.with_deriv('los', uv.d_dlos)
 
         return self.filled_uv_w_derivs
 

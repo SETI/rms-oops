@@ -144,14 +144,15 @@ class Event(object):
         self.__time_ = Scalar.as_scalar(time).as_readonly()
 
         if type(state) in (tuple,list) and len(state) == 2:
-            pos = Vector3.as_vector3(state[0]).as_readonly().clone()
-                # clone() above ensures that the source vector is unmodified
-                # when we insert the derivative.
-            vel = Vector3.as_vector3(state[1]).as_readonly()
-            pos.insert_deriv('t', vel, override=True)
-            self.__state_ = pos
+            pos = Vector3.as_vector3(state[0])
+            vel = Vector3.as_vector3(state[1])
+            state = pos.with_deriv('t', vel, 'insert')
         else:
-            self.__state_ = Vector3.as_vector3(state).as_readonly()
+            state = Vector3.as_vector3(state)
+            if 't' not in state.derivs:
+                state = state.with_deriv('t', Vector3.ZERO)
+
+        self.__state_ = state.as_readonly()
 
         assert 't' in self.__state_.derivs
 
@@ -750,16 +751,29 @@ class Event(object):
     # Derivative methods
     ############################################################################
 
-    def insert_self_derivs(self, override=False):
-        """Insert unit derivatives into the time and position attributes.
-
-        The derivatives are time.d_dt_link and state.d_dpos_link. They can be
-        used to track derivatives among events that link with this one.
+    def with_time_derivs(self):
+        """Return a clone of this event containing unit time derivatives d_dt.
         """
 
-        self.__time_.insert_deriv('t_link', Scalar.ONE, override=override)
-        self.__state_.insert_deriv('pos_link', Vector3.IDENTITY,
-                                               override=override)
+        event = self.clone(subfields=True, recursive=True)
+        event.__time_.insert_deriv('t', Scalar.ONE, override=True)
+        return event
+
+    def with_los_derivs(self):
+        """Clone of this event with unit photon arrival derivatives d_dlos.
+        """
+
+        event = self.clone(subfields=True, recursive=True)
+
+        event.neg_arr_ap.insert_deriv('los', Vector3.IDENTITY, override=True)
+        event.arr_ap.insert_deriv('los', -Vector3.IDENTITY, override=True)
+        if not ABERRATION.old: self.__arr_ = None
+
+        if self.ssb is not self:
+            self.ssb.__arr_ap_ = self.__xform_to_j2000_.rotate(self.__arr_ap_)
+            self.ssb.__neg_arr_ap_ = None
+            if not ABERRATION.old: self.ssb.__arr_ = None
+
         return self
 
     ############################################################################
@@ -776,6 +790,11 @@ class Event(object):
                         are going to be modified.
         """
 
+        def clone_attr(arg):
+            if arg is None: return None
+            if recursive: return arg.clone()
+            return arg
+
         if recursive:
             result = Event(self.__time_.clone(), self.__state_.clone(),
                            self.__origin_, self.__frame_)
@@ -785,31 +804,40 @@ class Event(object):
                            self.__origin_, self.__frame_)
 
         if subfields:
-            result.__arr_     = self.__arr_
-            result.__arr_ap_  = self.__arr_ap_
-            result.__arr_lt_  = self.__arr_lt_
+            result.__arr_     = clone_attr(self.__arr_)
+            result.__arr_ap_  = clone_attr(self.__arr_ap_)
+            result.__arr_lt_  = clone_attr(self.__arr_lt_)
 
-            result.__dep_     = self.__dep_
-            result.__dep_ap_  = self.__dep_ap_
-            result.__dep_lt_  = self.__dep_lt_
+            result.__dep_     = clone_attr(self.__dep_)
+            result.__dep_ap_  = clone_attr(self.__dep_ap_)
+            result.__dep_lt_  = clone_attr(self.__dep_lt_)
 
-            result.__perp_    = self.__perp_
-            result.__vflat_   = self.__vflat_
+            result.__perp_    = clone_attr(self.__perp_)
+            result.__vflat_   = clone_attr(self.__vflat_)
 
-            result.__neg_arr_    = self.__neg_arr_
-            result.__neg_arr_ap_ = self.__neg_arr_ap_
+            result.__neg_arr_    = clone_attr(self.__neg_arr_)
+            result.__neg_arr_ap_ = clone_attr(self.__neg_arr_ap_)
 
             result.__shape_   = self.__shape_
-            result.__mask_    = self.__mask_
             result.__xform_to_j2000_ = self.__xform_to_j2000_
+
+            if self.__mask_ is None:
+                result.__mask_ = None
+            else:
+                result.__mask_ = self.__mask_
 
             for (key,subfield) in self.__subfields_.iteritems():
                 if recursive:
                     subfield = subfield.clone()
                 result.insert_subfield(key, subfield)
 
-        if self.__ssb_ is self:
-            result.__ssb_ = result
+            if self.__ssb_ is self:
+                result.__ssb_ = result
+            elif self.__ssb_ is None:
+                result.__ssb_ = None
+            else:
+                result.__ssb_ = self.__ssb_.clone(subfields=True,
+                                                  recursive=True)
 
         return result
 

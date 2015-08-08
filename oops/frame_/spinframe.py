@@ -100,7 +100,7 @@ class Test_SpinFrame(unittest.TestCase):
         spin3  = SpinFrame(0., 1., 0., 2, "spin2", "spin3")
         spin1a = SpinFrame(1., 1., 1., 2, "J2000", "spin1a")
 
-        event = Event(Scalar.ZERO, (Vector3.XAXIS,Vector3.ZERO), "SSB", "J2000")
+        event = Event(Scalar.ZERO, Vector3.XAXIS, "SSB", "J2000")
         self.assertEqual(event.pos, (1,0,0))
         self.assertEqual(event.vel, (0,0,0))
 
@@ -128,7 +128,7 @@ class Test_SpinFrame(unittest.TestCase):
         self.assertEqual(event1.vel, (1,1,3))
 
         eps = 1.e-10
-        event = Event(eps, (Vector3.XAXIS,Vector3.ZERO), "SSB", "J2000")
+        event = Event(eps, Vector3.XAXIS, "SSB", "J2000")
 
         event1 = event.wrt_frame("spin1")
         self.assertEqual(event1.pos, (1, -eps,0))

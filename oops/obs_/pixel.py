@@ -229,7 +229,7 @@ class Pixel(Observation):
             time = self.cadence.time_at_tstep(tstep)
             time = time.append_axes(len(meshgrid.shape))
 
-        event = Event(time, (Vector3.ZERO, Vector3.ZERO), self.path, self.frame)
+        event = Event(time, Vector3.ZERO, self.path, self.frame)
 
         # Insert the arrival directions
         event.neg_arr_ap = meshgrid.los
@@ -258,7 +258,7 @@ class Pixel(Observation):
             time = self.cadence.time_at_tstep(tstep)
             time = time.append_axes(len(meshgrid.shape))
 
-        event = Event(time, (Vector3.ZERO, Vector3.ZERO), self.path, self.frame)
+        event = Event(time, Vector3.ZERO, self.path, self.frame)
 
         return event
 

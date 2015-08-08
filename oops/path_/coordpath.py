@@ -61,7 +61,7 @@ class CoordPath(Path):
             self.pos = self.surface.vector3_from_coords(self.coords,
                                                         obs_event.pos)
 
-        return Event(time, (self.pos, Vector3.ZERO), self.origin, self.frame)
+        return Event(time, self.pos, self.origin, self.frame)
 
 ################################################################################
 # UNIT TESTS

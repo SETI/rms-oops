@@ -434,7 +434,7 @@ class Test_OrbitPlane(unittest.TestCase):
         delta = 1.e-5
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        event = Event(0., (pos, Vector3.ZERO), "SSB", "J2000")
+        event = Event(0., pos, "SSB", "J2000")
         (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
         r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
@@ -518,7 +518,7 @@ class Test_OrbitPlane(unittest.TestCase):
 
         dz = 0.1
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
-        event = Event(0., (pos, Vector3.ZERO), "SSB", "J2000")
+        event = Event(0., pos, "SSB", "J2000")
         (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
         r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])

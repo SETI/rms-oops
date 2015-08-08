@@ -395,8 +395,7 @@ class Spheroid(Surface):
             #
             # dcept/dpos = (I + p dperp/dcept)**(-1) * (I - perp dp/dpos)
 
-            cept_with_derivs = cept.copy(readonly=False, recursive=False)
-            cept_with_derivs.insert_deriv('cept', Vector3.IDENTITY)
+            cept_with_derivs = cept.with_deriv('cept', Vector3.IDENTITY)
             perp = self.normal(cept_with_derivs, derivs=True)
 
             mat = Matrix.as_matrix(Vector3.IDENTITY + p * perp.d_dcept)

@@ -340,8 +340,7 @@ class Snapshot(Observation):
                         pixel.
         """
 
-        obs_event = Event(self.midtime, (Vector3.ZERO,Vector3.ZERO),
-                          self.path, self.frame)
+        obs_event = Event(self.midtime, Vector3.ZERO, self.path, self.frame)
         (path_event, obs_event) = path.photon_to_event(obs_event,
                                     derivs=False, guess=guess,
                                     quick=quick, converge=converge)
@@ -374,8 +373,7 @@ class Snapshot(Observation):
                         pixel.
         """
 
-        obs_event = Event(self.midtime, (Vector3.ZERO,Vector3.ZERO),
-                          self.path, self.frame)
+        obs_event = Event(self.midtime, Vector3.ZERO, self.path, self.frame)
         (surface_event,
          obs_event) = surface.photon_to_event_by_coords(obs_event, coords,
                                 derivs=derivs, quick=quick, converge=converge)

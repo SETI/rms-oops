@@ -254,7 +254,7 @@ class Observation(object):
         if time is None:
             time = self.midtime_at_uv(meshgrid.uv)
 
-        event = Event(time, (Vector3.ZERO,Vector3.ZERO), self.path, self.frame)
+        event = Event(time, Vector3.ZERO, self.path, self.frame)
 
         # Insert the arrival directions
         event.neg_arr_ap = meshgrid.los
@@ -281,7 +281,7 @@ class Observation(object):
         if shapeless:
             time = time.mean()
 
-        event = Event(time, (Vector3.ZERO,Vector3.ZERO), self.path, self.frame)
+        event = Event(time, Vector3.ZERO, self.path, self.frame)
 
         return event
 
@@ -323,8 +323,7 @@ class Observation(object):
         for iter in range(iters):
 
             # Define the photon arrival event
-            obs_event = Event(obs_time, (Vector3.ZERO, Vector3.ZERO),
-                              self.path, self.frame)
+            obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
 
             # Use a quickframe if appropriate
             rotation = Frame.quick_frame(rotation, obs_time, quick)
@@ -392,8 +391,7 @@ class Observation(object):
         for iter in range(iters):
 
             # Locate the object in the field of view
-            obs_event = Event(obs_time, (Vector3.ZERO,Vector3.ZERO),
-                              self.path, self.frame)
+            obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
             (path_event, obs_event) = path.photon_to_event(obs_event,
                                         derivs=False, guess=guess,
                                         quick=quick, converge=converge)
@@ -415,8 +413,7 @@ class Observation(object):
                 break
 
         # Return the results at the best mid-time
-        obs_event = Event(obs_time, (Vector3.ZERO, Vector3.ZERO),
-                          self.path, self.frame)
+        obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
 
         (path_event, obs_event) = path.photon_to_event(obs_event,
                                         derivs=derivs, guess=guess,
@@ -506,8 +503,7 @@ class Observation(object):
         path_ids = [body.path for body in bodies]
         multipath = MultiPath(path_ids)
 
-        obs_event = Event(self.midtime, (Vector3.ZERO,Vector3.ZERO),
-                          self.path, self.frame)
+        obs_event = Event(self.midtime, Vector3.ZERO, self.path, self.frame)
         _, obs_event = multipath.photon_to_event(
                                     obs_event, quick=quick,
                                     converge=converge)  # insert photon arrivals
