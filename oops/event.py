@@ -276,7 +276,7 @@ class Event(object):
     def arr(self):
         if self.__arr_ is None:
           if self.__arr_ap_ is not None:
-            ignore = self.actual_arr(self)  # fills in the internal attribute
+            ignore = self.actual_arr(derivs=True)   # fill internal attribute
 
         return self.__arr_                  # returns None if still undefined
 
@@ -302,7 +302,7 @@ class Event(object):
 
         if self.__arr_ap_ is None:
           if self.__arr_ is not None:
-            ignore = self.apparent_arr()    # fills in the internal attribute
+            ignore = self.apparent_arr(derivs=True) # fill internal attribute
 
         return self.__arr_ap_               # returns None if still undefined
 
@@ -386,7 +386,7 @@ class Event(object):
     def dep(self):
         if self.__dep_ is None:
           if self.__dep_ap_ is not None:
-            ignore = self.actual_dep(self)  # fills in the internal attribute
+            ignore = self.actual_dep(derivs=True)   # fill internal attribute
 
         return self.__dep_                  # returns None if still undefined
 
@@ -412,7 +412,7 @@ class Event(object):
 
         if self.__dep_ap_ is None:
           if self.__dep_ is not None:
-            ignore = self.apparent_dep()    # fills in the internal attribute
+            ignore = self.apparent_dep(derivs=True) # fill internal attribute
 
         return self.__dep_ap_
 
@@ -770,11 +770,13 @@ class Event(object):
         if not ABERRATION.old: self.__arr_ = None
 
         if self.ssb is not self:
-            self.ssb.__arr_ap_ = self.__xform_to_j2000_.rotate(self.__arr_ap_)
-            self.ssb.__neg_arr_ap_ = None
-            if not ABERRATION.old: self.ssb.__arr_ = None
+            event.ssb.__arr_ap_ = event.__xform_to_j2000_.rotate(
+                                                            event.__arr_ap_,
+                                                            derivs=True)
+            event.ssb.__neg_arr_ap_ = None
+            if not ABERRATION.old: event.ssb.__arr_ = None
 
-        return self
+        return event
 
     ############################################################################
     # More constructors
@@ -1053,6 +1055,7 @@ class Event(object):
                         to disable the use of QuickPaths and QuickFrames. The
                         default configuration is defined in config.py.
         """
+
 
         if self.__ssb_ is None:
             if (self.__origin_ == Event.PATH_CLASS().SSB) and \
@@ -1899,7 +1902,7 @@ class Event(object):
         elif frame is None:
             event = self
         else:
-            event = self.wrt_frame(frame, derivs=derivs, quick=quick)
+            event = self.wrt_frame(frame, derivs=True, quick=quick)
 
         # Calculate the ray in J2000
         if not apparent:
