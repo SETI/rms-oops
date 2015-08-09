@@ -217,7 +217,7 @@ class OrbitPlane(Surface):
             los         line of sight as a Vector3.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            t_guess     initial guess at the t array, optional.
+            guess       initial guess at the t array, optional.
 
         Return:         a tuple (pos, t) where
             pos         a Vector3 of intercept points on the surface, in km.
@@ -225,7 +225,7 @@ class OrbitPlane(Surface):
                             position = obs + t * los
         """
 
-        return self.ringplane.intercept(obs, los, derivs=derivs, guess=None)
+        return self.ringplane.intercept(obs, los, derivs=derivs, guess=guess)
 
     def normal(self, pos, derivs=False):
         """The normal vector at a position at or near a surface.
