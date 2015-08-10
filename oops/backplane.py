@@ -258,9 +258,7 @@ class Backplane(object):
         dest = self.get_surface_event(event_key[1:])
         surface = Backplane.get_surface(event_key[0])
 
-        new_arr_ap = dest.arr_ap.clone()
-        new_arr_ap.insert_deriv('los', Vector3.IDENTITY, override=True)
-        dest = dest.replace('arr_ap', new_arr_ap)
+        dest = dest.with_time_derivs().with_los_derivs()
         event = surface.photon_to_event(dest, derivs=True)[0]
 
         # Save extra information in the event object
