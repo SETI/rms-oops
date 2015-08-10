@@ -283,7 +283,7 @@ class Snapshot(Observation):
 ################################################################################
 
     def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=1, quick={},
-                           apparent=False):
+                           apparent=True):
         """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
@@ -300,7 +300,7 @@ class Snapshot(Observation):
                         default configuration is defined in config.py.
             apparent    True to interpret the (RA,dec) values as apparent
                         coordinates; False to interpret them as actual
-                        coordinates. Default is False.
+                        coordinates. Default is True.
 
         Return:         a Pair of (u,v) coordinates.
 

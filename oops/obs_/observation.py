@@ -286,7 +286,7 @@ class Observation(object):
         return event
 
     def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
-                           apparent=False):
+                           apparent=True):
         """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
@@ -303,7 +303,7 @@ class Observation(object):
                         default configuration is defined in config.py.
             apparent    True to interpret the (RA,dec) values as apparent
                         coordinates; False to interpret them as actual
-                        coordinates. Default is False.
+                        coordinates. Default is True.
 
         Return:         a Pair of (u,v) coordinates.
 
@@ -315,9 +315,6 @@ class Observation(object):
         # Convert to line of sight in SSB/J2000 frame
         neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec, recursive=derivs)
 
-        # Define the rotation from J2000 to the observer's frame
-        rotation = self.frame.wrt(Frame.J2000)
-
         # Iterate until the observation time has converged
         obs_time = self.midtime
         for iter in range(iters):
@@ -325,15 +322,10 @@ class Observation(object):
             # Define the photon arrival event
             obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
 
-            # Use a quickframe if appropriate
-            rotation = Frame.quick_frame(rotation, obs_time, quick)
-
-            # Rotate the line of sight to the observer's frame
-            xform = rotation.transform_at_time(obs_time)
             if apparent:
-                obs_event.neg_arr_ap_j2000 = xform.rotate(neg_arr_j2000)
+                obs_event.neg_arr_ap_j2000 = neg_arr_j2000
             else:
-                obs_event.neg_arr_j2000 = xform.rotate(neg_arr_j2000)
+                obs_event.neg_arr_j2000 = neg_arr_j2000
 
             # Convert to FOV coordinates
             uv = self.fov.uv_from_los(obs_event.neg_arr_ap)
