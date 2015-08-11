@@ -312,8 +312,9 @@ class Snapshot(Observation):
         return Observation.uv_from_ra_and_dec(self, ra, dec, derivs=derivs,
                                               iters=1, quick=quick,
                                               apparent=apparent)
-        
-    def uv_from_path(self, path, derivs=False, quick={}, converge={}):
+
+    def uv_from_path(self, path, derivs=False, guess=None,
+                            quick={}, converge={}):
         """Return the (u,v) indices of an object in the FOV, given its path.
 
         Note: This procedure assumes that movement along a path is very limited
@@ -327,6 +328,8 @@ class Snapshot(Observation):
             path        a Path object.
             derivs      True to propagate derivatives of the link time and
                         position into the returned event.
+            guess       an optional guess at the light travel time from the path
+                        to the event.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -381,8 +384,8 @@ class Snapshot(Observation):
         neg_arr_ap = obs_event.neg_arr_ap
         if not underside:
             normal = surface.normal(surface_event.pos)
-            neg_arr_ap = neg_arr_ap.mask_where(normal.dot(surface_event.dep_ap)
-                                               > 0)
+            mask = (normal.dot(surface_event.dep_ap, recursive=False) < 0.)
+            neg_arr_ap = neg_arr_ap.mask_where(mask)
 
         return self.fov.uv_from_los(neg_arr_ap, derivs=derivs)
 
