@@ -767,9 +767,10 @@ class Event(object):
 
         event.neg_arr_ap.insert_deriv('los', Vector3.IDENTITY, override=True)
         event.arr_ap.insert_deriv('los', -Vector3.IDENTITY, override=True)
-        if not ABERRATION.old: self.__arr_ = None
+        if not ABERRATION.old: event.__arr_ = None
 
-        if self.ssb is not self:
+        if event.ssb is not None and event.ssb is not event and \
+           event.ssb.__arr_ap_ is not None:
             event.ssb.__arr_ap_ = event.__xform_to_j2000_.rotate(
                                                             event.__arr_ap_,
                                                             derivs=True)
