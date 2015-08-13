@@ -548,15 +548,14 @@ class Path(object):
 
         # If the link is entirely masked...
         if np.all(link.mask):
-            path_event = link.all_masked(origin=self.waypoint,
-                                         frame=self.frame.wayframe,
-                                         derivs=derivs)
+            path_event = Event(link.time.all_masked(True),
+                               link.state.all_masked(True),
+                               self.waypoint, self.frame.wayframe)
             path_event.insert_subfield(path_key, Vector3.MASKED)
             path_event.insert_subfield(path_key + '_lt', Scalar.MASKED)
 
-            new_link = link.clone()
-            new_link.insert_subfield(link_key, Vector3.MASKED)
-            new_link.insert_subfield(link_key + '_lt', Scalar.MASKED)
+            new_link = link.replace(link_key, Vector3.MASKED,
+                                    link_key + '_lt', Scalar.MASKED)
 
             return (path_event, new_link)
 
