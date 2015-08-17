@@ -409,9 +409,8 @@ class Surface(object):
 
         # If the link is entirely masked...
         if np.all(link.time.mask):
-            surface_event = link.all_masked(origin=self.origin,
-                                            frame=self.frame.wayframe,
-                                            derivs=derivs)
+            surface_event = Event(link.time, link.state.all_masked(True),
+                                  self.origin, self.frame.wayframe)
             surface_event.insert_subfield(surface_key, Vector3.MASKED)
             surface_event.insert_subfield(surface_key + '_lt', Scalar.MASKED)
 
@@ -718,9 +717,8 @@ class Surface(object):
 
         # If the link is entirely masked...
         if np.all(link.time.mask):
-            surface_event = link.all_masked(origin=self.origin,
-                                            frame=self.frame.wayframe,
-                                            derivs=derivs)
+            surface_event = Event(link.time, link.state.all_masked(True),
+                                  self.origin, self.frame.wayframe)
             surface_event.insert_subfield(surface_key, Vector3.MASKED)
             surface_event.insert_subfield(surface_key + '_lt', Scalar.MASKED)
 
