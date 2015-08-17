@@ -481,6 +481,9 @@ class Observation(object):
                 body_data['u_max_unclipped']  to the FOV size.
                 body_data['v_min_unclipped']
                 body_data['v_max_unclipped']
+                body_data['u_pixel_size']  The number of pixels (non-integer)
+                body_data['v_pixel_size']  covered by the body in each 
+                                           direction.
         """
 
         assert return_type in ('list', 'flags', 'full')
@@ -577,6 +580,8 @@ class Observation(object):
                                              0, self.data.shape[0]-1)
                 body_data['v_max'] = np.clip(body_data['v_max_unclipped'],
                                              0, self.data.shape[0]-1)
+                body_data['u_pixel_size'] = radius_angles[i].vals/u_scale
+                body_data['v_pixel_size'] = radius_angles[i].vals/v_scale
                 ret_dict[body_names[i]] = body_data
 
         return ret_dict
