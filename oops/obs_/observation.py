@@ -3,6 +3,7 @@
 ################################################################################
 
 import numpy as np
+import numbers
 from polymath import *
 
 from oops.config          import LOGGING, PATH_PHOTONS
@@ -239,6 +240,254 @@ class Observation(object):
         (time0, time1) = self.times_at_uv(uv)
         return 0.5 * (time0 + time1)
 
+    def meshgrid(self, origin=0.5, undersample=1, oversample=1, limit=None,
+                       fov_keywords={}):
+        """Return a Scalar containingshaped to match the shape of the observation.
+
+        This works like Meshgrid.for_fov() except that the (u,v) axes are
+        assigned their correct locations in the axis ordering of the
+        observation.
+
+        Input:
+            origin      A single value, tuple or Pair defining the origin of the
+                        grid. Default is 0.5, which places the first sample in
+                        the middle of the first pixel.
+
+            limit       A single value, tuple or Pair defining the upper limits
+                        of the meshgrid. By default, this is the shape of the
+                        FOV.
+
+            undersample A single value, tuple or Pair defining the magnitude of
+                        under-sampling to be performed. For example, a value of
+                        2 would cause the meshgrid to sample every other pixel
+                        along each axis.
+
+            oversample  A single value, tuple or Pair defining the magnitude of
+                        over-sampling to be performed. For example, a value of
+                        2 would create a 2x2 array of samples inside each pixel.
+
+            fov_keywords  an optional dictionary of parameters passed to the
+                        FOV methods, containing parameters that might affect
+                        the properties of the FOV.
+        """
+
+        # Convert inputs to NumPy 2-element arrays
+        if limit is None: limit = self.fov.uv_shape
+        if isinstance(limit, numbers.Number): limit = (limit,limit)
+        limit = Pair.as_pair(limit).values.astype('float')
+
+        if isinstance(origin, numbers.Number): origin = (origin, origin)
+        origin = Pair.as_pair(origin).values.astype('float')
+
+        if isinstance(undersample, numbers.Number):
+            undersample = (undersample, undersample)
+        undersample = Pair.as_pair(undersample).values.astype('float')
+
+        if isinstance(oversample, numbers.Number):
+            oversample = (oversample, oversample)
+        oversample = Pair.as_pair(oversample).values.astype('float')
+
+        # Construct the 1-D index arrays
+        step = undersample/oversample
+        limit = limit + step * 1.e-10   # Allow a little slop at the upper end
+
+        urange = np.arange(origin[0], limit[0], step[0])
+        vrange = np.arange(origin[1], limit[1], step[1])
+
+        usize = urange.size
+        vsize = vrange.size
+
+        # Construct the empty array of values
+        shape_list = len(self.shape) * [1]
+        if self.u_axis >= 0:
+            shape_list[self.u_axis] = usize
+        if self.v_axis >= 0:
+            shape_list[self.v_axis] = vsize
+
+        values = np.empty(tuple(shape_list + [2]))
+
+        # Populate the array
+        if self.u_axis >= 0:
+            shape_list = len(self.shape) * [1]
+            shape_list[self.u_axis] = usize
+            uvalues = urange.reshape(tuple(shape_list))
+            values[...,0] = uvalues
+        else:
+            values[...,0] = 0.5
+
+        if self.v_axis >= 0:
+            shape_list = len(self.shape) * [1]
+            shape_list[self.v_axis] = vsize
+            vvalues = vrange.reshape(tuple(shape_list))
+            values[...,1] = vvalues
+        else:
+            values[...,1] = 0.5
+
+        # Return the Meshgrid
+        grid = Pair(values)
+        return Meshgrid(self.fov, grid, fov_keywords)
+
+    def timegrid(self, origin=None, undersample=1, oversample=1, limit=None):
+        """Return a Scalar of times broadcastable to the shape of the
+        observation.
+
+        If an observation has no time-dependence associated with an axis and
+        only one time is to be returned, the returned value is a float, not a
+        Scalar.
+
+        If an observation has no time-dependence associated with an axis but
+        multiple times are required, the shape of the returned Scalar has an
+        leading axis to encompass the time dependence.
+
+        Input:
+            origin      A single value or tuple (for N-dimensional cadences)
+                        defining the origin of the time grid, in units of the
+                        index. Default is None, which centers the time samples
+                        around the observation midtime.
+
+            undersample A single value or tuple defining the magnitude of
+                        under-sampling to be performed. For example, a value of
+                        2 would cause the timegrid to sample every other time
+                        step along each axis.
+
+            oversample  A single value or tuple defining the magnitude of
+                        over-sampling to be performed. For example, a value of
+                        2 would create a two time steps along each axis of each
+                        time step.
+
+            limit       A single value or tuple defining the upper limits of the
+                        timegrid. By default, this is the shape of the cadence.
+
+        """
+
+        # Validate input parameters...
+
+        # 0-D or 1-D case: convert to scalars
+        if isinstance(self.t_axis, numbers.Number):
+            if not isinstance(undersample, numbers.Number):
+                assert len(undersample) == 1
+                undersample = undersample[0]
+
+            if not isinstance(oversample, numbers.Number):
+                assert len(oversample) == 1
+                oversample = oversample[0]
+
+            undersample = float(undersample)
+            oversample = float(oversample)
+            step = undersample / oversample
+
+            if not isinstance(limit, numbers.Number):
+                if limit is None:
+                    limit = self.cadence.shape[0]
+                else:
+                    assert len(limit) == 1
+                    limit = limit[0]
+
+            limit = float(limit)
+
+            if not isinstance(origin, numbers.Number):
+                if origin is None:
+                    origin = 0.5 * limit * step
+                else:
+                    assert len(origin) == 1
+                    origin = origin[0]
+
+            origin = float(origin)
+
+        # 2-D case: convert to arrays
+        else:
+            axes = len(self.t_axis)
+
+            if isinstance(undersample, numbers.Number):
+                undersample = axes * [undersample,]
+
+            if isinstance(oversample, numbers.Number):
+                oversample = axes * [oversample,]
+
+            undersample = np.asfarray(undersample)
+            oversample = np.asfarray(oversample)
+            step = undersample / oversample
+
+            if limit is None:
+                limit = self.cadence.shape
+            elif isinstance(limit, numbers.Number):
+                limit = axes * [limit,]
+
+            limit = np.asfarray(limit)
+
+            if isinstance(origin, numbers.Number):
+                if origin is None:
+                    origing = 0.5 * limit * step
+                else:
+                    origin = axes * [origin,]
+
+            origin = np.asfarray(origin)
+
+        # Handle observations without time dependence
+        if self.t_axis == -1:
+            limit += step * 1.e-10      # Allow a little slop at the top
+
+            # Tabulate the times
+            tstep = np.arange(origin, limit, step)
+            print 1111, origin, limit, step
+            print 1112, tstep
+            times = self.time[0] * (1. - tstep) + self.time[1] * tstep
+
+            # For no times, return observation midtime
+            if len(times) == 0:
+                return self.midtime
+
+            # For one time, return a float
+            if len(times) == 1:
+                return times[0]
+
+            # Otherwise, return the reshaped Scalar
+            times = times.reshape(times.shape + len(self.shape) * (1,))
+            return Scalar(times)
+
+        # Handle 1-D case
+        if isinstance(self.t_axis, numbers.Number):
+            limit += step * 1.e-10   # Allow a little slop at the top
+
+            # Tabulate the times
+            tstep = Scalar(np.arange(origin, limit, step))
+            times = self.cadence.time_at_tstep(tstep, mask=False)
+
+            # Re-shape
+            shape_list = len(self.shape) * [1]
+            shape_list[self.t_axis] = times.shape[0]
+            values = times.values.reshape(tuple(shape_list))
+
+            # Return the Scalar
+            return Scalar(values)
+
+        # Handle N-dimensional case...
+
+        # Construct the index arrays
+        limit += step * 1.e-10      # Allow a little slop at the upper end
+
+        ranges = []
+        sizes = []
+        shape_list = axes * [1]
+        for i in range(axes):
+            ranges.append(np.arange(origin[i], limit[i], step[i]))
+            sizes.append(len(ranges[i]))
+            shape_list[self.t_axis[i]] = sizes[i]
+
+        # Construct the empty array of values in the desired shape
+        values = np.empty(tuple(shape_list) + (axes,))
+
+        # Populate the tstep array
+        for i in range(axes):
+            temp_shape = axes * [1]
+            temp_shape[self.t_axis[i]] = sizes[i]
+            tsteps = ranges[i].reshape(tuple(temp_shape))
+            values[...,i] = tsteps
+
+        # Return the times
+        tsteps = Vector(values)
+        return self.cadence.time_at_tstep(Vector(values), mask=False)
+
     def event_at_grid(self, meshgrid=None, time=None):
         """Return a photon arrival event from directions defined by a meshgrid.
 
@@ -254,6 +503,7 @@ class Observation(object):
         if time is None:
             time = self.midtime_at_uv(meshgrid.uv)
 
+        time = Scalar.as_scalar(time)
         event = Event(time, Vector3.ZERO, self.path, self.frame)
 
         # Insert the arrival directions

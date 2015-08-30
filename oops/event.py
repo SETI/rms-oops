@@ -291,7 +291,7 @@ class Event(object):
         if ABERRATION.old: self.__arr_ap_ = self.__arr_
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__arr_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__arr_)
 
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_ is None):
             self.__ssb_.__arr_ = self.xform_to_j2000.rotate(self.__arr_)
@@ -319,7 +319,7 @@ class Event(object):
         self.__arr_ap_ = Vector3.as_vector3(value).as_readonly()
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__arr_ap_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__arr_ap_)
 
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_ap_ is None):
             self.__ssb_.__arr_ap_ = self.xform_to_j2000.rotate(self.__arr_ap_)
@@ -373,7 +373,7 @@ class Event(object):
         self.__arr_lt_ = Scalar.as_scalar(value).as_readonly()
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__arr_lt_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__arr_lt_)
 
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_lt_ is None):
             self.__ssb_.__arr_lt_ = self.__arr_lt_
@@ -401,7 +401,7 @@ class Event(object):
         if ABERRATION.old: self.__dep_ap_ = self.__dep_
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__dep_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__dep_)
 
         if (self.__ssb_ is not None) and (self.__ssb_.__dep_ is None):
             self.__ssb_.__dep_ = self.xform_to_j2000.rotate(self.__dep_)
@@ -427,7 +427,7 @@ class Event(object):
         self.__dep_ap_ = Vector3.as_vector3(value).as_readonly()
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__dep_ap_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__dep_ap_)
 
         if (self.__ssb_ is not None) and (self.__ssb_.__dep_ap_ is None):
             self.__ssb_.__dep_ap_ = self.xform_to_j2000.rotate(self.__dep_ap_)
@@ -481,7 +481,7 @@ class Event(object):
         self.__dep_lt_ = Scalar.as_scalar(value).as_readonly()
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__dep_lt_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__dep_lt_)
 
         if (self.__ssb_ is not None):
             self.__ssb_.__dep_lt_ = self.__dep_lt_
@@ -571,7 +571,7 @@ class Event(object):
         self.__perp_ = Vector3.as_vector(value).as_readonly()
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__perp_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__perp_)
 
         if (self.__ssb_ is not None) and (self.__ssb_.__perp_ is None):
             self.__ssb_.__perp_ = self.xform_to_j2000.rotate(self.__perp_)
@@ -592,7 +592,7 @@ class Event(object):
         self.__vflat_ = Vector3.as_vector(value).as_readonly()
 
         # Raise a ValueError if the shape is incompatible
-        ignore = Qube.broadcasted_shape(self.shape, self.__vflat_)
+        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__vflat_)
 
         if (self.__ssb_ is not None) and (self.__ssb_.__vflat_ is None):
             self.__ssb_.__vflat_ = self.xform_to_j2000.rotate(self.__vflat_)
