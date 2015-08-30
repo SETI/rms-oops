@@ -82,25 +82,27 @@ class Meshgrid(object):
         # Convert inputs to NumPy 2-element arrays
         if limit is None: limit = fov.uv_shape
         if isinstance(limit, numbers.Number): limit = (limit,limit)
-        limit = Pair.as_pair(limit).values
+        limit = Pair.as_pair(limit).values.astype('float')
 
         if isinstance(origin, numbers.Number): origin = (origin, origin)
-        origin = Pair.as_pair(origin).values
+        origin = Pair.as_pair(origin).values.astype('float')
 
         if isinstance(undersample, numbers.Number):
             undersample = (undersample, undersample)
-        undersample = Pair.as_pair(undersample).values
+        undersample = Pair.as_pair(undersample).values.astype('float')
 
         if isinstance(oversample, numbers.Number):
             oversample = (oversample, oversample)
-        oversample = Pair.as_pair(oversample).values
+        oversample = Pair.as_pair(oversample).values.astype('float')
 
+        # Construct the 1-D index arrays
         step = undersample/oversample
-        limit = limit + step * 1.e-10  # Allow a little slop at the upper end
+        limit = limit + step * 1.e-10   # Allow a little slop at the upper end
 
         urange = np.arange(origin[0], limit[0], step[0])
         vrange = np.arange(origin[1], limit[1], step[1])
 
+        # Construct the 2-D index arrays
         usize = urange.size
         vsize = vrange.size
 
@@ -108,6 +110,8 @@ class Meshgrid(object):
         if vsize == 1: vrange = np.array(vrange[0])
 
         grid = Pair.combos(urange, vrange).values
+
+        # Swap axes if necessary
         if usize > 1 and vsize > 1 and swap: grid = grid.swapaxes(0,1)
 
         return Meshgrid(fov, grid, fov_keywords)

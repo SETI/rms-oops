@@ -1319,12 +1319,12 @@ class Backplane(object):
         key = ('sub_solar_latitude', event_key, lat_type)
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
-            arr_ap = -event.apparent_arr()  # for ABERRATION=old or new
+            neg_arr_ap = -event.apparent_arr()  # for ABERRATION=old or new
 
             if lat_type == 'graphic':
-                arr_ap = arr_ap.element_mul(event.surface.unsquash_sq)
+                neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq)
 
-            lat = (arr_ap.to_scalar(2) / arr_ap.norm()).arcsin()
+            lat = (neg_arr_ap.to_scalar(2) / neg_arr_ap.norm()).arcsin()
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
