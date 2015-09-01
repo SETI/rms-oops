@@ -384,7 +384,8 @@ class Path(object):
                         and the two objects must use the same frame.
             derivs      True to include derivatives in the attributes of the
                         returned event. The specific derivatives included will
-                        depend on the Path subclass and the given Event.
+                        depend on the Path subclass and the given Event. Time
+                        derivatives are always retained.
             quick       an optional dictionary of parameter values to use as
                         overrides to the configured default QuickPath and
                         QuickFrame parameters; use False to disable the use of
@@ -446,8 +447,9 @@ class Path(object):
                         +1 to return later events, corresponding to photons
                            arriving at the path after departing from the event.
 
-            derivs      True to propagate derivatives of the link time and
-                        position into the returned event.
+            derivs      True to propagate derivatives of the link position into
+                        the returned event. The time derivative is always
+                        retained.
 
             guess       an initial guess to use as the event time along the
                         path; otherwise None. Should only be used if the event
@@ -497,6 +499,10 @@ class Path(object):
                         larger than this limit are clipped. This prevents the
                         divergence of the solution in some cases.
         """
+
+        # Handle derivatives
+        if not derivs:
+            link = link.without_derivs()        # preserves time-dependence
 
         # If the path has a shape of its own, QuickPaths are disallowed
         if self.shape != (): quick = None
@@ -625,11 +631,9 @@ class Path(object):
         path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=False)
         link_event_ssb = link_wrt_ssb.clone()
 
-        if derivs:
-            path_pos_ssb = path_event_ssb.state
-            link_pos_ssb = link_event_ssb.state
-        else:
-            path_pos_ssb = path_event_ssb.pos
+        # Put the derivatives back as needed (at least the time derivative)
+        path_pos_ssb = path_event_ssb.state
+        link_pos_ssb = link_event_ssb.state
 
         # Fill in the key subfields
         if sign > 0:
@@ -646,7 +650,7 @@ class Path(object):
 
         # Transform the path event into its origin and frame
         path_event = path_event_ssb.from_ssb(self, self.frame,
-                                             derivs=derivs, quick=quick)
+                                             derivs=True, quick=quick)
 
         # Transform the light ray into the link's frame
         new_link = link.replace(link_key + '_j2000', ray_vector_ssb,

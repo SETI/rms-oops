@@ -320,8 +320,9 @@ class Surface(object):
                            departing from the link and arriving later at the
                            surface.
 
-            derivs      True to propagate derivatives of the link time, position
-                        and line of sight into the returned event.
+            derivs      True to propagate derivatives of the link position and
+                        and line of sight into the returned event. Derivatives
+                        with respect to time are always retained.
 
             guess       an initial guess to use as the event time for the
                         surface; otherwise None. Should only be used if the event
@@ -378,6 +379,10 @@ class Surface(object):
                         larger than this limit are clipped. This prevents the
                         divergence of the solution in some cases.
         """
+
+        # Handle derivatives
+        if not derivs:
+            link = link.without_derivs()        # preserves time-dependence
 
         # Assemble convergence parameters
         if converge:
@@ -522,35 +527,24 @@ class Surface(object):
 
         surface_time = link_time + lt
 
-        # Put the derivatives back if necessary
-        if derivs:
-            obs_wrt_ssb = link_wrt_ssb.state
-            los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).unit() * \
-                                                        constants.C
-            pos_in_j2000 = (obs_wrt_ssb + lt * los_wrt_ssb -
-                            origin_wrt_ssb.event_at_time(surface_time,
-                                                         quick=False).state)
-
-        else:
-            pos_in_j2000 = (obs_wrt_ssb + lt * los_wrt_ssb -
-                            origin_wrt_ssb.event_at_time(surface_time,
-                                                         quick=False).pos)
-
-            pos_in_j2000 = (obs_wrt_ssb + lt * los_wrt_ssb -
-                            origin_wrt_ssb.event_at_time(surface_time,
-                                                         quick=False).pos)
+        # Put the derivatives back as needed (at least the time derivative)
+        obs_wrt_ssb = link_wrt_ssb.state
+        los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).unit() * constants.C
+        pos_in_j2000 = obs_wrt_ssb + lt * los_wrt_ssb - \
+                       origin_wrt_ssb.event_at_time(surface_time,
+                                                    quick=False).state
 
         # Re-rotate into the surface-fixed frame
         surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
                                                           quick=False)
-        pos_wrt_surface = surface_xform.rotate(pos_in_j2000, derivs)
-        los_wrt_surface = surface_xform.rotate(los_wrt_ssb, derivs)
+        pos_wrt_surface = surface_xform.rotate(pos_in_j2000, derivs=True)
+        los_wrt_surface = surface_xform.rotate(los_wrt_ssb, derivs=True)
         obs_wrt_surface = pos_wrt_surface - lt * los_wrt_surface
 
         # Update the intercept time and position, with derivatives if necessary
         (pos_wrt_surface, lt) = self.intercept(obs_wrt_surface,
                                                los_wrt_surface,
-                                               derivs=derivs,
+                                               derivs=True,
                                                guess=lt)
 
         # Update the mask on light time to hide intercepts behind the observer
@@ -573,7 +567,7 @@ class Surface(object):
         surface_event.collapse_time()
 
         surface_event.insert_subfield('perp',
-                                      self.normal(pos_wrt_surface, derivs))
+                                      self.normal(pos_wrt_surface, derivs=True))
         surface_event.insert_subfield('vflat', self.velocity(pos_wrt_surface))
         surface_event.insert_subfield(surface_key, los_wrt_surface)
         surface_event.insert_subfield(surface_key + '_lt', -lt)
@@ -583,7 +577,7 @@ class Surface(object):
          coord2,
          coord3) = self.coords_from_vector3(surface_event.state,
                                             obs_wrt_surface,
-                                            axes=3, derivs=derivs)
+                                            axes=3, derivs=True)
 
         surface_event.insert_subfield('coord1', coord1)
         surface_event.insert_subfield('coord2', coord2)
@@ -633,8 +627,9 @@ class Surface(object):
                            departing from the link and arriving later at the
                            surface.
 
-            derivs      True to propagate derivatives of the link time, position
-                        and coordinates into the returned event.
+            derivs      True to propagate derivatives of the link position and
+                        coordinates into the returned event. Derivatives with
+                        respect to time are always retained.
 
             guess       an initial guess to use as the event time for the
                         surface; otherwise None. Should only be used if the event
@@ -687,6 +682,10 @@ class Surface(object):
                         larger than this limit are clipped. This prevents the
                         divergence of the solution in some cases.
         """
+
+        # Handle derivatives
+        if not derivs:
+            link = link.without_derivs()        # preserves time-dependence
 
         # Assemble convergence parameters
         if converge:
@@ -843,9 +842,9 @@ class Surface(object):
                                       self.velocity(pos_wrt_origin_frame))
 
         # Fill in derivatives if necessary
-        if derivs:
-            raise NotImplementedException("Derivatives are not implemented " +
-                                          "for _solve_photon_by_coords()")
+#         if derivs:
+#             raise NotImplementedException("Derivatives are not implemented " +
+#                                           "for _solve_photon_by_coords()")
 
         # Constructed the updated link_event
         new_link = link.replace(link_key + '_j2000', los_in_j2000,

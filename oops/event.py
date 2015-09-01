@@ -887,19 +887,19 @@ class Event(object):
         return result
 
     def without_derivs(self):
-        """A shallow copy of this Event without derivatives.
+        """A shallow copy of this Event without any derivatives except time.
 
         Input:
-            subfields   True to retain subfields; False to remove them.
+            subfields   True to retain derivatives; False to remove them.
         """
 
         def remove_derivs(arg):
             if arg is None:
                 return None
-            return arg.without_derivs()
+            return arg.without_derivs(preserve='t')
 
-        result = Event(self.__time_.without_derivs(),
-                       self.__state_.without_derivs(preserve='t'),
+        result = Event(remove_derivs(self.__time_),
+                       remove_derivs(self.__state_),
                        self.__origin_, self.__frame_)
 
         result.__arr_     = remove_derivs(self.__arr_)
@@ -1050,7 +1050,8 @@ class Event(object):
 
         Input:
             derivs      True to include the derivatives in the returned Event;
-                        False to exclude them.
+                        False to exclude them. Time derivatives are always
+                        retained.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -1090,7 +1091,8 @@ class Event(object):
             frame       the Frame or frame ID of the new coordinate frame; None
                         to leave the frame unchanged.
             derivs      True to include the derivatives in the returned Event;
-                        False to exclude them.
+                        False to exclude them. Time derivatives are always
+                        retained.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -1118,7 +1120,8 @@ class Event(object):
             frame       the Frame or frame ID of the new coordinate frame; None
                         to leave the frame unchanged.
             derivs      True to include the derivatives in the returned Event;
-                        False to exclude them.
+                        False to exclude them. Time derivatives are always
+                        retained.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -1184,7 +1187,8 @@ class Event(object):
             path        the Path object to be used as the new origin. If the
                         value is None, the event is returned unchanged.
             derivs      True to include the derivatives in the returned Event;
-                        False to exclude them.
+                        False to exclude them. Time derivatives are always
+                        retained.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -1241,7 +1245,8 @@ class Event(object):
             frame       the Frame object to be used as the new reference. If the
                         value is None, the event is returned unchanged.
             derivs      True to include the derivatives in the returned Event;
-                        False to exclude them.
+                        False to exclude them. Time derivatives are always
+                        retained.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -1285,7 +1290,8 @@ class Event(object):
             frame       a Frame into which to transform the coordinates. Its
                         reference frame must be the current frame of the event.
             derivs      True to include the derivatives in the returned Event;
-                        False to exclude them.
+                        False to exclude them. Time derivatives are always
+                        retained.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -1297,39 +1303,41 @@ class Event(object):
 
         def xform_rotate(arg):
             if arg is None: return None
-            return xform.rotate(arg, derivs=derivs)
+            return xform.rotate(arg, derivs=True)
+
+        if derivs:
+            event = self
+        else:
+            event = self.without_derivs()
 
         frame = Frame.as_frame(frame)
-        xform = frame.transform_at_time(self.__time_, quick=quick)
+        xform = frame.transform_at_time(event.__time_, quick=quick)
                     # xform rotates from event frame to new frame
 
-        if derivs:
-            state = xform.rotate(self.__state_, derivs)
-        else:
-            state = xform.rotate_pos_vel(self.pos, self.vel)
+        state = xform.rotate(event.__state_, derivs=True)
 
-        result = Event(self.__time_, state, self.__origin_, frame.wayframe)
+        result = Event(event.__time_, state, event.__origin_, frame.wayframe)
 
-        result.__arr_    = xform_rotate(self.__arr_)
-        result.__dep_    = xform_rotate(self.__dep_)
-        result.__arr_ap_ = xform_rotate(self.__arr_ap_)
-        result.__dep_ap_ = xform_rotate(self.__dep_ap_)
-        result.__arr_lt_ = self.__arr_lt_
-        result.__dep_lt_ = self.__dep_lt_
-        result.__vflat_  = xform_rotate(self.__vflat_)
-        result.__perp_   = xform_rotate(self.__perp_)
+        result.__arr_    = xform_rotate(event.__arr_)
+        result.__arr_ap_ = xform_rotate(event.__arr_ap_)
+        result.__arr_lt_ = event.__arr_lt_
+
+        result.__dep_    = xform_rotate(event.__dep_)
+        result.__dep_ap_ = xform_rotate(event.__dep_ap_)
+        result.__dep_lt_ = event.__dep_lt_
+
+        result.__vflat_  = xform_rotate(event.__vflat_)
+        result.__perp_   = xform_rotate(event.__perp_)
  
-        if derivs:
-            result.__ssb_ = self.__ssb_
-        elif result.__ssb_ is None:
+        if result.__ssb_ is None:
             result.__ssb_ = None
         else:
-            result.__ssb_ = self.__ssb_.without_derivs()
+            result.__ssb_ = event.__ssb_
 
-        result.__shape_ = self.__shape_
-        result.__mask_  = self.__mask_
+        result.__shape_ = event.__shape_
+        result.__mask_  = event.__mask_
 
-        for (key,subfield) in self.__subfields_.iteritems():
+        for (key,subfield) in event.__subfields_.iteritems():
             try:
                 subfield = xform_rotate(subfield)
             except:
@@ -1352,7 +1360,8 @@ class Event(object):
                         Its target frame must be the current frame of the event.
                         The returned event will use the reference frame instead.
             derivs      True to include the derivatives in the returned Event;
-                        False to exclude them.
+                        False to exclude them. Time derivatives are always
+                        retained.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -1361,38 +1370,42 @@ class Event(object):
 
         def xform_unrotate(arg):
             if arg is None: return None
-            return xform.unrotate(arg, derivs=derivs)
+            return xform.unrotate(arg, derivs=True)
+
+        if derivs:
+            event = self
+        else:
+            event = self.without_derivs()
 
         frame = Frame.as_frame(frame)
-        xform = frame.transform_at_time(self.__time_, quick=quick)
+        xform = frame.transform_at_time(event.__time_, quick=quick)
 
+        state = xform.unrotate(event.__state_, derivs=True)
+
+        result = Event(event.__time_, state, event.__origin_, frame.reference)
+
+        result.__arr_    = xform_unrotate(event.__arr_)
+        result.__arr_ap_ = xform_unrotate(event.__arr_ap_)
+        result.__arr_lt_ = event.__arr_lt_
+
+        result.__dep_    = xform_unrotate(event.__dep_)
+        result.__dep_ap_ = xform_unrotate(event.__dep_ap_)
+        result.__dep_lt_ = event.__dep_lt_
+
+        result.__vflat_  = xform_unrotate(event.__vflat_)
+        result.__perp_   = xform_unrotate(event.__perp_)
+  
         if derivs:
-            state = xform.unrotate(self.__state_, derivs)
-        else:
-            state = xform.unrotate_pos_vel(self.pos, self.vel)
-
-        result = Event(self.__time_, state, self.__origin_, frame.reference)
-
-        result.__arr_    = xform_unrotate(self.__arr_)
-        result.__dep_    = xform_unrotate(self.__dep_)
-        result.__arr_ap_ = xform_unrotate(self.__arr_ap_)
-        result.__dep_ap_ = xform_unrotate(self.__dep_ap_)
-        result.__arr_lt_ = self.__arr_lt_
-        result.__dep_lt_ = self.__dep_lt_
-        result.__vflat_  = xform_unrotate(self.__vflat_)
-        result.__perp_   = xform_unrotate(self.__perp_)
- 
-        if derivs:
-            result.__ssb_ = self.__ssb_
+            result.__ssb_ = event.__ssb_
         elif result.__ssb_ is None:
             result.__ssb_ = None
         else:
-            result.__ssb_ = self.__ssb_.without_derivs()
+            result.__ssb_ = event.__ssb_.without_derivs()
 
-        result.__shape_ = self.__shape_
-        result.__mask_  = self.__mask_
+        result.__shape_ = event.__shape_
+        result.__mask_  = event.__mask_
 
-        for (key,subfield) in self.__subfields_.iteritems():
+        for (key,subfield) in event.__subfields_.iteritems():
             try:
                 subfield = xform_unrotate(subfield)
             except:
@@ -1446,20 +1459,30 @@ class Event(object):
 
         if recursive:
             result.__arr_    = self.__arr_
-            result.__dep_    = self.__dep_
             result.__arr_ap_ = self.__arr_ap_
-            result.__dep_ap_ = self.__dep_ap_
             result.__arr_lt_ = self.__arr_lt_
+
+            result.__dep_    = self.__dep_
+            result.__dep_ap_ = self.__dep_ap_
             result.__dep_lt_ = self.__dep_lt_
+
+            result.__neg_arr     = self.__neg_arr
+            result.__neg_arr_ap_ = self.__neg_arr_ap_
+
             result.__vflat_  = self.__vflat_
             result.__perp_   = self.__perp_
         else:
             result.__arr_    = without_derivs(self.__arr_)
-            result.__dep_    = without_derivs(self.__dep_)
             result.__arr_ap_ = without_derivs(self.__arr_ap_)
-            result.__dep_ap_ = without_derivs(self.__dep_ap_)
             result.__arr_lt_ = without_derivs(self.__arr_lt_)
+
+            result.__dep_    = without_derivs(self.__dep_)
+            result.__dep_ap_ = without_derivs(self.__dep_ap_)
             result.__dep_lt_ = without_derivs(self.__dep_lt_)
+
+            result.__neg_arr_    = without_derivs(self.__neg_arr_)
+            result.__neg_arr_ap_ = without_derivs(self.__neg_arr_ap_)
+
             result.__vflat_  = without_derivs(self.__vflat_)
             result.__perp_   = without_derivs(self.__perp_)
 
@@ -1508,9 +1531,11 @@ class Event(object):
         diff.__arr_    = ref_unrotate(event_ssb.__arr_)
         diff.__arr_ap_ = ref_unrotate(event_ssb.__arr_ap_)
         diff.__arr_lt_ = self.__arr_lt_
+
         diff.__dep_    = ref_unrotate(event_ssb.__dep_)
         diff.__dep_ap_ = ref_unrotate(event_ssb.__dep_ap_)
         diff.__dep_lt_ = self.__dep_lt_
+
         diff.__vflat_  = ref_unrotate(event_ssb.__vflat_)
         diff.__perp_   = ref_unrotate(event_ssb.__perp_)
 
