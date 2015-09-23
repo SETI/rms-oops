@@ -40,23 +40,24 @@ class Cassini(object):
 
     START_TIME = "1997-10-01"
     STOP_TIME  = "2018-01-01"
-    
+
     TDB0 = julian.tdb_from_tai(julian.tai_from_iso(START_TIME))
     TDB1 = julian.tdb_from_tai(julian.tai_from_iso(STOP_TIME))
     MONTHS = 243
     DTDB = (TDB1 - TDB0) / MONTHS
     SLOP = 43200.
-    
+
     CK_SUBPATH = os.path.join("Cassini", "CK-reconstructed")
     CK_LOADED  = np.zeros(MONTHS, dtype="bool")  # True if month was loaded
     CK_LIST    = np.empty(MONTHS, dtype="object")# Kernels needed
     CK_DICT    = {}     # A dictionary of kernel names returning True if loaded
-    
-    SPK_SUBPATH = os.path.join("Cassini", "SPK-reconstructed")
-    SPK_PREDICT = os.path.join("Cassini", "SPK-predicted")
-    SPK_LOADED  = np.zeros(MONTHS, dtype="bool")
-    SPK_LIST    = np.empty(MONTHS, dtype="object")
-    SPK_DICT    = {}
+
+    # SPKs are now loaded all at once via a metakernel.
+#     SPK_SUBPATH = os.path.join("Cassini", "SPK-reconstructed")
+#     SPK_PREDICT = os.path.join("Cassini", "SPK-predicted")
+#     SPK_LOADED  = np.zeros(MONTHS, dtype="bool")
+#     SPK_LIST    = np.empty(MONTHS, dtype="object")
+#     SPK_DICT    = {}
 
     loaded_instruments = []
 
@@ -68,20 +69,22 @@ class Cassini(object):
     def initialize():
         if Cassini.initialized: return
 
+        # Define some important paths and frames
+        oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME)
+        ignore = oops.path.SpicePath("CASSINI", "SATURN")
+        #ignore = oops.frame.SpiceFrame("CASSINI_SC_COORD", "J2000")
+
         spicedb.open_db()
 
         kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"))
         Cassini.initialize_kernels(kernels, Cassini.CK_LIST, Cassini.CK_DICT)
 
-        kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"))
-        Cassini.initialize_kernels(kernels, Cassini.SPK_LIST, Cassini.SPK_DICT)
+        # SPKs are now loaded all at once via a metakernel
+#         kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"))
+#         Cassini.initialize_kernels(kernels, Cassini.SPK_LIST, Cassini.SPK_DICT)
+        kernels = spicedb.furnish_by_metafile('CAS-SPK-META')
 
         spicedb.close_db()
-
-        # Define some important paths and frames
-        oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME)
-        ignore = oops.path.SpicePath("CASSINI", "SATURN")
-        #ignore = oops.frame.SpiceFrame("CASSINI_SC_COORD", "J2000")
 
         initialized = True
 
@@ -94,10 +97,10 @@ class Cassini(object):
         Cassini.CK_LOADED = np.zeros(Cassini.MONTHS, dtype="bool")
         Cassini.CK_LIST = np.empty(Cassini.MONTHS, dtype="object")
         Cassini.CK_DICT = {}
-        
-        Cassini.SPK_LOADED = np.zeros(Cassini.MONTHS, dtype="bool")
-        Cassini.SPK_LIST = np.empty(Cassini.MONTHS, dtype="object")
-        Cassini.SPK_DICT = {}
+
+#         Cassini.SPK_LOADED = np.zeros(Cassini.MONTHS, dtype="bool")
+#         Cassini.SPK_LIST = np.empty(Cassini.MONTHS, dtype="object")
+#         Cassini.SPK_DICT = {}
 
         Cassini.initialized = False
 
@@ -125,16 +128,18 @@ class Cassini(object):
         """Ensures that the SPK kernels applicable at or near the given time have
         been furnished. The time can be tai or tdb."""
 
-        Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
-                                   Cassini.SPK_DICT)
+#         Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
+#                                    Cassini.SPK_DICT)
+        pass    # SPKs are now loaded all at once via a metakernel
 
     @staticmethod
     def load_spks(t0, t1):
         """Ensures that all the SPK kernels applicable near or within the time
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb."""
 
-        Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
-                                     Cassini.SPK_DICT)
+#         Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
+#                                      Cassini.SPK_DICT)
+        pass    # SPKs are now loaded all at once via a metakernel
 
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, dict):
