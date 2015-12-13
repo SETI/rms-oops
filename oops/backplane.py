@@ -844,6 +844,7 @@ class Backplane(object):
     #   incidence_angle()   incidence angle at surface, radians.
     #   emission_angle()    emission angle at surface, radians.
     #   lambert_law()       Lambert Law model for surface, cos(incidence).
+    #   minnaert_law()      Minnaert Law model for surface.
     ############################################################################
 
     def incidence_angle(self, event_key):
@@ -945,6 +946,29 @@ class Backplane(object):
             lambert_law = lambert_law.mask_where(incidence >= constants.HALFPI,
                                                  0.)
             self.register_backplane(key, lambert_law)
+
+        return self.backplanes[key]
+
+    def minnaert_law(self, event_key, k, k2=None):
+        """Minnaert law model for the surface.
+
+        Input:
+            event_key       key defining the surface event.
+            k               The Minnaert exponent (for cos(i)).
+            k2              Optional second Minnaert exponent (for cos(e)).
+                            Defaults to k-1.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ('minnaert_law', event_key)
+        if key not in self.backplanes:
+            if k2 is None:
+                k2 = k-1.
+            mu0 = self.lambert_law(event_key) # Masked
+            emission = self.emission_angle(event_key)
+            mu = emission.cos()
+            minnaert_law = mu0 ** k * mu ** k2
+            self.register_backplane(key, minnaert_law)
 
         return self.backplanes[key]
 
@@ -2646,7 +2670,7 @@ class Backplane(object):
             'center_resolution',
 
         'incidence_angle', 'emission_angle', 'phase_angle',
-            'scattering_angle', 'lambert_law',
+            'scattering_angle', 'lambert_law', 'minnaert_law',
         'center_incidence_angle', 'center_emission_angle', 'center_phase_angle',
             'center_scattering_angle',
 
