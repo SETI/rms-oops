@@ -2,8 +2,6 @@
 # oops/path_/kepler.py: Subclass Kepler of class Path.
 ################################################################################
 
-##### 3/29/14 reorganization not complete -- MRS
-
 import numpy as np
 import gravity
 from polymath import *
@@ -12,6 +10,7 @@ from oops.event        import Event
 from oops.path_.path   import Path
 from oops.frame_.frame import Frame
 from oops.fittable     import Fittable
+from oops.config       import PATH_PHOTONS
 import oops.constants  as constants
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
@@ -26,13 +25,20 @@ DNODE = 8   # elements[DNODE] = nodal regression rate (radians/s, negative)
 
 NELEMENTS = 9
 
+LIBAMP = 0  # libration[LIBAMP] = libration amplitude (radians)
+PHASE0 = 1  # libration[PHASE0] = libration phase at epoch (radians)
+DPHASE = 2  # libration[DPHASE] = libration rate (radians/s)
+
+NWOBBLES = 3
+
 class Kepler(Path, Fittable):
     """Subclass Kepler defines a fittable Keplerian orbit, which is accurate to
     first order in eccentricity and inclination. It is defined using nine
     orbital elements.
     """
 
-    def __init__(self, body, epoch, elements=None, observer=None, id=None):
+    def __init__(self, body, epoch, elements=None, observer=None, wobbles=(),
+                       id=None):
         """Constructor for a Kepler path.
 
         Input:
@@ -40,8 +46,9 @@ class Kepler(Path, Fittable):
                         gravity and its ring_frame.
             epoch       the time TDB relative to which all orbital elements are
                         defined.
-            elements    a tuple, list or Numpy array containing the nine orbital
-                        elements:
+
+            elements    a tuple, list or Numpy array containing the orbital
+                        elements and wobble terms:
                 a           mean radius of orbit, km.
                 lon         mean longitude of orbit at epoch, radians.
                 n           mean motion, radians/sec.
@@ -53,7 +60,13 @@ class Kepler(Path, Fittable):
                 i           inclination, radians.
                 node        longitude of ascending node at epoch, radians.
                 regr        nodal regression rate, radians/sec, NEGATIVE!
+
+                amp         amplitude of the first wobble term, radians.
+                phase0      initial phase of the first wobble term, radians.
+                dphase_dt   rate of change of the first wobble term, radians/s.
+
                         Alternatively, None to leave the object un-initialized.
+
             observer    an optional Path object or ID defining the observation
                         point. Used for astrometry. If provided, the path is
                         returned relative to the observer, in J2000 coordinates,
@@ -61,35 +74,49 @@ class Kepler(Path, Fittable):
                         already accounted for. If None (the default), then the
                         path is defined relative to the central planet in that
                         planet's ring_frame.
-            id          the name under which to register the path; None to leave
-                        the path unregistered.
+
+            wobbles     a string or tuple of strings containing the name of each
+                        element to which the corresponding wobble applies. Use
+                        'mean', 'peri' or 'node', 'a', 'e', or 'i'.
+
+            id          the name under which to register the path.
         """
 
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
         global NELEMENTS
 
-        self.nparams = NELEMENTS
+        global LIBAMP, PHASE0, DPHASE
+        global NWOBBLES
+
+        if type(wobbles) == str:
+            self.wobbles = (wobbles,)
+        else:
+            self.wobbles = wobbles
+
+        self.nwobbles = len(wobbles)
+        for name in self.wobbles:
+            assert name in ('mean', 'peri', 'node', 'a', 'e', 'i')
+
+        self.nparams = NELEMENTS + self.nwobbles * NWOBBLES
         self.param_name = "elements"
         self.cache = {}
 
         self.planet = body
-        self.origin = body.path
+        self.center = body.path
         self.gravity = body.gravity
 
-        observer = None     # FOR NOW; THE ALTERNATIVE DOES NOT WORK
         if observer is None:
             self.observer = None
-            self.center = self.planet.path
             self.origin = self.planet.path
             self.frame  = body.ring_frame
-            self.to_j2000 = Matrix3.UNIT
-#         else:
-#             self.observer = Registry.as_path(observer)
-#             assert self.observer.shape == []
-#             self.center = Path.connect(self.planet.path_id, observer, "J2000")
-#             self.frame_id = "J2000"
-#             frame = Registry.connect_frames("J2000", body.ring_frame_id)
-#             self.to_j2000 = frame.transform_at_time(epoch).matrix
+            self.to_j2000 = Matrix3.IDENTITY
+        else:
+            self.observer = Path.as_path(observer)
+            assert self.observer.shape == ()
+            self.origin = self.observer
+            self.frame = Frame.J2000
+            frame = self.frame.wrt(body.ring_frame)
+            self.to_j2000 = frame.transform_at_time(epoch).matrix
 
         self.epoch = epoch
 
@@ -98,25 +125,27 @@ class Kepler(Path, Fittable):
         else:
             self.set_params(elements)
 
-        self.nparams = NELEMENTS
-
         if id is None:
-            self.path_id = Registry.temporary_path_id()
+            self.path_id = Path.temporary_path_id()
         else:
             self.path_id = id
 
-        self.shape = []
-        self.reregister()
+        self.shape = ()
+        self.register()
 
     ########################################
 
     def set_params_new(self, elements):
-        """Part of the Fittable interface. Re-defines the path given new orbital
-        elements.
+        """Re-define the path given new orbital elements.
+
+        Part of the Fittable interface. 
 
         Input:
             elements    An array or list of orbital elements. In order, they are
-                        [a, mean0, dmean, e, peri0, dperi, i, node0, dnode].
+                            [a, mean0, dmean, e, peri0, dperi, i, node0, dnode],
+                        followed by
+                            [amp, phase0, dphase]
+                        for each wobble.
 
               a         semimajor axis (km).
               mean0     mean longitude (radians) at the epoch.
@@ -127,13 +156,17 @@ class Kepler(Path, Fittable):
               i         inclination (radians).
               node0     ascending node (radians) at the epoch.
               dnode     nodal regression rate (rad/s, < 0).
+
+              amp       amplitude of the wobble, radians.
+              phase0    phase of the wobble at epoch, radians.
+              dphase    rate of change of the wobble, radians/s.
         """
 
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
         global NELEMENTS
 
         self.elements = np.asfarray(elements)
-        assert self.elements.shape == (9,)
+        assert self.elements.shape == (self.nparams,)
 
         # Make copies of the orbital elements for convenience
         self.a = self.elements[SEMIM]
@@ -146,11 +179,20 @@ class Kepler(Path, Fittable):
         self.peri0 = self.elements[PERI0]
         self.node0 = self.elements[NODE0]
 
-        self.dmean = self.elements[DMEAN]
-        self.dperi = self.elements[DPERI]
-        self.dnode = self.elements[DNODE]
+        self.dmean_dt = self.elements[DMEAN]
+        self.dperi_dt = self.elements[DPERI]
+        self.dnode_dt = self.elements[DNODE]
 
         self.ae = self.a * self.e
+
+        self.amp       = np.array(self.elements[NELEMENTS+LIBAMP::NWOBBLES])
+        self.phase0    = np.array(self.elements[NELEMENTS+PHASE0::NWOBBLES])
+        self.dphase_dt = np.array(self.elements[NELEMENTS+DPHASE::NWOBBLES])
+
+        if self.amp.size == 0:      # because zero-sized arrays cause problems
+            self.amp       = 0.
+            self.phase0    = 0.
+            self.dphase_dt = 0.
 
         # Empty the cache
         self.cached_observation_time = None
@@ -159,354 +201,420 @@ class Kepler(Path, Fittable):
     ########################################
 
     def copy(self):
-        """Part of the Fittable interface. Returns a deep copy of the object.
+        """Return a deep copy of the object. Part of the Fittable interface.
         """
 
         return Kepler(self.planet, self.epoch, self.get_params().copy(),
-                      self.observer)
+                      self.observer, self.wobbles)
 
     ########################################
 
     def get_elements(self):
-        """Returns the complete set of nine orbital elements.
+        """Return the complete set of orbital elements, including wobbles.
         """
 
         return self.elements
 
-    ########################################
+    ############################################################################
 
     def xyz_planet(self, time, partials=False):
-        """Returns the body position and velocity relative to the planet as a
-        function of time, in an inertial frame where the Z-axis is aligned with
-        the planet's rotation pole. Optionally, it also returns the partial
+        """Body position and velocity relative to the planet, in planet's frame.
+
+        Results are returned in an inertial frame where the Z-axis is aligned
+        with the planet's rotation pole. Optionally, it also returns the partial
         derivatives of the position vector with respect to the orbital elements,
-        on the the assumption that all nine orbital elements are independent.
-        The coordinates are only accurate to first order in (e,i). The
-        derivatives are precise relative to the definitions of these elements.
+        on the the assumption that all orbital elements are independent. The
+        The coordinates are only accurate to first order in (e,i) and in the
+        wobbles. The derivatives are precise relative to the definitions of
+        these elements. However, partials are not provided for the wobbles.
 
         Input:
             time        time (seconds) as a Scalar.
-            partials    False (default) to return the position and velocity;
-                        True to return partial derivatives as well.
+            partials    True to include partial derivatives of the position with
+                        respect to the elements.
 
-        Return:
-            xyz         a Vector3 of position vectors.
-            dxyz_dt     a Vector3 of velocity vectors.
-            dxyz_delements
-                        a MatrixN containing the partial derivatives of the
-                        position vectors with respect to each orbital element,
-                            d(x,y,z)/d(elements)
-                        The item shape is [3,9].
-
-            If partials is False, then the tuple (xyz, dxyz_dt) is returned;
-            Otherwise, the tuple (xyz, dxyz_dt, dxyz_delements) is returned.
+        Return:         (pos, vel)
+            pos         a Vector3 of position vectors.
+            vel         a Vector3 of velocity vectors.
         """
 
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
         global NELEMENTS
 
+        global LIBAMP, PHASE0, DPHASE
+        global NWOBBLES
+
         # Convert to array if necessary
         time = Scalar.as_scalar(time)
         t = time.vals - self.epoch
 
-        # Determine moon polar coordinates in orbit plane
-        #   mean  = mean0 + dmean * t
-        #   peri  = peri0 + dperi * t
-        #   r     = a    * (1 - e * cos(mean - peri))
-        #   theta = mean - 2 * e * sin(mean - peri)
+        if partials:
+            partials_shape = time.shape + (self.nparams,)
+            dmean_delem = np.zeros(partials_shape)
+            dperi_delem = np.zeros(partials_shape)
+            dnode_delem = np.zeros(partials_shape)
+            da_delem = np.zeros(partials_shape)
+            de_delem = np.zeros(partials_shape)
+            di_delem = np.zeros(partials_shape)
 
-        mean = self.mean0 + self.dmean * t
-        peri = self.peri0 + self.dperi * t
+        ########################################################################
+        # Determine three angles and their time derivatives
+        #   mean = mean0 + t * dmean_dt
+        #   peri = peri0 + t * dperi_dt
+        #   node = node0 + t * dnode_dt
+        ########################################################################
+
+        mean = self.mean0 + t * self.dmean_dt
+        peri = self.peri0 + t * self.dperi_dt
+        node = self.node0 + t * self.dnode_dt
+        a = self.a
+        e = self.e
+        i = self.i
+
+        # Time derivatives...
+        dmean_dt = self.dmean_dt
+        dperi_dt = self.dperi_dt
+        dnode_dt = self.dnode_dt
+        da_dt = 0.
+        de_dt = 0.
+        di_dt = 0.
+
+        # Partials...
+        if partials:
+            dmean_delem[..., MEAN0] = 1.
+            dmean_delem[..., DMEAN] = t
+            dperi_delem[..., PERI0] = 1.
+            dperi_delem[..., DPERI] = t
+            dnode_delem[..., NODE0] = 1.
+            dnode_delem[..., DNODE] = t
+            da_delem[..., SEMIM] = 1.
+            de_delem[..., ECCEN] = 1.
+            di_delem[..., INCLI] = 1.
+
+        ########################################################################
+        # Apply the wobbles
+        ########################################################################
+
+        start = NELEMENTS - NWOBBLES
+        for k in range(self.nwobbles):
+            start += NWOBBLES
+
+            arg     = self.phase0[k] + t * self.dphase_dt[k]
+            sin_arg = np.sin(arg)
+            cos_arg = np.cos(arg)
+
+            wobble     = self.amp[k] * sin_arg
+            dwobble_dt = self.amp[k] * cos_arg * self.dphase_dt[k]
+
+            if partials:
+                dwobble_delem = np.empty(time.shape + (3,))
+                dwobble_delem[...,0] = sin_arg[k]
+                dwobble_delem[...,1] = self.amp[k] * cos_arg[k]
+                dwobble_delem[...,2] = dwobble_delem[...,1] * t
+
+            if self.wobbles[k] == 'mean':
+                mean     += wobble
+                dmean_dt += dwobble_dt
+                if partials:
+                    dmean_delem[...,start:start+NWOBBLES] = dwobble_delem
+
+            elif self.wobbles[k] == 'peri':
+                peri     += wobble
+                dperi_dt += dwobble_dt
+                if partials:
+                    dperi_delem[...,start:start+NWOBBLES] = dwobble_delem
+
+            elif self.wobbles[k] == 'node':
+                node     += wobble
+                dnode_dt += dwobble_dt
+                if partials:
+                    dnode_delem[...,start:start+NWOBBLES] = dwobble_delem
+
+            elif self.wobbles[k] == 'a':
+                a     += wobble
+                da_dt += dwobble_dt
+                if partials:
+                    da_delem[...,start:start+NWOBBLES] = dwobble_delem
+
+            elif self.wobbles[k] == 'e':
+                e     += wobble
+                de_dt += dwobble_dt
+                if partials:
+                    de_delem[...,start:start+NWOBBLES] = dwobble_delem
+
+            else:
+                i     += wobble
+                di_dt += dwobble_dt
+                if partials:
+                    di_delem[...,start:start+NWOBBLES] = dwobble_delem
+
+        ########################################################################
+        # Evaluate some derived elements
+        ########################################################################
+
+        ae = a * e
+        cos_i = np.cos(i)
+        sin_i = np.sin(i)
+
+        # Time-derivatives...
+        dae_dt = a * de_dt + da_dt * e
+        dcosi_dt = -sin_i * di_dt
+        dsini_dt =  cos_i * di_dt
+
+        # Partials...
+        if partials:
+            dae_delem = np.zeros(partials_shape)
+            dae_delem[..., SEMIM] = e
+            dae_delem[..., ECCEN] = a
+
+            dcosi_delem = np.zeros(partials_shape)
+            dsini_delem = np.zeros(partials_shape)
+            dcosi_delem[...,INCLI] = -sin_i
+            dsini_delem[...,INCLI] =  cos_i
+
+        ########################################################################
+        # Determine moon polar coordinates in orbit plane
+        #   r     = a - a * e * cos(mean - peri))
+        #   theta = mean -  2 * e * sin(mean - peri)
+        ########################################################################
 
         mp = mean - peri
         cos_mp = np.cos(mp)
         sin_mp = np.sin(mp)
 
-        r     = self.a - self.ae * cos_mp
-        theta = mean   + (2. * self.e * sin_mp)
+        r     = a - ae * cos_mp
+        theta = mean + 2. * e * sin_mp
 
         # Time-derivatives...
-        d_mp_dt = (self.dmean - self.dperi)
-        d_r_dt = self.ae * sin_mp * d_mp_dt
-        d_theta_dt = self.dmean + 2 * self.e * cos_mp * d_mp_dt
+        dmp_dt = dmean_dt - dperi_dt
+        dcosmp_dt = -sin_mp * dmp_dt
+        dsinmp_dt =  cos_mp * dmp_dt
 
+        dr_dt = da_dt - ae * dcosmp_dt - dae_dt * cos_mp
+        dtheta_dt = dmean_dt + 2. * (e * dsinmp_dt + de_dt * sin_mp)
+
+        # Partials...
+        if partials:
+            dmp_delem = dmean_delem - dperi_delem
+            dcosmp_delem = -sin_mp[...,np.newaxis] * dmp_delem
+            dsinmp_delem =  cos_mp[...,np.newaxis] * dmp_delem
+
+            dr_delem = da_delem - ae[...,np.newaxis] * dcosmp_delem - \
+                                  dae_delem * cos_mp[...,np.newaxis]
+            dtheta_delem = dmean_delem + 2. * \
+                                        (e[...,np.newaxis] * dsinmp_delem +
+                                         de_delem * sin_mp[...,np.newaxis])
+
+        ########################################################################
         # Locate body on an inclined orbit, in a frame where X is along the
         # ascending node
         #   asc[X] = r cos(theta - node)
         #   asc[Y] = r sin(theta - node) cos(i)
         #   asc[Z] = r sin(theta - node) sin(i)
+        ########################################################################
 
-        node = self.node0 + self.dnode * t
         tn = theta - node
         cos_tn = np.cos(tn)
         sin_tn = np.sin(tn)
 
-        unit1 = np.empty((time.shape + [3]))
+        unit1 = np.empty((time.shape + (3,)))
         unit1[...,0] = cos_tn
-        unit1[...,1] = sin_tn * self.cos_i
-        unit1[...,2] = sin_tn * self.sin_i
+        unit1[...,1] = sin_tn * cos_i
+        unit1[...,2] = sin_tn * sin_i
 
         asc = r[...,np.newaxis] * unit1
 
         # Time-derivatives...
-        d_tn_dt = d_theta_dt - self.dnode
+        dtn_dt = dtheta_dt - dnode_dt
+        dcostn_dt = -sin_tn * dtn_dt
+        dsintn_dt =  cos_tn * dtn_dt
 
-        d_unit1_d_tn = np.empty(time.shape + [3])
-        d_unit1_d_tn[...,0] = -sin_tn
-        d_unit1_d_tn[...,1] =  cos_tn * self.cos_i
-        d_unit1_d_tn[...,2] =  cos_tn * self.sin_i
+        dunit1_dt = np.empty(time.shape + (3,))
+        dunit1_dt[...,0] = dcostn_dt
+        dunit1_dt[...,1] = dsintn_dt * cos_i + sin_tn * dcosi_dt
+        dunit1_dt[...,2] = dsintn_dt * sin_i + sin_tn * dsini_dt
 
-        d_asc_dt = (d_r_dt[...,np.newaxis] * unit1 +
-                    (r * d_tn_dt)[...,np.newaxis] * d_unit1_d_tn)
+        dasc_dt = dr_dt[...,np.newaxis] * unit1 + r[...,np.newaxis] * dunit1_dt
 
+        # Partials...
+        if partials:
+            dtn_delem = dtheta_delem - dnode_delem
+            dcostn_delem = -sin_tn[...,np.newaxis] * dtn_delem
+            dsintn_delem =  cos_tn[...,np.newaxis] * dtn_delem
+
+            dunit1_delem = np.empty(partials_shape + (3,))
+            dunit1_delem[...,0] = dcostn_delem
+            dunit1_delem[...,1] = dsintn_delem * cos_i[...,np.newaxis] + \
+                                  sin_tn[...,np.newaxis] * dcosi_delem
+            dunit1_delem[...,2] = dsintn_delem * sin_i[...,np.newaxis] + \
+                                  sin_tn[...,np.newaxis] * dsini_delem
+
+            dasc_delem = dr_delem[...,np.newaxis] * unit1[...,np.newaxis,:] + \
+                         r[...,np.newaxis,np.newaxis] * dunit1_delem
+            # shape is (..., 9, 3)
+
+        ########################################################################
         # Rotate the ascending node back into position in our inertial frame
         #   xyz[X] = asc[X] * cos(node) - asc[Y] * sin(node)
         #   xyz[Y] = asc[X] * sin(node) + asc[Y] * cos(node)
         #   xyz[Z] = asc[Z]
+        ########################################################################
 
         cos_node = np.cos(node)
         sin_node = np.sin(node)
 
-        rotate = np.zeros(time.shape + [3,3])
+        rotate = np.zeros(time.shape + (3,3))
         rotate[...,0,0] =  cos_node
         rotate[...,0,1] = -sin_node
         rotate[...,1,0] =  sin_node
         rotate[...,1,1] =  cos_node
         rotate[...,2,2] =  1.
 
-        # Matrix multiply the results
         xyz = np.sum(rotate[...,:,:] * asc[...,np.newaxis,:], axis=-1)
 
         # Time-derivatives...
-        d_rotate_d_node = np.zeros(time.shape + [3,3])
-        d_rotate_d_node[...,0,0] = -sin_node
-        d_rotate_d_node[...,0,1] = -cos_node
-        d_rotate_d_node[...,1,0] =  cos_node
-        d_rotate_d_node[...,1,1] = -sin_node
+        dcosnode_dt = -sin_node * dnode_dt
+        dsinnode_dt =  cos_node * dnode_dt
 
-        d_rotate_dt = d_rotate_d_node * self.dnode
+        drotate_dt = np.zeros(time.shape + (3,3))
+        drotate_dt[...,0,0] =  dcosnode_dt
+        drotate_dt[...,0,1] = -dsinnode_dt
+        drotate_dt[...,1,0] =  dsinnode_dt
+        drotate_dt[...,1,1] =  dcosnode_dt
 
-        d_xyz_dt = (np.sum(rotate * d_asc_dt[...,np.newaxis,:], axis=-1) +
-                    np.sum(d_rotate_dt * asc[...,np.newaxis,:], axis=-1))
+        dxyz_dt = (np.sum(rotate * dasc_dt[...,np.newaxis,:], axis=-1) +
+                   np.sum(drotate_dt * asc[...,np.newaxis,:], axis=-1))
 
-        # Without a derivative calculation, we're done
-        result = (Vector3(xyz), Vector3(d_xyz_dt))
-        if not partials: return result
+        # Partials...
+        if partials:
+            dcosnode_delem = -sin_node[...,np.newaxis] * dnode_delem
+            dsinnode_delem =  cos_node[...,np.newaxis] * dnode_delem
 
-        # Differentiate this code from above...
-        # Note that we do NOT differentiate the velocities, just the positions.
-        #
-        # mean = self.mean0 + self.dmean * t
-        # peri = self.peri0 + self.dperi * t
-        # 
-        # mp = mean - peri
-        # 
-        # r     = self.a * (1. - self.e * cos_mp)
-        # theta = mean   - (2. * self.e * sin_mp)
+            drotate_delem = np.zeros(partials_shape + (3,3))
+            drotate_delem[...,0,0] =  dcosnode_delem
+            drotate_delem[...,0,1] = -dsinnode_delem
+            drotate_delem[...,1,0] =  dsinnode_delem
+            drotate_delem[...,1,1] =  dcosnode_delem
 
-        # Get the derivatives of r and theta with respect to each element
+            dxyz_delem = np.sum(rotate[...,np.newaxis,:,:] *
+                                dasc_delem[...,np.newaxis,:], axis=-1) + \
+                         np.sum(drotate_delem *
+                                asc[...,np.newaxis,np.newaxis,:], axis=-1)
+            # shape = (..., 9, 3)
 
-        d_r_d_elem = np.zeros(time.shape + [NELEMENTS])
-        d_r_d_elem[...,SEMIM] = 1 - self.e  * cos_mp
-        d_r_d_elem[...,ECCEN] =   - self.a  * cos_mp
-        d_r_d_elem[...,MEAN0] =     self.ae * sin_mp
-        d_r_d_elem[...,DMEAN] = t * d_r_d_elem[...,MEAN0]
-        d_r_d_elem[...,PERI0] =   - d_r_d_elem[...,MEAN0]
-        d_r_d_elem[...,DPERI] =   - d_r_d_elem[...,DMEAN]
+        ########################################################################
+        # Return results
+        ########################################################################
 
-        d_theta_d_elem = np.zeros(time.shape + [NELEMENTS])
-        d_theta_d_elem[...,ECCEN] = -2 * sin_mp
-        d_theta_d_elem[...,PERI0] =  2 * cos_mp * self.e
-        d_theta_d_elem[...,DPERI] =  t * d_theta_d_elem[...,PERI0]
-        d_theta_d_elem[...,MEAN0] =  1 - d_theta_d_elem[...,PERI0]
-        d_theta_d_elem[...,DMEAN] =  t * d_theta_d_elem[...,MEAN0]
+        pos = Vector3(xyz)
+        vel = Vector3(dxyz_dt)
 
-        # Differentiate this code from above...
-        #
-        # node = self.node0 + self.dnode * t
-        # tn = theta - node
-        # 
-        # unit1 = np.array([cos_tn,
-        #                   sin_tn * self.cos_i,
-        #                   sin_tn * self.sin_i])
-        # asc = r * unit1
+        if partials:
+            dxyz_delem = dxyz_delem.swapaxes(-1,-2)
+            pos.insert_deriv('elements', Vector3(dxyz_delem, drank=1))
 
-        # Get the derivaties of the "asc" coordinates with respect to each
-        # element
+        return (pos, vel)
 
-        d_tn_d_elem = d_theta_d_elem.copy()
-        d_tn_d_elem[...,NODE0] -= 1.
-        d_tn_d_elem[...,DNODE] -= t
+    ############################################################################
 
-        d_asc_d_r = unit1
-
-        d_asc_d_tn = np.empty(time.shape + [3])
-        d_asc_d_tn[...,0] = -sin_tn
-        d_asc_d_tn[...,1] =  cos_tn * self.cos_i
-        d_asc_d_tn[...,2] =  cos_tn * self.sin_i
-        d_asc_d_tn *= r[...,np.newaxis]
-
-        d_asc_d_i = np.zeros(time.shape + [3])
-        d_asc_d_i[...,1] = -sin_tn * self.sin_i
-        d_asc_d_i[...,2] =  sin_tn * self.cos_i
-        d_asc_d_i *= r[...,np.newaxis]
-
-        # Combine using outer products...
-        d_asc_d_elem = (
-                 d_asc_d_r[...,:,np.newaxis] *  d_r_d_elem[...,np.newaxis,:] +
-                d_asc_d_tn[...,:,np.newaxis] * d_tn_d_elem[...,np.newaxis,:])
-
-        d_asc_d_elem[...,:,INCLI] += d_asc_d_i
-
-        # Differentiate this code from above...
-        #
-        # Rotate the ascending node back into position in our inertial frame
-        #   xyz[X] = asc[X] * cos(node) - asc[Y] * sin(node)
-        #   xyz[Y] = asc[X] * sin(node) + asc[Y] * cos(node)
-        #   xyz[Z] = asc[Z]
-        # 
-        # xyz = rotate <dot> asc
-
-        # Get the derivaties of the "xyz" coordinates with respect to each
-        # element
-
-        d_node_d_elem = np.zeros(time.shape + [NELEMENTS])
-        d_node_d_elem[...,NODE0] = 1.
-        d_node_d_elem[...,DNODE] = t
-
-        d_rotate_d_elem = (d_rotate_d_node[...,:,:,np.newaxis] *
-                           d_node_d_elem[...,np.newaxis,np.newaxis,:])
-
-        d_xyz_d_elem = (np.sum(rotate[...,:,:,np.newaxis] *
-                               d_asc_d_elem[...,np.newaxis,:,:], axis=-2) +
-                        np.sum(d_rotate_d_elem[...,:,:,:] *
-                               asc[...,np.newaxis,:,np.newaxis], axis=-2))
-
-        result += (MatrixN(d_xyz_d_elem),)
-        return result
-
-    ########################################
-
-    def xyz_observed(self, time, planet_event, partials=False):
-        """Returns the body position and velocity relative to the observer and
-        in the J2000 coordinate frame. Optionally, it also returns the partial
-        derivatives of the position with respect to the orbital elements,
-        assuming they are all independent.
+    def xyz_observed(self, time, quick={}, partials=False, planet_event=None):
+        """Body position and velocity relative to the observer in J2000 frame.
 
         Input:
             time        time (seconds) as a Scalar.
+            partials    True to include partial derivatives of the position with
+            quick       False to disable QuickPaths; a dictionary to override
+                        specific options.
+                        respect to the elements.
             planet_event
                         the corresponding event of the photon leaving the
                         planet; None to calculate this from the time. Note that
                         this can be calculated once using planet_event(),
                         avoiding the need to re-calculate this quantity for
                         repeated calls using the same time(s).
-            partials    False (default) to return the position and velocity;
-                        True to return partial derivatives as well.
 
         Return:
-            xyz         a Vector3 of position vectors.
-            dxyz_dt     a Vector3 of velocity vectors.
-            dxyz_delements
-                        a MatrixN containing the partial derivatives of the
-                        position vectors with respect to each orbital element,
-                            d(x,y,z)/d(elements)
-                        The item shape is [3,9].
-
-            If partials is False, then the tuple (xyz, dxyz_dt) is returned;
-            Otherwise, the tuple (xyz, dxyz_dt, dxyz_delements) is returned.
+            pos         a Vector3 of position vectors.
+            vel         a Vector3 of velocity vectors.
         """
 
-        xyz_planet = self.xyz_planet(planet_event.time, partials)
+        if planet_event is None:
+            observer_event = Event(time, Vector3.ZERO,
+                                   self.observer, self.frame)
+            planet_event = self.center.photon_to_event(observer_event,
+                                                       quick=quick)[0]
 
-        pos_j2000 = self.to_j2000.rotate(xyz_planet[0]) + planet_event.pos
-        vel_j2000 = self.to_j2000.rotate(xyz_planet[1]) + planet_event.vel
+        (pos, vel) = self.xyz_planet(planet_event.time, partials)
 
-        if not partials: return (pos_j2000, vel_j2000)
+        pos_j2000 = self.to_j2000.rotate(pos) + planet_event.pos
+        vel_j2000 = self.to_j2000.rotate(vel) + planet_event.vel
 
-        # Rotate derivatives to J2000
-        d_xyz_d_elem_vals = xyz_planet[2]                   # shape (...,3,9)
-
-        derivs = Vector3(d_xyz_d_elem_vals.swapaxes(-1,-2)) # shape [...,9]
-
-        derivs_j2000 = self.to_j2000.rotate(derivs)         # shape [...,9]
-
-        derivs_j2000_vals = derivs_j2000.vals               # shape (...,9,3)
-
-        dpos_delem_j2000 = MatrixN(derivs_j2000_vals.swapaxes(-1,-2))
-                                                            # shape [...]
-                                                            # item shape [3,9]
-
-        return (pos_j2000, vel_j2000, dpos_delem_j2000)
+        return (pos_j2000, vel_j2000)
 
     ########################################
 
-    def event_at_time(self, time, quick=None, partials=False):
-        """Returns an Event object corresponding to a specified Scalar time on
-        this path.
+    def event_at_time(self, time, quick={}, partials=False, planet_event=None):
+        """Return an Event object corresponding to a Scalar time on this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
+            quick       False to disable QuickPaths; a dictionary to override
+                        specific options.
+            partials    True to include the derivatives of position with respect
+                        to the orbital elements; False otherwise.
+            planet_event  optional event of the photon leaving the center of the
+                        planet. Saves a re-calculation if the time is re-used.
+                        Only relevant when an observer is defined.
 
-        Return:         an Event object containing (at least) the time, position
-                        and velocity of the path.
+        Return:         an Event object containing the time, position and
+                        velocity of the paths.
         """
 
+        # Without an observer, return event in the planet frame
         if self.observer is None:
             (pos, vel) = self.xyz_planet(time, partials=partials)
             return Event(time, (pos, vel), self.origin, self.frame)
 
-            observer_event = Event(time, Vector3.ZERO,
-                                   self.observer.path, self.frame)
-            planet_event = self.center.photon_to_event(observer_event,
-                                                       quick=quick)
-
-        xyz_observed = self.xyz_observed(time, planet_event, partials)
-
-        event = Event(time, (xyz_observed[0], xyz_observed[1]),
-                            self.observer.path, self.frame)
-
-        if partials:
-            event.pos.insert_subfield("d_dpath", xyz_observed[2])
-
-        return event
+        # Otherwise, return the event WRT the observer
+        (pos, vel) = self.xyz_observed(time, quick, partials, planet_event)
+        return Event(time, (pos, vel), self.observer, Frame.J2000)
 
     ####################################################
     # Override for the case where observer != None
     ####################################################
 
-    def photon_to_event(self, link, quick=None, derivs=False, guess=None,
-                              update=True,
-                              iters     = PATH_PHOTONS.max_iterations,
-                              precision = PATH_PHOTONS.dlt_precision,
-                              limit     = PATH_PHOTONS.dlt_limit,
-                              partials=False):
-        """Returns the departure event at the given path for a photon, given the
-        linking event of the photon's arrival. See _solve_photon() for details.
+    def photon_to_event(self, arrival, derivs=False, guess=None, quick={},
+                              converge={}, partials=False):
+        """The photon departure event from this path to match the arrival event.
         """
 
-        if self.observer is None or guess is None:
-            return super(Kepler,self).photon_to_event(link, quick, derivs,
-                                                      guess, update,
-                                                      iters, precision, limit)
+        if self.observer is None:
+            (path_event,
+             link_event) = super(Kepler,
+                                 self).photon_to_event(arrival, derivs, guess,
+                                                       quick, converge)
+            if partials:
+                (pos, vel) = self.xyz_planet(event.time, partials=True)
+                path_event.pos.insert_deriv('elements', pos.d_delements)
 
-        # When the observer is pre-defined, photon_to_event() gets an override
-        # for quick evaluation, but is only valid at the observer event.
-        # In this case, guess must contain the event time at the planet.
-        event = self.event_at_time(guess, quick=quick, partials=partials)
+            return (path_event, link_event)
 
-        event.dep = -event.pos
-        event.dep_lt = event.time - link.time
-        event.link = link
+        (planet_event,
+         link_event) = self.center.photon_to_event(arrival, derivs, guess,
+                                                   quick, converge)
 
-        link.arr = event.dep
-        link.arr_lt = -event.dep_lt
+        path_event = self.event_at_time(path_event.time, quick, partials,
+                                        planet_event)
 
-        if partials:
-            link.arr.insert_subfield("d_dpath", -event.pos.d_dpath)
-            link.arr.insert_subfield("d_dt", -event.vel)
+        path_event.dep_lt = planet_event.time - link_event.time
+        path_event.dep_j2000 = path_event.pos_j2000 - link_event.pos_j2000
 
-        return event
+        link_event = Event(link_event.time, link_event.state,
+                           link_event.origin, link_event.frame)
+        link_event.arr_lt = path_event.dep_lt
+        link_event.arr_j2000 = path_event.dep_j2000
+
+        return (path_event, link_event)
 
 ################################################################################
 # UNIT TESTS
@@ -514,16 +622,15 @@ class Kepler(Path, Fittable):
 
 import unittest
 
-def _xyz_planet_derivative_test(kep, t, delta=1.e-6):
-    """Calculates numerical derivatives of (x,y,z) in the planet frame relative
-    to the orbital elements, at time(s) t. It returns a tuple of (numerical
-    derivatives, analytic derivatives, relative errors). Used for debugging.
+def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
+    """Error in position change based on numerical vs. analytic derivatives.
     """
 
     # Save the position and its derivatives
-    (xyz, d_xyz_dt, d_xyz_d_elem) = kep.xyz_planet(t, partials=True)
-    pos_norm = np.sqrt(np.sum(xyz**2, axis=-1))
-    vel_norm = np.sqrt(np.sum(d_xyz_dt**2, axis=-1))
+    (xyz, d_xyz_dt) = kep.xyz_planet(t, partials=True)
+    d_xyz_d_elem = xyz.d_delements.vals
+    pos_norm = xyz.norm().vals
+    vel_norm = d_xyz_dt.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
     khi = kep.copy()
@@ -532,7 +639,6 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-6):
     params = kep.get_params()
 
     # Loop through parameters...
-    new_derivs = np.zeros(np.shape(t) + (3,kep.nparams))
     errors = np.zeros(np.shape(t) + (3,kep.nparams))
     for e in range(kep.nparams):
 
@@ -541,43 +647,28 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-6):
         lo = params.copy()
 
         if params[e] == 0.:
-            hi[e] =  delta
-            lo[e] = -delta
-            denom = 2. * delta
+            hi[e] += delta
+            lo[e] -= delta
         else:
             hi[e] *= 1. + delta
             lo[e] *= 1. - delta
-            denom = hi[e] - lo[e]
+
+        denom = hi[e] - lo[e]
 
         khi.set_params(hi)
         klo.set_params(lo)
 
-        # Determine the partial derivative
-        xyz_hi = khi.xyz_planet(t, partials=False)[0]
-        xyz_lo = klo.xyz_planet(t, partials=False)[0]
-        xyz_diff = xyz_hi - xyz_lo
-        new_derivs[...,:,e] = xyz_diff / denom
+        # Compare the change with that derived from the partial derivative
+        xyz_hi = khi.xyz_planet(t, partials=False)[0].vals
+        xyz_lo = klo.xyz_planet(t, partials=False)[0].vals
+        hi_lo_diff = xyz_hi - xyz_lo
 
-        # Test slopes and test against numeric precision
-        norm = np.maximum(np.abs(new_derivs[...,:,e]),
-                          np.abs(d_xyz_d_elem[...,:,e]))
-        norm[norm == 0.] = 1.
-        errors[...,:,e] = (np.abs(new_derivs[...,:,e] -
-                           d_xyz_d_elem[...,:,e])) / norm
+        errors[...,:,e] = ((d_xyz_d_elem[...,:,e] * denom - hi_lo_diff) /
+                           pos_norm[...,np.newaxis])
 
-        precision = (np.abs(xyz_diff) /
-                     np.maximum(pos_norm,
-                                vel_norm * np.abs(t))[..., np.newaxis])
-        precision[precision == 0.] = 1.
-        errors[...,:,e] = np.minimum(errors[...,:,e],
-                                     1.e-16/precision * norm)
+    return errors
 
-    klo.unregister()
-    khi.unregister()
-
-    return (new_derivs, d_xyz_d_elem, errors)
-
-def _pos_derivative_test(kep, t, delta=1.e-6):
+def _pos_derivative_test(kep, t, delta=1.e-5):
     """Calculates numerical derivatives of (x,y,z) in the observer/J2000 frame
     relative to the orbital elements, at time(s) t. It returns a tuple of
     (numerical derivatives, analytic derivatives, relative errors). Used for
@@ -588,10 +679,10 @@ def _pos_derivative_test(kep, t, delta=1.e-6):
     event = kep.event_at_time(t, partials=True)
     xyz = event.pos.vals
     d_xyz_dt = event.vel.vals
-    d_xyz_d_elem = event.pos.d_dpath.vals
+    d_xyz_d_elem = event.pos.d_delements.vals
 
-    pos_norm = np.sqrt(np.sum(xyz**2, axis=-1))
-    vel_norm = np.sqrt(np.sum(d_xyz_dt**2, axis=-1))
+    pos_norm = event.pos.norm().vals
+    vel_norm = event.vel.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
     khi = kep.copy()
@@ -609,41 +700,26 @@ def _pos_derivative_test(kep, t, delta=1.e-6):
         lo = params.copy()
 
         if params[e] == 0.:
-            hi[e] =  delta
-            lo[e] = -delta
-            denom = 2. * delta
+            hi[e] += delta
+            lo[e] -= delta
         else:
             hi[e] *= 1. + delta
             lo[e] *= 1. - delta
-            denom = hi[e] - lo[e]
+
+        denom = hi[e] - lo[e]
 
         khi.set_params(hi)
         klo.set_params(lo)
 
-        # Determine the partial derivative
+        # Compare the change with that derived from the partial derivative
         xyz_hi = khi.event_at_time(t, partials=False).pos.vals
         xyz_lo = klo.event_at_time(t, partials=False).pos.vals
-        xyz_diff = xyz_hi - xyz_lo
-        new_derivs[...,:,e] = xyz_diff / denom
+        hi_lo_diff = xyz_hi - xyz_lo
 
-        # Test slopes and test against numeric precision
-        norm = np.maximum(np.abs(new_derivs[...,:,e]),
-                          np.abs(d_xyz_d_elem[...,:,e]))
-        norm[norm == 0.] = 1.
-        errors[...,:,e] = (np.abs(new_derivs[...,:,e] -
-                           d_xyz_d_elem[...,:,e])) / norm
+        errors[...,:,e] = ((d_xyz_d_elem[...,:,e] * denom - hi_lo_diff) /
+                           pos_norm[...,np.newaxis])
 
-        precision = (np.abs(xyz_diff) /
-                     np.maximum(pos_norm,
-                                vel_norm * np.abs(t))[..., np.newaxis])
-        precision[precision == 0.] = 1.
-        errors[...,:,e] = np.minimum(errors[...,:,e],
-                                     1.e-16/precision * norm)
-
-    klo.unregister()
-    khi.unregister()
-
-    return (new_derivs, d_xyz_d_elem, errors)
+    return errors
 
 class Test_Kepler(unittest.TestCase):
 
@@ -659,53 +735,98 @@ class Test_Kepler(unittest.TestCase):
         # DNODE = 8    elements[DNODE] = nodal regression rate (radians/s)
 
         import oops.body as body
-        body.define_solar_system("1999-01-01", "2002-01-01")
+
+        Path.reset_registry()
+        Frame.reset_registry()
+        body.Body.reset_registry()
+
+        body.define_solar_system("2000-01-01", "2010-01-01")
 
         a = 140000.
 
         saturn = gravity.SATURN
-        dmean = saturn.n(a)
-        dperi = saturn.dperi_dt(a)
-        dnode = saturn.dnode_dt(a)
+        dmean_dt = saturn.n(a)
+        dperi_dt = saturn.dperi_dt(a)
+        dnode_dt = saturn.dnode_dt(a)
 
-        TIMESTEPS = 500
+        TIMESTEPS = 100
         time = 3600. * np.arange(TIMESTEPS)
 
-        kep9 = Kepler(Registry.body_lookup("SATURN"), 0.,
-                       (a, 1., dmean, 0.2, 2., dperi, 4., 0., dnode),
-                       Registry.path_lookup("EARTH"))
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                       Path.as_path("EARTH"))
 
-        errors = _xyz_planet_derivative_test(kep9, time)[2]
-        self.assertTrue(np.all(np.abs(errors) < 1.e-4))
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
 
-        errors = _pos_derivative_test(kep9, time)[2]
-        self.assertTrue(np.all(np.abs(errors) < 1.e-4))
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
 
-#         kep = Kepler(Registry.body_lookup("SATURN"), 0.,
-#                      (a, 1., "A", 0.2, 2., "A", 4., 0., "A"),
-#                      Registry.path_lookup("EARTH"))
-#         self.assertEqual(kep.nparams, 6)
-#         self.assertEqual(kep.kepler9.nparams, 9)
-#         self.assertEqual(kep.constraint.fittable, kep.kepler9)
-#         self.assertEqual(kep.constraint.nparams, kep.nparams)
-# 
-#         errors = _pos_derivative_test(kep, time)[2]
-#         self.assertTrue(np.all(np.abs(errors) < 1.e-4))
-# 
-#         kep = Kepler(Registry.body_lookup("SATURN"), 0.,
-#                       ("N", 1., dmean, 0.2, 2., "N", 4., 0., "N"),
-#                      Registry.path_lookup("EARTH"))
-#         self.assertEqual(kep.nparams, 6)
-#         self.assertEqual(kep.kepler9.nparams, 9)
-#         self.assertEqual(kep.constraint.fittable, kep.kepler9)
-#         self.assertEqual(kep.constraint.nparams, kep.nparams)
-# 
-#         errors = _pos_derivative_test(kep, time)[2]
-#         self.assertTrue(np.all(np.abs(errors) < 1.e-4))
+        ####################
 
-        Registry.initialize_frame_registry()
-        Registry.initialize_path_registry()
-        Registry.initialize_body_registry()
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt,
+                        0.2, 3., dperi_dt,
+                        0.1, 5., dnode_dt,
+                        dmean_dt * 0.10, 2., dmean_dt / 100.,
+                        dperi_dt * 0.08, 4., dmean_dt / 50.,
+                        dnode_dt * 0.12, 6., dmean_dt / 200.),
+                       Path.as_path("EARTH"), wobbles=('mean', 'peri', 'node'))
+
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
+
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
+
+        ####################
+
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt,
+                        0.2, 3., dperi_dt,
+                        0.1, 5., dnode_dt,
+                        a * 0.10, 2., dmean_dt / 100.),
+                       Path.as_path("EARTH"), wobbles=('a',))
+
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-7)
+
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+
+        ####################
+
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt,
+                        0.2, 3., dperi_dt,
+                        0.1, 5., dnode_dt,
+                        0.1, 4., dmean_dt / 50.),
+                       Path.as_path("EARTH"), wobbles=('e',))
+
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 3.e-7)
+
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 3.e-5)
+
+        ####################
+
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt,
+                        0.2, 3., dperi_dt,
+                        0.1, 5., dnode_dt,
+                        0.15, 2., dmean_dt / 150.),
+                       Path.as_path("EARTH"), wobbles=('i',))
+
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-7)
+
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+
+        Frame.reset_registry()
+        Path.reset_registry()
+        body.Body.reset_registry()
 
 ########################################
 if __name__ == '__main__':

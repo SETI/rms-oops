@@ -66,7 +66,7 @@ class Fittable(object):
         return self.__dict__[self.param_name]
 
     def copy(self):
-        """Return a deep copy of the given object.
+        """Return a deep copy of this object.
 
         The copy can be safely modified without affecting the original.
         """
