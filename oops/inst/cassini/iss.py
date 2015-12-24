@@ -39,9 +39,9 @@ def from_file(filespec, fast_distortion=True, **parameters):
         camera = "NAC"
 
     filter1, filter2 = dict["FILTER_NAME"]
-    
+
     gain_mode = None
-    
+
     if dict["GAIN_MODE_ID"][:3] == "215":
         gain_mode = 0
     elif dict["GAIN_MODE_ID"][:2] == "95":
@@ -56,9 +56,10 @@ def from_file(filespec, fast_distortion=True, **parameters):
     Cassini.load_spks(tstart, tstart + texp)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(("v","u"), tstart, texp, ISS.fovs[camera,mode,fast_distortion],
+    result = oops.obs.Snapshot(("v","u"), tstart, texp,
+                               ISS.fovs[camera,mode, fast_distortion],
                                "CASSINI", "CASSINI_ISS_" + camera,
-                               dict = dict,               # Add the VICAR dict
+                               dict = dict,             # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
                                instrument = "ISS",
                                detector = camera,

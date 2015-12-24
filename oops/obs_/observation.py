@@ -536,7 +536,7 @@ class Observation(object):
         return event
 
     def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
-                           apparent=True):
+                           apparent=True, time_frac=0.5):
         """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
@@ -545,8 +545,8 @@ class Observation(object):
             derivs      True to propagate derivatives of ra and dec through to
                         derivatives of the returned (u,v) Pairs.
             iters       the number of iterations to perform until convergence
-                        is reached. Two is the most that should ever be needed;
-                        Snapshot should override to one.
+                        is reached. Two is probably the most that should ever be
+                        needed; Snapshot can override to one.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
                         to disable the use of QuickPaths and QuickFrames. The
@@ -554,6 +554,9 @@ class Observation(object):
             apparent    True to interpret the (RA,dec) values as apparent
                         coordinates; False to interpret them as actual
                         coordinates. Default is True.
+            time_frac   fractional time from the beginning to the end of the
+                        time spent inside the selected pixel. 0. for the
+                        beginning; 0.5 for the midtime, 1. for the end time.
 
         Return:         a Pair of (u,v) coordinates.
 
@@ -565,8 +568,13 @@ class Observation(object):
         # Convert to line of sight in SSB/J2000 frame
         neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec, recursive=derivs)
 
-        # Iterate until the observation time has converged
-        obs_time = self.midtime
+        # Require extra at least two iterations if time_frac != 0.5
+        if time_frac != 0.5:
+            iters = max(2, iters)
+
+        # Iterate until (u,v) has converged
+        obs_time = self.midtime     # starting guess
+        uv = None
         for iter in range(iters):
 
             # Define the photon arrival event
@@ -578,10 +586,15 @@ class Observation(object):
                 obs_event.neg_arr_j2000 = neg_arr_j2000
 
             # Convert to FOV coordinates
+            prev_uv = uv
             uv = self.fov.uv_from_los(obs_event.neg_arr_ap)
 
             # Update the time
-            obs_time = self.midtime_at_uv(uv)
+            (t0,t1) = self.times_at_uv(uv)
+            obs_time = t0 + time_frac * (t1 - t0)
+
+            # Stop at convergence
+            if uv == prev_uv: break
 
         return uv
 
