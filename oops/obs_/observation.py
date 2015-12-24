@@ -598,7 +598,8 @@ class Observation(object):
 
         return uv
 
-    def uv_from_path(self, path, derivs=False, quick={}, converge={}):
+    def uv_from_path(self, path, derivs=False, quick={}, converge={},
+                           time_frac=0.5):
         """Return the (u,v) indices of an object in the FOV, given its path.
 
         Note: This procedure assumes that movement along a path is very limited
@@ -619,6 +620,9 @@ class Observation(object):
             converge    an optional dictionary of parameters to override the
                         configured default convergence parameters. The default
                         configuration is defined in config.py.
+            time_frac   fractional time from the beginning to the end of the
+                        time spent inside the selected pixel. 0. for the
+                        beginning; 0.5 for the midtime, 1. for the end time.
 
         Return:
             uv_pair     the (u,v) indices of the pixel in which the point was
@@ -638,10 +642,14 @@ class Observation(object):
         precision = converge['dlt_precision']
         limit = converge['dlt_limit']
 
+        # Require extra at least two iterations if time_frac != 0.5
+        if time_frac != 0.5:
+            iters = max(2, iters)
+
         # Iterate to solution...
         guess = None
         max_dt = np.inf
-        obs_time = self.midtime
+        obs_time = self.midtime     # starting guess
 
         for iter in range(iters):
 
@@ -654,7 +662,8 @@ class Observation(object):
             (uv_min, uv_max) = self.uv_at_time(obs_event.time)
 
             # Update the observation times based on pixel midtimes
-            new_obs_time = self.midtime_at_uv(uv_min)
+            (t0, t1) = self.times_at_uv(uv_min)
+            new_obs_time = t0 + time_frac * (t1 - t0)
 
             # Test for convergence
             prev_max_dt = max_dt
@@ -680,11 +689,12 @@ class Observation(object):
     ### This method will at least need an override for the Pixel class.
 
     def inventory(self, bodies, expand=0., return_type='list', fov=None,
-                        quick={}, converge={}):
+                        quick={}, converge={}, time_frac=0.5):
         """Return the body names that appear unobscured inside the FOV.
 
-        Restrictions: All inventory calculations are performed at the
-        observation midtime and all bodies are assumed to be spherical.
+        Restrictions: All inventory calculations are performed at a single
+        observation time specified by time_frac. All bodies are assumed to be
+        spherical.
 
         Input:
             bodies      a list of the names of the body objects to be included
@@ -707,6 +717,9 @@ class Observation(object):
             converge    an optional dictionary of parameters to override the
                         configured default convergence parameters. The default
                         configuration is defined in config.py.
+            time_frac   fractional time from the beginning to the end of the
+                        observation for which the inventory applies. 0. for the
+                        beginning; 0.5 for the midtime, 1. for the end time.
 
         Return:         list, array, or dictionary
 
@@ -761,7 +774,8 @@ class Observation(object):
         path_ids = [body.path for body in bodies]
         multipath = MultiPath(path_ids)
 
-        obs_event = Event(self.midtime, Vector3.ZERO, self.path, self.frame)
+        obs_time = obs.time[0] + time_frac * (obs.time[1] - obs.time[0])
+        obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
         _, obs_event = multipath.photon_to_event(
                                     obs_event, quick=quick,
                                     converge=converge)  # insert photon arrivals
@@ -860,7 +874,7 @@ class Test_Observation(unittest.TestCase):
     def runTest(self):
 
         # TBD
-        # Note in particular that uv_from_path() is imcomplete and untested!
+        # Note in particular that uv_from_path() is incomplete and untested!
 
         pass
 
