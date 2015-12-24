@@ -197,7 +197,7 @@ class PolarLimb(Surface):
 
 import unittest
 
-class Test_Limb(unittest.TestCase):
+class Test_PolarLimb(unittest.TestCase):
 
     def runTest(self):
 
