@@ -26,7 +26,7 @@ import oops.constants as constants
 
 from oops.surface_.surface   import Surface
 from oops.surface_.ansa      import Ansa
-#from oops.surface_.limb      import Limb
+from oops.surface_.limb      import Limb
 from oops.surface_.ringplane import RingPlane
 from oops.path_.path         import Path, AliasPath
 from oops.frame_.frame       import Frame
@@ -198,8 +198,8 @@ class Backplane(object):
             else:                                           # if it's a planet
                 return Ansa(body.path, body.ring_frame)
 
-#         if modifier == "LIMB":
-#             return Limb(body.surface, limits=(0.,np.inf))
+        if modifier == "LIMB":
+            return Limb(body.surface, limits=(0.,np.inf))
 
     @staticmethod
     def get_path(path_id):
@@ -218,7 +218,7 @@ class Backplane(object):
             return self.surface_events[event_key]
 
         # The Sun is treated as a path, not a surface, unless it is listed first
-        if event_key[0].upper() == 'SUN' and len(event_key) > 1:
+        if event_key[0] == 'sun' and len(event_key) > 1:
             return self.get_path_event(event_key)
 
         # Look up the photon's departure surface and destination
@@ -729,9 +729,10 @@ class Backplane(object):
         if key not in self.backplanes:
             distance = self.distance(event_key)
 
-            (dlos_du, dlos_dv) = self.meshgrid.dlos_duv.as_columns()
-            u_resolution = distance * dlos_du.as_vector3().norm()
-            v_resolution = distance * dlos_dv.as_vector3().norm()
+            res = self.meshgrid.dlos_duv.swap_items(Pair)
+            (u_resolution, v_resolution) = res.to_scalars()
+            u_resolution = distance * u_resolution.join_items(Vector3).norm()
+            v_resolution = distance * v_resolution.join_items(Vector3).norm()
 
             self.register_backplane(key[:-1] + ('u',), u_resolution)
             self.register_backplane(key[:-1] + ('v',), v_resolution)
@@ -1456,35 +1457,36 @@ class Backplane(object):
     #   altitude()
     ############################################################################
 
-#     def altitude(self, event_key):
-#         """Elevation of a limb point above the body's surface.
-# 
-#         Input:
-#             event_key       key defining the ring surface event.
-#         """
-# 
-#         event_key = Backplane.standardize_event_key(event_key)
-#         key = ('altitude', event_key)
-#         if key not in self.backplanes:
-#             self._fill_limb_intercepts(event_key)
-# 
-#         return self.backplanes[key]
-# 
-#     def _fill_limb_intercepts(self, event_key):
-#         """Internal method to fill in the limb intercept geometry backplanes.
-#         """
-# 
-#         # Get the limb intercept coordinates
-#         event_key = Backplane.standardize_event_key(event_key)
-#         event = self.get_surface_event(event_key)
-#         assert event.surface.COORDINATE_TYPE == 'limb'
-# 
-#         self.register_backplane(('longitude', event_key, 'iau', 'east', 0),
-#                                 event.coord1)
-#         self.register_backplane(('latitude', event_key, 'squashed'),
-#                                 event.coord2)
-#         self.register_backplane(('altitude', event_key),
-#                                 event.coord3)
+    def altitude(self, event_key):
+        """Elevation of a limb point above the body's surface.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ('altitude', event_key)
+        if key not in self.backplanes:
+            self._fill_limb_intercepts(event_key)
+
+        return self.backplanes[key]
+
+    def _fill_limb_intercepts(self, event_key):
+        """Internal method to fill in the limb intercept geometry backplanes.
+        """
+
+        # Get the limb intercept coordinates
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == 'limb'
+
+        self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
+                                 'squashed'),
+                                event.coord1)
+        self.register_backplane(('latitude', event_key, 'squashed'),
+                                event.coord2)
+        self.register_backplane(('altitude', event_key),
+                                event.coord3)
 
     ############################################################################
     # Ring plane geometry, surface intercept version
@@ -1736,7 +1738,7 @@ class Backplane(object):
         event = self.get_surface_event(event_key)
         center_event = Event(event.time, Vector3.ZERO,
                                          event.origin, event.frame)
-        center_event = AliasPath("SUN").photon_to_event(center_event)[1]
+        center_event = AliasPath('SUN').photon_to_event(center_event)[1]
         surface = Backplane.get_surface(event_key[0])
         assert event.surface.COORDINATE_TYPE == 'polar'
         (r,lon) = surface.coords_from_vector3(-center_event.apparent_arr(),
@@ -2694,24 +2696,49 @@ class Backplane(object):
 # BACKPLANE LOGGER FOR TESTING
 ################################################################################
 
-def exercise_backplanes():
+def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
     """Generates info from every backplane."""
 
     import oops.inst.cassini.iss as iss
+    from PIL import Image
 
-    EXERCISE_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                     "cassini/ISS/W1573721822_1.IMG")
-    EXERCISE_UNDERSAMPLE = 16
-    EXERCISE_LOGGING = False
-    EXERCISE_ABERRATION = 'new'
+    def save_image(image, filename, lo=None, hi=None, zoom=1.):
+        """Save an image file of a 2-D array.
+
+        Input:
+            image       a 2-D array.
+            filename    the name of the output file, which should end with the
+                        type, e.g., '.png' or '.jpg'
+            lo          the array value to map to black; if None, then the
+                        minimum value in the array is used.
+            hi          the array value to map to white; if None, then the
+                        maximum value in the array is used.
+            zoom        the scale factor by which to enlarge the image, default
+                        1.
+        """
+
+        if lo is None:
+            lo = image.min()
+
+        if hi is None:
+            hi = image.max()
+
+        if zoom != 1:
+            image = zoom_image(image, zoom, order=1)
+
+        scaled = (image[::-1].copy() - lo) / float(hi - lo)
+        bytes = (256.*scaled).clip(0,255).astype("uint8")
+
+        im = Image.fromstring("L", (bytes.shape[1], bytes.shape[0]), bytes)
+        im.save(filename)
 
     def show_info(title, array):
         """Internal method to print summary information and display images as
         desired."""
 
-        if not EXERCISE_PRINT: return
+        if not printing and not saving: return
 
-        print title
+        if printing: print title
 
         # Mask summary
         if array.vals.dtype == np.dtype('bool'):
@@ -2719,7 +2746,9 @@ def exercise_backplanes():
             total = np.size(array.vals)
             percent = int(count / float(total) * 100. + 0.5)
             print "  ", (count, total-count),
-            print (percent, 100-percent), "(True, False pixels)"
+            print (percent, 100-percent), '(True, False pixels)'
+            minval = 0.
+            maxval = 1.
 
         # Unmasked backplane summary
         elif array.mask is False:
@@ -2728,25 +2757,45 @@ def exercise_backplanes():
             if minval == maxval:
                 print "  ", minval
             else:
-                print "  ", (minval, maxval), "(min, max)"
+                print "  ", (minval, maxval), '(min, max)'
 
         # Masked backplane summary
         else:
             print "  ", (np.min(array.vals),
-                           np.max(array.vals)), "(unmasked min, max)"
+                           np.max(array.vals)), '(unmasked min, max)'
             print "  ", (array.min(),
-                           array.max()), "(masked min, max)"
+                           array.max()), '(masked min, max)'
             total = np.size(array.mask)
             masked = np.sum(array.mask)
             percent = int(masked / float(total) * 100. + 0.5)
             print "  ", (masked, total-masked),
-            print         (percent, 100-percent),"(masked, unmasked pixels)"
+            print         (percent, 100-percent), '(masked, unmasked pixels)'
 
-    if EXERCISE_PRINT and EXERCISE_LOGGING: config.LOGGING.on("        ")
+            if total == masked:
+                minval = np.min(array.vals)
+                maxval = np.max(array.vals)
+            else:
+                minval = array.min()
+                maxval = array.max()
 
-    snap = iss.from_file(EXERCISE_FILESPEC)
-    meshgrid = Meshgrid.for_fov(snap.fov, undersample=EXERCISE_UNDERSAMPLE,
-                                swap=True)
+        if saving:
+            if minval == maxval:
+                maxval += 1.
+
+            image = array.vals.copy()
+            image[array.mask] = minval - 0.05 * (maxval - minval)
+
+            filename = 'backplane-' + title + '.png'
+            filename = filename.replace(':','-')
+            filename = filename.replace('/','-')
+            save_image(image, filename)
+
+    if printing and logging: config.LOGGING.on('        ')
+
+    if printing: print
+
+    snap = iss.from_file(filespec)
+    meshgrid = Meshgrid.for_fov(snap.fov, undersample=undersample, swap=True)
 
     bp = Backplane(snap, meshgrid)
 
@@ -2786,8 +2835,8 @@ def exercise_backplanes():
     test = bp.longitude('saturn')
     show_info("Saturn longitude (deg)", test * constants.DPR)
 
-    test = bp.longitude('saturn', direction='west')
-    show_info("Saturn longitude westward (deg)", test * constants.DPR)
+    test = bp.longitude('saturn', direction='east')
+    show_info("Saturn longitude eastward (deg)", test * constants.DPR)
 
     test = bp.longitude('saturn', minimum=-180)
     show_info("Saturn longitude with -180 minimum (deg)",
@@ -2795,6 +2844,10 @@ def exercise_backplanes():
 
     test = bp.longitude('saturn', reference='iau')
     show_info("Saturn longitude wrt IAU frame (deg)",
+                                                test * constants.DPR)
+
+    test = bp.longitude('saturn', reference='iau', minimum=-180)
+    show_info("Saturn longitude wrt IAU frame with -180 minimum (deg)",
                                                 test * constants.DPR)
 
     test = bp.longitude('saturn', reference='sun')
@@ -2875,13 +2928,13 @@ def exercise_backplanes():
     show_info("Saturn in front of rings", test)
 
     test = bp.where_in_back('saturn', 'saturn_main_rings')
-    show_info("Saturn in front of rings", test)
+    show_info("Saturn behind rings", test)
 
     test = bp.where_inside_shadow('saturn', 'saturn_main_rings')
-    show_info("Saturn in front of rings", test)
+    show_info("Saturn in shadow of rings", test)
 
     test = bp.where_outside_shadow('saturn', 'saturn_main_rings')
-    show_info("Saturn in front of rings", test)
+    show_info("Saturn outside shadow of rings", test)
 
     test = bp.where_sunward('saturn')
     show_info("Saturn sunward", test)
@@ -3016,7 +3069,7 @@ def exercise_backplanes():
     # Testing ring azimuth & elevation
 
     test = bp.ring_azimuth("saturn:ring")
-    show_info("Saturn ring azimuth wrt observer(deg)", test * constants.DPR)
+    show_info("Saturn ring azimuth wrt observer (deg)", test * constants.DPR)
 
     compare = bp.ring_longitude("saturn:ring", 'obs')
     diff = test - compare
@@ -3050,7 +3103,7 @@ def exercise_backplanes():
     ########################
     # Ring scalars, other tests 5/14/12
 
-    if EXERCISE_PRINT:
+    if printing:
         print
         print "Sub-solar Saturn planetocentric latitude (deg) =",
         print bp.sub_solar_latitude('saturn').vals * constants.DPR
@@ -3152,38 +3205,37 @@ def exercise_backplanes():
     ########################
     # Limb and resolution, 6/6/12
 
-#     test = bp.altitude("saturn:limb")
-#     show_info("Limb altitude (km)", test)
-# 
-#     test = bp.longitude("saturn:limb")
-#     show_info("Limb longitude (deg)", test * constants.DPR)
-# 
-#     test = bp.latitude("saturn:limb")
-#     show_info("Limb latitude (deg)", test * constants.DPR)
-# 
-#     test = bp.longitude("saturn:limb", reference='obs', minimum=-180)
-#     show_info("Limb longitude wrt observer, -180 (deg)",
-#                                                     test * constants.DPR)
-# 
-#     test = bp.latitude("saturn:limb", lat_type='graphic')
-#     show_info("Limb planetographic latitude (deg)", test * constants.DPR)
-# 
-#     test = bp.latitude("saturn:limb", lat_type='centric')
-#     show_info("Limb planetocentric latitude (deg)", test * constants.DPR)
-# 
-#     test = bp.resolution("saturn:limb", 'u')
-#     show_info("Limb resolution horizontal (km/pixel)", test)
-# 
-#     test = bp.resolution("saturn:limb", 'v')
-#     show_info("Limb resolution vertical (km/pixel)", test)
+    test = bp.altitude("saturn:limb")
+    show_info("Limb altitude (km)", test)
+
+    test = bp.longitude("saturn:limb")
+    show_info("Limb longitude (deg)", test * constants.DPR)
+
+    test = bp.latitude("saturn:limb")
+    show_info("Limb latitude (deg)", test * constants.DPR)
+
+    test = bp.longitude("saturn:limb", reference='obs', minimum=-180)
+    show_info("Limb longitude wrt observer, -180 (deg)",
+                                                    test * constants.DPR)
+
+    test = bp.latitude("saturn:limb", lat_type='graphic')
+    show_info("Limb planetographic latitude (deg)", test * constants.DPR)
+
+    test = bp.latitude("saturn:limb", lat_type='centric')
+    show_info("Limb planetocentric latitude (deg)", test * constants.DPR)
+
+    test = bp.resolution("saturn:limb", 'u')
+    show_info("Limb resolution horizontal (km/pixel)", test)
+
+    test = bp.resolution("saturn:limb", 'v')
+    show_info("Limb resolution vertical (km/pixel)", test)
 
     ########################
     # Testing empty events
     # DO NOT PUT ANY MORE UNIT TESTS BELOW THIS LINE; BACKPLANE IS REPLACED
 
-    snap = iss.from_file(EXERCISE_FILESPEC)
-    meshgrid = Meshgrid.for_fov(snap.fov, undersample=EXERCISE_UNDERSAMPLE,
-                                swap=True)
+    snap = iss.from_file(filespec)
+    meshgrid = Meshgrid.for_fov(snap.fov, undersample=undersample, swap=True)
     bp = Backplane(snap, meshgrid)
 
     # Override some internals...
@@ -3415,13 +3467,39 @@ class Test_Backplane(unittest.TestCase):
 
 ########################################
 
-if __name__ == '__main__':
+class Test_Backplane_Exercises(unittest.TestCase):
 
-#     EXERCISE_EXEC = True
-#     EXERCISE_PRINT = False
-# 
-#     if EXERCISE_EXEC:
-#         exercise_backplanes()
+    def runTest(self):
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                'cassini/ISS/W1573721822_1.IMG')
+
+        TEST_LEVEL = 0
+
+        if TEST_LEVEL == 3:     # long and slow, creates images, logging off
+            printing = True
+            logging = True
+            saving = True
+            undersample = 1
+        elif TEST_LEVEL == 2:   # faster, prints info, no images, undersampled
+            printing = True
+            logging = False
+            saving = False
+            undersample = 16
+        elif TEST_LEVEL == 1:   # executes every routine but does no printing
+            printing = False
+            logging = False
+            saving = False
+            undersample = 32
+
+        if TEST_LEVEL > 0:
+            exercise_backplanes(filespec, printing, logging, saving,
+                                undersample)
+        else:
+            print 'test skipped'
+
+########################################
+
+if __name__ == '__main__':
 
     unittest.main(verbosity=2)
 

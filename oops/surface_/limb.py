@@ -32,9 +32,6 @@ class Limb(Surface):
     IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
 
-    # Class constants to override where derivs are undefined
-    intercept_DERIVS_ARE_IMPLEMENTED = False
-
     def __init__(self, ground, limits=None):
         """Constructor for a Limb surface.
 
@@ -184,13 +181,9 @@ class Limb(Surface):
                             intercept = obs + t * los
         """
 
-        if derivs:
-            raise NotImplementedError("Limb.intercept() " +
-                                      " does not implement derivatives")
-
         # Convert to standard units
-        obs = Vector3.as_vector3(obs, False)
-        los = Vector3.as_vector3(los, False)
+        obs = Vector3.as_vector3(obs, derivs)
+        los = Vector3.as_vector3(los, derivs)
 
         # Solve for the intercept distance where the line of sight is normal to
         # the surface.
@@ -245,7 +238,7 @@ class Limb(Surface):
         pos = obs + t * los
 
         if groundtrack:
-            track = self.ground.intercept_normal_to(pos, derivs=False,
+            track = self.ground.intercept_normal_to(pos, derivs=derivs,
                                                     guess=ground_guess)[0]
             return (pos, t, track)
         else:
@@ -515,6 +508,58 @@ class Limb(Surface):
             return (cept, track)
         else:
             return cept
+
+    ############################################################################
+    # Longitude conversions
+    ############################################################################
+
+    def lon_to_centric(self, lon, derivs=False):
+        """Convert longitude in internal coordinates to planetocentric."""
+
+        return self.ground.lon_to_centric(lon, derivs)
+
+    def lon_from_centric(self, lon, derivs=False):
+        """Convert planetocentric longitude to internal coordinates."""
+
+        return self.ground.lon_from_centric(lon, derivs)
+
+    def lon_to_graphic(self, lon, derivs=False):
+        """Convert longitude in internal coordinates to planetographic."""
+
+        return self.ground.lon_to_graphic(lon, derivs)
+
+    def lon_from_graphic(self, lon, derivs=False):
+        """Convert planetographic longitude to internal coordinates."""
+
+        return self.ground.lon_from_graphic(lon, derivs)
+
+    ############################################################################
+    # Latitude conversions
+    ############################################################################
+
+    def lat_to_centric(self, lat, lon, derivs=False):
+        """Convert latitude in internal ellipsoid coordinates to planetocentric.
+        """
+
+        return self.ground.lat_to_centric(lat, lon, derivs)
+
+    def lat_from_centric(self, lat, lon, derivs=False):
+        """Convert planetocentric latitude to internal ellipsoid latitude.
+        """
+
+        return self.ground.lat_from_centric(lat, lon, derivs)
+
+    def lat_to_graphic(self, lat, lon, derivs=False):
+        """Convert latitude in internal ellipsoid coordinates to planetographic.
+        """
+
+        return self.ground.lat_to_graphic(lat, lon, derivs)
+
+    def lat_from_graphic(self, lat, lon, derivs=False):
+        """Convert planetographic latitude to internal ellipsoid latitude.
+        """
+
+        return self.ground.lat_from_graphic(lat, lon, derivs)
 
 ################################################################################
 # UNIT TESTS

@@ -1,0 +1,570 @@
+runTest (__main__.Test_Backplane) ... ok
+runTest (__main__.Test_Backplane_Exercises) ... 
+Right ascension (deg)
+   (212.2723446082546, 216.47103842613706) (min, max)
+Right ascension (deg, apparent)
+   (212.27270842760879, 216.471223914121) (min, max)
+Declination (deg)
+   (-0.58358776253199296, 3.6122439926921688) (min, max)
+Declination (deg, apparent)
+   (-0.58410992116552274, 3.611544899430648) (min, max)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Re-using QuickFrame: SpiceFrame(IAU_SATURN/J2000) (248300543.093, 248300543.093)
+         Surface.collapse_time() -5.6443188506 0.194923497491
+         Surface._solve_photon_by_los 0 0.100193924706
+         Surface.collapse_time() -5.64399357947 0.194595050039
+         Surface._solve_photon_by_los 1 0.00016104740551
+         Surface.collapse_time() -5.64399462922 0.194596094686
+         Surface._solve_photon_by_los 2 5.27428468011e-07
+Range to Saturn (km)
+   (1633688.5812850008, 1692390.5728318177) (unmasked min, max)
+   (1633688.5812850008, 1692027.0218198714) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+         Re-using QuickFrame: SpiceFrame(IAU_SATURN/J2000) (248300543.096, 248300543.290)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.096, 248300543.290)
+         New QuickPath: SpicePath([SUN - SSB]*J2000) (248300533.096, 248300553.290)
+         Extending QuickPath: SpicePath([SUN - SSB]*J2000) (248295915.232, 248295935.659)
+         Path._solve_photon 0 0.000160949597557
+         Path._solve_photon 1 1.72652107722e-07
+         New QuickPath: SpicePath([SUN - SSB]*J2000) (248295915.232, 248295935.659)
+Saturn distance to Sun (km)
+   (1384331095.2976563, 1384446669.4209473) (unmasked min, max)
+   (1384331095.2976563, 1384400900.2838147) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Light-time from Saturn (sec)
+   (5.4493985345188403, 5.6452073014852751) (unmasked min, max)
+   (5.44939853451884, 5.643994625841693) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+         Re-using QuickFrame: SpiceFrame(IAU_SATURN/J2000) (248300543.096, 248300543.290)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.096, 248300543.290)
+         Extending QuickPath: SpicePath([SUN - SSB]*J2000) (248300533.096, 248300553.290)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.232, 248295925.659)
+         Path._solve_photon 0 0.000160949597557
+         Path._solve_photon 1 1.72652107722e-07
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.232, 248295925.659)
+Saturn incidence angle (deg)
+   (73.262794012568222, 150.85026182738281) (unmasked min, max)
+   (73.26279401256822, 150.41527668671282) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn emission angle (deg)
+   (10.818780161204273, 89.999999998658396) (unmasked min, max)
+   (10.818780161204273, 89.8616213332187) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn phase angle (deg)
+   (60.853253594414774, 242.51543863888998) (unmasked min, max)
+   (60.853253594414774, 62.518384436963125) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn scattering angle (deg)
+   (-62.515438638889982, 119.14674640558522) (unmasked min, max)
+   (117.48161556303687, 119.14674640558522) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude (deg)
+   (220.21253538430062, 306.58112635986657) (unmasked min, max)
+   (221.25489924895982, 306.5811263598666) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude eastward (deg)
+   (53.418873640133448, 139.78746461569935) (unmasked min, max)
+   (53.41887364013345, 138.74510075104018) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude with -180 minimum (deg)
+   (-139.78746461569935, -53.418873640133455) (unmasked min, max)
+   (-138.74510075104018, -53.418873640133455) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt IAU frame (deg)
+   (220.21253538430062, 306.58112635986657) (unmasked min, max)
+   (221.25489924895982, 306.5811263598666) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt IAU frame with -180 minimum (deg)
+   (-139.78746461569935, -53.418873640133455) (unmasked min, max)
+   (-138.74510075104018, -53.418873640133455) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Path._solve_photon 0 0.000164930476596
+         Path._solve_photon 1 1.69054992227e-09
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.403, 248295925.403)
+         Path._solve_photon 0 0.000160944171512
+         Path._solve_photon 1 6.52107701171e-10
+Saturn longitude wrt Sun (deg)
+   (206.74859181119103, 293.11718278675693) (unmasked min, max)
+   (207.7909556758502, 293.1171827867569) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt SHA (deg)
+   (26.748591811191023, 113.11718278675693) (unmasked min, max)
+   (27.7909556758502, 113.11718278675693) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt observer (deg)
+   (268.21967823685497, 354.58826921242093) (unmasked min, max)
+   (269.26204210151417, 354.5882692124209) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt OHA (deg)
+   (88.219678236855003, 174.5882692124209) (unmasked min, max)
+   (89.26204210151417, 174.5882692124209) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn geocentric latitude (deg)
+   (-66.453310342668829, 39.59448816029564) (unmasked min, max)
+   (-63.29081228728041, 39.59448816029564) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn geographic latitude (deg)
+   (-70.476346371868019, 45.469247192164204) (unmasked min, max)
+   (-67.73591712124752, 45.469247192164204) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn finest surface resolution (km)
+   (96.477434254330078, 101.09130268642787) (unmasked min, max)
+   (96.47743425433008, 101.06739971990275) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+Saturn coarsest surface resolution (km)
+   (98.484873970539411, 4245568231263.5015) (unmasked min, max)
+   (98.48487397053941, 41823.676861992564) (masked min, max)
+   (734354, 314222) (70, 30) (masked, unmasked pixels)
+         Re-using QuickFrame: RingFrame(IAU_SATURN_DESPUN/J2000) (248300543.093, 248300543.093)
+         Surface.collapse_time() -6.10057112924 0.905521132053
+         Surface._solve_photon_by_los 0 0.00075953665276
+         Surface.collapse_time() -6.10057098867 0.905521111188
+         Surface._solve_photon_by_los 1 1.30139676813e-07
+Ring radius (km)
+   (11339.839589051078, 1061964.6512542912) (unmasked min, max)
+   (74658.38791273703, 136779.8944122782) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring radius unmasked (km)
+   (11339.839589051078, 1061964.6512542912) (min, max)
+Ring longitude wrt node (deg)
+   (0.001618941144428011, 359.99976991787071) (unmasked min, max)
+   (0.001618941144428011, 359.9983247429314) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+         Path._solve_photon 0 0.000164931435397
+         Path._solve_photon 1 2.65046029568e-09
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.403, 248295925.403)
+         Path._solve_photon 0 0.000160944574418
+         Path._solve_photon 1 2.50111042988e-10
+Ring longitude wrt Sun (deg)
+   (63.292391316490303, 240.62703389957659) (unmasked min, max)
+   (66.98786147443393, 237.40067390159686) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt SHA (deg)
+   (6.7457166983208498e-05, 359.99948452981829) (unmasked min, max)
+   (6.74571669832085e-05, 359.9994845298183) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt observer (deg)
+   (1.8203384890769996, 179.15498107216325) (unmasked min, max)
+   (5.515808647020623, 175.92862107418355) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt OHA (deg)
+   (181.82033848907699, 359.15498107216325) (unmasked min, max)
+   (185.51580864702063, 355.9286210741836) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Range to rings (km)
+   (1094748.2360072951, 2744419.3614949533) (unmasked min, max)
+   (1557436.7722088092, 1828905.1719038596) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Light time from rings (sec)
+   (3.6516870481354644, 9.1543976116135433) (unmasked min, max)
+   (5.195049877501619, 6.100570988693317) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+         New QuickPath: SpicePath([SATURN - SSB]*J2000) (248300532.639, 248300553.545)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248300542.639, 248300543.545)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295924.621, 248295926.030)
+         Path._solve_photon 0 0.000160952751685
+         Path._solve_photon 1 1.67674443219e-08
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295924.621, 248295926.030)
+Ring distance to Sun (km)
+   (1384082284.9457324, 1384989415.0383427) (unmasked min, max)
+   (1384296041.2232075, 1384483422.6307592) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300542.639, 248300543.545)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248300542.639, 248300543.545)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295924.621, 248295926.030)
+         Path._solve_photon 0 0.000160952751685
+         Path._solve_photon 1 1.67674443219e-08
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295924.621, 248295926.030)
+Ring incidence angle (deg)
+   (80.240106145658885, 99.761415652910586) (unmasked min, max)
+   (80.24010614565888, 80.24143989562688) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring emission angle (deg)
+   (82.97750557788271, 94.92995954264623) (unmasked min, max)
+   (94.19676822759664, 94.92995954264623) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring phase angle (deg)
+   (59.011459255106018, 242.53804665404238) (unmasked min, max)
+   (59.01145925510602, 62.51162104818103) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring radial resolution (km/pixel)
+   (100.28575213586259, 3306.3566151921359) (unmasked min, max)
+   (100.2857521358626, 1482.6284719036826) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring angular resolution (deg/pixel)
+   (0.0066287027681860462, 6.4367988862874288) (unmasked min, max)
+   (0.061092533182722335, 0.9835738507760443) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Saturn intercepted mask
+   (314222, 734354) (30, 70) (True, False pixels)
+Saturn in front of rings
+   (286799, 761777) (27, 73) (True, False pixels)
+Saturn behind rings
+   (27423, 1021153) (3, 97) (True, False pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.096, 248300543.290)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300542.896, 248300543.090)
+         Re-using QuickFrame: RingFrame(IAU_SATURN_DESPUN/J2000) (248300542.896, 248300543.090)
+         Surface.collapse_time() -0.597414741215 1.05278844406
+         Surface._solve_photon_by_los 0 0.13001188971
+         Surface.collapse_time() -0.597424654815 1.05278824183
+         Surface._solve_photon_by_los 1 1.00147173242e-05
+         Surface.collapse_time() -0.597424654014 1.05278824183
+         Surface._solve_photon_by_los 2 8.00405547396e-10
+Saturn in shadow of rings
+   (66643, 981933) (6, 94) (True, False pixels)
+Saturn outside shadow of rings
+   (247579, 800997) (24, 76) (True, False pixels)
+Saturn sunward
+   (104827, 943749) (10, 90) (True, False pixels)
+Saturn anti-sunward
+   (209395, 839181) (20, 80) (True, False pixels)
+Rings intercepted mask
+   (136096, 912480) (13, 87) (True, False pixels)
+Rings in front of Saturn
+   (112384, 936192) (11, 89) (True, False pixels)
+Rings in front of Saturn
+   (23712, 1024864) (2, 98) (True, False pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300542.639, 248300543.545)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300542.183, 248300543.089)
+         Re-using QuickFrame: SpiceFrame(IAU_SATURN/J2000) (248300542.183, 248300543.089)
+         Surface.collapse_time() -0.39815650586 0.349221798521
+         Surface._solve_photon_by_los 0 0.232703010609
+         Surface.collapse_time() -0.397873789625 0.348939208972
+         Surface._solve_photon_by_los 1 0.000141421461185
+         Surface.collapse_time() -0.397873618991 0.348939039041
+         Surface._solve_photon_by_los 2 8.56676610206e-08
+Rings in front of Saturn
+   (49735, 998841) (5, 95) (True, False pixels)
+Rings in front of Saturn
+   (86361, 962215) (8, 92) (True, False pixels)
+Rings sunward
+   (136096, 912480) (13, 87) (True, False pixels)
+Rings anti-sunward
+   (0, 1048576) (0, 100) (True, False pixels)
+Right ascension the old way (deg)
+   (212.27270842760879, 216.471223914121) (min, max)
+Right ascension via evaluate() (deg)
+   (212.27270842760879, 216.471223914121) (min, max)
+Saturn intercepted the old way
+   (314222, 734354) (30, 70) (True, False pixels)
+Saturn where intercepted via evaluate()
+   (314222, 734354) (30, 70) (True, False pixels)
+Saturn sunward the old way
+   (104827, 943749) (10, 90) (True, False pixels)
+Saturn sunward via evaluate()
+   (104827, 943749) (10, 90) (True, False pixels)
+Saturn sunward via where_below()
+   (104827, 943749) (10, 90) (True, False pixels)
+Saturn antisunward via evaluate()
+   (209395, 839181) (20, 80) (True, False pixels)
+Saturn antisunward via where_above()
+   (209395, 839181) (20, 80) (True, False pixels)
+Saturn antisunward via where_between()
+   (209395, 839181) (20, 80) (True, False pixels)
+Saturn intercepted the old way
+   (314222, 734354) (30, 70) (True, False pixels)
+Saturn inside border
+   (960, 1047616) (0, 100) (True, False pixels)
+Saturn outside border
+   (961, 1047615) (0, 100) (True, False pixels)
+Ring area below 100,000 km
+   (49587, 998989) (5, 95) (True, False pixels)
+Ring border below 100,000 km
+   (1712, 1046864) (0, 100) (True, False pixels)
+Ring border atop 100,000 km
+   (1713, 1046863) (0, 100) (True, False pixels)
+Ring border above 100,000 km
+   (1713, 1046863) (0, 100) (True, False pixels)
+Ring border above 100,000 km via evaluate()
+   (1713, 1046863) (0, 100) (True, False pixels)
+Saturn main ring radius the old way (km)
+   (11339.839589051078, 1061964.6512542912) (unmasked min, max)
+   (74658.38791273703, 136779.8944122782) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Re-using QuickFrame: RingFrame(IAU_SATURN_DESPUN/J2000) (248300543.093, 248300543.093)
+         Surface._solve_photon_by_los 0 3.50734679595
+         Surface._solve_photon_by_los 1 0.000974095732625
+         Surface._solve_photon_by_los 2 2.70537039881e-07
+Saturn:ring radius (km)
+   (1094814.5258055786, 2744127.4792499398) (min, max)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Re-using QuickFrame: RingFrame(IAU_SATURN_DESPUN/J2000) (248300543.093, 248300543.093)
+         Surface.collapse_time() -5.6708803422 0.0457964550245
+         Surface._solve_photon_by_los 0 0.000931088129715
+         Surface.collapse_time() -5.67088031591 0.0457964543596
+         Surface._solve_photon_by_los 1 2.59601922181e-08
+Saturn:ansa distance (km)
+   (1686357.7173107173, 1700087.1489306935) (min, max)
+Saturn:ansa radius (km)
+   (4912.2494824924115, 129789.2655073194) (min, max)
+Saturn:ansa altitude (km)
+   (-74008.13650518778, 51600.702842340179) (min, max)
+Saturn:ansa radial resolution (km)
+   (99.694733493412201, 101.22837661798928) (min, max)
+Saturn:ansa vertical resolution (km)
+   (99.685048718222291, 101.62055275020963) (min, max)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Re-using QuickFrame: RingFrame(IAU_SATURN_DESPUN/J2000) (248300543.093, 248300543.093)
+         Surface.collapse_time() -5.6708803422 0.0457964550245
+         Surface._solve_photon_by_los 0 0.000931088129715
+         Surface.collapse_time() -5.67088031591 0.0457964543596
+         Surface._solve_photon_by_los 1 2.59601922181e-08
+Saturn_main_ring:ansa vertical resolution (km)
+   (99.685048718222291, 101.62055275020963) (min, max)
+Saturn_main_ring:ansa finest resolution (km)
+   (99.467893387804963, 101.23057218682884) (min, max)
+Saturn_main_ring:ansa coarsest resolution (km)
+   (99.467893387804963, 101.23057218682884) (min, max)
+Saturn ansa longitude wrt node (deg)
+   (351.64311502237314, 355.88718866286729) (min, max)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Path._solve_photon 0 0.000164930478035
+         Path._solve_photon 1 1.69160152552e-09
+Saturn ansa longitude wrt observer (deg)
+   (85.588955003858686, 89.833028644352822) (min, max)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.403, 248295925.403)
+         Path._solve_photon 0 0.000160944170602
+         Path._solve_photon 1 6.53926690575e-10
+Saturn ansa longitude wrt Sun (deg)
+   (147.06004142953074, 151.30411507002489) (min, max)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300539.586, 248300545.088)
+Saturn ring azimuth wrt observer (deg)
+   (2.83140984444606, 179.32081082994884) (unmasked min, max)
+   (2.83140984444606, 179.32081082994884) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Path._solve_photon 0 0.000164930478035
+         Path._solve_photon 1 1.69160152552e-09
+Saturn ring azimuth wrt observer minus longitude (deg)
+   (0.16489130412964251, 4.4125535891321448) (unmasked min, max)
+   (0.1648913041296425, 4.412553589132145) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248300539.586, 248300545.088)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295919.760, 248295928.286)
+         Path._solve_photon 0 0.000161025869602
+         Path._solve_photon 1 2.5492226996e-08
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295919.759, 248295928.286)
+Saturn ring azimuth wrt Sun (deg)
+   (63.311227726375904, 240.5965898906816) (unmasked min, max)
+   (63.311227726375904, 240.5965898906816) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.403, 248295925.403)
+         Path._solve_photon 0 0.000160944170602
+         Path._solve_photon 1 6.53926690575e-10
+Saturn ring azimuth wrt Sun minus longitude (deg)
+   (-0.049216188514581365, 0.039245371927234582) (unmasked min, max)
+   (-0.049216188514581365, 0.03924537192723458) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Saturn ring elevation wrt observer (deg)
+   (2.7969238389521975, 7.0235552525966316) (unmasked min, max)
+   (2.7969238389521975, 7.023555252596632) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Saturn ring emission wrt observer plus emission (deg)
+   (95.592295710330305, 104.04604967471747) (unmasked min, max)
+   (95.5922957103303, 104.04604967471747) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Saturn ring elevation wrt Sun (deg)
+   (-9.7647595012965525, -9.7540459402736719) (unmasked min, max)
+   (-9.764759501296552, -9.754045940273672) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Saturn ring elevation wrt Sun plus incidence (deg)
+   (70.475780230533758, 70.490992392893389) (unmasked min, max)
+   (70.47578023053376, 70.49099239289339) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+
+Sub-solar Saturn planetocentric latitude (deg) = -9.76070770314
+Sub-solar Saturn planetographic latitude (deg) = -11.9375017892
+Sub-solar Saturn longitude wrt IAU (deg) = 346.536056427
+Solar distance to Saturn center (km) = 1384348633.21
+
+Sub-observer Saturn planetocentric latitude (deg) = 4.5356555468
+Sub-observer Saturn planetographic latitude (deg) = 5.56838142441
+Sub-observer Saturn longitude wrt IAU (deg) = 48.0071428526
+Observer distance to Saturn center (km) = 1692893.8633
+
+Sub-solar ring latitude (deg) = -9.76070770314
+Sub-solar ring longitude wrt node (deg) = 204.583073593
+Solar distance to ring center (km) = 1384348633.21
+Sub-observer ring latitude (deg) = 4.5356555468
+Sub-observer ring longitude wrt node (deg) = 266.054160019
+Observer distance to ring center (km) = 1692893.8633
+
+Ring longitude wrt Sun (deg)
+   (63.292391316490303, 240.62703389957659) (unmasked min, max)
+   (66.98786147443393, 237.40067390159686) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300542.639, 248300543.545)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248300542.639, 248300543.545)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295924.949, 248295925.855)
+         Path._solve_photon 0 0.000160944582603
+         Path._solve_photon 1 2.47382558882e-10
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295924.949, 248295925.855)
+Ring longitude wrt Sun (deg), old way
+   (63.292390562646553, 240.62703442170152) (unmasked min, max)
+   (66.98786130474568, 237.4006740716514) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt SHA (deg)
+   (6.7457166983208498e-05, 359.99948452981829) (unmasked min, max)
+   (6.74571669832085e-05, 359.9994845298183) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt SHA (deg), old way
+   (6.752339821778436e-05, 359.99948460757133) (unmasked min, max)
+   (6.752339821778436e-05, 359.99948460757133) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt observer (deg)
+   (1.8203384890769996, 179.15498107216325) (unmasked min, max)
+   (5.515808647020623, 175.92862107418355) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300542.639, 248300543.545)
+         New QuickPath: SpicePath([CASSINI - SSB]*J2000) (248300532.639, 248300553.545)
+         Re-using QuickPath: SpicePath([CASSINI - SSB]*J2000) (248300548.286, 248300549.192)
+         Path._solve_photon 0 0.000239158162087
+         Path._solve_photon 1 1.32742759007e-08
+         New QuickPath: SpicePath([CASSINI - SSB]*J2000) (248300538.286, 248300559.192)
+Ring longitude wrt observer (deg), old way
+   (1.8201777356781765, 179.15509241180447) (unmasked min, max)
+   (5.515772462003645, 175.92865733726293) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt OHA (deg)
+   (181.82033848907699, 359.15498107216325) (unmasked min, max)
+   (185.51580864702063, 355.9286210741836) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt OHA (deg), old way
+   (181.82017773567819, 359.15509241180445) (unmasked min, max)
+   (185.51577246200364, 355.9286573372629) (masked min, max)
+   (912480, 136096) (87, 13) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Path._solve_photon 0 0.000164930478035
+         Path._solve_photon 1 1.69160152552e-09
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.403, 248295925.403)
+         Path._solve_photon 0 0.000160944170602
+         Path._solve_photon 1 6.53926690575e-10
+Ansa longitude wrt Sun (deg)
+   (147.06004142953074, 151.30411507002489) (min, max)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.069, 248300543.115)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248300543.069, 248300543.115)
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.379, 248295925.425)
+         Path._solve_photon 0 0.000160944582603
+         Path._solve_photon 1 2.47382558882e-10
+         Re-using QuickPath: SpicePath([SUN - SSB]*J2000) (248295925.379, 248295925.425)
+Ansa longitude wrt Sun (deg), old way
+   (147.06057381017411, 151.30464744888664) (unmasked min, max)
+   (147.0605738101741, 151.30464744888664) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ansa longitude wrt SHA (deg)
+   (327.06004142953077, 331.30411507002486) (min, max)
+Ansa longitude wrt SHA (deg), old way
+   (327.06057381017411, 331.30464744888661) (unmasked min, max)
+   (327.0605738101741, 331.3046474488866) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ansa longitude wrt observer (deg)
+   (85.588955003858686, 89.833028644352822) (min, max)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.069, 248300543.115)
+         Re-using QuickPath: SpicePath([CASSINI - SSB]*J2000) (248300543.069, 248300543.115)
+         Re-using QuickPath: SpicePath([CASSINI - SSB]*J2000) (248300548.716, 248300548.762)
+         Path._solve_photon 0 0.000239158040723
+         Path._solve_photon 1 1.32728308344e-08
+         Re-using QuickPath: SpicePath([CASSINI - SSB]*J2000) (248300548.716, 248300548.762)
+Ansa longitude wrt observer (deg), old way
+   (85.588520854856327, 89.832594115441097) (unmasked min, max)
+   (85.58852085485633, 89.8325941154411) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ansa longitude wrt OHA (deg)
+   (265.5889550038587, 269.83302864435279) (min, max)
+Ansa longitude wrt OHA (deg), old way
+   (265.58852085485631, 269.83259411544111) (unmasked min, max)
+   (265.5885208548563, 269.8325941154411) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Re-using QuickFrame: SpiceFrame(IAU_SATURN/J2000) (248300543.093, 248300543.093)
+         Spheroid.intercept_normal_to 0 0.445144407851
+         Spheroid.intercept_normal_to 1 0.117545935777
+         Spheroid.intercept_normal_to 2 0.0386826619504
+         Spheroid.intercept_normal_to 3 0.0031350561779
+         Limb.intercept 0 0.00469237053821
+         Spheroid.intercept_normal_to 0 0.000222679707706
+         Spheroid.intercept_normal_to 1 1.02514755803e-07
+         Limb.intercept 1 2.83448102263e-06
+         Spheroid.intercept_normal_to 0 4.43317335867e-08
+         Limb.intercept 2 6.47103071625e-13
+         Surface.collapse_time() -5.6463315565 0.0198474324547
+         Surface._solve_photon_by_los 0 0.0106431862842
+         Spheroid.intercept_normal_to 0 0.445283608894
+         Spheroid.intercept_normal_to 1 0.117584082949
+         Spheroid.intercept_normal_to 2 0.0386754989583
+         Spheroid.intercept_normal_to 3 0.00313705183479
+         Limb.intercept 0 0.00996635345634
+         Spheroid.intercept_normal_to 0 0.00127439806193
+         Spheroid.intercept_normal_to 1 3.23527029701e-06
+         Spheroid.intercept_normal_to 2 2.09468588571e-11
+         Limb.intercept 1 3.13210052384e-05
+         Spheroid.intercept_normal_to 0 2.1424277509e-07
+         Limb.intercept 2 3.92396668587e-11
+         Surface.collapse_time() -5.64633186224 0.0198474324227
+         Surface._solve_photon_by_los 1 3.05751198582e-07
+         Spheroid.intercept_normal_to 0 0.445283924807
+         Spheroid.intercept_normal_to 1 0.117584167219
+         Spheroid.intercept_normal_to 2 0.0386755846112
+         Spheroid.intercept_normal_to 3 0.00313706284261
+         Limb.intercept 0 0.00996604491699
+         Spheroid.intercept_normal_to 0 0.00127432054706
+         Spheroid.intercept_normal_to 1 3.23487764164e-06
+         Spheroid.intercept_normal_to 2 2.09416713408e-11
+         Limb.intercept 1 3.13182344744e-05
+         Spheroid.intercept_normal_to 0 2.1422489404e-07
+         Limb.intercept 2 3.92319076815e-11
+         Spheroid.intercept_normal_to 0 0.445141714544
+         Spheroid.intercept_normal_to 1 0.117545221135
+         Spheroid.intercept_normal_to 2 0.0386848789919
+         Spheroid.intercept_normal_to 3 0.0031382711742
+Limb altitude (km)
+   (0.0, 78806.951836558219) (unmasked min, max)
+   (0.04175026153020816, 78806.95183655822) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb longitude (deg)
+   (198.8005500197151, 242.26550766498809) (unmasked min, max)
+   (220.21183221505055, 242.2655076649881) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb latitude (deg)
+   (-65.351313590509989, 78.840061944783756) (unmasked min, max)
+   (-65.35131359050999, 39.075521529004064) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+         Re-using QuickPath: SpicePath([SATURN - SSB]*J2000) (248300543.093, 248300543.093)
+         Path._solve_photon 0 0.000164930478035
+         Path._solve_photon 1 1.69160152552e-09
+Limb longitude wrt observer, -180 (deg)
+   (-113.19230712772243, -69.727349482449441) (unmasked min, max)
+   (-91.78102493238698, -69.72734948244944) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb planetographic latitude (deg)
+   (-69.526143980247525, 80.88066440326287) (unmasked min, max)
+   (-69.52614398024753, 44.93997911602586) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb planetocentric latitude (deg)
+   (-65.351313590509989, 78.840061944783756) (unmasked min, max)
+   (-65.35131359050999, 39.075521529004064) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb resolution horizontal (km/pixel)
+   (99.845554366648273, 101.0959914028538) (unmasked min, max)
+   (99.84555436664827, 101.0959914028538) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Limb resolution vertical (km/pixel)
+   (99.797358393971976, 101.08254823749773) (unmasked min, max)
+   (99.79735839397198, 101.08254823749773) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Range to Saturn, entirely masked (km)
+   (299792.45799999998, 299792.45799999998) (unmasked min, max)
+   (Scalar(--; mask), Scalar(--; mask)) (masked min, max)
+   (1, 0) (100, 0) (masked, unmasked pixels)
+Phase angle at Saturn, entirely masked (deg)
+   (180.0, 180.0) (unmasked min, max)
+   (Scalar(--; mask), Scalar(--; mask)) (masked min, max)
+   (1, 0) (100, 0) (masked, unmasked pixels)
+ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 496.162s
+
+OK
