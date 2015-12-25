@@ -30,13 +30,15 @@ class NullSurface(Surface):
         self.origin = Path.as_waypoint(origin)
         self.frame  = Frame.as_wayframe(frame)
 
-    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
+    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
+                                  derivs=False):
         """Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
             obs         a Vector3 of observer positions. Ignored for solid
                         surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaulate the surface; ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
@@ -80,12 +82,13 @@ class NullSurface(Surface):
         # Convert to a Vector3 and return
         return Vector3.from_scalars(x, y, z)
 
-    def intercept(self, obs, los, derivs=False, guess=None):
+    def intercept(self, obs, los, time=None, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
             los         line of sight as a Vector3.
+            time        a Scalar time at which to evaulate the surface; ignored.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       unused.
@@ -106,11 +109,12 @@ class NullSurface(Surface):
 
         return (pos, t)
 
-    def normal(self, pos, derivs=False):
+    def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
+            time        a Scalar time at which to evaulate the surface; ignored.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -121,7 +125,7 @@ class NullSurface(Surface):
         # Always the Z-axis
         return Vector3.ZAXIS
 
-    def velocity(self, pos):
+    def velocity(self, pos, time=None):
         """The local velocity vector at a point within the surface.
 
         This can be used to describe the orbital motion of ring particles or
@@ -129,6 +133,7 @@ class NullSurface(Surface):
 
         Input:
             pos         a Vector3 of positions at or near the surface.
+            time        a Scalar time at which to evaulate the surface; ignored.
 
         Return:         a Vector3 of velocities, in units of km/s.
         """

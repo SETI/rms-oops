@@ -3473,7 +3473,7 @@ class Test_Backplane_Exercises(unittest.TestCase):
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                 'cassini/ISS/W1573721822_1.IMG')
 
-        TEST_LEVEL = 0
+        TEST_LEVEL = 1
 
         if TEST_LEVEL == 3:     # long and slow, creates images, logging off
             printing = True

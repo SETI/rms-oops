@@ -30,6 +30,10 @@ class Surface(object):
     intercept_with_normal_DERIVS_ARE_IMPLEMENTED = True
     intercept_normal_to_DERIVS_ARE_IMPLEMENTED = True
 
+    # Default properties; override as needed
+    IS_VIRTUAL = False
+    IS_TIME_DEPENDENT = False
+
     ########################################
     # Each subclass must override...
     ########################################
@@ -40,13 +44,16 @@ class Surface(object):
 
         pass
 
-    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
+    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
+                                  derivs=False):
         """Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
             obs         a Vector3 of observer positions. Ignored for solid
                         surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaulate the surface; ignored
+                        unless the surface is time-variable.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
@@ -58,7 +65,7 @@ class Surface(object):
 
         pass
 
-    def vector3_from_coords(self, coords, obs=None, derivs=False):
+    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
         """Convert surface coordinates to positions in the internal frame.
 
         Input:
@@ -66,6 +73,8 @@ class Surface(object):
                         coordinates.
             obs         position of the observer in the surface frame. Ignored
                         for solid surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaulate the surface; ignored
+                        unless the surface is time-variable.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
@@ -78,12 +87,14 @@ class Surface(object):
 
         pass
 
-    def intercept(self, obs, los, derivs=False, guess=None):
+    def intercept(self, obs, los, time=None, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
             los         line of sight as a Vector3.
+            time        a Scalar time at the surface; ignored unless the surface
+                        is time-variable.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       optional initial guess at the coefficient t such that:
@@ -97,11 +108,13 @@ class Surface(object):
 
         pass
 
-    def normal(self, pos, derivs=False):
+    def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
+            time        a Scalar time at the surface; ignored unless the surface
+                        is time-variable.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -115,11 +128,14 @@ class Surface(object):
     # Optional Methods...
     ########################################
 
-    def intercept_with_normal(self, normal, derivs=False, guess=None):
+    def intercept_with_normal(self, normal, time=None,
+                                    derivs=False, guess=None):
         """Intercept point where the normal vector parallels the given vector.
 
         Input:
             normal      a Vector3 of normal vectors.
+            time        a Scalar time at the surface; ignored unless the surface
+                        is time-variable.
             derivs      True to propagate derivatives in the normal vector into
                         the returned intercepts.
             guess       optional initial guess a coefficient array p such that:
@@ -139,11 +155,13 @@ class Surface(object):
         raise NotImplementedError("intercept_with_normal() not implemented " +
                                   "for class " + type(self).__name__)
 
-    def intercept_normal_to(self, pos, derivs=False, guess=None):
+    def intercept_normal_to(self, pos, time=None, derivs=False, guess=None):
         """Intercept point whose normal vector passes through a given position.
 
         Input:
             pos         a Vector3 of positions near the surface.
+            time        a Scalar time at the surface; ignored unless the surface
+                        is time-variable.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
             guess       optional initial guess a coefficient array p such that:
@@ -163,7 +181,7 @@ class Surface(object):
         raise NotImplementedError("intercept_normal_to() not implemented " +
                                   "for class " + type(self).__name__)
 
-    def velocity(self, pos):
+    def velocity(self, pos, time=None):
         """The local velocity vector at a point within the surface.
 
         This can be used to describe the orbital motion of ring particles or
@@ -171,6 +189,8 @@ class Surface(object):
 
         Input:
             pos         a Vector3 of positions at or near the surface.
+            time        a Scalar time at the surface; ignored unless the surface
+                        is time-variable.
 
         Return:         a Vector3 of velocities, in units of km/s.
         """
@@ -221,7 +241,8 @@ class Surface(object):
 
         # Evaluate the coords and optional derivatives
         coords = self.coords_from_vector3(pos_wrt_surface, obs=obs_wrt_surface,
-                                          axes=axes, derivs=any_derivs)
+                                          time=event.time, axes=axes,
+                                          derivs=any_derivs)
 
         if not any_derivs: return coords
 
@@ -275,9 +296,9 @@ class Surface(object):
 
         # Determine position and velocity
         pos = self.vector3_from_coords((coord1, coord2, coord3), obs=obs,
-                                                                 derivs=True)
+                                        time=time, derivs=True)
         pos2 = Vector3(np.zeros(pos.values.shape))
-        pos2.insert_deriv('t', self.velocity(pos))
+        pos2.insert_deriv('t', self.velocity(pos, time))
 
         state = pos + pos2
 
@@ -474,8 +495,10 @@ class Surface(object):
             obs_wrt_surface = pos_wrt_surface - lt * los_wrt_surface
 
             # Update the intercept times; save the intercept positions
+            surface_time = link_time + new_lt
             (pos_wrt_surface, new_lt) = self.intercept(obs_wrt_surface,
                                                        los_wrt_surface,
+                                                       time=surface_time,
                                                        derivs=False,
                                                        guess=new_lt)
 
@@ -544,6 +567,7 @@ class Surface(object):
         # Update the intercept time and position, with derivatives if necessary
         (pos_wrt_surface, lt) = self.intercept(obs_wrt_surface,
                                                los_wrt_surface,
+                                               time=surface_time,
                                                derivs=True,
                                                guess=lt)
 
@@ -567,8 +591,12 @@ class Surface(object):
         surface_event.collapse_time()
 
         surface_event.insert_subfield('perp',
-                                      self.normal(pos_wrt_surface, derivs=True))
-        surface_event.insert_subfield('vflat', self.velocity(pos_wrt_surface))
+                                      self.normal(pos_wrt_surface,
+                                                  time=surface_event.time,
+                                                  derivs=True))
+        surface_event.insert_subfield('vflat',
+                                      self.velocity(pos_wrt_surface,
+                                                    surface_event.time))
         surface_event.insert_subfield(surface_key, los_wrt_surface)
         surface_event.insert_subfield(surface_key + '_lt', -lt)
 
@@ -577,6 +605,7 @@ class Surface(object):
          coord2,
          coord3) = self.coords_from_vector3(surface_event.state,
                                             obs_wrt_surface,
+                                            time=surface_event.time,
                                             axes=3, derivs=True)
 
         surface_event.insert_subfield('coord1', coord1)
@@ -756,7 +785,8 @@ class Surface(object):
 
         # For a non-virtual surface, pos_wrt_origin is fixed
         if not self.IS_VIRTUAL:
-            pos_wrt_origin_frame = self.vector3_from_coords(coords)
+            pos_wrt_origin_frame = self.vector3_from_coords(coords,
+                                                            time=surface_time)
 
         # Iterate. Convergence is rapid because all speeds are non-relativistic
         max_dlt = np.inf
@@ -783,7 +813,8 @@ class Surface(object):
             if self.IS_VIRTUAL:
                obs_wrt_origin_frame = surface_xform.rotate(obs_wrt_origin_j2000)
                pos_wrt_origin_frame = self.vector3_from_coords(coords,
-                                                           obs_wrt_origin_frame)
+                                                    obs=obs_wrt_origin_frame,
+                                                    time=surface_time)
 
             # Locate the coordinate position in J2000
             pos_wrt_origin_j2000 = surface_xform.unrotate(pos_wrt_origin_frame)
@@ -837,9 +868,11 @@ class Surface(object):
         surface_event.insert_subfield(surface_key + '_lt', -lt)
 
         surface_event.insert_subfield('perp',
-                                      self.normal(pos_wrt_origin_frame))
+                                      self.normal(pos_wrt_origin_frame,
+                                                  time=surface_event.time))
         surface_event.insert_subfield('vflat',
-                                      self.velocity(pos_wrt_origin_frame))
+                                      self.velocity(pos_wrt_origin_frame,
+                                                    time=surface_event.time))
 
         # Fill in derivatives if necessary
 #         if derivs:

@@ -54,14 +54,15 @@ class Limb(Surface):
         else:
             self.limits = (limits[0], limits[1])
 
-    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False,
-                                  guess=None, groundtrack=False):
+    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
+                                  derivs=False, guess=None, groundtrack=False):
         """Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
             obs         a Vector3 of observer positions. Ignored for solid
                         surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaulate the surface; ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
@@ -121,7 +122,7 @@ class Limb(Surface):
 
         return results
 
-    def vector3_from_coords(self, coords, obs=None, derivs=False,
+    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
                                   groundtrack=False):
         """Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
@@ -132,6 +133,7 @@ class Limb(Surface):
                 lat     latitude in radians.
                 z       the perpendicular distance from the surface, in km.
             obs         position of the observer in the surface frame.
+            time        a Scalar time at which to evaulate the surface; ignored.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to observer and to the coordinates.
             groundtrack True to replace the returned value by a tuple, where the
@@ -159,12 +161,14 @@ class Limb(Surface):
         else:
             return results[0]
 
-    def intercept(self, obs, los, derivs=False, guess=None, groundtrack=False):
+    def intercept(self, obs, los, time=None, derivs=False, guess=None,
+                        groundtrack=False):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
             los         line of sight as a Vector3.
+            time        a Scalar time at which to evaulate the surface; ignored.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       optional initial guess at the coefficient t such that:
@@ -244,11 +248,12 @@ class Limb(Surface):
         else:
             return (pos, t)
 
-    def normal(self, pos, derivs=False):
+    def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
+            time        a Scalar time at which to evaulate the surface; ignored.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
