@@ -865,16 +865,23 @@ class Event(object):
             items.append([key, value])
 
         for (key,value) in items:
-            if key == 'arr' or key == 'arr_ap':
+            if (key.startswith('arr') or key.startswith('neg_arr')) and \
+                                         key != 'arr_lt':
                 result.__arr_ = None
+                result.__arr_j2000_ = None
                 result.__arr_ap_ = None
+                result.__arr_ap_j2000_ = None
                 result.__neg_arr_ = None
+                result.__neg_arr_j2000_ = None
                 result.__neg_arr_ap_ = None
+                result.__neg_arr_ap_j2000 = None
             elif key == 'arr_lt':
                 result.__arr_lt_ = None
-            elif key == 'dep' or key == 'dep_ap':
+            elif key.startswith('dep') and key != 'dep_lt':
                 result.__dep_ = None
+                result.__dep_j2000_ = None
                 result.__del_ap_ = None
+                result.__del_ap_j2000_ = None
             elif key == 'dep_lt':
                 result.__del_lt_ = None
             elif key == 'perp':

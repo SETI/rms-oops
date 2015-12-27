@@ -22,5 +22,10 @@ from oops.surface_.graphicspheroid  import Test_GraphicSpheroid
 
 ########################################
 if __name__ == '__main__':
+
+    import oops
+    oops.config.LOGGING.on('     ')
+
     unittest.main(verbosity=2)
+
 ################################################################################

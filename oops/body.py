@@ -837,6 +837,7 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     body = Body(ring_name, barycenter.path, parent.ring_frame,
                 parent, parent)
     body.apply_gravity(barycenter.gravity)
+    body.apply_ring_frame(retrograde=retrograde)
 
     shape = RingPlane(barycenter.path, parent.ring_frame, radii,
                       gravity=barycenter.gravity)

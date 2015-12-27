@@ -1576,7 +1576,7 @@ class Qube(object):
         return obj
 
     def remask(self, mask, recursive=True):
-        """Return a shallow copy of this object with a replaced.
+        """Return a shallow copy of this object with a replaced mask.
 
         This is much quicker than masked_where(), for cases where only the mask
         is changing.
