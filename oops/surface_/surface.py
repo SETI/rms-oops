@@ -52,7 +52,7 @@ class Surface(object):
             pos         a Vector3 of positions at or near the surface.
             obs         a Vector3 of observer positions. Ignored for solid
                         surfaces but needed for virtual surfaces.
-            time        a Scalar time at which to evaulate the surface; ignored
+            time        a Scalar time at which to evaluate the surface; ignored
                         unless the surface is time-variable.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
@@ -73,7 +73,7 @@ class Surface(object):
                         coordinates.
             obs         position of the observer in the surface frame. Ignored
                         for solid surfaces but needed for virtual surfaces.
-            time        a Scalar time at which to evaulate the surface; ignored
+            time        a Scalar time at which to evaluate the surface; ignored
                         unless the surface is time-variable.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.

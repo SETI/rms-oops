@@ -129,7 +129,7 @@ class FOV(object):
 
         # In the pinhole camera model, the z-component is always 1
         (x,y) = Pair.to_scalars(xy_pair)
-        return Vector3.from_scalars(x,y,1.).unit()
+        return Vector3.from_scalars(x,y,1.).unit(derivs)
 
     def xy_from_los(self, los, derivs=False):
         """Return camera frame coordinates (x,y) given a line of sight.

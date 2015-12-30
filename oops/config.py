@@ -28,7 +28,7 @@ class QUICK(object):
                                 # if a time span is less than this amount,
                                 # perform linear interpolation instead of
                                 # using InterpolatedUnivariateSpline; this
-                                # increases performance
+                                # improves performance
 
     "use_quickframes": True,
     "frame_time_step": 0.5,     # time interval in seconds.
@@ -41,7 +41,7 @@ class QUICK(object):
                                 # if a time span is less than this amount,
                                 # perform linear interpolation instead of
                                 # using InterpolatedUnivariateSpline; this
-                                # increases performance
+                                # improves performance
 }
 
 ################################################################################

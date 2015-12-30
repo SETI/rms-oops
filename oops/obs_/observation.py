@@ -429,8 +429,6 @@ class Observation(object):
 
             # Tabulate the times
             tstep = np.arange(origin, limit, step)
-            print 1111, origin, limit, step
-            print 1112, tstep
             times = self.time[0] * (1. - tstep) + self.time[1] * tstep
 
             # For no times, return observation midtime

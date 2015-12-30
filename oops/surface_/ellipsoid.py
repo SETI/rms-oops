@@ -93,7 +93,7 @@ class Ellipsoid(Surface):
             pos         a Vector3 of positions at or near the surface.
             obs         a Vector3 of observer positions. Ignored for solid
                         surfaces but needed for virtual surfaces.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
@@ -130,7 +130,7 @@ class Ellipsoid(Surface):
                         coordinates.
             obs         position of the observer in the surface frame. Ignored
                         for solid surfaces but needed for virtual surfaces.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
@@ -169,7 +169,7 @@ class Ellipsoid(Surface):
         Input:
             obs         observer position as a Vector3.
             los         line of sight as a Vector3.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       optional initial guess at the coefficient t such that:
@@ -222,7 +222,7 @@ class Ellipsoid(Surface):
 
         Input:
             pos         a Vector3 of positions at or near the surface.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -240,7 +240,7 @@ class Ellipsoid(Surface):
         Input:
             normal      a Vector3 of normal vectors.
             derivs      True to propagate derivatives in the normal vector into
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
                         the returned intercepts.
             guess       optional initial guess a coefficient array p such that:
                             pos = intercept + p * normal(intercept);
@@ -264,7 +264,7 @@ class Ellipsoid(Surface):
 
         Input:
             pos         a Vector3 of positions near the surface.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluateevaluate the surface; ignored.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
             guess       optional initial guess a coefficient array p such that:

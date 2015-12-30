@@ -757,6 +757,10 @@ class Event(object):
 
         event = self.clone(subfields=True, recursive=True)
         event.__time_.insert_deriv('t', Scalar.ONE, override=True)
+
+        if event.__ssb_ is not None and event.__ssb_ is not event:
+            event.ssb.__time_.insert_deriv('t', Scalar.ONE, override=True)
+
         return event
 
     def with_los_derivs(self):
@@ -767,6 +771,7 @@ class Event(object):
 
         event.neg_arr_ap.insert_deriv('los', Vector3.IDENTITY, override=True)
         event.arr_ap.insert_deriv('los', -Vector3.IDENTITY, override=True)
+
         if not ABERRATION.old: event.__arr_ = None
 
         if event.ssb is not None and event.ssb is not event and \
@@ -775,6 +780,7 @@ class Event(object):
                                                             event.__arr_ap_,
                                                             derivs=True)
             event.ssb.__neg_arr_ap_ = None
+
             if not ABERRATION.old: event.ssb.__arr_ = None
 
         return event
@@ -1935,7 +1941,7 @@ class Event(object):
         elif frame is None:
             event = self
         else:
-            event = self.wrt_frame(frame, derivs=True, quick=quick)
+            event = self.wrt_frame(frame, derivs=derivs, quick=quick)
 
         # Calculate the ray in J2000
         if not apparent:
@@ -1958,7 +1964,7 @@ class Event(object):
             raise ValueError('Undefined light ray vector in ' + str(self))
 
         # Convert to RA and dec
-        return ray.to_ra_dec_length(derivs)[:2]
+        return ray.to_ra_dec_length(recursive=derivs)[:2]
 
 ################################################################################
 # UNIT TESTS

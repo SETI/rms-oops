@@ -124,7 +124,7 @@ class Spheroid(Surface):
                         coordinates.
             obs         position of the observer in the surface frame. Ignored
                         for solid surfaces but needed for virtual surfaces.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
@@ -157,7 +157,7 @@ class Spheroid(Surface):
         Input:
             obs         observer position as a Vector3.
             los         line of sight as a Vector3.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       optional initial guess at the coefficient t such that:
@@ -209,7 +209,7 @@ class Spheroid(Surface):
 
         Input:
             pos         a Vector3 of positions at or near the surface.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -226,7 +226,7 @@ class Spheroid(Surface):
 
         Input:
             normal      a Vector3 of normal vectors.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate derivatives in the normal vector into
                         the returned intercepts.
             guess       optional initial guess a coefficient array p such that:
@@ -251,7 +251,7 @@ class Spheroid(Surface):
 
         Input:
             pos         a Vector3 of positions near the surface.
-            time        a Scalar time at which to evaulate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
             guess       optional initial guess a coefficient array p such that:

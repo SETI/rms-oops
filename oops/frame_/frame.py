@@ -830,7 +830,7 @@ class QuickFrame(Frame):
 
         if collapse_threshold is None:
             collapse_threshold = QUICK.dictionary['quickframe_linear_interpolation_threshold']
-            
+
         # time can only be a 1-D array in the splines
         tflat = Scalar.as_scalar(time).flatten()
         tflat_max = np.max(tflat.vals)
