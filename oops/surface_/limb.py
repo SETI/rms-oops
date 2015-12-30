@@ -207,7 +207,7 @@ class Limb(Surface):
         #
         # t = -(obs dot los) / (los dot los)
 
-        if guess:
+        if guess not in (None, False):
             t = guess.copy()
         else:
             t = -obs.dot(los) / los.dot(los)

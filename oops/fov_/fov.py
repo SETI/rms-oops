@@ -147,6 +147,7 @@ class FOV(object):
         los = Vector3.as_vector3(los, derivs)
         z = los.to_scalar(2)
         los = los / z
+
         return los.to_pair((0,1))
 
     def los_from_uv(self, uv_pair, derivs=False, **keywords):
