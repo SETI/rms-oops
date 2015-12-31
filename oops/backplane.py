@@ -2,16 +2,14 @@
 # oops/backplane.py: Backplane class
 #
 # TBD...
-#   position(self, event_key, axis='x', apparent=True, frame="j2000")
+#   position(self, event_key, axis='x', apparent=True, frame='j2000')
 #       returns an arbitrary position vector in an arbitrary frame
-#   velocity(self, event_key, axis='x', apparent=True, frame="j2000")
+#   velocity(self, event_key, axis='x', apparent=True, frame='j2000')
 #       returns an arbitrary velocity vector in an arbitrary frame
-#   pole_clock_angle(self, event_key)
-#       returns the projected angle of a body's pole vector on the sky
 #   projected_radius(self, event_key, radius='long')
 #       returns the projected angular radius of the body along its long or
 #       short axis.
-#   orbital_longitude(self, event_key, reference="j2000")
+#   orbital_longitude(self, event_key, reference='j2000')
 #       returns the orbital longitude of the body's path relative to the
 #       barycenter of its motion.
 ################################################################################
@@ -26,7 +24,7 @@ import oops.constants as constants
 
 from oops.surface_.surface   import Surface
 from oops.surface_.ansa      import Ansa
-#from oops.surface_.limb      import Limb
+from oops.surface_.limb      import Limb
 from oops.surface_.ringplane import RingPlane
 from oops.path_.path         import Path, AliasPath
 from oops.frame_.frame       import Frame
@@ -72,7 +70,7 @@ class Backplane(object):
         # strings, where each string is the name of a body from which photons
         # depart. Each event is defined by a call to Surface.photon_to_event()
         # to the next. The last event is the arrival at the observation, which
-        # is implied so it does not appear in the key. For example, ("SATURN",)
+        # is implied so it does not appear in the key. For example, ('SATURN',)
         # is the key for an event defining the departures of photons from the
         # surface of Saturn to the observer. Shadow calculations require a
         # pair of steps; for example, ('saturn','saturn_main_rings') is the key
@@ -86,7 +84,7 @@ class Backplane(object):
 
         # The path_events dictionary holds photon departure events from paths.
         # All photons originate from the Sun so this name is implied. For
-        # example, ("SATURN",) is the key for the event of a photon departing
+        # example, ('SATURN',) is the key for the event of a photon departing
         # the Sun such that it later arrives at the Saturn surface arrival
         # event.
 
@@ -95,8 +93,12 @@ class Backplane(object):
         # The gridless_events dictionary keeps track of photon events at the
         # origin point of each defined surface. It uses the same keys as the
         # surface_events dictionary.
+        #
+        # The observed counterpart to each gridless event is stored in
+        # gridless_arrivals
 
-        self.gridless_events = {(): self.obs_gridless_event}
+        self.gridless_events   = {(): self.obs_gridless_event}
+        self.gridless_arrivals = {}
 
         # The backplanes dictionary holds every backplane that has been
         # calculated. This includes boolean backplanes, aka masks. A backplane
@@ -136,7 +138,7 @@ class Backplane(object):
         elif type(event_key) == type(()):
             return event_key
         else:
-            raise ValueError("illegal event key type: " + str(type(event_key)))
+            raise ValueError('illegal event key type: ' + str(type(event_key)))
 
     @staticmethod
     def standardize_backplane_key(backplane_key):
@@ -153,7 +155,7 @@ class Backplane(object):
         elif isinstance(backplane_key, (Scalar,Boolean)):
             return backplane_key.key
         else:
-            raise ValueError("illegal backplane key type: " +
+            raise ValueError('illegal backplane key type: ' +
                               str(type(backplane_key)))
 
     @staticmethod
@@ -161,23 +163,23 @@ class Backplane(object):
         """Return a surface based on its ID.
 
         The string is normally a registered body ID (case insensitive), but it
-        can be modified with ":ansa", ":ring" or ":limb" to indicate an
+        can be modified with ':ansa', ':ring' or ':limb' to indicate an
         associated surface.
         """
 
         surface_id = surface_id.upper()
 
         modifier = None
-        if surface_id.endswith(":ANSA"):
-            modifier = "ANSA"
+        if surface_id.endswith(':ANSA'):
+            modifier = 'ANSA'
             body_id = surface_id[:-5]
 
-        elif surface_id.endswith(":RING"):
-            modifier = "RING"
+        elif surface_id.endswith(':RING'):
+            modifier = 'RING'
             body_id = surface_id[:-5]
 
-        elif surface_id.endswith(":LIMB"):
-            modifier = "LIMB"
+        elif surface_id.endswith(':LIMB'):
+            modifier = 'LIMB'
             body_id = surface_id[:-5]
 
         else:
@@ -189,17 +191,17 @@ class Backplane(object):
         if modifier is None:
             return body.surface
 
-        if modifier == "RING":
+        if modifier == 'RING':
             return RingPlane(body.path, body.ring_frame, gravity=body.gravity)
 
-        if modifier == "ANSA":
+        if modifier == 'ANSA':
             if body.surface.COORDINATE_TYPE == 'polar':     # if it's a ring
                 return Ansa.for_ringplane(body.surface)
             else:                                           # if it's a planet
                 return Ansa(body.path, body.ring_frame)
 
-#         if modifier == "LIMB":
-#             return Limb(body.surface, limits=(0.,np.inf))
+        if modifier == 'LIMB':
+            return Limb(body.surface, limits=(0.,np.inf))
 
     @staticmethod
     def get_path(path_id):
@@ -218,7 +220,7 @@ class Backplane(object):
             return self.surface_events[event_key]
 
         # The Sun is treated as a path, not a surface, unless it is listed first
-        if event_key[0].upper() == 'SUN' and len(event_key) > 1:
+        if event_key[0] == 'sun' and len(event_key) > 1:
             return self.get_path_event(event_key)
 
         # Look up the photon's departure surface and destination
@@ -332,15 +334,18 @@ class Backplane(object):
         dest = self.get_gridless_event(event_key[1:])
         surface = Backplane.get_surface(event_key[0])
 
-        path = Path.as_waypoint(surface.origin)
-        event = path.photon_to_event(self.obs_gridless_event)[0]
+        (event, arrival) = surface.origin.photon_to_event(dest)
         event = event.wrt_frame(surface.frame)
+        arrival = arrival.wrt_frame(self.obs.frame)
 
         # Save extra information in the event object
         event.event_key = event_key
         event.surface = surface
+        arrival.event_key = event_key
 
         self.gridless_events[event_key] = event
+        self.gridless_arrivals[event_key] = arrival
+
         return event
 
     def get_gridless_event_with_arr(self, event_key):
@@ -350,14 +355,15 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         event = self.get_gridless_event(event_key)
-        if event.arr is None:
-            new_event = AliasPath('SUN').photon_to_event(event)[1]
-            new_event.event_key = event.event_key
-            new_event.surface = event.surface
-            self.gridless_events[event_key] = new_event
-            return new_event
+        if event.arr is not None:
+            return event
 
-        return event
+        new_event = AliasPath('SUN').photon_to_event(event)[1]
+        new_event.event_key = event.event_key
+        new_event.surface = event.surface
+
+        self.gridless_events[event_key] = new_event
+        return new_event
 
     def mask_as_boolean(self, mask):
         """Converts a mask represented by a single boolean into a Boolean.
@@ -494,11 +500,12 @@ class Backplane(object):
             self._fill_dlos_dradec(event_key)
 
         dlos_ddec = self.backplanes[temp_key]
-        duv_ddec = self.meshgrid.duv_dlos * dlos_ddec
+        duv_ddec = self.meshgrid.duv_dlos.chain(dlos_ddec)
 
-        du_ddec_vals = duv_ddec.vals[...,0,0]
-        dv_ddec_vals = duv_ddec.vals[...,1,0]
+        du_ddec_vals = duv_ddec.vals[...,0]
+        dv_ddec_vals = duv_ddec.vals[...,1]
         clock = np.arctan2(dv_ddec_vals, du_ddec_vals)
+
         self.register_backplane(key, Scalar(clock, duv_ddec.mask))
 
         return self.backplanes[key]
@@ -525,10 +532,10 @@ class Backplane(object):
             self._fill_dlos_dradec(event_key)
 
         dlos_dra = self.backplanes[temp_key]
-        duv_dra = self.meshgrid.duv_dlos * dlos_dra
+        duv_dra = self.meshgrid.duv_dlos.chain(dlos_dra)
 
-        du_dra_vals = duv_dra.vals[...,0,0]
-        dv_dra_vals = duv_dra.vals[...,1,0]
+        du_dra_vals = duv_dra.vals[...,0]
+        dv_dra_vals = duv_dra.vals[...,1]
         clock = np.arctan2(dv_dra_vals, du_dra_vals)
         self.register_backplane(key, Scalar(clock, duv_dra.mask))
 
@@ -552,29 +559,27 @@ class Backplane(object):
         cos_ra = np.cos(ra.vals)
         sin_ra = np.sin(ra.vals)
 
-        dlos_dra_vals = np.zeros(ra.shape + [3])
-        dlos_dra_vals[...,0] = -sin_ra * cos_dec
-        dlos_dra_vals[...,1] =  cos_ra * cos_dec
+        dlos_dradec_vals = np.zeros(ra.shape + (3,2))
+        dlos_dradec_vals[...,0,0] = -sin_ra * cos_dec
+        dlos_dradec_vals[...,1,0] =  cos_ra * cos_dec
+        dlos_dradec_vals[...,0,1] = -sin_dec * cos_ra
+        dlos_dradec_vals[...,1,1] = -sin_dec * sin_ra
+        dlos_dradec_vals[...,2,1] =  cos_dec
 
-        dlos_j2000_dra = Vector3(dlos_dra_vals, ra.mask)
-
-        dlos_ddec_vals = np.zeros(ra.shape + [3])
-        dlos_ddec_vals[...,0] = -sin_dec * cos_ra
-        dlos_ddec_vals[...,1] = -sin_dec * sin_ra
-        dlos_ddec_vals[...,2] =  cos_dec
-
-        dlos_j2000_ddec = Vector3(dlos_ddec_vals, ra.mask)
+        dlos_dradec_j2000 = Vector3(dlos_dradec_vals, ra.mask, drank=1)
 
         # Rotate dlos from the J2000 frame to the image coordinate frame
         frame = self.obs.frame.wrt(Frame.J2000)
         xform = frame.transform_at_time(self.obs_event.time)
 
-        dlos_dra  = xform.rotate(dlos_j2000_dra)
-        dlos_ddec = xform.rotate(dlos_j2000_ddec)
+        dlos_dradec = xform.rotate(dlos_dradec_j2000)
 
         # Convert to a column matrix and save
-        self.register_backplane(('dlos_dra',  event_key), dlos_dra.as_column())
-        self.register_backplane(('dlos_ddec', event_key), dlos_ddec.as_column())
+        dlos_dra  = Vector3(dlos_dradec.vals[...,0], ra.mask)
+        dlos_ddec = Vector3(dlos_dradec.vals[...,1], ra.mask)
+
+        self.register_backplane(('dlos_dra',  event_key), dlos_dra)
+        self.register_backplane(('dlos_ddec', event_key), dlos_ddec)
 
     ############################################################################
     # Sky geometry, path intercept versions
@@ -633,8 +638,10 @@ class Backplane(object):
 
         assert direction in ('arr', 'dep')
 
-        event = self.get_surface_event_with_arr(event_key)
-        (ra, dec) = event.ra_and_dec(apparent, direction)
+        _ = self.get_gridless_event_with_arr(event_key)
+        event = self.gridless_arrivals[event_key]
+
+        (ra, dec) = event.ra_and_dec(apparent, subfield=direction)
 
         self.register_gridless_backplane(
                 ('center_right_ascension', event_key, apparent, direction), ra)
@@ -685,10 +692,11 @@ class Backplane(object):
         if key not in self.backplanes:
             if direction == 'arr':
                 event = self.get_surface_event_with_arr(event_key)
+                lt = event.arr_lt
             else:
                 event = self.get_surface_event(event_key)
+                lt = event.dep_lt
 
-            lt = event.get_subfield(direction + '_lt')
             self.register_backplane(key, abs(lt))
 
         return self.backplanes[key]
@@ -729,9 +737,10 @@ class Backplane(object):
         if key not in self.backplanes:
             distance = self.distance(event_key)
 
-            (dlos_du, dlos_dv) = self.meshgrid.dlos_duv.as_columns()
-            u_resolution = distance * dlos_du.as_vector3().norm()
-            v_resolution = distance * dlos_dv.as_vector3().norm()
+            res = self.meshgrid.dlos_duv.swap_items(Pair)
+            (u_resolution, v_resolution) = res.to_scalars()
+            u_resolution = distance * u_resolution.join_items(Vector3).norm()
+            v_resolution = distance * v_resolution.join_items(Vector3).norm()
 
             self.register_backplane(key[:-1] + ('u',), u_resolution)
             self.register_backplane(key[:-1] + ('v',), v_resolution)
@@ -745,15 +754,15 @@ class Backplane(object):
     #   center_resolution() resolution based on body center distance, km/pixel.
     ############################################################################
 
-    def center_distance(self, event_key, direction='obs'):
+    def center_distance(self, event_key, direction='dep'):
         """Distance traveled by a photon between paths.
 
         Input:
             event_key       key defining the event at the body's path.
-            direction       'arr' or 'sun' to return the distance traveled by an
-                                           arriving photon;
-                            'dep' or 'obs' to return the distance traveled by a
-                                           departing photon.
+            direction       'arr' to return the distance traveled by an
+                                  arriving photon;
+                            'dep' to return the distance traveled by a
+                                  departing photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -769,18 +778,18 @@ class Backplane(object):
 
         Input:
             event_key       key defining the event at the body's path.
-            direction       'arr' or 'sun' to return the travel time for an
-                                           arriving photon;
-                            'dep' or 'obs' to return the travel time for a
-                                           departing photon.
+            direction       'arr' to return the travel time for an arriving
+                                  photon;
+                            'dep' to return the travel time for a departing
+                                  photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert direction in ('obs', 'sun', 'dep', 'arr')
+        assert direction in ('dep', 'arr')
 
         key = ('center_light_time', event_key, direction)
         if key not in self.backplanes:
-            if direction in ('sun', 'arr'):
+            if direction == 'arr':
                 event = self.get_gridless_event_with_arr(event_key)
                 lt = event.arr_lt
             else:
@@ -1136,7 +1145,6 @@ class Backplane(object):
         key_typed = key0 + ('iau', 'east', 0, lon_type)
         if key_typed in self.backplanes:
             lon = self.backplanes[key_typed]
-
         else:
             lon_squashed = self.backplanes[key_default]
             event = self.get_surface_event(event_key)
@@ -1150,14 +1158,13 @@ class Backplane(object):
 
         # Define the longitude relative to the reference value
         if reference != 'iau':
-            if reference == 'sun':
-                ref_lon = self.sub_solar_longitude(event_key)
-            elif reference == 'sha':
-                ref_lon = self.sub_solar_longitude(event_key) - constants.PI
-            elif reference == 'obs':
-                ref_lon = self.sub_observer_longitude(event_key)
-            elif reference == 'oha':
-                ref_lon = self.sub_observer_longitude(event_key) - constants.PI
+            if reference in ('sun', 'sha'):
+                ref_lon = self._sub_solar_longitude(event_key)
+            else:
+                ref_lon = self._sub_observer_longitude(event_key)
+
+            if reference in ('sha', 'oha'):
+                ref_lon = ref_lon - constants.PI
 
             lon = lon - ref_lon
 
@@ -1207,7 +1214,7 @@ class Backplane(object):
         event = self.get_surface_event(event_key)
         assert event.surface.COORDINATE_TYPE in ('spherical', 'limb')
 
-        # Fill in the right lon_type if necessary
+        # Fill in the requested lon_type if necessary
         lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
         lon = self.backplanes[lon_key]
 
@@ -1239,52 +1246,42 @@ class Backplane(object):
         self.register_backplane(('latitude', event_key, 'squashed'),
                                 event.coord2)
 
-    ############################################################################
-    # Surface geometry, path intercept versions
-    #   sub_longitude()
-    #   sub_solar_longitude()
-    #   sub_observer_longitude()
-    #   sub_latitude()
-    #   sub_solar_latitude()
-    #   sub_observer_latitude()
-    ############################################################################
-
-    def sub_longitude(self, event_key, reference='obs', direction='east'):
-        """Sub-solar or sub-observer longitude at the body's path.
-
-        Measured relative to the x-coordinate of the body's coordinate frame.
-        This is the IAU meridian for planets and moons, and the J2000 ascending
-        node for rings.
-
-        Input:
-            event_key       key defining the event on the body's path.
-            reference       'obs' for the sub-observer longitude;
-                            'sun' for the sub-solar longitude.
-            direction       the direction of increasing longitude, either 'east'
-                            or 'west'.
-        """
-
-        assert reference in ('obs', 'sun')
-
-        if reference == 'obs':
-            lon = self.sub_observer_longitude(event_key)
-        else:
-            lon = self.sub_solar_longitude(event_key)
-
-        if direction == 'west':
-            lon = constants.TWOPI - lon
-
-        return lon
-
-    def sub_solar_longitude(self, event_key):
-        """Sub-solar longitude
-
-        Primarily used internally. Longitudes are measured eastward from the
-        x-axis of the target's coordinate frame.
-        """
+    def _sub_observer_longitude(self, event_key):
+        """Sub-observer longitude. Used internally."""
 
         event_key = Backplane.standardize_event_key(event_key)
-        key = ('sub_solar_longitude', event_key)
+        key = ('_sub_observer_longitude', event_key)
+
+        if key not in self.backplanes:
+            event = self.get_gridless_event(event_key)
+            dep_ap = event.apparent_dep()       # for ABERRATION=old or new
+            lon = dep_ap.to_scalar(1).arctan2(dep_ap.to_scalar(0)) % \
+                  constants.TWOPI
+
+            self.register_gridless_backplane(key, lon)
+
+        return self.backplanes[key]
+
+    def _sub_observer_latitude(self, event_key):
+        """Sub-observer latitude. Used internally."""
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ('_sub_observer_latitude', event_key)
+
+        if key not in self.backplanes:
+            event = self.get_gridless_event(event_key)
+            dep_ap = event.apparent_dep()       # for ABERRATION=old or new
+            lat = (dep_ap.to_scalar(2) / dep_ap.norm()).arcsin()
+
+            self.register_gridless_backplane(key, lat)
+
+        return self.backplanes[key]
+
+    def _sub_solar_longitude(self, event_key):
+        """Sub-solar longitude. Used internally."""
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ('_sub_solar_longitude', event_key)
 
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
@@ -1296,78 +1293,177 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def sub_observer_longitude(self, event_key):
-        """Sub-observer longitude.
-
-        Primarily used internally. Longitudes are measured eastward from the
-        x-axis of the target's coordinate frame.
-        """
+    def _sub_solar_latitude(self, event_key):
+        """Sub-solar latitude. Used internally."""
 
         event_key = Backplane.standardize_event_key(event_key)
-        key = ('sub_observer_longitude', event_key)
+        key = ('_sub_solar_latitude', event_key)
 
-        if key not in self.backplanes:
-            event = self.get_gridless_event(event_key)
-            dep_ap = event.apparent_dep()  # for ABERRATION=old or new
-            lon = dep_ap.to_scalar(1).arctan2(dep_ap.to_scalar(0)) % \
-                  constants.TWOPI
-
-            self.register_gridless_backplane(key, lon)
-
-        return self.backplanes[key]
-
-    def sub_latitude(self, event_key, reference='obs', lat_type='centric'):
-        """Sub-solar or sub-observer latitude at the body's path.
-
-        Input:
-            event_key       key defining the event on the body's path.
-            reference       'obs' for the sub-observer latitude;
-                            'sun' for the sub-solar latitude.
-            lat_type        'centric' for planetocentric latitude;
-                            'graphic' for planetographic latitude.
-        """
-
-        assert reference in ('obs', 'sun')
-
-        if reference == 'obs':
-            return self.sub_observer_latitude(event_key, lat_type)
-        else:
-            return self.sub_solar_latitude(event_key, lat_type)
-
-    def sub_solar_latitude(self, event_key, lat_type='centric'):
-        """Sub-solar latitude, primarily used internally."""
-
-        event_key = Backplane.standardize_event_key(event_key)
-        assert lat_type in ('centric', 'graphic')
-
-        key = ('sub_solar_latitude', event_key, lat_type)
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
             neg_arr_ap = -event.apparent_arr()  # for ABERRATION=old or new
-
-            if lat_type == 'graphic':
-                neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq)
-
             lat = (neg_arr_ap.to_scalar(2) / neg_arr_ap.norm()).arcsin()
+
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
 
-    def sub_observer_latitude(self, event_key, lat_type='centric'):
-        """Sub-observer latitude, primarily used internally."""
+    ############################################################################
+    # Surface geometry, path intercept versions
+    #   sub_observer_longitude()
+    #   sub_solar_longitude()
+    #   sub_observer_latitude()
+    #   sub_solar_latitude()
+    ############################################################################
+
+    def sub_observer_longitude(self, event_key, reference='iau',
+                                     direction='west', minimum=0):
+        """Sub-observer longitude.
+
+        Note that this longitude is essentially independent of the
+        longitude_type (centric, graphic or squashed).
+
+        Input:
+            event_key   key defining the ring surface event.
+            reference   defines the location of zero longitude.
+                        'iau' for the IAU-defined prime meridian;
+                        'obs' for the sub-observer longitude;
+                        'sun' for the sub-solar longitude;
+                        'oha' for the anti-observer longitude;
+                        'sha' for the anti-solar longitude, returning the
+                              local time on the planet if direction is west.
+            direction   direction on the surface of increasing longitude, 'east'
+                        or 'west'.
+            minimum     the smallest numeric value of longitude, either 0 or
+                        -180.
+        """
+
+        key0 = ('sub_observer_longitude', event_key)
+        key = key0 + (reference, direction, minimum)
+        if key in self.backplanes:
+            return self.backplanes[key]
+
+        key_default = key0 + ('iau', 'east', 0)
+        if key_default in self.backplanes:
+            lon = self.backplanes[key_default]
+        else:
+            lon = self._sub_observer_longitude(event_key)
+            self.register_gridless_backplane(key_default, lon)
+
+        if key == key_default:
+            return lon
+
+        lon = self._sub_longitude(event_key, lon, reference, direction,
+                                                  minimum)
+
+        self.register_gridless_backplane(key, lon)
+        return lon
+
+    def sub_solar_longitude(self, event_key, reference='iau',
+                                             direction='west', minimum=0):
+        """Sub-solar longitude.
+
+        Note that this longitude is essentially independent of the
+        longitude_type (centric, graphic or squashed).
+
+        Input:
+            event_key   key defining the ring surface event.
+            reference   defines the location of zero longitude.
+                        'iau' for the IAU-defined prime meridian;
+                        'obs' for the sub-observer longitude;
+                        'sun' for the sub-solar longitude;
+                        'oha' for the anti-observer longitude;
+                        'sha' for the anti-solar longitude, returning the
+                              local time on the planet if direction is west.
+            direction   direction on the surface of increasing longitude, 'east'
+                        or 'west'.
+            minimum     the smallest numeric value of longitude, either 0 or
+                        -180.
+        """
+
+        key0 = ('sub_solar_longitude', event_key)
+        key = key0 + (reference, direction, minimum)
+        if key in self.backplanes:
+            return self.backplanes[key]
+
+        key_default = key0 + ('iau', 'east', 0)
+        if key_default in self.backplanes:
+            lon = self.backplanes[key_default]
+        else:
+            lon = self._sub_solar_longitude(event_key)
+            self.register_gridless_backplane(key_default, lon)
+
+        if key == key_default:
+            return lon
+
+        lon = self._sub_longitude(event_key, lon, reference, direction,
+                                                  minimum)
+
+        self.register_gridless_backplane(key, lon)
+        return lon
+
+    def _sub_longitude(self, event_key, lon, reference='iau',
+                                             direction='west', minimum=0):
+        """Sub-solar or sub-observer longitude."""
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert lat_type in ('centric', 'graphic')
+        assert reference in ('iau', 'sun', 'sha', 'obs', 'oha')
+        assert direction in ('east', 'west')
+        assert minimum in (0, -180)
 
-        key = ('sub_observer_latitude', event_key, lat_type)
+        # Define the longitude relative to the reference value
+        if reference != 'iau':
+            if reference in ('sun', 'sha'):
+                ref_lon = self._sub_solar_longitude(event_key)
+            else:
+                ref_lon = self._sub_observer_longitude(event_key)
+
+            if reference in ('sha', 'oha'):
+                ref_lon = ref_lon - constants.PI
+
+            lon = lon - ref_lon
+
+        # Reverse if necessary
+        if direction == 'west': lon = -lon
+
+        # Re-define the minimum
+        if minimum == 0:
+            lon = lon % constants.TWOPI
+        else:
+            lon = (lon + constants.PI) % constants.TWOPI - constants.PI
+
+        return lon
+
+    def sub_observer_latitude(self, event_key):
+        """Sub-observer latitude.
+
+        Note that this latitude is essentially independent of the latitude_type
+        (centric, graphic or squashed).
+
+        Input:
+            event_key   key defining the event on the body's path.
+        """
+
+        key = ('sub_observer_latitude', event_key)
         if key not in self.backplanes:
-            event = self.get_gridless_event(event_key)
-            dep_ap = event.apparent_dep()
+            lat = self._sub_observer_latitude(event_key)
+            self.register_gridless_backplane(key, lat)
 
-            if lat_type == 'graphic':
-                dep_ap = dep_ap.element_mul(event.surface.unsquash_sq)
+        return self.backplanes[key]
 
-            lat = (dep_ap.to_scalar(2) / dep_ap.norm()).arcsin()
+    def sub_solar_latitude(self, event_key):
+        """Sub-solar latitude.
+
+        Note that this latitude is essentially independent of the latitude_type
+        (centric, graphic or squashed).
+
+        Input:
+            event_key   key defining the event on the body's path.
+        """
+
+        key = ('sub_solar_latitude', event_key)
+        if key not in self.backplanes:
+            lat = self._sub_solar_latitude(event_key)
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
@@ -1480,35 +1576,36 @@ class Backplane(object):
     #   altitude()
     ############################################################################
 
-#     def altitude(self, event_key):
-#         """Elevation of a limb point above the body's surface.
-# 
-#         Input:
-#             event_key       key defining the ring surface event.
-#         """
-# 
-#         event_key = Backplane.standardize_event_key(event_key)
-#         key = ('altitude', event_key)
-#         if key not in self.backplanes:
-#             self._fill_limb_intercepts(event_key)
-# 
-#         return self.backplanes[key]
-# 
-#     def _fill_limb_intercepts(self, event_key):
-#         """Internal method to fill in the limb intercept geometry backplanes.
-#         """
-# 
-#         # Get the limb intercept coordinates
-#         event_key = Backplane.standardize_event_key(event_key)
-#         event = self.get_surface_event(event_key)
-#         assert event.surface.COORDINATE_TYPE == 'limb'
-# 
-#         self.register_backplane(('longitude', event_key, 'iau', 'east', 0),
-#                                 event.coord1)
-#         self.register_backplane(('latitude', event_key, 'squashed'),
-#                                 event.coord2)
-#         self.register_backplane(('altitude', event_key),
-#                                 event.coord3)
+    def limb_altitude(self, event_key):
+        """Elevation of a limb point above the body's surface.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ('altitude', event_key)
+        if key not in self.backplanes:
+            self._fill_limb_intercepts(event_key)
+
+        return self.backplanes[key]
+
+    def _fill_limb_intercepts(self, event_key):
+        """Internal method to fill in the limb intercept geometry backplanes.
+        """
+
+        # Get the limb intercept coordinates
+        event_key = Backplane.standardize_event_key(event_key)
+        event = self.get_surface_event(event_key)
+        assert event.surface.COORDINATE_TYPE == 'limb'
+
+        self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
+                                 'squashed'),
+                                event.coord1)
+        self.register_backplane(('latitude', event_key, 'squashed'),
+                                event.coord2)
+        self.register_backplane(('altitude', event_key),
+                                event.coord3)
 
     ############################################################################
     # Ring plane geometry, surface intercept version
@@ -1518,21 +1615,47 @@ class Backplane(object):
     #   ring_elevation()
     ############################################################################
 
-    def ring_radius(self, event_key):
+    def ring_radius(self, event_key, rmin=None, rmax=None):
         """Radius of the ring intercept point in the observation.
 
         Input:
             event_key       key defining the ring surface event.
+            rmin            minimum radius in km; None to allow it to be defined
+                            by the event_key.
+            rmax            maximum radius in km; None to allow it to be defined
+                            by the event_key.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        key = ('ring_radius', event_key)
+        key = ('ring_radius', event_key, rmin, rmax)
+        if key in self.backplanes:
+            return self.backplanes[key]
+
+        default_key = ('ring_radius', event_key, None, None)
         if key not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
-        return self.backplanes[key]
+        rad = self.backplanes[default_key]
 
-    def ring_longitude(self, event_key, reference='node'):
+        if rmin is None and rmax is None:
+            return rad
+
+        if rmin is not None:
+            mask0 = (rad.vals < rmin)
+        else:
+            mask0 = False
+
+        if rmax is not None:
+            mask1 = (rad.vals > rmax)
+        else:
+            mask1 = False
+
+        rad = rad.remask(mask0 | mask1)
+        self.register_backplane(key, rad)
+
+        return rad
+
+    def ring_longitude(self, event_key, reference='node', rmin=None, rmax=None):
         """Longitude of the ring intercept point in the image.
 
         Input:
@@ -1545,55 +1668,122 @@ class Backplane(object):
                             'oha'   for the anti-observer longitude;
                             'sha'   for the anti-solar longitude, returning the
                                     solar hour angle.
-                            Put 'old-' in front of the last four for deprecated
-                            definitions, which are slower but infinitesimally
-                            more accurate.
+            rmin            minimum radius in km; None to allow it to be defined
+                            by the event_key.
+            rmax            maximum radius in km; None to allow it to be defined
+                            by the event_key.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha',
-                             'old-obs', 'old-oha', 'old-sun', 'old-sha'}
-                            # The last four are deprecated but not deleted
+        assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
         # Look up under the desired reference
-        key = ('ring_longitude', event_key, reference)
+        key = ('ring_longitude', event_key, reference, rmin, rmax)
         if key in self.backplanes:
             return self.backplanes[key]
 
         # If it is not found with reference='node', fill in those backplanes
-        key_node = key[:-1] + ('node',)
-        if key_node not in self.backplanes:
+        default_key = key[:2] + ('node', None, None)
+        if default_key not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
         # Now apply the reference longitude
+        reflon_key = key[:3] + (None, None)
         if reference == 'node':
+            lon = self.backplanes[default_key]
+        else:
+            if reference == 'aries':
+                ref_lon = self._aries_ring_longitude(event_key)
+            elif reference == 'sun':
+                ref_lon = self._sub_solar_longitude(event_key)
+            elif reference == 'sha':
+                ref_lon = self._sub_solar_longitude(event_key) - np.pi
+            elif reference == 'obs':
+                ref_lon = self._sub_observer_longitude(event_key)
+            elif reference == 'oha':
+                ref_lon = self._sub_observer_longitude(event_key) - np.pi
+
+            lon = (self.backplanes[default_key] - ref_lon) % constants.TWOPI
+
+            self.register_backplane(reflon_key, lon)
+
+        # Apply the radial mask if necessary
+        if rmin is None and rmax is None:
             return self.backplanes[key]
 
-        if reference == 'aries':
-            ref_lon = self._aries_ring_longitude(event_key)
-        elif reference == 'sun':
-            ref_lon = self.sub_solar_longitude(event_key)
-        elif reference == 'sha':
-            ref_lon = self.sub_solar_longitude(event_key) - constants.PI
-        elif reference == 'obs':
-            ref_lon = self.sub_observer_longitude(event_key)
-        elif reference == 'oha':
-            ref_lon = self.sub_observer_longitude(event_key) - constants.PI
-
-        # These four options are deprecated but not deleted. The above versions
-        # are much simpler and faster and the difference is infinitesimal.
-        elif reference == 'old-sun':
-            ref_lon = self._sub_solar_ring_longitude(event_key)
-        elif reference == 'old-sha':
-            ref_lon = self._sub_solar_ring_longitude(event_key) - constants.PI
-        elif reference == 'old-obs':
-            ref_lon = self._sub_observer_ring_longitude(event_key)
-        elif reference == 'old-oha':
-            ref_lon = self._sub_observer_ring_longitude(event_key) -constants.PI
-
-        lon = (self.backplanes[key_node] - ref_lon) % constants.TWOPI
+        mask = self.ring_radius(event_key, rmin, rmax).mask
+        lon = lon.remask(mask)
         self.register_backplane(key, lon)
 
+        return lon
+
+    def radial_mode(self, backplane_key,
+                          cycles, epoch, amp, peri0, freq, a0, dperi_da=0.,
+                          reference='node'):
+        """Radius shift based on a particular ring mode.
+
+        Input:
+            backplane_key   key defining a ring_radius backplane, possibly with
+                            other radial modes.
+            cycles          the number of radial oscillations in 360 degrees of
+                            longitude.
+            epoch           the time (seconds TDB) at which the mode parameters
+                            apply.
+            amp             radial amplitude of the mode in km.
+            peri0           a longitude (radians) at epoch where the mode is at
+                            its radial minimum at semimajor axis a0.
+            freq            local frequency of the mode in radians per second.
+            a0              the reference semimajor axis, used for slopes
+            dperi_da        the rate of change of pericenter with semimajor
+                            axis, measured at semimajor axis a0 in radians/km.
+            reference       the reference longitude used to describe the mode;
+                            same options as for ring_longitude
+            rmin            minimum radius in km including modes; None to allow
+                            it to be defined by the event_key.
+            rmax            maximum radius in km including modes; None to allow
+                            it to be defined by the event_key.
+        """
+
+        key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, freq,
+                                             a0, dperi_da, reference)
+        if key in self.backplanes:
+            return self.backplanes[key]
+
+        # Get the backplane with modes, no mask
+        rad = self.evaluate(backplane_key).without_mask()
+
+        # Get radius, longitude and ring event time, without modes, no mask
+        ring_radius_key = backplane_key
+        while ring_radius_key[0] == 'radial_mode':
+            ring_radius_key = ring_radius_key[1]
+
+        (backplane_type, event_key, rmin, rmax) = ring_radius_key
+        assert backplane_type == 'ring_radius'
+
+        a = self.ring_radius(event_key)
+        lon = self.ring_longitude(event_key, reference)
+        time = self.event_time(event_key)
+
+        # Add the new mode
+        mode =  rad + amp * (cycles * (lon - peri0 - dperi_da * (a - a0)) +
+                             freq * (time - epoch)).cos()
+
+        # Replace the mask if necessary
+        if rmin is None:
+            mask0 = False
+        else:
+            mask0 = (mode.vals < rmin)
+
+        if rmax is None:
+            mask1 = False
+        else:
+            mask1 = (mode.vals > rmax)
+
+        mask = mask0 | mask1
+        if mask is not False:
+            mode = mode.remask(mask)
+
+        self.register_backplane(key, mode)
         return self.backplanes[key]
 
     def _aries_ring_longitude(self, event_key):
@@ -1713,61 +1903,11 @@ class Backplane(object):
         event = self.get_surface_event(event_key)
         assert event.surface.COORDINATE_TYPE == 'polar'
 
-        self.register_backplane(('ring_radius', event_key), event.coord1)
-        self.register_backplane(('ring_longitude', event_key, 'node'),
+        self.register_backplane(('ring_radius', event_key, None, None),
+                                event.coord1)
+        self.register_backplane(('ring_longitude', event_key, 'node',
+                                                   None, None),
                                 event.coord2)
-
-    # Deprecated...
-    def _sub_observer_ring_longitude(self, event_key):
-        """Sub-observer longitude, evaluated at the ring intercept time.
-
-        Used only internally. DEPRECATED.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ('_sub_observer_ring_longitude', event_key)
-        if key in self.backplanes:
-            return self.backplanes[key]
-
-        # At each intercept time, determine the outgoing direction to the
-        # observer from the center of the planet
-        event = self.get_surface_event(event_key)
-        center_event = Event(event.time, Vector3.ZERO,
-                                         event.origin, event.frame)
-        center_event = self.obs_event.origin.photon_from_event(center_event)[1]
-
-        surface = Backplane.get_surface(event_key[0])
-        assert surface.COORDINATE_TYPE == 'polar'
-        (r,lon) = surface.coords_from_vector3(center_event.apparent_dep(),
-                                              axes=2)
-
-        self.register_backplane(key, lon)
-        return self.backplanes[key]
-
-    # Deprecated...
-    def _sub_solar_ring_longitude(self, event_key):
-        """Sub-solar longitude at the ring center, but evaluated at the ring
-        intercept time. Used only internally. DEPRECATED.
-        """
-
-        event_key = Backplane.standardize_event_key(event_key)
-        key = ('_sub_solar_ring_longitude', event_key)
-        if key in self.backplanes:
-            return self.backplanes[key]
-
-        # At each intercept time, determine the incoming direction from the Sun
-        # to the center of the planet
-        event = self.get_surface_event(event_key)
-        center_event = Event(event.time, Vector3.ZERO,
-                                         event.origin, event.frame)
-        center_event = AliasPath("SUN").photon_to_event(center_event)[1]
-        surface = Backplane.get_surface(event_key[0])
-        assert event.surface.COORDINATE_TYPE == 'polar'
-        (r,lon) = surface.coords_from_vector3(-center_event.apparent_arr(),
-                                              axes=2)
-
-        self.register_backplane(key, lon)
-        return self.backplanes[key]
 
     ############################################################################
     # Ring plane lighting geometry, surface intercept version
@@ -1784,10 +1924,10 @@ class Backplane(object):
 
         Input:
             event_key       key defining the ring surface event.
-            pole            'sunward' for the ring pole on the illuminated face;
-                            'north' for the pole on the IAU-defined north face;
-                            'prograde' for the pole defined by the direction of
-                                positive angular momentum.
+            pole            'sunward'   for the pole on the illuminated face;
+                            'north'     for the pole on the IAU north face;
+                            'prograde'  for the pole defined by the direction of
+                                        positive angular momentum.
         """
 
         assert pole in {'sunward', 'north', 'prograde'}
@@ -1814,9 +1954,13 @@ class Backplane(object):
             return self.backplanes[key_prograde]
 
         # If the ring is prograde, 'north' and 'prograde' are the same
-        body = Body.lookup(event_key[0])
+        body_name = event_key[0]
+        if ':' in body_name:
+            body_name = body_name[:body_name.index(':')]
+
+        body = Body.lookup(body_name)
         if not body.ring_is_retrograde:
-            return self.backplanes[prograde_key]
+            return self.backplanes[key_prograde]
 
         # Otherwise, flip the incidence angles and return a new backplane
         incidence = constants.PI - self.backplanes[key_prograde]
@@ -1864,7 +2008,11 @@ class Backplane(object):
             return self.backplanes[key_prograde]
 
         # If the ring is prograde, 'north' and 'prograde' are the same
-        body = Body.lookup(event_key[0])
+        body_name = event_key[0]
+        if ':' in body_name:
+            body_name = body_name[:body_name.index(':')]
+
+        body = Body.lookup(body_name)
         if not body.ring_is_retrograde:
             return self.backplanes[key_prograde]
 
@@ -1880,44 +2028,102 @@ class Backplane(object):
     #   ring_center_emission_angle()
     ############################################################################
 
-    def sub_ring_longitude(self, event_key, reference='obs', origin='node'):
-        """Sub-solar or sub-observer longitude in the ring plane.
-
-        It can be defined relative to the ring plane's J2000 ascending node or
-        the First Point of Aries.
+    def ring_sub_observer_longitude(self, event_key, reference='node'):
+        """Sub-observer longitude in the ring plane.
 
         Input:
             event_key       key defining the event on the center of the ring's
                             path.
-            reference       'obs' for the sub-observer longitude;
-                            'sun' for the sub-solar longitude.
-            origin          'node' for the longitude relative to the J2000
-                            ascending node of the ring plane; 'aries' for the
-                            longitude relative to the First Point of Aries.
+            reference       defines the location of zero longitude.
+                            'aries' for the First point of Aries;
+                            'node'  for the J2000 ascending node;
+                            'obs'   for the sub-observer longitude;
+                            'sun'   for the sub-solar longitude;
+                            'oha'   for the anti-observer longitude;
+                            'sha'   for the anti-solar longitude, returning the
+                                    solar hour angle.
         """
 
-        assert reference in ('obs', 'sun')
-        assert origin in ('node', 'aries')
+        assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
-        # Longitudes relative to the node use the standard definition
-        if reference == 'obs':
-            lon = self.sub_observer_longitude(event_key)
-        else:
-            lon = self.sub_solar_longitude(event_key)
-
-        event_key = Backplane.standardize_event_key(event_key)
-
-        # Return a cached backplane if it exists
-        key = ('sub_ring_longitude', event_key, reference, origin)
+        # Look up under the desired reference
+        key0 = ('ring_sub_observer_longitude', event_key)
+        key = key0 + (reference,)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        # Otherwise, create the backplane
-        if origin == 'aries':
-            lon = (lon - self._aries_ring_longitude(event_key)) % constants.TWOPI
+        # Generate longitude values
+        default_key = key0 + ('node',)
+        if default_key not in self.backplanes:
+            lon = self._sub_observer_longitude(event_key)
+            self.register_gridless_backplane(default_key, lon)
+
+        # Now apply the reference longitude
+        if reference != 'node':
+            if reference == 'aries':
+                ref_lon = self._aries_ring_longitude(event_key)
+            elif reference == 'sun':
+                ref_lon = self._sub_solar_longitude(event_key)
+            elif reference == 'sha':
+                ref_lon = self._sub_solar_longitude(event_key) - np.pi
+            elif reference == 'obs':
+                ref_lon = self._sub_observer_longitude(event_key)
+            elif reference == 'oha':
+                ref_lon = self._sub_observer_longitude(event_key) - np.pi
+
+            lon = (self.backplanes[default_key] - ref_lon) % constants.TWOPI
             self.register_gridless_backplane(key, lon)
 
-        return lon
+        return self.backplanes[key]
+
+    def ring_sub_solar_longitude(self, event_key, reference='node'):
+        """Sub-solar longitude in the ring plane.
+
+        Input:
+            event_key       key defining the event on the center of the ring's
+                            path.
+            reference       defines the location of zero longitude.
+                            'aries' for the First point of Aries;
+                            'node'  for the J2000 ascending node;
+                            'obs'   for the sub-observer longitude;
+                            'sun'   for the sub-solar longitude;
+                            'oha'   for the anti-observer longitude;
+                            'sha'   for the anti-solar longitude, returning the
+                                    solar hour angle.
+        """
+
+        assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
+
+        # Look up under the desired reference
+        key0 = ('ring_sub_solar_longitude', event_key)
+        key = key0 + (reference,)
+        if key in self.backplanes:
+            return self.backplanes[key]
+
+        # If it is not found with reference='node', fill in those backplanes
+        default_key = key0 + ('node',)
+        if default_key not in self.backplanes:
+            lon = self._sub_solar_longitude(event_key)
+            self.register_gridless_backplane(default_key, lon)
+
+        # Now apply the reference longitude
+        if reference != 'node':
+            if reference == 'aries':
+                ref_lon = self._aries_ring_longitude(event_key)
+            elif reference == 'sun':
+                ref_lon = self._sub_solar_longitude(event_key)
+            elif reference == 'sha':
+                ref_lon = self._sub_solar_longitude(event_key) - np.pi
+            elif reference == 'obs':
+                ref_lon = self._sub_observer_longitude(event_key)
+            elif reference == 'oha':
+                ref_lon = self._sub_observer_longitude(event_key) - np.pi
+
+            lon = (self.backplanes[default_key] - ref_lon) % constants.TWOPI
+
+            self.register_gridless_backplane(key, lon)
+
+        return self.backplanes[key]
 
     def ring_center_incidence_angle(self, event_key, pole='sunward'):
         """Incidence angle of the arriving photons at the ring system center.
@@ -1928,10 +2134,10 @@ class Backplane(object):
 
         Input:
             event_key       key defining the ring surface event.
-            pole            'sunward' for the ring pole on the illuminated face;
-                            'north' for the pole on the IAU-defined north face;
-                            'prograde' for the pole defined by the direction of
-                                positive angular momentum.
+            pole            'sunward'   for the pole on the illuminated face;
+                            'north'     for the pole on the IAU north face;
+                            'prograde'  for the pole defined by the direction of
+                                        positive angular momentum.
         """
 
         assert pole in {'sunward', 'north', 'prograde'}
@@ -1943,13 +2149,16 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         # Return the cached copy if it exists
-        key = ('ring_center_incidence_angle', event_key, pole)
+        key0 = ('ring_center_incidence_angle', event_key)
+        key = key0 + (pole,)
         if key in self.backplanes:
             return self.backplanes[key]
 
         # Derive the prograde incidence angle if necessary
-        key_prograde = key[:-1] + ('prograde',)
-        if key_prograde not in self.backplanes:
+        key_prograde = key0 + ('prograde',)
+        if key_prograde in self.backplanes:
+            incidence = self.backplanes[key_prograde]
+        else:
             event = self.get_gridless_event_with_arr(event_key)
 
             # Sign on event.arr_ap is negative because photon is incoming
@@ -1957,21 +2166,23 @@ class Backplane(object):
                         event.arr_ap.norm()).arcsin()
             incidence = constants.HALFPI - latitude
 
-            self.register_gridless_backplane(key, incidence)
-
-        if pole == 'prograde':
-            return self.backplanes[key_prograde]
+            self.register_gridless_backplane(key_prograde, incidence)
 
         # If the ring is prograde, 'north' and 'prograde' are the same
-        body = Body.lookup(event_key[0])
+        body_name = event_key[0]
+        if ':' in body_name:
+            body_name = body_name[:body_name.index(':')]
+
+        body = Body.lookup(body_name)
         if not body.ring_is_retrograde:
-            return self.backplanes[prograde_key]
+            self.register_gridless_backplane(key, incidence)
+            return incidence
 
         # Otherwise, flip the incidence angle and return a new backplane
-        incidence = constants.PI - self.backplanes[key_prograde]
+        incidence = constants.PI - incidence
         self.register_gridless_backplane(key, incidence)
 
-        return self.backplanes[key]
+        return incidence
 
     def ring_center_emission_angle(self, event_key, pole='sunward'):
         """Emission angle of departing photons at the center of the ring system.
@@ -1999,34 +2210,39 @@ class Backplane(object):
         event_key = Backplane.standardize_event_key(event_key)
 
         # Return the cached copy if it exists
-        key = ('ring_center_emission_angle', event_key, pole)
+        key0 = ('ring_center_emission_angle', event_key)
+        key = key0 + (pole,)
         if key in self.backplanes:
             return self.backplanes[key]
 
         # Derive the prograde emission angle if necessary
-        key_prograde = key[:-1] + ('prograde',)
-        if key_prograde not in self.backplanes:
+        key_prograde = key0 + ('prograde',)
+        if key_prograde in self.backplanes:
+            emission = self.backplanes[key_prograde]
+        else:
             event = self.get_gridless_event(event_key)
 
             latitude = (event.dep_ap.to_scalar(2) /
                         event.dep_ap.norm()).arcsin()
             emission = constants.HALFPI - latitude
 
-            self.register_gridless_backplane(key, emission)
-
-        if pole == 'prograde':
-            return self.backplanes[key_prograde]
+            self.register_gridless_backplane(key_prograde, emission)
 
         # If the ring is prograde, 'north' and 'prograde' are the same
-        body = Body.lookup(event_key[0])
+        body_name = event_key[0]
+        if ':' in body_name:
+            body_name = body_name[:body_name.index(':')]
+
+        body = Body.lookup(body_name)
         if not body.ring_is_retrograde:
-            return self.backplanes[prograde_key]
+            self.register_gridless_backplane(key, emission)
+            return emission
 
         # Otherwise, flip the emission angle and return a new backplane
-        emission = constants.PI - self.backplanes[key_prograde]
-        self.register_backplane(key, emission)
+        emission = constants.PI - emission
+        self.register_gridless_backplane(key, emission)
 
-        return self.backplanes[key]
+        return emission
 
     ############################################################################
     # Ring plane geometry, surface intercept only
@@ -2143,15 +2359,10 @@ class Backplane(object):
                             'oha'   for the anti-observer longitude;
                             'sha'   for the anti-solar longitude, returning the
                                     solar hour angle.
-                            Put 'old-' in front of the last four for deprecated
-                            definitions, which are slower but infinitesimally
-                            more accurate.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha',
-                             'old-obs', 'old-oha', 'old-sun', 'old-sha'}
-                            # The last four are deprecated but not deleted
+        assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
         # Look up under the desired reference
         key0 = ('ansa_longitude', event_key)
@@ -2171,23 +2382,12 @@ class Backplane(object):
         if reference == 'aries':
             ref_lon = self._aries_ring_longitude(event_key)
         elif reference == 'sun':
-            ref_lon = self.sub_solar_longitude(event_key)
-        elif reference == 'sha':
-            ref_lon = self.sub_solar_longitude(event_key) - constants.PI
-        elif reference == 'obs':
-            ref_lon = self.sub_observer_longitude(event_key)
-        elif reference == 'oha':
-            ref_lon = self.sub_observer_longitude(event_key) - constants.PI
-
-        # These four options are deprecated but not deleted. The above versions
-        # are much simpler and faster and the difference is infinitesimal.
-        elif reference == 'old-sun':
             ref_lon = self._sub_solar_ansa_longitude(event_key)
-        elif reference == 'old-sha':
+        elif reference == 'sha':
             ref_lon = self._sub_solar_ansa_longitude(event_key) - constants.PI
-        elif reference == 'old-obs':
+        elif reference == 'obs':
             ref_lon = self._sub_observer_ansa_longitude(event_key)
-        elif reference == 'old-oha':
+        elif reference == 'oha':
             ref_lon = self._sub_observer_ansa_longitude(event_key) -constants.PI
 
         lon = (self.backplanes[key_node] - ref_lon) % constants.TWOPI
@@ -2223,7 +2423,6 @@ class Backplane(object):
         lon = event.surface.ringplane.coords_from_vector3(event.pos, axes=2)[1]
         self.register_backplane(('ansa_longitude', event_key, 'node'), lon)
 
-    # Deprecated
     def _sub_observer_ansa_longitude(self, event_key):
         """Sub-observer longitude evaluated at the ansa intercept time.
 
@@ -2246,10 +2445,9 @@ class Backplane(object):
         (r,lon) = surface.coords_from_vector3(center_event.apparent_dep(),
                                               axes=2)
 
-        self.register_backplane(key, lon)
+        self.register_gridless_backplane(key, lon)
         return self.backplanes[key]
 
-    # Deprecated
     def _sub_solar_ansa_longitude(self, event_key):
         """Sub-solar longitude evaluated at the ansa intercept time.
 
@@ -2272,7 +2470,7 @@ class Backplane(object):
         (r,lon) = surface.coords_from_vector3(-center_event.apparent_arr(),
                                               axes=2)
 
-        self.register_backplane(key, lon)
+        self.register_gridless_backplane(key, lon)
         return self.backplanes[key]
 
     ############################################################################
@@ -2675,18 +2873,18 @@ class Backplane(object):
             'center_scattering_angle',
 
         'longitude', 'latitude',
-        'sub_longitude', 'sub_latitude',
-        'sub_solar_longitude', 'sub_observer_longitude',
-        'sub_solar_latitude', 'sub_observer_latitude',
+        'sub_observer_longitude', 'sub_observer_latitude',
+        'sub_solar_longitude', 'sub_solar_latitude',
         'pole_clock_angle', 'pole_position_angle',
         'finest_resolution', 'coarsest_resolution',
         'altitude',
 
-        'ring_radius', 'ring_longitude', 'ring_azimuth', 'ring_elevation',
-        'ring_radial_resolution', 'ring_angular_resolution',
+        'ring_radius', 'ring_longitude', 'radial_mode',
+        'ring_azimuth', 'ring_elevation',
         'ring_incidence_angle', 'ring_emission_angle',
         'sub_ring_longitude',
         'ring_center_incidence_angle', 'ring_center_emission_angle',
+        'ring_radial_resolution', 'ring_angular_resolution',
 
         'ansa_radius', 'ansa_altitude', 'ansa_longitude',
         'ansa_radial_resolution', 'ansa_vertical_resolution',
@@ -2710,7 +2908,7 @@ class Backplane(object):
 
         func = backplane_key[0]
         if func not in Backplane.CALLABLES:
-            raise ValueError("unrecognized backplane function: " + func)
+            raise ValueError('unrecognized backplane function: ' + func)
 
         return Backplane.__dict__[func].__call__(self, *backplane_key[1:])
 
@@ -2718,514 +2916,962 @@ class Backplane(object):
 # BACKPLANE LOGGER FOR TESTING
 ################################################################################
 
-def exercise_backplanes():
+def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
     """Generates info from every backplane."""
 
+    import numbers
     import oops.inst.cassini.iss as iss
+    from PIL import Image
 
-    EXERCISE_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                     "cassini/ISS/W1573721822_1.IMG")
-    EXERCISE_UNDERSAMPLE = 16
-    EXERCISE_LOGGING = False
-    EXERCISE_ABERRATION = 'new'
+    def save_image(image, filename, lo=None, hi=None, zoom=1.):
+        """Save an image file of a 2-D array.
+
+        Input:
+            image       a 2-D array.
+            filename    the name of the output file, which should end with the
+                        type, e.g., '.png' or '.jpg'
+            lo          the array value to map to black; if None, then the
+                        minimum value in the array is used.
+            hi          the array value to map to white; if None, then the
+                        maximum value in the array is used.
+            zoom        the scale factor by which to enlarge the image, default
+                        1.
+        """
+
+        if lo is None:
+            lo = image.min()
+
+        if hi is None:
+            hi = image.max()
+
+        if zoom != 1:
+            image = zoom_image(image, zoom, order=1)
+
+        if hi == lo:
+            bytes = np.zeros(image.shape, dtype='uint8')
+        else:
+            scaled = (image[::-1] - lo) / float(hi - lo)
+            bytes = (256.*scaled).clip(0,255).astype('uint8')
+
+        im = Image.fromstring('L', (bytes.shape[1], bytes.shape[0]), bytes)
+        im.save(filename)
 
     def show_info(title, array):
         """Internal method to print summary information and display images as
         desired."""
 
-        if not EXERCISE_PRINT: return
+        if not printing and not saving: return
 
-        print title
+        if printing: print title
+
+        # Scalar summary
+        if isinstance(array, numbers.Number):
+            print '  ', array
 
         # Mask summary
-        if array.vals.dtype == np.dtype('bool'):
+        elif type(array.vals) == bool or \
+                (isinstance(array.vals, np.ndarray) and \
+                 array.vals.dtype == np.dtype('bool')):
             count = np.sum(array.vals)
             total = np.size(array.vals)
             percent = int(count / float(total) * 100. + 0.5)
-            print "  ", (count, total-count),
-            print (percent, 100-percent), "(True, False pixels)"
+            print '  ', (count, total-count),
+            print (percent, 100-percent), '(True, False pixels)'
+            minval = 0.
+            maxval = 1.
 
         # Unmasked backplane summary
         elif array.mask is False:
             minval = np.min(array.vals)
             maxval = np.max(array.vals)
             if minval == maxval:
-                print "  ", minval
+                print '  ', minval
             else:
-                print "  ", (minval, maxval), "(min, max)"
+                print '  ', (minval, maxval), '(min, max)'
 
         # Masked backplane summary
         else:
-            print "  ", (np.min(array.vals),
-                           np.max(array.vals)), "(unmasked min, max)"
-            print "  ", (array.min(),
-                           array.max()), "(masked min, max)"
+#             print '  ', (np.min(array.vals),
+#                            np.max(array.vals)), '(unmasked min, max)'
+            print '  ', (array.min(),
+                           array.max()), '(masked min, max)'
             total = np.size(array.mask)
             masked = np.sum(array.mask)
             percent = int(masked / float(total) * 100. + 0.5)
-            print "  ", (masked, total-masked),
-            print         (percent, 100-percent),"(masked, unmasked pixels)"
+            print '  ', (masked, total-masked),
+            print         (percent, 100-percent), '(masked, unmasked pixels)'
 
-    if EXERCISE_PRINT and EXERCISE_LOGGING: config.LOGGING.on("        ")
+            if total == masked:
+                minval = np.min(array.vals)
+                maxval = np.max(array.vals)
+            else:
+                minval = array.min()
+                maxval = array.max()
 
-    snap = iss.from_file(EXERCISE_FILESPEC)
-    meshgrid = Meshgrid.for_fov(snap.fov, undersample=EXERCISE_UNDERSAMPLE,
-                                swap=True)
+        if saving and array.shape != ():
+            if minval == maxval:
+                maxval += 1.
+
+            image = array.vals.copy()
+            image[array.mask] = minval - 0.05 * (maxval - minval)
+
+            filename = 'backplane-' + title + '.png'
+            filename = filename.replace(':','-')
+            filename = filename.replace('/','-')
+            save_image(image, filename)
+
+    if printing and logging: config.LOGGING.on('        ')
+
+    if printing: print
+
+    snap = iss.from_file(filespec)
+    meshgrid = Meshgrid.for_fov(snap.fov, undersample=undersample, swap=True)
 
     bp = Backplane(snap, meshgrid)
 
+    ########################
+
+    if printing: print '\n********* right ascension'
+
     test = bp.right_ascension(apparent=False)
-    show_info("Right ascension (deg)", test * constants.DPR)
+    show_info('Right ascension (deg, actual)', test * constants.DPR)
 
     test = bp.right_ascension(apparent=True)
-    show_info("Right ascension (deg, apparent)", test * constants.DPR)
+    show_info('Right ascension (deg, apparent)', test * constants.DPR)
+
+    test = bp.center_right_ascension('saturn', apparent=False)
+    show_info('Right ascension of Saturn (deg, actual)', test * constants.DPR)
+
+    test = bp.center_right_ascension('saturn', apparent=True)
+    show_info('Right ascension of Saturn (deg, apparent)', test * constants.DPR)
+
+    test = bp.center_right_ascension('epimetheus', apparent=False)
+    show_info('Right ascension of Epimetheus (deg, actual)',
+                                                    test * constants.DPR)
+
+    test = bp.center_right_ascension('epimetheus', apparent=True)
+    show_info('Right ascension of Epimetheus (deg, apparent)',
+                                                    test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* declination'
 
     test = bp.declination(apparent=False)
-    show_info("Declination (deg)", test * constants.DPR)
+    show_info('Declination (deg, actual)', test * constants.DPR)
 
     test = bp.declination(apparent=True)
-    show_info("Declination (deg, apparent)", test * constants.DPR)
+    show_info('Declination (deg, apparent)', test * constants.DPR)
+
+    test = bp.center_declination('saturn', apparent=False)
+    show_info('Declination of Saturn (deg, actual)', test * constants.DPR)
+
+    test = bp.center_declination('saturn', apparent=True)
+    show_info('Declination of Saturn (deg, apparent)', test * constants.DPR)
+
+    test = bp.center_declination('epimetheus', apparent=False)
+    show_info('Declination of Epimetheus (deg, actual)',
+                                                    test * constants.DPR)
+
+    test = bp.center_declination('epimetheus', apparent=True)
+    show_info('Declination of Epimetheus (deg, apparent)',
+                                                    test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* celestial and polar angles'
+
+    test = bp.celestial_north_angle()
+    show_info('Celestial north angle (deg)', test * constants.DPR)
+
+    test = bp.celestial_east_angle()
+    show_info('Celestial east angle (deg)', test * constants.DPR)
+
+    test = bp.pole_clock_angle('saturn')
+    show_info('Saturn pole clock angle (deg)', test * constants.DPR)
+
+    test = bp.pole_position_angle('saturn')
+    show_info('Saturn pole position angle (deg)', test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* observer distances'
 
     test = bp.distance('saturn')
-    show_info("Range to Saturn (km)", test)
+    show_info('Distance observer to Saturn (km)', test)
 
-    test = bp.distance(('sun','saturn'))
-    show_info("Saturn distance to Sun (km)", test)
+    test = bp.distance('saturn', direction='dep')
+    show_info('Distance observer to Saturn via dep (km)', test)
+
+    test = bp.center_distance('saturn')
+    show_info('Distance observer to Saturn center (km)', test)
+
+    test = bp.distance('saturn_main_rings')
+    show_info('Distance observer to rings (km)', test)
+
+    test = bp.center_distance('saturn_main_rings')
+    show_info('Distance observer to ring center (km)', test)
+
+    test = bp.distance('saturn:limb')
+    show_info('Distance observer to Saturn limb (km)', test)
+
+    test = bp.distance('saturn:ansa')
+    show_info('Distance observer to ansa (km)', test)
+
+    test = bp.distance('epimetheus')
+    show_info('Distance observer to Epimetheus (km)', test)
+
+    test = bp.center_distance('epimetheus')
+    show_info('Distance observer to Epimetheus center (km)', test)
+
+    ########################
+
+    if printing: print '\n********* Sun distances'
+
+    test = bp.distance('saturn', direction='arr')
+    show_info('Distance Sun to Saturn, arrival (km)', test)
+
+    test = bp.distance(('sun', 'saturn'), direction='dep')
+    show_info('Distance Sun to Saturn, departure (km)', test)
+
+    test = bp.center_distance('saturn', direction='arr')
+    show_info('Distance Sun to Saturn center, arrival (km)', test)
+
+    test = bp.center_distance(('sun', 'saturn'), direction='dep')
+    show_info('Distance Sun to Saturn center, departure (km)', test)
+
+    test = bp.distance('saturn_main_rings', direction='arr')
+    show_info('Distance Sun to rings, arrival (km)', test)
+
+    test = bp.distance(('sun', 'saturn_main_rings'), direction='dep')
+    show_info('Distance Sun to rings, departure (km)', test)
+
+    test = bp.center_distance('saturn_main_rings', direction='arr')
+    show_info('Distance Sun to ring center, arrival (km)', test)
+
+    test = bp.center_distance(('sun', 'saturn_main_rings'), direction='dep')
+    show_info('Distance Sun to ring center, departure (km)', test)
+
+    test = bp.distance('saturn:ansa', direction='arr')
+    show_info('Distance Sun to ansa (km)', test)
+
+    test = bp.distance('saturn:limb', direction='arr')
+    show_info('Distance Sun to limb (km)', test)
+
+    ########################
+
+    if printing: print '\n********* observer light time'
 
     test = bp.light_time('saturn')
-    show_info("Light-time from Saturn (sec)", test)
+    show_info('Light-time observer to Saturn (sec)', test)
 
-    test = bp.incidence_angle('saturn')
-    show_info("Saturn incidence angle (deg)", test * constants.DPR)
+    test = bp.light_time('saturn', direction='dep')
+    show_info('Light-time observer to Saturn via dep (sec)', test)
 
-    test = bp.emission_angle('saturn')
-    show_info("Saturn emission angle (deg)", test * constants.DPR)
+    test = bp.light_time('saturn_main_rings')
+    show_info('Light-time observer to rings (sec)', test)
 
-    test = bp.phase_angle('saturn')
-    show_info("Saturn phase angle (deg)", test * constants.DPR)
+    test = bp.light_time('saturn:limb')
+    show_info('Light-time observer to limb (sec)', test)
 
-    test = bp.scattering_angle('saturn')
-    show_info("Saturn scattering angle (deg)", test * constants.DPR)
+    test = bp.light_time('saturn:ansa')
+    show_info('Light-time observer to ansa (sec)', test)
+
+    test = bp.center_light_time('saturn')
+    show_info('Light-time observer to Saturn center (sec)', test)
+
+    test = bp.center_light_time('saturn_main_rings')
+    show_info('Light-time observer to ring center (sec)', test)
+
+    test = bp.light_time('epimetheus')
+    show_info('Light-time observer to Epimetheus (sec)', test)
+
+    test = bp.center_light_time('epimetheus')
+    show_info('Light-time observer to Epimetheus center (sec)', test)
+
+    ########################
+
+    if printing: print '\n********* Sun light time'
+
+    test = bp.light_time('saturn', direction='arr')
+    show_info('Light-time Sun to Saturn via arr (sec)', test)
+
+    test = bp.light_time(('sun', 'saturn'))
+    show_info('Light-time Sun to Saturn via sun-saturn (sec)', test)
+
+    test = bp.center_light_time(('sun', 'saturn'))
+    show_info('Light-time Sun to Saturn at centers (sec)', test)
+
+    test = bp.light_time('saturn_main_rings', direction='arr')
+    show_info('Light-time Sun to rings (sec)', test)
+
+    test = bp.center_light_time(('sun', 'saturn_main_rings'))
+    show_info('Light-time Sun to rings at centers (sec)', test)
+
+    test = bp.light_time('saturn:ansa', direction='arr')
+    show_info('Light-time Sun to ansa (sec)', test)
+
+    test = bp.light_time('saturn:limb', direction='arr')
+    show_info('Light-time Sun to limb (sec)', test)
+
+    ########################
+
+    if printing: print '\n********* event time'
+
+    test = bp.event_time(())
+    show_info('Event time at Cassini (sec, TDB)', test)
+
+    test = bp.event_time('saturn')
+    show_info('Event time at Saturn (sec, TDB)', test)
+
+    test = bp.event_time('saturn_main_rings')
+    show_info('Event time at rings (sec, TDB)', test)
+
+    test = bp.event_time('epimetheus')
+    show_info('Event time at Epimetheus (sec, TDB)', test)
+
+    test = bp.center_time(())
+    show_info('Event time at Cassini center (sec, TDB)', test)
+
+    test = bp.center_time('saturn')
+    show_info('Event time at Saturn (sec, TDB)', test)
+
+    test = bp.center_time('saturn_main_rings')
+    show_info(' Event time at ring center (sec, TDB)', test)
+
+    test = bp.event_time('epimetheus')
+    show_info('Event time at Epimetheus (sec, TDB)', test)
+
+    test = bp.event_time('epimetheus')
+    show_info('Event time at Epimetheus center (sec, TDB)', test)
+
+    ########################
+
+    if printing: print '\n********* resolution'
+
+    test = bp.resolution('saturn', 'u')
+    show_info('Saturn resolution along u axis (km)', test)
+
+    test = bp.resolution('saturn', 'v')
+    show_info('Saturn resolution along v axis (km)', test)
+
+    test = bp.center_resolution('saturn', 'u')
+    show_info('Saturn center resolution along u axis (km)', test)
+
+    test = bp.center_resolution('saturn', 'v')
+    show_info('Saturn center resolution along v axis (km)', test)
+
+    test = bp.finest_resolution('saturn')
+    show_info('Saturn finest resolution (km)', test)
+
+    test = bp.coarsest_resolution('saturn')
+    show_info('Saturn coarsest resolution (km)', test)
+
+    test = bp.resolution('epimetheus', 'u')
+    show_info('Epimetheus resolution along u axis (km)', test)
+
+    test = bp.resolution('epimetheus', 'v')
+    show_info('Epimetheus resolution along v axis (km)', test)
+
+    test = bp.center_resolution('epimetheus', 'u')
+    show_info('Epimetheus center resolution along u axis (km)', test)
+
+    test = bp.center_resolution('epimetheus', 'v')
+    show_info('Epimetheus center resolution along v axis (km)', test)
+
+    test = bp.finest_resolution('epimetheus')
+    show_info('Epimetheus finest resolution (km)', test)
+
+    test = bp.coarsest_resolution('epimetheus')
+    show_info('Epimetheus coarsest resolution (km)', test)
+
+    test = bp.resolution('saturn_main_rings', 'u')
+    show_info('Ring resolution along u axis (km)', test)
+
+    test = bp.resolution('saturn_main_rings', 'v')
+    show_info('Ring resolution along v axis (km)', test)
+
+    test = bp.center_resolution('saturn_main_rings', 'u')
+    show_info('Ring center resolution along u axis (km)', test)
+
+    test = bp.center_resolution('saturn_main_rings', 'v')
+    show_info('Ring center resolution along v axis (km)', test)
+
+    test = bp.finest_resolution('saturn_main_rings')
+    show_info('Ring finest resolution (km)', test)
+
+    test = bp.coarsest_resolution('saturn_main_rings')
+    show_info('Ring coarsest resolution (km)', test)
+
+    test = bp.ring_radial_resolution('saturn_main_rings')
+    show_info('Ring radial resolution (km)', test)
+
+    test = bp.ring_angular_resolution('saturn_main_rings')
+    show_info('Ring angular resolution (deg)', test * constants.DPR)
+
+    radii = bp.ring_radius('saturn_main_rings')
+    show_info('Ring angular resolution (km)', test * radii)
+
+    test = bp.resolution('saturn:ansa', 'u')
+    show_info('Ansa resolution along u axis (km)', test)
+
+    test = bp.resolution('saturn:ansa', 'v')
+    show_info('Ansa resolution along v axis (km)', test)
+
+    test = bp.center_resolution('saturn:ansa', 'u')
+    show_info('Ansa center resolution along u axis (km)', test)
+
+    test = bp.center_resolution('saturn:ansa', 'v')
+    show_info('Ansa center resolution along v axis (km)', test)
+
+    test = bp.finest_resolution('saturn:ansa')
+    show_info('Ansa finest resolution (km)', test)
+
+    test = bp.coarsest_resolution('saturn:ansa')
+    show_info('Ansa coarsest resolution (km)', test)
+
+    test = bp.ansa_radial_resolution('saturn:ansa')
+    show_info('Ansa radial resolution (km)', test)
+
+    test = bp.ansa_vertical_resolution('saturn:ansa')
+    show_info('Ansa vertical resolution (km)', test)
+
+    test = bp.resolution('saturn:limb', 'u')
+    show_info('Limb resolution along u axis (km)', test)
+
+    test = bp.resolution('saturn:limb', 'v')
+    show_info('Limb resolution along v axis (km)', test)
+
+    test = bp.resolution('saturn:limb', 'u')
+    show_info('Limb resolution along u axis (km)', test)
+
+    test = bp.resolution('saturn:limb', 'v')
+    show_info('Limb resolution along v axis (km)', test)
+
+    test = bp.finest_resolution('saturn:limb')
+    show_info('Limb finest resolution (km)', test)
+
+    test = bp.coarsest_resolution('saturn:limb')
+    show_info('Limb coarsest resolution (km)', test)
+
+    ########################
+
+    if printing: print '\n********* surface latitude'
+
+    test = bp.latitude('saturn', lat_type='centric')
+    show_info('Saturn latitude, planetocentric (deg)', test * constants.DPR)
+
+    test = bp.latitude('saturn', lat_type='squashed')
+    show_info('Saturn latitude, squashed (deg)', test * constants.DPR)
+
+    test = bp.latitude('saturn', lat_type='graphic')
+    show_info('Saturn latitude, planetographic (deg)', test * constants.DPR)
+
+    test = bp.sub_observer_latitude('saturn')
+    show_info('Saturn sub-observer latitude (deg)', test * constants.DPR)
+
+    test = bp.sub_solar_latitude('saturn')
+    show_info('Saturn sub-solar latitude (deg)', test * constants.DPR)
+
+    test = bp.latitude('epimetheus', lat_type='centric')
+    show_info('Epimetheus latitude, planetocentric (deg)', test * constants.DPR)
+
+    test = bp.latitude('epimetheus', lat_type='squashed')
+    show_info('Epimetheus latitude, squashed (deg)', test * constants.DPR)
+
+    test = bp.latitude('epimetheus', lat_type='graphic')
+    show_info('Epimetheus latitude, planetographic (deg)', test * constants.DPR)
+
+    test = bp.sub_observer_latitude('epimetheus')
+    show_info('Epimetheus sub-observer latitude (deg)', test * constants.DPR)
+
+    test = bp.sub_solar_latitude('epimetheus')
+    show_info('Epimetheus sub-solar latitude (deg)', test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* surface longitude'
 
     test = bp.longitude('saturn')
-    show_info("Saturn longitude (deg)", test * constants.DPR)
-
-    test = bp.longitude('saturn', direction='west')
-    show_info("Saturn longitude westward (deg)", test * constants.DPR)
-
-    test = bp.longitude('saturn', minimum=-180)
-    show_info("Saturn longitude with -180 minimum (deg)",
-                                                test * constants.DPR)
+    show_info('Saturn longitude (deg)', test * constants.DPR)
 
     test = bp.longitude('saturn', reference='iau')
-    show_info("Saturn longitude wrt IAU frame (deg)",
+    show_info('Saturn longitude wrt IAU frame (deg)',
+                                                test * constants.DPR)
+
+    test = bp.longitude('saturn', lon_type='centric')
+    show_info('Saturn longitude centric (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn', lon_type='graphic')
+    show_info('Saturn longitude graphic (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn', lon_type='squashed')
+    show_info('Saturn longitude squashed (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn', direction='east')
+    show_info('Saturn longitude eastward (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn', minimum=-180)
+    show_info('Saturn longitude with -180 minimum (deg)',
+                                                test * constants.DPR)
+
+    test = bp.longitude('saturn', reference='iau', minimum=-180)
+    show_info('Saturn longitude wrt IAU frame with -180 minimum (deg)',
                                                 test * constants.DPR)
 
     test = bp.longitude('saturn', reference='sun')
-    show_info("Saturn longitude wrt Sun (deg)", test * constants.DPR)
+    show_info('Saturn longitude wrt Sun (deg)', test * constants.DPR)
 
     test = bp.longitude('saturn', reference='sha')
-    show_info("Saturn longitude wrt SHA (deg)", test * constants.DPR)
+    show_info('Saturn longitude wrt SHA (deg)', test * constants.DPR)
 
     test = bp.longitude('saturn', reference='obs')
-    show_info("Saturn longitude wrt observer (deg)",
+    show_info('Saturn longitude wrt observer (deg)',
                                                 test * constants.DPR)
 
     test = bp.longitude('saturn', reference='oha')
-    show_info("Saturn longitude wrt OHA (deg)", test * constants.DPR)
+    show_info('Saturn longitude wrt OHA (deg)', test * constants.DPR)
 
-    test = bp.latitude('saturn', lat_type='centric')
-    show_info("Saturn geocentric latitude (deg)", test * constants.DPR)
-
-    test = bp.latitude('saturn', lat_type='graphic')
-    show_info("Saturn geographic latitude (deg)", test * constants.DPR)
-
-    test = bp.finest_resolution('saturn')
-    show_info("Saturn finest surface resolution (km)", test)
-
-    test = bp.coarsest_resolution('saturn')
-    show_info("Saturn coarsest surface resolution (km)", test)
-
-    test = bp.ring_radius('saturn_main_rings')
-    show_info("Ring radius (km)", test)
-
-    test = bp.ring_radius('saturn_main_rings').without_mask()
-    show_info("Ring radius unmasked (km)", test)
-
-    test = bp.ring_longitude('saturn_main_rings',reference='node')
-    show_info("Ring longitude wrt node (deg)", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='sun')
-    show_info("Ring longitude wrt Sun (deg)", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='sha')
-    show_info("Ring longitude wrt SHA (deg)", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='obs')
-    show_info("Ring longitude wrt observer (deg)",
+    test = bp.sub_observer_longitude('saturn', reference='iau')
+    show_info('Saturn sub-observer longitude wrt IAU (deg)',
                                                 test * constants.DPR)
 
+    test = bp.sub_observer_longitude('saturn', reference='sun', minimum=-180)
+    show_info('Saturn sub-observer longitude wrt Sun (deg)',
+                                                test * constants.DPR)
+
+    test = bp.sub_observer_longitude('saturn', reference='obs', minimum=-180)
+    show_info('Saturn sub-observer longitude wrt observer (deg)',
+                                                test * constants.DPR)
+
+    test = bp.sub_solar_longitude('saturn', reference='iau')
+    show_info('Saturn sub-solar longitude wrt IAU (deg)',
+                                                test * constants.DPR)
+
+    test = bp.sub_solar_longitude('saturn', reference='obs', minimum=-180)
+    show_info('Saturn sub-solar longitude wrt observer (deg)',
+                                                test * constants.DPR)
+
+    test = bp.sub_solar_longitude('saturn', reference='sun', minimum=-180)
+    show_info('Saturn sub-observer longitude wrt Sun (deg)',
+                                                test * constants.DPR)
+
+    test = bp.longitude('epimetheus')
+    show_info('Epimetheus longitude (deg)', test * constants.DPR)
+
+    test = bp.sub_observer_longitude('epimetheus')
+    show_info('Epimetheus sub-observer longitude (deg)', test * constants.DPR)
+
+    test = bp.sub_solar_longitude('epimetheus')
+    show_info('Epimetheus sub-solar longitude (deg)', test * constants.DPR)
+
+# Used for testing other images
+#     test = bp.longitude('enceladus')
+#     show_info('Enceladus longitude (deg)', test * constants.DPR)
+# 
+#     test = bp.sub_observer_longitude('enceladus')
+#     show_info('Enceladus sub-observer longitude (deg)', test * constants.DPR)
+# 
+#     test = bp.sub_solar_longitude('enceladus')
+#     show_info('Enceladus sub-solar longitude (deg)', test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* surface incidence, emission, phase'
+
+    test = bp.phase_angle('saturn')
+    show_info('Saturn phase angle (deg)', test * constants.DPR)
+
+    test = bp.scattering_angle('saturn')
+    show_info('Saturn scattering angle (deg)', test * constants.DPR)
+
+    test = bp.incidence_angle('saturn')
+    show_info('Saturn incidence angle (deg)', test * constants.DPR)
+
+    test = bp.emission_angle('saturn')
+    show_info('Saturn emission angle (deg)', test * constants.DPR)
+
+    test = bp.lambert_law('saturn')
+    show_info('Saturn as a Lambert law', test)
+
+    ########################
+
+    if printing: print '\n********* ring radius, radial modes'
+
+    test = bp.ring_radius('saturn_main_rings')
+    show_info('Ring radius (km)', test)
+
+    test0 = bp.ring_radius('saturn_main_rings', 70.e3, 100.e3)
+    show_info('Ring radius, 70-100 kkm (km)', test0)
+
+    test1 = bp.radial_mode(test0.key, 40, 0., 1000., 0., 0., 100.e3)
+    show_info('Ring radius, 70-100 kkm, mode 1 (km)', test1)
+
+    test = bp.radial_mode(test1.key, 40, 0., -1000., 0., 0., 100.e3)
+    show_info('Ring radius, 70-100 kkm, mode 1 canceled (km)', test)
+
+    test2 = bp.radial_mode(test1.key, 25, 0., 500., 0., 0., 100.e3)
+    show_info('Ring radius, 70-100 kkm, modes 1 and 2 (km)', test2)
+
+    test = bp.ring_radius('saturn_main_rings').without_mask()
+    show_info('Ring radius unmasked (km)', test)
+
+    ########################
+
+    if printing: print '\n********* ring longitude, azimuth'
+
+    test = bp.ring_longitude('saturn_main_rings', reference='node')
+    show_info('Ring longitude wrt node (deg)', test * constants.DPR)
+
+    test = bp.ring_longitude('saturn_main_rings', 'node', 70.e3, 100.e3)
+    show_info('Ring longitude wrt node, 70-100 kkm (deg)', test * constants.DPR)
+
+    test = bp.ring_longitude('saturn_main_rings', reference='aries')
+    show_info('Ring longitude wrt Aries (deg)', test * constants.DPR)
+
+    test = bp.ring_longitude('saturn_main_rings', reference='obs')
+    show_info('Ring longitude wrt observer (deg)',
+                                                test * constants.DPR)
+
+    test = bp.ring_azimuth('saturn_main_rings', 'obs')
+    show_info('Ring azimuth wrt observer (deg)', test * constants.DPR)
+
+    test = bp.ring_azimuth('saturn:ring', 'obs')
+    show_info('Ring azimuth wrt observer (deg)', test * constants.DPR)
+
+    compare = bp.ring_longitude('saturn_main_rings', 'obs')
+    diff = test - compare
+    show_info('Ring azimuth minus longitude wrt observer (deg)',
+                                                        diff * constants.DPR)
+
+    test = bp.ring_azimuth('saturn:ring', 'obs')
+    show_info('Ring azimuth wrt observer, unmasked (deg)', test * constants.DPR)
+
+    compare = bp.ring_longitude('saturn:ring', 'obs')
+    diff = test - compare
+    show_info('Ring azimuth minus longitude wrt observer, unmasked (deg)',
+                                                        diff * constants.DPR)
+
     test = bp.ring_longitude('saturn_main_rings', reference='oha')
-    show_info("Ring longitude wrt OHA (deg)", test * constants.DPR)
+    show_info('Ring longitude wrt OHA (deg)', test * constants.DPR)
 
-    test = bp.distance('saturn_main_rings')
-    show_info("Range to rings (km)", test)
+    test = bp.ring_longitude('saturn_main_rings', reference='sun')
+    show_info('Ring longitude wrt Sun (deg)', test * constants.DPR)
 
-    test = bp.light_time('saturn_main_rings')
-    show_info("Light time from rings (sec)", test)
+    test = bp.ring_azimuth('saturn_main_rings', reference='sun')
+    show_info('Ring azimuth wrt Sun (deg)', test * constants.DPR)
 
-    test = bp.distance(('sun', 'saturn_main_rings'))
-    show_info("Ring distance to Sun (km)", test)
+    compare = bp.ring_longitude('saturn_main_rings', 'sun')
+    diff = test - compare
+    show_info('Ring azimuth minus longitude wrt Sun (deg)',
+                                                        diff * constants.DPR)
 
-    test = bp.incidence_angle('saturn_main_rings')
-    show_info("Ring incidence angle (deg)", test * constants.DPR)
+    test = bp.ring_azimuth('saturn:ring', reference='sun')
+    show_info('Ring azimuth wrt Sun, unmasked (deg)', test * constants.DPR)
 
-    test = bp.emission_angle('saturn_main_rings')
-    show_info("Ring emission angle (deg)", test * constants.DPR)
+    compare = bp.ring_longitude('saturn:ring', 'sun')
+    diff = test - compare
+    show_info('Ring azimuth minus longitude wrt Sun, unmasked (deg)',
+                                                        diff * constants.DPR)
+
+    test = bp.ring_longitude('saturn_main_rings', reference='sha')
+    show_info('Ring longitude wrt SHA (deg)', test * constants.DPR)
+
+    test = bp.ring_sub_observer_longitude('saturn_main_rings', 'node')
+    show_info('Ring sub-observer longitude wrt node (deg)',
+                                                        test * constants.DPR)
+
+    test = bp.ring_sub_observer_longitude('saturn_main_rings', 'aries')
+    show_info('Ring sub-observer longitude wrt Aries (deg)',
+                                                        test * constants.DPR)
+
+    test = bp.ring_sub_observer_longitude('saturn_main_rings', 'sun')
+    show_info('Ring sub-observer longitude wrt Sun (deg)', test * constants.DPR)
+
+    test = bp.ring_sub_observer_longitude('saturn_main_rings', 'obs')
+    show_info('Ring sub-observer longitude wrt observer (deg)',
+                                                        test * constants.DPR)
+
+    test = bp.ring_sub_solar_longitude('saturn_main_rings', 'node')
+    show_info('Ring sub-solar longitude wrt node (deg)', test * constants.DPR)
+
+    test = bp.ring_sub_solar_longitude('saturn_main_rings', 'aries')
+    show_info('Ring sub-solar longitude wrt Aries (deg)', test * constants.DPR)
+
+    test = bp.ring_sub_solar_longitude('saturn_main_rings', 'sun')
+    show_info('Ring sub-solar longitude wrt Sun (deg)', test * constants.DPR)
+
+    test = bp.ring_sub_solar_longitude('saturn_main_rings', 'obs')
+    show_info('Ring sub-solar longitude wrt observer (deg)',
+                                                        test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* ring phase angle'
 
     test = bp.phase_angle('saturn_main_rings')
-    show_info("Ring phase angle (deg)", test * constants.DPR)
+    show_info('Ring phase angle (deg)', test * constants.DPR)
 
-    test = bp.ring_radial_resolution('saturn_main_rings')
-    show_info("Ring radial resolution (km/pixel)", test)
+    test = bp.sub_observer_longitude('saturn_main_rings', 'sun', minimum=-180)
+    show_info('Ring observer-sun longitude (deg)', test * constants.DPR)
 
-    test = bp.ring_angular_resolution('saturn_main_rings')
-    show_info("Ring angular resolution (deg/pixel)", test * constants.DPR)
+    ########################
+
+    if printing: print '\n********* ring incidence, solar elevation'
+
+    test = bp.ring_incidence_angle('saturn_main_rings', 'sunward')
+    show_info('Ring incidence angle, sunward (deg)', test * constants.DPR)
+
+    test = bp.ring_incidence_angle('saturn_main_rings', 'north')
+    show_info('Ring incidence angle, north (deg)', test * constants.DPR)
+
+    test = bp.ring_incidence_angle('saturn_main_rings', 'prograde')
+    show_info('Ring incidence angle, prograde (deg)', test * constants.DPR)
+
+    test = bp.incidence_angle('saturn_main_rings')
+    show_info('Ring incidence angle via incidence() (deg)',
+                                                        test * constants.DPR)
+
+    test = bp.ring_elevation('saturn_main_rings', reference='sun')
+    show_info('Ring elevation wrt Sun (deg)', test * constants.DPR)
+
+    compare = bp.ring_incidence_angle('saturn_main_rings', 'north')
+    diff = test + compare
+    show_info('Ring elevation wrt Sun plus north incidence (deg)',
+                                                        diff * constants.DPR)
+
+    test = bp.ring_center_incidence_angle('saturn_main_rings', 'sunward')
+    show_info('Ring center incidence angle, sunward (deg)',
+                                                        test * constants.DPR)
+
+    test = bp.ring_center_incidence_angle('saturn_main_rings', 'north')
+    show_info('Ring center incidence angle, north (deg)', test * constants.DPR)
+
+    test = bp.ring_center_incidence_angle('saturn_main_rings', 'prograde')
+    show_info('Ring center incidence angle, prograde (deg)',
+                                                        test * constants.DPR)
+
+    test = bp.ring_elevation('saturn:ring', reference='sun')
+    show_info('Ring elevation wrt Sun, unmasked (deg)', test * constants.DPR)
+
+    compare = bp.ring_incidence_angle('saturn:ring', 'north')
+    diff = test + compare
+    show_info('Ring elevation wrt Sun plus north incidence, unmasked (deg)',
+                                                        diff * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* ring emission, observer elevation'
+
+    test = bp.ring_emission_angle('saturn_main_rings', 'sunward')
+    show_info('Ring emission angle, sunward (deg)', test * constants.DPR)
+
+    test = bp.ring_emission_angle('saturn_main_rings', 'north')
+    show_info('Ring emission angle, north (deg)', test * constants.DPR)
+
+    test = bp.ring_emission_angle('saturn_main_rings', 'prograde')
+    show_info('Ring emission angle, prograde (deg)', test * constants.DPR)
+
+    test = bp.emission_angle('saturn_main_rings')
+    show_info('Ring emission angle via emission() (deg)', test * constants.DPR)
+
+    test = bp.ring_elevation('saturn_main_rings', reference='obs')
+    show_info('Ring elevation wrt observer (deg)', test * constants.DPR)
+
+    compare = bp.ring_emission_angle('saturn_main_rings', 'north')
+    diff = test + compare
+    show_info('Ring elevation wrt observer plus north emission (deg)',
+                                                        diff * constants.DPR)
+
+    test = bp.ring_center_emission_angle('saturn_main_rings', 'sunward')
+    show_info('Ring center emission angle, sunward (deg)', test * constants.DPR)
+
+    test = bp.ring_center_emission_angle('saturn_main_rings', 'north')
+    show_info('Ring center emission angle, north (deg)', test * constants.DPR)
+
+    test = bp.ring_center_emission_angle('saturn_main_rings', 'prograde')
+    show_info('Ring center emission angle, prograde (deg)',
+                                                        test * constants.DPR)
+
+    test = bp.ring_elevation('saturn:ring', reference='obs')
+    show_info('Ring elevation wrt observer, unmasked (deg)',
+                                                        test * constants.DPR)
+
+    compare = bp.ring_emission_angle('saturn:ring', 'north')
+    diff = test + compare
+    show_info('Ring elevation wrt observer plus north emission, unmasked (deg)',
+                                                        diff * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* ansa geometry'
+
+    test = bp.ansa_radius('saturn:ansa')
+    show_info('Ansa radius (km)', test)
+
+    test = bp.ansa_altitude('saturn:ansa')
+    show_info('Ansa altitude (km)', test)
+
+    test = bp.ansa_longitude('saturn:ansa', 'node')
+    show_info('Ansa longitude wrt node (deg)', test * constants.DPR)
+
+    test = bp.ansa_longitude('saturn:ansa', 'aries')
+    show_info('Ansa longitude wrt Aries (deg)', test * constants.DPR)
+
+    test = bp.ansa_longitude('saturn:ansa', 'obs')
+    show_info('Ansa longitude wrt observer (deg)', test * constants.DPR)
+
+    test = bp.ansa_longitude('saturn:ansa', 'oha')
+    show_info('Ansa longitude wrt OHA (deg)', test * constants.DPR)
+
+    test = bp.ansa_longitude('saturn:ansa', 'sun')
+    show_info('Ansa longitude wrt Sun (deg)', test * constants.DPR)
+
+    test = bp.ansa_longitude('saturn:ansa', 'sha')
+    show_info('Ansa longitude wrt SHA (deg)', test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* limb altitude'
+
+    test = bp.limb_altitude('saturn:limb')
+    show_info('Limb altitude (km)', test)
+
+    ########################
+
+    if printing: print '\n********* limb longitude'
+
+    test = bp.longitude('saturn:limb', 'iau')
+    show_info('Limb longitude wrt IAU (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn:limb', 'obs')
+    show_info('Limb longitude wrt observer (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn:limb', reference='obs', minimum=-180)
+    show_info('Limb longitude wrt observer, -180 (deg)',
+                                                    test * constants.DPR)
+
+    test = bp.longitude('saturn:limb', 'oha')
+    show_info('Limb longitude wrt OHA (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn:limb', 'sun')
+    show_info('Limb longitude wrt Sun (deg)', test * constants.DPR)
+
+    test = bp.longitude('saturn:limb', 'sha')
+    show_info('Limb longitude wrt SHA (deg)', test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* limb latitude'
+
+    test = bp.latitude('saturn:limb', lat_type='centric')
+    show_info('Limb planetocentric latitude (deg)', test * constants.DPR)
+
+    test = bp.latitude('saturn:limb', lat_type='squashed')
+    show_info('Limb squashed latitude (deg)', test * constants.DPR)
+
+    test = bp.latitude('saturn:limb', lat_type='graphic')
+    show_info('Limb planetographic latitude (deg)', test * constants.DPR)
+
+    ########################
+
+    if printing: print '\n********* masks'
 
     test = bp.where_intercepted('saturn')
-    show_info("Saturn intercepted mask", test)
-
-    test = bp.where_in_front('saturn', 'saturn_main_rings')
-    show_info("Saturn in front of rings", test)
-
-    test = bp.where_in_back('saturn', 'saturn_main_rings')
-    show_info("Saturn in front of rings", test)
-
-    test = bp.where_inside_shadow('saturn', 'saturn_main_rings')
-    show_info("Saturn in front of rings", test)
-
-    test = bp.where_outside_shadow('saturn', 'saturn_main_rings')
-    show_info("Saturn in front of rings", test)
-
-    test = bp.where_sunward('saturn')
-    show_info("Saturn sunward", test)
-
-    test = bp.where_antisunward('saturn')
-    show_info("Saturn anti-sunward", test)
-
-    test = bp.where_intercepted('saturn_main_rings')
-    show_info("Rings intercepted mask", test)
-
-    test = bp.where_in_front('saturn_main_rings', 'saturn')
-    show_info("Rings in front of Saturn", test)
-
-    test = bp.where_in_back('saturn_main_rings', 'saturn')
-    show_info("Rings in front of Saturn", test)
-
-    test = bp.where_inside_shadow('saturn_main_rings', 'saturn')
-    show_info("Rings in front of Saturn", test)
-
-    test = bp.where_outside_shadow('saturn_main_rings', 'saturn')
-    show_info("Rings in front of Saturn", test)
-
-    test = bp.where_sunward('saturn_main_rings')
-    show_info("Rings sunward", test)
-
-    test = bp.where_antisunward('saturn_main_rings')
-    show_info("Rings anti-sunward", test)
-
-    test = bp.right_ascension()
-    show_info("Right ascension the old way (deg)", test * constants.DPR)
-
-    test = bp.evaluate('right_ascension')
-    show_info("Right ascension via evaluate() (deg)", test * constants.DPR)
-
-    test = bp.where_intercepted('saturn')
-    show_info("Saturn intercepted the old way", test)
+    show_info('Mask of Saturn intercepted', test)
 
     test = bp.evaluate(('where_intercepted', 'saturn'))
-    show_info("Saturn where intercepted via evaluate()", test)
+    show_info('Mask of Saturn intercepted via evaluate()', test)
 
     test = bp.where_sunward('saturn')
-    show_info("Saturn sunward the old way", test)
+    show_info('Mask of Saturn sunward', test)
 
     test = bp.evaluate(('where_sunward', 'saturn'))
-    show_info("Saturn sunward via evaluate()", test)
+    show_info('Mask of Saturn sunward via evaluate()', test)
 
     test = bp.where_below(('incidence_angle', 'saturn'), constants.HALFPI)
-    show_info("Saturn sunward via where_below()", test)
+    show_info('Mask of Saturn sunward via where_below()', test)
 
-    test = bp.evaluate(('where_antisunward', 'saturn'))
-    show_info("Saturn antisunward via evaluate()", test)
+    test = bp.where_antisunward('saturn')
+    show_info('Mask of Saturn anti-sunward', test)
 
     test = bp.where_above(('incidence_angle', 'saturn'), constants.HALFPI)
-    show_info("Saturn antisunward via where_above()", test)
+    show_info('Mask of Saturn anti-sunward via where_above()', test)
 
-    test = bp.where_between(('incidence_angle', 'saturn'), constants.HALFPI, 3.2)
-    show_info("Saturn antisunward via where_between()", test)
+    test = bp.where_between(('incidence_angle', 'saturn'), constants.HALFPI,3.2)
+    show_info('Mask of Saturn anti-sunward via where_between()', test)
 
-    test = bp.where_intercepted('saturn')
-    show_info("Saturn intercepted the old way", test)
+    test = bp.where_in_front('saturn', 'saturn_main_rings')
+    show_info('Mask of Saturn in front of rings', test)
+
+    test = bp.where_in_back('saturn', 'saturn_main_rings')
+    show_info('Mask of Saturn behind rings', test)
+
+    test = bp.where_inside_shadow('saturn', 'saturn_main_rings')
+    show_info('Mask of Saturn in shadow of rings', test)
+
+    test = bp.where_outside_shadow('saturn', 'saturn_main_rings')
+    show_info('Mask of Saturn outside shadow of rings', test)
+
+    test = bp.where_intercepted('saturn_main_rings')
+    show_info('Mask of rings intercepted', test)
+
+    test = bp.where_in_front('saturn_main_rings', 'saturn')
+    show_info('Mask of rings in front of Saturn', test)
+
+    test = bp.where_in_back('saturn_main_rings', 'saturn')
+    show_info('Mask of rings behind Saturn', test)
+
+    test = bp.where_inside_shadow('saturn_main_rings', 'saturn')
+    show_info('Mask of rings in shadow of Saturn', test)
+
+    test = bp.where_outside_shadow('saturn_main_rings', 'saturn')
+    show_info('Mask of rings outside shadow of Saturn', test)
+
+    test = bp.where_sunward('saturn_main_rings')
+    show_info('Mask of rings sunward', test)
+
+    test = bp.where_antisunward('saturn_main_rings')
+    show_info('Mask of rings anti-sunward', test)
+
+    ########################
+
+    if printing: print '\n********* borders'
 
     mask = bp.where_intercepted('saturn')
     test = bp.border_inside(mask)
-    show_info("Saturn inside border", test)
+    show_info('Border of Saturn intercepted mask, inside', test)
 
     test = bp.border_outside(mask)
-    show_info("Saturn outside border", test)
+    show_info('Border of Saturn intercepted mask, outside', test)
 
-    test = bp.where_below(('ring_radius', 'saturn_main_rings'), 100000.)
-    show_info("Ring area below 100,000 km", test)
+    test = bp.border_below(('ring_radius', 'saturn:ring'), 100.e3)
+    show_info('Border of ring radius below 100 kkm', test)
 
-    test = bp.border_below(('ring_radius', 'saturn_main_rings'), 100000.)
-    show_info("Ring border below 100,000 km", test)
+    test = bp.border_atop(('ring_radius', 'saturn:ring'), 100.e3)
+    show_info('Border of ring radius atop 100 kkm', test)
 
-    test = bp.border_atop(('ring_radius', 'saturn_main_rings'), 100000.)
-    show_info("Ring border atop 100,000 km", test)
+    test = bp.border_above(('ring_radius', 'saturn:ring'), 100.e3)
+    show_info('Border of ring radius above 100 kkm', test)
 
-    test = bp.border_atop(('ring_radius', 'saturn_main_rings'), 100000.)
-    show_info("Ring border above 100,000 km", test)
-
-    test = bp.evaluate(('border_atop', ('ring_radius',
-                                        'saturn_main_rings'), 100000.))
-    show_info("Ring border above 100,000 km via evaluate()", test)
+    test = bp.evaluate(('border_above', ('ring_radius', 'saturn:ring'), 100.e3))
+    show_info('Border of ring radius above 100 kkm via evaluate()', test)
 
     ########################
-    # Testing ansa events and new notation
 
-    test = bp.ring_radius('saturn_main_rings')
-    show_info("Saturn main ring radius the old way (km)", test)
+    if printing: print '\n********* EMPTY EVENTS'
 
-    test = bp.distance("saturn:ring")
-    show_info("Saturn:ring radius (km)", test)
+    test = bp.where_below(('ring_radius', 'saturn_main_rings'), 10.e3)
+    show_info('Empty mask of Saturn ring radius < 10 kkm', test)
 
-    test = bp.distance("saturn:ansa")
-    show_info("Saturn:ansa distance (km)", test)
+    test = bp.ring_radius('pluto:ring')
+    show_info('Empty ring radius for Pluto (km)', test)
 
-    test = bp.ansa_radius("saturn:ansa")
-    show_info("Saturn:ansa radius (km)", test)
+    test = bp.longitude('pluto')
+    show_info('Empty longitude for Pluto (km)', test)
 
-    test = bp.ansa_altitude("saturn:ansa")
-    show_info("Saturn:ansa altitude (km)", test)
-
-    test = bp.ansa_radial_resolution("saturn:ansa")
-    show_info("Saturn:ansa radial resolution (km)", test)
-
-    test = bp.ansa_vertical_resolution("saturn:ansa")
-    show_info("Saturn:ansa vertical resolution (km)", test)
-
-    test = bp.ansa_vertical_resolution("saturn_main_rings:ansa")
-    show_info("Saturn_main_ring:ansa vertical resolution (km)", test)
-
-    test = bp.finest_resolution("saturn_main_rings:ansa")
-    show_info("Saturn_main_ring:ansa finest resolution (km)", test)
-
-    test = bp.finest_resolution("saturn_main_rings:ansa")
-    show_info("Saturn_main_ring:ansa coarsest resolution (km)", test)
-
-    ########################
-    # Testing ansa longitudes
-
-    test = bp.ansa_longitude("saturn:ansa")
-    show_info("Saturn ansa longitude wrt node (deg)", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn:ansa", 'obs')
-    show_info("Saturn ansa longitude wrt observer (deg)",
-                                                       test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn:ansa", 'sun')
-    show_info("Saturn ansa longitude wrt Sun (deg)", test * constants.DPR)
-
-    ########################
-    # Testing ring azimuth & elevation
-
-    test = bp.ring_azimuth("saturn:ring")
-    show_info("Saturn ring azimuth wrt observer(deg)", test * constants.DPR)
-
-    compare = bp.ring_longitude("saturn:ring", 'obs')
-    diff = test - compare
-    show_info("Saturn ring azimuth wrt observer minus longitude (deg)",
-                                                       diff * constants.DPR)
-
-    test = bp.ring_azimuth("saturn:ring", reference='sun')
-    show_info("Saturn ring azimuth wrt Sun (deg)", test * constants.DPR)
-
-    compare = bp.ring_longitude("saturn:ring", 'sun')
-    diff = test - compare
-    show_info("Saturn ring azimuth wrt Sun minus longitude (deg)",
-                                                       diff * constants.DPR)
-
-    test = bp.ring_elevation("saturn:ring", reference='obs')
-    show_info("Saturn ring elevation wrt observer (deg)",
-                                                       test * constants.DPR)
-    compare = bp.emission_angle("saturn:ring")
-    diff = test + compare
-    show_info("Saturn ring emission wrt observer plus emission (deg)",
-                                                       diff * constants.DPR)
-
-    test = bp.ring_elevation("saturn:ring", reference='sun')
-    show_info("Saturn ring elevation wrt Sun (deg)", test * constants.DPR)
-
-    compare = bp.incidence_angle("saturn:ring")
-    diff = test + compare
-    show_info("Saturn ring elevation wrt Sun plus incidence (deg)",
-                                                       diff * constants.DPR)
-
-    ########################
-    # Ring scalars, other tests 5/14/12
-
-    if EXERCISE_PRINT:
-        print
-        print "Sub-solar Saturn planetocentric latitude (deg) =",
-        print bp.sub_solar_latitude('saturn').vals * constants.DPR
-
-        print "Sub-solar Saturn planetographic latitude (deg) =",
-        print bp.sub_solar_latitude('saturn',
-                                    'graphic').vals * constants.DPR
-
-        print "Sub-solar Saturn longitude wrt IAU (deg) =",
-        print bp.sub_solar_longitude('saturn').vals * constants.DPR
-
-        print "Solar distance to Saturn center (km) =",
-        print bp.center_distance('saturn', 'sun').vals
-
-        print
-        print "Sub-observer Saturn planetocentric latitude (deg) =",
-        print bp.sub_observer_latitude('saturn').vals * constants.DPR
-
-        print "Sub-observer Saturn planetographic latitude (deg) =",
-        print bp.sub_observer_latitude('saturn',
-                                       'graphic').vals * constants.DPR
-
-        print "Sub-observer Saturn longitude wrt IAU (deg) =",
-        print bp.sub_observer_longitude('saturn').vals * constants.DPR
-
-        print "Observer distance to Saturn center (km) =",
-        print bp.center_distance('saturn').vals
-
-        print
-        print "Sub-solar ring latitude (deg) =",
-        print bp.sub_solar_latitude("saturn:ring").vals * constants.DPR
-
-        print "Sub-solar ring longitude wrt node (deg) =",
-        print bp.sub_solar_longitude("saturn:ring").vals * constants.DPR
-
-        print "Solar distance to ring center (km) =",
-        print bp.center_distance("saturn:ring", 'sun').vals
-
-        print "Sub-observer ring latitude (deg) =",
-        print bp.sub_observer_latitude("saturn:ring").vals * constants.DPR
-
-        print "Sub-observer ring longitude wrt node (deg) =",
-        print bp.sub_observer_longitude("saturn:ring").vals * constants.DPR
-
-        print "Observer distance to ring center (km) =",
-        print bp.center_distance("saturn:ring").vals
-        print
-
-    test = bp.ring_longitude('saturn_main_rings', reference='sun')
-    show_info("Ring longitude wrt Sun (deg)", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='old-sun')
-    show_info("Ring longitude wrt Sun (deg), old way", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='sha')
-    show_info("Ring longitude wrt SHA (deg)", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='old-sha')
-    show_info("Ring longitude wrt SHA (deg), old way", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='obs')
-    show_info("Ring longitude wrt observer (deg)", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='old-obs')
-    show_info("Ring longitude wrt observer (deg), old way",
-                                                test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='oha')
-    show_info("Ring longitude wrt OHA (deg)", test * constants.DPR)
-
-    test = bp.ring_longitude('saturn_main_rings', reference='old-oha')
-    show_info("Ring longitude wrt OHA (deg), old way", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='sun')
-    show_info("Ansa longitude wrt Sun (deg)", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='old-sun')
-    show_info("Ansa longitude wrt Sun (deg), old way", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='sha')
-    show_info("Ansa longitude wrt SHA (deg)", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='old-sha')
-    show_info("Ansa longitude wrt SHA (deg), old way", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='obs')
-    show_info("Ansa longitude wrt observer (deg)", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='old-obs')
-    show_info("Ansa longitude wrt observer (deg), old way",
-                                                test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='oha')
-    show_info("Ansa longitude wrt OHA (deg)", test * constants.DPR)
-
-    test = bp.ansa_longitude("saturn_main_rings:ansa", reference='old-oha')
-    show_info("Ansa longitude wrt OHA (deg), old way", test * constants.DPR)
-
-    ########################
-    # Limb and resolution, 6/6/12
-
-#     test = bp.altitude("saturn:limb")
-#     show_info("Limb altitude (km)", test)
-# 
-#     test = bp.longitude("saturn:limb")
-#     show_info("Limb longitude (deg)", test * constants.DPR)
-# 
-#     test = bp.latitude("saturn:limb")
-#     show_info("Limb latitude (deg)", test * constants.DPR)
-# 
-#     test = bp.longitude("saturn:limb", reference='obs', minimum=-180)
-#     show_info("Limb longitude wrt observer, -180 (deg)",
-#                                                     test * constants.DPR)
-# 
-#     test = bp.latitude("saturn:limb", lat_type='graphic')
-#     show_info("Limb planetographic latitude (deg)", test * constants.DPR)
-# 
-#     test = bp.latitude("saturn:limb", lat_type='centric')
-#     show_info("Limb planetocentric latitude (deg)", test * constants.DPR)
-# 
-#     test = bp.resolution("saturn:limb", 'u')
-#     show_info("Limb resolution horizontal (km/pixel)", test)
-# 
-#     test = bp.resolution("saturn:limb", 'v')
-#     show_info("Limb resolution vertical (km/pixel)", test)
-
-    ########################
-    # Testing empty events
-    # DO NOT PUT ANY MORE UNIT TESTS BELOW THIS LINE; BACKPLANE IS REPLACED
-
-    snap = iss.from_file(EXERCISE_FILESPEC)
-    meshgrid = Meshgrid.for_fov(snap.fov, undersample=EXERCISE_UNDERSAMPLE,
-                                swap=True)
-    bp = Backplane(snap, meshgrid)
-
-    # Override some internals...
-    old_obs = bp.obs_event
-    bp.obs_event = Event(Scalar(old_obs.time, mask=True),
-                         (old_obs.pos, old_obs.vel),
-                         old_obs.origin, old_obs.frame,
-                         arr = old_obs.arr)
-
-    bp.surface_events_w_derivs = {(): bp.obs_event}
-    bp.surface_events = {(): bp.obs_event.without_derivs()}
-
-    test = bp.distance('saturn')
-    show_info("Range to Saturn, entirely masked (km)", test)
-
-    test = bp.phase_angle('saturn')
-    show_info("Phase angle at Saturn, entirely masked (deg)",
-                                            test * constants.DPR)
+    test = bp.incidence_angle('pluto')
+    show_info('Empty incidence angle for Pluto (km)', test)
 
     config.LOGGING.off()
 
@@ -3237,9 +3883,9 @@ import unittest
 from oops.config import ABERRATION
 
 UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                      "cassini/ISS/W1573721822_1.IMG")
+                                      'cassini/ISS/W1573721822_1.IMG')
 UNITTEST_RHEA_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                      "cassini/ISS/N1649465464_1.IMG")
+                                      'cassini/ISS/N1649465464_1.IMG')
 UNITTEST_UNDERSAMPLE = 16
 
 class Test_Backplane(unittest.TestCase):
@@ -3439,13 +4085,46 @@ class Test_Backplane(unittest.TestCase):
 
 ########################################
 
-if __name__ == '__main__':
+class Test_Backplane_Exercises(unittest.TestCase):
 
-#     EXERCISE_EXEC = True
-#     EXERCISE_PRINT = False
-# 
-#     if EXERCISE_EXEC:
-#         exercise_backplanes()
+    def runTest(self):
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                'cassini/ISS/W1573721822_1.IMG')
+
+#         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                                 'cassini/ISS/W1575632515_1.IMG')
+# TARGET = SATURN
+
+#         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                                 'cassini/ISS/N1573845439_1.IMG')
+# TARGET = 'ENCELADUS'
+
+        TEST_LEVEL = 1
+
+        logging = False         # Turn on for efficiency testing
+
+        if TEST_LEVEL == 3:     # long and slow, creates images, logging off
+            printing = True
+            saving = True
+            undersample = 1
+        elif TEST_LEVEL == 2:   # faster, prints info, no images, undersampled
+            printing = True
+            saving = False
+            undersample = 16
+        elif TEST_LEVEL == 1:   # executes every routine but does no printing
+            printing = False
+            saving = False
+            undersample = 32
+
+        if TEST_LEVEL > 0:
+            exercise_backplanes(filespec, printing, logging, saving,
+                                undersample)
+        else:
+            print 'test skipped'
+
+########################################
+
+if __name__ == '__main__':
 
     unittest.main(verbosity=2)
 

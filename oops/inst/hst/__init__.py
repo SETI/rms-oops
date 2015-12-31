@@ -332,7 +332,7 @@ class HST(object):
         xpos_corrected =  xpos * cos_angle + ypos * sin_angle
         ypos_corrected = -xpos * sin_angle + ypos * cos_angle
 
-        frame_id = hst_file[0].header["FILENAME"] + '_postarg'
+        frame_id = hst_file[0].header["FILENAME"] + '_postarg' + suffix
         frame = oops.frame.PosTarg(xpos_corrected, ypos_corrected,
                                    reference.frame, frame_id)
 

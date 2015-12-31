@@ -97,10 +97,9 @@ class Vector(Qube):
         if di < 0:
             i0 -= self.item[0]
         i1 = i0 + 2 * di
+        idx = (Ellipsis, slice(i0,i1,di)) + self.drank * (slice(None),)
 
-        index = (Ellipsis, slice(i0,i1,di)) + self.drank * (slice(None),)
-
-        result = Qube.PAIR_CLASS(self.values[index], example=self)
+        result = Qube.PAIR_CLASS(self.values[idx], derivs={}, example=self)
 
         if recursive and self.derivs:
             for (key,deriv) in self.derivs.iteritems():

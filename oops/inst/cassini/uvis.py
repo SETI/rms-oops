@@ -18,7 +18,7 @@ DEBUG = False       # True to assert that the data array must have null
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, data=False, enclose=False, **parameters):
+def from_file(filespec, data=True, enclose=False, **parameters):
     """A general, static method to return one or more Observation subclass
     objects based on a label for a given Cassini UVIS file.
 
@@ -476,7 +476,7 @@ class UVIS(object):
             # Define the frame for 1 or 64 lines
             # Not every combination is really used but that doesn't matter
             for lines in {1, 64}:
-                fov = oops.fov.Flat((u_angle, v_angle/lines), (1,lines))
+                fov = oops.fov.FlatFOV((u_angle, v_angle/lines), (1,lines))
                 UVIS.fovs[(detector, resolution, lines)] = fov
 
         UVIS.initialized = True

@@ -32,9 +32,6 @@ class Limb(Surface):
     IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
 
-    # Class constants to override where derivs are undefined
-    intercept_DERIVS_ARE_IMPLEMENTED = False
-
     def __init__(self, ground, limits=None):
         """Constructor for a Limb surface.
 
@@ -57,14 +54,15 @@ class Limb(Surface):
         else:
             self.limits = (limits[0], limits[1])
 
-    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False,
-                                  guess=None, groundtrack=False):
+    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
+                                  derivs=False, guess=None, groundtrack=False):
         """Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
             obs         a Vector3 of observer positions. Ignored for solid
                         surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaluate the surface; ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
@@ -124,7 +122,7 @@ class Limb(Surface):
 
         return results
 
-    def vector3_from_coords(self, coords, obs=None, derivs=False,
+    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
                                   groundtrack=False):
         """Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
@@ -135,6 +133,7 @@ class Limb(Surface):
                 lat     latitude in radians.
                 z       the perpendicular distance from the surface, in km.
             obs         position of the observer in the surface frame.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to observer and to the coordinates.
             groundtrack True to replace the returned value by a tuple, where the
@@ -162,12 +161,14 @@ class Limb(Surface):
         else:
             return results[0]
 
-    def intercept(self, obs, los, derivs=False, guess=None, groundtrack=False):
+    def intercept(self, obs, los, time=None, derivs=False, guess=None,
+                        groundtrack=False):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
             los         line of sight as a Vector3.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       optional initial guess at the coefficient t such that:
@@ -184,13 +185,9 @@ class Limb(Surface):
                             intercept = obs + t * los
         """
 
-        if derivs:
-            raise NotImplementedError("Limb.intercept() " +
-                                      " does not implement derivatives")
-
         # Convert to standard units
-        obs = Vector3.as_vector3(obs, False)
-        los = Vector3.as_vector3(los, False)
+        obs = Vector3.as_vector3(obs, derivs)
+        los = Vector3.as_vector3(los, derivs)
 
         # Solve for the intercept distance where the line of sight is normal to
         # the surface.
@@ -210,7 +207,7 @@ class Limb(Surface):
         #
         # t = -(obs dot los) / (los dot los)
 
-        if guess:
+        if guess not in (None, False):
             t = guess.copy()
         else:
             t = -obs.dot(los) / los.dot(los)
@@ -245,17 +242,18 @@ class Limb(Surface):
         pos = obs + t * los
 
         if groundtrack:
-            track = self.ground.intercept_normal_to(pos, derivs=False,
+            track = self.ground.intercept_normal_to(pos, derivs=derivs,
                                                     guess=ground_guess)[0]
             return (pos, t, track)
         else:
             return (pos, t)
 
-    def normal(self, pos, derivs=False):
+    def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -515,6 +513,58 @@ class Limb(Surface):
             return (cept, track)
         else:
             return cept
+
+    ############################################################################
+    # Longitude conversions
+    ############################################################################
+
+    def lon_to_centric(self, lon, derivs=False):
+        """Convert longitude in internal coordinates to planetocentric."""
+
+        return self.ground.lon_to_centric(lon, derivs)
+
+    def lon_from_centric(self, lon, derivs=False):
+        """Convert planetocentric longitude to internal coordinates."""
+
+        return self.ground.lon_from_centric(lon, derivs)
+
+    def lon_to_graphic(self, lon, derivs=False):
+        """Convert longitude in internal coordinates to planetographic."""
+
+        return self.ground.lon_to_graphic(lon, derivs)
+
+    def lon_from_graphic(self, lon, derivs=False):
+        """Convert planetographic longitude to internal coordinates."""
+
+        return self.ground.lon_from_graphic(lon, derivs)
+
+    ############################################################################
+    # Latitude conversions
+    ############################################################################
+
+    def lat_to_centric(self, lat, lon, derivs=False):
+        """Convert latitude in internal ellipsoid coordinates to planetocentric.
+        """
+
+        return self.ground.lat_to_centric(lat, lon, derivs)
+
+    def lat_from_centric(self, lat, lon, derivs=False):
+        """Convert planetocentric latitude to internal ellipsoid latitude.
+        """
+
+        return self.ground.lat_from_centric(lat, lon, derivs)
+
+    def lat_to_graphic(self, lat, lon, derivs=False):
+        """Convert latitude in internal ellipsoid coordinates to planetographic.
+        """
+
+        return self.ground.lat_to_graphic(lat, lon, derivs)
+
+    def lat_from_graphic(self, lat, lon, derivs=False):
+        """Convert planetographic latitude to internal ellipsoid latitude.
+        """
+
+        return self.ground.lat_from_graphic(lat, lon, derivs)
 
 ################################################################################
 # UNIT TESTS

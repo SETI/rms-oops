@@ -22,26 +22,39 @@ class QUICK(object):
     "path_time_extension": 5.,  # secs by which to extend interval at each end.
     "path_self_check": None,    # fractional precision for self-testing.
     "path_extra_steps": 4,      # number of extra time steps at each end.
-    "quickpath_cache": 4,       # maximum number of non-overlapping quickpaths
+    "quickpath_cache": 40,      # maximum number of non-overlapping quickpaths
                                 # to cache for any given path.
     "quickpath_linear_interpolation_threshold": 3.,
                                 # if a time span is less than this amount,
                                 # perform linear interpolation instead of
                                 # using InterpolatedUnivariateSpline; this
-                                # increases performance
+                                # improves performance
 
     "use_quickframes": True,
-    "frame_time_step": 0.5,     # time interval in seconds.
+    "frame_time_step": 0.05,    # time interval in seconds.
     "frame_time_extension": 5., # secs by which to extend interval at each end.
     "frame_self_check": None,   # fractional precision for self-testing.
     "frame_extra_steps": 4,     # number of extra time steps at each end.
-    "quickframe_cache": 4,      # maximum number of non-overlapping quickframes
+    "quickframe_cache": 40,     # maximum number of non-overlapping quickframes
                                 # to cache for any given frame.
-    "quickframe_linear_interpolation_threshold": 3.,
+    "quickframe_linear_interpolation_threshold": 1.,
                                 # if a time span is less than this amount,
                                 # perform linear interpolation instead of
                                 # using InterpolatedUnivariateSpline; this
-                                # increases performance
+                                # improves performance
+    "quickframe_numerical_omega": False,
+                                # True to derive the omega rotation vectors
+                                # via numerical derivatives rather than via
+                                # interpolation of the vector components.
+    "ignore_quickframe_omega": False,
+                                # True to derive the omega rotation vectors
+                                # via numerical derivatives rather than via
+                                # interpolation of the vector components.
+    "use_superseded_quickframes": False,
+                                # True to use the old frame interpolation method
+                                # involving matrix components rather than
+                                # quaternions. DEPRECATED by perserved for
+                                # testing purposes.
 }
 
 ################################################################################

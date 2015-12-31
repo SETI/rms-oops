@@ -11,6 +11,7 @@ from oops.surface_.limb        import Test_Limb
 from oops.surface_.nullsurface import Test_NullSurface
 from oops.surface_.orbitplane  import Test_OrbitPlane
 from oops.surface_.ringplane   import Test_RingPlane
+from oops.surface_.polarlimb   import Test_PolarLimb
 from oops.surface_.spheroid    import Test_Spheroid
 from oops.surface_.spicebody   import Test_spice_body
 
@@ -21,5 +22,10 @@ from oops.surface_.graphicspheroid  import Test_GraphicSpheroid
 
 ########################################
 if __name__ == '__main__':
+
+    import oops
+    oops.config.LOGGING.on('     ')
+
     unittest.main(verbosity=2)
+
 ################################################################################

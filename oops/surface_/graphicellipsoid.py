@@ -49,13 +49,15 @@ class GraphicEllipsoid(Surface):
 
         self.radii = self.ellipsoid.radii
 
-    def coords_from_vector3(self, pos, obs=None, axes=2, derivs=False):
+    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
+                                  derivs=False):
         """Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
             obs         a Vector3 of observer positions. Ignored for solid
                         surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaluate the surface; ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
@@ -72,7 +74,7 @@ class GraphicEllipsoid(Surface):
                                                     derivs=derivs)
         return (graphic_lon, graphic_lat,) + coords[2:]
 
-    def vector3_from_coords(self, coords, obs=None, derivs=False):
+    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
         """Convert surface coordinates to positions in the internal frame.
 
         Input:
@@ -80,6 +82,7 @@ class GraphicEllipsoid(Surface):
                         coordinates.
             obs         position of the observer in the surface frame. Ignored
                         for solid surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
@@ -98,12 +101,13 @@ class GraphicEllipsoid(Surface):
         return self.ellipsoid.vector3_from_coords(new_coords, obs=obs,
                                                   derivs=derivs)
 
-    def intercept(self, obs, los, derivs=False, guess=None):
+    def intercept(self, obs, los, time=None, derivs=False, guess=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
             los         line of sight as a Vector3.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       optional initial guess at the coefficient t such that:
@@ -117,11 +121,12 @@ class GraphicEllipsoid(Surface):
 
         return self.ellipsoid.intercept(obs, los, derivs=derivs, guess=guess)
 
-    def normal(self, pos, derivs=False):
+    def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -131,11 +136,13 @@ class GraphicEllipsoid(Surface):
 
         return self.ellipsoid.normal(pos, derivs=derivs)
 
-    def intercept_with_normal(self, normal, derivs=False, guess=None):
+    def intercept_with_normal(self, normal, time=None, derivs=False,
+                                    guess=None):
         """Intercept point where the normal vector parallels the given vector.
 
         Input:
             normal      a Vector3 of normal vectors.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate derivatives in the normal vector into
                         the returned intercepts.
             guess       optional initial guess a coefficient array p such that:
@@ -155,11 +162,12 @@ class GraphicEllipsoid(Surface):
         return self.ellipsoid.intercept_with_normal(normal, derivs=derivs,
                                                     guess=guess)
 
-    def intercept_normal_to(self, pos, derivs=False, guess=None):
+    def intercept_normal_to(self, pos, time=None, derivs=False, guess=None):
         """Intercept point whose normal vector passes through a given position.
 
         Input:
             pos         a Vector3 of positions near the surface.
+            time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
             guess       optional initial guess a coefficient array p such that:
@@ -461,7 +469,7 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         cept1 = planet.vector3_from_coords((lon+eps,lat,0.))
         cept2 = planet.vector3_from_coords((lon-eps,lat,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 3.e-8)
 
         (lon,lat) = planet.coords_from_vector3(cept, axes=2)
         cept1 = planet.vector3_from_coords((lon,lat+eps,0.))

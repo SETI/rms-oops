@@ -641,12 +641,10 @@ class Path(object):
         else:
             ray_vector_ssb = (link_pos_ssb - path_pos_ssb).as_readonly()
 
-        path_event_ssb.insert_subfield(path_key, ray_vector_ssb)
-        link_event_ssb.insert_subfield(link_key, ray_vector_ssb)
-
         lt = ray_vector_ssb.norm(derivs) / signed_c
-        path_event_ssb.insert_subfield(path_key + '_lt', -lt)
-        link_event_ssb.insert_subfield(link_key + '_lt',  lt)
+
+        path_event_ssb = path_event_ssb.replace(path_key, ray_vector_ssb,
+                                                path_key + '_lt', -lt)
 
         # Transform the path event into its origin and frame
         path_event = path_event_ssb.from_ssb(self, self.frame,

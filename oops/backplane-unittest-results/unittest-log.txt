@@ -1,0 +1,644 @@
+runTest (__main__.Test_Backplane) ... ok
+runTest (__main__.Test_Backplane_Exercises) ... 
+
+********* right ascension
+Right ascension (deg, actual)
+   (212.2723446082546, 216.47103842613706) (min, max)
+Right ascension (deg, apparent)
+   (212.27270842760879, 216.471223914121) (min, max)
+Right ascension of Saturn (deg, actual)
+   216.644601113
+Right ascension of Saturn (deg, apparent)
+   216.644779069
+Right ascension of Epimetheus (deg, actual)
+   214.394673735
+Right ascension of Epimetheus (deg, apparent)
+   214.394947573
+
+********* declination
+Declination (deg, actual)
+   (-0.58358776253199296, 3.6122439926921688) (min, max)
+Declination (deg, apparent)
+   (-0.58410992116552274, 3.611544899430648) (min, max)
+Declination of Saturn (deg, actual)
+   1.91294312123
+Declination of Saturn (deg, apparent)
+   1.91231470854
+Declination of Epimetheus (deg, actual)
+   1.46704238085
+Declination of Epimetheus (deg, apparent)
+   1.46643309747
+
+********* celestial and polar angles
+Celestial north angle (deg)
+   (-76.936424630994196, -76.371276976541409) (min, max)
+Celestial east angle (deg)
+   (-166.92261394504158, -166.28840569471211) (min, max)
+Saturn pole clock angle (deg)
+   0.444038218063
+Saturn pole position angle (deg)
+   359.555961782
+
+********* observer distances
+Distance observer to Saturn (km)
+   (1633689.5059746085, 1692127.8609387905) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Distance observer to Saturn via dep (km)
+   (1633689.5059746085, 1692127.8609387905) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Distance observer to Saturn center (km)
+   1692893.8633
+Distance observer to rings (km)
+   (1557458.1618605945, 1828880.0546267743) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Distance observer to ring center (km)
+   1692893.8633
+Distance observer to Saturn limb (km)
+   (1686777.6825787828, 1692727.6361816304) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Distance observer to ansa (km)
+   (1686357.9062584417, 1700086.955080105) (min, max)
+Distance observer to Epimetheus (km)
+   (1554915.6290954524, 1554915.6290954524) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Distance observer to Epimetheus center (km)
+   1554968.19552
+
+********* Sun distances
+Distance Sun to Saturn, arrival (km)
+   (1384331094.7900853, 1384400881.2992015) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Distance Sun to Saturn, departure (km)
+   (1384331094.7900853, 1384400881.2992015) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Distance Sun to Saturn center, arrival (km)
+   1384348633.21
+Distance Sun to Saturn center, departure (km)
+   1384348633.21
+Distance Sun to rings, arrival (km)
+   (1384296050.88905, 1384483416.4703345) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Distance Sun to rings, departure (km)
+   (1384296050.88905, 1384483416.4703345) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Distance Sun to ring center, arrival (km)
+   1384348633.21
+Distance Sun to ring center, departure (km)
+   1384348633.21
+Distance Sun to ansa (km)
+   (1384357361.007848, 1384447812.2570615) (min, max)
+Distance Sun to limb (km)
+   (1384356721.3575373, 1384446585.8402615) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+
+********* observer light time
+Light-time observer to Saturn (sec)
+   (5.449401618951363, 5.644330988936321) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Light-time observer to Saturn via dep (sec)
+   (5.449401618951363, 5.644330988936321) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Light-time observer to rings (sec)
+   (5.1951212257000625, 6.100487206475269) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Light-time observer to limb (sec)
+   (5.626484714898274, 5.646331623798323) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Light-time observer to ansa (sec)
+   (5.6250844918134728, 5.6708796692947665) (min, max)
+Light-time observer to Saturn center (sec)
+   5.64688609778
+Light-time observer to ring center (sec)
+   5.64688609778
+Light-time observer to Epimetheus (sec)
+   (5.1866402492869, 5.1866402492869) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Light-time observer to Epimetheus center (sec)
+   5.18681559202
+
+********* Sun light time
+Light-time Sun to Saturn via arr (sec)
+   (4617.631490883221, 4617.864273620925) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Light-time Sun to Saturn via sun-saturn (sec)
+   (4617.631490883221, 4617.864273620925) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Light-time Sun to Saturn at centers (sec)
+   4617.68999277
+Light-time Sun to rings (sec)
+   (4617.51459701181, 4618.139581317735) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Light-time Sun to rings at centers (sec)
+   4617.68999277
+Light-time Sun to ansa (sec)
+   (4617.7191055548437, 4618.0208184458779) (min, max)
+Light-time Sun to limb (sec)
+   (4617.7169719110725, 4618.016727559776) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+
+********* event time
+Event time at Cassini (sec, TDB)
+   248300548.74
+Event time at Saturn (sec, TDB)
+   (248300543.09539515, 248300543.2903245) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Event time at rings (sec, TDB)
+   (248300542.63923892, 248300543.5446049) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Event time at Epimetheus (sec, TDB)
+   (248300543.55308586, 248300543.55308586) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Event time at Cassini center (sec, TDB)
+   248300548.74
+Event time at Saturn (sec, TDB)
+   248300543.093
+ Event time at ring center (sec, TDB)
+   248300543.093
+Event time at Epimetheus (sec, TDB)
+   (248300543.55308586, 248300543.55308586) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Event time at Epimetheus center (sec, TDB)
+   (248300543.55308586, 248300543.55308586) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+
+********* resolution
+Saturn resolution along u axis (km)
+   (96.72773728665908, 101.06906356804062) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn resolution along v axis (km)
+   (96.97811784450548, 101.05423133654557) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn center resolution along u axis (km)
+   101.18083082
+Saturn center resolution along v axis (km)
+   101.170525159
+Saturn finest resolution (km)
+   (96.47748829873309, 101.06341073637307) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn coarsest resolution (km)
+   (98.48505651816576, 39464.641668032775) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Epimetheus resolution along u axis (km)
+   (92.9320421504361, 92.9320421504361) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Epimetheus resolution along v axis (km)
+   (92.9233211613418, 92.9233211613418) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Epimetheus center resolution along u axis (km)
+   92.9372935495
+Epimetheus center resolution along v axis (km)
+   92.9278275251
+Epimetheus finest resolution (km)
+   (92.9336233505329, 92.9336233505329) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Epimetheus coarsest resolution (km)
+   (108.81414155678, 108.81414155678) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Ring resolution along u axis (km)
+   (92.27846170560946, 108.68042178775418) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring resolution along v axis (km)
+   (92.74608273079215, 108.69926146755174) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring center resolution along u axis (km)
+   101.18083082
+Ring center resolution along v axis (km)
+   101.170525159
+Ring finest resolution (km)
+   (92.25658425180174, 108.61993144639546) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring coarsest resolution (km)
+   (1079.5873309334463, 1486.1119905907858) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring radial resolution (km)
+   (100.28578076832508, 1482.6081628171264) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring angular resolution (deg)
+   (0.06110957632556309, 0.9835751908902914) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring angular resolution (km)
+   (145.02717672243062, 1282.8146307779728) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ansa resolution along u axis (km)
+   (99.852621741848253, 101.21312493763207) (min, max)
+Ansa resolution along v axis (km)
+   (99.784716764818214, 101.17833414825479) (min, max)
+Ansa center resolution along u axis (km)
+   101.18083082
+Ansa center resolution along v axis (km)
+   101.170525159
+Ansa finest resolution (km)
+   (99.467897044632295, 101.23056855006374) (min, max)
+Ansa coarsest resolution (km)
+   (100.36042844365497, 101.77241651787101) (min, max)
+Ansa radial resolution (km)
+   (99.69473719122611, 101.22837333613241) (min, max)
+Ansa vertical resolution (km)
+   (99.68505988633558, 101.62055070904276) (min, max)
+Limb resolution along u axis (km)
+   (99.84555457608727, 101.09598822988019) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Limb resolution along v axis (km)
+   (99.79736345061752, 101.0825451158697) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Limb resolution along u axis (km)
+   (99.84555457608727, 101.09598822988019) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Limb resolution along v axis (km)
+   (99.79736345061752, 101.0825451158697) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Limb finest resolution (km)
+   (99.33865564687731, 101.08584094072778) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+Limb coarsest resolution (km)
+   (100.3147341221318, 101.10128271606555) (masked min, max)
+   (231769, 816807) (22, 78) (masked, unmasked pixels)
+
+********* surface latitude
+Saturn latitude, planetocentric (deg)
+   (-63.29512393002, 39.59431720047143) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn latitude, squashed (deg)
+   (-65.59269678289624, 42.518630626102855) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn latitude, planetographic (deg)
+   (-67.73968239650911, 45.4690731664161) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn sub-observer latitude (deg)
+   4.5356555468
+Saturn sub-solar latitude (deg)
+   -9.76070770314
+Epimetheus latitude, planetocentric (deg)
+   (25.79859342800805, 25.79859342800805) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Epimetheus latitude, squashed (deg)
+   (29.50604513366398, 29.50604513366398) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Epimetheus latitude, planetographic (deg)
+   (33.321167290568695, 33.321167290568695) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Epimetheus sub-observer latitude (deg)
+   4.6160102917
+Epimetheus sub-solar latitude (deg)
+   -9.95801132359
+
+********* surface longitude
+Saturn longitude (deg)
+   (220.8211515265163, 306.5815235479263) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt IAU frame (deg)
+   (220.8211515265163, 306.5815235479263) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude centric (deg)
+   (220.8211515265163, 306.5815235479263) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude graphic (deg)
+   (220.8211515265163, 306.5815235479263) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude squashed (deg)
+   (220.8211515265163, 306.5815235479263) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude eastward (deg)
+   (53.418476452073705, 139.1788484734837) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude with -180 minimum (deg)
+   (-139.1788484734837, -53.418476452073705) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt IAU frame with -180 minimum (deg)
+   (-139.1788484734837, -53.418476452073705) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt Sun (deg)
+   (207.3572079534067, 293.11757997481664) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt SHA (deg)
+   (27.357207953406686, 113.11757997481668) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt observer (deg)
+   (268.82829437907066, 354.58866640048063) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn longitude wrt OHA (deg)
+   (88.82829437907067, 174.58866640048066) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn sub-observer longitude wrt IAU (deg)
+   311.992857147
+Saturn sub-observer longitude wrt Sun (deg)
+   -61.4710864257
+Saturn sub-observer longitude wrt observer (deg)
+   0.0
+Saturn sub-solar longitude wrt IAU (deg)
+   13.4639435731
+Saturn sub-solar longitude wrt observer (deg)
+   61.4710864257
+Saturn sub-observer longitude wrt Sun (deg)
+   0.0
+Epimetheus longitude (deg)
+   (33.42169665215118, 33.42169665215118) (masked min, max)
+   (1048575, 1) (100, 0) (masked, unmasked pixels)
+Epimetheus sub-observer longitude (deg)
+   54.0659886561
+Epimetheus sub-solar longitude (deg)
+   113.32728221
+
+********* surface incidence, emission, phase
+Saturn phase angle (deg)
+   (60.85411902722139, 62.51770732864249) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn scattering angle (deg)
+   (117.48229267135751, 119.14588097277861) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn incidence angle (deg)
+   (73.26228567250561, 150.3441861175698) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn emission angle (deg)
+   (10.819165108466587, 89.85330343048079) (masked min, max)
+   (734351, 314225) (70, 30) (masked, unmasked pixels)
+Saturn as a Lambert law
+   (3.6193877540036506e-06, 0.28799093385369573) (masked min, max)
+   (943746, 104830) (90, 10) (masked, unmasked pixels)
+
+********* ring radius, radial modes
+Ring radius (km)
+   (74658.7883215214, 136772.30905598716) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring radius, 70-100 kkm (km)
+   (70001.48845697536, 99999.96247465305) (masked min, max)
+   (991587, 56989) (95, 5) (masked, unmasked pixels)
+Ring radius, 70-100 kkm, mode 1 (km)
+   (70000.80430537493, 99999.44175447916) (masked min, max)
+   (991530, 57046) (95, 5) (masked, unmasked pixels)
+Ring radius, 70-100 kkm, mode 1 canceled (km)
+   (70001.48845697536, 99999.96247465305) (masked min, max)
+   (991587, 56989) (95, 5) (masked, unmasked pixels)
+Ring radius, 70-100 kkm, modes 1 and 2 (km)
+   (70000.63320698951, 99999.11076890254) (masked min, max)
+   (991533, 57043) (95, 5) (masked, unmasked pixels)
+Ring radius unmasked (km)
+   (11339.835710662406, 1061701.9758706714) (min, max)
+
+********* ring longitude, azimuth
+Ring longitude wrt node (deg)
+   (0.0008794837800091611, 359.9975191858198) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt node, 70-100 kkm (deg)
+   (0.0008794837800091611, 359.9927412586763) (masked min, max)
+   (991587, 56989) (95, 5) (masked, unmasked pixels)
+Ring longitude wrt Aries (deg)
+   (42.15226335608614, 212.56372078693263) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt observer (deg)
+   (5.517642467229591, 175.9290998980761) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring azimuth wrt observer (deg)
+   (6.0026765967908755, 176.22856307226925) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring azimuth wrt observer (deg)
+   (2.8314098444409583, 179.32081082997735) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ring azimuth minus longitude wrt observer (deg)
+   (0.2994631741931485, 4.0487660310760125) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring azimuth wrt observer, unmasked (deg)
+   (2.8314098444409583, 179.32081082997735) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ring azimuth minus longitude wrt observer, unmasked (deg)
+   (0.16489130411027927, 4.412553589112757) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ring longitude wrt OHA (deg)
+   (185.5176424672296, 355.9290998980761) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring longitude wrt Sun (deg)
+   (66.98872889288229, 237.40018632372878) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring azimuth wrt Sun (deg)
+   (66.98454664121523, 237.38538058358475) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring azimuth minus longitude wrt Sun (deg)
+   (-0.014838641265159727, 0.0024470187682307356) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring azimuth wrt Sun, unmasked (deg)
+   (63.3112277263708, 240.59658989071013) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ring azimuth minus longitude wrt Sun, unmasked (deg)
+   (-0.049216188514632254, 0.0392453719234688) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ring longitude wrt SHA (deg)
+   (0.0010367760405715742, 359.998828101018) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring sub-observer longitude wrt node (deg)
+   266.054160018
+Ring sub-observer longitude wrt Aries (deg)
+   36.6346208889
+Ring sub-observer longitude wrt Sun (deg)
+   61.4710864257
+Ring sub-observer longitude wrt observer (deg)
+   0.0
+Ring sub-solar longitude wrt node (deg)
+   204.583073593
+Ring sub-solar longitude wrt Aries (deg)
+   335.163534463
+Ring sub-solar longitude wrt Sun (deg)
+   0.0
+Ring sub-solar longitude wrt observer (deg)
+   298.528913574
+
+********* ring phase angle
+Ring phase angle (deg)
+   (59.01145959087748, 62.51162044647367) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring observer-sun longitude (deg)
+   -61.4710864257
+
+********* ring incidence, solar elevation
+Ring incidence angle, sunward (deg)
+   (80.24010621446202, 80.24143985178713) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring incidence angle, north (deg)
+   (99.75856014821287, 99.75989378553797) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring incidence angle, prograde (deg)
+   (99.75856014821287, 99.75989378553797) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring incidence angle via incidence() (deg)
+   (80.24010621446202, 80.24143985178713) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring elevation wrt Sun (deg)
+   (-9.760495783182572, -9.758307450701228) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring elevation wrt Sun plus north incidence (deg)
+   (89.99911873183422, 90.00074759718485) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring center incidence angle, sunward (deg)
+   80.2392922969
+Ring center incidence angle, north (deg)
+   99.7607077031
+Ring center incidence angle, prograde (deg)
+   99.7607077031
+Ring elevation wrt Sun, unmasked (deg)
+   (-9.7647595012971, -9.754045940273672) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ring elevation wrt Sun plus north incidence, unmasked (deg)
+   (89.9947007668726, 90.00094531079718) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+
+********* ring emission, observer elevation
+Ring emission angle, sunward (deg)
+   (94.19676822759585, 94.92995954264701) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring emission angle, north (deg)
+   (85.07004045735299, 85.80323177240415) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring emission angle, prograde (deg)
+   (85.07004045735299, 85.80323177240415) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring emission angle via emission() (deg)
+   (94.19676822759585, 94.92995954264701) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring elevation wrt observer (deg)
+   (4.198399228104864, 4.931372806667994) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring elevation wrt observer plus north emission (deg)
+   (90.00082079796246, 90.0016345047157) (masked min, max)
+   (912489, 136087) (87, 13) (masked, unmasked pixels)
+Ring center emission angle, sunward (deg)
+   94.5356555468
+Ring center emission angle, north (deg)
+   85.4643444532
+Ring center emission angle, prograde (deg)
+   85.4643444532
+Ring elevation wrt observer, unmasked (deg)
+   (2.7969238389521975, 7.023555252596632) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ring elevation wrt observer plus north emission, unmasked (deg)
+   (89.9973523216696, 90.0018468471783) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+
+********* ansa geometry
+Ansa radius (km)
+   (4912.2739438374465, 129789.27605364229) (min, max)
+Ansa altitude (km)
+   (-74008.20578257498, 51600.786605197849) (min, max)
+Ansa longitude wrt node (deg)
+   (351.64311502237325, 355.88718866287314) (min, max)
+Ansa longitude wrt Aries (deg)
+   (122.22357589273477, 126.46764953323466) (min, max)
+Ansa longitude wrt observer (deg)
+   (85.58852085486615, 89.83259411546786) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ansa longitude wrt OHA (deg)
+   (265.58852085486615, 269.8325941154679) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ansa longitude wrt Sun (deg)
+   (147.06057381017428, 151.30464744889264) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+Ansa longitude wrt SHA (deg)
+   (327.06057381017433, 331.30464744889264) (masked min, max)
+   (0, 1048576) (0, 100) (masked, unmasked pixels)
+
+********* limb altitude
+Limb altitude (km)
+   (0.0367236054925315, 78806.9762574043) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+
+********* limb longitude
+Limb longitude wrt IAU (deg)
+   (220.21174971961878, 242.2655103219532) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb longitude wrt observer (deg)
+   (268.21889257216185, 290.2726531744962) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb longitude wrt observer, -180 (deg)
+   (-91.78110742783815, -69.72734682550376) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb longitude wrt OHA (deg)
+   (88.21889257216185, 110.27265317449621) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb longitude wrt Sun (deg)
+   (206.74780614650916, 228.80156674884356) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb longitude wrt SHA (deg)
+   (26.747806146509163, 48.80156674884356) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+
+********* limb latitude
+Limb planetocentric latitude (deg)
+   (-65.3513124025291, 39.075521125053896) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb squashed latitude (deg)
+   (-67.51472066763083, 41.9919492996039) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+Limb planetographic latitude (deg)
+   (-69.52614295325573, 44.93997870328196) (masked min, max)
+   (314225, 734351) (30, 70) (masked, unmasked pixels)
+
+********* masks
+Mask of Saturn intercepted
+   (314225, 734351) (30, 70) (True, False pixels)
+Mask of Saturn intercepted via evaluate()
+   (314225, 734351) (30, 70) (True, False pixels)
+Mask of Saturn sunward
+   (104830, 943746) (10, 90) (True, False pixels)
+Mask of Saturn sunward via evaluate()
+   (104830, 943746) (10, 90) (True, False pixels)
+Mask of Saturn sunward via where_below()
+   (104830, 943746) (10, 90) (True, False pixels)
+Mask of Saturn anti-sunward
+   (209395, 839181) (20, 80) (True, False pixels)
+Mask of Saturn anti-sunward via where_above()
+   (209395, 839181) (20, 80) (True, False pixels)
+Mask of Saturn anti-sunward via where_between()
+   (209395, 839181) (20, 80) (True, False pixels)
+Mask of Saturn in front of rings
+   (286806, 761770) (27, 73) (True, False pixels)
+Mask of Saturn behind rings
+   (27419, 1021157) (3, 97) (True, False pixels)
+Mask of Saturn in shadow of rings
+   (66645, 981931) (6, 94) (True, False pixels)
+Mask of Saturn outside shadow of rings
+   (247580, 800996) (24, 76) (True, False pixels)
+Mask of rings intercepted
+   (136087, 912489) (13, 87) (True, False pixels)
+Mask of rings in front of Saturn
+   (112380, 936196) (11, 89) (True, False pixels)
+Mask of rings behind Saturn
+   (23707, 1024869) (2, 98) (True, False pixels)
+Mask of rings in shadow of Saturn
+   (49741, 998835) (5, 95) (True, False pixels)
+Mask of rings outside shadow of Saturn
+   (86346, 962230) (8, 92) (True, False pixels)
+Mask of rings sunward
+   (136087, 912489) (13, 87) (True, False pixels)
+Mask of rings anti-sunward
+   (0, 1048576) (0, 100) (True, False pixels)
+
+********* borders
+Border of Saturn intercepted mask, inside
+   (960, 1047616) (0, 100) (True, False pixels)
+Border of Saturn intercepted mask, outside
+   (961, 1047615) (0, 100) (True, False pixels)
+Border of ring radius below 100 kkm
+   (1712, 1046864) (0, 100) (True, False pixels)
+Border of ring radius atop 100 kkm
+   (1713, 1046863) (0, 100) (True, False pixels)
+Border of ring radius above 100 kkm
+   (1714, 1046862) (0, 100) (True, False pixels)
+Border of ring radius above 100 kkm via evaluate()
+   (1714, 1046862) (0, 100) (True, False pixels)
+
+********* EMPTY EVENTS
+Empty mask of Saturn ring radius < 10 kkm
+   (0, 1048576) (0, 100) (True, False pixels)
+Empty ring radius for Pluto (km)
+   (Scalar(--; mask), Scalar(--; mask)) (masked min, max)
+   (1048576, 0) (100, 0) (masked, unmasked pixels)
+Empty longitude for Pluto (km)
+   (Scalar(--; mask), Scalar(--; mask)) (masked min, max)
+   (1048576, 0) (100, 0) (masked, unmasked pixels)
+Empty incidence angle for Pluto (km)
+   (Scalar(--; mask), Scalar(--; mask)) (masked min, max)
+   (1048576, 0) (100, 0) (masked, unmasked pixels)
+ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 455.839s
+
+OK
