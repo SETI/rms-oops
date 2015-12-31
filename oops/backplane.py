@@ -1694,7 +1694,7 @@ class Backplane(object):
         return lon
 
     def radial_mode(self, backplane_key,
-                          cycles, epoch, amp, peri0, freq, a0, dperi_da=0.,
+                          cycles, epoch, amp, peri0, speed, a0, dperi_da=0.,
                           reference='node'):
         """Radius shift based on a particular ring mode.
 
@@ -1708,7 +1708,7 @@ class Backplane(object):
             amp             radial amplitude of the mode in km.
             peri0           a longitude (radians) at epoch where the mode is at
                             its radial minimum at semimajor axis a0.
-            freq            local frequency of the mode in radians per second.
+            speed           local pattern speed in radians per second.
             a0              the reference semimajor axis, used for slopes
             dperi_da        the rate of change of pericenter with semimajor
                             axis, measured at semimajor axis a0 in radians/km.
@@ -1720,7 +1720,7 @@ class Backplane(object):
                             it to be defined by the event_key.
         """
 
-        key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, freq,
+        key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, speed,
                                              a0, dperi_da, reference)
         if key in self.backplanes:
             return self.backplanes[key]
@@ -1742,7 +1742,7 @@ class Backplane(object):
 
         # Add the new mode
         mode =  rad + amp * (cycles * (lon - peri0 - dperi_da * (a - a0)) +
-                             freq * (time - epoch)).cos()
+                             speed * (time - epoch)).cos()
 
         # Replace the mask if necessary
         if rmin is None:
