@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-import scipy.interpolate as interp
+from scipy.interpolate import InterpolatedUnivariateSpline
 from polymath import *
 
 from oops.config     import QUICK, LOGGING
@@ -336,7 +336,7 @@ class Frame(object):
 
         while True:
             Frame.TEMPORARY_FRAME_ID += 1
-            frame_id = "TEMPORARY_" + str(Frame.TEMPORARY_FRAME_ID)
+            frame_id = 'TEMPORARY_' + str(Frame.TEMPORARY_FRAME_ID)
 
             if frame_id not in Frame.WAYFRAME_REGISTRY:
                 return frame_id
@@ -360,7 +360,7 @@ class Frame(object):
         """
 
         # Convert a Wayframe to its registered version
-        # Sorry for the ugly use of "self"!
+        # Sorry for the ugly use of 'self'!
         if isinstance(self, Wayframe):
             self = Frame.WAYFRAME_REGISTRY[self.frame_id]
 
@@ -466,7 +466,7 @@ class Frame(object):
             if tmin >= quickframe.t0 and tmax <= quickframe.t1:
 
                 if LOGGING.quickframe_creation:
-                    print LOGGING.prefix, "Re-using QuickFrame: " + str(self),
+                    print LOGGING.prefix, 'Re-using QuickFrame: ' + str(self),
                     print '(%.3f, %.3f)' % (tmin, tmax)
 
                 return quickframe
@@ -490,10 +490,10 @@ class Frame(object):
 
             # Compare the effort involved in extending to the effort without
             effort_extending_quickframe = OVERHEAD + steps + count/SPEEDUP
-            if count >= effort_extending_quickframe: 
+            if count >= effort_extending_quickframe:
 
                 if LOGGING.quickframe_creation:
-                    print LOGGING.prefix, "Extending QuickFrame: " + str(self),
+                    print LOGGING.prefix, 'Extending QuickFrame: ' + str(self),
                     print '(%.3f, %.3f)' % (tmin, tmax)
 
                 quickframe.extend((tmin,tmax))
@@ -506,7 +506,7 @@ class Frame(object):
             return self
 
         if LOGGING.quickframe_creation:
-            print LOGGING.prefix, "New QuickFrame: " + str(self),
+            print LOGGING.prefix, 'New QuickFrame: ' + str(self),
             print '(%.3f, %.3f)' % (tmin, tmax)
 
         result = QuickFrame(self, (tmin, tmax), quickdict)
@@ -552,7 +552,7 @@ class Wayframe(Frame):
 
     def register(self): return      # does nothing
 
-    def __str__(self): return "Wayframe(" + self.frame_id + ")"
+    def __str__(self): return 'Wayframe(' + self.frame_id + ')'
 
 ################################################################################
 
@@ -754,9 +754,9 @@ class QuickFrame(Frame):
 
         self.t0 = interval[0]
         self.t1 = interval[1]
-        self.dt = quickdict["frame_time_step"]
+        self.dt = quickdict['frame_time_step']
 
-        self.extras = quickdict["frame_extra_steps"]
+        self.extras = quickdict['frame_extra_steps']
         self.times = np.arange(self.t0 - self.extras * self.dt,
                                self.t1 + self.extras * self.dt + self.dt,
                                self.dt)
@@ -767,15 +767,25 @@ class QuickFrame(Frame):
                     self.slowframe.transform_at_time_if_possible(self.times)
         self.times = new_times.values
 
-        self._spline_setup()
+        self.quickdict = quickdict
+        self.omega_numerical = quickdict['quickframe_numerical_omega']
+        self.omega_zero = quickdict['ignore_quickframe_omega']
+
+        self.superseded = quickdict['use_superseded_quickframes']
+        if self.superseded:
+            self._spline_setup_old()
+            self.interpolation_func = self._interpolate_matrix_omega_old
+        else:
+            self._spline_setup()
+            self.interpolation_func = self._interpolate_matrix_omega
 
         # Test the precision
-        precision_self_check = quickdict["frame_self_check"]
+        precision_self_check = quickdict['frame_self_check']
         if precision_self_check is not None:
             t = self.times[:-1] + self.dt/2.        # Halfway points
 
             true_transform = self.slowframe.transform_at_time(t)
-            (matrix, omega) = self._interpolate_matrix_omega(t)
+            (matrix, omega) = self.interpolation_func(t)
 
             dmatrix = (true_transform.matrix - matrix).rms()
 
@@ -785,14 +795,14 @@ class QuickFrame(Frame):
 
             error = max(np.max(dmatrix.vals), np.max(domega.vals))
             if error > precision_self_check:
-                raise ValueError("precision tolerance not achieved: " +
-                                  str(error) + " > " +
+                raise ValueError('precision tolerance not achieved: ' +
+                                  str(error) + ' > ' +
                                   str(precision_self_check))
 
     ####################################
 
     def transform_at_time(self, time, quick=False):
-        (matrix, omega) = self._interpolate_matrix_omega(time)
+        (matrix, omega) = self.interpolation_func(time)
         return Transform(matrix, omega, self, self.reference, self.origin)
 
     def transform_at_time_if_possible(self, time, quick=False):
@@ -803,16 +813,184 @@ class QuickFrame(Frame):
         raise TypeError('a QuickFrame cannot be registered')
 
     ####################################
+    # This new version uses quaternions.
+    ####################################
 
     def _spline_setup(self):
 
-        # This would be faster with quaternions but I'm lazy
         KIND = 3
-        self.matrix = np.empty((3,3), dtype="object")
+
+        # Create splines for all four components of the quaternion
+        quaternions = Quaternion.as_quaternion(self.transforms.matrix)
+        self.quat_splines = np.empty((4,), dtype='object')
+        for i in range(4):
+          self.quat_splines[i] = InterpolatedUnivariateSpline(self.times,
+                                    quaternions.vals[...,i],
+                                    k=KIND)
+
+        # Don't interpolate omega if frame is inertial
+        if self.omega_zero or (self.transforms.omega == Vector3.ZERO):
+          self.omega_splines = None
+          self.qdot_splines = None
+
+        # Create derivative splines if omega solution is numerical
+        elif self.omega_numerical:
+          self.omega_splines = None
+          self.qdot_splines = np.empty((4,), dtype='object')
+          for i in range(4):
+            self.qdot_splines[i] = self.quat_splines[i].derivative(1)
+
+        # Otherwise, create splines for the vector components of omega
+        else:
+          self.omega_splines = np.empty((3,), dtype='object')
+          self.qdot_splines = None
+          for i in range(3):
+            self.omega_splines[i] = InterpolatedUnivariateSpline(self.times,
+                                        self.transforms.omega.vals[...,i],
+                                        k=KIND)
+
+    def _interpolate_matrix_omega(self, time, collapse_threshold=None):
+
+        if collapse_threshold is None:
+            collapse_threshold = self.quickdict[
+                                    'quickframe_linear_interpolation_threshold']
+
+        # time can only be a 1-D array in the splines
+        time = Scalar.as_scalar(time)
+        tflat = time.flatten()
+        tflat_max = np.max(tflat.vals)
+        tflat_min = np.min(tflat.vals)
+        time_diff = tflat_max - tflat_min
+
+        # Case 1: A single time
+        if time_diff == 0.:
+            quat = np.empty((4,))
+            quat[0] = self.quat_splines[0](tflat_max)
+            quat[1] = self.quat_splines[1](tflat_max)
+            quat[2] = self.quat_splines[2](tflat_max)
+            quat[3] = self.quat_splines[3](tflat_max)
+
+            quat = Quaternion(quat)
+
+            matrix_vals = np.empty(tflat.shape + (3,3))
+            matrix_vals[...,:,:] = Matrix3.as_matrix3(quat).vals
+            matrix = Matrix3(matrix_vals)
+
+            if self.omega_splines is not None:
+                om = np.empty((3,))
+                om[0] = self.omega_splines[0](tflat_max)
+                om[1] = self.omega_splines[1](tflat_max)
+                om[2] = self.omega_splines[2](tflat_max)
+
+                omega_vals = np.empty(tflat.shape + (3,))
+                omega_vals[...,:] = om[:]
+                omega = Vector3(omega_vals)
+
+            elif self.qdot_splines is not None:
+                qd = np.empty((4,))
+                qd[0] = self.qdot_splines[0](tflat_max)
+                qd[1] = self.qdot_splines[1](tflat_max)
+                qd[2] = self.qdot_splines[2](tflat_max)
+                qd[3] = self.qdot_splines[3](tflat_max)
+                qdot = Quaternion(qd)
+
+                omega_vals = np.empty(tflat.shape + (3,))
+                omega_vals[...,:] = 2. * (qdot / quat).values[1:4]
+                omega = Vector3(omega_vals)
+
+            else:
+                omega = Vector3(np.zeros(tflat.shape + (3,)))
+
+        # Case 2: Use linear interpolation for a brief enough time span
+        elif time_diff < collapse_threshold:
+            frac = (tflat.vals - tflat_min) / time_diff
+
+            # Create a time scalar just containing the end points
+            tflat2 = Scalar([tflat_min, tflat_max])
+
+            quat = np.empty((2,4))
+            quat[:,0] = self.quat_splines[0](tflat2.vals)
+            quat[:,1] = self.quat_splines[1](tflat2.vals)
+            quat[:,2] = self.quat_splines[2](tflat2.vals)
+            quat[:,3] = self.quat_splines[3](tflat2.vals)
+
+            quat = Quaternion(quat[0] + (quat[1] - quat[0]) * \
+                                        frac[...,np.newaxis])
+            matrix = Matrix3.as_matrix3(quat)
+
+            if self.omega_splines is not None:
+                om = np.empty((2,3))
+                om[:,0] = self.omega_splines[0](tflat2.vals)
+                om[:,1] = self.omega_splines[1](tflat2.vals)
+                om[:,2] = self.omega_splines[2](tflat2.vals)
+
+                omega = Vector3(om[0] + frac[...,np.newaxis] * (om[1] - om[0]))
+
+            elif self.qdot_splines is not None:
+                qd = np.empty((2,4))
+                qd[:,0] = self.qdot_splines[0](tflat2.vals)
+                qd[:,1] = self.qdot_splines[1](tflat2.vals)
+                qd[:,2] = self.qdot_splines[2](tflat2.vals)
+                qd[:,3] = self.qdot_splines[3](tflat2.vals)
+                qd_x2 = 2. * qd
+
+                qdot_x2 = Quaternion(qd_x2[0] + frac[...,np.newaxis] * \
+                                                (qd_x2[1] - qd_x2[0]))
+
+                omega = (qdot_x2 / quat).to_parts()[1]
+
+            else:
+                omega = Vector3(np.zeros(tflat.shape + (3,)))
+
+        # Case 3: Use spline evaluation
+        else:
+            quat = np.empty(tflat.shape + (4,))
+            quat[...,0] = self.quat_splines[0](tflat.vals)
+            quat[...,1] = self.quat_splines[1](tflat.vals)
+            quat[...,2] = self.quat_splines[2](tflat.vals)
+            quat[...,3] = self.quat_splines[3](tflat.vals)
+
+            quat = Quaternion(quat)
+            matrix = Matrix3.as_matrix3(quat)
+
+            if self.omega_splines is not None:
+                om = np.empty(tflat.shape + (3,))
+                om[...,0] = self.omega_splines[0](tflat.vals)
+                om[...,1] = self.omega_splines[1](tflat.vals)
+                om[...,2] = self.omega_splines[2](tflat.vals)
+
+                omega = Vector3(om)
+
+            elif self.qdot_splines is not None:
+                qd = np.empty(tflat.shape + (4,))
+                qd[...,0] = self.qdot_splines[0](tflat.vals)
+                qd[...,1] = self.qdot_splines[1](tflat.vals)
+                qd[...,2] = self.qdot_splines[2](tflat.vals)
+                qd[...,3] = self.qdot_splines[3](tflat.vals)
+
+                qdot = Quaternion(qd)
+                omega = 2. * (qdot / quat).to_parts()[1]
+
+            else:
+                omega = Vector3(np.zeros(tflat.shape + (3,)))
+
+        # Return the matrices and rotation vectors
+        return (matrix.reshape(time.shape), omega.reshape(time.shape))
+
+    ####################################
+    # This superseded code performs interpolation using matrix elements and
+    # omega vector components. It has been superseded by a new version that uses
+    # quaternions.
+    ####################################
+
+    def _spline_setup_old(self):
+
+        KIND = 3
+        self.matrix = np.empty((3,3), dtype='object')
         # for i in range(3):
         for i in range(2):
           for j in range(3):
-            self.matrix[i,j] = interp.InterpolatedUnivariateSpline(self.times,
+            self.matrix[i,j] = InterpolatedUnivariateSpline(self.times,
                                     self.transforms.matrix.vals[...,i,j],
                                     k=KIND)
 
@@ -820,16 +998,17 @@ class QuickFrame(Frame):
         if self.transforms.omega == Vector3.ZERO:
             self.omega = None
         else:
-            self.omega = np.empty((3,), dtype="object")
+            self.omega = np.empty((3,), dtype='object')
             for i in range(3):
-                self.omega[i] = interp.InterpolatedUnivariateSpline(self.times,
+                self.omega[i] = InterpolatedUnivariateSpline(self.times,
                                         self.transforms.omega.vals[...,i],
                                         k=KIND)
 
-    def _interpolate_matrix_omega(self, time, collapse_threshold=None):
+    def _interpolate_matrix_omega_old(self, time, collapse_threshold=None):
 
         if collapse_threshold is None:
-            collapse_threshold = QUICK.dictionary['quickframe_linear_interpolation_threshold']
+            collapse_threshold = \
+                QUICK.dictionary['quickframe_linear_interpolation_threshold']
 
         # time can only be a 1-D array in the splines
         tflat = Scalar.as_scalar(time).flatten()
@@ -851,9 +1030,9 @@ class QuickFrame(Frame):
             matrix11 = self.matrix[1,1](tflat2.vals)
             matrix12 = self.matrix[1,2](tflat2.vals)
             if self.omega is not None:
-                omega0 = self.omega[0](tflat.vals)
-                omega1 = self.omega[1](tflat.vals)
-                omega2 = self.omega[2](tflat.vals)
+                omega0 = self.omega[0](tflat2.vals)
+                omega1 = self.omega[1](tflat2.vals)
+                omega2 = self.omega[2](tflat2.vals)
         
             if time_diff == 0.:
                 matrix[...,0,0] = matrix00[0]
@@ -909,7 +1088,7 @@ class QuickFrame(Frame):
         matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
         matrix[...,1,:] = utils.unit(matrix[...,1,:])
 
-        # Return the positions and velocities
+        # Return the matrices and rotation vectors
         return (Matrix3(matrix).reshape(time.shape),
                 Vector3(omega).reshape(time.shape))
 
@@ -1006,26 +1185,26 @@ class Test_Frame(unittest.TestCase):
         from oops.path_.spicepath import SpicePath
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
+        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
 
         Frame.reset_registry()
 
         # QuickFrame tests
 
-        ignore = SpicePath("EARTH", "SSB")
-        ignore = SpicePath("MOON", "SSB")
-        ignore = SpiceFrame("IAU_EARTH", "J2000")
-        moon  = SpiceFrame("IAU_MOON", "IAU_EARTH")
+        ignore = SpicePath('EARTH', 'SSB')
+        ignore = SpicePath('MOON', 'SSB')
+        ignore = SpiceFrame('IAU_EARTH', 'J2000')
+        moon  = SpiceFrame('IAU_MOON', 'IAU_EARTH')
         quick = QuickFrame(moon, (-5.,5.),
-                        dict(QUICK.dictionary, **{"frame_self_check":3.e-14}))
+                        dict(QUICK.dictionary, **{'frame_self_check':3.e-14}))
 
         # Perfect precision is impossible
         try:
             quick = QuickFrame(moon, (-5.,5.),
-                        dict(QUICK.dictionary, **{"frame_self_check":0.}))
-            self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
+                        dict(QUICK.dictionary, **{'frame_self_check':0.}))
+            self.assertTrue(False, 'No ValueError raised for PRECISION = 0.')
         except ValueError: pass
 
         # Timing tests...

@@ -1324,7 +1324,7 @@ class Backplane(object):
             lon = self.backplanes[key_default]
         else:
             lon = self._sub_observer_longitude(event_key)
-            self.register_backplane(key_default, lon)
+            self.register_gridless_backplane(key_default, lon)
 
         if key == key_default:
             return lon
@@ -1332,7 +1332,7 @@ class Backplane(object):
         lon = self._sub_longitude(event_key, lon, reference, direction,
                                                   minimum)
 
-        self.register_backplane(key, lon)
+        self.register_gridless_backplane(key, lon)
         return lon
 
     def sub_solar_longitude(self, event_key, reference='iau',
@@ -1367,7 +1367,7 @@ class Backplane(object):
             lon = self.backplanes[key_default]
         else:
             lon = self._sub_solar_longitude(event_key)
-            self.register_backplane(key_default, lon)
+            self.register_gridless_backplane(key_default, lon)
 
         if key == key_default:
             return lon
@@ -1375,7 +1375,7 @@ class Backplane(object):
         lon = self._sub_longitude(event_key, lon, reference, direction,
                                                   minimum)
 
-        self.register_backplane(key, lon)
+        self.register_gridless_backplane(key, lon)
         return lon
 
     def _sub_longitude(self, event_key, lon, reference='iau',
@@ -1423,7 +1423,7 @@ class Backplane(object):
         key = ('sub_observer_latitude', event_key)
         if key not in self.backplanes:
             lat = self._sub_observer_latitude(event_key)
-            self.register_backplane(key, lat)
+            self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
 
@@ -1440,7 +1440,7 @@ class Backplane(object):
         key = ('sub_solar_latitude', event_key)
         if key not in self.backplanes:
             lat = self._sub_solar_latitude(event_key)
-            self.register_backplane(key, lat)
+            self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
 
@@ -2032,7 +2032,7 @@ class Backplane(object):
         default_key = key0 + ('node',)
         if default_key not in self.backplanes:
             lon = self._sub_observer_longitude(event_key)
-            self.register_backplane(default_key, lon)
+            self.register_gridless_backplane(default_key, lon)
 
         # Now apply the reference longitude
         if reference != 'node':
@@ -2048,7 +2048,7 @@ class Backplane(object):
                 ref_lon = self._sub_observer_longitude(event_key) - np.pi
 
             lon = (self.backplanes[default_key] - ref_lon) % constants.TWOPI
-            self.register_backplane(key, lon)
+            self.register_gridless_backplane(key, lon)
 
         return self.backplanes[key]
 
@@ -2080,7 +2080,7 @@ class Backplane(object):
         default_key = key0 + ('node',)
         if default_key not in self.backplanes:
             lon = self._sub_solar_longitude(event_key)
-            self.register_backplane(default_key, lon)
+            self.register_gridless_backplane(default_key, lon)
 
         # Now apply the reference longitude
         if reference != 'node':
@@ -2097,7 +2097,7 @@ class Backplane(object):
 
             lon = (self.backplanes[default_key] - ref_lon) % constants.TWOPI
 
-            self.register_backplane(key, lon)
+            self.register_gridless_backplane(key, lon)
 
         return self.backplanes[key]
 
