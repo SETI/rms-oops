@@ -260,7 +260,8 @@ class Backplane(object):
         dest = self.get_surface_event(event_key[1:])
         surface = Backplane.get_surface(event_key[0])
 
-        dest = dest.with_time_derivs().with_los_derivs()
+#         dest = dest.with_time_derivs().with_los_derivs()
+        dest = dest.with_los_derivs()
         event = surface.photon_to_event(dest, derivs=True)[0]
 
         # Save extra information in the event object
