@@ -54,16 +54,26 @@ class Backplane(object):
 
         self.obs = obs
 
-        if meshgrid is None and obs.fov is not None:
-            swap = obs.u_axis > obs.v_axis or obs.u_axis == -1
-            self.meshgrid = Meshgrid.for_fov(obs.fov, swap=swap)
+        if meshgrid is None:
+            self.meshgrid = obs.meshgrid()
         else:
             self.meshgrid = meshgrid
 
-        self.obs_event = obs.event_at_grid(self.meshgrid, time)
-        self.obs_gridless_event = obs.gridless_event(self.meshgrid, time)
+        if time is None:
+            self.time = obs.timegrid()
+        else:
+            self.time = Scalar.as_scalar(time)
 
-        self.shape = self.obs_event.arr.shape
+        # For some cases, times are all equal. If so, collapse the times.
+        dt = self.time - obs.midtime
+        if abs(dt).max() < 1.e-3:   # simplifies cases with jitter in time tags
+            self.time = Scalar(obs.midtime)
+
+        # Define events
+        self.obs_event = obs.event_at_grid(self.meshgrid, self.time)
+        self.obs_gridless_event = obs.gridless_event(self.meshgrid, self.time)
+
+        self.shape = self.obs_event.shape
 
         # The surface_events dictionary comes in two versions, one with
         # derivatives and one without. Each dictionary is keyed by a tuple of
@@ -2930,7 +2940,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
             scaled = (image[::-1] - lo) / float(hi - lo)
             bytes = (256.*scaled).clip(0,255).astype('uint8')
 
-        im = Image.fromstring('L', (bytes.shape[1], bytes.shape[0]), bytes)
+        im = Image.frombytes('L', (bytes.shape[1], bytes.shape[0]), bytes)
         im.save(filename)
 
     def show_info(title, array):
