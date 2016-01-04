@@ -3003,8 +3003,19 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
             image[array.mask] = minval - 0.05 * (maxval - minval)
 
             filename = 'backplane-' + title + '.png'
-            filename = filename.replace(':','-')
-            filename = filename.replace('/','-')
+            filename = filename.replace(':','_')
+            filename = filename.replace('/','_')
+            filename = filename.replace(' ','_')
+            filename = filename.replace('(','_')
+            filename = filename.replace(')','_')
+            filename = filename.replace('[','_')
+            filename = filename.replace(']','_')
+            filename = filename.replace('&','_')
+            filename = filename.replace(',','_')
+            filename = filename.replace('-','_')
+            filename = filename.replace('__','_')
+            filename = filename.replace('__','_')
+            filename = filename.replace('_.','.')
             save_image(image, filename)
 
     if printing and logging: config.LOGGING.on('        ')
@@ -4086,7 +4097,7 @@ class Test_Backplane_Exercises(unittest.TestCase):
 #                                 'cassini/ISS/N1573845439_1.IMG')
 # TARGET = 'ENCELADUS'
 
-        TEST_LEVEL = 1
+        TEST_LEVEL = 3
 
         logging = False         # Turn on for efficiency testing
 
