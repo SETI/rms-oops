@@ -3027,8 +3027,19 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
             image[array.mask] = minval - 0.05 * (maxval - minval)
 
             filename = 'backplane-' + title + '.png'
-            filename = filename.replace(':','-')
-            filename = filename.replace('/','-')
+            filename = filename.replace(':','_')
+            filename = filename.replace('/','_')
+            filename = filename.replace(' ','_')
+            filename = filename.replace('(','_')
+            filename = filename.replace(')','_')
+            filename = filename.replace('[','_')
+            filename = filename.replace(']','_')
+            filename = filename.replace('&','_')
+            filename = filename.replace(',','_')
+            filename = filename.replace('-','_')
+            filename = filename.replace('__','_')
+            filename = filename.replace('__','_')
+            filename = filename.replace('_.','.')
             save_image(image, filename)
 
     if printing and logging: config.LOGGING.on('        ')
@@ -3873,7 +3884,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
     if printing: print '\n********* EMPTY EVENTS'
 
     test = bp.where_below(('ring_radius', 'saturn_main_rings'), 10.e3)
-    show_info('Empty mask of Saturn ring radius < 10 kkm', test)
+    show_info('Empty mask of Saturn ring radius below 10 kkm', test)
 
     test = bp.ring_radius('pluto:ring')
     show_info('Empty ring radius for Pluto (km)', test)
@@ -4110,7 +4121,7 @@ class Test_Backplane_Exercises(unittest.TestCase):
 #                                 'cassini/ISS/N1573845439_1.IMG')
 # TARGET = 'ENCELADUS'
 
-        TEST_LEVEL = 1
+        TEST_LEVEL = 3
 
         logging = False         # Turn on for efficiency testing
 
