@@ -3860,7 +3860,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
     if printing: print '\n********* EMPTY EVENTS'
 
     test = bp.where_below(('ring_radius', 'saturn_main_rings'), 10.e3)
-    show_info('Empty mask of Saturn ring radius < 10 kkm', test)
+    show_info('Empty mask of Saturn ring radius below 10 kkm', test)
 
     test = bp.ring_radius('pluto:ring')
     show_info('Empty ring radius for Pluto (km)', test)
