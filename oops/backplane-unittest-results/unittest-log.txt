@@ -88,7 +88,7 @@ Distance Sun to ring center, departure (km)
 Distance Sun to ansa (km)
    (1384357361.007848, 1384447812.2570615) (min, max)
 Distance Sun to limb (km)
-   (1384356721.3575373, 1384446585.8402615) (masked min, max)
+   (1384356721.3558316, 1384446585.8200471) (masked min, max)
    (231769, 816807) (22, 78) (masked, unmasked pixels)
 
 ********* observer light time
@@ -133,7 +133,7 @@ Light-time Sun to rings at centers (sec)
 Light-time Sun to ansa (sec)
    (4617.7191055548437, 4618.0208184458779) (min, max)
 Light-time Sun to limb (sec)
-   (4617.7169719110725, 4618.016727559776) (masked min, max)
+   (4617.716971905383, 4618.016727492348) (masked min, max)
    (231769, 816807) (22, 78) (masked, unmasked pixels)
 
 ********* event time
@@ -639,6 +639,6 @@ Empty incidence angle for Pluto (km)
 ok
 
 ----------------------------------------------------------------------
-Ran 2 tests in 455.839s
+Ran 2 tests in 464.015s
 
 OK

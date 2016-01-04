@@ -770,6 +770,7 @@ class QuickFrame(Frame):
         self.quickdict = quickdict
         self.omega_numerical = quickdict['quickframe_numerical_omega']
         self.omega_zero = quickdict['ignore_quickframe_omega']
+        self.omega_fixed = (self.transforms.omega.shape == ())
 
         self.superseded = quickdict['use_superseded_quickframes']
         if self.superseded:
@@ -829,7 +830,8 @@ class QuickFrame(Frame):
                                     k=KIND)
 
         # Don't interpolate omega if frame is inertial
-        if self.omega_zero or (self.transforms.omega == Vector3.ZERO):
+        if self.omega_zero or self.omega_fixed or \
+                             (self.transforms.omega == Vector3.ZERO):
           self.omega_splines = None
           self.qdot_splines = None
 
@@ -898,8 +900,11 @@ class QuickFrame(Frame):
                 omega_vals[...,:] = 2. * (qdot / quat).values[1:4]
                 omega = Vector3(omega_vals)
 
+            elif self.omega_zero:
+                omega = Vector3.ZERO
+
             else:
-                omega = Vector3(np.zeros(tflat.shape + (3,)))
+                omega = self.transforms.omega
 
         # Case 2: Use linear interpolation for a brief enough time span
         elif time_diff < collapse_threshold:
@@ -939,8 +944,11 @@ class QuickFrame(Frame):
 
                 omega = (qdot_x2 / quat).to_parts()[1]
 
+            elif self.omega_zero:
+                omega = Vector3.ZERO
+
             else:
-                omega = Vector3(np.zeros(tflat.shape + (3,)))
+                omega = self.transforms.omega
 
         # Case 3: Use spline evaluation
         else:
@@ -971,11 +979,19 @@ class QuickFrame(Frame):
                 qdot = Quaternion(qd)
                 omega = 2. * (qdot / quat).to_parts()[1]
 
+            elif self.omega_zero:
+                omega = Vector3.ZERO
+
             else:
-                omega = Vector3(np.zeros(tflat.shape + (3,)))
+                omega = self.transforms.omega
 
         # Return the matrices and rotation vectors
-        return (matrix.reshape(time.shape), omega.reshape(time.shape))
+        matrix = matrix.reshape(time.shape)
+
+        if omega.shape != ():
+            omega = omega.reshape(time.shape)
+
+        return (matrix, omega)
 
     ####################################
     # This superseded code performs interpolation using matrix elements and

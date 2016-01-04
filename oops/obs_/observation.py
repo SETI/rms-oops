@@ -242,7 +242,7 @@ class Observation(object):
 
     def meshgrid(self, origin=0.5, undersample=1, oversample=1, limit=None,
                        fov_keywords={}):
-        """Return a Scalar containingshaped to match the shape of the observation.
+        """Return a Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are
         assigned their correct locations in the axis ordering of the
@@ -336,7 +336,7 @@ class Observation(object):
         Scalar.
 
         If an observation has no time-dependence associated with an axis but
-        multiple times are required, the shape of the returned Scalar has an
+        multiple times are requested, the shape of the returned Scalar has a
         leading axis to encompass the time dependence.
 
         Input:

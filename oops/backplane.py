@@ -54,16 +54,26 @@ class Backplane(object):
 
         self.obs = obs
 
-        if meshgrid is None and obs.fov is not None:
-            swap = obs.u_axis > obs.v_axis or obs.u_axis == -1
-            self.meshgrid = Meshgrid.for_fov(obs.fov, swap=swap)
+        if meshgrid is None:
+            self.meshgrid = obs.meshgrid()
         else:
             self.meshgrid = meshgrid
 
-        self.obs_event = obs.event_at_grid(self.meshgrid, time)
-        self.obs_gridless_event = obs.gridless_event(self.meshgrid, time)
+        if time is None:
+            self.time = obs.timegrid()
+        else:
+            self.time = Scalar.as_scalar(time)
 
-        self.shape = self.obs_event.arr.shape
+        # For some cases, times are all equal. If so, collapse the times.
+        dt = self.time - obs.midtime
+        if abs(dt).max() < 1.e-3:   # simplifies cases with jitter in time tags
+            self.time = Scalar(obs.midtime)
+
+        # Define events
+        self.obs_event = obs.event_at_grid(self.meshgrid, self.time)
+        self.obs_gridless_event = obs.gridless_event(self.meshgrid, self.time)
+
+        self.shape = self.obs_event.shape
 
         # The surface_events dictionary comes in two versions, one with
         # derivatives and one without. Each dictionary is keyed by a tuple of
@@ -260,7 +270,8 @@ class Backplane(object):
         dest = self.get_surface_event(event_key[1:])
         surface = Backplane.get_surface(event_key[0])
 
-        dest = dest.with_time_derivs().with_los_derivs()
+#         dest = dest.with_time_derivs().with_los_derivs()
+        dest = dest.with_los_derivs()
         event = surface.photon_to_event(dest, derivs=True)[0]
 
         # Save extra information in the event object
@@ -1718,7 +1729,7 @@ class Backplane(object):
         return lon
 
     def radial_mode(self, backplane_key,
-                          cycles, epoch, amp, peri0, freq, a0, dperi_da=0.,
+                          cycles, epoch, amp, peri0, speed, a0, dperi_da=0.,
                           reference='node'):
         """Radius shift based on a particular ring mode.
 
@@ -1732,7 +1743,7 @@ class Backplane(object):
             amp             radial amplitude of the mode in km.
             peri0           a longitude (radians) at epoch where the mode is at
                             its radial minimum at semimajor axis a0.
-            freq            local frequency of the mode in radians per second.
+            speed           local pattern speed in radians per second.
             a0              the reference semimajor axis, used for slopes
             dperi_da        the rate of change of pericenter with semimajor
                             axis, measured at semimajor axis a0 in radians/km.
@@ -1744,7 +1755,7 @@ class Backplane(object):
                             it to be defined by the event_key.
         """
 
-        key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, freq,
+        key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, speed,
                                              a0, dperi_da, reference)
         if key in self.backplanes:
             return self.backplanes[key]
@@ -1766,7 +1777,7 @@ class Backplane(object):
 
         # Add the new mode
         mode =  rad + amp * (cycles * (lon - peri0 - dperi_da * (a - a0)) +
-                             freq * (time - epoch)).cos()
+                             speed * (time - epoch)).cos()
 
         # Replace the mask if necessary
         if rmin is None:
@@ -2953,7 +2964,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
             scaled = (image[::-1] - lo) / float(hi - lo)
             bytes = (256.*scaled).clip(0,255).astype('uint8')
 
-        im = Image.fromstring('L', (bytes.shape[1], bytes.shape[0]), bytes)
+        im = Image.frombytes('L', (bytes.shape[1], bytes.shape[0]), bytes)
         im.save(filename)
 
     def show_info(title, array):
