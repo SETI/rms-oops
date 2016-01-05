@@ -1743,10 +1743,11 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
     return names
 
 ################################################################################
-# DEPRECATED: Special kernel loader for every planet and moon
+# Special kernel loader for every planet and moon
 ################################################################################
 
-def furnish_solar_system(start_time=None, stop_time=None, asof=None):
+def furnish_solar_system(start_time=None, stop_time=None, asof=None,
+                         planets=(1,2,3,4,5,6,7,8,9)):
     """A routine designed to load all the SPK, FK and planetary constants files
     needed for the planets and moons of the Solar System.
 
@@ -1763,8 +1764,15 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None):
                         have release dates earlier than this date. The date is
                         expressed as a string in ISO format.
 
+        planets         1-9 to load kernels for a particular planet and its
+                        moons. 0 or None to load nine planets (including Pluto).
+                        Use a tuple to list more than one planet number.
+
     Return:             a list of the names of all the kernels loaded.
     """
+
+    if type(planets) == int:
+        planets = (planets,)
 
     names = []
 
@@ -1780,12 +1788,25 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None):
     # We speed this up by taking advantage of the fact that certain sets of
     # bodies are always grouped together in the kernels
 
-    bodies =  [3, 301, 399, 4, 401]
-    bodies += [501,505,506,530,540,55062]
-    bodies += [601,610,618,619,633,640,65035,65040]
-    bodies += [701,706,715,716,726]
-    bodies += [801,802,803,808,809,813,814]
-    bodies += [901,902,904,905]
+    bodies = [3, 301, 399]
+
+    if 4 in planets:
+        bodies += [4, 401]
+
+    if 5 in planets:
+        bodies += [501,505,506,530,540,55062]
+
+    if 6 in planets:
+        bodies += [601,610,618,619,633,640,65035,65040]
+
+    if 7 in planets:
+        bodies += [701,706,715,716,726]
+
+    if 8 in planets:
+        bodies += [801,802,803,808,809,813,814]
+
+    if 9 in planets:
+        bodies += [901,902,904,905]
 
     names += furnish_pck(bodies, asof=asof)
 
