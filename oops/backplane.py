@@ -1742,8 +1742,12 @@ class Backplane(object):
                             apply.
             amp             radial amplitude of the mode in km.
             peri0           a longitude (radians) at epoch where the mode is at
-                            its radial minimum at semimajor axis a0.
-            speed           local pattern speed in radians per second.
+                            its radial minimum at semimajor axis a0. For cycles
+                            == 0, it is the phase at epoch, where a phase of 0
+                            corresponds to the minimum ring radius, with every
+                            particle at pericenter.
+            speed           local pattern speed in radians per second, as scaled
+                            by the number of cycles.
             a0              the reference semimajor axis, used for slopes
             dperi_da        the rate of change of pericenter with semimajor
                             axis, measured at semimajor axis a0 in radians/km.
@@ -1776,8 +1780,11 @@ class Backplane(object):
         time = self.event_time(event_key)
 
         # Add the new mode
-        mode =  rad + amp * (cycles * (lon - peri0 - dperi_da * (a - a0)) +
-                             speed * (time - epoch)).cos()
+        peri = peri0 + dperi_da * (a - a0) + speed * (time - epoch)
+        if cyles == 0:
+            mode = rad + amp * peri.cos()
+        else:
+            mode = rad + amp * (cycles * (lon - peri)).cos()
 
         # Replace the mask if necessary
         if rmin is None:
