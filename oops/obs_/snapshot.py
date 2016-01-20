@@ -283,7 +283,7 @@ class Snapshot(Observation):
 ################################################################################
 
     def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=1, quick={},
-                           apparent=True):
+                           apparent=True, time_frac=0.5):
         """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
@@ -311,7 +311,8 @@ class Snapshot(Observation):
 
         return Observation.uv_from_ra_and_dec(self, ra, dec, derivs=derivs,
                                               iters=1, quick=quick,
-                                              apparent=apparent)
+                                              apparent=apparent,
+                                              time_frac=time_frac)
 
     def uv_from_path(self, path, derivs=False, guess=None,
                             quick={}, converge={}):

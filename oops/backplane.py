@@ -1729,7 +1729,7 @@ class Backplane(object):
         return lon
 
     def radial_mode(self, backplane_key,
-                          cycles, epoch, amp, peri0, speed, a0, dperi_da=0.,
+                          cycles, epoch, amp, peri0, speed, a0=0., dperi_da=0.,
                           reference='node'):
         """Radius shift based on a particular ring mode.
 
@@ -1781,7 +1781,7 @@ class Backplane(object):
 
         # Add the new mode
         peri = peri0 + dperi_da * (a - a0) + speed * (time - epoch)
-        if cyles == 0:
+        if cycles == 0:
             mode = rad + amp * peri.cos()
         else:
             mode = rad + amp * (cycles * (lon - peri)).cos()
