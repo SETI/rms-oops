@@ -1757,7 +1757,7 @@ class Backplane(object):
 
         # Add the new mode
         peri = peri0 + dperi_da * (a - a0) + speed * (time - epoch)
-        if cyles == 0:
+        if cycles == 0:
             mode = rad + amp * peri.cos()
         else:
             mode = rad + amp * (cycles * (lon - peri)).cos()

@@ -825,13 +825,17 @@ class Path(object):
 
         # See if a QuickPath can be efficiently extended
         for quickpath in self.quickpaths:
+
+            # If there's no overlap, skip it
+            if (quickpath.t0 > tmax + dt) or (quickpath.t1 < tmin - dt):
+                continue
+
+            # Otherwise, check the effort involved
             duration = (max(tmax, quickpath.t1) - min(tmin, quickpath.t0))
             steps = int(duration//dt) - quickpath.times.size
 
-            # Compare the effort involved in extending to the effort without
             effort_extending_quickpath = OVERHEAD + steps + count/SPEEDUP
             if count >= effort_extending_quickpath: 
-
                 if LOGGING.quickpath_creation:
                     print LOGGING.prefix, 'Extending QuickPath: ' + str(self),
                     print '(%.3f, %.3f)' % (tmin, tmax)
@@ -1195,12 +1199,13 @@ class QuickPath(Path):
     def _interpolate_pos_vel(self, time, collapse_threshold=None):
 
         if collapse_threshold is None:
-            collapse_threshold = QUICK.dictionary['quickpath_linear_interpolation_threshold']
-            
+            collapse_threshold = \
+                QUICK.dictionary['quickpath_linear_interpolation_threshold']
+
         tflat = Scalar.as_scalar(time).flatten()
         tflat_max = np.max(tflat.vals)
         tflat_min = np.min(tflat.vals)
-        time_diff = tflat_max-tflat_min
+        time_diff = tflat_max - tflat_min
 
         pos = np.empty(tflat.shape + (3,))
         vel = np.empty(tflat.shape + (3,))
@@ -1208,7 +1213,7 @@ class QuickPath(Path):
         if time_diff < collapse_threshold:
             # If all time values are basically the same, we only need to do
             # linear interpolation.
-            tflat_diff = tflat.vals-tflat_min
+            tflat_diff = tflat.vals - tflat_min
             tflat2 = Scalar([tflat_min, tflat_max])
             pos_x = self.pos_x(tflat2.vals)
             pos_y = self.pos_y(tflat2.vals)

@@ -625,7 +625,7 @@ Border of ring radius above 100 kkm via evaluate()
    (1714, 1046862) (0, 100) (True, False pixels)
 
 ********* EMPTY EVENTS
-Empty mask of Saturn ring radius < 10 kkm
+Empty mask of Saturn ring radius below 10 kkm
    (0, 1048576) (0, 100) (True, False pixels)
 Empty ring radius for Pluto (km)
    (Scalar(--; mask), Scalar(--; mask)) (masked min, max)
@@ -639,6 +639,6 @@ Empty incidence angle for Pluto (km)
 ok
 
 ----------------------------------------------------------------------
-Ran 2 tests in 464.015s
+Ran 2 tests in 433.413s
 
 OK

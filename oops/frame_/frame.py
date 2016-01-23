@@ -483,15 +483,19 @@ class Frame(object):
         tmin -= extension
         tmax += extension
 
-        # See if a QuickFrame can be efficiently extended
+        # See if any QuickFrame can be efficiently extended
         for quickframe in self.quickframes:
-            duration = (max(tmax, quickframe.t1) - min(tmin, quickframe.t0))
-            steps = int(duration//dt) - quickframe.times.size
 
-            # Compare the effort involved in extending to the effort without
+            # If there's no overlap, skip it
+            if (quickframe.t0 > tmax + dt) or (quickframe.t1 < tmin - dt):
+                continue
+
+            # Otherwise, check the effort involved
+            duration = (max(tmax, quickframe.t1) - min(tmin, quickframe.t0))
+            steps = int(duration // dt) - quickframe.steps
+
             effort_extending_quickframe = OVERHEAD + steps + count/SPEEDUP
             if count >= effort_extending_quickframe:
-
                 if LOGGING.quickframe_creation:
                     print LOGGING.prefix, 'Extending QuickFrame: ' + str(self),
                     print '(%.3f, %.3f)' % (tmin, tmax)
@@ -500,7 +504,7 @@ class Frame(object):
                 return quickframe
 
         # Evaluate the effort using a QuickFrame compared to the effort without
-        steps = int((tmax - tmin)//dt) + 2*extras
+        steps = int((tmax - tmin) // dt) + 2*extras
         effort_using_quickframe = OVERHEAD + steps + count/SPEEDUP
         if count < (1. + SAVINGS) * effort_using_quickframe:
             return self
@@ -762,6 +766,7 @@ class QuickFrame(Frame):
                                self.dt)
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
+        self.steps = int((self.t1 - self.t0) / self.dt + 0.5)
 
         (new_times, self.transforms) = \
                     self.slowframe.transform_at_time_if_possible(self.times)
@@ -830,8 +835,7 @@ class QuickFrame(Frame):
                                     k=KIND)
 
         # Don't interpolate omega if frame is inertial
-        if self.omega_zero or self.omega_fixed or \
-                             (self.transforms.omega == Vector3.ZERO):
+        if self.omega_zero or self.omega_fixed:
           self.omega_splines = None
           self.qdot_splines = None
 
@@ -1002,23 +1006,23 @@ class QuickFrame(Frame):
     def _spline_setup_old(self):
 
         KIND = 3
-        self.matrix = np.empty((3,3), dtype='object')
+        self.matrix_splines = np.empty((3,3), dtype='object')
         # for i in range(3):
         for i in range(2):
           for j in range(3):
-            self.matrix[i,j] = InterpolatedUnivariateSpline(self.times,
-                                    self.transforms.matrix.vals[...,i,j],
-                                    k=KIND)
+            self.matrix_splines[i,j] = InterpolatedUnivariateSpline(self.times,
+                                        self.transforms.matrix.vals[...,i,j],
+                                        k=KIND)
 
         # Don't interpolate omega if frame is inertial
         if self.transforms.omega == Vector3.ZERO:
-            self.omega = None
+            self.omega_splines = None
         else:
-            self.omega = np.empty((3,), dtype='object')
+            self.omega_splines = np.empty((3,), dtype='object')
             for i in range(3):
-                self.omega[i] = InterpolatedUnivariateSpline(self.times,
-                                        self.transforms.omega.vals[...,i],
-                                        k=KIND)
+                self.omega_splines[i] = InterpolatedUnivariateSpline(self.times,
+                                            self.transforms.omega.vals[...,i],
+                                            k=KIND)
 
     def _interpolate_matrix_omega_old(self, time, collapse_threshold=None):
 
@@ -1037,18 +1041,18 @@ class QuickFrame(Frame):
         if time_diff < collapse_threshold:
             # If all time values are basically the same, we only need to do
             # linear interpolation.
-            tflat_diff = tflat.vals-tflat_min
+            tflat_diff = tflat.vals - tflat_min
             tflat2 = Scalar([tflat_min, tflat_max])
-            matrix00 = self.matrix[0,0](tflat2.vals)
-            matrix01 = self.matrix[0,1](tflat2.vals)
-            matrix02 = self.matrix[0,2](tflat2.vals)
-            matrix10 = self.matrix[1,0](tflat2.vals)
-            matrix11 = self.matrix[1,1](tflat2.vals)
-            matrix12 = self.matrix[1,2](tflat2.vals)
-            if self.omega is not None:
-                omega0 = self.omega[0](tflat2.vals)
-                omega1 = self.omega[1](tflat2.vals)
-                omega2 = self.omega[2](tflat2.vals)
+            matrix00 = self.matrix_splines[0,0](tflat2.vals)
+            matrix01 = self.matrix_splines[0,1](tflat2.vals)
+            matrix02 = self.matrix_splines[0,2](tflat2.vals)
+            matrix10 = self.matrix_splines[1,0](tflat2.vals)
+            matrix11 = self.matrix_splines[1,1](tflat2.vals)
+            matrix12 = self.matrix_splines[1,2](tflat2.vals)
+            if self.omega_splines is not None:
+                omega0 = self.omega_splines[0](tflat2.vals)
+                omega1 = self.omega_splines[1](tflat2.vals)
+                omega2 = self.omega_splines[2](tflat2.vals)
         
             if time_diff == 0.:
                 matrix[...,0,0] = matrix00[0]
@@ -1062,42 +1066,42 @@ class QuickFrame(Frame):
                     omega[...,1] = omega1
                     omega[...,2] = omega2
             else:
-                matrix[...,0,0] = ((matrix00[1]-matrix00[0])/time_diff *
+                matrix[...,0,0] = ((matrix00[1] - matrix00[0]) / time_diff *
                                    tflat_diff + matrix00[0])
-                matrix[...,0,1] = ((matrix01[1]-matrix01[0])/time_diff *
+                matrix[...,0,1] = ((matrix01[1] - matrix01[0]) / time_diff *
                                    tflat_diff + matrix01[0])
-                matrix[...,0,2] = ((matrix02[1]-matrix02[0])/time_diff *
+                matrix[...,0,2] = ((matrix02[1] - matrix02[0]) / time_diff *
                                    tflat_diff + matrix02[0])
-                matrix[...,1,0] = ((matrix10[1]-matrix10[0])/time_diff *
+                matrix[...,1,0] = ((matrix10[1] - matrix10[0]) / time_diff *
                                    tflat_diff + matrix10[0])
-                matrix[...,1,1] = ((matrix11[1]-matrix11[0])/time_diff *
+                matrix[...,1,1] = ((matrix11[1] - matrix11[0]) / time_diff *
                                    tflat_diff + matrix11[0])
-                matrix[...,1,2] = ((matrix12[1]-matrix12[0])/time_diff *
+                matrix[...,1,2] = ((matrix12[1] - matrix12[0]) / time_diff *
                                    tflat_diff + matrix12[0])
                 if self.omega is not None:
-                    omega[...,0] = ((omega0[1]-omega0[0])/time_diff *
+                    omega[...,0] = ((omega0[1] - omega0[0]) / time_diff *
                                     tflat_diff + omega0[0])
-                    omega[...,1] = ((omega1[1]-omega1[0])/time_diff *
+                    omega[...,1] = ((omega1[1] - omega1[0]) / time_diff *
                                     tflat_diff + omega1[0])
-                    omega[...,2] = ((omega2[1]-omega2[0])/time_diff *
+                    omega[...,2] = ((omega2[1] - omega2[0]) / time_diff *
                                     tflat_diff + omega2[0])
-                    
+
         else:
             # Evaluate the matrix and rotation vector
-            matrix[...,0,0] = self.matrix[0,0](tflat.vals)
-            matrix[...,0,1] = self.matrix[0,1](tflat.vals)
-            matrix[...,0,2] = self.matrix[0,2](tflat.vals)
-            matrix[...,1,0] = self.matrix[1,0](tflat.vals)
-            matrix[...,1,1] = self.matrix[1,1](tflat.vals)
-            matrix[...,1,2] = self.matrix[1,2](tflat.vals)
-            # matrix[...,2,0] = self.matrix[2,0](tflat.vals)
-            # matrix[...,2,1] = self.matrix[2,1](tflat.vals)
-            # matrix[...,2,2] = self.matrix[2,2](tflat.vals)
+            matrix[...,0,0] = self.matrix_splines[0,0](tflat.vals)
+            matrix[...,0,1] = self.matrix_splines[0,1](tflat.vals)
+            matrix[...,0,2] = self.matrix_splines[0,2](tflat.vals)
+            matrix[...,1,0] = self.matrix_splines[1,0](tflat.vals)
+            matrix[...,1,1] = self.matrix_splines[1,1](tflat.vals)
+            matrix[...,1,2] = self.matrix_splines[1,2](tflat.vals)
+            # matrix[...,2,0] = self.matrix_splines[2,0](tflat.vals)
+            # matrix[...,2,1] = self.matrix_splines[2,1](tflat.vals)
+            # matrix[...,2,2] = self.matrix_splines[2,2](tflat.vals)
 
             if self.omega is not None:
-                omega[...,0] = self.omega[0](tflat.vals)
-                omega[...,1] = self.omega[1](tflat.vals)
-                omega[...,2] = self.omega[2](tflat.vals)
+                omega[...,0] = self.omega_splines[0](tflat.vals)
+                omega[...,1] = self.omega_splines[1](tflat.vals)
+                omega[...,2] = self.omega_splines[2](tflat.vals)
 
         # Normalize the matrix
         matrix[...,2,:] = utils.ucross3d(matrix[...,0,:], matrix[...,1,:])
@@ -1120,44 +1124,62 @@ class QuickFrame(Frame):
         # Extend the interval
         if interval[0] < self.t0:
             count0 = int((self.t0 - interval[0]) // self.dt) + 1 + self.extras
-            new_t0 = self.t0 - count0 * self.dt
-            times  = np.arange(count0) * self.dt + new_t0
-            transform0 = self.slowframe.transform_at_time(times, quick=False)
+            times0 = np.arange(count0) * self.dt + new_t0
+            (times0,
+             transform0) = self.slowframe.transform_at_time_if_possible(times0,
+                                                                    quick=False)
+            count0 = len(times0)
         else:
             count0 = 0
             new_t0 = self.t0
 
         if interval[1] > self.t1:
             count1 = int((interval[1] - self.t1) // self.dt) + 1 + self.extras
-            new_t1 = self.t1 + count1 * self.dt
-            times  = np.arange(count1) * self.dt + self.t1 + self.dt
-            transform1 = self.slowframe.transform_at_time(times, quick=False)
+            times1 = np.arange(count1) * self.dt + self.t1 + self.dt
+            (times1,
+             transform1) = self.slowframe.transform_at_time_if_possible(times1,
+                                                                    quick=False)
+            count1 = len(times1)
         else:
             count1 = 0
-            new_t1 = self.t1
+
+        if count0 + count1 == 0: return
 
         # Allocate the new arrays
         old_size = self.times.size
         new_size = old_size + count0 + count1
+
+        times = np.empty(new_size)
         matrix_vals = np.empty((new_size,3,3))
-        omega_vals = np.empty((new_size,3))
+
+        if self.omega_fixed:
+            omega_vals = self.transforms.omega.vals
+        else:
+            omega_vals = np.empty((new_size,3))
 
         # Copy the new arrays
         if count0 > 0:
+            times[0:count0] = times0.vals
             matrix_vals[0:count0,:,:] = transform0.matrix.vals
-            omega_vals[0:count0,:] = transform0.omega.vals
+            if not self.omega_fixed:
+                omega_vals[0:count0,:] = transform0.omega.vals
 
+        times[count0:count0+old_size] = self.times
         matrix_vals[count0:count0+old_size,:,:] = self.transforms.matrix.vals
-        omega_vals[count0:count0+old_size,:] = self.transforms.omega.vals
+        if not self.omega_fixed:
+            omega_vals[count0:count0+old_size,:] = self.transforms.omega.vals
 
         if count1 > 0:
+            times[count0+old_size:] = times1.vals
             matrix_vals[count0+old_size:,:,:] = transform1.matrix.vals
-            omega_vals[count0+old_size:,:] = transform1.omega.vals
+            if not self.omega_fixed:
+                omega_vals[count0+old_size:,:] = transform1.omega.vals
 
         # Generate the new transforms
-        self.times = np.arange(new_size) * self.dt + new_t0
+        self.times = times
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
+        self.steps = int((self.t1 - self.t0) / self.dt + 0.5)
 
         new_transforms = Transform(Matrix3(matrix_vals),
                                    Vector3(omega_vals),
