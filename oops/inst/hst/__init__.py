@@ -340,16 +340,18 @@ class HST(object):
 
     def dn_per_sec_factor(self, hst_file):
         """Returns a factor that converts a pixel value in DN per second.
+
         For instruments like WFC3/UVIS this is just 1/exposure time.
         For instruments like WFC3/IR this is 1.0, since the pixel values are
-        already in DN per second.
-        This method is overridden by the various subclasses.
-        
+        already in DN per second. This method is overridden by the various
+        subclasses.
+
         Input:
             hst_file        the object returned by pyfits.open()
-            
+
         Return              the factor to multiply a pixel value by to get DN/sec
         """
+
         assert False  # Must be overridden
 
     def iof_calibration(self, hst_file, fov, extended=True, **parameters):
@@ -417,8 +419,9 @@ class HST(object):
             raise IOError("PHOTFLAM calibration factor not found in file " +
                           self.filespec(hst_file))
 
-        texp_factor = self.dn_per_sec_factor(hst_file) 
-        factor = photflam * texp_factor / fov.uv_area / self.solar_f(hst_file, solar_range, solar_model)
+        texp_factor = self.dn_per_sec_factor(hst_file)
+        factor = photflam * texp_factor / fov.uv_area / _
+                            self.solar_f(hst_file, solar_range, solar_model)
 
         # Create and return the calibration for solar reflectivity
         if extended:
