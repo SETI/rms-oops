@@ -735,7 +735,7 @@ class Observation(object):
             containing data about the body in the FOV:
 
                 body_data['name']          The body name
-                body_data['center_uv']     The U,V Pair of the center point
+                body_data['center_uv']     The U,V coord of the center point
                 body_data['center']        The Vector3 direction of the center
                                            point
                 body_data['range']         The range in km
@@ -756,8 +756,8 @@ class Observation(object):
                 body_data['v_min_unclipped']
                 body_data['v_max_unclipped']
                 body_data['u_pixel_size']  The number of pixels (non-integer)
-                body_data['v_pixel_size']  covered by the body in each 
-                                           direction.
+                body_data['v_pixel_size']  covered by the diameter of the body 
+                                           in each direction.
         """
 
         assert return_type in ('list', 'flags', 'full')
@@ -855,8 +855,8 @@ class Observation(object):
                                              0, self.data.shape[0]-1)
                 body_data['v_max'] = np.clip(body_data['v_max_unclipped'],
                                              0, self.data.shape[0]-1)
-                body_data['u_pixel_size'] = radius_angles[i].vals/u_scale
-                body_data['v_pixel_size'] = radius_angles[i].vals/v_scale
+                body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
+                body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
                 ret_dict[body_names[i]] = body_data
 
         return ret_dict

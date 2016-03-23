@@ -1124,14 +1124,13 @@ class QuickFrame(Frame):
         # Extend the interval
         if interval[0] < self.t0:
             count0 = int((self.t0 - interval[0]) // self.dt) + 1 + self.extras
-            times0 = np.arange(count0) * self.dt + new_t0
+            times0 = np.arange(count0) * self.dt + interval[0]
             (times0,
              transform0) = self.slowframe.transform_at_time_if_possible(times0,
                                                                     quick=False)
             count0 = len(times0)
         else:
             count0 = 0
-            new_t0 = self.t0
 
         if interval[1] > self.t1:
             count1 = int((interval[1] - self.t1) // self.dt) + 1 + self.extras
