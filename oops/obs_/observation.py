@@ -832,11 +832,11 @@ class Observation(object):
                 body_data['center_uv'] = body_uv[i]
                 body_data['center'] = centers[i]
                 body_data['range'] = ranges[i]
-                body_data['outer_radius'] = radii[i]
-                body_data['inner_radius'] = inner_radii[i]
+                body_data['outer_radius'] = radii[i].vals
+                body_data['inner_radius'] = inner_radii[i].vals
                 u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
                 v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
-                body_data['resolution'] = Pair.from_scalars(u_res, v_res)
+                body_data['resolution'] = Pair.from_scalars(u_res, v_res).vals
                 u = body_uv[i][0]
                 v = body_uv[i][1]
                 body_data['u_min_unclipped'] = np.floor(
