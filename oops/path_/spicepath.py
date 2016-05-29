@@ -123,15 +123,15 @@ class SpicePath(Path):
         if SpicePath.VECTORIZE_CSPICE:
             if np.any(time.mask):
                 state = cspice.spkez_vector(self.spice_target_id,
-                                            time.vals[time.mask],
+                                            time.vals[~time.mask],
                                             self.spice_frame_name,
                                             'NONE',
                                             self.spice_origin_id)[0]
 
                 pos = np.zeros(time.shape + (3,))
                 vel = np.zeros(time.shape + (3,))
-                pos[time.mask] = state[...,0:3]
-                vel[time.mask] = state[...,3:6]
+                pos[~time.mask] = state[...,0:3]
+                vel[~time.mask] = state[...,3:6]
 
             else:
                 state = cspice.spkez_vector(self.spice_target_id,
