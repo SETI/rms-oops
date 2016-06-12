@@ -830,8 +830,8 @@ class Observation(object):
                 body_data = {}
                 body_data['name'] = body_names[i]
                 body_data['center_uv'] = body_uv[i]
-                body_data['center'] = centers[i]
-                body_data['range'] = ranges[i]
+                body_data['center'] = centers[i].vals
+                body_data['range'] = ranges[i].vals
                 body_data['outer_radius'] = radii[i].vals
                 body_data['inner_radius'] = inner_radii[i].vals
                 u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
