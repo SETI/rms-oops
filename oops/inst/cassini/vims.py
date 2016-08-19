@@ -835,6 +835,21 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
 
 ################################################################################
 
+def initialize(ck='reconstructed'):
+    """Initialize key information about the VIMS instrument.
+
+    Must be called first. After the first call, later calls to this function
+    are ignored.
+
+    Input:
+        ck      'predicted' or 'reconstructed' depending on which C kernels
+                are to be used. Default is 'reconstructed'.
+    """
+
+    VIMS.initialize(ck)
+
+################################################################################
+
 class VIMS(object):
     """A instance-free class to hold Cassini VIMS instrument parameters."""
 

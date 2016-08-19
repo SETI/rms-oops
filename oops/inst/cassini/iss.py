@@ -124,6 +124,21 @@ def from_index(filespec, **parameters):
 
 ################################################################################
 
+def initialize(ck='reconstructed'):
+    """Initialize key information about the ISS instrument.
+
+    Must be called first. After the first call, later calls to this function
+    are ignored.
+
+    Input:
+        ck      'predicted' or 'reconstructed' depending on which C kernels
+                are to be used. Default is 'reconstructed'.
+    """
+
+    ISS.initialize(ck)
+
+################################################################################
+
 class ISS(object):
     """A instance-free class to hold Cassini ISS instrument parameters."""
 

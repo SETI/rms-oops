@@ -398,6 +398,21 @@ def load_data(filespec, body, dtype):
 
 ################################################################################
 
+def initialize(ck='reconstructed'):
+    """Initialize key information about the UVIS instrument.
+
+    Must be called first. After the first call, later calls to this function
+    are ignored.
+
+    Input:
+        ck      'predicted' or 'reconstructed' depending on which C kernels
+                are to be used. Default is 'reconstructed'.
+    """
+
+    UVIS.initialize(ck)
+
+################################################################################
+
 class UVIS(object):
     """A instance-free class to hold Cassini UVIS instrument parameters."""
 
