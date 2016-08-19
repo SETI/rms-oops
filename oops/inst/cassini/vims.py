@@ -842,15 +842,21 @@ class VIMS(object):
     instrument_kernel = None
 
     @staticmethod
-    def initialize():
-        """Fills in key information about the VIS and IR channels. Must be
-        called first.
+    def initialize(ck='reconstructed'):
+        """Fills in key information about the VIS and IR channels.
+
+        Must be called first. After the first call, later calls to this function
+        are ignored.
+
+        Input:
+            ck      'predicted' or 'reconstructed' depending on which C kernels
+                    are to be used. Default is 'reconstructed'.
         """
 
         # Quick exit after first call
         if VIMS.initialized: return
 
-        Cassini.initialize()
+        Cassini.initialize(ck)
         Cassini.load_instruments()
 
         # Load the instrument kernel
@@ -873,12 +879,6 @@ class VIMS(object):
         VIMS.initialized = False
 
         Cassini.reset()
-
-################################################################################
-# Initialize at load time
-################################################################################
-
-VIMS.initialize()
 
 ################################################################################
 # UNIT TESTS

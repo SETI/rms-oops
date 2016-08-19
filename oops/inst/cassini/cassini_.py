@@ -47,12 +47,11 @@ class Cassini(object):
     DTDB = (TDB1 - TDB0) / MONTHS
     SLOP = 43200.
 
-    CK_SUBPATH = os.path.join("Cassini", "CK-reconstructed")
-    CK_LOADED  = np.zeros(MONTHS, dtype="bool")  # True if month was loaded
-    CK_LIST    = np.empty(MONTHS, dtype="object")# Kernels needed
-    CK_DICT    = {}     # A dictionary of kernel names returning True if loaded
+    CK_LOADED = np.zeros(MONTHS, dtype="bool")  # True if month was loaded
+    CK_LIST   = np.empty(MONTHS, dtype="object")# Kernels needed
+    CK_DICT   = {}     # A dictionary of kernel names returning True if loaded
 
-    # SPKs are now loaded all at once via a metakernel.
+    # SPKs are now furnished all at once via a metakernel.
 #     SPK_SUBPATH = os.path.join("Cassini", "SPK-reconstructed")
 #     SPK_PREDICT = os.path.join("Cassini", "SPK-predicted")
 #     SPK_LOADED  = np.zeros(MONTHS, dtype="bool")
@@ -66,7 +65,16 @@ class Cassini(object):
     ############################################################################
 
     @staticmethod
-    def initialize():
+    def initialize(ck='reconstructed'):
+        """Intialize the Cassini mission internals.
+
+        After the first call, later calls to this function are ignored.
+
+        Input:
+            ck      'predicted' or 'reconstructed' depending on which C kernels
+                    are to be used. Default is 'reconstructed'.
+        """
+
         if Cassini.initialized: return
 
         # Define some important paths and frames
@@ -76,10 +84,11 @@ class Cassini(object):
 
         spicedb.open_db()
 
-        kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"))
+        kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"),
+                                         name="CAS-CK-" + ck.upper())
         Cassini.initialize_kernels(kernels, Cassini.CK_LIST, Cassini.CK_DICT)
 
-        # SPKs are now loaded all at once via a metakernel
+        # SPKs are now furnished all at once via a metakernel
 #         kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"))
 #         Cassini.initialize_kernels(kernels, Cassini.SPK_LIST, Cassini.SPK_DICT)
         kernels = spicedb.furnish_by_metafile('CAS-SPK-META')
@@ -108,7 +117,7 @@ class Cassini(object):
 
     @staticmethod
     def load_ck(t):
-        """Ensures that the C kernels applicable at or near the given time have
+        """Ensure that the C kernels applicable at or near the given time have
         been furnished. The time can be tai or tdb."""
 
         Cassini.load_kernels(t, t, Cassini.CK_LOADED, Cassini.CK_LIST,
@@ -116,7 +125,7 @@ class Cassini(object):
 
     @staticmethod
     def load_cks(t0, t1):
-        """Ensures that all the C kernels applicable near or within the time
+        """Ensure that all the C kernels applicable near or within the time
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb.
         """
 
@@ -125,7 +134,7 @@ class Cassini(object):
 
     @staticmethod
     def load_spk(t):
-        """Ensures that the SPK kernels applicable at or near the given time have
+        """Ensure that the SPK kernels applicable at or near the given time have
         been furnished. The time can be tai or tdb."""
 
 #         Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
@@ -134,7 +143,7 @@ class Cassini(object):
 
     @staticmethod
     def load_spks(t0, t1):
-        """Ensures that all the SPK kernels applicable near or within the time
+        """Ensure that all the SPK kernels applicable near or within the time
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb."""
 
 #         Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,

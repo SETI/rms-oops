@@ -426,15 +426,21 @@ class UVIS(object):
                  "HDAC"   : "CASSINI_UVIS_HDAC"}
 
     @staticmethod
-    def initialize():
-        """Fills in key information about the UVIS channels. Must be called
-        first.
+    def initialize(ck='reconstructed'):
+        """Fill in key information about the UVIS channels.
+
+        Must be called first. After the first call, later calls to this function
+        are ignored.
+
+        Input:
+            ck      'predicted' or 'reconstructed' depending on which C kernels
+                    are to be used. Default is 'reconstructed'.
         """
 
         # Quick exit after first call
         if UVIS.initialized: return
 
-        Cassini.initialize()
+        Cassini.initialize(ck)
         Cassini.load_instruments()
 
         # Load the instrument kernel
@@ -491,12 +497,6 @@ class UVIS(object):
         UVIS.initialized = False
 
         Cassini.reset()
-
-################################################################################
-# Initialize at load time
-################################################################################
-
-UVIS.initialize()
 
 ################################################################################
 # UNIT TESTS
