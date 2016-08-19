@@ -17,9 +17,12 @@ from oops.inst.cassini.cassini_ import Cassini
 def from_file(filespec, fast_distortion=True, **parameters):
     """A general, static method to return a Snapshot object based on a given
     Cassini ISS image file.
-    
-    fast_distortion is True to use a pre-inverted polynomial, False to use
-    a dynamically solved polynomial, and None is use a FlatFOV."""
+
+    Inputs:
+        fast_distortion     True to use a pre-inverted polynomial;
+                            False to use a dynamically solved polynomial;
+                            None to use a FlatFOV.
+    """
 
     ISS.initialize()    # Define everything the first time through
 
@@ -118,6 +121,21 @@ def from_index(filespec, **parameters):
     Cassini.load_spks(tdb0, tdb1)
 
     return snapshots
+
+################################################################################
+
+def initialize(ck='reconstructed'):
+    """Initialize key information about the ISS instrument.
+
+    Must be called first. After the first call, later calls to this function
+    are ignored.
+
+    Input:
+        ck      'predicted' or 'reconstructed' depending on which C kernels
+                are to be used. Default is 'reconstructed'.
+    """
+
+    ISS.initialize(ck)
 
 ################################################################################
 
@@ -236,15 +254,21 @@ class ISS(object):
     ######################################################################
     
     @staticmethod
-    def initialize():
-        """Fills in key information about the WAC and NAC. Must be called
-        first.
+    def initialize(ck='reconstructed'):
+        """Fill in key information about the WAC and NAC.
+
+        Must be called first. After the first call, later calls to this function
+        are ignored.
+
+        Input:
+            ck      'predicted' or 'reconstructed' depending on which C kernels
+                    are to be used. Default is 'reconstructed'.
         """
 
         # Quick exit after first call
         if ISS.initialized: return
 
-        Cassini.initialize()
+        Cassini.initialize(ck)
         Cassini.load_instruments()
 
         # Load the instrument kernel
@@ -312,12 +336,6 @@ class ISS(object):
         ISS.initialized = False
 
         Cassini.reset()
-
-################################################################################
-# Initialize at load time
-################################################################################
-
-ISS.initialize()
 
 ################################################################################
 # UNIT TESTS
