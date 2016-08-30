@@ -772,7 +772,7 @@ class Observation(object):
         path_ids = [body.path for body in bodies]
         multipath = MultiPath(path_ids)
 
-        obs_time = obs.time[0] + time_frac * (obs.time[1] - obs.time[0])
+        obs_time = self.time[0] + time_frac * (self.time[1] - self.time[0])
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
         _, obs_event = multipath.photon_to_event(
                                     obs_event, quick=quick,

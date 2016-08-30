@@ -27,9 +27,9 @@ class Frame(object):
 
     def __init__(self):
         """Constructor for a Frame object.
-        
+
         Every frame must have these attributes:
-        
+
             frame_id    the string ID of this frame.
             wayframe    the wayframe that uniquely identifies this frame. For
                         registered frames, this is the Wayframe with the same
@@ -1124,7 +1124,7 @@ class QuickFrame(Frame):
         # Extend the interval
         if interval[0] < self.t0:
             count0 = int((self.t0 - interval[0]) // self.dt) + 1 + self.extras
-            times0 = np.arange(count0) * self.dt + new_t0
+            times0 = np.arange(count0) * self.dt + self.t0 - count0 * self.dt
             (times0,
              transform0) = self.slowframe.transform_at_time_if_possible(times0,
                                                                     quick=False)

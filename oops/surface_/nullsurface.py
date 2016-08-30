@@ -99,8 +99,8 @@ class NullSurface(Surface):
                             intercept = obs + t * los
         """
 
-        obs = Vector3.as_scalar(obs, derivs)
-        los = Vector3.as_scalar(los, derivs)
+        obs = Vector3.as_vector(obs, derivs)
+        los = Vector3.as_vector(los, derivs)
         shape = Qube.broadcasted_shape(obs, los)
 
         t = obs.to_scalar(0, derivs)

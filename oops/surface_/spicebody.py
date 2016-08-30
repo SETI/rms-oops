@@ -10,22 +10,29 @@ from oops.path_.spicepath    import SpicePath
 from oops.frame_.spiceframe  import SpiceFrame
 import oops.spice_support as spice
 
-def spice_body(spice_id):
+def spice_body(spice_id, frame_id=None):
     """Returns a Spheroid or Ellipsoid defining the path, orientation and shape
     of a body defined in the SPICE toolkit.
 
     Input:
         spice_id        the name or ID of the body as defined in the SPICE
                         toolkit.
-        centric         True to use planetocentric latitudes, False to use
-                        planetographic latitudes.
+        frame_id        the ID of the body's frame if already defined; otherwise
+                        None. This typically allows a Synchronous frame to be
+                        used if the SPICE frame is missing.
     """
 
     spice_body_id = spice.body_id_and_name(spice_id)[0]
     origin_id = spice.PATH_TRANSLATION[spice_body_id]
 
-    spice_frame_name = spice.frame_id_and_name(spice_id)[1]
-    frame_id = spice.FRAME_TRANSLATION[spice_frame_name]
+    if frame_id is None:
+        try:
+            spice_frame_name = spice.frame_id_and_name(spice_id)[1]
+        except LookupError:     # moons with unknown spin inherit from the planet
+            planet_id = 100 * int(str(spice_id)[0]) + 99
+            spice_frame_name = spice.frame_id_and_name(planet_id)[1]
+
+        frame_id = spice.FRAME_TRANSLATION[spice_frame_name]
 
     radii = cspice.bodvcd(spice_body_id, "RADII")
 

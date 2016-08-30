@@ -22,15 +22,16 @@ from polymath import *
 import oops.config    as config
 import oops.constants as constants
 
-from oops.surface_.surface   import Surface
-from oops.surface_.ansa      import Ansa
-from oops.surface_.limb      import Limb
-from oops.surface_.ringplane import RingPlane
-from oops.path_.path         import Path, AliasPath
-from oops.frame_.frame       import Frame
-from oops.event              import Event
-from oops.meshgrid           import Meshgrid
-from oops.body               import Body
+from oops.surface_.surface     import Surface
+from oops.surface_.ansa        import Ansa
+from oops.surface_.limb        import Limb
+from oops.surface_.ringplane   import RingPlane
+from oops.surface_.nullsurface import NullSurface
+from oops.path_.path           import Path, AliasPath
+from oops.frame_.frame         import Frame
+from oops.event                import Event
+from oops.meshgrid             import Meshgrid
+from oops.body                 import Body
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
@@ -770,10 +771,10 @@ class Backplane(object):
 
         Input:
             event_key       key defining the event at the body's path.
-            direction       'arr' to return the distance traveled by an
-                                  arriving photon;
-                            'dep' to return the distance traveled by a
-                                  departing photon.
+            direction       'arr' or 'sun' to return the distance traveled by an
+                                           arriving photon;
+                            'dep' or 'obs' to return the distance traveled by a
+                                           departing photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -789,18 +790,18 @@ class Backplane(object):
 
         Input:
             event_key       key defining the event at the body's path.
-            direction       'arr' to return the travel time for an arriving
-                                  photon;
-                            'dep' to return the travel time for a departing
-                                  photon.
+            direction       'arr' or 'sun' to return the distance traveled by an
+                                           arriving photon;
+                            'dep' or 'obs' to return the distance traveled by a
+                                           departing photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert direction in ('dep', 'arr')
+        assert direction in ('dep', 'arr', 'obs', 'sun')
 
         key = ('center_light_time', event_key, direction)
         if key not in self.backplanes:
-            if direction == 'arr':
+            if direction in ('arr', 'sun'):
                 event = self.get_gridless_event_with_arr(event_key)
                 lt = event.arr_lt
             else:
@@ -1224,6 +1225,10 @@ class Backplane(object):
         # If this is actually a limb event, define the limb backplanes instead
         if event.surface.COORDINATE_TYPE == 'limb':
             self._fill_limb_intercepts(event_key)
+            return
+
+        # If this is a null surface, no intercepts are defined
+        if type(event.surface) == NullSurface:
             return
 
         assert event.surface.COORDINATE_TYPE == 'spherical'
@@ -2017,7 +2022,8 @@ class Backplane(object):
 
     ############################################################################
     # Ring plane geometry, path intercept versions
-    #   sub_ring_longitude()
+    #   ring_sub_observer_longitude()
+    #   ring_sub_solar_longitude()
     #   ring_center_incidence_angle()
     #   ring_center_emission_angle()
     ############################################################################
@@ -2876,7 +2882,7 @@ class Backplane(object):
         'ring_radius', 'ring_longitude', 'radial_mode',
         'ring_azimuth', 'ring_elevation',
         'ring_incidence_angle', 'ring_emission_angle',
-        'sub_ring_longitude',
+        'ring_sub_observer_longitude', 'ring_sub_solar_longitude',
         'ring_center_incidence_angle', 'ring_center_emission_angle',
         'ring_radial_resolution', 'ring_angular_resolution',
 
@@ -3900,8 +3906,10 @@ class Test_Backplane(unittest.TestCase):
     def setUp(self):
         global OLD_RHEA_SURFACE
 
-        import oops.inst.cassini.iss as iss
+        import oops.body
         from oops.surface_.ellipsoid  import Ellipsoid
+
+        oops.body.define_solar_system('2000-01-01', '2020-01-01')
 
         # Distort Rhea's shape for better Ellipsoid testing
         rhea = Body.as_body('RHEA')
