@@ -1312,9 +1312,6 @@ class Backplane(object):
                                      direction='west', minimum=0):
         """Sub-observer longitude.
 
-        Note that this longitude is essentially independent of the
-        longitude_type (centric, graphic or squashed).
-
         Input:
             event_key   key defining the ring surface event.
             reference   defines the location of zero longitude.
@@ -1426,36 +1423,52 @@ class Backplane(object):
 
         return lon
 
-    def sub_observer_latitude(self, event_key):
-        """Sub-observer latitude.
-
-        Note that this latitude is essentially independent of the latitude_type
-        (centric, graphic or squashed).
+    def sub_observer_latitude(self, event_key, lat_type='centric'):
+        """Sub-observer latitude at the center of the disk.
 
         Input:
-            event_key   key defining the event on the body's path.
+            event_key       key defining the event on the body's path.
+            lat_type        "centric" for planetocentric latitude;
+                            "graphic" for planetographic latitude.
         """
 
-        key = ('sub_observer_latitude', event_key)
+        key = ('sub_observer_latitude', event_key, lat_type)
+        assert lat_type in ('centric', 'graphic')
+
         if key not in self.backplanes:
-            lat = self._sub_observer_latitude(event_key)
+            event = self.get_gridless_event(event_key)
+            dep_ap = event.apparent_dep()       # for ABERRATION=old or new
+
+            if lat_type == 'graphic':
+                dep_ap = dep_ap.element_mul(event.surface.unsquash_sq)
+
+            lat = (dep_ap.to_scalar(2) / dep_ap.norm()).arcsin()
+
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
 
-    def sub_solar_latitude(self, event_key):
-        """Sub-solar latitude.
-
-        Note that this latitude is essentially independent of the latitude_type
-        (centric, graphic or squashed).
+    def sub_solar_latitude(self, event_key, lat_type='centric'):
+        """Sub-solar latitude at the center of the disk.
 
         Input:
-            event_key   key defining the event on the body's path.
+            event_key       key defining the event on the body's path.
+            lat_type        "centric" for planetocentric latitude;
+                            "graphic" for planetographic latitude.
         """
 
-        key = ('sub_solar_latitude', event_key)
+        key = ('sub_solar_latitude', event_key, lat_type)
+        assert lat_type in ('centric', 'graphic')
+
         if key not in self.backplanes:
-            lat = self._sub_solar_latitude(event_key)
+            event = self.get_gridless_event_with_arr(event_key)
+            neg_arr_ap = -event.apparent_arr()  # for ABERRATION=old or new
+
+            if lat_type == 'graphic':
+                neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq)
+
+            lat = (neg_arr_ap.to_scalar(2) / neg_arr_ap.norm()).arcsin()
+
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
