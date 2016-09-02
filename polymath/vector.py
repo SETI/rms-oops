@@ -499,7 +499,7 @@ class Vector(Qube):
         b = b * sign
 
         arg = 0.5 * (a - b).norm()
-        angle = 2. * sign * arg.arcsin(check=False) + (sign < 0.) * np.pi
+        angle = 2. * sign * arg.arcsin() + (sign < 0.) * np.pi
 
         return angle
 

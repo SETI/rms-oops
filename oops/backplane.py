@@ -1200,7 +1200,6 @@ class Backplane(object):
             return lat
 
         event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE in ('spherical', 'limb')
 
         # Fill in the requested lon_type if necessary
         lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
@@ -1227,16 +1226,13 @@ class Backplane(object):
             self._fill_limb_intercepts(event_key)
             return
 
-        # If this is a null surface, no intercepts are defined
-        if type(event.surface) == NullSurface:
-            return
+        lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
+        lat_key = ('latitude', event_key, 'squashed')
 
         assert event.surface.COORDINATE_TYPE == 'spherical'
 
-        self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
-                                 'squashed'), event.coord1)
-        self.register_backplane(('latitude', event_key, 'squashed'),
-                                event.coord2)
+        self.register_backplane(lon_key, event.coord1)
+        self.register_backplane(lat_key, event.coord2)
 
     def _sub_observer_longitude(self, event_key):
         """Sub-observer longitude. Used internally."""
@@ -2261,6 +2257,7 @@ class Backplane(object):
     # Ring plane geometry, surface intercept only
     #   ring_radial_resolution()
     #   ring_angular_resolution()
+    #   ring_gradient_angle()
     ############################################################################
 
     def ring_radial_resolution(self, event_key):
@@ -2305,6 +2302,32 @@ class Backplane(object):
         res = dlon_duv.join_items(Pair).norm()
 
         self.register_backplane(key, res)
+        return self.backplanes[key]
+
+    def ring_gradient_angle(self, event_key=()):
+        """Direction of the radius gradient at each pixel in the image.
+
+        The angle is measured from the U-axis toward the V-axis.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ('radial_gradient_angle', event_key)
+        if key in self.backplanes:
+            return self.backplanes[key]
+
+        event = self.get_surface_event_w_derivs(event_key)
+        assert event.surface.COORDINATE_TYPE == 'polar'
+
+        rad = event.coord1
+        drad_duv = rad.d_dlos.chain(self.meshgrid.dlos_duv)
+        (drad_du, drad_dv) = drad_duv.join_items(Pair).to_scalars()
+
+        clock = drad_dv.arctan2(drad_du)
+        self.register_backplane(key, clock)
+
         return self.backplanes[key]
 
     ############################################################################
@@ -2898,6 +2921,7 @@ class Backplane(object):
         'ring_sub_observer_longitude', 'ring_sub_solar_longitude',
         'ring_center_incidence_angle', 'ring_center_emission_angle',
         'ring_radial_resolution', 'ring_angular_resolution',
+        'ring_gradient_angle',
 
         'ansa_radius', 'ansa_altitude', 'ansa_longitude',
         'ansa_radial_resolution', 'ansa_vertical_resolution',

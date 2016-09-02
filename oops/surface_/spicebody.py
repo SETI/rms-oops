@@ -10,7 +10,7 @@ from oops.path_.spicepath    import SpicePath
 from oops.frame_.spiceframe  import SpiceFrame
 import oops.spice_support as spice
 
-def spice_body(spice_id, frame_id=None):
+def spice_body(spice_id, frame_id=None, default_radii=None):
     """Returns a Spheroid or Ellipsoid defining the path, orientation and shape
     of a body defined in the SPICE toolkit.
 
@@ -20,6 +20,8 @@ def spice_body(spice_id, frame_id=None):
         frame_id        the ID of the body's frame if already defined; otherwise
                         None. This typically allows a Synchronous frame to be
                         used if the SPICE frame is missing.
+        default_radii   three radii values to use if PCK values are not found;
+                        None to raise a LookupError on missing radii.
     """
 
     spice_body_id = spice.body_id_and_name(spice_id)[0]
@@ -34,7 +36,11 @@ def spice_body(spice_id, frame_id=None):
 
         frame_id = spice.FRAME_TRANSLATION[spice_frame_name]
 
-    radii = cspice.bodvcd(spice_body_id, "RADII")
+    try:
+        radii = cspice.bodvcd(spice_body_id, "RADII")
+    except RuntimeError as e:
+        if default_radii is None: raise e
+        radii = default_radii
 
     if radii[0] == radii[1]:
         return Spheroid(origin_id, frame_id, (radii[0], radii[2]))

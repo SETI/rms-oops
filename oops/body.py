@@ -436,7 +436,8 @@ class Body(object):
 # General function to load Solar System components
 ################################################################################
 
-def define_solar_system(start_time=None, stop_time=None, asof=None):
+def define_solar_system(start_time=None, stop_time=None, asof=None,
+                        irregulars=True):
     """Construct bodies, paths and frames for planets and their moons.
 
     Each planet is defined relative to the SSB. Each moon is defined relative to
@@ -450,6 +451,7 @@ def define_solar_system(start_time=None, stop_time=None, asof=None):
                         or date-time format.
         asof            a UTC date such that only kernels released earlier
                         than that date will be included, in ISO format.
+        irregulars      True to include the outer irregular satellites.
 
     Return              an ordered list of SPICE kernel names
     """
@@ -474,12 +476,12 @@ def define_solar_system(start_time=None, stop_time=None, asof=None):
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
 
     # Define planetary systems
-    _define_mars(start_time, stop_time, asof)
-    _define_jupiter(start_time, stop_time, asof)
-    _define_saturn(start_time, stop_time, asof)
-    _define_uranus(start_time, stop_time, asof)
-    _define_neptune(start_time, stop_time, asof)
-    _define_pluto(start_time, stop_time, asof)
+    _define_mars(start_time, stop_time, asof, irregulars)
+    _define_jupiter(start_time, stop_time, asof, irregulars)
+    _define_saturn(start_time, stop_time, asof, irregulars)
+    _define_uranus(start_time, stop_time, asof, irregulars)
+    _define_neptune(start_time, stop_time, asof, irregulars)
+    _define_pluto(start_time, stop_time, asof, irregulars)
 
     return names
 
@@ -776,7 +778,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
         # Add the surface object if shape information is available
         try:
-            shape = spice_body(spice_id, frame.frame_id)
+            shape = spice_body(spice_id, frame.frame_id, (1.,1.,1.))
             body.apply_surface(shape, shape.req, shape.rpol)
         except RuntimeError:
             shape = NullSurface(path, frame)
