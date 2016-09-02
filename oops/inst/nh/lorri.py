@@ -6,6 +6,8 @@
 
 import numpy as np
 import julian
+import pdstable
+
 try:
     import astropy.io.fits as pyfits
 except ImportError:
@@ -150,7 +152,14 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     tstart = tdb_midtime - texp/2
     shape = nh_file[0].data.shape
 
-    binning_mode = header['SFORMAT']
+#     binning_mode = header['SFORMAT']
+    if shape[0] == 1024:
+        binning_mode = '1X1'
+    elif shape[0] == 256:
+        binning_mode = '4X4'
+    else:
+        raise ValueError('Unrecognized binning mode; shape =', str(shape))
+
     fov = LORRI.fovs[binning_mode, fov_type]
 
     target_name = header['SPCCBTNM']
@@ -319,6 +328,49 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         snapshot.insert_subfield('headers', headers)
 
     return snapshot
+
+################################################################################
+
+def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
+    """Return a list of Snapshot objects, one for each row in a supplemental
+    index file.
+
+    Inputs:
+        fov_type    'fast'      to use a separate numerically inverted
+                                polynomial FOV for camera distortion;
+                    'slow'      to invert the polynomial FOV using Newton's
+                                method;
+                    'flat'      to use a flat FOV model.
+    """
+
+    LORRI.initialize(asof=asof, meta=meta)
+
+    # Read the index file
+    COLUMNS = []                # Return all columns
+    TIMES = ['START_TIME']      # Convert this one to TAI
+    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+    row_dicts = table.dicts_by_row()
+
+    # Create a list of Snapshot objects
+    snapshots = []
+    for dict in row_dicts:
+
+        tstart = julian.tdb_from_tai(dict['START_TIME'])
+        texp = max(0.0005, dict['EXPOSURE_DURATION'])
+        fov = LORRI.fovs[dict['BINNING_MODE'].upper(), fov_type]
+        target_name = dict['TARGET_NAME']
+
+        # Create a Snapshot
+        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+                                 fov, 'NEW HORIZONS', 'NH_LORRI',
+                                 dict = dict,
+                                 index_dict = dict,
+                                 target = target_name,
+                                 instrument = 'LORRI')
+
+        snapshots.append(item)
+
+    return snapshots
 
 ################################################################################
 

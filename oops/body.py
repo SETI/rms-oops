@@ -14,9 +14,10 @@ from oops.path_.path      import Path
 from oops.path_.multipath import MultiPath
 from oops.path_.spicepath import SpicePath
 
-from oops.frame_.frame      import Frame, AliasFrame
-from oops.frame_.ringframe  import RingFrame
-from oops.frame_.spiceframe import SpiceFrame
+from oops.frame_.frame       import Frame, AliasFrame
+from oops.frame_.ringframe   import RingFrame
+from oops.frame_.spiceframe  import SpiceFrame
+from oops.frame_.synchronous import Synchronous
 
 from oops.surface_.nullsurface import NullSurface
 from oops.surface_.ringplane   import RingPlane
@@ -396,6 +397,12 @@ class Body(object):
         return Body.BODY_REGISTRY[key.upper()]
 
     @staticmethod
+    def exists(key):
+        """Return True if the body's name exists in the registry."""
+
+        return key.upper() in Body.BODY_REGISTRY
+
+    @staticmethod
     def as_body(body):
         """Return a body object given the registered name or the object itself.
         """
@@ -429,7 +436,8 @@ class Body(object):
 # General function to load Solar System components
 ################################################################################
 
-def define_solar_system(start_time=None, stop_time=None, asof=None):
+def define_solar_system(start_time=None, stop_time=None, asof=None,
+                        irregulars=True):
     """Construct bodies, paths and frames for planets and their moons.
 
     Each planet is defined relative to the SSB. Each moon is defined relative to
@@ -443,6 +451,7 @@ def define_solar_system(start_time=None, stop_time=None, asof=None):
                         or date-time format.
         asof            a UTC date such that only kernels released earlier
                         than that date will be included, in ISO format.
+        irregulars      True to include the outer irregular satellites.
 
     Return              an ordered list of SPICE kernel names
     """
@@ -467,12 +476,12 @@ def define_solar_system(start_time=None, stop_time=None, asof=None):
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
 
     # Define planetary systems
-    _define_mars(start_time, stop_time, asof)
-    _define_jupiter(start_time, stop_time, asof)
-    _define_saturn(start_time, stop_time, asof)
-    _define_uranus(start_time, stop_time, asof)
-    _define_neptune(start_time, stop_time, asof)
-    _define_pluto(start_time, stop_time, asof)
+    _define_mars(start_time, stop_time, asof, irregulars)
+    _define_jupiter(start_time, stop_time, asof, irregulars)
+    _define_saturn(start_time, stop_time, asof, irregulars)
+    _define_uranus(start_time, stop_time, asof, irregulars)
+    _define_neptune(start_time, stop_time, asof, irregulars)
+    _define_pluto(start_time, stop_time, asof, irregulars)
 
     return names
 
@@ -747,12 +756,15 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         # If the body already exists, skip it
         if name in Body.BODY_REGISTRY: continue
 
-        # Sometimes a frame is undefined for a new body; in this case any frame
-        # will do.
+        # Sometimes a frame is undefined for a new moon; in this case assume it
+        # is synchronous
         try:
             frame = SpiceFrame(spice_id)
         except LookupError:
-            frame = Frame.J2000
+            if ('BARYCENTER' in keywords) or ('IRREGULAR' in keywords):
+                frame = Frame.J2000
+            else:
+                frame = Synchronous(path, parent, id='SYNCHRONOUS_' + name)
 
         # Define the planet's body
         # Note that this will overwrite any registered body of the same name
@@ -766,7 +778,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
         # Add the surface object if shape information is available
         try:
-            shape = spice_body(spice_id)
+            shape = spice_body(spice_id, frame.frame_id, (1.,1.,1.))
             body.apply_surface(shape, shape.req, shape.rpol)
         except RuntimeError:
             shape = NullSurface(path, frame)
@@ -879,9 +891,7 @@ class Test_Body(unittest.TestCase):
         Frame.reset_registry()
         Body.reset_registry()
 
-        from body import define_solar_system
-
-        define_solar_system("2000-01-01", "2010-01-01")
+        define_solar_system("2000-01-01", "2020-01-01")
 
         self.assertEqual(Body.lookup("DAPHNIS").barycenter.name,
                          "SATURN")

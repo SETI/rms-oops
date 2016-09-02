@@ -13,6 +13,7 @@ from oops.frame_.rotation        import Test_Rotation
 from oops.frame_.spiceframe      import Test_SpiceFrame
 from oops.frame_.spicetype1frame import Test_SpiceType1Frame
 from oops.frame_.spinframe       import Test_SpinFrame
+from oops.frame_.synchronous     import Test_Synchronous
 from oops.frame_.tracker         import Test_Tracker
 
 ########################################
