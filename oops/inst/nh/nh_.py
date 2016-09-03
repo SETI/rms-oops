@@ -18,8 +18,8 @@ import oops
 class NewHorizons(object):
     """A instance-free class to hold NewHorizons-specific parameters."""
 
-    START_TIME = "2006-10-01"
-    STOP_TIME  = "2018-01-01"
+    START_TIME = '2006-10-01'
+    STOP_TIME  = '2018-01-01'
 
     initialized = False
     time = [START_TIME, STOP_TIME]
@@ -58,10 +58,6 @@ class NewHorizons(object):
                                               name='NH-SPK-PREDICTED%',
                                               asof=asof)
 
-            names += spicedb.furnish_spk(9, time=time,
-                                            name='NH-SPK-UPDATED%',
-                                            asof=asof)
-
             names += spicedb.furnish_spk(-98, time=time,
                                               name='NH-SPK-RECONSTRUCTED%',
                                               asof=asof)
@@ -83,7 +79,6 @@ class NewHorizons(object):
         ignore = oops.path.SpicePath('NEW HORIZONS', 'JUPITER')
         ignore = oops.path.SpicePath('NEW HORIZONS', 'PLUTO')
 
-#         print 11111, names
         return names
 
     @staticmethod
@@ -120,7 +115,7 @@ class NewHorizons(object):
         """
 
         spicedb.open_db()
-        kernel_info = spicedb.select_inst(-98, inst=[inst_name, "UPDATE"],
+        kernel_info = spicedb.select_inst(-98, inst=inst_name.lower(),
                                                types="IK", asof=asof)
         spicedb.furnish_kernels(kernel_info)
         spicedb.close_db()

@@ -22,15 +22,16 @@ from polymath import *
 import oops.config    as config
 import oops.constants as constants
 
-from oops.surface_.surface   import Surface
-from oops.surface_.ansa      import Ansa
-from oops.surface_.limb      import Limb
-from oops.surface_.ringplane import RingPlane
-from oops.path_.path         import Path, AliasPath
-from oops.frame_.frame       import Frame
-from oops.event              import Event
-from oops.meshgrid           import Meshgrid
-from oops.body               import Body
+from oops.surface_.surface     import Surface
+from oops.surface_.ansa        import Ansa
+from oops.surface_.limb        import Limb
+from oops.surface_.ringplane   import RingPlane
+from oops.surface_.nullsurface import NullSurface
+from oops.path_.path           import Path, AliasPath
+from oops.frame_.frame         import Frame
+from oops.event                import Event
+from oops.meshgrid             import Meshgrid
+from oops.body                 import Body
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
@@ -770,10 +771,10 @@ class Backplane(object):
 
         Input:
             event_key       key defining the event at the body's path.
-            direction       'arr' to return the distance traveled by an
-                                  arriving photon;
-                            'dep' to return the distance traveled by a
-                                  departing photon.
+            direction       'arr' or 'sun' to return the distance traveled by an
+                                           arriving photon;
+                            'dep' or 'obs' to return the distance traveled by a
+                                           departing photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
@@ -789,18 +790,18 @@ class Backplane(object):
 
         Input:
             event_key       key defining the event at the body's path.
-            direction       'arr' to return the travel time for an arriving
-                                  photon;
-                            'dep' to return the travel time for a departing
-                                  photon.
+            direction       'arr' or 'sun' to return the distance traveled by an
+                                           arriving photon;
+                            'dep' or 'obs' to return the distance traveled by a
+                                           departing photon.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
-        assert direction in ('dep', 'arr')
+        assert direction in ('dep', 'arr', 'obs', 'sun')
 
         key = ('center_light_time', event_key, direction)
         if key not in self.backplanes:
-            if direction == 'arr':
+            if direction in ('arr', 'sun'):
                 event = self.get_gridless_event_with_arr(event_key)
                 lt = event.arr_lt
             else:
@@ -1223,7 +1224,6 @@ class Backplane(object):
             return lat
 
         event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE in ('spherical', 'limb')
 
         # Fill in the requested lon_type if necessary
         lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
@@ -1250,12 +1250,13 @@ class Backplane(object):
             self._fill_limb_intercepts(event_key)
             return
 
+        lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
+        lat_key = ('latitude', event_key, 'squashed')
+
         assert event.surface.COORDINATE_TYPE == 'spherical'
 
-        self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
-                                 'squashed'), event.coord1)
-        self.register_backplane(('latitude', event_key, 'squashed'),
-                                event.coord2)
+        self.register_backplane(lon_key, event.coord1)
+        self.register_backplane(lat_key, event.coord2)
 
     def _sub_observer_longitude(self, event_key):
         """Sub-observer longitude. Used internally."""
@@ -1330,9 +1331,6 @@ class Backplane(object):
     def sub_observer_longitude(self, event_key, reference='iau',
                                      direction='west', minimum=0):
         """Sub-observer longitude.
-
-        Note that this longitude is essentially independent of the
-        longitude_type (centric, graphic or squashed).
 
         Input:
             event_key   key defining the ring surface event.
@@ -1445,36 +1443,52 @@ class Backplane(object):
 
         return lon
 
-    def sub_observer_latitude(self, event_key):
-        """Sub-observer latitude.
-
-        Note that this latitude is essentially independent of the latitude_type
-        (centric, graphic or squashed).
+    def sub_observer_latitude(self, event_key, lat_type='centric'):
+        """Sub-observer latitude at the center of the disk.
 
         Input:
-            event_key   key defining the event on the body's path.
+            event_key       key defining the event on the body's path.
+            lat_type        "centric" for planetocentric latitude;
+                            "graphic" for planetographic latitude.
         """
 
-        key = ('sub_observer_latitude', event_key)
+        key = ('sub_observer_latitude', event_key, lat_type)
+        assert lat_type in ('centric', 'graphic')
+
         if key not in self.backplanes:
-            lat = self._sub_observer_latitude(event_key)
+            event = self.get_gridless_event(event_key)
+            dep_ap = event.apparent_dep()       # for ABERRATION=old or new
+
+            if lat_type == 'graphic':
+                dep_ap = dep_ap.element_mul(event.surface.unsquash_sq)
+
+            lat = (dep_ap.to_scalar(2) / dep_ap.norm()).arcsin()
+
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
 
-    def sub_solar_latitude(self, event_key):
-        """Sub-solar latitude.
-
-        Note that this latitude is essentially independent of the latitude_type
-        (centric, graphic or squashed).
+    def sub_solar_latitude(self, event_key, lat_type='centric'):
+        """Sub-solar latitude at the center of the disk.
 
         Input:
-            event_key   key defining the event on the body's path.
+            event_key       key defining the event on the body's path.
+            lat_type        "centric" for planetocentric latitude;
+                            "graphic" for planetographic latitude.
         """
 
-        key = ('sub_solar_latitude', event_key)
+        key = ('sub_solar_latitude', event_key, lat_type)
+        assert lat_type in ('centric', 'graphic')
+
         if key not in self.backplanes:
-            lat = self._sub_solar_latitude(event_key)
+            event = self.get_gridless_event_with_arr(event_key)
+            neg_arr_ap = -event.apparent_arr()  # for ABERRATION=old or new
+
+            if lat_type == 'graphic':
+                neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq)
+
+            lat = (neg_arr_ap.to_scalar(2) / neg_arr_ap.norm()).arcsin()
+
             self.register_gridless_backplane(key, lat)
 
         return self.backplanes[key]
@@ -2041,7 +2055,8 @@ class Backplane(object):
 
     ############################################################################
     # Ring plane geometry, path intercept versions
-    #   sub_ring_longitude()
+    #   ring_sub_observer_longitude()
+    #   ring_sub_solar_longitude()
     #   ring_center_incidence_angle()
     #   ring_center_emission_angle()
     ############################################################################
@@ -2266,6 +2281,7 @@ class Backplane(object):
     # Ring plane geometry, surface intercept only
     #   ring_radial_resolution()
     #   ring_angular_resolution()
+    #   ring_gradient_angle()
     ############################################################################
 
     def ring_radial_resolution(self, event_key):
@@ -2310,6 +2326,32 @@ class Backplane(object):
         res = dlon_duv.join_items(Pair).norm()
 
         self.register_backplane(key, res)
+        return self.backplanes[key]
+
+    def ring_gradient_angle(self, event_key=()):
+        """Direction of the radius gradient at each pixel in the image.
+
+        The angle is measured from the U-axis toward the V-axis.
+
+        Input:
+            event_key       key defining the ring surface event.
+        """
+
+        event_key = Backplane.standardize_event_key(event_key)
+        key = ('radial_gradient_angle', event_key)
+        if key in self.backplanes:
+            return self.backplanes[key]
+
+        event = self.get_surface_event_w_derivs(event_key)
+        assert event.surface.COORDINATE_TYPE == 'polar'
+
+        rad = event.coord1
+        drad_duv = rad.d_dlos.chain(self.meshgrid.dlos_duv)
+        (drad_du, drad_dv) = drad_duv.join_items(Pair).to_scalars()
+
+        clock = drad_dv.arctan2(drad_du)
+        self.register_backplane(key, clock)
+
         return self.backplanes[key]
 
     ############################################################################
@@ -2900,9 +2942,10 @@ class Backplane(object):
         'ring_radius', 'ring_longitude', 'radial_mode',
         'ring_azimuth', 'ring_elevation',
         'ring_incidence_angle', 'ring_emission_angle',
-        'sub_ring_longitude',
+        'ring_sub_observer_longitude', 'ring_sub_solar_longitude',
         'ring_center_incidence_angle', 'ring_center_emission_angle',
         'ring_radial_resolution', 'ring_angular_resolution',
+        'ring_gradient_angle',
 
         'ansa_radius', 'ansa_altitude', 'ansa_longitude',
         'ansa_radial_resolution', 'ansa_vertical_resolution',
@@ -3924,8 +3967,10 @@ class Test_Backplane(unittest.TestCase):
     def setUp(self):
         global OLD_RHEA_SURFACE
 
-        import oops.inst.cassini.iss as iss
+        import oops.body
         from oops.surface_.ellipsoid  import Ellipsoid
+
+        oops.body.define_solar_system('2000-01-01', '2020-01-01')
 
         # Distort Rhea's shape for better Ellipsoid testing
         rhea = Body.as_body('RHEA')

@@ -88,8 +88,12 @@ def frame_id_and_name(arg):
         # If the int is recognized as a frame ID, return it
         if name != '': return (arg, name)
 
+        # Make sure the body's frame is defined
+        if not cspice.bodfnd(arg, 'POLE_RA'):
+            raise LookupError('frame for body %d is undefined' % arg)
+
         # Otherwise, perhaps it is a body ID
-        return cspice.cidfrm(arg)       # raises LookupError if not found
+        return cspice.cidfrm(arg) # LookupError if not found
 
     # Interpret the argument given as a string
     if type(arg) == type(""):
@@ -102,14 +106,26 @@ def frame_id_and_name(arg):
         except KeyError:
             id = 0
 
-        # If a nonzero ID is found, return the official, capitalized name
-        if id != 0: return (id, cspice.frmnam(id))
+        # If a nonzero ID is found...
+        if id != 0:
+
+            # Make sure the frame is defined
+            body_id = cspice.frinfo(id)[0]
+            if (body_id > 0) and not cspice.bodfnd(body_id, 'POLE_RA'):
+                raise LookupError('frame "%s" is undefined' % arg)
+
+            # Return the official, capitalized name
+            return (id, cspice.frmnam(id))
 
         # See if this is the name of a body
-        id = cspice.bodn2c(arg)         # raises LookupError if not found
+        body_id = cspice.bodn2c(arg)         # raises LookupError if not found
 
-        # If so, return the name of the associated frame
-        return cspice.cidfrm(id)
+        # Make sure the body's frame is defined
+        if not cspice.bodfnd(body_id, 'POLE_RA'):
+            raise LookupError('frame for body "%s" is undefined' % arg)
+
+        # If this is a body, return the name of the associated frame
+        return cspice.cidfrm(body_id)
 
 ########################################
 

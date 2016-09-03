@@ -13,6 +13,7 @@ from oops.frame_.rotation        import Rotation
 from oops.frame_.spiceframe      import SpiceFrame
 from oops.frame_.spicetype1frame import SpiceType1Frame
 from oops.frame_.spinframe       import SpinFrame
+from oops.frame_.synchronous     import Synchronous
 from oops.frame_.tracker         import Tracker
 
 ################################################################################
