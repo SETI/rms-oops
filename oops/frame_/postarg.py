@@ -56,7 +56,7 @@ class PosTarg(Frame):
 
         # It needs a wayframe before we can define the transform
         self.transform = Transform(mat, Vector3.ZERO,
-                                   self.frame_id, self.reference, self.origin)
+                                   self, self.reference, self.origin)
 
     ########################################
 
