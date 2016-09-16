@@ -420,8 +420,8 @@ class HST(object):
                           self.filespec(hst_file))
 
         texp_factor = self.dn_per_sec_factor(hst_file)
-        factor = photflam * texp_factor / fov.uv_area / _
-                            self.solar_f(hst_file, solar_range, solar_model)
+        factor = (photflam * texp_factor / fov.uv_area /
+                             self.solar_f(hst_file, solar_range, solar_model))
 
         # Create and return the calibration for solar reflectivity
         if extended:

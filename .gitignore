@@ -1,6 +1,7 @@
 .gitignore
 .project
 .pydevproject
+.settings
 *~
 \#*#
 *.pyc

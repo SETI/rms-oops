@@ -634,9 +634,8 @@ class LinkedFrame(Frame):
 
         parent = self.parent.transform_at_time(time, quick=quick)
         xform = self.frame.transform_at_time(time, quick=quick)
-        return xform.rotate_transform(parent)
 
-        return transform
+        return xform.rotate_transform(parent)
 
     def transform_at_time_if_possible(self, time, quick={}):
 
