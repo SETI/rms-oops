@@ -95,6 +95,9 @@ def from_file(filespec, **parameters):
     If parameters["reference"] is specified, then the frame of the returned
     observation will employ the same frame as that of the reference observation.
 
+    If parameters["target"] is specified, then this is the name of the target
+    body; otherwise, the target body is inferred from the header.
+
     If parameters["solar_range"] is specified, it overrides the distance from the
     Sun to the target body for calibration purposes.
     """
@@ -147,18 +150,27 @@ class HST(object):
     def data_array(self, hst_file, **parameters):
         """Returns an array containing the data."""
 
-        return hst_file[1].data
+        if 'layer' in parameters:
+            return hst_file[parameters['layer']].data
+        else:
+            return hst_file[1].data
 
     def error_array(self, hst_file, **parameters):
         """Returns an array containing the uncertainty values associated with
         the data."""
 
-        return hst_file[2].data
+        if 'layer' in parameters:
+            return hst_file[parameters['layer']+1].data
+        else:
+            return hst_file[2].data
 
     def quality_mask(self, hst_file, **parameters):
         """Returns an array containing the data quality mask."""
 
-        return hst_file[3].data
+        if 'layer' in parameters:
+            return hst_file[parameters['layer']+2].data
+        else:
+            return hst_file[3].data
 
     # This works for Snapshot observations. Others must override.
     def time_limits(self, hst_file, **parameters):
@@ -205,11 +217,11 @@ class HST(object):
           of the reference observation, and the ID of this new frame is
           returned.
 
-        The index and suffix arguments are used by WFPC2 to override the default
-        behavior.
+        The index and suffix arguments are used by WFPC2 and ACS/WFC to override
+        the default behavior.
         """
 
-        if parameters.has_key("reference"):
+        if "reference" in parameters:
             return self.register_postarg_frame(hst_file, fov, index, suffix,
                                                               **parameters)
 
@@ -290,8 +302,8 @@ class HST(object):
         # Applies for the duration of the observation
         time_limits = self.time_limits(hst_file)
         tracker = oops.frame.Tracker(cmatrix,
-                                     self.target_body(hst_file).path,
-                                     "EARTH", time_limits[0], frame_id)
+                            self.target_body(hst_file, **parameters).path,
+                            "EARTH", time_limits[0], frame_id)
 
         return frame_id
 
@@ -390,7 +402,7 @@ class HST(object):
 
         # If necessary, get the solar range from the target name
         if solar_range is None:
-            target_body = self.target_body(hst_file)
+            target_body = self.target_body(hst_file, **parameters)
             target = oops.Path.as_path(target_body.path)
             target_sun_path = target.wrt("SUN")
             # Paths of the relevant bodies need to be defined in advance!
@@ -429,11 +441,15 @@ class HST(object):
         else:
             return oops.calib.PointSource("I/F", factor, fov)
 
-    def target_body(self, hst_file):
+    def target_body(self, hst_file, **parameters):
         """This procedure returns the body object defining the image target. It
         is based on educated guesses from the target name used by the P.I."""
 
         global HST_TARGET_DICT
+
+        if 'target' in parameters:
+            body_name = parameters['target']
+            return oops.Body.lookup(body_name)
 
         targname = hst_file[0].header["TARGNAME"]
 
@@ -467,7 +483,7 @@ class HST(object):
                         path = "EARTH",
                         frame = self.register_frame(hst_file, fov,
                                                        **parameters),
-                        target = self.target_body(hst_file),
+                        target = self.target_body(hst_file, **parameters),
                         telescope = self.telescope_name(hst_file),
                         instrument = self.instrument_name(hst_file),
                         detector = self.detector_name(hst_file),
@@ -475,17 +491,17 @@ class HST(object):
                         pos_targ = self.pos_targ(hst_file, **parameters))
 
         # Interpret loader options
-        if parameters.has_key("astrometry") and parameters["astrometry"]:
+        if "astrometry" in parameters.keys() and parameters["astrometry"]:
             include_data = False
             include_calibration = False
             include_headers = False
 
         else:
-            include_data = (not parameters.has_key("data") or
+            include_data = ("data" not in parameters.keys() or
                             parameters["data"])
-            include_calibration = (not parameters.has_key("calibration") or
+            include_calibration = ("calibration" not in parameters.keys() or
                             parameters["calibration"])
-            include_headers = (not parameters.has_key("headers") or
+            include_headers = ("headers" not in parameters.keys() or
                             parameters["headers"])
 
         if include_data:
@@ -511,9 +527,15 @@ class HST(object):
             snapshot.insert_subfield("extended_calib", extended_calib)
 
         if include_headers:
-            headers = []
-            for objects in hst_file:
-                headers.append(objects.header)
+            headers = [hst_file[0].header]
+
+            if 'layer' in parameters:
+                istart = parameters['layer']
+            else:
+                istart = 1
+
+            for i in range(istart, istart+3):
+                headers.append(hst_file[i].header)
 
             snapshot.insert_subfield("headers", headers)
 
@@ -657,7 +679,7 @@ class HST(object):
 
         return idc_dict
 
-    def construct_idc_fov(self, fov_dict):
+    def construct_idc_fov(self, fov_dict, platescale=1.):
         """Returns the FOV object associated with the full field of view of an
         HST instrument, based on a dictionary of associated IDC parameter
         values.
@@ -688,16 +710,17 @@ class HST(object):
             try:
                 # In these arrays, the indices are the powers of x (increasing
                 # rightward) and y (increasing upward).
-                cxy[j,i-j,0] =  fov_dict["CX" + str(i) + str(j)]
-                cxy[j,i-j,1] = -fov_dict["CY" + str(i) + str(j)]
+                cxy[j,i-j,0] =  fov_dict["CX" + str(i) + str(j)] * platescale
+                cxy[j,i-j,1] = -fov_dict["CY" + str(i) + str(j)] * platescale
             except KeyError: pass
 
-        return oops.fov.Polynomial((fov_dict["XSIZE"], fov_dict["YSIZE"]),
+        return oops.fov.Polynomial((fov_dict["XSIZE"] * platescale,
+                                    fov_dict["YSIZE"] * platescale),
             coefft_xy_from_uv = cxy*RADIANS_PER_ARCSEC,
             uv_los            = (fov_dict["XREF" ], fov_dict["YREF" ]),
             uv_area           = (fov_dict["SCALE"] * RADIANS_PER_ARCSEC)**2)
 
-    def construct_drz_fov(self, fov_dict, hst_file):
+    def construct_drz_fov(self, fov_dict, hst_file, platescale=1.):
         """Returns the FOV object associated with the full field of view of a
         "drizzled" (geometrically reprojected) image.
 
@@ -712,7 +735,7 @@ class HST(object):
 
         # Define the field of view without sub-sampling
         # *** SHOULD BE CHECKED ***
-        scale = fov_dict["SCALE"] * RADIANS_PER_ARCSEC
+        scale = fov_dict["SCALE"] * RADIANS_PER_ARCSEC * platescale
         scale = oops.Pair((scale, -scale))
 
         # Extract all size and offset parameters from the header
@@ -723,7 +746,7 @@ class HST(object):
 
         return oops.fov.FlatFOV(scale.element_mul(binaxis), sizaxis, crpix)
 
-    def construct_fov(self, fov_dict, hst_file):
+    def construct_fov(self, fov_dict, hst_file, platescale=1.):
         """Returns the FOV object associated with an HST instrument, allowing for
         drizzling, for subarrays, overscan pixels and pixel binning.
 
@@ -745,10 +768,10 @@ class HST(object):
 
         suffix = self.filespec(hst_file)[-8:-5].upper()
         if suffix == "DRZ":
-            return self.construct_drz_fov(fov_dict, hst_file)
+            return self.construct_drz_fov(fov_dict, hst_file, platescale)
 
         # Otherwise, construct the default Polynomial FOV
-        fov = self.construct_idc_fov(fov_dict)
+        fov = self.construct_idc_fov(fov_dict, platescale)
 
         # Extract all size and offset parameters from the header
         header1 = hst_file[1].header
@@ -771,9 +794,9 @@ class HST(object):
                           str((naxis.vals[1], naxis.vals[1])))
 
         # Apply the subarray correction
-        subarray_fov = oops.fov.Subarray(fov, centera,              # new_los
-                                              naxis,                # uv_shape
-                                              crpix.element_mul(binaxis))      # uv_los
+        subarray_fov = oops.fov.Subarray(fov, centera,               # new_los
+                                         naxis,                      # uv_shape
+                                         crpix.element_mul(binaxis)) # uv_los
 
         # Apply the subsampling if necessary
         if binaxis == (1,1):

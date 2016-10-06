@@ -76,7 +76,13 @@ class UVIS(WFC3):
         # Define the key into the dictionary
         idc_key = (hst_file[1].header["CCDCHIP"],hst_file[0].header["FILTER"])
 
-        return self.construct_fov(IDC_DICT[idc_key], hst_file)
+        if 'platescale' in parameters:
+            platescale = parameters['platescale']
+        else:
+            platescale = 1.
+
+        return self.construct_fov(IDC_DICT[idc_key], hst_file,
+                                  platescale=platescale)
 
     def select_syn_files(self, hst_file, **parameters):
         """Returns the list of SYN files containing profiles that are to be

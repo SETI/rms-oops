@@ -71,7 +71,7 @@ class Polynomial(FOV):
 
         assert (self.coefft_xy_from_uv is not None or
                 self.coefft_uv_from_xy is not None)
-        
+
         self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
 
         if uv_los is None:
@@ -81,7 +81,7 @@ class Polynomial(FOV):
             self.uv_los.as_readonly()
 
         self.iters = iters
-        
+
         # Required attribute
         if self.coefft_uv_from_xy is not None:
             self.uv_scale = Pair.as_pair((1./self.coefft_uv_from_xy[1,0,0],
