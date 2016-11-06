@@ -857,6 +857,16 @@ class Observation(object):
                                              0, self.data.shape[0]-1)
                 body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
                 body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
+                
+                # Final sanity check - the moon HAS to be actually inside the
+                # FOV. There are times previous tests fail when we are really
+                # close to the moon. (See Enceladus in N1669812089_1 for
+                # an example)
+                if (body_data['u_min_unclipped'] >= self.data.shape[1] or
+                    body_data['u_max_unclipped'] < 0 or
+                    body_data['v_min_unclipped'] >= self.data.shape[0] or
+                    body_data['v_max_unclipped'] < 0):
+                    continue
                 ret_dict[body_names[i]] = body_data
 
         return ret_dict
