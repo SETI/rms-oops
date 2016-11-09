@@ -437,7 +437,7 @@ class Body(object):
 ################################################################################
 
 def define_solar_system(start_time=None, stop_time=None, asof=None,
-                        irregulars=True):
+                        irregulars=True, planets=(1,2,3,4,5,6,7,8,9)):
     """Construct bodies, paths and frames for planets and their moons.
 
     Each planet is defined relative to the SSB. Each moon is defined relative to
@@ -452,13 +452,22 @@ def define_solar_system(start_time=None, stop_time=None, asof=None,
         asof            a UTC date such that only kernels released earlier
                         than that date will be included, in ISO format.
         irregulars      True to include the outer irregular satellites.
+        planets         1-9 to load kernels for a particular planet and its
+                        moons. 0 or None to load nine planets (including Pluto).
+                        Use a tuple to list more than one planet number.
 
     Return              an ordered list of SPICE kernel names
     """
 
+    if planets is None or planets == 0:
+        planets = (1,2,3,4,5,6,7,8,9)
+    if type(planets) == int:
+        planets = (planets,)
+
     # Load the necessary SPICE kernels
     spicedb.open_db()
-    names = spicedb.furnish_solar_system(start_time, stop_time, asof)
+    names = spicedb.furnish_solar_system(start_time, stop_time, asof,
+                                         planets=planets)
     spicedb.close_db()
 
     # Define B1950 in addition to J2000
@@ -476,12 +485,18 @@ def define_solar_system(start_time=None, stop_time=None, asof=None,
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
 
     # Define planetary systems
-    _define_mars(start_time, stop_time, asof, irregulars)
-    _define_jupiter(start_time, stop_time, asof, irregulars)
-    _define_saturn(start_time, stop_time, asof, irregulars)
-    _define_uranus(start_time, stop_time, asof, irregulars)
-    _define_neptune(start_time, stop_time, asof, irregulars)
-    _define_pluto(start_time, stop_time, asof, irregulars)
+    if 4 in planets:
+        _define_mars(start_time, stop_time, asof, irregulars)
+    if 5 in planets:
+        _define_jupiter(start_time, stop_time, asof, irregulars)
+    if 6 in planets:
+        _define_saturn(start_time, stop_time, asof, irregulars)
+    if 7 in planets:
+        _define_uranus(start_time, stop_time, asof, irregulars)
+    if 8 in planets:
+        _define_neptune(start_time, stop_time, asof, irregulars)
+    if 9 in planets:
+        _define_pluto(start_time, stop_time, asof, irregulars)
 
     return names
 

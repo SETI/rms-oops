@@ -124,7 +124,7 @@ def from_index(filespec, **parameters):
 
 ################################################################################
 
-def initialize(ck='reconstructed'):
+def initialize(ck='reconstructed', saturn_only=False):
     """Initialize key information about the ISS instrument.
 
     Must be called first. After the first call, later calls to this function
@@ -133,9 +133,11 @@ def initialize(ck='reconstructed'):
     Input:
         ck      'predicted' or 'reconstructed' depending on which C kernels
                 are to be used. Default is 'reconstructed'.
+        saturn_only
+                If True, only load the SPICE kernels related to Saturn.
     """
 
-    ISS.initialize(ck)
+    ISS.initialize(ck, saturn_only)
 
 ################################################################################
 
@@ -254,7 +256,7 @@ class ISS(object):
     ######################################################################
     
     @staticmethod
-    def initialize(ck='reconstructed'):
+    def initialize(ck='reconstructed', saturn_only=False):
         """Fill in key information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
@@ -263,12 +265,14 @@ class ISS(object):
         Input:
             ck      'predicted' or 'reconstructed' depending on which C kernels
                     are to be used. Default is 'reconstructed'.
+            saturn_only
+                    If True, only load the SPICE kernels related to Saturn.
         """
 
         # Quick exit after first call
         if ISS.initialized: return
 
-        Cassini.initialize(ck)
+        Cassini.initialize(ck, saturn_only)
         Cassini.load_instruments()
 
         # Load the instrument kernel

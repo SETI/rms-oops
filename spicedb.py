@@ -1771,6 +1771,8 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
     Return:             a list of the names of all the kernels loaded.
     """
 
+    if planets is None or planets == 0:
+        planets = (1,2,3,4,5,6,7,8,9)
     if type(planets) == int:
         planets = (planets,)
 

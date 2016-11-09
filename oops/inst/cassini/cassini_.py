@@ -65,7 +65,7 @@ class Cassini(object):
     ############################################################################
 
     @staticmethod
-    def initialize(ck='reconstructed'):
+    def initialize(ck='reconstructed', saturn_only=False):
         """Intialize the Cassini mission internals.
 
         After the first call, later calls to this function are ignored.
@@ -73,12 +73,18 @@ class Cassini(object):
         Input:
             ck      'predicted' or 'reconstructed' depending on which C kernels
                     are to be used. Default is 'reconstructed'.
+            saturn_only
+                    If True, only load the SPICE kernels related to Saturn.
         """
 
         if Cassini.initialized: return
 
         # Define some important paths and frames
-        oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME)
+        if saturn_only:
+            oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME,
+                                     planets=(6,))
+        else:
+            oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME)
         ignore = oops.path.SpicePath("CASSINI", "SATURN")
         #ignore = oops.frame.SpiceFrame("CASSINI_SC_COORD", "J2000")
 
