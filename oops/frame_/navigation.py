@@ -127,7 +127,7 @@ class Navigation(Frame, Fittable):
 
 import unittest
 
-class Test_Rotate(unittest.TestCase):
+class Test_Navigation(unittest.TestCase):
 
     def runTest(self):
 

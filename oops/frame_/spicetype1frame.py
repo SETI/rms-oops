@@ -7,9 +7,11 @@ from polymath import *
 
 import cspice
 
-from oops.frame_.frame import Frame
-from oops.config       import QUICK
-from oops.transform    import Transform
+from oops.frame_.frame     import Frame
+from oops.path_.path       import Path
+from oops.path_.spicepath  import SpicePath
+from oops.transform        import Transform
+from oops.config           import QUICK
 import oops.spice_support as spice
 
 class SpiceType1Frame(Frame):
@@ -71,10 +73,10 @@ class SpiceType1Frame(Frame):
         self.spice_origin_name = cspice.bodc2n(self.spice_origin_id)
 
         try:
-            self.origin = Path.as_waypoint(origin_id)
+            self.origin = Path.as_waypoint(self.spice_origin_id)
         except KeyError:
             # If the origin path was never defined, define it now
-            origin_path = SpicePath(origin_id)
+            origin_path = SpicePath(self.spice_origin_id)
             self.origin = origin_path.waypoint
 
         # No shape, no keys

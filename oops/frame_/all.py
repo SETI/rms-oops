@@ -8,6 +8,7 @@ from oops.frame_.frame           import *
 from oops.frame_.cmatrix         import Cmatrix
 from oops.frame_.inclinedframe   import InclinedFrame
 from oops.frame_.navigation      import Navigation
+from oops.frame_.poleframe       import PoleFrame
 from oops.frame_.postarg         import PosTarg
 from oops.frame_.ringframe       import RingFrame
 from oops.frame_.rotation        import Rotation
