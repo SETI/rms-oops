@@ -398,7 +398,7 @@ def load_data(filespec, body, dtype):
 
 ################################################################################
 
-def initialize(ck='reconstructed', saturn_only=False):
+def initialize(ck='reconstructed', planets=None):
     """Initialize key information about the UVIS instrument.
 
     Must be called first. After the first call, later calls to this function
@@ -407,11 +407,11 @@ def initialize(ck='reconstructed', saturn_only=False):
     Input:
         ck      'predicted' or 'reconstructed' depending on which C kernels
                 are to be used. Default is 'reconstructed'.
-        saturn_only
-                If True, only load the SPICE kernels related to Saturn.
+        planets A list of planets to pass to define_solar_system. None or
+                0 means all.
     """
 
-    UVIS.initialize(ck, saturn_only)
+    UVIS.initialize(ck, planets)
 
 ################################################################################
 
@@ -443,7 +443,7 @@ class UVIS(object):
                  "HDAC"   : "CASSINI_UVIS_HDAC"}
 
     @staticmethod
-    def initialize(ck='reconstructed', saturn_only=False):
+    def initialize(ck='reconstructed', planets=None):
         """Fill in key information about the UVIS channels.
 
         Must be called first. After the first call, later calls to this function
@@ -452,14 +452,14 @@ class UVIS(object):
         Input:
             ck      'predicted' or 'reconstructed' depending on which C kernels
                     are to be used. Default is 'reconstructed'.
-            saturn_only
-                    If True, only load the SPICE kernels related to Saturn.
+            planets A list of planets to pass to define_solar_system. None or
+                    0 means all.
         """
 
         # Quick exit after first call
         if UVIS.initialized: return
 
-        Cassini.initialize(ck, saturn_only)
+        Cassini.initialize(ck, planets)
         Cassini.load_instruments()
 
         # Load the instrument kernel

@@ -124,7 +124,8 @@ def from_index(filespec, **parameters):
 
 ################################################################################
 
-def initialize(ck='reconstructed', saturn_only=False):
+def initialize(ck='reconstructed', planets=None,
+               offset_wac=True):
     """Initialize key information about the ISS instrument.
 
     Must be called first. After the first call, later calls to this function
@@ -133,11 +134,14 @@ def initialize(ck='reconstructed', saturn_only=False):
     Input:
         ck      'predicted' or 'reconstructed' depending on which C kernels
                 are to be used. Default is 'reconstructed'.
-        saturn_only
-                If True, only load the SPICE kernels related to Saturn.
+        planets A list of planets to pass to define_solar_system. None or
+                0 means all.
+        offset_wac
+                True to offset the WAC frame relative to the NAC frame as
+                determined by star positions.
     """
 
-    ISS.initialize(ck, saturn_only)
+    ISS.initialize(ck, planets, offset_wac)
 
 ################################################################################
 
@@ -256,7 +260,8 @@ class ISS(object):
     ######################################################################
     
     @staticmethod
-    def initialize(ck='reconstructed', saturn_only=False):
+    def initialize(ck='reconstructed', planets=None,
+                   offset_wac=True):
         """Fill in key information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
@@ -265,14 +270,17 @@ class ISS(object):
         Input:
             ck      'predicted' or 'reconstructed' depending on which C kernels
                     are to be used. Default is 'reconstructed'.
-            saturn_only
-                    If True, only load the SPICE kernels related to Saturn.
+            planets A list of planets to pass to define_solar_system. None or
+                    0 means all.
+            offset_wac
+                    True to offset the WAC frame relative to the NAC frame as
+                    determined by star positions.
         """
 
         # Quick exit after first call
         if ISS.initialized: return
 
-        Cassini.initialize(ck, saturn_only)
+        Cassini.initialize(ck, planets)
         Cassini.load_instruments()
 
         # Load the instrument kernel
@@ -319,14 +327,35 @@ class ISS(object):
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal coordinate system is
         # rotated 180 degrees
+        rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
         nac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
                                             id="CASSINI_ISS_NAC_FLIPPED")
         wac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
                                             id="CASSINI_ISS_WAC_FLIPPED")
-
-        rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-        ignore = oops.frame.Cmatrix(rot180, nac_flipped, id="CASSINI_ISS_NAC")
-        ignore = oops.frame.Cmatrix(rot180, wac_flipped, id="CASSINI_ISS_WAC")
+        nac_frame = oops.frame.Cmatrix(rot180, nac_flipped, 
+                                       id="CASSINI_ISS_NAC")
+        
+        if offset_wac:
+            # Apply offset for WAC relative to NAC
+            info = ISS.instrument_kernel["INS"]["CASSINI_ISS_NAC"]
+            xfov = info["FOV_REF_ANGLE"]
+            yfov = info["FOV_CROSS_ANGLE"]
+            lines = info["PIXEL_LINES"]
+            samples = info["PIXEL_SAMPLES"]
+    
+            xpixel = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
+            ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
+    
+            # This is Rob's determination of WAC - NAC in units of NAC pixels
+            xshift = -6.70 * xpixel
+            yshift = 1.73 * ypixel
+            wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped, 
+                                           id="CASSINI_ISS_WAC-NO_OFFSET")
+            wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
+                                              id="CASSINI_ISS_WAC")         
+        else:
+            wac_frame = oops.frame.Cmatrix(rot180, wac_flipped, 
+                                           id="CASSINI_ISS_WAC")
 
         ISS.initialized = True
 

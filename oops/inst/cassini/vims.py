@@ -835,7 +835,7 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
 
 ################################################################################
 
-def initialize(ck='reconstructed', saturn_only=False):
+def initialize(ck='reconstructed', planets=None):
     """Initialize key information about the VIMS instrument.
 
     Must be called first. After the first call, later calls to this function
@@ -844,11 +844,11 @@ def initialize(ck='reconstructed', saturn_only=False):
     Input:
         ck      'predicted' or 'reconstructed' depending on which C kernels
                 are to be used. Default is 'reconstructed'.
-        saturn_only
-                If True, only load the SPICE kernels related to Saturn.
+        planets A list of planets to pass to define_solar_system. None or
+                0 means all.
     """
 
-    VIMS.initialize(ck, saturn_only)
+    VIMS.initialize(ck, planets)
 
 ################################################################################
 
@@ -859,7 +859,7 @@ class VIMS(object):
     instrument_kernel = None
 
     @staticmethod
-    def initialize(ck='reconstructed', saturn_only=False):
+    def initialize(ck='reconstructed', planets=None):
         """Fills in key information about the VIS and IR channels.
 
         Must be called first. After the first call, later calls to this function
@@ -868,14 +868,14 @@ class VIMS(object):
         Input:
             ck      'predicted' or 'reconstructed' depending on which C kernels
                     are to be used. Default is 'reconstructed'.
-            saturn_only
-                    If True, only load the SPICE kernels related to Saturn.
+            planets A list of planets to pass to define_solar_system. None or
+                    0 means all.
         """
 
         # Quick exit after first call
         if VIMS.initialized: return
 
-        Cassini.initialize(ck, saturn_only)
+        Cassini.initialize(ck, planets)
         Cassini.load_instruments()
 
         # Load the instrument kernel
