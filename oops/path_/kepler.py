@@ -67,17 +67,18 @@ class Kepler(Path, Fittable):
 
                         Alternatively, None to leave the object un-initialized.
 
-            observer    an optional Path object or ID defining the observation
-                        point. Used for astrometry. If provided, the path is
-                        returned relative to the observer, in J2000 coordinates,
-                        and with light travel time from the central planet
-                        already accounted for. If None (the default), then the
-                        path is defined relative to the central planet in that
-                        planet's ring_frame.
+            observer    NOT IMPLEMENTED. An optional Path object or ID defining
+                        the observation point. Used for astrometry. If provided,
+                        the path is returned relative to the observer, in J2000
+                        coordinates, and with light travel time from the central
+                        planet already accounted for. If None (the default),
+                        then the path is defined relative to the central planet
+                        in that planet's ring_frame.
 
             wobbles     a string or tuple of strings containing the name of each
                         element to which the corresponding wobble applies. Use
-                        'mean', 'peri' or 'node', 'a', 'e', or 'i'.
+                        'mean', 'peri' or 'node', 'a', 'e', or 'i', or 'pole' (for
+                        a Laplace plane offset).
 
             id          the name under which to register the path.
         """
@@ -95,7 +96,7 @@ class Kepler(Path, Fittable):
 
         self.nwobbles = len(wobbles)
         for name in self.wobbles:
-            assert name in ('mean', 'peri', 'node', 'a', 'e', 'i')
+            assert name in ('mean', 'peri', 'node', 'a', 'e', 'i', 'pole')
 
         self.nparams = NELEMENTS + self.nwobbles * NWOBBLES
         self.param_name = "elements"
@@ -295,6 +296,9 @@ class Kepler(Path, Fittable):
         # Apply the wobbles
         ########################################################################
 
+        # For Laplace planes
+        laplace_plane = False
+
         start = NELEMENTS - NWOBBLES
         for k in range(self.nwobbles):
             start += NWOBBLES
@@ -342,11 +346,18 @@ class Kepler(Path, Fittable):
                 if partials:
                     de_delem[...,start:start+NWOBBLES] = dwobble_delem
 
-            else:
-                i     += wobble
+            elif self.wobbles[k] == 'i':
+                pole_inc = wobble
                 di_dt += dwobble_dt
                 if partials:
                     di_delem[...,start:start+NWOBBLES] = dwobble_delem
+
+            else:
+                laplace_plane = True
+                laplace_sin_inc = np.sin(self.amp[k])
+                laplace_cos_inc = np.cos(self.amp[k])
+                laplace_sin_node = sin_arg
+                laplace_cos_node = cos_arg
 
         ########################################################################
         # Evaluate some derived elements
@@ -503,6 +514,44 @@ class Kepler(Path, Fittable):
             # shape = (..., 9, 3)
 
         ########################################################################
+        # Apply Laplace Plane
+        #   asc[X] = r cos(theta - node)
+        #   asc[Y] = r sin(theta - node) cos(i)
+        #   asc[Z] = r sin(theta - node) sin(i)
+        ########################################################################
+
+        if laplace_plane:
+            node = np.array([laplace_cos_node, laplace_sin_node, 0.])
+
+            cos_sin_node = laplace_cos_node * laplace_sin_node
+            cos2_node = laplace_cos_node**2
+            sin2_node = laplace_sin_node**2
+
+            cos_sin_node_1_minus_cos_inc = (laplace_cos_node *
+                                            laplace_sin_node *
+                                            (1. - laplace_cos_inc))
+
+            rotate = np.array(
+                [[cos2_node + sin2_node * laplace_cos_inc,
+                  cos_sin_node_1_minus_cos_inc,
+                  laplace_sin_node * laplace_cos_inc],
+                 [cos_sin_node_1_minus_cos_inc,
+                  sin2_node + cos2_node * laplace_cos_inc,
+                  -laplace_cos_node * laplace_sin_inc],
+                 [-laplace_sin_node * laplace_sin_inc,
+                   laplace_cos_node * laplace_sin_inc,
+                   laplace_cos_inc]
+                ])
+
+            xyz = np.sum(rotate[...,:,:] * xyz[...,np.newaxis,:], axis=-1)
+            dxyz_dt = np.sum(rotate[...,:,:] * dxyz_dt[...,np.newaxis,:],
+                             axis=-1)
+
+            if partials:
+                dxyz_delem = np.sum(rotate[...,np.newaxis,:,:] *
+                                    dxyz_delem[...,np.newaxis,:], axis=-1)
+
+        ########################################################################
         # Return results
         ########################################################################
 
@@ -603,7 +652,7 @@ class Kepler(Path, Fittable):
          link_event) = self.center.photon_to_event(arrival, derivs, guess,
                                                    quick, converge)
 
-        path_event = self.event_at_time(path_event.time, quick, partials,
+        path_event = self.event_at_time(planet_event.time, quick, partials,
                                         planet_event)
 
         path_event.dep_lt = planet_event.time - link_event.time

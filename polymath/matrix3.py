@@ -85,6 +85,170 @@ class Matrix3(Matrix):
 
         return Matrix3(new_values, vector1.mask | vector2.mask)
 
+    # from https://en.wikipedia.org/wiki/Rotation_matrix
+    # These are rotations of a vector counterclockwise about an axis
+    # The same matrices rotate a coordinate system clockwise about the axis!
+
+    @staticmethod
+    def x_rotation(angle, recursive=True):
+        """Rotation matrix about X-axis.
+
+        The returned matrix rotates a vector counterclockwise about the X-axis
+        bythe specified angle in radians. The same matrix rotates a coordinate
+        system clockwise by the same angle.
+        """
+
+        angle = Scalar.as_scalar(angle)
+        Units.require_angle(angle.units)
+
+        cos_angle = np.cos(angle.values)
+        sin_angle = np.sin(angle.values)
+
+        values = np.zeros(angle.shape + (3,3))
+        values[...,1,1] =  cos_angle
+        values[...,1,2] =  sin_angle
+        values[...,2,1] = -sin_angle
+        values[...,2,2] =  cos_angle
+        values[...,0,0] =  1.
+
+        obj = Matrix3(values.reshape(angle.shape + (3,3)))
+
+        if recursive and angle.derivs:
+            matrix = np.zeros(angle.shape + (3,3))
+            matrix[...,1,1] = -sin_angle
+            matrix[...,1,2] =  cos_angle
+            matrix[...,2,1] = -cos_angle
+            matrix[...,2,2] = -sin_angle
+
+            for (key, deriv) in self.derivs.iteritems():
+                obj.insert_deriv(key, Matrix(matrix * deriv))
+
+        return obj
+
+    @staticmethod
+    def y_rotation(angle, recursive=True):
+        """Rotation matrix about Y-axis.
+
+        The returned matrix rotates a vector counterclockwise about the Y-axis
+        by the specified angle in radians. The same matrix rotates a coordinate
+        system clockwise by the same angle.
+        """
+
+        angle = Scalar.as_scalar(angle)
+        Units.require_angle(angle.units)
+
+        cos_angle = np.cos(angle.values)
+        sin_angle = np.sin(angle.values)
+
+        values = np.zeros(angle.shape + (3,3))
+        values[...,0,0] =  cos_angle
+        values[...,0,2] =  sin_angle
+        values[...,2,0] = -sin_angle
+        values[...,2,2] =  cos_angle
+        values[...,1,1] =  1.
+
+        obj = Matrix3(values.reshape(angle.shape + (3,3)))
+
+        if recursive and angle.derivs:
+            matrix = np.zeros(angle.shape + (3,3))
+            matrix[...,0,0] = -sin_angle
+            matrix[...,0,2] =  cos_angle
+            matrix[...,2,0] = -cos_angle
+            matrix[...,2,2] = -sin_angle
+
+            for (key, deriv) in self.derivs.iteritems():
+                obj.insert_deriv(key, Matrix(matrix * deriv))
+
+        return obj
+
+    @staticmethod
+    def z_rotation(angle, recursive=True):
+        """Rotation matrix about Z-axis.
+
+        The returned matrix rotates a vector counterclockwise about the Z-axis
+        by the specified angle in radians. The same matrix rotates a coordinate
+        system clockwise by the same angle.
+        """
+
+        angle = Scalar.as_scalar(angle)
+        Units.require_angle(angle.units)
+
+        cos_angle = np.cos(angle.values)
+        sin_angle = np.sin(angle.values)
+
+        values = np.zeros(angle.shape + (3,3))
+        values[...,0,0] =  cos_angle
+        values[...,0,1] = -sin_angle
+        values[...,1,0] =  sin_angle
+        values[...,1,1] =  cos_angle
+        values[...,2,2] =  1.
+
+        obj = Matrix3(values.reshape(angle.shape + (3,3)))
+
+        if recursive and angle.derivs:
+            matrix = np.zeros(angle.shape + (3,3))
+            matrix[...,0,0] = -sin_angle
+            matrix[...,0,1] = -cos_angle
+            matrix[...,1,0] =  cos_angle
+            matrix[...,1,1] = -sin_angle
+
+            for (key, deriv) in self.derivs.iteritems():
+                obj.insert_deriv(key, Matrix(matrix * deriv))
+
+        return obj
+
+    @staticmethod
+    def axis_rotation(angle, axis=2, recursive=True):
+        """Rotation about one of the three primary axes.
+
+        The returned matrix rotates a vector counterclockwise by the specified
+        angle about the specified axis (0 for X, 1 for Y, 2 for Z). The same
+        matrix rotates a coordinate system clockwise by the same angle.
+        """
+
+        axis = axis % 3
+
+        if axis == 2:
+            return Matrix3.z_rotation(angle, recursive)
+
+        if axis == 0:
+            return Matrix3.x_rotation(angle, recursive)
+
+        return Matrix3.y_rotation(angle, recursive)
+
+    # This matrix rotates J2000 coordinates to another inertial frame,
+    # placing the Z-axis along the pole and the X-axis along the J2000
+    # ascending node.
+    @staticmethod
+    def pole_rotation(ra, dec):
+        """Rotation matrix to a frame defined by right ascension and
+        declination.
+
+        The returned matrix rotates coordinates into a frame where the Z-axis is
+        defined by (ra,dec) and the X-axis points along the new equatorial
+        plane's ascending node on the original equator.
+
+        Derivatives are not supported.
+        """
+
+        ra = Scalar.as_scalar(ra)
+        Units.require_angle(ra.units)
+
+        cos_ra = np.cos(ra.values)
+        sin_ra = np.sin(ra.values)
+
+        dec = Scalar.as_scalar(dec)
+        Units.require_angle(dec.units)
+
+        cos_dec = np.cos(dec.values)
+        sin_dec = np.sin(dec.values)
+
+        values = np.stack([-sin_ra,            cos_ra,           0.,
+                           -cos_ra * sin_dec, -sin_ra * sin_dec, cos_dec,
+                            cos_ra * cos_dec,  sin_ra * cos_dec, sin_dec],
+                           axis=-1)
+        return Matrix3(values.reshape(values.shape[:-1] + (3,3)))
+
     def rotate(self, arg, recursive=True):
         """Rotate by this Matrix3, returning an instance of the same subclass.
 

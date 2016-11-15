@@ -78,7 +78,7 @@ class RingFrame(Frame):
 
     ########################################
 
-    def transform_at_time(self, time, quick=False):
+    def transform_at_time(self, time, quick={}):
         """The Transform into the this Frame at a Scalar of times."""
 
         # For a fixed epoch, return the fixed transform
@@ -87,7 +87,7 @@ class RingFrame(Frame):
 
         # Otherwise, calculate it for the current time
         xform = self.planet_frame.transform_at_time(time, quick=quick)
-        matrix = xform.matrix.values
+        matrix = xform.matrix.values.copy()
 
         # The bottom row of the matrix is the z-axis of the frame
         if self.retrograde:

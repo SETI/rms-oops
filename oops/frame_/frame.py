@@ -122,7 +122,9 @@ class Frame(object):
     def reference_id(self): return self.reference.frame_id
 
     @property
-    def origin_id(self): return self.origin.path_id
+    def origin_id(self):
+        if self.origin is None: return None
+        return self.origin.path_id
 
     # string operations
     def __str__(self):

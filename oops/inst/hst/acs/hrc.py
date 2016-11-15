@@ -66,6 +66,11 @@ class HRC(ACS):
 
         global IDC_DICT
 
+        if 'platescale' in parameters:
+            platescale = parameters['platescale']
+        else:
+            platescale = 1.
+
         # Load the dictionary of IDC parameters if necessary
         if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("FILTER1", "FILTER2"))
@@ -75,7 +80,7 @@ class HRC(ACS):
 
         # Use the default function defined at the HST level for completing the
         # definition of the FOV
-        return self.construct_fov(IDC_DICT[idc_key], hst_file)
+        return self.construct_fov(IDC_DICT[idc_key], hst_file, platescale)
 
     def select_syn_files(self, hst_file):
         """Returns the list of SYN files containing profiles that are to be

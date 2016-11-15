@@ -71,7 +71,7 @@ class Vector3(Vector):
 
     @staticmethod
     def from_ra_dec_length(ra, dec, length=1., recursive=True):
-        """A unit Vector3 constructed from right ascension and declination.
+        """Vector3 from right ascension, declination and optional length.
 
         Inputs:
             ra, dec     Scalars of right ascension and declination, in radians.
@@ -114,6 +114,43 @@ class Vector3(Vector):
         dec = (z/length).arcsin()
 
         return (ra, dec, length)
+
+    @staticmethod
+    def from_cylindrical(radius, longitude, z=0., recursive=True):
+        """Vector3 from cylindrical coordinates.
+
+        Inputs:
+            radius      Scalar radius, distance from the cylindrical axis.
+            longitude   Scalar longitude in radians. Zero is along the x-axis.
+            z           Distance above/below the equatorial plane, default 0.
+
+            recursive   True to include all the derivatives. The returned object
+                        will have derivatives representing the union of all the
+                        derivatives in radius, longitude and z. Default is True.
+        """
+
+        radius  = Scalar.as_scalar(radius, recursive)
+        longitude = Scalar.as_scalar(longitude, recursive)
+        z = Scalar.as_scalar(z, recursive)
+
+        x = radius * longitude.cos(recursive)
+        y = radius * longitude.sin(recursive)
+
+        return Vector3.from_scalars(x, y, z, recursive)
+
+    def to_cylindrical(self, recursive=True):
+        """A tuple (radius, longitude, z) from this Vector3.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        (x,y,z) = self.to_scalars(recursive)
+        radius = (x**2 + y**2).sqrt(recursive)
+
+        longitude = y.arctan2(x,recursive) % TWOPI
+
+        return (radius, longitude, z)
 
     ### Most operations are inherited from Vector. These include:
     #     def extract_scalar(self, axis, recursive=True)
