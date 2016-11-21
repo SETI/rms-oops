@@ -10,12 +10,15 @@ import julian
 import gravity
 import cspice
 
+from polymath import *
+
 from oops.path_.path      import Path
 from oops.path_.multipath import MultiPath
 from oops.path_.spicepath import SpicePath
 
 from oops.frame_.frame       import Frame, AliasFrame
 from oops.frame_.ringframe   import RingFrame
+from oops.frame_.poleframe   import PoleFrame
 from oops.frame_.spiceframe  import SpiceFrame
 from oops.frame_.synchronous import Synchronous
 
@@ -431,6 +434,17 @@ class Body(object):
 
         Path.reset_registry()
         Frame.reset_registry()
+
+    def set_pole_epoch(self, time, cache_size=1000):
+        """Set the reference epoch for the body's pole. Primarily for Neptune.
+        """
+
+        name = cspice.bodc2n(self.spice_id)
+        ra  = cspice.bodvrd(name, 'POLE_RA')[0]  * constants.RPD
+        dec = cspice.bodvrd(name, 'POLE_DEC')[0] * constants.RPD
+        pole = Vector3.from_ra_dec_length(ra,dec)
+        self.ring_frame = PoleFrame(self.frame, pole, epoch=time,
+                                    cache_size=cache_size)
 
 ################################################################################
 # General function to load Solar System components
