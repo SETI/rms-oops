@@ -560,11 +560,13 @@ SATURN_IRREGULAR = (range(619,632) + range(636,649) + range(650,653) +
                     [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
 
 SATURN_MAIN_RINGS = (74658., 136780.)
+SATURN_D_RING_LIMIT = 66900.
 SATURN_C_RING = ( 74658.,  91975.)
 SATURN_B_RING = ( 91975., 117507.)
 SATURN_A_RING = (122340., 136780.)
+SATURN_F_RING_CORE = 140220.
 SATURN_F_RING_LIMIT = 140612.
-SATURN_RINGS  = (SATURN_MAIN_RINGS[0], SATURN_F_RING_LIMIT)
+SATURN_RINGS  = (SATURN_D_RING_LIMIT, SATURN_F_RING_LIMIT)
 
 def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Saturn system."""
