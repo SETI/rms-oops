@@ -596,7 +596,6 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [])
     define_ring("SATURN", "SATURN_B_RING", SATURN_B_RING, [])
     define_ring("SATURN", "SATURN_C_RING", SATURN_C_RING, [])
-    define_ring("SATURN", "SATURN_D_RING", SATURN_D_RING, [])
 
 ################################################################################
 # Uranus System
