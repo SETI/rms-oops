@@ -139,17 +139,27 @@ class Body(object):
         # assert self.surface.origin == self.path
         # This assertion is not strictly necessary
 
-    def apply_ring_frame(self, epoch=None, retrograde=False):
+    def apply_ring_frame(self, epoch=None, retrograde=False, pole=None):
         """Add the ring and ring_frame attributes to a Body."""
 
-        # On a repeat call, make sure they match
-        if self.ring_frame is not None:
+        # On a repeat call, make sure the frames match
+        if type(self.ring_frame) == RingFrame and pole is None:
             assert self.ring_frame.epoch == epoch
             assert self.ring_frame.retrograde == retrograde
             return
 
-        self.ring_frame = RingFrame(self.frame, epoch=epoch,
-                                    retrograde=retrograde)
+        if type(self.ring_frame) == PoleFrame and pole is not None:
+            assert self.ring_frame.retrograde == retrograde
+            assert self.ring_frame.invariable_pole == pole
+            return
+
+        if pole is not None:
+            self.ring_frame = PoleFrame(self.frame, pole=pole,
+                                                    retrograde=retrograde)
+        else:
+            self.ring_frame = RingFrame(self.frame, epoch=epoch,
+                                                    retrograde=retrograde)
+
         self.ring_is_retrograde = retrograde
 
     def apply_gravity(self, gravity):
@@ -434,17 +444,6 @@ class Body(object):
 
         Path.reset_registry()
         Frame.reset_registry()
-
-    def set_pole_epoch(self, time, cache_size=1000):
-        """Set the reference epoch for the body's pole. Primarily for Neptune.
-        """
-
-        name = cspice.bodc2n(self.spice_id)
-        ra  = cspice.bodvrd(name, 'POLE_RA')[0]  * constants.RPD
-        dec = cspice.bodvrd(name, 'POLE_DEC')[0] * constants.RPD
-        pole = Vector3.from_ra_dec_length(ra,dec)
-        self.ring_frame = PoleFrame(self.frame, pole, epoch=time,
-                                    cache_size=cache_size)
 
 ################################################################################
 # General function to load Solar System components
@@ -734,8 +733,13 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
         define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
                       ["SATELLITE", "IRREGULAR"])
 
-    define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [])
-    define_ring("NEPTUNE", "NEPTUNE_RING_SYSTEM", NEPTUNE_ADAMS_LIMIT, [])
+    ra  = cspice.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
+    dec = cspice.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
+    pole = Vector3.from_ra_dec_length(ra,dec)
+
+    define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [], pole=pole)
+    define_ring("NEPTUNE", "NEPTUNE_RING_SYSTEM", NEPTUNE_ADAMS_LIMIT, [],
+                                                  pole=pole)
 
 ################################################################################
 # Pluto System
@@ -824,7 +828,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
             body.add_keywords(parent)
 
 def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
-                barycenter_name=None):
+                barycenter_name=None, pole=None):
     """Define the path, frame, surface and body for ring, given radial limits.
 
     A single radius value is used to define the outer limit of rings. Note that
@@ -846,6 +850,8 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                         planet's IAU-defined pole.
         barycenter_name the name of the ring's barycenter if this is not the
                         same as the name of the central planet.
+        pole            if not None, the pole of the invariable plane to be used
+                        in the PoleFrame (instead of a RingFrame).
     """
 
     # If the ring body already exists, skip it
@@ -853,7 +859,7 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
 
     # Identify the parent
     parent = Body.lookup(parent_name)
-    parent.apply_ring_frame(retrograde=retrograde)
+    parent.apply_ring_frame(retrograde=retrograde, pole=pole)
 
     if barycenter_name is None:
         barycenter = parent
@@ -878,7 +884,7 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     body = Body(ring_name, barycenter.path, parent.ring_frame,
                 parent, parent)
     body.apply_gravity(barycenter.gravity)
-    body.apply_ring_frame(retrograde=retrograde)
+    body.apply_ring_frame(retrograde=retrograde, pole=pole)
 
     shape = RingPlane(barycenter.path, parent.ring_frame, radii,
                       gravity=barycenter.gravity)
