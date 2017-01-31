@@ -137,6 +137,7 @@ class Kepler(Path, Fittable):
             self.path_id = id
 
         self.shape = ()
+        self.keys = set()
         self.register()
 
     ########################################
