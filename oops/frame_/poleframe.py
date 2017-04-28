@@ -20,8 +20,7 @@ class PoleFrame(Frame):
     ascending node of the invariable plane on the J2000 equator.
     """
 
-    def __init__(self, frame, pole, epoch=0., retrograde=False, id='+',
-                       cache_size=1000):
+    def __init__(self, frame, pole, retrograde=False, id='+', cache_size=1000):
         """Constructor for a PoleFrame.
 
         Input:
@@ -33,20 +32,13 @@ class PoleFrame(Frame):
                         pole precesses. This enables the reference longitude to
                         be defined properly.
 
-            epoch       the time TDB at which the longitude reference (at the
-                        X-axis) is initially defined. The X-axis will vary in
-                        such a way that longitudes can continue to be determined
-                        by an angular rotation from the X-axis, toward the
-                        Y-axis, around the Z-axis.
-
             retrograde  True to flip the sign of the Z-axis. Necessary for
                         retrograde systems like Uranus.
 
             id          the ID under which the frame will be registered. None to
                         leave the frame unregistered. If the value is "+", then
                         the registered name is the planet frame's name with the
-                        suffix "_DESPUN" if epoch is None, or "_POLE" if an
-                        epoch is specified.
+                        suffix "_POLE".
 
             cache_size  number of transforms to cache. This can be useful
                         because it avoids unnecessary SPICE calls when the frame
@@ -56,11 +48,10 @@ class PoleFrame(Frame):
         # Rotates from J2000 to the invariable frame
         (ra,dec,_) = Vector3.as_vector3(pole).to_ra_dec_length(recursive=False)
         self.invariable_matrix = Matrix3.pole_rotation(ra,dec)
-        self.invariable_pole = self.invariable_matrix.inverse() * Vector3.ZAXIS
+        self.invariable_pole = pole
 
         self.planet_frame = Frame.as_frame(frame).wrt(Frame.J2000)
         self.origin = self.planet_frame.origin
-        self.epoch = epoch
         self.retrograde = retrograde
         self.shape = ()
         self.keys = set()
@@ -210,7 +201,7 @@ class Test_PoleFrame(unittest.TestCase):
         # This invariable pole is aligned with the planet's pole, so this should
         # behave just like a RingFrame
         pole = planet.transform_at_time(0.).matrix.inverse() * Vector3.ZAXIS
-        poleframe = PoleFrame(planet, pole, epoch=0., cache_size=0)
+        poleframe = PoleFrame(planet, pole, cache_size=0)
         ringframe = RingFrame(planet, epoch=0.)
         self.assertEqual(Frame.as_wayframe('IAU_MARS_POLE'), poleframe.wayframe)
 
@@ -248,7 +239,7 @@ class Test_PoleFrame(unittest.TestCase):
         # This invariable pole is aligned with the planet's pole, so this should
         # behave just like a RingFrame
         pole = planet.transform_at_time(0.).matrix.inverse() * Vector3.ZAXIS
-        poleframe = PoleFrame(planet, pole, epoch=0., cache_size=0)
+        poleframe = PoleFrame(planet, pole, cache_size=0)
         ringframe = RingFrame(planet, epoch=0.)
 
         vectors = Vector3(np.random.rand(3,4,2,3)).unit()
@@ -284,7 +275,7 @@ class Test_PoleFrame(unittest.TestCase):
         ra  = cspice.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
         dec = cspice.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
         pole = Vector3.from_ra_dec_length(ra,dec)
-        poleframe = PoleFrame(planet, pole, epoch=0., cache_size=0)
+        poleframe = PoleFrame(planet, pole, cache_size=0)
 
         # Make sure Z-axis tracks Neptune pole
         pole_vecs = poleframe.transform_at_time(times).unrotate(Vector3.ZAXIS)
@@ -311,7 +302,7 @@ class Test_PoleFrame(unittest.TestCase):
 
         #### Test cache
 
-        poleframe = PoleFrame(planet, pole, epoch=0., cache_size=3)
+        poleframe = PoleFrame(planet, pole, cache_size=3)
         self.assertTrue(poleframe.cache_size == 4)
         self.assertTrue(poleframe.trim_size == 1)
         self.assertTrue(len(poleframe.cache) == 0)

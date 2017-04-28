@@ -426,7 +426,7 @@ class Scalar(Qube):
                                 derivs={}, example=no_negs)
 
         if recursive and no_negs.derivs:
-            factor = Scalar(0.5 / sqrt_vals, no_negs.mask)
+            factor = 0.5 / obj
             for (key, deriv) in self.derivs.iteritems():
                 obj.insert_deriv(key, factor * deriv)
 

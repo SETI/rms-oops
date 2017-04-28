@@ -66,17 +66,20 @@ class HRC(ACS):
 
         global IDC_DICT
 
-        if 'platescale' in parameters:
-            platescale = parameters['platescale']
-        else:
-            platescale = 1.
-
         # Load the dictionary of IDC parameters if necessary
         if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("FILTER1", "FILTER2"))
 
         # Define the key into the dictionary
         idc_key = (hst_file[0].header["FILTER1"], hst_file[0].header["FILTER2"])
+
+        # Define the plane scale
+        if 'platescale' in parameters:
+            platescale = parameters['platescale']
+        elif idc_key == ('CLEAR1S', 'CLEAR2S'):
+            platescale = 0.9987     # determined empirically for Mab's orbit
+        else:
+            platescale = 1.
 
         # Use the default function defined at the HST level for completing the
         # definition of the FOV

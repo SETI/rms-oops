@@ -61,6 +61,8 @@ class Kepler(Path, Fittable):
                 node        longitude of ascending node at epoch, radians.
                 regr        nodal regression rate, radians/sec, NEGATIVE!
 
+                Repeat for each wobble:
+
                 amp         amplitude of the first wobble term, radians.
                 phase0      initial phase of the first wobble term, radians.
                 dphase_dt   rate of change of the first wobble term, radians/s.
@@ -77,8 +79,10 @@ class Kepler(Path, Fittable):
 
             wobbles     a string or tuple of strings containing the name of each
                         element to which the corresponding wobble applies. Use
-                        'mean', 'peri' or 'node', 'a', 'e', or 'i', or 'pole' (for
-                        a Laplace plane offset).
+                        'mean', 'peri' or 'node', 'a', 'e', or 'i', for
+                        individual elements. Use 'e2d' for a forced eccentricity
+                        and 'i2d' for a forced inclination. Use 'pole' for a
+                        Laplace plane offset).
 
             id          the name under which to register the path.
         """
@@ -96,7 +100,8 @@ class Kepler(Path, Fittable):
 
         self.nwobbles = len(wobbles)
         for name in self.wobbles:
-            assert name in ('mean', 'peri', 'node', 'a', 'e', 'i', 'pole')
+            assert name in ('mean', 'peri', 'node', 'a', 'e', 'i', 'e2d', 'i2d',
+                            'pole')
 
         self.nparams = NELEMENTS + self.nwobbles * NWOBBLES
         self.param_name = "elements"
@@ -132,6 +137,7 @@ class Kepler(Path, Fittable):
             self.path_id = id
 
         self.shape = ()
+        self.keys = set()
         self.register()
 
     ########################################
@@ -299,59 +305,170 @@ class Kepler(Path, Fittable):
         # For Laplace planes
         laplace_plane = False
 
+        # For each wobble...
         start = NELEMENTS - NWOBBLES
         for k in range(self.nwobbles):
             start += NWOBBLES
 
-            arg     = self.phase0[k] + t * self.dphase_dt[k]
-            sin_arg = np.sin(arg)
-            cos_arg = np.cos(arg)
+            # 2-D librations
+            if self.wobbles[k] in ('e2d', 'i2d'):
+                if self.wobbles[k] == 'e2d':
+                    amp = e
+                    damp_dt = de_dt
+                    angle = peri
+                    dangle_dt = dperi_dt
 
-            wobble     = self.amp[k] * sin_arg
-            dwobble_dt = self.amp[k] * cos_arg * self.dphase_dt[k]
+                    if partials:
+                        damp_delem = de_delem
+                        dangle_delem = dperi_delem
 
-            if partials:
-                dwobble_delem = np.empty(time.shape + (3,))
-                dwobble_delem[...,0] = sin_arg[k]
-                dwobble_delem[...,1] = self.amp[k] * cos_arg[k]
-                dwobble_delem[...,2] = dwobble_delem[...,1] * t
+                else:
+                    amp = i
+                    damp_dt = di_dt
+                    angle = node
+                    dangle_dt = dnode_dt
 
-            if self.wobbles[k] == 'mean':
-                mean     += wobble
-                dmean_dt += dwobble_dt
+                    if partials:
+                        damp_delem = di_delem
+                        dangle_delem = dnode_delem
+
+                cos_angle = np.cos(angle)
+                sin_angle = np.sin(angle)
+                x = amp * cos_angle
+                y = amp * sin_angle
+                dx_dt = damp_dt * cos_angle - y * dangle_dt
+                dy_dt = damp_dt * sin_angle + x * dangle_dt
+
                 if partials:
-                    dmean_delem[...,start:start+NWOBBLES] = dwobble_delem
+                    dx_delem = (damp_delem * cos_angle[...,np.newaxis] -
+                                y[...,np.newaxis] * dangle_delem)
+                    dy_delem = (damp_delem * sin_angle[...,np.newaxis] +
+                                x[...,np.newaxis] * dangle_delem)
 
-            elif self.wobbles[k] == 'peri':
-                peri     += wobble
-                dperi_dt += dwobble_dt
+                arg = self.phase0[k] + t * self.dphase_dt[k]
+                sin_arg = np.sin(arg)
+                cos_arg = np.cos(arg)
+
                 if partials:
-                    dperi_delem[...,start:start+NWOBBLES] = dwobble_delem
+                    darg_delem = np.zeros(partials_shape)
+                    darg_delem[...,start+1] = 1.
+                    darg_delem[...,start+2] = t
 
-            elif self.wobbles[k] == 'node':
-                node     += wobble
-                dnode_dt += dwobble_dt
+                x1 = self.amp[k] * cos_arg
+                y1 = self.amp[k] * sin_arg
+                dx1_dt = -y1 * self.dphase_dt[k]
+                dy1_dt =  x1 * self.dphase_dt[k]
+
                 if partials:
-                    dnode_delem[...,start:start+NWOBBLES] = dwobble_delem
+                    dx1_delem = np.zeros(partials_shape)
+                    dy1_delem = np.zeros(partials_shape)
+                    dx1_delem[...,start] = cos_arg
+                    dy1_delem[...,start] = sin_arg
 
-            elif self.wobbles[k] == 'a':
-                a     += wobble
-                da_dt += dwobble_dt
+                    dx1_darg = -self.amp[k] * sin_arg
+                    dy1_darg =  self.amp[k] * cos_arg
+                    dx1_delem += dx1_darg[...,np.newaxis] * darg_delem
+                    dy1_delem += dy1_darg[...,np.newaxis] * darg_delem
+
+                x2 = x + x1
+                y2 = y + y1
+                dx2_dt = dx_dt + dx1_dt
+                dy2_dt = dy_dt + dy1_dt
+
                 if partials:
-                    da_delem[...,start:start+NWOBBLES] = dwobble_delem
+                    dx2_delem = dx_delem + dx1_delem
+                    dy2_delem = dy_delem + dy1_delem
 
-            elif self.wobbles[k] == 'e':
-                e     += wobble
-                de_dt += dwobble_dt
+                amp2 = np.sqrt(x2**2 + y2**2)
+                damp2_dx2 = -x2 / amp2
+                damp2_dy2 = -y2 / amp2
+                damp2_dt = damp2_dx2 * dx2_dt + damp2_dy2 * dy2_dt
+
+                angle2 = np.arctan2(y2,x2)
+                dangle2_dx2 =  x2 / (x2**2 + y2**2)
+                dangle2_dy2 = -y2 / (x2**2 + y2**2)
+                dangle2_dt = dangle2_dx2 * dx2_dt + dangle2_dy2 * dy2_dt
+
                 if partials:
-                    de_delem[...,start:start+NWOBBLES] = dwobble_delem
+                    damp2_delem = (damp2_dx2[...,np.newaxis] * dx2_delem +
+                                   damp2_dy2[...,np.newaxis] * dy2_delem)
 
-            elif self.wobbles[k] == 'i':
-                pole_inc = wobble
-                di_dt += dwobble_dt
+                    dangle2_delem = (dangle2_dx2[...,np.newaxis] * dx2_delem +
+                                     dangle2_dy2[...,np.newaxis] * dy2_delem)
+
+                if self.wobbles[k] == 'e2d':
+                    e = amp2
+                    de_dt = damp2_dt
+                    peri = angle2
+                    dperi_dt = dangle2_dt
+
+                    if partials:
+                        de_delem = damp2_delem
+                        dperi_delem = dangle2_delem
+
+                else:
+                    i = amp2
+                    di_dt = damp2_dt
+                    node = angle2
+                    dnode_dt = dangle2_dt
+
+                    if partials:
+                        di_delem = damp2_delem
+                        dnode_delem = dangle2_delem
+
+            # Single-element librations
+            elif self.wobbles[k] in ('mean', 'peri', 'node', 'a', 'e', 'i'):
+
+                arg = self.phase0[k] + t * self.dphase_dt[k]
+                sin_arg = np.sin(arg)
+                cos_arg = np.cos(arg)
+
+                w = self.amp[k] * cos_arg
+                dw_dt = -self.amp[k] * sin_arg * self.dphase_dt[k]
+
                 if partials:
-                    di_delem[...,start:start+NWOBBLES] = dwobble_delem
+                    dw_delem = np.zeros(partials_shape)
+                    dw_delem[...,start] = cos_arg
+                    dw_delem[...,start+1] = self.amp[k] * cos_arg[k]
+                    dw_delem[...,start+2] = dw_delem[...,start+1] * t
 
+                if self.wobbles[k] == 'mean':
+                    mean     += w
+                    dmean_dt += dw_dt
+                    if partials:
+                        dmean_delem += dw_delem
+
+                elif self.wobbles[k] == 'peri':
+                    peri     += w
+                    dperi_dt += dw_dt
+                    if partials:
+                        dperi_delem += dw_delem
+
+                elif self.wobbles[k] == 'node':
+                    node     += w
+                    dnode_dt += dw_dt
+                    if partials:
+                        dnode_delem += dw_delem
+
+                elif self.wobbles[k] == 'a':
+                    a     += w
+                    da_dt += dw_dt
+                    if partials:
+                        da_delem += dw_delem
+
+                elif self.wobbles[k] == 'e':
+                    e     += w
+                    de_dt += dw_dt
+                    if partials:
+                        de_delem += dw_delem
+
+                else:
+                    pole_inc = w
+                    di_dt += dw_dt
+                    if partials:
+                        di_delem += dw_delem
+
+            # Laplace plane case
             else:
                 laplace_plane = True
                 laplace_sin_inc = np.sin(self.amp[k])
@@ -872,6 +989,53 @@ class Test_Kepler(unittest.TestCase):
 
         errors = _pos_derivative_test(kep, time)
         self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+
+        ####################
+
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt,
+                        0.2, 3., dperi_dt,
+                        0.1, 5., dnode_dt,
+                        1.e-4, 3., dperi_dt/100.),
+                       Path.as_path("EARTH"), wobbles=('e2d',))
+
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
+
+        ####################
+
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt,
+                        0.2, 3., dperi_dt,
+                        0.1, 5., dnode_dt,
+                        1.e-4, 2., dnode_dt/150.),
+                       Path.as_path("EARTH"), wobbles=('i2d',))
+
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-6)
+
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+
+        ####################
+
+        kep = Kepler(body.Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt,
+                        0.2, 3., dperi_dt,
+                        0.1, 5., dnode_dt,
+                        1.e-4, 2., dperi_dt/150.,
+                        2.e-4, 3., dnode_dt/200.,
+                        a * 1.e-3, 4., dmean_dt/150.),
+                       Path.as_path("EARTH"), wobbles=('i2d','e2d','a'))
+
+        errors = _xyz_planet_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+
+        errors = _pos_derivative_test(kep, time)
+        self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
 
         Frame.reset_registry()
         Path.reset_registry()
