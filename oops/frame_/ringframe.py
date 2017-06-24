@@ -119,7 +119,7 @@ class RingFrame(Frame):
 
         # For a fixed epoch, return the fixed node
         if self.transform is not None:
-            return self.transform
+            return 0.
 
         # Otherwise, calculate it for the current time
         xform = self.planet_frame.transform_at_time(time, quick=quick)

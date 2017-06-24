@@ -1883,8 +1883,8 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def ring_elevation(self, event_key, reference='obs'):
-        """Angle from the ring plane and the photon direction.
+    def ring_elevation(self, event_key, reference='obs', signed=True):
+        """Angle from the ring plane to the photon direction.
 
         Evaluated at the ring intercept point. The angle is positive on the side
         of the ring plane where rotation is prograde; negative on the opposite
@@ -1897,15 +1897,22 @@ class Backplane(object):
         Input:
             event_key       key defining the ring surface event.
             reference       'obs' or 'sun'; see discussion above.
+            signed          True for elevations on the retrograde side of the
+                            rings to be negative; False for all angles to be
+                            non-negative.
         """
 
         event_key = Backplane.standardize_event_key(event_key)
         assert reference in ('obs', 'sun')
 
         # Look up under the desired reference
-        key = ('ring_elevation', event_key, reference)
+        key = ('ring_elevation', event_key, reference, signed)
         if key in self.backplanes:
             return self.backplanes[key]
+
+        key0 = ('ring_elevation', event_key, reference, True)
+        if key0 in self.backplanes:
+            return self.backplanes[key].abs()
 
         # If not found, fill in the ring events if necessary
         if ('ring_radius', event_key) not in self.backplanes:
@@ -1922,7 +1929,11 @@ class Backplane(object):
             dir = -event.apparent_arr()
 
         el = constants.HALFPI - event.perp.sep(dir)
-        self.register_backplane(key, el)
+        self.register_backplane(key0, el)
+
+        if not signed:
+            el = el.abs()
+            self.register_backplane(key, el)
 
         return self.backplanes[key]
 

@@ -102,7 +102,13 @@ def from_file(filespec, **parameters):
     Sun to the target body for calibration purposes.
     """
 
+    # Open the file
     hst_file = pyfits.open(filespec)
+
+    # Confirm that the telescope is HST
+    if HST().telescope_name(hst_file) != "HST":
+        raise IOError("not an HST file: " + this.filespec(hst_file))
+
     return HST.from_opened_fitsfile(hst_file, **parameters)
 
 ################################################################################
@@ -151,26 +157,32 @@ class HST(object):
         """Returns an array containing the data."""
 
         if 'layer' in parameters:
-            return hst_file[parameters['layer']].data
+            layer = parameters['layer']
         else:
-            return hst_file[1].data
+            layer = 1
+
+        return hst_file[layer].data
 
     def error_array(self, hst_file, **parameters):
         """Returns an array containing the uncertainty values associated with
         the data."""
 
         if 'layer' in parameters:
-            return hst_file[parameters['layer']+1].data
+            layer = parameters['layer']
         else:
-            return hst_file[2].data
+            layer = 1
+
+        return hst_file[layer+1].data
 
     def quality_mask(self, hst_file, **parameters):
         """Returns an array containing the data quality mask."""
 
         if 'layer' in parameters:
-            return hst_file[parameters['layer']+2].data
+            layer = parameters['layer']
         else:
-            return hst_file[3].data
+            layer = 1
+
+        return hst_file[layer+2].data
 
     # This works for Snapshot observations. Others must override.
     def time_limits(self, hst_file, **parameters):
@@ -203,7 +215,7 @@ class HST(object):
 
         return (0.,0.)
 
-    def register_frame(self, hst_file, fov, index=1, suffix="", **parameters):
+    def register_frame(self, hst_file, fov, suffix="", **parameters):
         """Returns the ID of a frame that rotates from J2000 coordinates into
         the (u,v) coordinates of the HST observation.
 
@@ -217,26 +229,30 @@ class HST(object):
           of the reference observation, and the ID of this new frame is
           returned.
 
-        The index and suffix arguments are used by WFPC2 and ACS/WFC to override
-        the default behavior.
+        The suffix argument is appended to frame ID; this is needed to make
+        WFPC2 and for ACS/WFC frame names unique.
         """
 
         if "reference" in parameters:
-            return self.register_postarg_frame(hst_file, fov, index, suffix,
+            return self.register_postarg_frame(hst_file, fov, suffix,
                                                               **parameters)
 
         else:
-            return self.register_tracker_frame(hst_file, fov, index, suffix,
+            return self.register_tracker_frame(hst_file, fov, suffix,
                                                               **parameters)
 
-    def register_tracker_frame(self, hst_file, fov, index=1, suffix="",
-                                                    **parameters):
+    def register_tracker_frame(self, hst_file, fov, suffix="", **parameters):
         """Constructs and returns a Tracker frame for the observation. This
         frame ensures that the target object stays at the same location on the
         CCD for the duration of the observation.
         """
 
-        header1 = hst_file[index].header
+        if 'layer' in parameters:
+            layer = parameters['layer']
+        else:
+            layer = 1
+
+        header1 = hst_file[layer].header
 
         if header1["CTYPE1"][:2] != "RA" or header1["CTYPE2"][:3] != "DEC":
             return None
@@ -307,8 +323,7 @@ class HST(object):
 
         return frame_id
 
-    def register_postarg_frame(self, hst_file, fov, index=1, suffix="",
-                                                    **parameters):
+    def register_postarg_frame(self, hst_file, fov, suffix="", **parameters):
         """If necessary, constructs a PosTarg frame for the observation and
         returns its ID. Otherwise, it returns the ID of the frame used by the
         reference observation."""
@@ -482,7 +497,7 @@ class HST(object):
                         fov = fov,
                         path = "EARTH",
                         frame = self.register_frame(hst_file, fov,
-                                                       **parameters),
+                                                    **parameters),
                         target = self.target_body(hst_file, **parameters),
                         telescope = self.telescope_name(hst_file),
                         instrument = self.instrument_name(hst_file),
@@ -530,11 +545,11 @@ class HST(object):
             headers = [hst_file[0].header]
 
             if 'layer' in parameters:
-                istart = parameters['layer']
+                layer = parameters['layer']
             else:
-                istart = 1
+                layer = 1
 
-            for i in range(istart, istart+3):
+            for i in range(layer, layer+3):
                 headers.append(hst_file[i].header)
 
             snapshot.insert_subfield("headers", headers)

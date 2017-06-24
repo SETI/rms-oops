@@ -167,6 +167,16 @@ class PoleFrame(Frame):
 
         return xform
 
+    ########################################
+
+    def node_at_time(self, time, quick={}):
+        """Angle from the original X-axis to the invariable plane's ascending
+        node.
+
+        This serves as the X-axis of this frame."""
+
+        return 0.
+
 ################################################################################
 # UNIT TESTS
 ################################################################################

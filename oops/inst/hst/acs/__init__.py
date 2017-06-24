@@ -6,6 +6,7 @@ try:
     import astropy.io.fits as pyfits
 except ImportError:
     import pyfits
+
 import oops
 from oops.inst.hst import HST
 
