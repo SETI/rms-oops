@@ -74,7 +74,7 @@ class Test_PointSource(unittest.TestCase):
 
         import numpy as np
         from oops.fov_.flatfov import FlatFOV
-        from oops.constants import *
+        from oops.constants import RPD
 
         flat_fov = FlatFOV((RPD/3600.,RPD/3600.), (1024,1024)) 
         ps = PointSource("TEST", 5., flat_fov)
