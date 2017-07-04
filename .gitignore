@@ -57,6 +57,10 @@ website/tools/Tools/viewer2_nep
 website/tools/Tools/viewer2_plu
 website/tools/Tools/viewer2_sat
 website/tools/Tools/viewer2_ura
+website/tools/metadata/COxxxx/COISS
+website/tools/metadata/COxxxx/COUVIS
+website/tools/metadata/COxxxx/COVIMS
+
 rf-research/astrometry/tinytim-7.4/*.txt
 rf-research/astrometry/tinytim-7.4/*.tt3
 rf-research/astrometry/tinytim-7.4/temp*
