@@ -324,6 +324,10 @@ class ISS(object):
             ISS.fovs[detector, "SUM2", None] = oops.fov.Subsampled(full_fov_none, 2)
             ISS.fovs[detector, "SUM4", None] = oops.fov.Subsampled(full_fov_none, 4)
 
+            ISS.fovs[detector, "FULL"] = full_fov_none
+            ISS.fovs[detector, "SUM2"] = oops.fov.Subsampled(full_fov_none, 2)
+            ISS.fovs[detector, "SUM4"] = oops.fov.Subsampled(full_fov_none, 4)
+
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal coordinate system is
         # rotated 180 degrees
