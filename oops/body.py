@@ -911,6 +911,58 @@ def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
     body.add_keywords([parent, "RING", "ORBIT", ring_name])
     body.add_keywords(keywords)
 
+def define_small_body(spice_id, name=None, spk=None, keywords=[],
+                                parent='SUN', barycenter='SSB'):
+    """Define the path, frame, surface for a body by SPICE ID.
+
+    This body treats the Sun as its parent body and barycenter."""
+
+    # Load the SPK if necessary
+    if spk:
+        cspice.furnsh(spk)
+
+    # Define the body's path
+    path = SpicePath(spice_id, "SSB", id=name)
+
+    # The name of the path is the name of the body
+    name = name or path.path_id
+
+    # If the body already exists, skip it
+    if name in Body.BODY_REGISTRY: return
+
+    # Sometimes a frame is undefined for a new moon; in this case assume it
+    # is synchronous
+    try:
+        frame = SpiceFrame(spice_id)
+    except LookupError:
+        if ('BARYCENTER' in keywords) or ('IRREGULAR' in keywords):
+            frame = Frame.J2000
+        else:
+            frame = Synchronous(path, parent, id='SYNCHRONOUS_' + name)
+
+    # Define the planet's body
+    # Note that this will overwrite any registered body of the same name
+    body = Body(name, path.path_id, frame.frame_id,
+                      parent=Body.lookup(parent),
+                      barycenter=Body.lookup(barycenter))
+    body.add_keywords(keywords)
+
+    # Add the gravity object if it exists
+    try:
+        body.apply_gravity(gravity.LOOKUP[name])
+    except KeyError: pass
+
+    # Add the surface object if shape information is available
+    try:
+        shape = spice_body(spice_id, frame.frame_id, (1.,1.,1.))
+        body.apply_surface(shape, shape.req, shape.rpol)
+    except RuntimeError:
+        shape = NullSurface(path, frame)
+        body.apply_surface(shape, 0., 0.)
+    except LookupError:
+        shape = NullSurface(path, frame)
+        body.apply_surface(shape, 0., 0.)
+
 ################################################################################
 # UNIT TESTS
 ################################################################################

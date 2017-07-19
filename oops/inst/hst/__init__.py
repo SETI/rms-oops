@@ -315,11 +315,15 @@ class HST(object):
         cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
                                                  id=frame_id + "_CMATRIX")
 
+        # If there is no target, assume inertial pointing
+        target_body = self.target_body(hst_file, **parameters)
+        if target_body is None:
+            return cmatrix.frame_id
+
         # Applies for the duration of the observation
         time_limits = self.time_limits(hst_file)
-        tracker = oops.frame.Tracker(cmatrix,
-                            self.target_body(hst_file, **parameters).path,
-                            "EARTH", time_limits[0], frame_id)
+        tracker = oops.frame.Tracker(cmatrix, target_body.path,
+                                     "EARTH", time_limits[0], frame_id)
 
         return frame_id
 
@@ -418,6 +422,8 @@ class HST(object):
         # If necessary, get the solar range from the target name
         if solar_range is None:
             target_body = self.target_body(hst_file, **parameters)
+            if target_body is None: return None
+
             target = oops.Path.as_path(target_body.path)
             target_sun_path = target.wrt("SUN")
             # Paths of the relevant bodies need to be defined in advance!
@@ -464,6 +470,8 @@ class HST(object):
 
         if 'target' in parameters:
             body_name = parameters['target']
+            if body_name is None:
+                return None
             return oops.Body.lookup(body_name)
 
         targname = hst_file[0].header["TARGNAME"]
@@ -477,10 +485,31 @@ class HST(object):
         try:
             body_name = HST_TARGET_DICT[key3]
         except KeyError:
-            body_name = HST_TARGET_DICT[key2]
-        # Raises a KeyError on failure
+            try:
+                body_name = HST_TARGET_DICT[key2]
+            except KeyError:
+#                 raise ValueError('Target body not identified: ' + targname)
+                return None
 
         return oops.Body.lookup(body_name)
+
+    def get_headers(self, hst_file, **parameters):
+        """Return an array of header dictionaries from the FITS file.
+
+        Overridden by WFPC2, where there are not three layers per object.
+        """
+
+        headers = [hst_file[0].header]
+
+        if 'layer' in parameters:
+            layer = parameters['layer']
+        else:
+            layer = 1
+
+        for i in range(layer, layer+3):
+            headers.append(hst_file[i].header)
+
+        return headers
 
     def construct_snapshot(self, hst_file, **parameters):
         """Returns a Snapshot object for the data found in the specified image.
@@ -542,17 +571,8 @@ class HST(object):
             snapshot.insert_subfield("extended_calib", extended_calib)
 
         if include_headers:
-            headers = [hst_file[0].header]
-
-            if 'layer' in parameters:
-                layer = parameters['layer']
-            else:
-                layer = 1
-
-            for i in range(layer, layer+3):
-                headers.append(hst_file[i].header)
-
-            snapshot.insert_subfield("headers", headers)
+            snapshot.insert_subfield("headers", self.get_headers(hst_file,
+                                                                 **parameters))
 
         return snapshot
 
