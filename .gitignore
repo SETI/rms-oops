@@ -43,3 +43,4 @@ swift/fxdr_2.1c/Makefile
 rf-research/astrometry/tinytim-7.4/*.txt
 rf-research/astrometry/tinytim-7.4/*.tt3
 rf-research/astrometry/tinytim-7.4/temp*
+cassini_backplane/docs/_build
