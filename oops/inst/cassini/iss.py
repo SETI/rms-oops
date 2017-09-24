@@ -351,8 +351,8 @@ class ISS(object):
             ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
     
             # This is Rob's determination of WAC - NAC in units of NAC pixels
-            xshift = -6.70 * xpixel
-            yshift = 1.73 * ypixel
+            xshift = -7. * xpixel
+            yshift = 4.4 * ypixel
             wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped, 
                                            id="CASSINI_ISS_WAC-NO_OFFSET")
             wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,

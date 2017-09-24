@@ -774,14 +774,14 @@ class Observation(object):
 
         obs_time = self.time[0] + time_frac * (self.time[1] - self.time[0])
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
-        _, obs_event = multipath.photon_to_event(
-                                    obs_event, quick=quick,
-                                    converge=converge)  # insert photon arrivals
+        (_,
+         arrival_event) = multipath.photon_to_event(obs_event, quick=quick,
+                                                    converge=converge)
 
-        centers = obs_event.neg_arr_ap
+        centers = arrival_event.neg_arr_ap
         ranges = centers.norm()
         radii = Scalar([body.radius for body in bodies])
-        radius_angles = (radii / ranges).arcsin()
+        radius_angles = (radii/ranges).arcsin()
 
         inner_radii = Scalar([body.inner_radius for body in bodies])
         inner_angles = (inner_radii / ranges).arcsin()
@@ -824,7 +824,7 @@ class Observation(object):
 
         u_scale = fov.uv_scale.vals[0]
         v_scale = fov.uv_scale.vals[1]
-        body_uv = fov.uv_from_los(obs_event.neg_arr_ap).vals
+        body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
         for i in range(nbodies):
             if flags[i]:
                 body_data = {}

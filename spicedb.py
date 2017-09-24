@@ -1799,7 +1799,7 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
         bodies += [501,505,506,530,540,55062]
 
     if 6 in planets:
-        bodies += [601,610,618,619,633,640,65035,65040]
+        bodies += [601,610,618,619,633,635,640,65035,65040]
 
     if 7 in planets:
         bodies += [701,706,715,716,726]
