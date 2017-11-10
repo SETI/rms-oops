@@ -470,6 +470,10 @@ class Kepler(Path, Fittable):
 
             # Laplace plane case
             else:
+                arg = self.phase0[k] + t * self.dphase_dt[k]
+                sin_arg = np.sin(arg)
+                cos_arg = np.cos(arg)
+
                 laplace_plane = True
                 laplace_sin_inc = np.sin(self.amp[k])
                 laplace_cos_inc = np.cos(self.amp[k])
