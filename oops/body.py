@@ -30,6 +30,61 @@ from oops.surface_.spicebody   import spice_body
 import oops.constants     as constants
 import oops.spice_support as spice_support
 
+################################################################################
+# A list of known changes in SPICE names and IDs
+# This also standardizes the SPICE names of provisionally-named bodies.
+################################################################################
+
+JUPITER_ALIASES = [
+    # Jupiter [new code, old code], [formal name, provisional name]
+    [[     55060], [         'S2003_J_2' ]],
+    [[     55061], [         'S2003_J_3' ]],
+    [[     55062], [         'S2003_J_4' ]],
+    [[557, 55063], [         'S2003_J_5' ]],
+    [[     55064], [         'S2003_J_9' ]],
+    [[     55065], [         'S2003_J_10']],
+    [[     55066], [         'S2003_J_12']],
+    [[558, 55067], [         'S2003_J_15']],
+    [[     55068], [         'S2003_J_16']],
+    [[550       ], ['HERSE', 'S2003_J_17']],
+    [[555, 55069], [         'S2003_J_18']],
+    [[     55070], [         'S2003_J_19']],
+    [[     55071], [         'S2003_J_23']],
+    [[551, 55072], [         'S2010_J_1' ]],
+    [[552, 55073], [         'S2010_J_2' ]],
+    [[     55074], [         'S2011_J_1' ]],
+    [[556, 55075], [         'S2011_J_2' ]],
+    [[554       ], [         'S2016_J_1' ]],
+    [[553, 55076], ['DIA',   'S2000_J_11']],
+]
+
+SATURN_ALIASES = [
+    # Saturn [code], [preferred name, old name]
+    [[65035], ['S2004_S_7' , 'S7_2004' ]],
+    [[65040], ['S2004_S_12', 'S12_2004']],
+    [[65041], ['S2004_S_13', 'S13_2004']],
+    [[65045], ['S2004_S_17', 'S17_2004']],
+    [[65048], ['S2006_S_1' , 'S01_2006']],
+    [[65055], ['S2007_S_2' , 'S02_2007']],
+    [[65050], ['S2006_S_3' , 'S03_2006']],
+    [[65056], ['S2007_S_3' , 'S03_2007']],
+]
+
+ALIASES = JUPITER_ALIASES + SATURN_ALIASES
+
+# Define within CSPICE
+if cspice.VERSION == 2:
+    for (codes, names) in ALIASES:
+        cspice.boddef_aliases(names, codes)
+else:
+    for (codes, names) in ALIASES:
+        while len(codes) < len(names):
+            codes = [codes[0]] + codes
+        for (c,n) in zip(codes, names)[::-1]:   # reverse; later boddefs win
+            cspice.boddef(n, c)
+
+################################################################################
+
 class Body(object):
     """Defines the properties and relationships of solar system bodies.
 
@@ -87,10 +142,10 @@ class Body(object):
 
         if spice_name is None:
             spice_name = name
-            
+
         try:
             self.spice_id = cspice.bodn2c(spice_name)
-        except KeyError:
+        except (KeyError, ValueError):
             self.spice_id = None
 
         self.ring_frame = None
@@ -537,7 +592,11 @@ def _define_mars(start_time, stop_time, asof=None, irregulars=False):
 
 JUPITER_CLASSICAL = range(501,505)
 JUPITER_REGULAR   = [505] + range(514,517)
-JUPITER_IRREGULAR = range(506,514) + range(517,550) + [55062, 55063]
+JUPITER_IRREGULAR = range(506,514) + range(517,551) + [554] + \
+                    [55060, 55061, 55062, 55064, 55065, 55066, 55068, 55070,
+                     55071, 55074]
+# See definition of JUPITER_ALIASES at the top of the file for the list of
+# additional, ambiguous irregular moons
 
 JUPITER_MAIN_RING_LIMIT = 128940.
 
@@ -557,6 +616,23 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
     if irregulars:
         define_bodies(JUPITER_IRREGULAR, "JUPITER", "JUPITER BARYCENTER",
                       ["SATELLITE", "IRREGULAR"])
+
+        # For backwards compatibility, test alternative IDs for certain moons
+        if cspice.VERSION < 2:      # Search for the aliased ID that is in SPK
+          for (ids, names) in JUPITER_ALIASES:
+            try:
+                _ = cspice.spkez(ids[0], 0., 'J2000', 'NONE', 1) # did it work?
+                cspice.boddef(names[0], ids[0])
+                define_bodies([ids[0]], "JUPITER", "JUPITER BARYCENTER",
+                                        ["SATELLITE", "IRREGULAR"])
+            except RuntimeError:
+                cspice.boddef(names[-1], ids[1])
+                define_bodies([ids[1]], "JUPITER", "JUPITER BARYCENTER",
+                                        ["SATELLITE", "IRREGULAR"])
+        else:                       # cspice handles aliases; one ID is enough
+            for (ids, names) in JUPITER_ALIASES:
+                define_bodies([ids[0]], "JUPITER", "JUPITER BARYCENTER",
+                                        ["SATELLITE", "IRREGULAR"])
 
     define_ring("JUPITER", "JUPITER_RING_PLANE", None, [])
     define_ring("JUPITER", "JUPITER_RING_SYSTEM", JUPITER_MAIN_RING_LIMIT, [])

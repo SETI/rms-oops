@@ -3010,6 +3010,8 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
                         1.
         """
 
+        image = np.asfarray(image)
+
         if lo is None:
             lo = image.min()
 

@@ -230,7 +230,6 @@ class Test_Keck(unittest.TestCase):
         import cspice
         from oops.inst.keck import Keck
 
-
 ########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

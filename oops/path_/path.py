@@ -1347,7 +1347,7 @@ class Test_Path(unittest.TestCase):
         from oops.path_.linearpath import LinearPath
         from oops.frame_.spiceframe import SpiceFrame
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-        
+
         Path.USE_QUICKPATHS = False
 
         cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))

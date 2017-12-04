@@ -4,28 +4,6 @@
 # This set of routines handles the selection of SPICE kernels based on various
 # criteria related to body, instrument, time frame, etc. It also sorts selected
 # kernels into their proper load order.
-#
-# 11/2011 original by Deukkwon Yoon & Mark Showalter
-#
-# 3/11/14 (MRS) Complete rewrite.
-#   - Revised to support times TAI in addition to ISO format date/time strings.
-#   - New functions added:
-#       furnish_lsk(), furnish_spk(), furnish_inst(), furnish_ck(),
-#       furnish_by_name(), unload_by_name(), unload_by_type(), furnished_names()
-#     These function provide much greater control over what kernels are being
-#     used at a given moment, and the support the ability to save the current
-#     kernel state as a list of kernel names, and then restore it later.
-#   - Old functions deprecated:
-#       furnish_cassini_kernels(), furnish_solar_system()
-#   - SPICE.db has been reorganized to separate the kernel version from the
-#     kernel name, and this feature now makes it simpler to select different
-#     version of kernels that are otherwise functionally equivalent.
-#   - Unit tests now exercise the default SPICE.db file rather than a test DB.
-#     Results of unit tests should NOT change as the database is updated. This
-#     is important because we want the results of database query to be stable
-#     when using selection options such as "as of"
-#
-# 6/10/15 (MRS) Added support for metakernels and star kernels
 ################################################################################
 
 from __future__ import division
@@ -47,6 +25,7 @@ FILE_LIST = []  # If DEBUG, lists the files that would have been furnished.
 # Global variables to track loaded kernels
 ################################################################################
 
+# Furnished kernel names by type, listed in load order
 FURNISHED_NAMES = {
     'CK':   [],
     'FK':   [],
@@ -59,6 +38,7 @@ FURNISHED_NAMES = {
     'META':  [],
 }
 
+# Furnished kernel file basenames by type, listed in load order
 FURNISHED_FILES = {
     'CK':   [],
     'FK':   [],
@@ -71,6 +51,7 @@ FURNISHED_FILES = {
     'META':  [],
 }
 
+# Furnished file numbers by name.
 FURNISHED_FILENOS = {}
 
 SPICE_PATH = None
@@ -322,7 +303,7 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
 
     Input:
         kernel_list a list of KernelInfo objects as returned by one or more
-                    calls to elect_kernels("SPK", ...), in its intended load
+                    calls to select_kernels("SPK", ...), in its intended load
                     order.
 
         start_time  the start time of the interval of interest, as ISO format
