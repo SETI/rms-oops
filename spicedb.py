@@ -38,8 +38,8 @@ FURNISHED_NAMES = {
     'META':  [],
 }
 
-# Furnished kernel file basenames by type, listed in load order
-FURNISHED_FILES = {
+# Furnished kernel file paths and names by type, listed in load order
+FURNISHED_FILESPECS = {
     'CK':   [],
     'FK':   [],
     'IK':   [],
@@ -53,6 +53,9 @@ FURNISHED_FILES = {
 
 # Furnished file numbers by name.
 FURNISHED_FILENOS = {}
+
+# Furnished kernel file info objects by type, keyed by basename
+FURNISHED_INFO = {}
 
 SPICE_PATH = None
 
@@ -97,6 +100,18 @@ class KernelInfo(object):
         self.release_date   = list[RELEASE_DATE_INDEX]
         self.spice_id       = list[SPICE_ID_INDEX]
         self.load_priority  = list[LOAD_PRIORITY_INDEX]
+        self.basename       = os.path.basename(self.filespec)
+
+        if self.start_time:
+            self.start_tai  = julian.tai_from_iso(self.start_time)
+            self.stop_tai   = julian.tai_from_iso(self.stop_time)
+            self.start_tdb  = julian.tdb_from_tai(self.start_tai)
+            self.stop_tdb   = julian.tdb_from_tai(self.stop_tai)
+        else:
+            self.start_tai  = -1.e99
+            self.stop_tai   =  1.e99
+            self.start_tdb  = -1.e99
+            self.stop_tdb   =  1.e99
 
         if len(list) > FILE_NO_INDEX:
             self.file_no = list[FILE_NO_INDEX]
@@ -1175,7 +1190,8 @@ def furnish_kernels(kernel_list, fast=True):
     ranges if appropriate.
     """
 
-    global DEBUG, FILE_LIST, FURNISHED_NAMES, FURNISHED_FILES, FURNISHED_FILENOS
+    global DEBUG, FILE_LIST
+    global FURNISHED_NAMES, FURNISHED_FILESPECS, FURNISHED_INFO, FURNISHED_FILENOS
 
     file_list = []
     file_types = {}     # returns the kernel type give the file name
@@ -1204,13 +1220,16 @@ def furnish_kernels(kernel_list, fast=True):
         files = kernel.filespec.split(',')
         for file in files:
 
-            # Remove the name from earliers in the list if necessary
+            # Remove the name from earlier in the list if necessary
             if file in file_list:
                 file_list.remove(file)
 
             # Always add it at the end
             file_list.append(file)
             file_types[file] = kernel.kernel_type       # track kernel types
+
+            # Save the info for each furnished file
+            FURNISHED_INFO[kernel.basename] = kernel
 
     # Furnish the kernel files...
     if DEBUG:
@@ -1219,7 +1238,7 @@ def furnish_kernels(kernel_list, fast=True):
     else:
         spice_path = get_spice_path()
         for file in file_list:
-            furnished_list = FURNISHED_FILES[file_types[file]]
+            furnished_list = FURNISHED_FILESPECS[file_types[file]]
 
             # In fast mode, avoid re-furnishing kernels
             already_furnished = (file in furnished_list)
@@ -1235,6 +1254,7 @@ def furnish_kernels(kernel_list, fast=True):
             # Load the kernel
             cspice.furnsh(filespec)
             furnished_list.append(file)
+            
 
         # Track the kernel names loaded
         for name in name_list:
@@ -1537,7 +1557,7 @@ def furnish_by_metafile(metafile, time=None, asof=None):
 def unload_by_name(names):
     """Unload kernels based on a list of kernel names."""
 
-    global FURNISHED_FILES, FURNISHED_NAMES, FURNISHED_FILENOS
+    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO, FURNISHED_FILENOS
 
     # Search database
     kernel_list = _query_by_name(names)
@@ -1553,8 +1573,9 @@ def unload_by_name(names):
         # Remove the kernel files from the dictionary and unload from SPICE
         filespecs = kernel.filespec.split(',')
         for filespec in filespecs:
-            if filespec in FURNISHED_FILES[key]:
-                FURNISHED_FILES[key].remove(filespec)
+            if filespec in FURNISHED_FILESPECS[key]:
+                FURNISHED_FILESPECS[key].remove(filespec)
+                del FURNISHED_INFO[filespec]
                 cspice.unload(os.path.join(spice_path, filespec))
 
         # Delete the file_no from the list
@@ -1578,7 +1599,7 @@ def unload_by_name(names):
 def unload_by_type(types=None):
     """Unload all the kernels of one or more specified types."""
 
-    global FURNISHED_FILES, FURNISHED_NAMES, FURNISHED_FILENOS
+    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO, FURNISHED_FILENOS
     global KERNEL_TYPE_SORT_ORDER
 
     # Normalize input
@@ -1593,12 +1614,13 @@ def unload_by_type(types=None):
     for key in types:
 
         # Unload each file from SPICE
-        file_list = FURNISHED_FILES[key]
+        file_list = FURNISHED_FILESPECS[key]
         for file in file_list:
             cspice.unload(os.path.join(spice_path, file))
+            del FURNISHED_INFO[file]
 
         # Delete the file list from the dictionary
-        FURNISHED_FILES[key] = []
+        FURNISHED_FILESPECS[key] = []
 
         # Delete the file_no list if necessary
         name_list = FURNISHED_NAMES[key]
@@ -1610,6 +1632,15 @@ def unload_by_type(types=None):
         FURNISHED_NAMES[key] = []
 
     return
+
+def unload(filespec, type):
+    """Unload a given kernel give the full path and the type. Used to allow
+    the spicedb module to track kernels opened by other methods."""
+
+    cspice.unload(filespec)
+
+    if filespec in FURNISHED_FILESPECS[type]:
+        FURNISHED_FILESPECS.remove(filespec)
 
 ################################################################################
 # Public API for names of kernels
@@ -1666,7 +1697,7 @@ def furnished_names(types=None):
     # For each selected type...
     for key in types:
 
-        # Unload each file from SPICE
+        # Walk down list
         for name in FURNISHED_NAMES[key]:
             if name in FURNISHED_FILENOS:
                 name_list.append(name + _fileno_str(FURNISHED_FILENOS[name]))
@@ -1674,6 +1705,97 @@ def furnished_names(types=None):
                 name_list.append(name)
 
     return name_list
+
+def furnished_basenames(types=None):
+    """Return a list of strings containing the basenames of the furnished
+    kernels."""
+
+    global FURNISHED_NAMES, FURNISHED_FILENOS
+    global KERNEL_TYPE_SORT_ORDER
+
+    # Normalize input
+    if types is None or types == []:
+        types = KERNEL_TYPE_SORT_ORDER
+    elif type(types) == str:
+        types = [types]
+
+    name_list = []
+
+    # For each selected type...
+    for key in types:
+
+        # Walk down list
+        for filespec in FURNISHED_FILESPECS[key]:
+            basename = os.path.basename(filespec)
+            name_list.append(basename)
+
+    return name_list
+
+def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
+                             slop=6*60*60):
+    """Return a list of SPICE file basenames needed for a particular list of
+    bodies and frames at a particular time."""
+
+    global FURNISHED_NAMES, FURNISHED_FILENOS
+    global KERNEL_TYPE_SORT_ORDER
+
+    # Normalize input
+    if types is None or types == []:
+        types = KERNEL_TYPE_SORT_ORDER
+    elif type(types) == str:
+        types = [types]
+
+    # Normalize time
+    if isinstance(time, (str,float,int)):
+        time = [time, time]
+
+    time_tai = []
+    for tval in time:
+        if type(tval) == str:
+            time_tai.append(julian.tai_from_iso(tval))
+        else:
+            time_tai.append(tval)
+
+    # Handle spacecraft and instrument
+    ck_needed = False
+    if sc:
+        bodies.append(sc)
+        ck_needed = True
+
+    if inst:
+        ck_needed = True
+        inst = inst.lower()
+
+    basename_list = []
+
+    # For each selected type...
+    for key in types:
+      if key == 'CK' and not ck_needed: continue
+      if key == 'IK' and not inst: continue
+
+      # Walk down list
+      temp_list = []
+      for filespec in FURNISHED_FILESPECS[key]:
+        basename = os.path.basename(filespec)
+        info = FURNISHED_INFO[basename]
+
+        if time and info.start_time:
+            if time[1] < info.start_tai - slop: continue
+            if time[0] > info.stop_tai + slop: continue
+
+        if bodies and info.spice_id:
+            if info.spice_id not in bodies: continue
+
+        temp_list.append(info)
+
+      if key == 'IK':
+        reduced_list = [i for i in temp_list if inst in i.basename.lower()]
+        if reduced_list:
+            temp_list = reduced_list
+
+      basename_list += [i.basename for i in temp_list]
+
+    return basename_list
 
 ################################################################################
 # DEPRECATED: Special kernel loader for Cassini
@@ -2714,23 +2836,23 @@ class test_spicedb(unittest.TestCase):
         self.assertTrue(kernels.index('NEP087') < kernels.index('NEP086'))
         # NEP087 < NEP086 because the latter has the later creation date
 
-        self.assertEqual(len(FURNISHED_FILES['LSK']), 1)
-        self.assertEqual(len(FURNISHED_FILES['PCK']), 5)
-        self.assertEqual(len(FURNISHED_FILES['SPK']), 16)
+        self.assertEqual(len(FURNISHED_FILESPECS['LSK']), 1)
+        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 5)
+        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 16)
         self.assertEqual(len(FURNISHED_NAMES['LSK']), 1)
         self.assertEqual(len(FURNISHED_NAMES['PCK']), 5)
         self.assertEqual(len(FURNISHED_NAMES['SPK']), 16)
 
         unload_by_name(kernels[:6])
-        self.assertEqual(len(FURNISHED_FILES['LSK']), 0)
-        self.assertEqual(len(FURNISHED_FILES['PCK']), 0)
-        self.assertEqual(len(FURNISHED_FILES['SPK']), 16)
+        self.assertEqual(len(FURNISHED_FILESPECS['LSK']), 0)
+        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 0)
+        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 16)
         self.assertEqual(len(FURNISHED_NAMES['LSK']), 0)
         self.assertEqual(len(FURNISHED_NAMES['PCK']), 0)
         self.assertEqual(len(FURNISHED_NAMES['SPK']), 16)
 
         unload_by_type('SPK')
-        self.assertEqual(len(FURNISHED_FILES['SPK']), 0)
+        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 0)
         self.assertEqual(len(FURNISHED_NAMES['SPK']), 0)
 
         ########
@@ -2774,7 +2896,7 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
-        self.assertEqual(len(FURNISHED_FILES['PCK']), 4)
+        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 4)
 
         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
@@ -2784,12 +2906,12 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
                          range(90,95))
-        self.assertEqual(len(FURNISHED_FILES['SPK']), 5 + 5)
+        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 5 + 5)
 
         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          range(438,457))
-        self.assertEqual(len(FURNISHED_FILES['CK']), 457 - 438)
+        self.assertEqual(len(FURNISHED_FILESPECS['CK']), 457 - 438)
 
         ########
         kernels1 = furnish_cassini_kernels('2010-03-01', '2010-06-01',
@@ -2821,7 +2943,7 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
-        self.assertEqual(len(FURNISHED_FILES['PCK']), 4)
+        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 4)
 
         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
@@ -2831,12 +2953,12 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
                          range(90,98))
-        self.assertEqual(len(FURNISHED_FILES['SPK']), 8 + 5)
+        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 8 + 5)
 
         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          range(438,469))
-        self.assertEqual(len(FURNISHED_FILES['CK']), 469 - 438)
+        self.assertEqual(len(FURNISHED_FILESPECS['CK']), 469 - 438)
         # SPK and CK file_no lists get merged
 
         ########

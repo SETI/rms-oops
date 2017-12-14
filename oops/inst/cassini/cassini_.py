@@ -47,16 +47,17 @@ class Cassini(object):
     DTDB = (TDB1 - TDB0) / MONTHS
     SLOP = 43200.
 
-    CK_LOADED = np.zeros(MONTHS, dtype="bool")  # True if month was loaded
-    CK_LIST   = np.empty(MONTHS, dtype="object")# Kernels needed
-    CK_DICT   = {}     # A dictionary of kernel names returning True if loaded
+    CK_LOADED = np.zeros(MONTHS, dtype="bool")      # True if month was loaded
+    CK_LIST   = np.empty(MONTHS, dtype="object")    # Kernels needed by month
+    CK_DICT   = {}      # Dictionary keyed by filespec returns kernel info
+                        # object, but only if loaded.
 
-    # SPKs are now furnished all at once via a metakernel.
-#     SPK_SUBPATH = os.path.join("Cassini", "SPK-reconstructed")
-#     SPK_PREDICT = os.path.join("Cassini", "SPK-predicted")
-#     SPK_LOADED  = np.zeros(MONTHS, dtype="bool")
-#     SPK_LIST    = np.empty(MONTHS, dtype="object")
-#     SPK_DICT    = {}
+    # SPKs are now furnished all at once via a metakernel. DISABLED
+    SPK_SUBPATH = os.path.join("Cassini", "SPK-reconstructed")
+    SPK_PREDICT = os.path.join("Cassini", "SPK-predicted")
+    SPK_LOADED  = np.zeros(MONTHS, dtype="bool")
+    SPK_LIST    = np.empty(MONTHS, dtype="object")
+    SPK_DICT    = {}
 
     loaded_instruments = []
 
@@ -83,18 +84,14 @@ class Cassini(object):
         oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME,
                                  planets=planets)
         ignore = oops.path.SpicePath("CASSINI", "SATURN")
-        #ignore = oops.frame.SpiceFrame("CASSINI_SC_COORD", "J2000")
 
         spicedb.open_db()
-
         kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"),
                                          name="CAS-CK-" + ck.upper())
-        Cassini.initialize_kernels(kernels, Cassini.CK_LIST, Cassini.CK_DICT)
+        Cassini.initialize_kernels(kernels, Cassini.CK_LIST)
 
-        # SPKs are now furnished all at once via a metakernel
-#         kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"))
-#         Cassini.initialize_kernels(kernels, Cassini.SPK_LIST, Cassini.SPK_DICT)
-        kernels = spicedb.furnish_by_metafile('CAS-SPK-META')
+        kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"))
+        Cassini.initialize_kernels(kernels, Cassini.SPK_LIST)
 
         spicedb.close_db()
 
@@ -110,9 +107,9 @@ class Cassini(object):
         Cassini.CK_LIST = np.empty(Cassini.MONTHS, dtype="object")
         Cassini.CK_DICT = {}
 
-#         Cassini.SPK_LOADED = np.zeros(Cassini.MONTHS, dtype="bool")
-#         Cassini.SPK_LIST = np.empty(Cassini.MONTHS, dtype="object")
-#         Cassini.SPK_DICT = {}
+        Cassini.SPK_LOADED = np.zeros(Cassini.MONTHS, dtype="bool")
+        Cassini.SPK_LIST = np.empty(Cassini.MONTHS, dtype="object")
+        Cassini.SPK_DICT = {}
 
         Cassini.initialized = False
 
@@ -140,23 +137,21 @@ class Cassini(object):
         """Ensure that the SPK kernels applicable at or near the given time have
         been furnished. The time can be tai or tdb."""
 
-#         Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
-#                                    Cassini.SPK_DICT)
-        pass    # SPKs are now loaded all at once via a metakernel
+        Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
+                                   Cassini.SPK_DICT)
+# DISABLED  pass    # SPKs are now loaded all at once via a metakernel
 
     @staticmethod
     def load_spks(t0, t1):
         """Ensure that all the SPK kernels applicable near or within the time
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb."""
 
-#         Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
-#                                      Cassini.SPK_DICT)
-        pass    # SPKs are now loaded all at once via a metakernel
+        Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
+                                     Cassini.SPK_DICT)
+# DISABLED  pass    # SPKs are now loaded all at once via a metakernel
 
     @staticmethod
-    def load_kernels(t0, t1, loaded, lists, dict):
-
-        spice_path = spicedb.get_spice_path()
+    def load_kernels(t0, t1, loaded, lists, kernel_dict):
 
         # Find the range of months needed
         m1 = int((t0 - Cassini.TDB0) // Cassini.DTDB)
@@ -164,11 +159,12 @@ class Cassini(object):
 
         # Load any months not already loaded
         for m in range(m1, m2):
-            if not loaded[m]:
-                for name in lists[m]:
-                    if not dict[name]:
-                        cspice.furnsh(os.path.join(spice_path, name))
-                        dict[name] = True
+          if not loaded[m]:
+            for kernel in lists[m]:
+                filespec = kernel.filespec
+                if filespec not in kernel_dict:
+                    spicedb.furnish_kernels([kernel])
+                    kernel_dict[filespec] = kernel
                 loaded[m] = True
 
     ########################################
@@ -176,26 +172,23 @@ class Cassini(object):
     ########################################
 
     @staticmethod
-    def initialize_kernels(kernels, lists, dict):
+    def initialize_kernels(kernels, lists):
 
         for i in range(Cassini.MONTHS):
             lists[i] = []
 
         for kernel in kernels:
 
-            # Add the kernel's filespec to the dictionary
-            dict[kernel.filespec] = False
-
             # Find the range of months applicable, extended by 12 hours
             t0 = cspice.str2et(kernel.start_time) - Cassini.SLOP
-            t1  = cspice.str2et(kernel.stop_time) + Cassini.SLOP
+            t1 = cspice.str2et(kernel.stop_time)  + Cassini.SLOP
 
             m1 = int((t0 - Cassini.TDB0) // Cassini.DTDB)
             m2 = int((t1 - Cassini.TDB0) // Cassini.DTDB) + 1
 
             # Add this kernel to each month's list
             for m in range(m1, m2):
-                lists[m] += [kernel.filespec]
+                lists[m] += [kernel]
 
     ############################################################################
     # Routines for managing the loading other kernels
