@@ -15,6 +15,12 @@ import spicedb
 import cspice
 import oops
 
+import oops.body as body
+
+TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
+SATURN_BODIES  = [6, 699] + body.SATURN_REGULAR  + body.SATURN_IRREGULAR
+JUPITER_BODIES = [5, 599] + body.JUPITER_REGULAR + body.JUPITER_IRREGULAR
+
 ################################################################################
 # Routines for managing the loading of C and SP kernels
 ################################################################################
@@ -292,5 +298,20 @@ class Cassini(object):
         spicedb.close_db()
 
         return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))
+
+    ############################################################################
+
+    @staticmethod
+    def used_kernels(time, inst):
+        """Return the list of kernels associated with a Cassini observation at
+        a selected range of times."""
+
+        if time[0] >= TOUR:
+            bodies = SATURN_BODIES
+        else:
+            bodies = JUPITER_BODIES
+
+        return spicedb.used_basenames(time=time, inst=inst, sc=-82,
+                                      bodies=bodies)
 
 ################################################################################

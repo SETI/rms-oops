@@ -7,14 +7,8 @@ import julian
 import vicar
 import pdstable
 import oops
-import spicedb
-import oops.body as body
 
 from oops.inst.cassini.cassini_ import Cassini
-
-TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
-SATURN_BODIES  = [6, 699] + body.SATURN_REGULAR  + body.SATURN_IRREGULAR
-JUPITER_BODIES = [5, 599] + body.JUPITER_REGULAR + body.JUPITER_IRREGULAR
 
 ################################################################################
 # Standard class methods
@@ -77,13 +71,7 @@ def from_file(filespec, fast_distortion=True, **parameters):
                                filter2 = filter2,
                                gain_mode = gain_mode)
 
-    # Insert the list of SPICE kernels
-    if result.time[0] >= TOUR:
-        bodies = SATURN_BODIES
-    else:
-        bodies = JUPITER_BODIES
-    result.spice_kernels = spicedb.used_basenames(time=result.time, sc=-82,
-                                                  inst='iss', bodies=bodies)
+    result.spice_kernels = Cassini.used_kernels(result.time, 'iss')
 
     return result
 
@@ -125,6 +113,7 @@ def from_index(filespec, **parameters):
                                  detector = camera,
                                  sampling = mode)
 
+        item.spice_kernels = Cassini.used_kernels(item.time, 'iss')
         snapshots.append(item)
 
     # Make sure all the SPICE kernels are loaded
