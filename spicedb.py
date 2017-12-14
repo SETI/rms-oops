@@ -8,18 +8,22 @@
 
 from __future__ import division
 import os
+import datetime
 import unittest
 
 import julian
 import interval
 import textkernel
-import cspice
+import cspice1 as cspice
 
 import sqlite_db as db
 
 # For testing and debugging
 DEBUG = False   # If true, no files are furnished.
 FILE_LIST = []  # If DEBUG, lists the files that would have been furnished.
+
+IS_OPEN = False
+DB_PATH = ''
 
 ################################################################################
 # Global variables to track loaded kernels
@@ -36,6 +40,7 @@ FURNISHED_NAMES = {
     'SPK':  [],
     'STARS': [],
     'META':  [],
+    'UNK':  [],
 }
 
 # Furnished kernel file paths and names by type, listed in load order
@@ -49,12 +54,13 @@ FURNISHED_FILESPECS = {
     'SPK':  [],
     'STARS': [],
     'META':  [],
+    'UNK':  [],
 }
 
 # Furnished file numbers by name.
 FURNISHED_FILENOS = {}
 
-# Furnished kernel file info objects by type, keyed by basename
+# Furnished sets of kernel file info objects, keyed by basename
 FURNISHED_INFO = {}
 
 SPICE_PATH = None
@@ -88,6 +94,18 @@ KERNEL_TYPE_SORT_DICT = {'LSK': 0, 'SCLK': 1, 'FK': 2, 'IK': 3, 'PCK': 4,
 KERNEL_TYPE_SORT_ORDER = ['LSK', 'SCLK', 'FK', 'IK', 'PCK', 'SPK', 'CK',
                           'STARS', 'META']
 
+KERNEL_TYPE_FROM_EXT = {
+    '.tls': 'LSK',
+    '.tpc': 'PCK',
+    '.bpc': 'PCK',
+    '.bsp': 'SPK',
+    '.tsc': 'SCLK',
+    '.tf' : 'FK',
+    '.ti' : 'IK',
+    '.bc' : 'CK',
+    '.bdb': 'STARS',
+    '.txt': 'META',
+}
 class KernelInfo(object):
 
     def __init__(self, list):
@@ -237,6 +255,96 @@ class KernelInfo(object):
     @property
     def timeless(self):
         return (self.start_time is None and self.stop_time is None)
+
+def kernels_from_filespec(filespec, name=None, version=None, release=None,
+                                    priority=100):
+    """Fill in kernel info as well as possible from a file path."""
+
+    # Search in the database first
+    basename = os.path.basename(filespec)
+    try:
+        if db_is_open():
+            return select_by_filespec(basename, time=None)
+        else:
+            open_db()
+            kernels = select_by_filespec(basename, time=None)
+            close_db()
+            return kernels
+
+    except ValueError:
+        pass
+
+    if name is None:
+        (name, ext) = os.path.splitext(basename)
+        name = name.upper()
+    else:
+        ext = os.path.splitext(basename)[1]
+
+    ext = ext.lower()
+
+    if version is None:
+        version = 'V1'
+
+    full_name = name + '-' + version
+
+    if release is None:
+        today = datetime.datetime.today()
+        release = '%4d-%02d-%02d' % (today.year, today.month, today.day)
+
+    kernels = []
+
+    # Get info about a CK
+    try:
+        spice_ids = cspice.ckobj(filespec)
+        for spice_id in spice_ids:
+            spice_id = int(spice_id)
+
+            if spice_id < -999:
+                body_id = spice_id // 1000
+            else:
+                body_id = spice_id
+
+            coverages = cspice.ckcov(filespec, spice_id,
+                                     False, 'SEGMENT', 1., 'TDB')
+            for (start_tdb, stop_tdb) in coverages:
+                start_time = julian.iso_from_tai(julian.tai_from_tdb(start_tdb))
+                stop_time  = julian.iso_from_tai(julian.tai_from_tdb(stop_tdb))
+
+                kernel = KernelInfo([name, version, 'CK', filespec,
+                                     start_time, stop_time, release,
+                                     body_id, priority, full_name, 1])
+                kernels.append(kernel)
+
+        return kernels
+
+    except RuntimeError:
+        pass
+
+    # Get info about an SPK
+    try:
+        spice_ids = cspice.spkobj(filespec)
+        for spice_id in spice_ids:
+            spice_id = int(spice_id)
+
+            coverages = cspice.spkcov(filespec, spice_id)
+            for (start_tdb, stop_tdb) in coverages:
+                start_time = julian.iso_from_tai(julian.tai_from_tdb(start_tdb))
+                stop_time  = julian.iso_from_tai(julian.tai_from_tdb(stop_tdb))
+
+                kernel = KernelInfo([name, version, 'SPK', filespec,
+                                     start_time, stop_time, release,
+                                     spice_id, priority, full_name, 1])
+                kernels.append(kernel)
+
+        return kernels
+
+    except RuntimeError:
+        pass
+
+    ktype = KERNEL_TYPE_FROM_EXT.get(ext, 'UNK')
+
+    return [KernelInfo([name, version, ktype, filespec, None, None, release,
+                        None, priority, full_name, 1])]
 
 ################################################################################
 # Kernel List Manipulations
@@ -852,15 +960,35 @@ def open_db(name=None):
     SPICE_SQLITE_DB_NAME is used.
     """
 
+    global IS_OPEN, DB_PATH
+
+    if IS_OPEN: return
+
     if name is None:
-        name = os.environ["SPICE_SQLITE_DB_NAME"]
+        if DB_PATH:
+            name = DB_PATH
+        else:
+            name = os.environ["SPICE_SQLITE_DB_NAME"]
 
     db.open(name)
+    DB_PATH = name
+    IS_OPEN = True
 
 def close_db():
     """Close the SPICE database."""
 
-    db.close()
+    global IS_OPEN
+
+    if IS_OPEN:
+        db.close()
+        IS_OPEN = False
+
+def db_is_open():
+    """Return True if SPICE database is currently open."""
+
+    global IS_OPEN
+
+    return IS_OPEN
 
 ################################################################################
 # Public API for selecting kernels, returning lists of KernelInfo objects
@@ -1191,7 +1319,8 @@ def furnish_kernels(kernel_list, fast=True):
     """
 
     global DEBUG, FILE_LIST
-    global FURNISHED_NAMES, FURNISHED_FILESPECS, FURNISHED_INFO, FURNISHED_FILENOS
+    global FURNISHED_NAMES, FURNISHED_FILESPECS, FURNISHED_INFO
+    global FURNISHED_FILENOS
 
     file_list = []
     file_types = {}     # returns the kernel type give the file name
@@ -1229,7 +1358,10 @@ def furnish_kernels(kernel_list, fast=True):
             file_types[file] = kernel.kernel_type       # track kernel types
 
             # Save the info for each furnished file
-            FURNISHED_INFO[kernel.basename] = kernel
+            if kernel.basename in FURNISHED_INFO:
+                FURNISHED_INFO[kernel.basename].add(kernel)
+            else:
+                FURNISHED_INFO[kernel.basename] = set([kernel])
 
     # Furnish the kernel files...
     if DEBUG:
@@ -1550,6 +1682,13 @@ def furnish_by_metafile(metafile, time=None, asof=None):
     # Furnish the kernels and return the names
     return furnish_kernels(kernel_list, fast=False) + kernel_names
 
+def furnish_by_filepath(filepath):
+    """Furnish a file by its full file path. This file need not be in the
+    database."""
+
+    kernels = kernels_from_filespec(filepath)
+    furnish_kernels(kernels, fast=False)
+
 ################################################################################
 # Public API for unloading kernels
 ################################################################################
@@ -1557,7 +1696,8 @@ def furnish_by_metafile(metafile, time=None, asof=None):
 def unload_by_name(names):
     """Unload kernels based on a list of kernel names."""
 
-    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO, FURNISHED_FILENOS
+    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO
+    global FURNISHED_FILENOS
 
     # Search database
     kernel_list = _query_by_name(names)
@@ -1599,8 +1739,8 @@ def unload_by_name(names):
 def unload_by_type(types=None):
     """Unload all the kernels of one or more specified types."""
 
-    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO, FURNISHED_FILENOS
-    global KERNEL_TYPE_SORT_ORDER
+    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO
+    global FURNISHED_FILENOS, KERNEL_TYPE_SORT_ORDER
 
     # Normalize input
     if types is None or types == []:
@@ -1633,14 +1773,25 @@ def unload_by_type(types=None):
 
     return
 
-def unload(filespec, type):
-    """Unload a given kernel give the full path and the type. Used to allow
-    the spicedb module to track kernels opened by other methods."""
+def unload_by_filepath(filepath):
+    """Unload a file by its full file path. This file need not be in the
+    database."""
 
-    cspice.unload(filespec)
+    kernels = kernels_from_filespec(filepath)
+    name = kernels[0].full_name
+    ktype = kernels[0].kernel_type
+    basename = os.path.basename(filepath)
 
-    if filespec in FURNISHED_FILESPECS[type]:
-        FURNISHED_FILESPECS.remove(filespec)
+    if name in FURNISHED_NAMES[ktype]:
+        FURNISHED_NAMES[ktype].remove(name)
+
+    if filepath in FURNISHED_FILESPECS[ktype]:
+        FURNISHED_FILESPECS[ktype].remove(filepath)
+
+    del FURNISHED_INFO[basename]
+
+    if name in FURNISHED_FILENOS:
+        del FURNISHED_FILENOS[name]
 
 ################################################################################
 # Public API for names of kernels
@@ -1777,23 +1928,27 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
       temp_list = []
       for filespec in FURNISHED_FILESPECS[key]:
         basename = os.path.basename(filespec)
-        info = FURNISHED_INFO[basename]
+        used = False
+        for info in FURNISHED_INFO[basename]:
 
-        if time and info.start_time:
-            if time[1] < info.start_tai - slop: continue
-            if time[0] > info.stop_tai + slop: continue
+            if time and info.start_time:
+                if time[1] < info.start_tai - slop: continue
+                if time[0] > info.stop_tai  + slop: continue
 
-        if bodies and info.spice_id:
-            if info.spice_id not in bodies: continue
+            if bodies and info.spice_id:
+                if info.spice_id not in bodies: continue
 
-        temp_list.append(info)
+            used = True
+
+        if used:
+            temp_list.append(basename)
 
       if key == 'IK':
-        reduced_list = [i for i in temp_list if inst in i.basename.lower()]
+        reduced_list = [name for name in temp_list if inst in name.lower()]
         if reduced_list:
             temp_list = reduced_list
 
-      basename_list += [i.basename for i in temp_list]
+      basename_list += temp_list
 
     return basename_list
 

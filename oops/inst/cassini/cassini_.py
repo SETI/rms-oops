@@ -78,8 +78,10 @@ class Cassini(object):
         After the first call, later calls to this function are ignored.
 
         Input:
-            ck      'predicted' or 'reconstructed' depending on which C kernels
-                    are to be used. Default is 'reconstructed'.
+            ck      Used to specify which C kernels are used.:
+                    'reconstructed' for the reconstructed kernels (default);
+                    'predicted' for the predicted kernels;
+                    'none' to allow manual control of the C kernels.
             planets A list of planets to pass to define_solar_system. None or
                     0 means all.
         """
@@ -92,12 +94,16 @@ class Cassini(object):
         ignore = oops.path.SpicePath("CASSINI", "SATURN")
 
         spicedb.open_db()
-        kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"),
-                                         name="CAS-CK-" + ck.upper())
-        Cassini.initialize_kernels(kernels, Cassini.CK_LIST)
-
         kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"))
         Cassini.initialize_kernels(kernels, Cassini.SPK_LIST)
+
+        ck = ck.upper()
+        if ck == 'NONE':
+            Cassini.initialize_kernels([], Cassini.CK_LIST)
+        else:
+            kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"),
+                                             name="CAS-CK-" + ck)
+            Cassini.initialize_kernels(kernels, Cassini.CK_LIST)
 
         spicedb.close_db()
 
