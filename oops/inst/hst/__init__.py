@@ -993,7 +993,7 @@ class Test_HST(unittest.TestCase):
     def runTest(self):
 
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
-        import cspice
+        import spyce
         from oops.inst.hst.acs.hrc import HRC
 
         APR = oops.DPR * 3600.
@@ -1055,7 +1055,7 @@ class Test_HST(unittest.TestCase):
         self.assertTrue(time1 - time0 - hst_file[0].header["EXPTIME"] > -1.e-8)
         self.assertTrue(time1 - time0 - hst_file[0].header["EXPTIME"] <  1.e-8)
 
-        str0 = cspice.et2utc(time0, "ISOC", 0)
+        str0 = spyce.et2utc(time0, "ISOC", 0)
         self.assertEqual(str0, hst_file[0].header["DATE-OBS"] + "T" +
                                hst_file[0].header["TIME-OBS"])
 

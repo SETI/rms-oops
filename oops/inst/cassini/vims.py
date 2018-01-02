@@ -22,7 +22,7 @@ import pylab
 import julian
 import pdstable
 import pdsparser
-import cspice
+import spyce
 import oops
 
 from oops.inst.cassini.cassini_ import Cassini
@@ -663,16 +663,16 @@ def _load_data_and_times(filespec, label):
         assert np.all(mask.ravel()[1:])
         formatted = "%16.3f" % sclock[0,0]
         times = np.empty(sclock.shape)
-        times[...] = cspice.scs2e(-82, formatted)
+        times[...] = spyce.scs2e(-82, formatted)
 
     else:
         sclock_min = sclock.min()
         formatted = "%16.3f" % sclock_min
-        tdb_min = cspice.scs2e(-82, formatted) + (sclock_min - float(formatted))
+        tdb_min = spyce.scs2e(-82, formatted) + (sclock_min - float(formatted))
 
         sclock_max = sclock.max()
         formatted = "%16.3f" % sclock_max
-        tdb_max = cspice.scs2e(-82, formatted) + (sclock_max - float(formatted))
+        tdb_max = spyce.scs2e(-82, formatted) + (sclock_max - float(formatted))
 
         times = tdb_min + (sclock - sclock_min) * ((tdb_max - tdb_min) /
                                                    (sclock_max - sclock_min))

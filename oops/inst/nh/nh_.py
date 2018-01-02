@@ -12,7 +12,6 @@ import os.path
 import julian
 import textkernel
 import spicedb
-import cspice
 import oops
 
 class NewHorizons(object):

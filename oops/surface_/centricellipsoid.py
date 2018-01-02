@@ -378,7 +378,7 @@ class Test_CentricEllipsoid(unittest.TestCase):
 
         (pts, t) = planet.intercept(obs, los)
         test = t * Vector3(los) + Vector3(obs)
-        self.assertTrue(abs(test - pts).max() < 3.e-9)
+        self.assertTrue(abs(test - pts).max() < 4.e-9)
 
         self.assertTrue(np.all(t.mask == pts.mask))
         self.assertTrue(np.all(pts.mask[t.vals < 0.]))

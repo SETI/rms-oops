@@ -18,9 +18,10 @@
 #   This imports all the oops components without the "oops" prefix. It can fill
 #   up the default name space but there is nothing wrong with it.
 
-# import cspice           # This is CRITICAL to avoid the MKL error in calls to
-#                         # dpstrf(). Somehow, this ensures that the cspice
-#                         # function overrides the MKL function of the same name.
+import spyce
+import spyce.aliases
+spyce.use_errors()
+spyce.use_aliases()
 
 import oops.cadence_.all as cadence
 import oops.calib_.all   as calib

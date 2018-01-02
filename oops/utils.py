@@ -1,7 +1,7 @@
 ################################################################################
 # oops/array_/utils.py
 #
-# Low-level operations on numpy arrays, mimicking CSPICE routines but fully
+# Low-level operations on numpy arrays, mimicking SPICE routines but fully
 # supporting broadcasted shapes.
 #
 # Mark Showalter, PDS Rings Node, SETI Institute, October 2011
@@ -59,7 +59,7 @@ def perp(a,b):
 def sep(a,b):
     """sep(a,b) = angular separation between 2/3-vectors a and b."""
 
-    # Algorithm translated directly from the CSPICE routine
+    # Algorithm translated directly from the SPICE routine
     signs = np.sign(dot(a,b))
     return (((1-signs)/2) * np.pi +
              2.*signs*np.arcsin(0.5 * norm(unit(a) -

@@ -148,16 +148,16 @@ class Test_RingFrame(unittest.TestCase):
 
         # Imports are here to reduce conflicts
         import os
-        import cspice
+        import spyce
         from oops.frame_.spiceframe import SpiceFrame
         from oops.path_.spicepath import SpicePath
         from oops.event import Event
         from oops.path_.path import Path
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
         Path.reset_registry()
         Frame.reset_registry()

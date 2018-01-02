@@ -8,7 +8,7 @@ import os
 import spicedb
 import julian
 import gravity
-import cspice
+import spyce
 
 from polymath import *
 
@@ -72,16 +72,9 @@ SATURN_ALIASES = [
 
 ALIASES = JUPITER_ALIASES + SATURN_ALIASES
 
-# Define within CSPICE
-if cspice.VERSION == 2:
-    for (codes, names) in ALIASES:
-        cspice.boddef_aliases(names, codes)
-else:
-    for (codes, names) in ALIASES:
-        while len(codes) < len(names):
-            codes = [codes[0]] + codes
-        for (c,n) in zip(codes, names)[::-1]:   # reverse; later boddefs win
-            cspice.boddef(n, c)
+# Define within spyce
+for (codes, names) in ALIASES:
+    spyce.define_body_aliases(*(names + codes))
 
 ################################################################################
 
@@ -144,7 +137,7 @@ class Body(object):
             spice_name = name
 
         try:
-            self.spice_id = cspice.bodn2c(spice_name)
+            self.spice_id = spyce.bodn2c(spice_name)
         except (KeyError, ValueError):
             self.spice_id = None
 
@@ -617,22 +610,9 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
         define_bodies(JUPITER_IRREGULAR, "JUPITER", "JUPITER BARYCENTER",
                       ["SATELLITE", "IRREGULAR"])
 
-        # For backwards compatibility, test alternative IDs for certain moons
-        if cspice.VERSION < 2:      # Search for the aliased ID that is in SPK
-          for (ids, names) in JUPITER_ALIASES:
-            try:
-                _ = cspice.spkez(ids[0], 0., 'J2000', 'NONE', 1) # did it work?
-                cspice.boddef(names[0], ids[0])
-                define_bodies([ids[0]], "JUPITER", "JUPITER BARYCENTER",
-                                        ["SATELLITE", "IRREGULAR"])
-            except RuntimeError:
-                cspice.boddef(names[-1], ids[1])
-                define_bodies([ids[1]], "JUPITER", "JUPITER BARYCENTER",
-                                        ["SATELLITE", "IRREGULAR"])
-        else:                       # cspice handles aliases; one ID is enough
-            for (ids, names) in JUPITER_ALIASES:
-                define_bodies([ids[0]], "JUPITER", "JUPITER BARYCENTER",
-                                        ["SATELLITE", "IRREGULAR"])
+        for (ids, names) in JUPITER_ALIASES:
+            define_bodies([ids[0]], "JUPITER", "JUPITER BARYCENTER",
+                                    ["SATELLITE", "IRREGULAR"])
 
     define_ring("JUPITER", "JUPITER_RING_PLANE", None, [])
     define_ring("JUPITER", "JUPITER_RING_SYSTEM", JUPITER_MAIN_RING_LIMIT, [])
@@ -754,7 +734,7 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [], retrograde=True)
     define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [], retrograde=True)
 
-    URANUS_EPOCH = cspice.utc2et("1977-03-10T20:00:00")
+    URANUS_EPOCH = spyce.utc2et("1977-03-10T20:00:00")
 
     uranus_wrt_b1950 = AliasFrame("IAU_URANUS").wrt("B1950")
     ignore = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
@@ -811,8 +791,8 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
         define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
                       ["SATELLITE", "IRREGULAR"])
 
-    ra  = cspice.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
-    dec = cspice.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
+    ra  = spyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
+    dec = spyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
     pole = Vector3.from_ra_dec_length(ra,dec)
 
     define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [], pole=pole)
@@ -891,10 +871,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         try:
             shape = spice_body(spice_id, frame.frame_id, (1.,1.,1.))
             body.apply_surface(shape, shape.req, shape.rpol)
-        except RuntimeError:
-            shape = NullSurface(path, frame)
-            body.apply_surface(shape, 0., 0.)
-        except LookupError:
+        except (RuntimeError, ValueError, KeyError):
             shape = NullSurface(path, frame)
             body.apply_surface(shape, 0., 0.)
 
@@ -997,7 +974,7 @@ def define_small_body(spice_id, name=None, spk=None, keywords=[],
 
     # Load the SPK if necessary
     if spk:
-        cspice.furnsh(spk)
+        spyce.furnsh(spk)
 
     # Define the body's path
     path = SpicePath(spice_id, "SSB", id=name)

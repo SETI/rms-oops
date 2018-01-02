@@ -518,7 +518,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
     def runTest(self):
 
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
-        import cspice
+        import spyce
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
@@ -576,7 +576,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertAlmostEqual(snapshot.time[1]-snapshot.time[0],
                                snapshot.texp)
         self.assertAlmostEqual(snapshot.time[0]+snapshot.texp/2,
-                               cspice.utc2et(snapshot.headers[0]["SPCUTCID"]),
+                               spyce.utc2et(snapshot.headers[0]["SPCUTCID"]),
                                places=3)
         self.assertEqual(snapshot.target, "EUROPA")
 
@@ -607,7 +607,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
             self.assertEqual(europa, 0.0)
             self.assertEqual(europa_fits, 0.0)
 
-            # Adjust offset as CSPICE kernels change
+            # Adjust offset as SPICE kernels change
             orig_fov = snapshot.fov
             orig_fits_fov = snapshot_fits.fov
             snapshot.fov = oops.fov.OffsetFOV(orig_fov, (-4,-13))

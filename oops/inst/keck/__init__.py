@@ -227,7 +227,7 @@ class Test_Keck(unittest.TestCase):
 
     def runTest(self):
 
-        import cspice
+        import spyce
         from oops.inst.keck import Keck
 
 ########################################

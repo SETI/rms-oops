@@ -189,7 +189,7 @@ class Test_PoleFrame(unittest.TestCase):
 
         # Imports are here to reduce conflicts
         import os
-        import cspice
+        import spyce
         from oops.event import Event
         from oops.frame_.ringframe   import RingFrame
         from oops.frame_.spiceframe  import SpiceFrame
@@ -197,9 +197,9 @@ class Test_PoleFrame(unittest.TestCase):
         from oops.path_.path         import Path
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
 
         Path.reset_registry()
         Frame.reset_registry()
@@ -282,8 +282,8 @@ class Test_PoleFrame(unittest.TestCase):
 
         times = Scalar(np.arange(1000) * 86400. * 365.)     # 1000 years
 
-        ra  = cspice.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
-        dec = cspice.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
+        ra  = spyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
+        dec = spyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
         pole = Vector3.from_ra_dec_length(ra,dec)
         poleframe = PoleFrame(planet, pole, cache_size=0)
 

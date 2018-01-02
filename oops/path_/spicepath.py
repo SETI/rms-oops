@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-import cspice
+import spyce
 from polymath import *
 
 from oops.path_.path   import Path, AliasPath, RotatedPath
@@ -20,10 +20,6 @@ class SpicePath(Path):
     # Set False to confirm that SpicePaths return the same results without
     # shortcuts and with shortcuts
     USE_SPICEPATH_SHORTCUTS = True
-
-    # Set False to call cspice library sequentially rather than with array
-    # inputs
-    VECTORIZE_CSPICE = True
 
     def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
                        id=None, shortcut=None):
@@ -107,11 +103,11 @@ class SpicePath(Path):
         # A single unmasked time can be handled quickly
         if time.shape == ():
             (state,
-             lighttime) = cspice.spkez(self.spice_target_id,
-                                       time.vals,
-                                       self.spice_frame_name,
-                                       'NONE',
-                                       self.spice_origin_id)
+             lighttime) = spyce.spkez(self.spice_target_id,
+                                      time.vals,
+                                      self.spice_frame_name,
+                                      'NONE',
+                                      self.spice_origin_id)
 
             return Event(time, (state[0:3],state[3:6]), self.origin, self.frame)
 
@@ -119,53 +115,27 @@ class SpicePath(Path):
         if type(quick) == dict:
             return self.quick_path(time, quick).event_at_time(time, False)
 
-        # Fill in the states and light travel times using CSPICE
-        if SpicePath.VECTORIZE_CSPICE:
-            if np.any(time.mask):
-                state = cspice.spkez_vector(self.spice_target_id,
-                                            time.vals[~time.mask],
-                                            self.spice_frame_name,
-                                            'NONE',
-                                            self.spice_origin_id)[0]
+        # Fill in the states and light travel times using spyce
+        if np.any(time.mask):
+            state = spyce.spkez_vector(self.spice_target_id,
+                                        time.vals[~time.mask],
+                                        self.spice_frame_name,
+                                        'NONE',
+                                        self.spice_origin_id)[0]
 
-                pos = np.zeros(time.shape + (3,))
-                vel = np.zeros(time.shape + (3,))
-                pos[~time.mask] = state[...,0:3]
-                vel[~time.mask] = state[...,3:6]
-
-            else:
-                state = cspice.spkez_vector(self.spice_target_id,
-                                            time.flatten().vals,
-                                            self.spice_frame_name,
-                                            'NONE',
-                                            self.spice_origin_id)[0]
-
-                pos = state[:,0:3].reshape(time.shape + (3,))
-                vel = state[:,3:6].reshape(time.shape + (3,))
+            pos = np.zeros(time.shape + (3,))
+            vel = np.zeros(time.shape + (3,))
+            pos[~time.mask] = state[...,0:3]
+            vel[~time.mask] = state[...,3:6]
 
         else:
-            if np.any(time.mask):
-
-                state = np.zeros(time.shape + (6,))
-                for (i,t) in np.ndenumerate(time.vals):
-                    if not time.mask[i]:
-                        state[i] = cspice.spkez(self.spice_target_id,
-                                                t,
-                                                self.spice_frame_name,
-                                                'NONE',
-                                                self.spice_origin_id)[0]
-
-            else:
-                state = np.empty(time.shape + (6,))
-                for (i,t) in np.ndenumerate(time.vals):
-                    state[i] = cspice.spkez(self.spice_target_id,
-                                            t,
-                                            self.spice_frame_name,
-                                            'NONE',
-                                            self.spice_origin_id)[0]
-
-            pos = state[...,0:3]
-            vel = state[...,3:6]
+            state = spyce.spkez_vector(self.spice_target_id,
+                                       time.flatten().vals,
+                                       self.spice_frame_name,
+                                       'NONE',
+                                       self.spice_origin_id)[0]
+            pos = state[:,0:3].reshape(time.shape + (3,))
+            vel = state[:,3:6].reshape(time.shape + (3,))
 
         # Convert to an Event and return
         return Event(time, (pos,vel), self.origin, self.frame)
@@ -257,8 +227,8 @@ class Test_SpicePath(unittest.TestCase):
       Path.USE_QUICKPATHS = False
       Frame.USE_QUICKFRAMES = False
 
-      cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
-      cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+      spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
+      spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
       # Repeat the tests without and then with shortcuts
       for SpicePath.USE_SPICEPATH_SHORTCUTS in (False, True):
@@ -274,7 +244,7 @@ class Test_SpicePath(unittest.TestCase):
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
         moon_event = moon.event_at_time(times)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",399)
+            (state, lt) = spyce.spkez(301,times[i],"J2000","NONE",399)
             self.assertEqual(moon_event.pos[i], state[0:3])
             self.assertEqual(moon_event.vel[i], state[3:6])
 
@@ -286,7 +256,7 @@ class Test_SpicePath(unittest.TestCase):
         (saturn_event, ssb_event) = saturn.photon_to_event(ssb_event,
                                                  converge={'max_iterations':99})
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(6,times[i],"J2000","CN",0)
+            (state, lt) = spyce.spkez(6,times[i],"J2000","CN",0)
             self.assertTrue(abs(lt - saturn_event.dep_lt[i]) < 1.e-11)
             self.assertTrue(abs(saturn_event.time[i] + lt - ssb_event.time[i])
                                                                        < 1.e-11)
@@ -298,7 +268,7 @@ class Test_SpicePath(unittest.TestCase):
         (saturn_event, ssb_event) = saturn.photon_from_event(ssb_event,
                                                 converge={'max_iterations':99})
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(6,times[i],"J2000","XCN",0)
+            (state, lt) = spyce.spkez(6,times[i],"J2000","XCN",0)
             self.assertTrue(abs(lt + saturn_event.arr_lt[i]) < 1.e-11)
             self.assertTrue(abs(ssb_event.time[i] + lt - saturn_event.time[i])
                                                                        < 1.e-11)
@@ -311,7 +281,7 @@ class Test_SpicePath(unittest.TestCase):
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
         moon_event = moon.event_at_time(times).wrt_path("EARTH")
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",399)
+            (state, lt) = spyce.spkez(301,times[i],"J2000","NONE",399)
             self.assertTrue(np.all(np.abs(state[0:3] -
                                           moon_event.pos.vals[i]) < 1.e-8))
             self.assertTrue(np.all(np.abs(state[3:6] -
@@ -320,7 +290,7 @@ class Test_SpicePath(unittest.TestCase):
         # Moon to SSB
         moon_event = moon.event_at_time(times).wrt_path("SSB")
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",0)
+            (state, lt) = spyce.spkez(301,times[i],"J2000","NONE",0)
             self.assertTrue(np.all(np.abs(state[0:3] -
                                           moon_event.pos.vals[i]) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[3:6] -
@@ -329,7 +299,7 @@ class Test_SpicePath(unittest.TestCase):
         # Moon to Saturn
         moon_event = moon.event_at_time(times).wrt_path("SATURN")
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(301,times[i],"J2000","NONE",6)
+            (state, lt) = spyce.spkez(301,times[i],"J2000","NONE",6)
             self.assertTrue(np.all(np.abs(state[0:3] -
                                           moon_event.pos.vals[i]) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[3:6] -
@@ -358,7 +328,7 @@ class Test_SpicePath(unittest.TestCase):
         self.assertEqual(event.origin_id, "SUN")
 
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(499, times[i], "J2000", "NONE", 10)
+            (state, lt) = spyce.spkez(499, times[i], "J2000", "NONE", 10)
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
@@ -375,7 +345,7 @@ class Test_SpicePath(unittest.TestCase):
         path = Path.as_path("EARTH").wrt("SSB", "J2000")
         event = path.event_at_time(times)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(399, times[i], "J2000", "NONE", 0)
+            (state, lt) = spyce.spkez(399, times[i], "J2000", "NONE", 0)
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
@@ -399,7 +369,7 @@ class Test_SpicePath(unittest.TestCase):
         path = Path.as_path("EARTH").wrt("SSB", "J2000")
         event = path.event_at_time(times)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(399, times[i], "J2000", "NONE", 0)
+            (state, lt) = spyce.spkez(399, times[i], "J2000", "NONE", 0)
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
@@ -408,7 +378,7 @@ class Test_SpicePath(unittest.TestCase):
         path = Path.as_path("SSB").wrt("EARTH", "IAU_MARS")
         event = path.event_at_time(times)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(0, times[i], "IAU_MARS", "NONE", 399)
+            (state, lt) = spyce.spkez(0, times[i], "IAU_MARS", "NONE", 399)
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
@@ -417,7 +387,7 @@ class Test_SpicePath(unittest.TestCase):
         path = Path.as_path("EARTH").wrt("SUN", "IAU_EARTH")
         event = path.event_at_time(times)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(399, times[i], "IAU_EARTH", "NONE", 10)
+            (state, lt) = spyce.spkez(399, times[i], "IAU_EARTH", "NONE", 10)
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-6))
@@ -426,7 +396,7 @@ class Test_SpicePath(unittest.TestCase):
         path = Path.as_path("MOON").wrt("MARS", "IAU_EARTH")
         event = path.event_at_time(times)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(301, times[i], "IAU_EARTH", "NONE", 499)
+            (state, lt) = spyce.spkez(301, times[i], "IAU_EARTH", "NONE", 499)
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-6))
@@ -451,7 +421,7 @@ class Test_SpicePath(unittest.TestCase):
         path = Path.as_path("MARS").wrt("MOON", "IAU_MOON")
         event = path.event_at_time(times)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(499, times[i], "IAU_MOON", "NONE", 301)
+            (state, lt) = spyce.spkez(499, times[i], "IAU_MOON", "NONE", 301)
             dpos = event.pos[i] - state[0:3]
             dvel = event.vel[i] - state[3:6]
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-6))
@@ -485,7 +455,7 @@ class Test_SpicePath(unittest.TestCase):
         self.assertTrue(abs(saturn_rel_ssb.dep  - saturn_abs_ssb.dep).max()  < 1.e-6)
 
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(6,times[i],"J2000","CN",399)
+            (state, lt) = spyce.spkez(6,times[i],"J2000","CN",399)
             self.assertTrue(abs(lt + saturn_rel.time[i]) < 1.e-7)
             self.assertTrue(abs(saturn_event.time[i] + lt
                                 - earth_event.time[i]) < 1.e-11)
@@ -499,7 +469,7 @@ class Test_SpicePath(unittest.TestCase):
         saturn_rel = saturn_event.sub(earth_event)
 
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(6,times[i],"J2000","XCN",399)
+            (state, lt) = spyce.spkez(6,times[i],"J2000","XCN",399)
             self.assertTrue(np.abs(lt - saturn_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(earth_event.time.vals[i] + lt
                                    - saturn_event.time.vals[i]) < 1.e-11)
@@ -527,7 +497,7 @@ class Test_SpicePath(unittest.TestCase):
         self.assertEqual(saturn_rel.origin_id, "EARTH")
 
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(6,times[i],"J2000","CN",399)
+            (state, lt) = spyce.spkez(6,times[i],"J2000","CN",399)
             self.assertTrue(np.abs(lt + saturn_rel.time.vals[i] < 1.e-7))
             self.assertTrue(np.abs(saturn_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-11)
@@ -542,7 +512,7 @@ class Test_SpicePath(unittest.TestCase):
 
         # Apparent case
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(6,times[i],"J2000","CN+S",399)
+            (state, lt) = spyce.spkez(6,times[i],"J2000","CN+S",399)
             self.assertTrue(np.abs(lt + saturn_rel.time.vals[i] < 1.e-7))
             self.assertTrue(np.abs(saturn_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-11)
@@ -594,7 +564,7 @@ class Test_SpicePath(unittest.TestCase):
               self.assertTrue(abs(pluto_event_ssb.dep - pluto_rel_ssb.dep).max() < 1e-2)
 
               for i in range(len(times)):
-                (state, lt) = cspice.spkez(9, times[i], frame, "CN", 399)
+                (state, lt) = spyce.spkez(9, times[i], frame, "CN", 399)
                 self.assertTrue(abs(pluto_rel.time[i] + lt) < 1.e-6)
                 self.assertTrue(abs(pluto_event.time[i] + lt
                                               - earth_event.time[i]) < 1.e-10)
@@ -604,7 +574,7 @@ class Test_SpicePath(unittest.TestCase):
 
               # Apparent case
               for i in range(len(times)):
-                (state, lt) = cspice.spkez(9, times[i], frame, "CN+S", 399)
+                (state, lt) = spyce.spkez(9, times[i], frame, "CN+S", 399)
                 self.assertTrue(np.abs(lt + pluto_rel.time.vals[i]) < 1.e-6)
                 self.assertTrue(np.abs(pluto_event.time.vals[i] + lt -
                                        earth_event.time.vals[i]) < 1.e-11)
@@ -649,7 +619,7 @@ class Test_SpicePath(unittest.TestCase):
               self.assertTrue(abs(pluto_rel.pos - pluto_rel.arr).max() < 1.e-5)
 
               for i in range(len(times)):
-                (state, lt) = cspice.spkez(9, times[i], frame, "XCN", 399)
+                (state, lt) = spyce.spkez(9, times[i], frame, "XCN", 399)
                 self.assertTrue(abs(pluto_rel.time[i] - lt) < 1.e-6)
                 self.assertTrue(abs(earth_event.time[i] + lt
                                               - pluto_event.time[i]) < 1.e-10)
@@ -659,7 +629,7 @@ class Test_SpicePath(unittest.TestCase):
 
               # Apparent case
               for i in range(len(times)):
-                (state, lt) = cspice.spkez(9, times[i], frame, "XN+S", 399)
+                (state, lt) = spyce.spkez(9, times[i], frame, "XN+S", 399)
                 self.assertTrue(np.abs(pluto_rel.time[i] - lt) < 1.e-6)
                 self.assertTrue(np.abs(pluto_event.time.vals[i] + lt -
                                        earth_event.time.vals[i]) < 1.e-11)
@@ -689,7 +659,7 @@ class Test_SpicePath(unittest.TestCase):
         mars_rel = mars_event.sub(earth_event)
 
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(499,times[i],"B1950","CN",399)
+            (state, lt) = spyce.spkez(499,times[i],"B1950","CN",399)
             self.assertTrue(np.abs(lt + mars_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(mars_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-9)
@@ -715,7 +685,7 @@ class Test_SpicePath(unittest.TestCase):
         pluto_rel = pluto_event.sub(earth_event)
 
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9,times[i],"IAU_EARTH","CN",399)
+            (state, lt) = spyce.spkez(9,times[i],"IAU_EARTH","CN",399)
             self.assertTrue(np.abs(lt + pluto_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(pluto_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-9)
@@ -742,7 +712,7 @@ class Test_SpicePath(unittest.TestCase):
         pluto_rel = pluto_event.sub(earth_event)
 
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9,times[i],"IAU_MARS","CN",4)
+            (state, lt) = spyce.spkez(9,times[i],"IAU_MARS","CN",4)
             self.assertTrue(np.abs(lt + pluto_rel.time.vals[i]) < 1.e-7)
             self.assertTrue(np.abs(pluto_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-9)
@@ -767,15 +737,15 @@ class Test_SpicePath(unittest.TestCase):
 
         (ra,dec) = earth_event.ra_and_dec(apparent=False)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9,times[i],"J2000","CN",399)
-            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            (state, lt) = spyce.spkez(9,times[i],"J2000","CN",399)
+            (ra_test, dec_test) = spyce.recrad(state[0:3])[1:3]
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
         (ra,dec) = earth_event.ra_and_dec(apparent=True)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9,times[i],"J2000","CN+S",399)
-            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            (state, lt) = spyce.spkez(9,times[i],"J2000","CN+S",399)
+            (ra_test, dec_test) = spyce.recrad(state[0:3])[1:3]
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
@@ -787,15 +757,15 @@ class Test_SpicePath(unittest.TestCase):
 
         (ra,dec) = earth_event.ra_and_dec(apparent=False, subfield="dep")
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9, times[i], "J2000", "XCN", 399)
-            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            (state, lt) = spyce.spkez(9, times[i], "J2000", "XCN", 399)
+            (ra_test, dec_test) = spyce.recrad(state[0:3])[1:3]
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
         (ra,dec) = earth_event.ra_and_dec(apparent=True, subfield="dep")
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9,times[i], "J2000", "XCN+S", 399)
-            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            (state, lt) = spyce.spkez(9,times[i], "J2000", "XCN+S", 399)
+            (ra_test, dec_test) = spyce.recrad(state[0:3])[1:3]
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
@@ -819,15 +789,15 @@ class Test_SpicePath(unittest.TestCase):
         # Note: These "RA,dec" values are in the IAU_EARTH frame, not J2000!
         (ra,dec) = earth_event.ra_and_dec(apparent=False, frame=None)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9, times[i], "IAU_EARTH", "CN", 399)
-            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            (state, lt) = spyce.spkez(9, times[i], "IAU_EARTH", "CN", 399)
+            (ra_test, dec_test) = spyce.recrad(state[0:3])[1:3]
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-8)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-8)
 
         (ra,dec) = earth_event.ra_and_dec(apparent=True, frame=None)
         for i in range(len(times)):
-            (state, lt) = cspice.spkez(9, times[i], "IAU_EARTH", "CN+S", 399)
-            (ra_test, dec_test) = cspice.recrad(state[0:3])[1:3]
+            (state, lt) = spyce.spkez(9, times[i], "IAU_EARTH", "CN+S", 399)
+            (ra_test, dec_test) = spyce.recrad(state[0:3])[1:3]
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-8)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-8)
 

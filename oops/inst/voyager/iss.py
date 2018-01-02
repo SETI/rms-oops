@@ -2,7 +2,7 @@
 # oops/inst/voyager/iss.py
 ################################################################################
 
-import cspice
+import spyce
 import spicedb
 import oops
 import julian
@@ -115,9 +115,9 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
 
     # Get spacecraft clock ticks
     scid = -(30 + ivgr)
-    start_ticks = cspice.sce2t(scid, tstart)
-    mid_ticks   = cspice.sce2t(scid, tstart + texp/2.)
-    stop_ticks  = cspice.sce2t(scid, tstart + texp)
+    start_ticks = spyce.sce2t(scid, tstart)
+    mid_ticks   = spyce.sce2t(scid, tstart + texp/2.)
+    stop_ticks  = spyce.sce2t(scid, tstart + texp)
 
     # Construct the image coordinate frame
     scan_platform_id = scid * 1000 - 100
@@ -128,11 +128,11 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
 
         try:
             (j2000_to_platform,
-             found_ticks) = cspice.ckgp(scan_platform_id, mid_ticks,
-                                                          tol_ticks, 'J2000')
-            platform_to_camera = cspice.pxform('VG' + vgr + '_SCAN_PLATFORM',
-                                               'VG' + vgr + 'ISS' + camera[:2],
-                                               0.)
+             found_ticks) = spyce.ckgp(scan_platform_id, mid_ticks,
+                                                         tol_ticks, 'J2000')
+            platform_to_camera = spyce.pxform('VG' + vgr + '_SCAN_PLATFORM',
+                                              'VG' + vgr + 'ISS' + camera[:2],
+                                              0.)
             image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) * 
                                              oops.Matrix3(j2000_to_platform))
 
@@ -234,9 +234,9 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
         # Get spacecraft clock ticks
         scid = -(30 + ivgr)
-        start_ticks = cspice.sce2t(scid, tstart)
-        mid_ticks   = cspice.sce2t(scid, tstart + texp/2.)
-        stop_ticks  = cspice.sce2t(scid, tstart + texp)
+        start_ticks = spyce.sce2t(scid, tstart)
+        mid_ticks   = spyce.sce2t(scid, tstart + texp/2.)
+        stop_ticks  = spyce.sce2t(scid, tstart + texp)
 
         # Construct the image coordinate frame
         scan_platform_id = scid * 1000 - 100
@@ -244,11 +244,11 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
         try:
             (j2000_to_platform,
-             found_ticks) = cspice.ckgp(scan_platform_id, mid_ticks,
-                                                          tol_ticks, 'J2000')
-            platform_to_camera = cspice.pxform('VG' + vgr + '_SCAN_PLATFORM',
-                                               'VG' + vgr + '_ISS' + camera[:2],
-                                               0.)
+             found_ticks) = spyce.ckgp(scan_platform_id, mid_ticks,
+                                                         tol_ticks, 'J2000')
+            platform_to_camera = spyce.pxform('VG' + vgr + '_SCAN_PLATFORM',
+                                              'VG' + vgr + '_ISS' + camera[:2],
+                                              0.)
             image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) * 
                                              oops.Matrix3(j2000_to_platform))
 
@@ -362,19 +362,19 @@ class ISS(object):
                                        id='VOYAGER2_SCAN_PLATFORM')
 
         # Construct additional rotations for each camera
-        matrix = cspice.pxform('VG1_SCAN_PLATFORM', 'VG1_ISSNA', 0.)
+        matrix = spyce.pxform('VG1_SCAN_PLATFORM', 'VG1_ISSNA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER1_SCAN_PLATFORM',
                                        id='VOYAGER1_ISS_NAC')
 
-        matrix = cspice.pxform('VG1_SCAN_PLATFORM', 'VG1_ISSWA', 0.)
+        matrix = spyce.pxform('VG1_SCAN_PLATFORM', 'VG1_ISSWA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER1_SCAN_PLATFORM',
                                        id='VOYAGER1_ISS_WAC')
 
-        matrix = cspice.pxform('VG2_SCAN_PLATFORM', 'VG2_ISSNA', 0.)
+        matrix = spyce.pxform('VG2_SCAN_PLATFORM', 'VG2_ISSNA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER2_SCAN_PLATFORM',
                                        id='VOYAGER2_ISS_NAC')
 
-        matrix = cspice.pxform('VG2_SCAN_PLATFORM', 'VG2_ISSWA', 0.)
+        matrix = spyce.pxform('VG2_SCAN_PLATFORM', 'VG2_ISSWA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER2_SCAN_PLATFORM',
                                        id='VOYAGER2_ISS_WAC')
 

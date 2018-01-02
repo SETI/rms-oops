@@ -7,7 +7,6 @@ import numpy as np
 import os
 import julian
 import pdsparser
-import cspice
 
 from oops.inst.cassini.cassini_ import Cassini
 
@@ -495,8 +494,7 @@ class UVIS(object):
                 u_angle = 2. * info["FOV_REF_ANGLE"] * oops.RPD
                 v_angle = u_angle
             else:
-                raise RuntimeError("Unrecognized FOV_SHAPE: " +
-                                   info["FOV_SHAPE"])
+                raise ValueError("Unrecognized FOV_SHAPE: " + info["FOV_SHAPE"])
 
             # Define the frame for 1 or 64 lines
             # Not every combination is really used but that doesn't matter

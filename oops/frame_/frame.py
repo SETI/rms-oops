@@ -96,7 +96,7 @@ class Frame(object):
         the center of rotation.
 
         Unlike method transform_at_time(), this variant tolerates times that
-        raise RuntimeErrors. It returns a new time Scalar along with the new
+        raise spyce errors. It returns a new time Scalar along with the new
         Transform, where both objects skip over the times at which the transform
         could not be evaluated.
 
@@ -1217,15 +1217,15 @@ class Test_Frame(unittest.TestCase):
 
         # More imports are here to avoid conflicts
         import os
-        import cspice
+        import spyce
         from oops.frame_.rotation import Rotation
         from oops.frame_.spiceframe import SpiceFrame
         from oops.path_.spicepath import SpicePath
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
-        cspice.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
+        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
 
         Frame.reset_registry()
 
