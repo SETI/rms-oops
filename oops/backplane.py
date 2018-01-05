@@ -1912,7 +1912,7 @@ class Backplane(object):
 
         key0 = ('ring_elevation', event_key, reference, True)
         if key0 in self.backplanes:
-            return self.backplanes[key].abs()
+            return self.backplanes[key0].abs()
 
         # If not found, fill in the ring events if necessary
         if ('ring_radius', event_key) not in self.backplanes:

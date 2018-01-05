@@ -173,6 +173,19 @@ class Scalar(Qube):
 
         return obj
 
+    def abs(self, recursive=True):
+        """Return the absolute value of each value.
+
+        Inputs:
+            recursive   True to include the derivatives of the absolute values
+                        inside the returned object.
+        """
+
+        if recursive:
+            return abs(self)
+        else:
+            return abs(self.without_derivs())
+
     def sin(self, recursive=True):
         """Return the sine of each value.
 
