@@ -633,9 +633,10 @@ SATURN_D_RING =     ( 66900.,  74658.)
 SATURN_C_RING =     ( 74658.,  91975.)
 SATURN_B_RING =     ( 91975., 117507.)
 SATURN_A_RING =     (122340., 136780.)
-SATURN_F_RING_CORE =  140220.
+SATURN_F_RING_CORE  = 140220.
 SATURN_F_RING_LIMIT = 140612.
-SATURN_RINGS  = (SATURN_MAIN_RINGS[0], SATURN_F_RING_LIMIT)
+SATURN_RINGS        = (SATURN_MAIN_RINGS[0], SATURN_F_RING_LIMIT)
+SATURN_AB_RINGS     = (SATURN_B_RING[0], SATURN_A_RING[1])
 
 def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Saturn system."""
@@ -665,6 +666,7 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [])
     define_ring("SATURN", "SATURN_B_RING", SATURN_B_RING, [])
     define_ring("SATURN", "SATURN_C_RING", SATURN_C_RING, [])
+    define_ring("SATURN", "SATURN_AB_RINGS", SATURN_AB_RINGS, [])
 
 ################################################################################
 # Uranus System

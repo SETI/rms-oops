@@ -1842,8 +1842,8 @@ class Backplane(object):
 
         The angle is measured in the prograde direction from a reference
         direction to the local radial, as measured at the ring intercept point
-        and projected into the ring plane. This value is 90 at the left ansa and
-        270 at the right ansa."
+        and projected into the ring plane. This value is 90 degrees at the left
+        ansa and 270 degrees at the right ansa."
 
         The reference direction can be 'obs' for the apparent departing
         direction of the photon, or 'sun' for the (negative) apparent direction
@@ -2617,12 +2617,13 @@ class Backplane(object):
 
         event_key = Backplane.standardize_event_key(event_key)
         shadow_body = Backplane.standardize_event_key(shadow_body)
+
         key = ('where_inside_shadow', event_key, shadow_body[0])
         if key not in self.backplanes:
             event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
             mask = self.mask_as_boolean(np.logical_not(event.mask) &
-                                       np.logical_not(shadow_event.mask))
+                                        np.logical_not(shadow_event.mask))
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2632,6 +2633,7 @@ class Backplane(object):
 
         event_key  = Backplane.standardize_event_key(event_key)
         shadow_body = Backplane.standardize_event_key(shadow_body)
+
         key = ('where_outside_shadow', event_key, shadow_body[0])
         if key not in self.backplanes:
             event = self.get_surface_event_with_arr(event_key)
@@ -2643,13 +2645,15 @@ class Backplane(object):
         return self.backplanes[key]
 
     def where_in_front(self, event_key, back_body):
-        """A mask where the first surface is in front of the second surface.
+        """A mask where the first surface is in not obscured by the second
+        surface.
 
-        This is also True where the back_body is not behind the front body at 
-        all."""
+        This is where the back_body is either further away than the front body
+        or not intercepted at all."""
 
         event_key = Backplane.standardize_event_key(event_key)
         back_body  = Backplane.standardize_event_key(back_body)
+
         key = ('where_in_front', event_key, back_body[0])
         if key not in self.backplanes:
 
@@ -2666,7 +2670,8 @@ class Backplane(object):
         return self.backplanes[key]
 
     def where_in_back(self, event_key, front_body):
-        """A mask where the first surface is behind the second surface."""
+        """A mask where the first surface is behind (obscured by) the second
+        surface."""
 
         event_key = Backplane.standardize_event_key(event_key)
         front_body = Backplane.standardize_event_key(front_body)

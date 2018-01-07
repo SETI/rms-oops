@@ -1271,7 +1271,7 @@ class Qube(object):
             replace         a single replacement value, inserted into the values
                             array at every masked location. Use None (the
                             default) to leave values unchanged.
-            remask          True to include the new mask into the object's mask;
+            remask          True to include the new mask in the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
