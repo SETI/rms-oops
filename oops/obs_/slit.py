@@ -172,7 +172,7 @@ class Slit(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Vector.as_int(indices)
+        indices = Vector.as_vector(indices).as_int()
 
         slit_coord = indices.to_scalar(self.along_slit_index)
 

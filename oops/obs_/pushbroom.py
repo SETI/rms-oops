@@ -129,7 +129,7 @@ class Pushbroom(Observation):
             at_upper_v = (uv.values[...,1] == self.uv_shape[1])
 
             # Map continuous index to discontinuous (u,v)
-            uv_int = Pair.as_int(uv)
+            uv_int = Pair.as_pair(uv).as_int()
             uv = uv_int + (uv - uv_int).element_mul(self.uv_size)
 
             # Adjust values at upper limits
@@ -176,7 +176,7 @@ class Pushbroom(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Vector.as_int(indices)
+        indices = Vector.as_vector(indices).as_int()
 
         uv_min = indices.to_pair((self.u_axis,self.v_axis))
         uv_max = uv_min + self.uv_size
