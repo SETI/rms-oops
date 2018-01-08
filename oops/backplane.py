@@ -48,9 +48,9 @@ class Backplane(object):
                         associated.
             meshgrid    the optional meshgrid defining the sampling of the FOV.
                         Default is to sample the center of every pixel.
-            time        a Scalar of times. The shape of this Scalar will be
-                        broadcasted with the shape of the meshgrid. Default is
-                        to sample the midtime of every pixel.
+            time        an optional Scalar of times. The shape of this Scalar
+                        will be broadcasted with the shape of the meshgrid.
+                        Default is to sample the midtime of every pixel.
         """
 
         self.obs = obs
@@ -61,7 +61,7 @@ class Backplane(object):
             self.meshgrid = meshgrid
 
         if time is None:
-            self.time = obs.timegrid()
+            self.time = obs.timegrid(self.meshgrid)
         else:
             self.time = Scalar.as_scalar(time)
 

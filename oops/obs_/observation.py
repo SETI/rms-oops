@@ -272,11 +272,14 @@ class Observation(object):
         """
 
         # Convert inputs to NumPy 2-element arrays
-        if limit is None: limit = self.fov.uv_shape
-        if isinstance(limit, numbers.Number): limit = (limit,limit)
+        if limit is None:
+            limit = self.fov.uv_shape
+        if isinstance(limit, numbers.Number):
+            limit = (limit, limit)
         limit = Pair.as_pair(limit).values.astype('float')
 
-        if isinstance(origin, numbers.Number): origin = (origin, origin)
+        if isinstance(origin, numbers.Number):
+            origin = (origin, origin)
         origin = Pair.as_pair(origin).values.astype('float')
 
         if isinstance(undersample, numbers.Number):
@@ -327,164 +330,105 @@ class Observation(object):
         grid = Pair(values)
         return Meshgrid(self.fov, grid, fov_keywords)
 
-    def timegrid(self, origin=None, undersample=1, oversample=1, limit=None):
-        """Return a Scalar of times broadcastable to the shape of the
-        observation.
-
-        If an observation has no time-dependence associated with an axis and
-        only one time is to be returned, the returned value is a float, not a
-        Scalar.
-
-        If an observation has no time-dependence associated with an axis but
-        multiple times are requested, the shape of the returned Scalar has a
-        leading axis to encompass the time dependence.
+    def timegrid(self, meshgrid, oversample=1, tfrac=(0,1)):
+        """Return a Scalar of times broadcastable with the shape of the given
+        meshgrid.
 
         Input:
-            origin      A single value or tuple (for N-dimensional cadences)
-                        defining the origin of the time grid, in units of the
-                        index. Default is None, which centers the time samples
-                        around the observation midtime.
+            meshgrid    the meshgrid defining spatial sampling.
+            oversample  1 to obtain one time sample per pixel; > 1 for finer
+                        sampling in time.
 
-            undersample A single value or tuple defining the magnitude of
-                        under-sampling to be performed. For example, a value of
-                        2 would cause the timegrid to sample every other time
-                        step along each axis.
-
-            oversample  A single value or tuple defining the magnitude of
-                        over-sampling to be performed. For example, a value of
-                        2 would create a two time steps along each axis of each
-                        time step.
-
-            limit       A single value or tuple defining the upper limits of the
-                        timegrid. By default, this is the shape of the cadence.
-
+            tfrac       a tuple interpreted in different ways depending on the
+                        observation's structure.
+                        - if this observation has no time-dependence, it is the
+                          pair of fractional time limits within the overall
+                          exposure duration.
+                        - if this observation has time-dependence that is
+                          entirely coupled to spatial axes, then it is the the
+                          fractional time limits within each pixel's individual
+                          exposure duration.
+                        - if this observation has time-dependence that is
+                          entirely decoupled from the spatial axes, then it is
+                          the start and end time relative to the time limits of
+                          the defined cadence.
+                        - the possible case of a 2-D time-dependence that has
+                          only one axis coupled to a spatial axis is not
+                          supported.
         """
 
-        # Validate input parameters...
+        if isinstance(tfrac, numbers.Number):
+            tfrac = (tfrac, tfrac)
 
-        # 0-D or 1-D case: convert to scalars
-        if isinstance(self.t_axis, numbers.Number):
-            if not isinstance(undersample, numbers.Number):
-                assert len(undersample) == 1
-                undersample = undersample[0]
-
-            if not isinstance(oversample, numbers.Number):
-                assert len(oversample) == 1
-                oversample = oversample[0]
-
-            undersample = float(undersample)
-            oversample = float(oversample)
-            step = undersample / oversample
-
-            if not isinstance(limit, numbers.Number):
-                if limit is None:
-                    limit = self.cadence.shape[0]
-                else:
-                    assert len(limit) == 1
-                    limit = limit[0]
-
-            limit = float(limit)
-
-            if not isinstance(origin, numbers.Number):
-                if origin is None:
-                    origin = 0.5 * limit * step
-                else:
-                    assert len(origin) == 1
-                    origin = origin[0]
-
-            origin = float(origin)
-
-        # 2-D case: convert to arrays
-        else:
-            axes = len(self.t_axis)
-
-            if isinstance(undersample, numbers.Number):
-                undersample = axes * [undersample,]
-
-            if isinstance(oversample, numbers.Number):
-                oversample = axes * [oversample,]
-
-            undersample = np.asfarray(undersample)
-            oversample = np.asfarray(oversample)
-            step = undersample / oversample
-
-            if limit is None:
-                limit = self.cadence.shape
-            elif isinstance(limit, numbers.Number):
-                limit = axes * [limit,]
-
-            limit = np.asfarray(limit)
-
-            if isinstance(origin, numbers.Number):
-                if origin is None:
-                    origing = 0.5 * limit * step
-                else:
-                    origin = axes * [origin,]
-
-            origin = np.asfarray(origin)
-
-        # Handle observations without time dependence
+        # Handle a time-independent observation
         if self.t_axis == -1:
-            limit += step * 1.e-10      # Allow a little slop at the top
 
-            # Tabulate the times
-            tstep = np.arange(origin, limit, step)
-            times = self.time[0] * (1. - tstep) + self.time[1] * tstep
+            time0 = self.time[0] + tfrac[0] * (self.time[1] - self.time[0])
+            time1 = self.time[0] + tfrac[1] * (self.time[1] - self.time[0])
 
-            # For no times, return observation midtime
-            if len(times) == 0:
-                return self.midtime
+            # One step implies midtime, which can be returned as a scalar
+            if oversample == 1:
+                return 0.5 * (time0 + time1)
 
-            # For one time, return a float
-            if len(times) == 1:
-                return times[0]
+            # Otherwise, uniform time steps between endpoints
+            fracs = np.arange(oversample) / (oversample - 1.)
+            times = time0 + fracs * (time1 - time0)
 
-            # Otherwise, return the reshaped Scalar
-            times = times.reshape(times.shape + len(self.shape) * (1,))
-            return Scalar(times)
+            # Time is on a leading axis
+            tshape = times.shape + len(self.shape) * (1,)
+            return times.reshape(tshape)
+
+        # Get times at each pixel in meshgrid
+        (tstarts, tstops) = self.times_at_uv(meshgrid.uv)
+
+        # Scale based on tfrac
+        time0 = tstarts + tfrac[0] * (tstops - tstarts)
+        time1 = tstarts + tfrac[1] * (tstops - tstarts)
 
         # Handle 1-D case
         if isinstance(self.t_axis, numbers.Number):
-            limit += step * 1.e-10   # Allow a little slop at the top
 
-            # Tabulate the times
-            tstep = Scalar(np.arange(origin, limit, step))
-            times = self.cadence.time_at_tstep(tstep, mask=False)
+            # Time aligns with u-axis or v-axis
+            if self.t_axis in (self.u_axis, self.v_axis):
 
-            # Re-shape
+                # One time step implies midtime
+                if oversample == 1:
+                    return 0.5 * (time0 + time1)
+
+                # Otherwise, uniform time steps on a leading axis
+                fracs = np.arange(oversample) / (oversample - 1.)
+                fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
+                return time0 + fracs * (time1 - time0)
+
+            # Otherwise time is along a unique axis
+            tstep0 = tfrac[0] * self.cadence.shape[0]
+            tstep1 = tfrac[1] * self.cadence.shape[0]
+            tsteps = np.arange(tstep0, tstep1 + 1.e-10, 1./oversample)
+            times = self.cadence.time_at_tstep(tsteps)
+
             shape_list = len(self.shape) * [1]
-            shape_list[self.t_axis] = times.shape[0]
-            values = times.values.reshape(tuple(shape_list))
+            shape_list[self.t_axis] = len(times)
+            times = times.reshape(tuple(shape_list))
+            return times
 
-            # Return the Scalar
-            return Scalar(values)
+        # Handle a 2-D observation
+        if (self.t_axis[0] not in (self.u_axis, self.v_axis) or
+            self.t_axis[1] not in (self.u_axis, self.v_axis)):
+                raise NotImplementedError('timegrid not implemented for ' +
+                                          't axes (%d,%d), ' % self.t_axis,
+                                          'u axis %d, ' % self.u_axis,
+                                          'v axis %d'   % self.v_axis)
 
-        # Handle N-dimensional case...
+        # Time aligns with u-axis AND v-axis
 
-        # Construct the index arrays
-        limit += step * 1.e-10      # Allow a little slop at the upper end
+        # One time step implies midtime
+        if oversample == 1:
+            return 0.5 * (time0 + time1)
 
-        ranges = []
-        sizes = []
-        shape_list = axes * [1]
-        for i in range(axes):
-            ranges.append(np.arange(origin[i], limit[i], step[i]))
-            sizes.append(len(ranges[i]))
-            shape_list[self.t_axis[i]] = sizes[i]
-
-        # Construct the empty array of values in the desired shape
-        values = np.empty(tuple(shape_list) + (axes,))
-
-        # Populate the tstep array
-        for i in range(axes):
-            temp_shape = axes * [1]
-            temp_shape[self.t_axis[i]] = sizes[i]
-            tsteps = ranges[i].reshape(tuple(temp_shape))
-            values[...,i] = tsteps
-
-        # Return the times
-        tsteps = Vector(values)
-        return self.cadence.time_at_tstep(Vector(values), mask=False)
+        # Otherwise, uniform time steps on a leading axis
+        fracs = np.arange(oversample) / (oversample - 1.)
+        fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
+        return time0 + fracs * (time1 - time0)
 
     def event_at_grid(self, meshgrid=None, time=None):
         """Return a photon arrival event from directions defined by a meshgrid.
