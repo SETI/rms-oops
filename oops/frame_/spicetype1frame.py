@@ -5,7 +5,7 @@
 import numpy as np
 from polymath import *
 
-import spyce
+import cspyce
 
 from oops.frame_.frame     import Frame
 from oops.path_.path       import Path
@@ -53,7 +53,7 @@ class SpiceType1Frame(Frame):
 
         # Fill in the time tolerances
         if type(tick_tolerance) == type(''):
-            self.tick_tolerance = spyce.sctiks(spice_body_id, tick_tolerance)
+            self.tick_tolerance = cspyce.sctiks(spice_body_id, tick_tolerance)
         else:
             self.tick_tolerance = tick_tolerance
 
@@ -69,8 +69,8 @@ class SpiceType1Frame(Frame):
         self.reference = Frame.as_wayframe(reference_id)
 
         # Fill in the origin waypoint
-        self.spice_origin_id   = spyce.frinfo(self.spice_frame_id)[0]
-        self.spice_origin_name = spyce.bodc2n(self.spice_origin_id)
+        self.spice_origin_id   = cspyce.frinfo(self.spice_frame_id)[0]
+        self.spice_origin_name = cspyce.bodc2n(self.spice_origin_id)
 
         try:
             self.origin = Path.as_waypoint(self.spice_origin_id)
@@ -107,9 +107,9 @@ class SpiceType1Frame(Frame):
         # Fill in the time tolerance in seconds
         if self.time_tolerance is None:
             time = Scalar.as_scalar(time)
-            ticks = spyce.sce2c(self.spice_body_id, time.vals)
-            ticks_per_sec = spyce.sce2c(self.spice_body_id,
-                                        time.vals + 1.) - ticks
+            ticks = cspyce.sce2c(self.spice_body_id, time.vals)
+            ticks_per_sec = cspyce.sce2c(self.spice_body_id,
+                                         time.vals + 1.) - ticks
             self.time_tolerance = self.tick_tolerance / ticks_per_sec
 
         # Check to see if the cached transform is adequate
@@ -121,13 +121,13 @@ class SpiceType1Frame(Frame):
 
         # A single input time can be handled quickly
         if time.shape == ():
-            ticks = spyce.sce2c(self.spice_body_id, time.vals)
-            (matrix3, true_ticks) = spyce.ckgp(self.spice_frame_id, ticks,
-                                               self.tick_tolerance,
-                                               self.spice_reference_name)
+            ticks = cspyce.sce2c(self.spice_body_id, time.vals)
+            (matrix3, true_ticks) = cspyce.ckgp(self.spice_frame_id, ticks,
+                                                self.tick_tolerance,
+                                                self.spice_reference_name)
 
             self.cached_shape = time.shape
-            self.cached_time = spyce.sct2e(self.spice_body_id, true_ticks)
+            self.cached_time = cspyce.sct2e(self.spice_body_id, true_ticks)
             self.cached_transform = Transform(matrix3, Vector3.ZERO,
                                               self.frame_id, self.reference_id)
             return self.cached_transform
@@ -141,13 +141,13 @@ class SpiceType1Frame(Frame):
         time_min = time.vals.min()
         time_max = time.vals.max()
         if (time_max - time_min) < self.time_tolerance:
-            ticks = spyce.sce2c(self.spice_body_id, (time_min + time_max)/2.)
-            (matrix3, true_ticks) = spyce.ckgp(self.spice_frame_id, ticks,
-                                               self.tick_tolerance,
-                                               self.spice_reference_name)
+            ticks = cspyce.sce2c(self.spice_body_id, (time_min + time_max)/2.)
+            (matrix3, true_ticks) = cspyce.ckgp(self.spice_frame_id, ticks,
+                                                self.tick_tolerance,
+                                                self.spice_reference_name)
 
             matrix[...] = matrix
-            true_times[...] = spyce.sct2e(self.spice_body_id, true_ticks)
+            true_times[...] = cspyce.sct2e(self.spice_body_id, true_ticks)
 
             self.cached_shape = time.shape
             self.cached_time = true_times
@@ -157,12 +157,12 @@ class SpiceType1Frame(Frame):
         
         # Otherwise, iterate through the array...
         for (i,t) in np.ndenumerate(time.vals):
-            ticks = spyce.sce2c(self.spice_body_id, t)
-            (matrix3, true_ticks) = spyce.ckgp(self.spice_frame_id, ticks,
-                                               self.tick_tolerance,
-                                               self.spice_reference_name)
+            ticks = cspyce.sce2c(self.spice_body_id, t)
+            (matrix3, true_ticks) = cspyce.ckgp(self.spice_frame_id, ticks,
+                                                self.tick_tolerance,
+                                                self.spice_reference_name)
             matrix[i] = matrix3
-            true_times[i] = spyce.sct2e(self.spice_body_id, true_ticks)
+            true_times[i] = cspyce.sct2e(self.spice_body_id, true_ticks)
 
         self.cached_shape = time.shape
         self.cached_time = true_times

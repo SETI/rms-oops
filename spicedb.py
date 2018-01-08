@@ -14,7 +14,7 @@ import unittest
 import julian
 import interval
 import textkernel
-import spyce
+import cspyce
 
 import sqlite_db as db
 
@@ -295,7 +295,7 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
 
     # Get info about a CK
     try:
-        spice_ids = spyce.ckobj(filespec)
+        spice_ids = cspyce.ckobj(filespec)
         for spice_id in spice_ids:
             spice_id = int(spice_id)
 
@@ -304,7 +304,7 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
             else:
                 body_id = spice_id
 
-            coverages = spyce.ckcov(filespec, spice_id,
+            coverages = cspyce.ckcov(filespec, spice_id,
                                      False, 'SEGMENT', 1., 'TDB')
             for (start_tdb, stop_tdb) in coverages:
                 start_time = julian.iso_from_tai(julian.tai_from_tdb(start_tdb))
@@ -322,11 +322,11 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
 
     # Get info about an SPK
     try:
-        spice_ids = spyce.spkobj(filespec)
+        spice_ids = cspyce.spkobj(filespec)
         for spice_id in spice_ids:
             spice_id = int(spice_id)
 
-            coverages = spyce.spkcov(filespec, spice_id)
+            coverages = cspyce.spkcov(filespec, spice_id)
             for (start_tdb, stop_tdb) in coverages:
                 start_time = julian.iso_from_tai(julian.tai_from_tdb(start_tdb))
                 stop_time  = julian.iso_from_tai(julian.tai_from_tdb(stop_tdb))
@@ -1301,7 +1301,7 @@ def as_dict(kernel_list):
 ################################################################################
 
 def furnish_kernels(kernel_list, fast=True):
-    """Furnish a pre-sorted list of kernels for use by the spyce module.
+    """Furnish a pre-sorted list of kernels for use by the cspyce module.
 
     Input:
         kernel_list a pre-sorted list of one or more KernelInfo objects
@@ -1381,10 +1381,10 @@ def furnish_kernels(kernel_list, fast=True):
             filespec = os.path.join(spice_path, file)
             if already_furnished:
                 furnished_list.remove(file)
-                spyce.unload(filespec)
+                cspyce.unload(filespec)
 
             # Load the kernel
-            spyce.furnsh(filespec)
+            cspyce.furnsh(filespec)
             furnished_list.append(file)
             
 
@@ -1716,7 +1716,7 @@ def unload_by_name(names):
             if filespec in FURNISHED_FILESPECS[key]:
                 FURNISHED_FILESPECS[key].remove(filespec)
                 del FURNISHED_INFO[filespec]
-                spyce.unload(os.path.join(spice_path, filespec))
+                cspyce.unload(os.path.join(spice_path, filespec))
 
         # Delete the file_no from the list
         name = kernel.full_name
@@ -1756,7 +1756,7 @@ def unload_by_type(types=None):
         # Unload each file from SPICE
         file_list = FURNISHED_FILESPECS[key]
         for file in file_list:
-            spyce.unload(os.path.join(spice_path, file))
+            cspyce.unload(os.path.join(spice_path, file))
             del FURNISHED_INFO[file]
 
         # Delete the file list from the dictionary

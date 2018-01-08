@@ -2,7 +2,7 @@
 # oops/spice_support.py
 ################################################################################
 
-import spicedb, spyce, julian
+import spicedb, cspyce, julian
 import os
 
 from oops.path_.path import Path
@@ -10,7 +10,7 @@ from oops.path_.path import Path
 # Maintain dictionaries that translates names in SPICE toolkit into their
 # corresponding names in the Frame and Path registries.
 
-FRAME_TRANSLATION = {'J2000':'J2000', spyce.namfrm('J2000'):'J2000'}
+FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}
 PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
 
 ################################################################################
@@ -54,14 +54,14 @@ def body_id_and_name(arg):
 
     # Interpret the argument given as a string
     if type(arg) == str:
-        id = spyce.bodn2c(arg)     # raises LookupError if not found
-        name = spyce.bodc2n(id)
+        id = cspyce.bodn2c(arg)     # raises LookupError if not found
+        name = cspyce.bodc2n(id)
         return (id, name)
 
     # Otherwise, interpret the argument given as an integer
     elif type(arg) == int:
         try:
-            name = spyce.bodc2n(arg)
+            name = cspyce.bodc2n(arg)
         except LookupError:
             # In rare cases, a body has no name; use the ID instead
             name = str(arg)
@@ -79,7 +79,7 @@ def frame_id_and_name(arg):
     # Interpret the SPICE frame ID as an int
     if type(arg) == type(0):
         try:
-            name = spyce.frmnam(arg)   # does not raise an error; I may fix
+            name = cspyce.frmnam(arg)   # does not raise an error; I may fix
         except ValueError:
             name = ''
         except KeyError:
@@ -89,18 +89,18 @@ def frame_id_and_name(arg):
         if name != '': return (arg, name)
 
         # Make sure the body's frame is defined
-        if not spyce.bodfnd(arg, 'POLE_RA'):
+        if not cspyce.bodfnd(arg, 'POLE_RA'):
             raise LookupError('frame for body %d is undefined' % arg)
 
         # Otherwise, perhaps it is a body ID
-        return spyce.cidfrm(arg) # LookupError if not found
+        return cspyce.cidfrm(arg) # LookupError if not found
 
     # Interpret the argument given as a string
     if type(arg) == type(""):
 
         # Validate this as the name of a frame
         try:
-            id = spyce.namfrm(arg)     # does not raise an error; I may fix
+            id = cspyce.namfrm(arg)     # does not raise an error; I may fix
         except ValueError:
             id = 0
         except KeyError:
@@ -110,29 +110,29 @@ def frame_id_and_name(arg):
         if id != 0:
 
             # Make sure the frame is defined
-            body_id = spyce.frinfo(id)[0]
-            if (body_id > 0) and not spyce.bodfnd(body_id, 'POLE_RA'):
+            body_id = cspyce.frinfo(id)[0]
+            if (body_id > 0) and not cspyce.bodfnd(body_id, 'POLE_RA'):
                 raise LookupError('frame "%s" is undefined' % arg)
 
             # Return the official, capitalized name
-            return (id, spyce.frmnam(id))
+            return (id, cspyce.frmnam(id))
 
         # See if this is the name of a body
-        body_id = spyce.bodn2c(arg)         # raises LookupError if not found
+        body_id = cspyce.bodn2c(arg)         # raises LookupError if not found
 
         # Make sure the body's frame is defined
-        if not spyce.bodfnd(body_id, 'POLE_RA'):
+        if not cspyce.bodfnd(body_id, 'POLE_RA'):
             raise LookupError('frame for body "%s" is undefined' % arg)
 
         # If this is a body, return the name of the associated frame
-        return spyce.cidfrm(body_id)
+        return cspyce.cidfrm(body_id)
 
 ########################################
 
 def initialize():
     global FRAME_TRANSLATION, PATH_TRANSLATION
 
-    FRAME_TRANSLATION = {'J2000':'J2000', spyce.namfrm('J2000'):'J2000'}
+    FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}
     PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
 
 ################################################################################

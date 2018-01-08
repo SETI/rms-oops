@@ -1976,7 +1976,7 @@ class Test_Event(unittest.TestCase):
 
     def runTest(self):
 
-        import spyce
+        import cspyce
         from oops.body import define_solar_system
         define_solar_system('1990-01-01', '2010-01-01')
 
@@ -2060,20 +2060,20 @@ class Test_Event(unittest.TestCase):
         ########################################################################
 
         angles = np.arange(181.)
-        spyce_arr_ap = []
-        spyce_dep_ap = []
+        cspyce_arr_ap = []
+        cspyce_dep_ap = []
         for angle in angles:
             vobs = np.array([SPEED, 0., 0.])
 
             # Note the sign change on pobj, because we consider the photon's
             # direction, not the direction to the target
             pobj = np.array([-np.cos(angle * RPD), -np.sin(angle * RPD), 0.])
-            appobj = spyce.stelab(pobj, vobs)
-            spyce_arr_ap.append(np.arctan2(-appobj[1], -appobj[0]))
+            appobj = cspyce.stelab(pobj, vobs)
+            cspyce_arr_ap.append(np.arctan2(-appobj[1], -appobj[0]))
 
             pobj = np.array([np.cos(angle * RPD), np.sin(angle * RPD), 0.])
-            appobj = spyce.stlabx(pobj, vobs)
-            spyce_dep_ap.append(np.arctan2(appobj[1], appobj[0]))
+            appobj = cspyce.stlabx(pobj, vobs)
+            cspyce_dep_ap.append(np.arctan2(appobj[1], appobj[0]))
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ray = Vector3.from_scalars(np.cos(angles * RPD),
@@ -2086,12 +2086,12 @@ class Test_Event(unittest.TestCase):
 
         for k in range(181):
             arr_ap = np.arctan2(ev.arr_ap[k].vals[1], ev.arr_ap[k].vals[0])
-            self.assertTrue(abs(spyce_arr_ap[k] - exact_arr_ap[k]) < 1.e-6)
+            self.assertTrue(abs(cspyce_arr_ap[k] - exact_arr_ap[k]) < 1.e-6)
             self.assertTrue(abs(arr_ap - exact_arr_ap[k]) < 1.e-15)
 
         for k in range(181):
             dep_ap = np.arctan2(ev.dep_ap[k].vals[1], ev.dep_ap[k].vals[0])
-            self.assertTrue(abs(spyce_dep_ap[k] - exact_dep_ap[k]) < 1.e-6)
+            self.assertTrue(abs(cspyce_dep_ap[k] - exact_dep_ap[k]) < 1.e-6)
             self.assertTrue(abs(dep_ap - exact_dep_ap[k]) < 1.e-15)
 
         ########################################################################

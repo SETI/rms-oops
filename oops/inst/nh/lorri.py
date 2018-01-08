@@ -518,7 +518,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
     def runTest(self):
 
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
-        import spyce
+        import cspyce
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
@@ -576,7 +576,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertAlmostEqual(snapshot.time[1]-snapshot.time[0],
                                snapshot.texp)
         self.assertAlmostEqual(snapshot.time[0]+snapshot.texp/2,
-                               spyce.utc2et(snapshot.headers[0]["SPCUTCID"]),
+                               cspyce.utc2et(snapshot.headers[0]["SPCUTCID"]),
                                places=3)
         self.assertEqual(snapshot.target, "EUROPA")
 

@@ -1342,7 +1342,7 @@ class Test_Path(unittest.TestCase):
 
         # More imports are here to avoid conflicts
         import os
-        import spyce
+        import cspyce
         from oops.path_.spicepath import SpicePath
         from oops.path_.linearpath import LinearPath
         from oops.frame_.spiceframe import SpiceFrame
@@ -1350,7 +1350,7 @@ class Test_Path(unittest.TestCase):
 
         Path.USE_QUICKPATHS = False
 
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
         # Registry tests
         Path.reset_registry()

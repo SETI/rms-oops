@@ -8,7 +8,7 @@ import os
 import spicedb
 import julian
 import gravity
-import spyce
+import cspyce
 
 from polymath import *
 
@@ -72,9 +72,9 @@ SATURN_ALIASES = [
 
 ALIASES = JUPITER_ALIASES + SATURN_ALIASES
 
-# Define within spyce
+# Define within cspyce
 for (codes, names) in ALIASES:
-    spyce.define_body_aliases(*(names + codes))
+    cspyce.define_body_aliases(*(names + codes))
 
 ################################################################################
 
@@ -137,7 +137,7 @@ class Body(object):
             spice_name = name
 
         try:
-            self.spice_id = spyce.bodn2c(spice_name)
+            self.spice_id = cspyce.bodn2c(spice_name)
         except (KeyError, ValueError):
             self.spice_id = None
 
@@ -736,7 +736,7 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT, [], retrograde=True)
     define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT, [], retrograde=True)
 
-    URANUS_EPOCH = spyce.utc2et("1977-03-10T20:00:00")
+    URANUS_EPOCH = cspyce.utc2et("1977-03-10T20:00:00")
 
     uranus_wrt_b1950 = AliasFrame("IAU_URANUS").wrt("B1950")
     ignore = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
@@ -793,8 +793,8 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
         define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
                       ["SATELLITE", "IRREGULAR"])
 
-    ra  = spyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
-    dec = spyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
+    ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
+    dec = cspyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
     pole = Vector3.from_ra_dec_length(ra,dec)
 
     define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [], pole=pole)
@@ -976,7 +976,7 @@ def define_small_body(spice_id, name=None, spk=None, keywords=[],
 
     # Load the SPK if necessary
     if spk:
-        spyce.furnsh(spk)
+        cspyce.furnsh(spk)
 
     # Define the body's path
     path = SpicePath(spice_id, "SSB", id=name)
@@ -1054,7 +1054,7 @@ class Test_Body(unittest.TestCase):
         self.assertEqual(len(moons), 8)     # Mimas-Iapetus
 
         rings = saturn.select_children(include_any=("RING"))
-        self.assertEqual(len(rings), 7)     # A, B, C, Main, all, plane, system
+        self.assertEqual(len(rings), 8)     # A, B, C, AB, Main, all, plane, system
 
         moons = saturn.select_children(include_all="SATELLITE",
                                        exclude=("IRREGULAR"), radius=1000)

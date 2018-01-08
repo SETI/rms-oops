@@ -2,7 +2,7 @@
 # oops/surface_/spicebody.py: For bodies shaped defined in SPICE.
 ################################################################################
 
-import spyce
+import cspyce
 
 from oops.surface_.spheroid  import Spheroid
 from oops.surface_.ellipsoid import Ellipsoid
@@ -37,7 +37,7 @@ def spice_body(spice_id, frame_id=None, default_radii=None):
         frame_id = spice.FRAME_TRANSLATION[spice_frame_name]
 
     try:
-        radii = spyce.bodvcd(spice_body_id, "RADII")
+        radii = cspyce.bodvcd(spice_body_id, "RADII")
     except (RuntimeError, KeyError) as e:
         if default_radii is None: raise e
         radii = default_radii
@@ -62,8 +62,8 @@ class Test_spice_body(unittest.TestCase):
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import os.path
 
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
 
         ignore = SpicePath("VENUS", "SSB", "J2000", "APHRODITE")
         ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")

@@ -12,7 +12,7 @@ import os.path
 import julian
 import textkernel
 import spicedb
-import spyce
+import cspyce
 import oops
 
 import oops.body as body
@@ -192,8 +192,8 @@ class Cassini(object):
         for kernel in kernels:
 
             # Find the range of months applicable, extended by 12 hours
-            t0 = spyce.str2et(kernel.start_time) - Cassini.SLOP
-            t1 = spyce.str2et(kernel.stop_time)  + Cassini.SLOP
+            t0 = cspyce.str2et(kernel.start_time) - Cassini.SLOP
+            t1 = cspyce.str2et(kernel.stop_time)  + Cassini.SLOP
 
             m1 = int((t0 - Cassini.TDB0) // Cassini.DTDB)
             m2 = int((t1 - Cassini.TDB0) // Cassini.DTDB) + 1

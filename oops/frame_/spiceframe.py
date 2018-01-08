@@ -7,7 +7,7 @@ from scipy.interpolate import UnivariateSpline
 
 from polymath import *
 
-import spyce
+import cspyce
 
 from oops.frame_.frame    import Frame
 from oops.path_.path      import Path
@@ -60,8 +60,8 @@ class SpiceFrame(Frame):
         self.reference = Frame.as_wayframe(reference_id)
 
         # Fill in the origin waypoint
-        self.spice_origin_id   = spyce.frinfo(self.spice_frame_id)[0]
-        self.spice_origin_name = spyce.bodc2n(self.spice_origin_id)
+        self.spice_origin_id   = cspyce.frinfo(self.spice_frame_id)[0]
+        self.spice_origin_name = cspyce.bodc2n(self.spice_origin_id)
         origin_id = spice.PATH_TRANSLATION[self.spice_origin_id]
 
         try:
@@ -110,18 +110,18 @@ class SpiceFrame(Frame):
 
             # Case 1: omega_type = tabulated
             if self.omega_tabulated:
-                matrix6 = spyce.sxform(self.spice_reference_name,
-                                       self.spice_frame_name,
-                                       time.values)
-                (matrix, omega) = spyce.xf2rav(matrix6)
+                matrix6 = cspyce.sxform(self.spice_reference_name,
+                                        self.spice_frame_name,
+                                        time.values)
+                (matrix, omega) = cspyce.xf2rav(matrix6)
 
                 return Transform(matrix, omega, self, self.reference)
 
             # Case 2: omega_type = zero
             elif self.omega_zero:
-                matrix = spyce.pxform(self.spice_reference_name,
-                                      self.spice_frame_name,
-                                      time.values)
+                matrix = cspyce.pxform(self.spice_reference_name,
+                                       self.spice_frame_name,
+                                       time.values)
 
                 return Transform(matrix, Vector3.ZERO, self, self.reference)
 
@@ -132,9 +132,9 @@ class SpiceFrame(Frame):
                 mats = np.empty((3,3,3))
 
                 for j in range(len(times)):
-                    mats[j] = spyce.pxform(self.spice_reference_name,
-                                           self.spice_frame_name,
-                                           times[j])
+                    mats[j] = cspyce.pxform(self.spice_reference_name,
+                                            self.spice_frame_name,
+                                            times[j])
 
                 # Convert three matrices to quaternions
                 quats = Quaternion.as_quaternion(Matrix3(mats))
@@ -171,10 +171,10 @@ class SpiceFrame(Frame):
             omega  = np.empty(time.shape + (3,))
 
             for i,t in np.ndenumerate(time.values):
-                matrix6 = spyce.sxform(self.spice_reference_name,
-                                       self.spice_frame_name,
-                                       t)
-                (matrix[i], omega[i]) = spyce.xf2rav(matrix6)
+                matrix6 = cspyce.sxform(self.spice_reference_name,
+                                        self.spice_frame_name,
+                                       t )
+                (matrix[i], omega[i]) = cspyce.xf2rav(matrix6)
 
         # Case 2: omega_type = zero
         elif self.omega_zero:
@@ -182,9 +182,9 @@ class SpiceFrame(Frame):
             omega  = np.zeros(time.shape + (3,))
 
             for i,t in np.ndenumerate(time.values):
-                matrix[i] = spyce.pxform(self.spice_reference_name,
-                                         self.spice_frame_name,
-                                         t)
+                matrix[i] = cspyce.pxform(self.spice_reference_name,
+                                          self.spice_frame_name,
+                                          t)
 
         # Case 3: omega_type = numerical
         # This procedure calculates each omega using its own UnivariateSpline;
@@ -202,9 +202,9 @@ class SpiceFrame(Frame):
                 # Generate the rotation matrix at each time
                 mats = np.empty((3,3,3))
                 for j in range(len(times)):
-                    mats[j] = spyce.pxform(self.spice_reference_name,
-                                           self.spice_frame_name,
-                                           times[j])
+                    mats[j] = cspyce.pxform(self.spice_reference_name,
+                                            self.spice_frame_name,
+                                            times[j])
 
                 # Convert these three matrices to quaternions
                 quats = Quaternion.as_quaternion(Matrix3(mats))
@@ -227,7 +227,7 @@ class SpiceFrame(Frame):
         """A Transform that rotates from the reference frame into this frame.
 
         Unlike method transform_at_time(), this variant tolerates times that
-        raise spyce errors. It returns a new time Scalar along with the new
+        raise cspyce errors. It returns a new time Scalar along with the new
         Transform, where both objects skip over the times at which the transform
         could not be evaluated.
 
@@ -282,10 +282,10 @@ class SpiceFrame(Frame):
 
             for i,t in np.ndenumerate(time.values):
                 try:
-                    matrix6 = spyce.sxform(self.spice_reference_name,
-                                           self.spice_frame_name,
-                                           t)
-                    (matrix[i], omega[i]) = spyce.xf2rav(matrix6)
+                    matrix6 = cspyce.sxform(self.spice_reference_name,
+                                            self.spice_frame_name,
+                                            t)
+                    (matrix[i], omega[i]) = cspyce.xf2rav(matrix6)
 
                     new_time.append(t)
                     matrix_list.append(matrix[i])
@@ -302,9 +302,9 @@ class SpiceFrame(Frame):
 
             for i,t in np.ndenumerate(time.values):
                 try:
-                    matrix[i] = spyce.pxform(self.spice_reference_name,
-                                             self.spice_frame_name,
-                                             t)
+                    matrix[i] = cspyce.pxform(self.spice_reference_name,
+                                              self.spice_frame_name,
+                                              t)
 
                     new_time.append(t)
                     matrix_list.append(matrix[i])
@@ -328,9 +328,9 @@ class SpiceFrame(Frame):
                 mats = np.empty((3,3,3))
 
                 for j in range(len(times)):
-                    mats[j] = spyce.pxform(self.spice_reference_name,
-                                           self.spice_frame_name,
-                                           times[j])
+                    mats[j] = cspyce.pxform(self.spice_reference_name,
+                                            self.spice_frame_name,
+                                            times[j])
 
                 # Convert three matrices to quaternions
                 quats = Quaternion.as_quaternion(Matrix3(mats))
@@ -370,7 +370,7 @@ class SpiceFrame(Frame):
 ################################################################################
 
 # Here we also test many of the overall Frame operations, because we can be
-# confident that spyce produces valid results.
+# confident that cspyce produces valid results.
 
 import unittest
 
@@ -386,9 +386,9 @@ class Test_SpiceFrame(unittest.TestCase):
         from oops.event import Event
 
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
 
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
@@ -406,7 +406,7 @@ class Test_SpiceFrame(unittest.TestCase):
         rotated = event.wrt_frame('IAU_EARTH')
 
         for i,t in np.ndenumerate(time.vals):
-            matrix6 = spyce.sxform('J2000', 'IAU_EARTH', t)
+            matrix6 = cspyce.sxform('J2000', 'IAU_EARTH', t)
             spiceval = np.matrix(matrix6) * np.matrix(posvel[i])
 
             dpos = rotated.pos[i].vals[...,np.newaxis] - spiceval[0:3,0]
@@ -435,8 +435,8 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = Frame.as_frame('IAU_EARTH').wrt('J2000')
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = spyce.sxform('J2000', 'IAU_EARTH', times[i].vals)
-            (matrix, omega) = spyce.xf2rav(matrix6)
+            matrix6 = cspyce.sxform('J2000', 'IAU_EARTH', times[i].vals)
+            (matrix, omega) = cspyce.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
             domega  = transform.omega[i].vals  - omega
@@ -447,8 +447,8 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = Frame.as_frame('J2000').wrt('IAU_EARTH')
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = spyce.sxform('IAU_EARTH', 'J2000', times[i].vals)
-            (matrix, omega) = spyce.xf2rav(matrix6)
+            matrix6 = cspyce.sxform('IAU_EARTH', 'J2000', times[i].vals)
+            (matrix, omega) = cspyce.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
             domega  = transform.omega[i].vals  - omega
@@ -459,8 +459,8 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = Frame.as_frame('B1950').wrt('J2000')
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = spyce.sxform('J2000', 'B1950', times[i].vals)
-            (matrix, omega) = spyce.xf2rav(matrix6)
+            matrix6 = cspyce.sxform('J2000', 'B1950', times[i].vals)
+            (matrix, omega) = cspyce.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
             domega  = transform.omega[i].vals  - omega
@@ -471,8 +471,8 @@ class Test_SpiceFrame(unittest.TestCase):
         frame = Frame.as_frame('J2000').wrt('B1950')
         transform = frame.transform_at_time(times)
         for i in range(times.vals.size):
-            matrix6 = spyce.sxform('B1950', 'J2000', times[i].vals)
-            (matrix, omega) = spyce.xf2rav(matrix6)
+            matrix6 = cspyce.sxform('B1950', 'J2000', times[i].vals)
+            (matrix, omega) = cspyce.xf2rav(matrix6)
 
             dmatrix = transform.matrix[i].vals - matrix
             domega  = transform.omega[i].vals  - omega
@@ -488,35 +488,35 @@ class Test_SpiceFrame(unittest.TestCase):
         ########################################
 
         # Load all the required kernels for Cassini ISS on 2007-312
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'naif0009.tls'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'cas00149.tsc'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'cas_v40.tf'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'cas_status_v04.tf'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'cas_iss_v10.ti'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'pck00010.tpc'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'cpck14Oct2011.tpc'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'de421.bsp'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'sat052.bsp'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'sat083.bsp'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'sat125.bsp'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'sat128.bsp'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'sat164.bsp'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', '07312_07317ra.bc'))
-        spyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', '080123R_SCPSE_07309_07329.bsp'))
 
         ignore = SpicePath('CASSINI', 'SSB')
@@ -525,7 +525,7 @@ class Test_SpiceFrame(unittest.TestCase):
 
         # Look up N1573186009_1.IMG from COISS_2039/data/1573186009_1573197826/
         timestring = '2007-312T03:34:16.391'
-        TDB = spyce.str2et(timestring)
+        TDB = cspyce.str2et(timestring)
 
         nacframe = Frame.J2000.wrt('CASSINI_ISS_NAC')
         matrix = nacframe.transform_at_time(TDB).matrix

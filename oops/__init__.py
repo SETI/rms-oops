@@ -18,10 +18,10 @@
 #   This imports all the oops components without the "oops" prefix. It can fill
 #   up the default name space but there is nothing wrong with it.
 
-import spyce
-import spyce.aliases
-spyce.use_errors()
-spyce.use_aliases()
+import cspyce
+import cspyce.aliases
+cspyce.use_errors()
+cspyce.use_aliases()
 
 import oops.cadence_.all as cadence
 import oops.calib_.all   as calib
