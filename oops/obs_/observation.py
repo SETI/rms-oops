@@ -368,7 +368,7 @@ class Observation(object):
 
             # One step implies midtime, which can be returned as a scalar
             if oversample == 1:
-                return 0.5 * (time0 + time1)
+                return Scalar(0.5 * (time0 + time1))
 
             # Otherwise, uniform time steps between endpoints
             fracs = np.arange(oversample) / (oversample - 1.)
@@ -376,7 +376,7 @@ class Observation(object):
 
             # Time is on a leading axis
             tshape = times.shape + len(self.shape) * (1,)
-            return times.reshape(tshape)
+            return Scalar.as_scalar(times.reshape(tshape))
 
         # Get times at each pixel in meshgrid
         (tstarts, tstops) = self.times_at_uv(meshgrid.uv)
@@ -393,12 +393,12 @@ class Observation(object):
 
                 # One time step implies midtime
                 if oversample == 1:
-                    return 0.5 * (time0 + time1)
+                    return Scalar.as_scalar(0.5 * (time0 + time1))
 
                 # Otherwise, uniform time steps on a leading axis
                 fracs = np.arange(oversample) / (oversample - 1.)
                 fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
-                return time0 + fracs * (time1 - time0)
+                return Scalar(time0 + fracs * (time1 - time0))
 
             # Otherwise time is along a unique axis
             tstep0 = tfrac[0] * self.cadence.shape[0]
@@ -408,7 +408,7 @@ class Observation(object):
 
             shape_list = len(self.shape) * [1]
             shape_list[self.t_axis] = len(times)
-            times = times.reshape(tuple(shape_list))
+            times = Scalar.as_scalar(times).reshape(tuple(shape_list))
             return times
 
         # Handle a 2-D observation
@@ -423,12 +423,12 @@ class Observation(object):
 
         # One time step implies midtime
         if oversample == 1:
-            return 0.5 * (time0 + time1)
+            return Scalar.as_scalar(0.5 * (time0 + time1))
 
         # Otherwise, uniform time steps on a leading axis
         fracs = np.arange(oversample) / (oversample - 1.)
         fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
-        return time0 + fracs * (time1 - time0)
+        return Scalar(time0 + fracs * (time1 - time0))
 
     def event_at_grid(self, meshgrid=None, time=None):
         """Return a photon arrival event from directions defined by a meshgrid.
