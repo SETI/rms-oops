@@ -181,7 +181,7 @@ class ISS(object):
     NAC_COEFF[1,1,1] = NAC_KY*NAC_E6 * NAC_F**2
 
     WAC_F = 200.7761    # mm
-    WAC_E2 = 60.89e-6    # / mm2
+    WAC_E2 = 60.89e-6   # / mm2
     WAC_E5 = 4.93e-6    # / mm
     WAC_E6 = -72.28e-6  # / mm
     WAC_KX = 83.33333   # samples/mm

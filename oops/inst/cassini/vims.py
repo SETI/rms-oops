@@ -194,7 +194,7 @@ def from_file(filespec, fast=False, **parameters):
     assert samples * lines == frames * frame_size
 
     # Replace multiple one-line frames by one frame, multiple lines
-    if frames > 1:
+    if frames > 1 and frame_size != 1:
         assert swath_length == 1
         swath_length = frames
         lines = frames
@@ -257,14 +257,10 @@ def from_file(filespec, fast=False, **parameters):
     interline_delay  = info["INTERLINE_DELAY_DURATION"]  * 0.001 * TIME_FACTOR
 
     # Adjust the timing of one line, multiple frames
-    if frames > 1:
+    if frames > 1 and frame_size != 1:
         interline_delay = interframe_delay
 
     length_stride = max(ir_texp * swath_width, vis_texp) + interline_delay
-
-# 1/9/15 no longer needed
-#     frame_stride = swath_length * length_stride + (interframe_delay -
-#                                                    interline_delay)
 
     backplane_cadence = None
 
