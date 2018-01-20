@@ -20,10 +20,14 @@ import sqlite_db as db
 
 # For testing and debugging
 DEBUG = False   # If true, no files are furnished.
-FILE_LIST = []  # If DEBUG, lists the files that would have been furnished.
+ABSPATH_LIST = []  # If DEBUG, lists the files that would have been furnished.
 
 IS_OPEN = False
 DB_PATH = ''
+
+TRANSLATOR = None   # Optional user-specified function to alter the absolute
+                    # paths of SPICE kernels. This can be used to override the
+                    # default kernels to be loaded. See set_translator().
 
 ################################################################################
 # Global variables to track loaded kernels
@@ -44,7 +48,7 @@ FURNISHED_NAMES = {
 }
 
 # Furnished kernel file paths and names by type, listed in load order
-FURNISHED_FILESPECS = {
+FURNISHED_ABSPATHS = {
     'CK':   [],
     'FK':   [],
     'IK':   [],
@@ -991,6 +995,24 @@ def db_is_open():
     return IS_OPEN
 
 ################################################################################
+# Filename translator control
+################################################################################
+
+def set_translator(func):
+    """Define the translator function."""
+
+    global TRANSLATOR
+
+    if TRANSLATOR:
+        raise RuntimeError('spicedb translator can only be defined once')
+
+    if FURNISHED_INFO:
+        raise RuntimeError('spicedb translotor cannot be defined after ' +
+                           'kernels have already been loaded.')
+
+    TRANSLATOR = func
+
+################################################################################
 # Public API for selecting kernels, returning lists of KernelInfo objects
 ################################################################################
 
@@ -1313,17 +1335,15 @@ def furnish_kernels(kernel_list, fast=True):
     Return:         an ordered list of the names, versions and file_nos of the
                     kernels loaded. This can be used to re-load the exact same
                     selection of kernels again at a later date.
-
-    The function also returns a list of the kernel names, including file_no
-    ranges if appropriate.
     """
 
-    global DEBUG, FILE_LIST
-    global FURNISHED_NAMES, FURNISHED_FILESPECS, FURNISHED_INFO
+    global DEBUG, ABSPATH_LIST
+    global FURNISHED_NAMES, FURNISHED_ABSPATHS, FURNISHED_INFO
     global FURNISHED_FILENOS
+    global TRANSLATOR
 
-    file_list = []
-    file_types = {}     # returns the kernel type give the file name
+    abspath_list = []
+    abspath_types = {}      # returns the kernel type given the file abspath
     name_list = []
     name_types = {}
     fileno_dict = {}
@@ -1346,16 +1366,16 @@ def furnish_kernels(kernel_list, fast=True):
                 fileno_dict[name].append(kernel.file_no)
 
         # Update the list of files to furnish
-        files = kernel.filespec.split(',')
-        for file in files:
+        abspaths = kernel.filespec.split(',')
+        for abspath in abspaths:
 
             # Remove the name from earlier in the list if necessary
-            if file in file_list:
-                file_list.remove(file)
+            if abspath in abspath_list:
+                abspath_list.remove(abspath)
 
             # Always add it at the end
-            file_list.append(file)
-            file_types[file] = kernel.kernel_type       # track kernel types
+            abspath_list.append(abspath)
+            abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
             # Save the info for each furnished file
             if kernel.basename in FURNISHED_INFO:
@@ -1363,40 +1383,49 @@ def furnish_kernels(kernel_list, fast=True):
             else:
                 FURNISHED_INFO[kernel.basename] = set([kernel])
 
+    # Translate kernel paths if necessary
+    if TRANSLATOR:
+
+        new_abspath_list = []
+        for oldpath in abspath_list:
+            newpath = TRANSLATOR(oldpath)
+            new_abspath_list.append(newpath)
+            abspath_types[newpath] = abspath_types[oldpath]
+
+        abbspath_list = new_abspath_list
+
     # Furnish the kernel files...
     if DEBUG:
-        FILE_LIST += file_list
+        ABSPATH_LIST += abspath_list
 
     else:
         spice_path = get_spice_path()
-        for file in file_list:
-            furnished_list = FURNISHED_FILESPECS[file_types[file]]
+        for abspath in abspath_list:
+            furnished_list = FURNISHED_ABSPATHS[abspath_types[abspath]]
 
             # In fast mode, avoid re-furnishing kernels
-            already_furnished = (file in furnished_list)
+            already_furnished = (abspath in furnished_list)
             if fast and already_furnished:
                 continue
 
-            # Otherwise, unload the kernel if it is found
-            filespec = os.path.join(spice_path, file)
+            # Otherwise, unload the kernel if it was already furnished
             if already_furnished:
-                furnished_list.remove(file)
-                cspyce.unload(filespec)
+                furnished_list.remove(abspath)
+                cspyce.unload(abspath)
 
             # Load the kernel
-            cspyce.furnsh(filespec)
-            furnished_list.append(file)
-            
+            cspyce.furnsh(abspath)
+            furnished_list.append(abspath)
 
         # Track the kernel names loaded
         for name in name_list:
-            furnished_list = FURNISHED_NAMES[name_types[name]]
+            furnished_names = FURNISHED_NAMES[name_types[name]]
 
-            if name in furnished_list:
+            if name in furnished_names:
                 if fast: continue
-                furnished_list.remove(name)
+                furnished_names.remove(name)
 
-            furnished_list.append(name)
+            furnished_names.append(name)
 
     # Append file number ranges into the names in the list returned
     for (name,filenos) in fileno_dict.iteritems():
@@ -1696,7 +1725,7 @@ def furnish_by_filepath(filepath):
 def unload_by_name(names):
     """Unload kernels based on a list of kernel names."""
 
-    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO
+    global FURNISHED_ABSPATHS, FURNISHED_NAMES, FURNISHED_INFO
     global FURNISHED_FILENOS
 
     # Search database
@@ -1713,8 +1742,8 @@ def unload_by_name(names):
         # Remove the kernel files from the dictionary and unload from SPICE
         filespecs = kernel.filespec.split(',')
         for filespec in filespecs:
-            if filespec in FURNISHED_FILESPECS[key]:
-                FURNISHED_FILESPECS[key].remove(filespec)
+            if filespec in FURNISHED_ABSPATHS[key]:
+                FURNISHED_ABSPATHS[key].remove(filespec)
                 del FURNISHED_INFO[filespec]
                 cspyce.unload(os.path.join(spice_path, filespec))
 
@@ -1739,7 +1768,7 @@ def unload_by_name(names):
 def unload_by_type(types=None):
     """Unload all the kernels of one or more specified types."""
 
-    global FURNISHED_FILESPECS, FURNISHED_NAMES, FURNISHED_INFO
+    global FURNISHED_ABSPATHS, FURNISHED_NAMES, FURNISHED_INFO
     global FURNISHED_FILENOS, KERNEL_TYPE_SORT_ORDER
 
     # Normalize input
@@ -1754,13 +1783,13 @@ def unload_by_type(types=None):
     for key in types:
 
         # Unload each file from SPICE
-        file_list = FURNISHED_FILESPECS[key]
-        for file in file_list:
+        abspath_list = FURNISHED_ABSPATHS[key]
+        for file in abspath_list:
             cspyce.unload(os.path.join(spice_path, file))
             del FURNISHED_INFO[file]
 
         # Delete the file list from the dictionary
-        FURNISHED_FILESPECS[key] = []
+        FURNISHED_ABSPATHS[key] = []
 
         # Delete the file_no list if necessary
         name_list = FURNISHED_NAMES[key]
@@ -1785,8 +1814,8 @@ def unload_by_filepath(filepath):
     if name in FURNISHED_NAMES[ktype]:
         FURNISHED_NAMES[ktype].remove(name)
 
-    if filepath in FURNISHED_FILESPECS[ktype]:
-        FURNISHED_FILESPECS[ktype].remove(filepath)
+    if filepath in FURNISHED_ABSPATHS[ktype]:
+        FURNISHED_ABSPATHS[ktype].remove(filepath)
 
     del FURNISHED_INFO[basename]
 
@@ -1876,7 +1905,7 @@ def furnished_basenames(types=None):
     for key in types:
 
         # Walk down list
-        for filespec in FURNISHED_FILESPECS[key]:
+        for filespec in FURNISHED_ABSPATHS[key]:
             basename = os.path.basename(filespec)
             name_list.append(basename)
 
@@ -1926,7 +1955,7 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
 
       # Walk down list
       temp_list = []
-      for filespec in FURNISHED_FILESPECS[key]:
+      for filespec in FURNISHED_ABSPATHS[key]:
         basename = os.path.basename(filespec)
         used = False
         for info in FURNISHED_INFO[basename]:
@@ -2090,13 +2119,24 @@ class test_KernelInfo(unittest.TestCase):
   def runTest(self):
 
     # Sort based on kernel type
-    lsk  = KernelInfo(['LSK',  '1', 'LSK',  'file', 'T0', 'T1', 'T2', 0, 1])
-    lsk2 = KernelInfo(['LSK',  '1', 'LSK',  'file', 'T0', 'T1', 'T2', 0, 1])
-    sclk = KernelInfo(['SCLK', '1', 'SCLK', 'file', 'T0', 'T1', 'T2', 0, 1])
-    fk   = KernelInfo(['FK',   '1', 'FK',   'file', 'T0', 'T1', 'T2', 0, 1])
-    ik   = KernelInfo(['IK',   '1', 'IK',   'file', 'T0', 'T1', 'T2', 0, 1])
-    ck   = KernelInfo(['CK',   '1', 'CK',   'file', 'T0', 'T1', 'T2', 0, 1])
-    spk  = KernelInfo(['SPK',  '1', 'SPK',  'file', 'T0', 'T1', 'T2', 0, 1])
+    T0 = '2000-01-01T00:00:00'
+    T1 = '2001-01-01T00:00:00'
+    T2 = '2002-01-01T00:00:00'
+    T3 = '2003-01-01T00:00:00'
+    T4 = '2004-01-01T00:00:00'
+    T5 = '2005-01-01T00:00:00'
+    T6 = '2006-01-01T00:00:00'
+    T7 = '2007-01-01T00:00:00'
+    T8 = '2008-01-01T00:00:00'
+    T9 = '2009-01-01T00:00:00'
+
+    lsk  = KernelInfo(['LSK',  '1', 'LSK',  'file', T0, T1, T2, 0, 1])
+    lsk2 = KernelInfo(['LSK',  '1', 'LSK',  'file', T0, T1, T2, 0, 1])
+    sclk = KernelInfo(['SCLK', '1', 'SCLK', 'file', T0, T1, T2, 0, 1])
+    fk   = KernelInfo(['FK',   '1', 'FK',   'file', T0, T1, T2, 0, 1])
+    ik   = KernelInfo(['IK',   '1', 'IK',   'file', T0, T1, T2, 0, 1])
+    ck   = KernelInfo(['CK',   '1', 'CK',   'file', T0, T1, T2, 0, 1])
+    spk  = KernelInfo(['SPK',  '1', 'SPK',  'file', T0, T1, T2, 0, 1])
 
     self.assertEqual(lsk, lsk2)
     self.assertTrue(lsk <= lsk2)
@@ -2116,24 +2156,24 @@ class test_KernelInfo(unittest.TestCase):
     self.assertEqual(kernels, [lsk, lsk2, sclk, fk, ik, spk, ck])
 
     # Sort based on load priority
-    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 1])
-    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 2])
-    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 3])
-    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 4])
-    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 5])
-    spk6 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 6])
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 2])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 3])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 4])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 5])
+    spk6 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 6])
 
     kernels = [spk6, spk5, spk4, spk3, spk2, spk1]
     kernels.sort()
     self.assertEqual(kernels, [spk1, spk2, spk3, spk4, spk5, spk6])
 
     # Sort including release dates
-    lsk1 = KernelInfo(['LSK', '1', 'LSK', 'file', 'T0', 'T1', 'T9', 0, 9])
-    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T0', 0, 9])
-    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T2', 0, 2])
-    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T3', 0, 3])
-    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T4', 0, 4])
-    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T1', 'T5', 0, 5])
+    lsk1 = KernelInfo(['LSK', '1', 'LSK', 'file', T0, T1, T9, 0, 9])
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T0, 0, 9])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 2])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T3, 0, 3])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T4, 0, 4])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T5, 0, 5])
 
     # note--spk0 has the highest load priority
     kernels = [spk0, spk5, spk4, spk3, spk2, lsk1]
@@ -2141,61 +2181,61 @@ class test_KernelInfo(unittest.TestCase):
     self.assertEqual(kernels, [lsk1, spk2, spk3, spk4, spk5, spk0])
 
     # Sort by name and version
-    spk0 = KernelInfo(['AA', '1', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
-    spk1 = KernelInfo(['AA', '2', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
-    spk2 = KernelInfo(['AA', '3', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
-    spk3 = KernelInfo(['BB', '3', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
-    spk4 = KernelInfo(['BB', '4', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
-    spk5 = KernelInfo(['CC', '4', 'SPK', 'file', 'T0', 'T1', 'T9', 0, 1])
+    spk0 = KernelInfo(['AA', '1', 'SPK', 'file', T0, T1, T9, 0, 1])
+    spk1 = KernelInfo(['AA', '2', 'SPK', 'file', T0, T1, T9, 0, 1])
+    spk2 = KernelInfo(['AA', '3', 'SPK', 'file', T0, T1, T9, 0, 1])
+    spk3 = KernelInfo(['BB', '3', 'SPK', 'file', T0, T1, T9, 0, 1])
+    spk4 = KernelInfo(['BB', '4', 'SPK', 'file', T0, T1, T9, 0, 1])
+    spk5 = KernelInfo(['CC', '4', 'SPK', 'file', T0, T1, T9, 0, 1])
 
     kernels = [spk5, spk4, spk3, spk2, spk1, spk0]
     kernels.sort()
     self.assertEqual(kernels, [spk0, spk1, spk2, spk3, spk4, spk5])
 
     # Sort by time ranges
-    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T4', 'T7', 'T9', 0, 1])
-    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T6', 'T7', 'T9', 0, 1])
-    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T0', 'T4', 'T9', 0, 1])
-    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T1', 'T4', 'T9', 0, 1])
-    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T2', 'T4', 'T9', 0, 1])
-    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', 'T3', 'T4', 'T9', 0, 1])
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', T4, T7, T9, 0, 1])
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', T6, T7, T9, 0, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T4, T9, 0, 1])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', T1, T4, T9, 0, 1])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', T2, T4, T9, 0, 1])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', T3, T4, T9, 0, 1])
 
     kernels = [spk0, spk1, spk2, spk3, spk4, spk5]
     kernels.sort()
     self.assertEqual(kernels, [spk5, spk4, spk3, spk2, spk1, spk0])
 
     # Sort by file name
-    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 0, 1])
-    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 0, 1])
-    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file2', 'T0', 'T9', 'T9', 0, 1])
-    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file3', 'T1', 'T9', 'T9', 0, 1])
-    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file4', 'T0', 'T9', 'T9', 0, 1])
-    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file5', 'T0', 'T9', 'T9', 0, 1])
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file0', T0, T9, T9, 0, 1])
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 0, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file2', T0, T9, T9, 0, 1])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file3', T1, T9, T9, 0, 1])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file4', T0, T9, T9, 0, 1])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file5', T0, T9, T9, 0, 1])
 
     kernels = [spk5, spk4, spk3, spk2, spk1, spk0]
     kernels.sort()
     self.assertEqual(kernels, [spk3, spk0, spk1, spk2, spk4, spk5])
 
     # Sort by body ID
-    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 0, 1])
-    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 1, 1])
-    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file1', 'T0', 'T9', 'T9', 2, 1])
-    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 3, 1])
-    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 4, 1])
-    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file0', 'T0', 'T9', 'T9', 5, 1])
+    spk0 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 0, 1])
+    spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 1, 1])
+    spk2 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 2, 1])
+    spk3 = KernelInfo(['SPK', '1', 'SPK', 'file0', T0, T9, T9, 3, 1])
+    spk4 = KernelInfo(['SPK', '1', 'SPK', 'file0', T0, T9, T9, 4, 1])
+    spk5 = KernelInfo(['SPK', '1', 'SPK', 'file0', T0, T9, T9, 5, 1])
 
     kernels = [spk5, spk4, spk3, spk2, spk1, spk0]
     kernels.sort()
     self.assertEqual(kernels, [spk3, spk4, spk5, spk0, spk1, spk2])
 
     # Test full names
-    spk = KernelInfo(['VG1-JUP', '+230', 'SPK', 'file', '0', '1', '2', 0, 1])
+    spk = KernelInfo(['VG1-JUP', '+230', 'SPK', 'file', T0, T1, T2, 0, 1])
     self.assertEqual(spk.full_name, 'VG1-JUP230')
 
-    spk = KernelInfo(['VG1', 'JUP230', 'SPK', 'file', '0', '1', '2', 0, 1])
+    spk = KernelInfo(['VG1', 'JUP230', 'SPK', 'file', T0, T1, T2, 0, 1])
     self.assertEqual(spk.full_name, 'VG1-JUP230')
 
-    spk = KernelInfo(['VG1-JUP230', None, 'SPK', 'file', '0', '1', '2', 0, 1])
+    spk = KernelInfo(['VG1-JUP230', None, 'SPK', 'file', T0, T1, T2, 0, 1])
     self.assertEqual(spk.full_name, 'VG1-JUP230')
 
 ################################################################################
@@ -2206,7 +2246,7 @@ class test_spicedb(unittest.TestCase):
 
   def runTest(self):
 
-    global DEBUG, FILE_LIST
+    global DEBUG, ABSPATH_LIST
 
     ############################################################################
     # _sort_kernels()
@@ -2417,7 +2457,7 @@ class test_spicedb(unittest.TestCase):
         open_db()
 
         DEBUG = True        # Avoid attempting to load kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
 
         ########################################################################
         # _query_kernels()
@@ -2463,14 +2503,17 @@ class test_spicedb(unittest.TestCase):
 
         # Cassini CK tests
         kernels = _query_kernels('CK', body=-82, asof='2014',
-                                        time=('2008-01-01','2009-01-01'),
+                                        time=('2008-01-01','2008-02-01'),
                                         limit=False)
-        for kernel in kernels:
+        for kernel in kernels[:-2]:
             self.assertEqual(kernel.full_name, 'CAS-CK-RECONSTRUCTED-V01')
 
-        self.assertEqual(len(kernels), 75)
+        for kernel in kernels[-2:]:
+            self.assertEqual(kernel.full_name, 'CAS-CK-PREDICTED-V01')
+
+        self.assertEqual(len(kernels), 9)
         self.assertTrue(kernels[ 0].filespec.endswith('07362_08002ra.bc'))
-        self.assertTrue(kernels[-1].filespec.endswith('08242_08247rb.bc'))
+        self.assertTrue(kernels[-1].filespec.endswith('08022_08047pg_live.bc'))
 
         # Cassini SPK tests
         kernels = _query_kernels('SPK', body=-82, asof='2014',
@@ -2489,45 +2532,45 @@ class test_spicedb(unittest.TestCase):
         # furnish_lsk(asof=None, after=None, redo=True)
         ########################################################################
 
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_lsk(asof='2014')
         self.assertEqual(kernels, ['NAIF-LSK-0010'])
-        self.assertEqual(len(FILE_LIST), 1)
-        self.assertTrue(FILE_LIST[0].endswith('/naif0010.tls'))
+        self.assertEqual(len(ABSPATH_LIST), 1)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/naif0010.tls'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         k1 = kernels
         kernels = furnish_lsk(asof=(14*365.25*86400))
         self.assertEqual(kernels, ['NAIF-LSK-0010'])
-        self.assertTrue(FILE_LIST[0].endswith('/naif0010.tls'))
+        self.assertTrue(ABSPATH_LIST[0].endswith('/naif0010.tls'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_lsk(asof='2010-01-01')
         self.assertEqual(kernels, ['NAIF-LSK-0009'])
-        self.assertTrue(FILE_LIST[0].endswith('/naif0009.tls'))
+        self.assertTrue(ABSPATH_LIST[0].endswith('/naif0009.tls'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
         self.assertRaises(ValueError, furnish_lsk, asof='1950', redo=False)
@@ -2546,7 +2589,7 @@ class test_spicedb(unittest.TestCase):
         # furnish_pck(bodies, asof=None, after=None, redo=True)
         ########################################################################
 
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_pck()
         naif_pck_mars = -1
         naif_pck = -1
@@ -2557,15 +2600,15 @@ class test_spicedb(unittest.TestCase):
         self.assertTrue(naif_pck >= 0)
         self.assertTrue(naif_pck_mars >= 0)
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_pck(bodies=range(1,11) + range(199,1000,100) + [301] +
                                      range(401,403) + range(501,517) +
                                      range(601,654) + range(701,716) +
@@ -2579,366 +2622,366 @@ class test_spicedb(unittest.TestCase):
                                    'CAS-PCK-2014-02-19',
                                    'NAIF-PCK-00010-EDIT-V01'])
 
-        self.assertTrue(FILE_LIST[0].endswith('mars_iau2000_v0.tpc'))
-        self.assertTrue(FILE_LIST[1].endswith('cas_rocks_v18.tf'))
-        self.assertTrue(FILE_LIST[2].endswith('cpck_rock_21Jan2011_merged.tpc'))
-        self.assertTrue(FILE_LIST[3].endswith('cpck19Feb2014.tpc'))
-        self.assertTrue(FILE_LIST[4].endswith('pck00010_edit_v01.tpc'))
+        self.assertTrue(ABSPATH_LIST[0].endswith('mars_iau2000_v0.tpc'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('cas_rocks_v18.tf'))
+        self.assertTrue(ABSPATH_LIST[2].endswith('cpck_rock_21Jan2011_merged.tpc'))
+        self.assertTrue(ABSPATH_LIST[3].endswith('cpck19Feb2014.tpc'))
+        self.assertTrue(ABSPATH_LIST[4].endswith('pck00010_edit_v01.tpc'))
 
         ########################################################################
         # furnish_spk(bodies, time=None, asof=None, after=None, redo=True)
         ########################################################################
 
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([1,2,3,4,5,6,7,8,9], asof='2014-03-10')
         self.assertEqual(kernels, ['DE430'])
-        self.assertEqual(len(FILE_LIST), 1)
-        self.assertTrue(FILE_LIST[0].endswith('/de430.bsp'))
+        self.assertEqual(len(ABSPATH_LIST), 1)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/de430.bsp'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([699], asof='2014-03-10')
-        self.assertEqual(kernels, ['SAT363', 'DE430'])
-        self.assertEqual(len(FILE_LIST), 2)
-        self.assertTrue(FILE_LIST[0].endswith('/sat363.bsp'))
-        self.assertTrue(FILE_LIST[1].endswith('/de430.bsp'))
+        self.assertEqual(kernels, ['SAT363', 'DE430']) #####
+        self.assertEqual(len(ABSPATH_LIST), 2)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/sat363.bsp'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/de430.bsp'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk(range(601,654), asof='2014-03-10')
         self.assertEqual(kernels, ['SAT357', 'SAT360', 'SAT362', 'SAT363',
                                    'DE430'])
 
         # Only SAT357-rocks is loaded the first time, not SAT357
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
 
         for file in F1:
-            self.assertIn(file, FILE_LIST)
+            self.assertIn(file, ABSPATH_LIST)
 
         ########
         self.assertRaises(ValueError, furnish_spk, [601], after='3000-01-01',
                                                           redo=False)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([601], after='3000-01-01', redo=True)
         self.assertTrue(kernels[0][:3] == 'SAT')
         self.assertTrue(kernels[0][3:] >= '360')
         self.assertTrue(kernels[1][:2] == 'DE')
         self.assertTrue(kernels[1][2:] >= '430')
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2013-12-13', time=None)
         self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-135]'])
-        self.assertEqual(len(FILE_LIST), 135)
-        self.assertTrue(FILE_LIST[ 0].endswith('/000331R_SK_LP0_V1P32.bsp'))
-        self.assertTrue(FILE_LIST[-1].endswith('/131212R_SCPSE_13273_13314.bsp'))
+        self.assertEqual(len(ABSPATH_LIST), 135)
+        self.assertTrue(ABSPATH_LIST[ 0].endswith('/000331R_SK_LP0_V1P32.bsp'))
+        self.assertTrue(ABSPATH_LIST[-1].endswith('/131212R_SCPSE_13273_13314.bsp'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2014-03-10',
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[115-118]'])
-        self.assertEqual(len(FILE_LIST), 4)
-        self.assertTrue(FILE_LIST[0].endswith('/120227R_SCPSE_11357_12016.bsp'))
-        self.assertTrue(FILE_LIST[1].endswith('/120312R_SCPSE_12016_12042.bsp'))
-        self.assertTrue(FILE_LIST[2].endswith('/120416R_SCPSE_12042_12077.bsp'))
-        self.assertTrue(FILE_LIST[3].endswith('/120426R_SCPSE_12077_12098.bsp'))
+        self.assertEqual(len(ABSPATH_LIST), 4)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/120227R_SCPSE_11357_12016.bsp'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/120312R_SCPSE_12016_12042.bsp'))
+        self.assertTrue(ABSPATH_LIST[2].endswith('/120416R_SCPSE_12042_12077.bsp'))
+        self.assertTrue(ABSPATH_LIST[3].endswith('/120426R_SCPSE_12077_12098.bsp'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2012-04-01',
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18',
                                    'CAS-SPK-RECONSTRUCTED-V01[115,116]'])
-        self.assertEqual(len(FILE_LIST), 3)
-        self.assertTrue(FILE_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
-        self.assertTrue(FILE_LIST[1].endswith('120227R_SCPSE_11357_12016.bsp'))
-        self.assertTrue(FILE_LIST[2].endswith('120312R_SCPSE_12016_12042.bsp'))
+        self.assertEqual(len(ABSPATH_LIST), 3)
+        self.assertTrue(ABSPATH_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('120227R_SCPSE_11357_12016.bsp'))
+        self.assertTrue(ABSPATH_LIST[2].endswith('120312R_SCPSE_12016_12042.bsp'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2011-09-01',
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18'])
-        self.assertEqual(len(FILE_LIST), 1)
-        self.assertTrue(FILE_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
+        self.assertEqual(len(ABSPATH_LIST), 1)
+        self.assertTrue(ABSPATH_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2011-08-01',
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2009-10-05'])
-        self.assertEqual(len(FILE_LIST), 1)
-        self.assertTrue(FILE_LIST[0].endswith('091005AP_SCPSE_09248_17265.bsp'))
+        self.assertEqual(len(ABSPATH_LIST), 1)
+        self.assertTrue(ABSPATH_LIST[0].endswith('091005AP_SCPSE_09248_17265.bsp'))
 
         self.assertRaises(ValueError, furnish_spk, [-82], after='3000-01-01',
                                                           redo=False)
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_spk([-32,601,699], asof='2014-08-01',
                               time=('1981-08-14', '1981-08-24'))
         self.assertEqual(kernels, ['SAT360', 'SAT363', 'VG2-SPK-SAT337',
                                    'DE432'])
-        self.assertEqual(len(FILE_LIST), 5)
-        self.assertTrue(FILE_LIST[-3].endswith('/sat337.bsp'))
-        self.assertTrue(FILE_LIST[-2].endswith('/vgr2_sat337.bsp'))
-        self.assertTrue('de432' in FILE_LIST[-1])
+        self.assertEqual(len(ABSPATH_LIST), 5)
+        self.assertTrue(ABSPATH_LIST[-3].endswith('/sat337.bsp'))
+        self.assertTrue(ABSPATH_LIST[-2].endswith('/vgr2_sat337.bsp'))
+        self.assertTrue('de432' in ABSPATH_LIST[-1])
 
         self.assertRaises(ValueError, furnish_spk, [-82], after='3000-01-01',
                                                           redo=False)
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=('1981-08-14', '1981-08-24'))
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         sl9 = range(1000181,1000189) + [1000190,1000191] + \
               range(1000193,1000204)
         kernels = furnish_spk(sl9, asof='2014-08-01')
         self.assertEqual(kernels, ['SL9-SPK-DE403'])
-        self.assertEqual(len(FILE_LIST), len(sl9) + 1)
-        self.assertTrue(FILE_LIST[-1].endswith('/de403.bsp'))
-        for file in FILE_LIST[:-1]:
+        self.assertEqual(len(ABSPATH_LIST), len(sl9) + 1)
+        self.assertTrue(ABSPATH_LIST[-1].endswith('/de403.bsp'))
+        for file in ABSPATH_LIST[:-1]:
             self.assertTrue(file.endswith('_1992-1994.gst.DE403.bsp'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########################################################################
         # furnish_inst(ids, inst=None, asof=None, after=None, redo=True)
         ########################################################################
 
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_inst(-82, inst=[], asof='2014-03-10')
         self.assertEqual(kernels, ['CAS-SCLK-00158', 'CAS-FK-V04'])
-        self.assertEqual(len(FILE_LIST), 3)
-        self.assertTrue(FILE_LIST[0].endswith('/cas00158.tsc'))
-        self.assertTrue(FILE_LIST[1].endswith('/cas_v40.tf'))
-        self.assertTrue(FILE_LIST[2].endswith('/cas_status_v04.tf'))
+        self.assertEqual(len(ABSPATH_LIST), 3)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00158.tsc'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/cas_v40.tf'))
+        self.assertTrue(ABSPATH_LIST[2].endswith('/cas_status_v04.tf'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_inst(-82, inst='ISS', asof='2014-03-10')
         self.assertEqual(kernels, ['CAS-SCLK-00158', 'CAS-FK-V04',
                                    'CAS-IK-ISS-V10'])
-        self.assertEqual(len(FILE_LIST), 4)
-        self.assertTrue(FILE_LIST[0].endswith('/cas00158.tsc'))
-        self.assertTrue(FILE_LIST[1].endswith('/cas_v40.tf'))
-        self.assertTrue(FILE_LIST[2].endswith('/cas_status_v04.tf'))
-        self.assertTrue(FILE_LIST[3].endswith('/cas_iss_v10.ti'))
+        self.assertEqual(len(ABSPATH_LIST), 4)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00158.tsc'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/cas_v40.tf'))
+        self.assertTrue(ABSPATH_LIST[2].endswith('/cas_status_v04.tf'))
+        self.assertTrue(ABSPATH_LIST[3].endswith('/cas_iss_v10.ti'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_inst(-82, inst=None, asof='2014-03-10')
-        for file in FILE_LIST[3:]:      # skip over one .tsc and two .tf files
+        for file in ABSPATH_LIST[3:]:      # skip over one .tsc and two .tf files
             self.assertTrue(file.endswith('.ti'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_inst(-31, inst='ISS', asof='2014-03-10')
         self.assertEqual(kernels, ['VG1-SCLK-00019', 'VG1-FK-V02',
                                    'VG1-IK-ISSNA-V02', 'VG1-IK-ISSWA-V01'])
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########################################################################
         # furnish_ck(ids, time=None, asof=None, after=None, redo=True)
         ########################################################################
 
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_ck(-82)
         self.assertEqual(kernels[0], 'CAS-CK-JUP-V01[1-64]')
         self.assertTrue(kernels[1].startswith('CAS-CK-RECONSTRUCTED-V01[1-'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_ck(-82, asof='2014-02-18')
         self.assertEqual(kernels, ['CAS-CK-JUP-V01[1-64]',
                                    'CAS-CK-RECONSTRUCTED-V01[1-744]'])
-        self.assertEqual(len(FILE_LIST), 808)
+        self.assertEqual(len(ABSPATH_LIST), 808)
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
                                   asof='2014-01-01')
         self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[69-75]'])
-        self.assertEqual(len(FILE_LIST), 7)
-        self.assertTrue(FILE_LIST[0].endswith('/05002_05007ra.bc'))
-        self.assertTrue(FILE_LIST[1].endswith('/05007_05012ra.bc'))
-        self.assertTrue(FILE_LIST[2].endswith('/05012_05017ra.bc'))
-        self.assertTrue(FILE_LIST[3].endswith('/05017_05022ra.bc'))
-        self.assertTrue(FILE_LIST[4].endswith('/05022_05027ra.bc'))
-        self.assertTrue(FILE_LIST[5].endswith('/04361_05002ra.bc'))
-        self.assertTrue(FILE_LIST[6].endswith('/05027_05032ra.bc'))
+        self.assertEqual(len(ABSPATH_LIST), 7)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/05002_05007ra.bc'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/05007_05012ra.bc'))
+        self.assertTrue(ABSPATH_LIST[2].endswith('/05012_05017ra.bc'))
+        self.assertTrue(ABSPATH_LIST[3].endswith('/05017_05022ra.bc'))
+        self.assertTrue(ABSPATH_LIST[4].endswith('/05022_05027ra.bc'))
+        self.assertTrue(ABSPATH_LIST[5].endswith('/04361_05002ra.bc'))
+        self.assertTrue(ABSPATH_LIST[6].endswith('/05027_05032ra.bc'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=('2005-01-01','2005-02-01'))
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
                                   asof='2005-02-01')
         self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[69-73]'])
-        self.assertEqual(len(FILE_LIST), 5)
-        self.assertTrue(FILE_LIST[0].endswith('/05002_05007ra.bc'))
-        self.assertTrue(FILE_LIST[1].endswith('/05007_05012ra.bc'))
-        self.assertTrue(FILE_LIST[2].endswith('/05012_05017ra.bc'))
-        self.assertTrue(FILE_LIST[3].endswith('/05017_05022ra.bc'))
-        self.assertTrue(FILE_LIST[4].endswith('/05022_05027ra.bc'))
+        self.assertEqual(len(ABSPATH_LIST), 5)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/05002_05007ra.bc'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/05007_05012ra.bc'))
+        self.assertTrue(ABSPATH_LIST[2].endswith('/05012_05017ra.bc'))
+        self.assertTrue(ABSPATH_LIST[3].endswith('/05017_05022ra.bc'))
+        self.assertTrue(ABSPATH_LIST[4].endswith('/05022_05027ra.bc'))
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=('2005-01-01','2005-02-01'))
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_ck(-32, asof='2014-00-01')
         self.assertIn('VG2-CK-ISS-JUP-V01', kernels)
         self.assertIn('VG2-CK-ISS-SAT-V01', kernels)
         self.assertIn('VG2-CK-ISS-URA-V01', kernels)
         self.assertIn('VG2-CK-ISS-NEP-V01', kernels)
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_ck(-98, asof='2014-00-01')
         self.assertEqual(kernels, ['NH-CK-JUP-V01'])
 
-        F1 = FILE_LIST
+        F1 = ABSPATH_LIST
         k1 = kernels
-        FILE_LIST = []
+        ABSPATH_LIST = []
         kernels = furnish_by_name(k1)
         self.assertEqual(k1, kernels)
-        self.assertEqual(F1, FILE_LIST)
+        self.assertEqual(F1, ABSPATH_LIST)
 
         ########################################################################
         # DEBUG mode off...
@@ -2991,23 +3034,23 @@ class test_spicedb(unittest.TestCase):
         self.assertTrue(kernels.index('NEP087') < kernels.index('NEP086'))
         # NEP087 < NEP086 because the latter has the later creation date
 
-        self.assertEqual(len(FURNISHED_FILESPECS['LSK']), 1)
-        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 5)
-        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 16)
+        self.assertEqual(len(FURNISHED_ABSPATHS['LSK']), 1)
+        self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 5)
+        self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 16)
         self.assertEqual(len(FURNISHED_NAMES['LSK']), 1)
         self.assertEqual(len(FURNISHED_NAMES['PCK']), 5)
         self.assertEqual(len(FURNISHED_NAMES['SPK']), 16)
 
         unload_by_name(kernels[:6])
-        self.assertEqual(len(FURNISHED_FILESPECS['LSK']), 0)
-        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 0)
-        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 16)
+        self.assertEqual(len(FURNISHED_ABSPATHS['LSK']), 0)
+        self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 0)
+        self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 16)
         self.assertEqual(len(FURNISHED_NAMES['LSK']), 0)
         self.assertEqual(len(FURNISHED_NAMES['PCK']), 0)
         self.assertEqual(len(FURNISHED_NAMES['SPK']), 16)
 
         unload_by_type('SPK')
-        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 0)
+        self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 0)
         self.assertEqual(len(FURNISHED_NAMES['SPK']), 0)
 
         ########
@@ -3051,7 +3094,7 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
-        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 4)
+        self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
 
         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
@@ -3061,12 +3104,12 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
                          range(90,95))
-        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 5 + 5)
+        self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 5 + 5)
 
         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          range(438,457))
-        self.assertEqual(len(FURNISHED_FILESPECS['CK']), 457 - 438)
+        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 457 - 438)
 
         ########
         kernels1 = furnish_cassini_kernels('2010-03-01', '2010-06-01',
@@ -3098,7 +3141,7 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
-        self.assertEqual(len(FURNISHED_FILESPECS['PCK']), 4)
+        self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
 
         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
@@ -3108,12 +3151,12 @@ class test_spicedb(unittest.TestCase):
         self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
                          range(90,98))
-        self.assertEqual(len(FURNISHED_FILESPECS['SPK']), 8 + 5)
+        self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 8 + 5)
 
         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          range(438,469))
-        self.assertEqual(len(FURNISHED_FILESPECS['CK']), 469 - 438)
+        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 469 - 438)
         # SPK and CK file_no lists get merged
 
         ########
