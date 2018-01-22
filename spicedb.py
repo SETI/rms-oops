@@ -1348,6 +1348,8 @@ def furnish_kernels(kernel_list, fast=True):
     name_types = {}
     fileno_dict = {}
 
+    spice_path = get_spice_path()
+
     # For each kernel...
     for kernel in kernel_list:
 
@@ -1366,7 +1368,8 @@ def furnish_kernels(kernel_list, fast=True):
                 fileno_dict[name].append(kernel.file_no)
 
         # Update the list of files to furnish
-        abspaths = kernel.filespec.split(',')
+        filepaths = kernel.filespec.split(',')
+        abspaths = [os.path.join(spice_path, f) for f in filepaths]
         for abspath in abspaths:
 
             # Remove the name from earlier in the list if necessary
@@ -1399,7 +1402,6 @@ def furnish_kernels(kernel_list, fast=True):
         ABSPATH_LIST += abspath_list
 
     else:
-        spice_path = get_spice_path()
         for abspath in abspath_list:
             furnished_list = FURNISHED_ABSPATHS[abspath_types[abspath]]
 
@@ -1741,11 +1743,12 @@ def unload_by_name(names):
 
         # Remove the kernel files from the dictionary and unload from SPICE
         filespecs = kernel.filespec.split(',')
-        for filespec in filespecs:
-            if filespec in FURNISHED_ABSPATHS[key]:
-                FURNISHED_ABSPATHS[key].remove(filespec)
-                del FURNISHED_INFO[filespec]
-                cspyce.unload(os.path.join(spice_path, filespec))
+        abspaths = [os.path.join(spice_path, f) for f in filespecs]
+        for abspath in abspaths:
+            if abspath in FURNISHED_ABSPATHS[key]:
+                FURNISHED_ABSPATHS[key].remove(abspath)
+                del FURNISHED_INFO[os.path.basename(abspath)]
+                cspyce.unload(abspath)
 
         # Delete the file_no from the list
         name = kernel.full_name
@@ -1786,7 +1789,7 @@ def unload_by_type(types=None):
         abspath_list = FURNISHED_ABSPATHS[key]
         for file in abspath_list:
             cspyce.unload(os.path.join(spice_path, file))
-            del FURNISHED_INFO[file]
+            del FURNISHED_INFO[os.path.basename(file)]
 
         # Delete the file list from the dictionary
         FURNISHED_ABSPATHS[key] = []
@@ -2698,8 +2701,8 @@ class test_spicedb(unittest.TestCase):
         ########
         ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2013-12-13', time=None)
-        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-135]'])
-        self.assertEqual(len(ABSPATH_LIST), 135)
+        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-134]'])
+        self.assertEqual(len(ABSPATH_LIST), 134)
         self.assertTrue(ABSPATH_LIST[ 0].endswith('/000331R_SK_LP0_V1P32.bsp'))
         self.assertTrue(ABSPATH_LIST[-1].endswith('/131212R_SCPSE_13273_13314.bsp'))
 
@@ -2714,7 +2717,7 @@ class test_spicedb(unittest.TestCase):
         ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2014-03-10',
                                      time=(12*365.25*86400., '2012-04-01'))
-        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[115-118]'])
+        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[114-117]'])
         self.assertEqual(len(ABSPATH_LIST), 4)
         self.assertTrue(ABSPATH_LIST[0].endswith('/120227R_SCPSE_11357_12016.bsp'))
         self.assertTrue(ABSPATH_LIST[1].endswith('/120312R_SCPSE_12016_12042.bsp'))
@@ -2733,7 +2736,7 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_spk([-82], asof='2012-04-01',
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18',
-                                   'CAS-SPK-RECONSTRUCTED-V01[115,116]'])
+                                   'CAS-SPK-RECONSTRUCTED-V01[114,115]'])
         self.assertEqual(len(ABSPATH_LIST), 3)
         self.assertTrue(ABSPATH_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
         self.assertTrue(ABSPATH_LIST[1].endswith('120227R_SCPSE_11357_12016.bsp'))
@@ -2887,8 +2890,8 @@ class test_spicedb(unittest.TestCase):
 
         ABSPATH_LIST = []
         kernels = furnish_ck(-82)
-        self.assertEqual(kernels[0], 'CAS-CK-JUP-V01[1-64]')
-        self.assertTrue(kernels[1].startswith('CAS-CK-RECONSTRUCTED-V01[1-'))
+        self.assertEqual(kernels[0], 'CAS-CK-PREDICTED-V01[1-104]')
+        self.assertTrue(kernels[1].startswith('CAS-CK-JUP-V01[1-'))
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2900,9 +2903,10 @@ class test_spicedb(unittest.TestCase):
         ########
         ABSPATH_LIST = []
         kernels = furnish_ck(-82, asof='2014-02-18')
-        self.assertEqual(kernels, ['CAS-CK-JUP-V01[1-64]',
+        self.assertEqual(kernels, ['CAS-CK-PREDICTED-V01[1-81]',
+                                   'CAS-CK-JUP-V01[1-64]',
                                    'CAS-CK-RECONSTRUCTED-V01[1-744]'])
-        self.assertEqual(len(ABSPATH_LIST), 808)
+        self.assertEqual(len(ABSPATH_LIST), 81+64+744)
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2915,15 +2919,16 @@ class test_spicedb(unittest.TestCase):
         ABSPATH_LIST = []
         kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
                                   asof='2014-01-01')
-        self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[69-75]'])
-        self.assertEqual(len(ABSPATH_LIST), 7)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/05002_05007ra.bc'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/05007_05012ra.bc'))
-        self.assertTrue(ABSPATH_LIST[2].endswith('/05012_05017ra.bc'))
-        self.assertTrue(ABSPATH_LIST[3].endswith('/05017_05022ra.bc'))
-        self.assertTrue(ABSPATH_LIST[4].endswith('/05022_05027ra.bc'))
-        self.assertTrue(ABSPATH_LIST[5].endswith('/04361_05002ra.bc'))
-        self.assertTrue(ABSPATH_LIST[6].endswith('/05027_05032ra.bc'))
+        self.assertEqual(kernels, ['CAS-CK-PREDICTED-V01[10,11]',
+                                   'CAS-CK-RECONSTRUCTED-V01[69-75]'])
+        self.assertEqual(len(ABSPATH_LIST), 2+7)
+        self.assertTrue(ABSPATH_LIST[2].endswith('/05002_05007ra.bc'))
+        self.assertTrue(ABSPATH_LIST[3].endswith('/05007_05012ra.bc'))
+        self.assertTrue(ABSPATH_LIST[4].endswith('/05012_05017ra.bc'))
+        self.assertTrue(ABSPATH_LIST[5].endswith('/05017_05022ra.bc'))
+        self.assertTrue(ABSPATH_LIST[6].endswith('/05022_05027ra.bc'))
+        self.assertTrue(ABSPATH_LIST[7].endswith('/04361_05002ra.bc'))
+        self.assertTrue(ABSPATH_LIST[8].endswith('/05027_05032ra.bc'))
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2958,7 +2963,7 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        kernels = furnish_ck(-32, asof='2014-00-01')
+        kernels = furnish_ck(-32, asof='2014-01-01')
         self.assertIn('VG2-CK-ISS-JUP-V01', kernels)
         self.assertIn('VG2-CK-ISS-SAT-V01', kernels)
         self.assertIn('VG2-CK-ISS-URA-V01', kernels)
@@ -2973,8 +2978,8 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        kernels = furnish_ck(-98, asof='2014-00-01')
-        self.assertEqual(kernels, ['NH-CK-JUP-V01'])
+        kernels = furnish_ck(-98, asof='2015-06-01')
+        self.assertEqual(kernels, ['NH-CK-RECONSTRUCTED-V01[1-9]'])
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -3106,10 +3111,13 @@ class test_spicedb(unittest.TestCase):
                          range(90,95))
         self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 5 + 5)
 
-        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
+        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
+                                                 'CAS-CK-RECONSTRUCTED-V01'])
+        self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
+                         range(59,62))
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          range(438,457))
-        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 457 - 438)
+        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 457 - 438 + 62 - 59)
 
         ########
         kernels1 = furnish_cassini_kernels('2010-03-01', '2010-06-01',
@@ -3153,40 +3161,47 @@ class test_spicedb(unittest.TestCase):
                          range(90,98))
         self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 8 + 5)
 
-        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-RECONSTRUCTED-V01'])
+        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
+                                                 'CAS-CK-RECONSTRUCTED-V01'])
+        self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
+                         range(59,64))
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          range(438,469))
-        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 469 - 438)
+        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 469 - 438 + 64 - 59)
         # SPK and CK file_no lists get merged
 
         ########
         self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-RECONSTRUCTED-V01[438-468]'])
+                         ['CAS-CK-PREDICTED-V01[59-63]',
+                          'CAS-CK-RECONSTRUCTED-V01[438-468]'])
 
         unload_by_name('CAS-CK-RECONSTRUCTED-V01[440]')
 
         self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-RECONSTRUCTED-V01[438,439,441-468]'])
+                         ['CAS-CK-PREDICTED-V01[59-63]',
+                          'CAS-CK-RECONSTRUCTED-V01[438,439,441-468]'])
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          [438,439] + range(441,469))
 
         unload_by_name('CAS-CK-RECONSTRUCTED-V01[1-438]')
 
         self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-RECONSTRUCTED-V01[439,441-468]'])
+                         ['CAS-CK-PREDICTED-V01[59-63]',
+                          'CAS-CK-RECONSTRUCTED-V01[439,441-468]'])
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          [439] + range(441,469))
 
         unload_by_name('CAS-CK-RECONSTRUCTED-V01[439,442-465]')
 
         self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-RECONSTRUCTED-V01[441,466-468]'])
+                         ['CAS-CK-PREDICTED-V01[59-63]',
+                          'CAS-CK-RECONSTRUCTED-V01[441,466-468]'])
         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
                          [441] + range(466,469))
 
         unload_by_name('CAS-CK-RECONSTRUCTED-V01[441-468]')
 
-        self.assertEqual(furnished_names('CK'), [])
+        self.assertEqual(furnished_names('CK'), ['CAS-CK-PREDICTED-V01[59-63]'])
         self.assertNotIn('CAS-CK-RECONSTRUCTED-V01', FURNISHED_FILENOS)
 
         self.assertEqual(furnished_names('SPK'),

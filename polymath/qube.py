@@ -1534,23 +1534,27 @@ class Qube(object):
     def masked(self):
         """Return the number of masked items in this object."""
 
-        if self.mask is True:
+        if self.__mask_ is True:
             return self.size
+        elif self.__mask_ is False:
+            return 0
         else:
-            return np.sum(self.mask)
+            return np.count_nonzero(self.__mask_)
 
     def unmasked(self):
         """Return the number of unmasked items in this object."""
 
-        if self.mask is True:
+        if self.__mask_ is True:
             return 0
+        elif self.__mask_ is False:
+            return self.size
         else:
-            return self.size - np.sum(self.mask)
+            return self.size - np.count_nonzero(self.__mask_)
 
     def without_mask(self, recursive=True):
         """Return a shallow copy of this object without its mask."""
 
-        if self.mask is False: return self
+        if self.__mask_ is False: return self
 
         obj = self.clone(False)
         obj.__set_mask_(False)
@@ -1564,7 +1568,7 @@ class Qube(object):
     def all_masked(self, recursive=True):
         """Return a shallow copy of this object with everything masked."""
 
-        if self.mask is True: return self
+        if self.__mask_ is True: return self
 
         obj = self.clone(False)
         obj.__set_mask_(True)
