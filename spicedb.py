@@ -1003,10 +1003,10 @@ def set_translator(func):
 
     global TRANSLATOR
 
-    if TRANSLATOR:
+    if TRANSLATOR and not DEBUG:
         raise RuntimeError('spicedb translator can only be defined once')
 
-    if FURNISHED_INFO:
+    if FURNISHED_INFO and not DEBUG:
         raise RuntimeError('spicedb translotor cannot be defined after ' +
                            'kernels have already been loaded.')
 
@@ -1392,10 +1392,11 @@ def furnish_kernels(kernel_list, fast=True):
         new_abspath_list = []
         for oldpath in abspath_list:
             newpath = TRANSLATOR(oldpath)
-            new_abspath_list.append(newpath)
-            abspath_types[newpath] = abspath_types[oldpath]
+            if newpath:
+                new_abspath_list.append(newpath)
+                abspath_types[newpath] = abspath_types[oldpath]
 
-        abbspath_list = new_abspath_list
+        abspath_list = new_abspath_list
 
     # Furnish the kernel files...
     if DEBUG:
@@ -3211,6 +3212,72 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(furnished_names(['IK','FK','LSK','SCLK']),
                          ['CAS-IK-ISS-V10', 'CAS-IK-VIMS-V06',
                           'CAS-FK-V04', 'NAIF-LSK-0010', 'CAS-SCLK-00158'])
+
+        ########################################################################
+        # Test translator
+        ########################################################################
+
+        unload_by_type()
+
+        DEBUG = True
+
+        # Function to translate Cassini SPKs, adding "_testing" before suffix
+        # and replacing the leading directory path with 'my_testing/'
+        def translator(filepath):
+          if filepath.endswith('.bsp') and 'RECONSTRUCTED' in filepath.upper():
+            lpref = len(get_spice_path())
+            return 'my_testing/' + filepath[lpref:-4] + '_testing.bsp'
+          return filepath
+
+        # Translator will not affect solar system kernels
+        ABSPATH_LIST = []
+        kernels1 = furnish_solar_system('2000-01-01', '2020-01-01',
+                                        asof='2014-03-10')
+        abspaths1 = set(ABSPATH_LIST)
+        unload_by_type()
+
+        set_translator(translator)
+        ABSPATH_LIST = []
+        kernels2 = furnish_solar_system('2000-01-01', '2020-01-01',
+                                        asof='2014-03-10')
+        abspaths2 = set(ABSPATH_LIST)
+        unload_by_type()
+
+        self.assertEqual(kernels1, kernels2)
+        self.assertEqual(abspaths1, abspaths2)
+
+        # Translator will change Cassini SPKs
+        set_translator(None)
+        ABSPATH_LIST = []
+        kernels1 = furnish_cassini_kernels('2010-01-01', '2010-04-01',
+                                           instrument='ISS', asof='2014-03-10')
+        abspaths1 = set(ABSPATH_LIST)
+        unload_by_type()
+
+        set_translator(translator)
+        ABSPATH_LIST = []
+        kernels2 = furnish_cassini_kernels('2010-01-01', '2010-04-01',
+                                           instrument='ISS', asof='2014-03-10')
+        abspaths2 = set(ABSPATH_LIST)
+        unload_by_type()
+
+        self.assertEqual(kernels1, kernels2)
+
+        translated = abspaths2 - abspaths1
+        originals  = abspaths1 - abspaths2
+
+        remainder1 = abspaths1 - originals
+        remainder2 = abspaths2 - translated
+        self.assertEqual(remainder1, remainder2)
+
+        for abspath in originals:
+            self.assertTrue(abspath.endswith('.bsp'))
+            self.assertTrue('CASSINI' in abspath.upper())
+
+            newpath = translator(abspath)
+            self.assertTrue(newpath in translated)
+
+        self.assertTrue(len(translated) == len(originals))
 
     ############################################################################
     # Clean up...
