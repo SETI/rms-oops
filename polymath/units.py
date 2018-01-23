@@ -215,6 +215,12 @@ class Units(object):
     def __rmul__(self, arg):
         return self.__mul__(arg)
 
+    def __div__(self, arg):
+        return self.__truediv__(arg)
+
+    def __rdiv__(self, arg):
+        return self.__rtruediv__(arg)
+
     def __truediv__(self, arg):
         if isinstance(arg, Units):
             return Units((self.exponents[0] - arg.exponents[0],
@@ -232,10 +238,7 @@ class Units(object):
 
         return NotImplemented
 
-    def __div__(self, arg):
-        return self.__truediv__(arg)
-
-    def __rdiv__(self, arg):
+    def __rtruediv__(self, arg):
         if arg is None: arg = 1.
 
         if isinstance(arg, numbers.Real):

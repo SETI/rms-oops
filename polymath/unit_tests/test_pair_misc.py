@@ -91,8 +91,36 @@ class Test_Pair_misc(unittest.TestCase):
         self.assertRaises(TypeError, pairs.__add__, Scalar(2))
         self.assertRaises(TypeError, pairs.__sub__, Scalar(2))
 
-        # In-place operations
+        # In-place operations on ints
         test = pairs.copy()
+        test += (2,2)
+        self.assertEqual(test, [[3,4],[5,6],(7,8)])
+        test -= (2,2)
+        self.assertEqual(test, [[1,2],[3,4],[5,6]])
+        test *= (1,2,3)
+        self.assertEqual(test, [[1,2],[6,8],[15,18]])
+        test //= (1,2,3)
+        self.assertEqual(test, [[1,2],[3,4],[5,6]])
+        test *= 2
+        self.assertEqual(test, [[2,4],[6,8],[10,12]])
+        test //= 2
+        self.assertEqual(test, [[1,2],[3,4],[5,6]])
+
+        test += Pair((2,2))
+        self.assertEqual(test, [[3,4],[5,6],(7,8)])
+        test -= Pair((2,2))
+        self.assertEqual(test, [[1,2],[3,4],[5,6]])
+        test *= Scalar((1,2,3))
+        self.assertEqual(test, [[1,2],[6,8],[15,18]])
+        test //= Scalar((1,2,3))
+        self.assertEqual(test, [[1,2],[3,4],[5,6]])
+        test *= Scalar(2)
+        self.assertEqual(test, [[2,4],[6,8],[10,12]])
+        test //= Scalar(2)
+        self.assertEqual(test, [[1,2],[3,4],[5,6]])
+
+        # In-place operations on floats
+        test = pairs.as_float()
         test += (2,2)
         self.assertEqual(test, [[3,4],[5,6],(7,8)])
         test -= (2,2)

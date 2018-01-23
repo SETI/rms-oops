@@ -422,8 +422,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a, (4,6))
     self.assertTrue(a.is_int())
 
-    a += (0.5,1.5)
-    self.assertEqual(a, (4,7))  # no automatic conversion to float
+    self.assertRaises(TypeError, a.__iadd__,  (0.5,1.5))
 
     a = Vector([(1,2),(3,4)])
     b = Vector([(1,2),(3,4)], mask=(False,True))
@@ -607,8 +606,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a, (2,4))
     self.assertTrue(a.is_int())
 
-    a -= (0.5,1.5)
-    self.assertEqual(a, (1,2))  # no automatic conversion to float
+    self.assertRaises(TypeError, a.__isub__,  (0.5,1.5))
 
     a = Vector([(1,2),(3,4)])
     b = Vector([(1,2),(3,4)], mask=(False,True))
@@ -785,8 +783,7 @@ class Test_Vector_ops(unittest.TestCase):
     a *= 2
     self.assertEqual(a, (2,4))
 
-    a *= 0.25
-    self.assertEqual(a, (0,1))  # no automatic conversion to float
+    self.assertRaises(TypeError, a.__imul__,  0.25)
 
     a = Vector([(1,2),(3,4)])
     b = (2,3)
@@ -883,35 +880,39 @@ class Test_Vector_ops(unittest.TestCase):
 
     # In-place
     a = Vector((4,6))
+    self.assertRaises(TypeError, a.__itruediv__, 2)
+    self.assertRaises(TypeError, a.__itruediv__, 0.5)
+
+    a = Vector((4.,6.))
     a /= 2
     self.assertEqual(a, (2,3))
 
-    a = Vector((1,2))
+    a = Vector((1.,2.))
     a /= 0.5
-    self.assertEqual(a, (2,4))  # no automatic conversion to float
-    self.assertTrue(a.is_int())
+    self.assertEqual(a, (2,4))
+    self.assertTrue(a.is_float())
 
-    a = Vector([(3,4),(4,6)])
+    a = Vector([(3.,4.),(4.,6.)])
     b = Scalar((1,2), mask=(False,True))
     a /= b
     self.assertEqual(a[0], (3,4))
     self.assertEqual(a[0].mask, False)
     self.assertEqual(a[1].mask, True)
 
-    a = Vector([(3,4),(4,6)])
+    a = Vector([(3.,4.),(4.,6.)])
     b = Scalar((1,2), mask=(False,False))
     a /= b
     self.assertEqual(a[0], (3,4))
     self.assertEqual(a[1], (2,3))
 
-    a = Vector([(3,4),(4,6)])
+    a = Vector([(3.,4.),(4.,6.)])
     b = Scalar((1,2), mask=(False,True))
     a /= b
     self.assertEqual(a[0], (3,4))
     self.assertEqual(a[0].mask, False)
     self.assertEqual(a[1].mask, True)
 
-    a = Vector((9,-18))
+    a = Vector((9.,-18.))
     b = Scalar(3, derivs={'t':Scalar((1,2), drank=1)})
     self.assertFalse(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
@@ -928,7 +929,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertAlmostEqual(a.d_dt.values[1,0], da_dt.values[1,0], delta=DEL)
     self.assertAlmostEqual(a.d_dt.values[1,1], da_dt.values[1,1], delta=DEL)
 
-    a = Vector((9,-18))
+    a = Vector((9.,-18.))
     a /= 0
     self.assertTrue(a.mask)
 
@@ -1000,9 +1001,12 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a, (2,3))
 
     a = Vector((5,8))
+    self.assertRaises(TypeError, a.__ifloordiv__, 3.5)
+
+    a = Vector((5.,8.))
     a //= 3.5
     self.assertEqual(a, (1,2))  # no automatic conversion to float
-    self.assertTrue(a.is_int())
+    self.assertTrue(a.is_float())
 
     a = Vector([(3,4),(4,7)])
     b = Scalar((1,2), mask=(False,False))
@@ -1092,9 +1096,11 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a, (0,1))
 
     a = Vector((5,8))
+    self.assertRaises(TypeError, a.__imod__, 3.5)
+
+    a = Vector((5.,8.))
     a %= 3.5
-    self.assertEqual(a, (1,1))  # no automatic conversion to float
-    self.assertTrue(a.is_int())
+    self.assertEqual(a, (1.5,1))
 
     a = Vector([(3,4),(4,7)])
     b = Scalar((1,2), mask=(False,False))

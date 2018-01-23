@@ -2,7 +2,7 @@
 # Scalar tests for arithmetic and comparison operations
 ################################################################################
 
-from __future__ import division
+# from __future__ import division
 import numpy as np
 import unittest
 
@@ -420,8 +420,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a, (4,6))
     self.assertTrue(a.is_int())
 
-    a += 0.5
-    self.assertEqual(a, (4,6))  # no automatic conversion to float
+    self.assertRaises(TypeError, a.__iadd__, 0.5)
 
     b = Scalar((1,2), mask=(False,True))
     a += b
@@ -620,8 +619,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a, (1,1))
     self.assertTrue(a.is_int())
 
-    a -= 0.5
-    self.assertEqual(a, (0,0))  # no automatic conversion to float
+    self.assertRaises(TypeError, a.__isub__, 0.5)
 
     a = Scalar((3,4))
     b = Scalar((1,2), mask=(False,True))
@@ -820,8 +818,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(a.is_int())
 
     a = Scalar((1,2))
-    a *= 0.5
-    self.assertEqual(a, (0,1))  # no automatic conversion to float
+    self.assertRaises(TypeError, a.__imul__, 0.5)
 
     a = Scalar((3,4))
     b = Scalar((1,2), mask=(False,True))
@@ -943,26 +940,27 @@ class Test_Scalar_ops(unittest.TestCase):
 
     # In-place
     a = Scalar((4,6))
+    self.assertRaises(TypeError, a.__itruediv__, 2)
+
+    a = a.as_float()
     a /= 2
     self.assertEqual(a, (2,3))
 
     a /= (2,1)
     self.assertEqual(a, (1,3))
-    self.assertTrue(a.is_int())
 
-    a = Scalar((1,2))
+    a = Scalar((1.,2.))
     a /= 0.5
-    self.assertEqual(a, (2,4))  # no automatic conversion to float
-    self.assertTrue(a.is_int())
+    self.assertEqual(a, (2,4))
 
-    a = Scalar((3,4))
+    a = Scalar((3.,4.))
     b = Scalar((1,2), mask=(False,True))
     a /= b
     self.assertEqual(a[0], 3)
     self.assertEqual(a[0].mask, False)
     self.assertEqual(a[1].mask, True)
 
-    a = Scalar((12,15))
+    a = Scalar((12.,15.))
     b = Scalar((3,5), derivs={'t':Scalar([(18,9),(5,-10)], drank=1)})
     self.assertFalse(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
@@ -994,11 +992,11 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertAlmostEqual(a.d_dt.values[1,1],   3, delta=1.e-14)
 
     a /= 2
-    self.assertEqual(a, (1,1))  # no automatic conversion to float
-    self.assertAlmostEqual(a.d_dt.values[0,0], -13/2, delta=1.e-14)
-    self.assertAlmostEqual(a.d_dt.values[0,1],  -7/2, delta=1.e-14)
-    self.assertAlmostEqual(a.d_dt.values[1,0],  -6/2, delta=1.e-14)
-    self.assertAlmostEqual(a.d_dt.values[1,1],   3/2, delta=1.e-14)
+    self.assertEqual(a, (1,1.5))
+    self.assertAlmostEqual(a.d_dt.values[0,0], -13/2., delta=1.e-14)
+    self.assertAlmostEqual(a.d_dt.values[0,1],  -7/2., delta=1.e-14)
+    self.assertAlmostEqual(a.d_dt.values[1,0],  -6/2., delta=1.e-14)
+    self.assertAlmostEqual(a.d_dt.values[1,1],   3/2., delta=1.e-14)
 
     a /= 0
     self.assertTrue(a.mask)
@@ -1116,9 +1114,12 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(a.is_int())
 
     a = Scalar((1,2))
+    self.assertRaises(TypeError, a.__ifloordiv__, 0.5)
+
+    a = Scalar((1.,2.))
     a //= 0.5
     self.assertEqual(a, (2,4))
-    self.assertTrue(a.is_int())
+    self.assertTrue(a.is_float())
 
     a = Scalar((3,4))
     b = Scalar((1,2), mask=(False,True))
@@ -1256,10 +1257,13 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a, (0,1))
     self.assertTrue(a.is_int())
 
-    a = Scalar((9,12))
+    a = Scalar((9.,12.))
     a %= 3.5
-    self.assertEqual(a, (2,1))      # truncated back to int
-    self.assertTrue(a.is_int())
+    self.assertEqual(a, (2,1.5))
+    self.assertTrue(a.is_float())
+
+    a = Scalar((9,12))
+    self.assertRaises(TypeError, a.__imod__, 3.5)
 
     a = Scalar((3,4))
     b = Scalar((4,2), mask=(False,True))

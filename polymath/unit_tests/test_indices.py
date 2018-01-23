@@ -7,6 +7,9 @@ import warnings
 import numpy as np
 import unittest
 
+# suppress Warning: converting a masked element to nan.
+warnings.filterwarnings('ignore')
+
 from polymath import Scalar, Pair, Vector, Matrix
 
 class Test_Indices(unittest.TestCase):

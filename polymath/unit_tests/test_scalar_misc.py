@@ -58,6 +58,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(ValueError, ints.__div__, Scalar((4,5)))
     self.assertRaises(ValueError, ints.__mod__, Scalar((4,5)))
 
+    # Integer ops
     ints = Scalar((1,2,3))
     ints += 1
     self.assertEqual(ints, [2,3,4])
@@ -68,13 +69,13 @@ class Test_Scalar_misc(unittest.TestCase):
     ints *= 2
     self.assertEqual(ints, [2,4,6])
 
-    ints /= 2
+    ints //= 2
     self.assertEqual(ints, [1,2,3])
 
     ints *= (3,2,1)
     self.assertEqual(ints, [3,4,3])
 
-    ints /= (1,2,3)
+    ints //= (1,2,3)
     self.assertEqual(ints, [3,2,1])
 
     ints += (1,2,3)
@@ -101,14 +102,72 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(ValueError, ints.__iadd__, (4,5))
     self.assertRaises(ValueError, ints.__isub__, (4,5))
     self.assertRaises(ValueError, ints.__imul__, (4,5))
-    self.assertRaises(ValueError, ints.__idiv__, (4,5))
     self.assertRaises(ValueError, ints.__imod__, (4,5))
+    self.assertRaises(ValueError, ints.__ifloordiv__, (4,5))
 
     self.assertRaises(ValueError, ints.__iadd__, Scalar((4,5)))
     self.assertRaises(ValueError, ints.__isub__, Scalar((4,5)))
     self.assertRaises(ValueError, ints.__imul__, Scalar((4,5)))
-    self.assertRaises(ValueError, ints.__idiv__, Scalar((4,5)))
     self.assertRaises(ValueError, ints.__imod__, Scalar((4,5)))
+    self.assertRaises(ValueError, ints.__ifloordiv__, Scalar((4,5)))
+
+    self.assertRaises(TypeError, ints.__idiv__, (4,5))
+    self.assertRaises(TypeError, ints.__idiv__, Scalar((4,5)))
+
+    # Float ops
+    floats = Scalar((1.,2.,3.))
+    floats += 1
+    self.assertEqual(floats, [2,3,4])
+
+    floats -= 1
+    self.assertEqual(floats, [1,2,3])
+
+    floats *= 2
+    self.assertEqual(floats, [2,4,6])
+
+    floats /= 2
+    self.assertEqual(floats, [1,2,3])
+
+    floats *= (3,2,1)
+    self.assertEqual(floats, [3,4,3])
+
+    floats /= (1,2,3)
+    self.assertEqual(floats, [3,2,1])
+
+    floats += (1,2,3)
+    self.assertEqual(floats, 4)
+    self.assertEqual(floats, [4])
+    self.assertEqual(floats, [4,4,4])
+    self.assertEqual(floats, Scalar([4,4,4]))
+
+    floats -= (3,2,1)
+    self.assertEqual(floats, [1,2,3])
+
+    test = Scalar((10,10,10))
+    test %= 4
+    self.assertEqual(test, 2)
+
+    test = Scalar((10,10,10))
+    test %= (4,3,2)
+    self.assertEqual(test, [2,1,0])
+
+    test = Scalar((10,10,10))
+    test %= Scalar((5,4,3))
+    self.assertEqual(test, [0,2,1])
+
+    self.assertRaises(ValueError, floats.__iadd__, (4,5))
+    self.assertRaises(ValueError, floats.__isub__, (4,5))
+    self.assertRaises(ValueError, floats.__imul__, (4,5))
+    self.assertRaises(ValueError, floats.__idiv__, (4,5))
+    self.assertRaises(ValueError, floats.__imod__, (4,5))
+    self.assertRaises(ValueError, floats.__ifloordiv__, (4,5))
+
+    self.assertRaises(ValueError, floats.__iadd__, Scalar((4,5)))
+    self.assertRaises(ValueError, floats.__isub__, Scalar((4,5)))
+    self.assertRaises(ValueError, floats.__imul__, Scalar((4,5)))
+    self.assertRaises(ValueError, floats.__idiv__, Scalar((4,5)))
+    self.assertRaises(ValueError, floats.__imod__, Scalar((4,5)))
+    self.assertRaises(ValueError, floats.__ifloordiv__, Scalar((4,5)))
 
     # Generic operations
     self.assertEqual(ints[0], 1)

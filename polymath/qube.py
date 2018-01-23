@@ -2173,6 +2173,9 @@ class Qube(object):
                              (str(self.__denom_), str(arg.__denom_)))
 
         # Perform the operation
+        if self.is_int() and not arg.is_int():
+            raise TypeError('"+=" operation returns non-integer result')
+
         new_derivs = self.add_derivs(arg)   # if this raises exception, stop
         self.__values_ += arg.__values_     # on exception here, no harm done
         self.__mask_ = self.__mask_ | arg.__mask_
@@ -2280,6 +2283,9 @@ class Qube(object):
                              (str(self.__denom_), str(arg.__denom_)))
 
         # Perform the operation
+        if self.is_int() and not arg.is_int():
+            raise TypeError('"-=" operation returns non-integer result')
+
         new_derivs = self.sub_derivs(arg)   # if this raises exception, stop
         self.__values_ -= arg.__values_     # on exception here, no harm done
         self.__mask_ = self.__mask_ | arg.__mask_
@@ -2397,6 +2403,9 @@ class Qube(object):
                                                 self.__rank_ * (1,))
 
             # Multiply...
+            if self.is_int() and not arg.is_int():
+                raise TypeError('"*=" operation returns non-integer result')
+
             new_derivs = self.mul_derivs(arg)   # on exception, stop
             self.__values_ *= arg_values        # on exception, no harm done
             self.__mask_ = self.__mask_ | arg.__mask_
@@ -2554,8 +2563,12 @@ class Qube(object):
 
     # Generic in-place division
     def __itruediv__(self, arg):
-        self.require_writable()
         if Qube.is_empty(arg): return arg
+
+        if not self.is_float():
+            raise TypeError('"/=" operation returns non-integer result')
+
+        self.require_writable()
 
         # Convert arg to a Scalar if necessary
         original_arg = arg
