@@ -3279,6 +3279,26 @@ class test_spicedb(unittest.TestCase):
 
         self.assertTrue(len(translated) == len(originals))
 
+        # Function to replace all files "*.bc" with a blank string
+        def translator2(filepath):
+            if filepath.endswith('.bc') :
+                return ''
+            return filepath
+
+        # Translator will eliminate all C kernels from list
+        set_translator(translator2)
+        ABSPATH_LIST = []
+        kernels2 = furnish_cassini_kernels('2010-01-01', '2010-04-01',
+                                           instrument='ISS', asof='2014-03-10')
+        abspaths2 = set(ABSPATH_LIST)
+        unload_by_type()
+
+        for abspath in abspaths2:
+            if abspath.endswith('.bc'):
+                self.assertNotIn(abspath, abspaths1)
+            else:
+                self.assertIn(abspath, abspaths1)
+
     ############################################################################
     # Clean up...
     ############################################################################
