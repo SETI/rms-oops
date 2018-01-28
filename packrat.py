@@ -5,8 +5,26 @@ import base64
 import pickle
 import getpass
 import time
+import numbers
+import decimal
 from xml.sax.saxutils import escape, unescape
 import xml.etree.ElementTree as ET
+
+from packrat_arrays import encode_array, decode_array, \
+                           encode_dtype, decode_dtype, \
+                           ENTITIES, UNENTITIES
+
+def clean_attr(attr_name):
+    """Function to strip away '_Type__attr_', leaving 'attr'."""
+
+    if attr_name[0] != '_' or attr_name[-1] != '_':
+        return attr_name
+
+    try:
+        j = attr_name.index('__')
+        return attr_name[j+2:-1]
+    except ValueError:
+        return attr_name
 
 class Packrat(object):
     """A class that supports the reading and writing of objects and their
@@ -16,76 +34,84 @@ class Packrat(object):
     file. When necessary, large objects are stored in a NumPy "savez" file of
     the same name but extension '.npz', with a pointer in the XML file.
 
-    The procedure handles the reading and writing of all the standard Python
-    types: int, float, bool, str, list, tuple, dict and set.
-
-    The procedure also handles NumPy arrays of all dtypes except 'U' (Unicode)
-    and 'o' (object).
-
-    A special class "Session" is designed for grouping together information that
-    has been added to a Packrat file all it once. A Session records the user
-    ID and time, and exposes its contents as attributes and by indexing. A call
-    to start_session() is all that is required.
-
-    For other object classes, it looks for a class attribute 'PACKRAT_ARGS',
-    containing a list of the names of attributes. When writing, the values of
-    these attributes are written in the order listed. When reading, it calls
-    the constructor using the argument values in the order they appear in this
-    list.
-
-    For classes that do not have a PACKRAT_ARGS attribute, _all_ of the
-    attributes are written to the XML file in alphabetical order. Reading
-    returns a tuple (module_name, class_name, attribute_dictionary).
-
-    Like standard files, Packrat files can be open for read ("r"), write ("w")
-    or append ("a"). When open for write or append, each call to
-        write(name, value)
-    appends a new name/value to the end of the file. When open for read, each
-    call to
+    Like standard files, Packrat files can be opened for read ("r") or write
+    ("w"). When open for write, each call to
+        write(value, key=name)
+    appends a new value and its optional name to the end of the file. When
+    opened for read, each call to
         read()
-    returns a tuple containing the name and value of the next object in the 
-    file.
+    returns the value of the next object in the file. In addition,
+        read(key=name)
+    returns the value associated with the given name.
+
+    The procedure handles the reading and writing of objects of all types.
+    Support is specifically included for all the  standard Python types: int,
+    float, bool, Decimal, str, list, tuple, dict and set. All NumPy array dtypes
+    except 'U' (Unicode) and 'o' (object) are also supported.
+
+    Packrat can write and read objectsof most other classes as well. However,
+    users can customize the way Packrat handles them by defining class constant
+    PACKRAT_ARGS, object method PACKRAT__args__, and/or class method
+    PACKRAT__init__. Details are provided below.
+
+    Packrat's procedure for writing objects:
+
+    1. Packrat looks for an object method
+        PACKRAT__args__(self)
+    If this function exists, it must return None, a list of attributes names, or
+    another object. If None, then Packrat proceeds with the next step. If a list
+    of attribute names, then these are the attributes of the object that Packrat
+    will save in the file. If another object, then Packrat will proceed to Step
+    2 using this other object.
+
+    2. Packrat looks for a class attribute PACKRAT_ARGS. If this exists, it must
+    contain a list of attribute names. The values of these attributes are saved
+    in the file. This approach is more common than defining a PACKRAT__args__
+    method, but theat option allows customization of what is saved on an
+    object-by-object basis; this can be useful in some circumstances.
+
+    3. If neither are defined, Packrat saves all the attributes of the object in
+    the file.
+
+    Note: In the list of attribute names, one can be prefixed with "**" and any
+    number can be prefixed with "+". These attributes are handled specially
+    when the object is read and reconstructed, as discussed below.
+
+    Packrat's procedure for reading and reconstructing objects:
+
+    1. If the class has a function PACKRAT__init__, then Packrat calls the
+    function as follows:
+        PACKRAT__init__(cls, **args)
+    where cls is the object class and args is a dictionary of all the attribute
+    (attribute, value) pairs that were saved for this object. This function
+    should return the new object or else None on failure.
+
+    2. If PACKRAT__init__ does not exist or returns None, the standard
+    constructor for the class is called as follows:
+        cls.__init__(self, arg1, arg2, ..., **argdict)
+    where arg1, arg2, ... are all the un-prefixed attributes save in the file,
+    in order. If an attribute was listed by PACKRAT__args__ or PACKRAT_ARGS
+    using a '**' prefix, then this is included as 'argdict' in the constructor;
+    note that it must be a dictionary.
+
+    3. Attribute names that PACKRAT__args__ or PACKRAT_ARGS prefixed with "+"
+    are not passed to the constructor. Instead, Packrats sets these as
+    (attribute, value) pairs for the object after it has been constructed.
+
+    4. As noted above, if Packrat does not find explicit support for an object,
+    all of its attributes are save. In this case, an object is constructed via
+        cls.__new__()
+    and then all of its attributes are defined. This is not a recommended way to
+    construct an object, but it often works.
     """
 
-    class Session(object):
-        """Subclass for logically grouped information.
-
-        Values are saved by name as session attributes. Sessions can also be
-        indexed to return (name,value) tuples in order.
-        """
-
-        def __init__(self, node, pack):
-            self._mylist = []
-            self._mydict = {}
-
-            for subnode in node:
-                (key, value) = pack._read_node(subnode)
-                self._mylist.append((key, value))
-                self._mydict[key] = value
-                self.__dict__[key] = value
-
-            self.user = node.attrib['user']
-            self.time = node.attrib['time']
-            self.note = node.attrib['note']
-
-        def __getitem__(self, i):
-            if type(i) == int:
-                return self._mylist[i]
-            else:
-                return self._mydict[i]
-
-        def __str__(self):
-            return 'Session(user="%s", time="%s")' % (self.user, self.time)
-
-        def __repr__(self): return str(self)
+    UNLINKABLE_TYPENAMES = {'int', 'bool', 'float', 'str', 'None', 'Decimal'}
+    MUTABLE_TYPENAMES = {'list', 'dict', 'set', 'np.ndarray'}
 
     VERSION = '1.0'
 
-    ENTITIES = {'"': '&quot;', "'": '&apos;'}
-    UNENTITIES = {'&quot;':'"', '&apos;': "'"}
-
-    def __init__(self, filename, access='w', indent=2, savings=1.e5,
-                       crlf=None):
+    def __init__(self, filename, access='w', indent=2, savings=(1.e3,1.e4),
+                       crlf=None, compress=False):
         """Create a Packrat object for write or append.
 
         It opens a new file of the given name. Use the close() method when
@@ -94,8 +120,7 @@ class Packrat(object):
         Input:
             filename    the name of the file to open. It should end in ".xml"
             access      'w' to write a new file (replacing one if it already
-                        exists); 'a' to append new objects to an existing file;
-                        'r' to read an existing file.
+                        exists); 'r' to read an existing file.
             indent      the number of characters to indent entries in the XML
                         hierarchy.
             savings     a tuple containing two values:
@@ -113,28 +138,23 @@ class Packrat(object):
                         Note that, when opening for append, whatever line
                         terminator is already in the file will continue to be
                         used.
+            compress    True to use zip compression on the npz file objects;
+                        False to leave them uncompressed.
         """
 
         if not filename.lower().endswith('.xml'):
             raise ValueError('filename does not end in ".xml": ' + filename)
 
-        if access not in ('w', 'a', 'r'):
-            raise ValueError('access is not "w", "a" or "r"')
+        if access not in ('w', 'r'):
+            raise ValueError('access is not "w" or "r"')
 
         self.filename = filename
         self.file = None
         self.access = access
         self._version = Packrat.VERSION
-        self.tuples = []
-        self.tuple_no = 0       # To emulate sequential read operations
-        self.indent = indent
 
-        if crlf is None:
-            self.linesep = os.linesep
-        elif crlf:
-            self.linesep = '\r\n'
-        else:
-            self.linesep = '\n'
+        # Attributes used for write...
+        self.write_index = 0
 
         try:
             if len(savings) == 1:
@@ -149,9 +169,32 @@ class Packrat(object):
         self.npz_list = []
         self.npz_no = 0
 
+        self.indent = indent
+        self.compress = compress
+
+        if crlf is None:
+            self.linesep = os.linesep
+        elif crlf:
+            self.linesep = '\r\n'
+        else:
+            self.linesep = '\n'
+
+        self.xml_id_by_python_id = {}   # Dictionary of XML IDs keyed by id()
+        self.python_id_by_xml_id = []   # Ordered list of Python IDs, indexed by
+                                        # XML ID
+        self.object_by_python_id = {}   # Dictionary of objects in XML file
+                                        # keyed by Python id()
+
+        # Attributes used for read...
+        self.objects = []
+        self.object_names = []
+        self.object_no = 0              # To emulate sequential read operations
+
+        self.object_by_xml_id = {}
+
         # Handle the existing npz file if necessary
         if os.path.exists(self.npz_filename):
-            if access in ('a', 'r'):
+            if access == 'r':
                 npz_dict = np.load(self.npz_filename)
                 count = len(npz_dict.keys())
                 for i in range(count):
@@ -171,51 +214,36 @@ class Packrat(object):
             self._version = root.attrib['version']
 
             # Load the tree recursively
-            self.tuples = []
             for node in root:
-                self.tuples.append(self._read_node(node))
+                try:
+                    name = unescape(node.attrib['name'], UNENTITIES)
+                except KeyError:
+                    name = None
+
+                self.objects.append(self._read_node(node))
+                self.object_names.append(name)
 
             # Check the npz count
             if len(self.npz_list) != self.npz_no:
-                raise IOError('Packrat file %s does not match its .npz file' %
+                raise IOError('Packrat file "%s" does not match its .npz file' %
                               filename)
 
             return
 
         # When opening for write, initialize the file
-        if self.access == 'w':
-            self.file = open(filename, 'wb')
+        self.file = open(filename, 'wb')
 
-            self.file.write('<?xml version="1.0" encoding="ASCII"?>')
-            self.file.write(self.linesep)
-            self.file.write(self.linesep)
-            self.file.write('<packrat version="%s">' % Packrat.VERSION)
-            self.file.write(self.linesep)
-            self.begun = ['packrat']
-
-        # When opening for append, position before the last line
-        else:
-            self.file = open(filename, 'r+b')
-
-            # Figure out line termination
-            self.file.seek(-2, 2)
-            char = self.file.read(1)
-            if char == '\r':     # Windows CRLF line terminators
-                self.linesep = '\r\n'
-            else:
-                self.linesep = '\n'
-
-            # Jump to just before the last line of the file
-            self.file.seek(0, 0)
-            for line in self.file:
-                pass
-
-            self.file.seek(1 - len(line) - len(self.linesep), 2)
-            self.begun = ['packrat']
+        self.file.write('<?xml version="1.0" encoding="ASCII"?>')
+        self.file.write(self.linesep)
+        self.file.write(self.linesep)
+        self.file.write('<packrat version="%s">' % Packrat.VERSION)
+        self.file.write(self.linesep)
+        self.begun = ['packrat']
 
     @staticmethod
-    def open(filename, access='r', indent=2, savings=(1000,1000), crlf=None):
-        """Create and open a Packrat object for write or append.
+    def open(filename, access='r', indent=2, savings=(1.e3,1.e4), crlf=None,
+                       compress=False):
+        """Open a Packrat object for read or write.
 
         This is an alternative to calling the constructor directly.
 
@@ -225,8 +253,7 @@ class Packrat(object):
         Input:
             filename    the name of the file to open. It should end in ".xml"
             access      'w' to write a new file (replacing one if it already
-                        exists); 'a' to append new objects to an existing file;
-                        'r' to read an existing file.
+                        exists); 'r' to read an existing file.
             indent      the number of characters to indent entries in the XML
                         hierarchy.
             savings     a tuple containing two values:
@@ -235,8 +262,7 @@ class Packrat(object):
                             XML file using base64 encoding.
                 savings[1]  the approximate minimum number of bytes that need to
                             be saved before data values will be written into an
-                            associated .npz file. None to prevent the use of an
-                            .npz file.
+                            associated .npz file.
                         Either value can be None to disable that option.
             crlf        True to use Windows <cr><lf> line terminators; False to
                         use Unix/MacOS <lf> line terminators. Use None (the
@@ -244,9 +270,11 @@ class Packrat(object):
                         Note that, when opening for append, whatever line
                         terminator is already in the file will continue to be
                         used.
+            compress    True to use zip compression on the npz file objects;
+                        False to leave them uncompressed.
         """
 
-        return Packrat(filename, access, indent, savings, crlf)
+        return Packrat(filename, access, indent, savings, crlf, compress)
 
     def close(self):
         """Close this Packrat file."""
@@ -256,14 +284,17 @@ class Packrat(object):
 
             # Terminate anything already begun
             levels = len(self.begun) - 1
-            for (k,element) in enumerate(self.begun[::-1]):
+            for (k, typename) in enumerate(self.begun[::-1]):
                 self.file.write(self.indent * (levels - k) * ' ')
-                self.file.write('</' + element + '>' + self.linesep)
+                self.file.write('</' + typename + '>' + self.linesep)
 
             self.file.close()
             self.file = None
 
             if self.npz_no > 0:
+              if self.compress:
+                np.savez_compressed(self.npz_filename, *tuple(self.npz_list))
+              else:
                 np.savez(self.npz_filename, *tuple(self.npz_list))
 
        # Close a file open for read
@@ -278,401 +309,407 @@ class Packrat(object):
     # Write methods
     ############################################################################
 
-    def write(self, element, value, level=0, attributes=[]):
-        """Write an object into a Packrat file.
+    def write(self, obj, name=None):
+        """Write an object into a Packrat file, top-level version.
 
-        The object and its value is appended to this file.
+        The object is appended to the end of file.
 
         Input:
-            element     name of the XML element.
-            value       the value of the element.
-            level       the indent level of this element relative to the
-                        previous indentation.
-            skip        True to skip a line before and after.
-            attributes  a list of additional attributes to include as (name,
-                        value) tuples.
+            obj         the object to write.
+            name        optional name of the object.
         """
 
-        close_element = True
+        self._write(obj, name, self.write_index, level=0)
+        self.write_index += 1
+
+    def _write(self, obj, name=None, index=None, level=0, **params):
+        """Write an object into a Packrat file, recursive version
+
+        The object is appended to the end of file.
+
+        Input:
+            obj         the object to write.
+            name        optional name of the object.
+            index       optional integer index of the object.
+            level       the indent level of this element relative to the
+                        previous indentation.
+            params      a dictionary of additional parameters, e.g., for
+                        defining the compression to use on float arrays.
+        """
+
+        # Determine the type name
+        if isinstance(obj, decimal.Decimal):
+            typename = 'Decimal'
+        elif isinstance(obj, (bool, np.bool_)):
+            typename = 'bool'
+        elif isinstance(obj, numbers.Integral):
+            typename = 'int'
+        elif isinstance(obj, numbers.Real):
+            typename = 'float'
+        elif isinstance(obj, str):
+            typename = 'str'
+        elif obj is None:
+            typename = 'None'
+        elif isinstance(obj, np.ndarray):
+            typename = 'array'
+        elif isinstance(obj, frozenset):
+            typename = 'frozenset'
+        elif isinstance(obj, set):
+            typename = 'set'
+        elif isinstance(obj, dict):
+            typename = 'dict'
+        elif isinstance(obj, list):
+            typename = 'list'
+        elif isinstance(obj, tuple):
+            typename = 'tuple'
+        else:
+            typename = 'object'
+
+        # Determine the Python id; None for elementary objects and if len == 0
+        python_id = None
+        if typename not in self.UNLINKABLE_TYPENAMES:
+            try:
+                if len(obj) > 0:
+                    python_id = id(obj)
+            except (TypeError, AttributeError):
+                python_id = id(obj)
+
+        # Be careful when tracking mutable objects; test link before using
+        object_to_cache = obj
+        if typename in ('set', 'list', 'dict', 'array'):
+            if python_id in self.object_by_python_id:
+                test = self.object_by_python_id[python_id]
+
+                if typename == 'array':
+                    changed = not np.all(test == obj)
+                else:
+                    changed = (test != obj)
+
+                if changed:
+                    del self.xml_id_by_python_id[python_id]
+
+            # For mutable objects, save a copy
+            if typename == 'list':
+                object_to_cache = list(obj)
+            else:
+                object_to_cache = obj.copy()
+
+        # Look for object in cache; define XML id and link status; update cache
+        if python_id:
+            try:
+                xml_id = self.xml_id_by_python_id[python_id]
+                xml_link = True
+            except KeyError:
+                xml_id = len(self.python_id_by_xml_id)
+                xml_link = False
+
+                self.python_id_by_xml_id.append(python_id)
+                self.xml_id_by_python_id[python_id] = xml_id
+
+            self.object_by_python_id[python_id] = object_to_cache
+        else:
+            xml_id = None
+            xml_link = False
+
+        # Initialize the XML attributes
+        xml_attr = []
+        if xml_link:
+            xml_attr += [('link', str(xml_id))]
+        elif xml_id is not None:
+            xml_attr += [('id', str(xml_id))]
+
+        # Write a standard Python class without caching
+
+        # float, int, bool, decimal, str, None
+        if typename in ('int', 'float', 'bool'):
+            self._start_node(typename, level, name, index, xml_attr)
+            self.file.write(repr(obj))
+            self._end_node(typename, level, indent=False)
+            return
+
+        if typename == 'None':
+            self._start_node(typename, level, name, index, xml_attr,
+                             slash='/')
+            return
+
+        if typename == 'str':
+            self._start_node(typename, level, name, index, xml_attr)
+            self.file.write(escape(obj, ENTITIES))
+            self._end_node(typename, level, indent=False)
+            return
+
+        if typename == 'Decimal':
+            self._start_node(typename, level, name, index, xml_attr)
+            self.file.write(str(obj))
+            self._end_node(typename, level, indent=False)
+            return
+
+        # Write a Python class with caching
+
+        # tuple, list, set
+        if typename in ('tuple', 'list', 'set', 'frozenset'):
+            lenval = len(obj)
+            xml_attr += [('len', str(lenval))]
+            slash = self._start_node(typename, level, name, index, xml_attr,
+                                     slash=(lenval==0), terminate=True)
+            if slash: return
+
+            if typename in ('set', 'frozenset'):
+                obj = list(obj)
+                obj.sort()
+
+            for indx in range(len(obj)):
+                self._write(obj[indx], None, indx, level=level+1, **params)
+
+            self._end_node(typename, level)
+            return
+
+        # dict
+        if typename == 'dict':
+            lenval = len(obj)
+            xml_attr += [('len', str(lenval))]
+            slash = self._start_node(typename, level, name, index, xml_attr,
+                                  slash=(lenval==0), terminate=True)
+            if slash: return
+
+            keys = obj.keys()
+            keys.sort()
+
+            compact_mode = all([isinstance(k,str) for k in keys])
+
+            if compact_mode:
+                for indx in range(len(keys)):
+                    key = keys[indx]
+                    self._write(obj[key], key, indx, level=level+1, **params)
+            else:
+                for indx in range(len(keys)):
+                    key = keys[indx]
+                    self._start_node('dict_pair', level+1, None, indx,
+                                     terminate=True)
+                    self._write(key,      'key', level=level+2)
+                    self._write(obj[key], 'value', level=level+2, **params)
+                    self._end_node('dict_pair', level+1)
+
+            self._end_node(typename, level)
+            return
 
         # Write a NumPy ndarray
 
-        if type(value) == np.ndarray:
-            self._write_element(element, level,
-                                [('type', 'array'),
-                                 ('shape', str(value.shape)),
-                                 ('dtype', value.dtype.str)] + attributes, '')
+        if typename == 'array':
+            if xml_link:
+                xml_attr += [('shape', str(obj.shape).replace(' ','')),
+                             ('dtype', encode_dtype(obj.dtype))]
 
-            raw_bytes = value.size * value.itemsize
-            kind = value.dtype.kind
-            flattened = value.ravel()
+                self._start_node(typename, level, name, index, xml_attr)
+                return
 
-            if kind in ('S','c'): first = flattened[0]
-            else:                 first = repr(flattened[0])
+            (xml_text, npz_value,
+             attr_list) = encode_array(obj, self.base64_savings,
+                                            self.npz_savings, **params)
+            xml_attr += attr_list
 
-            # Estimate the size when formatted
-            if kind == 'f':
-                xml_bytes = value.size * 24
-            elif kind in 'iu':
-                median = np.median(flattened)
-                xml_bytes = value.size * (len(str(median)) + 3)
-            elif kind == 'b':
-                xml_bytes = value.size
-            elif kind == 'c' or value.dtype.str == '|S1':
-                xml_bytes = value.size
-            elif kind in 'S':
-                xml_bytes = value.size * (value.itemsize + 3)
-            else:
-                raise ValueError('arrays of kind %s are not supported' % kind)
-
-            b64_bytes = int(1.3 * raw_bytes)
+            slash = self._start_node(typename, level, name, index, xml_attr,
+                                     slash=(npz_value is not None))
 
             # Hold the data for the npz file if the savings is large enough
-            if min(xml_bytes, b64_bytes) > raw_bytes + self.npz_savings:
-
-                self.npz_list.append(value)
+            if npz_value is not None:
+                self.npz_list.append(npz_value)
                 self.npz_no += 1
+                return
 
-                self.file.write(' first="%s"' % first)
-                self.file.write(' encoding="npz"/>' + self.linesep)
-                close_element = False
+            if slash: return
 
-            # Otherwise, write data as base64 if the savings is large enough
-            elif xml_bytes > b64_bytes + self.base64_savings:
-                if kind == 'S': first = escape(flattened[0], Packrat.ENTITIES)
-                else:           first = repr(flattened[0])
-
-                self.file.write(' first="%s"' % first)
-                self.file.write(' encoding="base64">' + self.linesep)
-
-                string = base64.b64encode(value.tostring())
-                self.file.write(string) # escape() not needed
-                self.file.write(self.linesep)
-                self.file.write(self.indent * (len(self.begun) + level) * ' ')
-
-            # Handle integers and floats
-            elif kind in 'iuf':
-                self.file.write(' encoding="text">')
-                for v in flattened[:-1]:
-                    self.file.write(repr(v))
-                    self.file.write(', ')
-                self.file.write(repr(flattened[-1]))
-
-            # Handle booleans
-            elif kind == 'b':
-                self.file.write(' encoding="text">')
-                for v in flattened:
-                    self.file.write('FT'[v])
-
-            # Handle characters or 1-bytes strings
-            elif kind == 'c' or value.dtype.str == '|S1':
-                self.file.write(' encoding="text">')
-                for v in flattened:
-                    self.file.write(escape(v, Packrat.ENTITIES))
-
-            # Handle longer strings
-            elif kind == 'S':
-                self.file.write(' encoding="text">')
-
-                for v in flattened[:-1]:
-                    self.file.write('"')
-                    self.file.write(escape(v, Packrat.ENTITIES))
-                    self.file.write('", ')
-
-                self.file.write('"')
-                self.file.write(escape(flattened[-1], Packrat.ENTITIES))
-                self.file.write('"')
-
-            if close_element:
-                self.file.write('</' + element + '>' + self.linesep)
-
-        # Write a standard Python class
-
-        # int, float, bool
-        elif type(value) in (int, float, bool):
-            self._write_element(element, level,
-                                [('type', type(value).__name__)] + attributes)
-            self.file.write(repr(value))
-            self.file.write('</' + element + '>' + self.linesep)
-
-        # str
-        elif type(value) == str:
-            self._write_element(element, level,
-                                [('type', type(value).__name__)] + attributes)
-            self.file.write('"')
-            self.file.write(escape(value, Packrat.ENTITIES))
-            self.file.write('"')
-            self.file.write('</' + element + '>' + self.linesep)
-
-        # None
-        elif value == None:
-            self._write_element(element, level, [('type', 'None')] + attributes,
-                                terminate='/>')
-            self.file.write(self.linesep)
-
-        # tuple, list
-        elif type(value) in (tuple,list):
-            self._write_element(element, level,
-                                [('type', type(value).__name__)] + attributes)
-            self.file.write(self.linesep)
-
-            for (i,item) in enumerate(value):
-                self.write('item', item, level=level+1,
-                           attributes=[('index',str(i))])
-
-            self.file.write(self.indent * (len(self.begun) + level) * ' ')
-            self.file.write('</' + element + '>' + self.linesep)
-
-        # set
-        elif type(value) == set:
-            self._write_element(element, level,
-                                [('type', type(value).__name__)] + attributes)
-            self.file.write(self.linesep)
-
-            for item in value:
-                self.write('item', item, level=level+1)
-
-            self.file.write(self.indent * (len(self.begun) + level) * ' ')
-            self.file.write('</' + element + '>' + self.linesep)
-
-
-        # dict
-        elif type(value) == dict:
-            self._write_element(element, level,
-                                [('type', type(value).__name__)] + attributes)
-            self.file.write(self.linesep)
-
-            keys = value.keys()
-            keys.sort()
-            for key in keys:
-                self._write_dict_pair(key, value[key], level=level+1)
-
-            self.file.write(self.indent * (len(self.begun) + level) * ' ')
-            self.file.write('</' + element + '>' + self.linesep)
+            self.file.write(xml_text)
+            self._end_node(typename, level, indent=False)
+            return
 
         # Otherwise write an object
 
+        # Use the special attribute list if available
+        obj_attr = None
+        if hasattr(obj, 'PACKRAT__args__'):
+            result = obj.PACKRAT__args__()
+            if result is None or type(result) == list:
+                obj_attr = result
+            else:
+                obj = result    # object might be replaced by this func
+
+        # Write the XML header for this object
+        xml_attr += [('module', type(obj).__module__),
+                     ('class', type(obj).__name__)]
+        slash = self._start_node(typename, level, name, index, xml_attr,
+                                 terminate=True)
+        if slash: return
+
+        # Use the class attribute list if available
+        if obj_attr is None:
+            if hasattr(obj, 'PACKRAT_ARGS'):
+                obj_attr = [argname.lstrip('*').lstrip('+')
+                            for argname in obj.PACKRAT_ARGS]
+
+        # Otherwise, use all the attributes
+        if obj_attr is None:
+            obj_attr = obj.__dict__.keys()
+            obj_attr.sort()
+
+        # Generate (name, value) pairs
+        # Also clean up the internal names of attributes
+        pairs = [(clean_attr(k), obj.__dict__[k]) for k in obj_attr]
+
+        # Get precision information if available
+        if hasattr(obj, 'PACKRAT_params'):
+            params = obj.PACKRAT_params(params)
+
+        # Write the subnodes
+        for indx in range(len(pairs)):
+            (attr_name, value) = pairs[indx]
+            self._write(value, attr_name, indx, level=level+1, **params)
+
+        # End this object
+        self._end_node(typename, level)
+
+    def _start_node(self, typename, level, name=None, index=None, attr=[],
+                          slash='', terminate=False):
+
+        # Determine if a trailing slash is needed
+        if slash:
+            slash = '/'
+
+        if not slash:
+            for (attr_name, _) in attr:
+                if attr_name == 'link':
+                    slash = '/'
+                    break
+
+        # Determine 
+        if slash:
+            terminate = True
+
+        # Indent
+        self.file.write(self.indent * (len(self.begun) + level) * ' ')
+
+        # Write node type
+        self.file.write('<%s' % typename)
+
+        # Include name and/or index for list items, object attributes, etc.
+        if name:
+            self.file.write(' name="%s"' % name)
+        if index is not None:
+            self.file.write(' index="%d"' % index)
+
+        # Write the additional attributes
+        for (attr_name, value) in attr:
+            self.file.write(' %s="%s"' % (attr_name, escape(value, ENTITIES)))
+
+        # Write trailing slash if needed
+        if slash:
+            self.file.write('/>')
         else:
-            self._write_element(element, level,
-                                [('type', 'object'),
-                                 ('module', type(value).__module__),
-                                 ('class', type(value).__name__)] + attributes)
+            self.file.write('>')
+
+        # Terminate if necessary and report termination state
+        if terminate:
             self.file.write(self.linesep)
 
-            # Use the special attribute list if available
-            if hasattr(type(value), 'PACKRAT_ARGS'):
-                attr_list = type(value).PACKRAT_ARGS
-            else:
-                attr_list = value.__dict__.keys()
-                attr_list.sort()
+        return slash
 
-            for key in attr_list:
-                self.write(key, value.__dict__[key], level=level+1)
+    def _end_node(self, typename, level, indent=True):
 
+        # Indent
+        if indent:
             self.file.write(self.indent * (len(self.begun) + level) * ' ')
-            self.file.write('</' + element + '>' + self.linesep)
 
-    def start(self, element, attributes=[]):
-        """Write the beginning of an object into a Packrat file."""
-
-        self.file.write(self.linesep)
-        self.file.write(self.indent * len(self.begun) * ' ')
-        self.file.write('<' + element)
-
-        for tuple in attributes:
-            self.file.write(' ' + tuple[0] + '="' +
-                            escape(tuple[1], Packrat.ENTITIES) + '"')
-
-        self.file.write('>' + self.linesep)
-
-        self.begun.append(element)
-
-    def start_session(self, note=''):
-        """Write the beginning of a new session into a Packrat file.
-
-        A session is just an optional way to group information in a file. A
-        session saves the user name, date and Packrat version ID into the file
-        as attributes. The next call to finish() ends the session.
-        """
-
-        self.start('session', [('type', 'session'),
-                               ('user', getpass.getuser()),
-                               ('time', time.strftime('%Y-%m-%dT%H:%M:%S')),
-                               ('note', note),
-                               ('version', Packrat.VERSION)])
-
-    def finish(self):
-        """End of the most recently begun object in a Packrat file."""
-
-        self.file.write(self.indent * (len(self.begun) - 1) * ' ')
-        self.file.write('</' + self.begun[-1] + '>' + self.linesep)
-
-        del self.begun[-1]
-
-    def _write_element(self, element, level, attributes, terminate='>'):
-        """Internal method to write the beginning of one element."""
-
-        self.file.write(self.indent * (len(self.begun) + level) * ' ')
-        self.file.write('<' + element)
-
-        for tuple in attributes:
-            self.file.write(' ' + tuple[0] + '="' +
-                            escape(tuple[1], Packrat.ENTITIES) + '"')
-
-        self.file.write(terminate)
-
-    def _write_dict_pair(self, key, value, level):
-        """Internal write method for key/value pairs from dictionaries."""
-
-        self.file.write(self.indent * (len(self.begun) + level) * ' ')
-        self.file.write('<dict_pair>' + self.linesep)
-
-        self.write('key', key, level=level+1)
-        self.write('value', value, level=level+1)
-
-        self.file.write(self.indent * (len(self.begun) + level) * ' ')
-        self.file.write('</dict_pair>' + self.linesep)
+        # Terminate node
+        self.file.write('</%s>' % typename + self.linesep)
 
     ############################################################################
     # Read methods
     ############################################################################
 
-    def read(self):
+    def read(self, key=None, index=None):
         """Read the next item from the file.
 
         The read process is actually emulated, because all of the objects are
         read by the constructor when access is 'r'
         """
 
-        if self.tuple_no >= len(self.tuples):
-            return ()
+        if key is not None:
+            self.object_no = self.object_names.index[key]
 
-        else:
-            result = self.tuples[self.tuple_no]
-            self.tuple_no += 1
-            return result
+        if index is not None:
+            self.object_no = index
 
-    def read_list(self):
-        """Return the complete contents as (element, value) pairs."""
+        if self.object_no >= len(self.objects):
+            return None
 
-        self.tuple_no = len(self.tuples)
-        return self.tuples
-
-    def read_dict(self):
-        """Return the complete contents as a dictionary."""
-
-        self.tuple_no = len(self.tuples)
-
-        result = {}
-        for (key, value) in self.tuples:
-            result[key] = value
-
-        return result
+        obj = self.objects[self.object_no]
+        self.object_no += 1
+        return obj
 
     def _read_node(self, node):
-        """Interprets one node of the XML tree recursively."""
+        """Interprets one node of the XML tree, recursively."""
 
-        node_type = node.attrib['type']
+        node_type = node.tag
+
+        # Return the value if this node is a link
+        key = None
+        try:
+            key = int(node.attrib['link'])
+        except KeyError:
+            pass
+
+        if key is not None:
+            return self.object_by_xml_id[key]
 
         if node_type == 'int':
-            return (node.tag, int(node.text))
+            obj = int(node.text)
 
-        if node_type == 'float':
-            return (node.tag, float(node.text))
+        elif node_type == 'float':
+            obj = float(node.text)
 
-        if node_type == 'bool':
-            return (node.tag, eval(node.text))
+        elif node_type == 'bool':
+            obj = eval(node.text)
 
-        if node_type == 'None':
-            return (node.tag, None)
+        elif node_type == 'Decimal':
+            obj = decimal.Decimal(node.text)
 
-        if node_type == 'str':
-            assert node.text[0] == '"'
-            assert node.text[-1] == '"'
-            return (node.tag, unescape(node.text[1:-1], Packrat.UNENTITIES))
+        elif node_type == 'None':
+            obj = None
 
-        if node_type in ('list', 'tuple', 'set'):
-            result = []
+        elif node_type == 'str':
+            obj = unescape(node.text, UNENTITIES)
+
+        elif node_type in ('list', 'tuple', 'set'):
+            obj = []
             for subnode in node:
-                result.append(self._read_node(subnode)[1])
+                obj.append(self._read_node(subnode))
 
             if node_type == 'tuple':
-                return (node.tag, tuple(result))
+                obj = tuple(obj)
 
             if node_type == 'set':
-                return (node.tag, set(result))
+                obj = set(obj)
 
-            return (node.tag, result)
-
-        if node_type == 'dict':
-            result = {}
+        elif node_type == 'dict':
+            obj = {}
             for subnode in node:
-                key = self._read_node(subnode[0])[1]
-                value = self._read_node(subnode[1])[1]
-                result[key] = value
-
-            return (node.tag, result)
-
-        if node_type == 'array':
-            dtype = node.attrib['dtype']
-            kind = np.dtype(dtype).kind
-            shape = eval(node.attrib['shape'])
-            source = None
-
-            if 'first' in node.attrib:
-                first = node.attrib['first']
-                if kind in ('S','c'):
-                    first = unescape(first, Packrat.UNENTITIES)
+                if subnode.tag == 'dict_pair':
+                    key = self._read_node(subnode[0])
+                    value = self._read_node(subnode[1])
                 else:
-                    first = eval(first)
-            else:
-                first = None
+                    key = subnode.attrib['name']
+                    value = self._read_node(subnode)
+                obj[key] = value
 
-            if node.attrib['encoding'] == 'npz':
-                result = self.npz_list[self.npz_no]
+        elif node_type == 'array':
+            encoding = node.attrib['encoding']
+            if encoding == 'npz':
+                obj = decode_array(self.npz_list[self.npz_no], node.attrib)
                 self.npz_no += 1
-                flattened = result.ravel()
-                source = 'npz file'
-
-            elif node.attrib['encoding'] == 'base64':
-                decoded = base64.b64decode(unescape(node.text,
-                                                    Packrat.UNENTITIES))
-                flattened = np.fromstring(decoded, dtype=dtype)
-                result = flattened.reshape(shape)
-                source = 'base64 string'
-
-            elif kind == 'b':
-                result = []
-                for v in node.text:
-                    result.append(v == 'T')
-                result = np.array(result).reshape(shape)
-
-            elif kind == 'c' or dtype == '|S1':
-                result = []
-                for v in unescape(node.text, Packrat.UNENTITIES):
-                    result.append(v)
-                result = np.array(result, dtype=dtype).reshape(shape)
-
-            elif kind == 'S':
-                result = eval('[' + node.text + ']')
-                for (i,value) in enumerate(result):
-                    if '&' in value:
-                        result[i] = unescape(value, Packrat.UNENTITIES)
-                result = np.array(result, dtype=dtype).reshape(shape)
-
             else:
-                result = np.fromstring(node.text, sep=',', dtype=dtype)
-                result = result.reshape(shape)
+                obj = decode_array(node.text, node.attrib)
 
-            if (first is not None and
-                source is not None and
-                flattened[0] != first):
-                    raise IOError('error decoding %s: %s != %s' %
-                                  (source, repr(first), repr(flattened[0])))
-
-            return (node.tag, result)
-
-        if node_type == 'object':
+        elif node_type == 'object':
             module = node.attrib['module']
             classname = node.attrib['class']
             try:
@@ -680,37 +717,61 @@ class Packrat(object):
             except KeyError:
                 cls = None
 
+            obj = None
+
             # Create a dictionary of elements
             object_dict = {}
             for subnode in node:
-                (key, value) = self._read_node(subnode)
+                key = subnode.attrib['name']
+                value = self._read_node(subnode)
                 object_dict[key] = value
 
             # For an unrecognized class, just return the attribute dictionary
             if cls is None:
-                return (node.tag, object_dict)
+                obj = object_dict
+
+            # If the class has a PACKRAT__init__ function, call it with the full
+            # dictionary
+            if obj is None and hasattr(cls,'PACKRAT__init__'):
+                obj = cls.PACKRAT__init__(cls, **object_dict)
 
             # If the class has a PACKRAT_ARGS list, call the constructor
-            if hasattr(cls, 'PACKRAT_ARGS'):
-                args = []
+            if obj is None and hasattr(cls, 'PACKRAT_ARGS'):
+                arglist = []
+                argdict = {}
+                extras = []
                 for key in cls.PACKRAT_ARGS:
-                    args.append(object_dict[key])
+                    if key.startswith('**'):
+                        argdict = object_dict[clean_attr(key[2:])]
+                    elif key.startswith('+'):
+                        extras.append((key[1:],
+                                       object_dict[clean_attr(key[1:])]))
+                    else:
+                        arglist.append(object_dict[clean_attr(key)])
 
                 obj = object.__new__(cls)
-                obj.__init__(*args)
-                return (node.tag, obj)
+                obj.__init__(*arglist, **argdict)
+
+                for (attr_name, value) in extras:
+                    obj.__dict__[attr_name] = value
 
             # Otherwise, create a new object and install the attributes.
-            # This approach is not generally recommended but it will often work.
-            obj = object.__new__(cls)
-            obj.__dict__ = object_dict
+            # This approach is not recommended but it will often work.
+            if obj is None:
+                obj = object.__new__(cls)
+                obj.__dict__ = object_dict
 
-            return (node.tag, obj)
+        else:
+            raise TypeError('unrecognized Packrat element type: ' + node_type)
 
-        if node_type == 'session':
-            return Packrat.Session(node, self)
+        # Save in dictionary
+        try:
+            key = int(node.attrib['id'])
+            self.object_by_xml_id[key] = obj
+        except KeyError:
+            pass
 
-        raise TypeError('unrecognized Packrat element type: ' + node_type)
+        return obj
 
 ################################################################################
 # Unit tests
@@ -747,21 +808,6 @@ class test_packrat(unittest.TestCase):
         ####################
         f = Packrat.open(filename, access='w', crlf=crlf)
         f.write('two', 2)
-        f.close()
-
-        ####################
-        f = Packrat.open(filename, access='r')
-        rec = f.read()
-        self.assertEqual(rec[0], 'two')
-        self.assertEqual(rec[1], 2)
-        self.assertEqual(type(rec[1]), int)
-
-        rec = f.read()
-        self.assertEqual(rec, ())
-        f.close()
-
-        ####################
-        f = Packrat.open(filename, access='a')
         f.write('three', 3.)
         f.write('four', '4')
         f.write('five', (5,5.,'five'))
@@ -770,6 +816,48 @@ class test_packrat(unittest.TestCase):
         f.write('eight', {8:'eight', 'eight':8.})
         f.write('nine', True)
         f.write('ten', False)
+        f.write('eleven', {'>11':'<=13', '>=11':12, '"elev"':"'11'"})
+        f.write('twelve', 'eleven<"12"<<thirteen>')
+        f.write('thirteen', None)
+
+        bools = np.array([True, False, False, True]).reshape(2,1,2)
+        ints = np.arange(20)
+        floats = np.arange(20.)
+
+        strings = np.array(['1', '22', '333', '4444']).reshape(2,2)
+        uints = np.arange(40,60).astype('uint')
+        chars = np.array([str(i) for i in (range(10) + list('<>"'))])
+
+        f.write('bools', bools)
+        f.write('ints', ints)
+        f.write('floats', floats)
+
+        f.write('random', random)
+
+        f.write('strings', strings)
+        f.write('uints', uints)
+        f.write('chars', chars)
+
+        #################### uses an npz file
+        more_ints = np.arange(10000).reshape(4,100,25)
+        f.write('more_ints', more_ints)
+
+        #################### uses base64
+        more_floats = np.arange(200.)
+        f.write('more_floats', more_floats)
+
+        f.write('more_floats', more_floats)
+        f.write('more_randoms', more_randoms)
+        f.write('more_randoms_msb', more_randoms.astype('>f8'))
+        f.write('more_randoms_lsb', more_randoms.astype('<f8'))
+
+        #################### uses a new class foo, without PACKRAT_ARGS
+        f.write('foo', Foo(np.arange(10), np.arange(10.)))
+
+        #################### uses a new class bar, with PACKRAT_ARGS
+        sample_bar = Bar(np.arange(10), np.arange(10.))
+        f.write('bar', sample_bar)
+
         f.close()
 
         ####################
@@ -826,58 +914,26 @@ class test_packrat(unittest.TestCase):
         self.assertEqual(rec[1], False)
         self.assertEqual(type(rec[1]), bool)
 
-        ####################
-        f = Packrat.open(filename, access='a')
-        f.write('eleven', {'>11':'<=13', '>=11':12, '"elev"':"'11'"})
-        f.write('twelve', 'eleven<"12"<<thirteen>')
-        f.write('thirteen', None)
+        rec = f.read()
+        self.assertEqual(rec[0], 'eleven')
+        self.assertEqual(rec[1], {'>11':'<=13', '>=11':12, '"elev"':"'11'"})
+        self.assertEqual(rec[1]['>11'], '<=13')
+        self.assertEqual(rec[1]['>=11'], 12)
+        self.assertEqual(rec[1]['"elev"'], "'11'")
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'twelve')
+        self.assertEqual(rec[1], 'eleven<"12"<<thirteen>')
+
+        rec = f.read()
+        self.assertEqual(rec[0], 'thirteen')
+        self.assertEqual(rec[1], None)
+
         f.close()
 
-        ####################
-        f = Packrat.open(filename, access='r')
-        recs = f.read_list()
-
-        self.assertEqual(recs[-4][0], 'ten')
-
-        self.assertEqual(recs[-3][0], 'eleven')
-        self.assertEqual(recs[-3][1], {'>11':'<=13',
-                                       '>=11':12,
-                                       '"elev"':"'11'"})
-        self.assertEqual(recs[-3][1]['>11'], '<=13')
-        self.assertEqual(recs[-3][1]['>=11'], 12)
-        self.assertEqual(recs[-3][1]['"elev"'], "'11'")
-
-        self.assertEqual(recs[-2][0], 'twelve')
-        self.assertEqual(recs[-2][1], 'eleven<"12"<<thirteen>')
-
-        self.assertEqual(recs[-1][0], 'thirteen')
-        self.assertEqual(recs[-1][1], None)
-
-        ####################
-        f = Packrat.open(filename, access='a')
-
-        bools = np.array([True, False, False, True]).reshape(2,1,2)
-        ints = np.arange(20)
-        floats = np.arange(20.)
-
-        strings = np.array(['1', '22', '333', '4444']).reshape(2,2)
-        uints = np.arange(40,60).astype('uint')
-        chars = np.array([str(i) for i in (range(10) + list('<>"'))])
-
-        f.write('bools', bools)
-        f.write('ints', ints)
-        f.write('floats', floats)
-
-        f.write('random', random)
-
-        f.write('strings', strings)
-        f.write('uints', uints)
-        f.write('chars', chars)
-        f.close()
-
-        ####################
-        f = Packrat.open(filename, access='r')
+        f.open(filename, access='r')
         recs = f.read_dict()
+        print recs.keys()
 
         self.assertTrue(np.all(recs['bools'] == bools))
         self.assertTrue(np.all(recs['ints'] == ints))
@@ -886,70 +942,27 @@ class test_packrat(unittest.TestCase):
         self.assertTrue(np.all(recs['strings'] == strings))
         self.assertTrue(np.all(recs['uints'] == uints))
         self.assertTrue(np.all(recs['chars'] == chars))
-        f.close()
-
-        #################### uses a pickle file
-        f = Packrat.open(filename, access='a')
-
-        more_ints = np.arange(10000).reshape(4,100,25)
-        f.write('more_ints', more_ints)
-        f.close()
-
-        ####################
-        f = Packrat.open(filename, access='r')
-        recs = f.read_dict()
 
         self.assertTrue(np.all(recs['more_ints'] == more_ints))
 
-        #################### uses base64
-        f = Packrat.open(filename, access='a', savings=(1,1.e99))
-
-        more_floats = np.arange(200.)
-        f.write('more_floats', more_floats)
-
-        f.write('more_floats', more_floats)
-        f.write('more_randoms', more_randoms)
-        f.write('more_randoms_msb', more_randoms.astype('>f8'))
-        f.write('more_randoms_lsb', more_randoms.astype('<f8'))
-        f.close()
-
-        ####################
-        f = Packrat.open(filename, access='r')
-        recs = f.read_dict()
+        print recs.keys()
 
         self.assertTrue(np.all(recs['more_floats'] == more_floats))
         self.assertTrue(np.all(recs['more_randoms'] == more_randoms))
         self.assertTrue(np.all(recs['more_randoms_lsb'] == more_randoms))
         self.assertTrue(np.all(recs['more_randoms_msb'] == more_randoms))
 
-        #################### uses a new class foo, without PACKRAT_ARGS
-        f = Packrat.open(filename, access='a')
-        f.write('foo', Foo(np.arange(10), np.arange(10.)))
-        f.close()
-
-        ####################
-        f = Packrat.open(filename, access='r')
-        recs = f.read_dict()
-
         self.assertEqual(type(recs['foo']), Foo)
         self.assertTrue(np.all(recs['foo'].ints == np.arange(10)))
         self.assertTrue(np.all(recs['foo'].floats == np.arange(10.)))
         self.assertTrue(np.all(recs['foo'].sum == 2.*np.arange(10)))
 
-        #################### uses a new class bar, with PACKRAT_ARGS
-        sample_bar = Bar(np.arange(10), np.arange(10.))
-        f = Packrat.open(filename, access='a')
-        f.write('bar', sample_bar)
-        f.close()
-
-        ####################
-        f = Packrat.open(filename, access='r')
-        recs = f.read_dict()
-
         self.assertEqual(type(recs['bar']), Bar)
         self.assertTrue(np.all(recs['bar'].ints   == sample_bar.ints))
         self.assertTrue(np.all(recs['bar'].floats == sample_bar.floats))
         self.assertTrue(np.all(recs['bar'].sum    == sample_bar.sum))
+
+        f.close()
 
     # Test all line terminators
 
@@ -978,80 +991,6 @@ class test_packrat(unittest.TestCase):
             native_rec += 1
 
     f.close()
-
-    ############################################################################
-    # Test start(), finish(), sessions
-
-    filename = 'packrat_unittests2.xml'
-
-    f = Packrat.open(filename, 'w')
-    f.start_session(note='test')
-    f.write('one23', [1,2,3])
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_list()
-    f.close()
-
-    self.assertEqual(len(recs), 1)
-    self.assertEqual(type(recs[0]), Packrat.Session)
-    self.assertEqual(recs[0][0][0], 'one23')
-    self.assertEqual(recs[0][0][1], [1,2,3])
-    self.assertEqual(recs[0].one23, [1,2,3])
-    self.assertEqual(recs[0].note, 'test')
-    self.assertTrue(hasattr(recs[0], 'user'))
-    self.assertTrue(hasattr(recs[0], 'time'))
-
-    ####################
-    time.sleep(1)
-
-    f = Packrat.open(filename, 'a')
-    f.start_session(note='another test')
-    f.write('four56',  [4,5,6])
-    f.write('seven89', [7,8,9])
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_list()
-    f.close()
-
-    self.assertEqual(len(recs), 2)
-    self.assertEqual(type(recs[1]), Packrat.Session)
-    self.assertEqual(len(recs[1]._mylist), 2)
-    self.assertEqual(len(recs[1]._mydict), 2)
-
-    self.assertEqual(recs[1][0][0], 'four56')
-    self.assertEqual(recs[1][0][1], [4,5,6])
-    self.assertEqual(recs[1].four56, [4,5,6])
-    self.assertEqual(recs[1]['four56'], [4,5,6])
-
-    self.assertEqual(recs[1][1][0], 'seven89')
-    self.assertEqual(recs[1][1][1], [7,8,9])
-    self.assertEqual(recs[1].seven89, [7,8,9])
-    self.assertEqual(recs[1]['seven89'], [7,8,9])
-
-    self.assertEqual(recs[1].note, 'another test')
-
-    self.assertEqual(recs[0].user, recs[1].user)
-    self.assertTrue(recs[0].time < recs[1].time)
-
-    #################### use start/finish to create a fake tuple
-    f = Packrat.open(filename, 'a')
-    f.start('fake_tuple', attributes=[('type', 'tuple')])
-    f.write('item', 1)
-    f.write('item', 2)
-    f.finish()
-    f.close()
-
-    ####################
-    f = Packrat.open(filename, access='r')
-    recs = f.read_list()
-    f.close()
-
-    self.assertEqual(recs[2][0], 'fake_tuple')
-    self.assertEqual(recs[2][1], (1,2))
 
 ################################################################################
 # Perform unit testing if executed from the command line

@@ -26,6 +26,7 @@ cspyce.use_aliases()
 import oops.cadence_.all as cadence
 import oops.calib_.all   as calib
 import oops.fov_.all     as fov
+import oops.gravity_.all as gravity
 import oops.frame_.all   as frame
 import oops.obs_.all     as obs
 import oops.path_.all    as path

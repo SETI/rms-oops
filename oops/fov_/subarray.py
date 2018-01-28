@@ -12,6 +12,7 @@ class Subarray(FOV):
     larger FOV.
     """
 
+    PACKRAT_ARGS = ['fov', 'new_los', 'uv_shape', 'uv_los']
 
     def __init__(self, fov, new_los, uv_shape, uv_los=None):
         """Constructor for a Subarray.

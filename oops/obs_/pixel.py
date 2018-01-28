@@ -17,6 +17,8 @@ class Pixel(Observation):
     Generalization to other pixel shapes is TDB. 7/24/12 MRS
     """
 
+    PACKRAT_ARGS = ['axes', 'cadence', 'fov', 'path', 'frame', '**subfields']
+
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
         """Constructor for a Pixel observation.
 
@@ -72,6 +74,8 @@ class Pixel(Observation):
             self.insert_subfield(key, subfields[key])
 
         return
+
+    ############################################################################
 
     def uvt(self, indices, fovmask=False):
         """Return coordinates (u,v) and time t for indices into the data array.

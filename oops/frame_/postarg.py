@@ -14,6 +14,8 @@ class PosTarg(Frame):
     position in this frame.
     """
 
+    PACKRAT_ARGS = ['xpos', 'ypos', 'reference', 'frame_id']
+
     def __init__(self, xpos, ypos, reference, id=None):
         """Constructor for a PosTarg Frame.
 

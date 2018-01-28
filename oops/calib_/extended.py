@@ -15,6 +15,8 @@ class ExtendedSource(Calibration):
 # Methods to be defined for each Calibration subclass
 ########################################################
 
+    PACKRAT_ARGS = ['name', 'factor']
+
     def __init__(self, name, factor):
         """Constructor for a Scaling.
 

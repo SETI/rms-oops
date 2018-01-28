@@ -9,6 +9,8 @@ from oops.fov_.fov import FOV
 
 class Subsampled(FOV):
 
+    PACKRAT_ARGS = ['fov', 'rescale']
+
     def __init__(self, fov, rescale):
         """Constructor for a Subsampled FOV.
         

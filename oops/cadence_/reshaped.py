@@ -13,6 +13,8 @@ class ReshapedCadence(Cadence):
     This can be used, for example, to convert a 1-D cadence into an N-D cadence.
     """
 
+    PACKRAT_ARGS = ['cadence', 'shape']
+
     def __init__(self, cadence, shape):
         """Constructor for a ReshapedCadence.
 

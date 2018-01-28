@@ -1,5 +1,5 @@
 ################################################################################
-# oops/frame_/__init__.py
+# oops/frame_/all.py
 ################################################################################
 
 # Import the Frame class and its core components into a common name space

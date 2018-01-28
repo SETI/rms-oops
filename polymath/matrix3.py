@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/matrix3.py: Matrix3 subclass of PolyMath Matrix class
+# polymath/matrix3.py: Matrix3 subclass of PolyMath Matrix class
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -27,6 +27,8 @@ class Matrix3(Matrix):
     UNITS_OK = False    # True to allow units; False to disallow them.
     MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+
+    DEFAULT_VALUE = np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])
 
     @staticmethod
     def as_matrix3(arg, recursive=True):

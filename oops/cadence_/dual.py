@@ -9,6 +9,8 @@ class DualCadence(Cadence):
     """A Cadence subclass in which time steps are defined by a pair of cadences.
     """
 
+    PACKRAT_ARGS = ['long', 'short']
+
     def __init__(self, long, short):
         """Constructor for a DualCadence.
 

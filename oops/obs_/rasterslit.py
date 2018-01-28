@@ -19,6 +19,9 @@ class RasterSlit(Observation):
     line of sight within the instrument's frame.
     """
 
+    PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
+                    '**subfields']
+
     def __init__(self, axes, det_size, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterSlit observation.
 

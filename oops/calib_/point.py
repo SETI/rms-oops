@@ -18,6 +18,8 @@ class PointSource(Calibration):
 # Methods to be defined for each Calibration subclass
 ########################################################
 
+    PACKRAT_ARGS = ['name', 'factor', 'fov']
+
     def __init__(self, name, factor, fov):
         """Constructor for an Distorted Calibration.
 

@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/matrix.py: Matrix subclass ofse PolyMath base class
+# polymath/matrix.py: Matrix subclass ofse PolyMath base class
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division

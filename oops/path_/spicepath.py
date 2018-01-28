@@ -21,6 +21,9 @@ class SpicePath(Path):
     # shortcuts and with shortcuts
     USE_SPICEPATH_SHORTCUTS = True
 
+    PACKRAT_ARGS = ['spice_id', 'spice_origin', 'spice_frame', 'path_id',
+                    'shortcut']
+
     def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
                        id=None, shortcut=None):
         """Constructor for a SpicePath object.
@@ -43,6 +46,12 @@ class SpicePath(Path):
                             as a shortcut definition; the other registered path
                             definitions are unchanged.
         """
+
+        # Preserve the inputs
+        self.spice_id = spice_id
+        self.spice_origin = spice_origin
+        self.spice_frame = spice_frame
+        self.shortcut = shortcut
 
         # Interpret the SPICE IDs
         (self.spice_target_id,
@@ -82,7 +91,7 @@ class SpicePath(Path):
         # Register the SpicePath; fill in the waypoint
         self.register(shortcut)
 
-    ########################################
+    ############################################################################
 
     def event_at_time(self, time, quick={}):
         """An Event corresponding to a specified Scalar time on this path.
@@ -118,15 +127,15 @@ class SpicePath(Path):
         # Fill in the states and light travel times using cspyce
         if np.any(time.mask):
             state = cspyce.spkez_vector(self.spice_target_id,
-                                        time.vals[~time.mask],
+                                        time.vals[time.antimask],
                                         self.spice_frame_name,
                                         'NONE',
                                         self.spice_origin_id)[0]
 
             pos = np.zeros(time.shape + (3,))
             vel = np.zeros(time.shape + (3,))
-            pos[~time.mask] = state[...,0:3]
-            vel[~time.mask] = state[...,3:6]
+            pos[time.antimask] = state[...,0:3]
+            vel[time.antimask] = state[...,3:6]
 
         else:
             state = cspyce.spkez_vector(self.spice_target_id,

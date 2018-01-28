@@ -26,6 +26,8 @@ class Meshgrid(object):
     dlos_duv        the partial derivatives dlos/d(u,v).
     """
 
+    PACKRAT_ARGS = ['fov', 'uv', 'fov_keywords']
+
     def __init__(self, fov, uv_pair, fov_keywords={}):
         """The Meshgrid constructor.
 

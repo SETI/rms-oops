@@ -20,6 +20,9 @@ class PoleFrame(Frame):
     ascending node of the invariable plane on the J2000 equator.
     """
 
+    PACKRAT_ARGS = ['planet_frame', 'invariable_pole', 'retrograde', 'frame_id',
+                    'given_cache_size']
+
     def __init__(self, frame, pole, retrograde=False, id='+', cache_size=1000):
         """Constructor for a PoleFrame.
 
@@ -73,6 +76,7 @@ class PoleFrame(Frame):
 
         self.cache = {}
         self.trim_size = max(cache_size//10, 1)
+        self.given_cache_size = cache_size
         self.cache_size = cache_size + self.trim_size
         self.cache_counter = 0
         self.cached_value_returned = False          # Just used for debugging

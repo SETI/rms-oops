@@ -13,6 +13,8 @@ class FixedPath(Path):
     """A path described by fixed coordinates relative to another path and frame.
     """
 
+    PACKRAT_ARGS = ['pos', 'origin', 'frame', 'path_id']
+
     def __init__(self, pos, origin, frame, id=None):
         """Constructor for an FixedPath.
 

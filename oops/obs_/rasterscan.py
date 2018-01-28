@@ -19,6 +19,9 @@ class RasterScan(Observation):
     by a 2-D cadence.
     """
 
+    PACKRAT_ARGS = ['axes', 'uv_size', 'cadence', 'fov', 'path', 'frame',
+                    '**subfields']
+
     def __init__(self, axes, uv_size, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterScan observation.
 

@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/empty.py: Empty subclass of the PolyMath base class
+# polymath/empty.py: Empty subclass of the PolyMath base class
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -25,6 +25,8 @@ class Empty(Qube):
     UNITS_OK = False    # True to allow units; False to disallow them.
     MASKS_OK = False    # True to allow masks; False to disallow them.
     DERIVS_OK = False   # True to disallow derivatives; False to allow them.
+
+    DEFAULT_VALUE = 0
 
     def __init__(self, *arg, **keywords):
         Qube.__init__(self, 0, False, None, {}, nrank=0, drank=0, example=None)

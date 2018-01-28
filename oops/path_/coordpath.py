@@ -12,6 +12,8 @@ from oops.frame_.frame import Frame
 class CoordPath(Path):
     """A path defined by fixed coordinates on a specified Surface."""
 
+    PACKRAT_ARGS = ['surface', 'coords', 'obs_path', 'path_id']
+
     def __init__(self, surface, coords, obs=None, id=None):
         """Constructor for a CoordPath.
 

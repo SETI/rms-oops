@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/qube.py: Base class for all PolyMath subclasses.
+# polymath/qube.py: Base class for all PolyMath subclasses.
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -120,7 +120,7 @@ class Qube(object):
         return object.__new__(subtype)
 
     def __init__(self, arg=None, mask=None, units=None, derivs=None,
-                       nrank=None, drank=None, example=None):
+                       nrank=None, drank=None, example=None, default=None):
         """Default constructor.
 
         arg         an object to define the numeric value(s) of the returned 
@@ -154,6 +154,11 @@ class Qube(object):
 
         example     optionally, another Qube object from which to copy any input
                     arguments that have not been explicitly specified.
+
+        default     value to use where masked. Typically a nonzero constant that
+                    will not "break" most arithmetic calculations. Default is
+                    None, in which case the class constant DEFAULT_VALUE is
+                    used, or else a reasonable value is constructed.
         """
 
         if type(arg) in (list, tuple):
@@ -166,12 +171,13 @@ class Qube(object):
 
         # Interpret the example
         if example is not None:
-            if arg    is None: arg    = example.__values_
-            if mask   is None: mask   = example.__mask_
-            if units  is None: units  = example.__units_
-            if derivs is None: derivs = example.__derivs_
-            if nrank  is None: nrank  = example.__nrank_
-            if drank  is None: drank  = example.__drank_
+            if arg     is None: arg     = example.__values_
+            if mask    is None: mask    = example.__mask_
+            if units   is None: units   = example.__units_
+            if derivs  is None: derivs  = example.__derivs_
+            if nrank   is None: nrank   = example.__nrank_
+            if drank   is None: drank   = example.__drank_
+            if default is None: default = example.__default_
 
         # Interpret the arg if it is a PolyMath object
         if isinstance(arg, Qube):
@@ -353,6 +359,34 @@ class Qube(object):
                                   (str(shape), str(np.shape(mask))))
 
         self.__mask_ = mask
+        self.__antimask_ = None
+        self.__corners_  = None
+        self.__slicer_   = None
+
+        # Fill in the default
+        if default is not None and np.shape(default) == item:
+            self.__default_ = default
+
+        elif hasattr(self, 'DEFAULT_VALUE') and drank == 0:
+            self.__default_ = self.DEFAULT_VALUE
+
+        elif item:
+            self.__default_ = np.ones(item)
+
+        else:
+            self.__default_ = 1
+
+        if self.is_float():
+            if isinstance(self.__default_, np.ndarray):
+                self.__default_ = self.__default_.astype('float')
+            else:
+                self.__default_ = float(self.__default_)
+
+        elif self.is_int():
+            if isinstance(self.__default_, np.ndarray):
+                self.__default_ = self.__default_.astype('int')
+            else:
+                self.__default_ = int(self.__default_)
 
         # Fill in the units
         if self.UNITS_OK:
@@ -385,6 +419,8 @@ class Qube(object):
         if derivs:
             self.insert_derivs(derivs)
 
+        self.__is_deriv_ = False    # gets changed by insert_derivs()
+
         # Used only for if clauses
         self.__truth_if_any_ = False
         self.__truth_if_all_ = False
@@ -416,9 +452,16 @@ class Qube(object):
         obj.__units_ = self.__units_
 
         obj.__values_ = self.__values_
-        obj.__mask_ = self.__mask_
+        obj.__mask_   = self.__mask_
+        obj.__default_ = self.__default_
+        
+        obj.__antimask_ = self.__antimask_
+        obj.__corners_  = self.__corners_
+        obj.__slicer_   = self.__slicer_
 
         obj.__readonly_ = self.__readonly_
+
+        obj.__is_deriv_ = self.__is_deriv_
 
         # Install the derivs
         obj.__derivs_ = {}
@@ -434,6 +477,114 @@ class Qube(object):
         obj.__truth_if_all_ = self.__truth_if_all_
 
         return obj
+
+    ############################################################################
+    # For Packrat serialization
+    ############################################################################
+
+    def PACKRAT__args__(self):
+        """Return the list of attributes to write into the Packrat file."""
+
+        args = ['_Qube__shape_', '_Qube__item_',
+                '_Qube__nrank_', '_Qube__drank_',
+                '_Qube__readonly_', '_Qube__default_']
+
+        # For a fully masked object, no need to save values
+        if self.__mask_ is True:
+            args.append('_Qube__mask_')
+
+        # For an unmasked object, save the array values as they are
+        elif self.__mask_ is False:
+            args.append('_Qube__mask_')
+            args.append('_Qube__values_')
+
+        # For a partially masked object, take advantage of the corners and also
+        # only save the unmasked values
+        else:
+            _ = self.corners
+            args.append('_Qube__corners_')
+
+            self.__sliced_mask_ = self.__mask_[self.slicer]
+            args.append('_Qube__sliced_mask_')
+
+            self.__unmasked_values_ = self.__values_[self.antimask]
+            args.append('_Qube__unmasked_values_')
+
+        # Include derivatives and units as needed
+        if self.__derivs_:
+            args.append('_Qube__derivs_')
+
+        if self.__units_:
+            args.append('_Qube__units_')
+
+        return args
+
+    @staticmethod
+    def PACKRAT__init__(cls, **args):
+        """Construct an object from the subobjects extracted from the XML."""
+
+        shape = args['shape']
+        item  = args['item']
+        nrank = args['nrank']
+        drank = args['drank']
+        readonly = args['readonly']
+        default  = args['default']
+        derivs   = args.get('derivs', None)
+        units    = args.get('units', None)
+
+        try:
+            dtype = default.dtype
+        except AttributeError:
+            if type(default) == int:
+                dtype = 'int'
+            else:
+                dtype = 'float'
+
+        # If the dictionary contains 'mask', it is either fully masked or
+        # fully unmasked
+        try:
+            mask = args['mask']
+            if mask:
+                values = np.empty(shape + item, dtype=dtype)
+                repeater = (Ellipsis,) + len(item) * (slice(None),)
+                values[repeater] = default
+            else:
+                values = args['values']
+
+        # Otherwise, take advantage of the corners and of the fact that only
+        # unmasked values were saved
+        except KeyError:
+    
+            values = np.empty(shape + item, dtype=dtype)
+            repeater = (Ellipsis,) + len(item) * (slice(None),)
+            values[repeater] = default
+
+            corners = args['corners']
+            slicer = Qube.slicer_from_corners(args['corners'])
+            mask = np.ones(shape, dtype='bool')
+            mask[slicer] = args['sliced_mask']
+
+            values[np.logical_not(mask)] = args['unmasked_values']
+
+        # Construct the object
+        obj = Qube.__new__(cls)
+        obj.__init__(values, mask, units, derivs, nrank, drank)
+
+        # Set the readonly state as needed
+        if readonly:
+            obj = obj.as_readonly()
+
+        return obj
+
+    def PACKRAT_params(self, params):
+        """Return an updated copy of the parameter dictionary, including
+        precision parameters to be used by Packrat when storing this object."""
+
+        if self.__is_deriv_:
+            params = params.copy()
+            params['single'] = True
+
+        return params
 
     ############################################################################
     # Properties and low-level access
@@ -466,6 +617,9 @@ class Qube(object):
                 Qube._array_to_readonly(mask)
 
             self.__mask_ = mask
+            self.__antimask_ = None
+            self.__corners_  = None
+            self.__slicer_   = None
 
         # If the object is newly read-only, confirm the mask and derivs are also
         if new_readonly and not self.__readonly_:
@@ -492,6 +646,9 @@ class Qube(object):
             Qube._array_to_readonly(mask)
 
         self.__mask_ = mask
+        self.__antimask_ = None
+        self.__corners_  = None
+        self.__slicer_   = None
 
     @property
     def values(self): return self.__values_
@@ -524,6 +681,16 @@ class Qube(object):
 
     @property
     def mask(self): return self.__mask_
+
+    @property
+    def antimask(self):
+        if self.__antimask_ is None:
+            self.__antimask_ = np.logical_not(self.__mask_)
+
+        return self.__antimask_
+
+    @property
+    def default(self): return self.__default_
 
     @property
     def units(self): return self.__units_
@@ -571,6 +738,78 @@ class Qube(object):
     @property
     def readonly(self):
         return self.__readonly_
+
+    @property
+    def is_deriv(self):
+        return self.__is_deriv_
+
+    def find_corners(self):
+        """Update the corner indices such that everything outside this defined
+        "hypercube" is masked."""
+
+        shape = self.__shape_
+        lshape = len(shape)
+        index0 = lshape * (0,)
+
+        self.__slicer_  = None
+
+        if lshape == 0:
+            self.__corners_ = None
+
+        if self.__mask_ is False:
+            self.__corners_ = (index0, shape)
+            return
+
+        if self.__mask_ is True:
+            self.__corners_ = (index0, index0)
+            return
+
+        lower = []
+        upper = []
+        antimask = self.antimask
+        self.__masked_value_ = None
+
+        for axis in range(lshape):
+            other_axes = range(lshape)
+            del other_axes[axis]
+
+            occupied = np.any(antimask, tuple(other_axes))
+            indices = np.where(occupied)[0]
+            if len(indices) == 0:
+                self.__corners_ = (index0, index0)
+                return
+
+            lower.append(indices[0])
+            upper.append(indices[-1] + 1)
+
+        self.__corners_ = (tuple(lower), tuple(upper))
+
+    @property
+    def corners(self):
+        """Corners of a "hypercube" that contain all the unmasked array
+        elements."""
+
+        if self.__corners_ is None:
+            self.find_corners()
+
+        return self.__corners_
+
+    @staticmethod
+    def slicer_from_corners(corners):
+        slice_objects = []
+        for axis in range(len(corners[0])):
+            slice_objects.append(slice(corners[0][axis], corners[1][axis]))
+
+        return tuple(slice_objects)
+
+    @property
+    def slicer(self):
+        """A slice object containing all the unmasked array elements."""
+
+        if self.__slicer_ is None:
+            self.__slicer_ = Qube.slicer_from_corners(self.corners)
+
+        return self.__slicer_
 
     ############################################################################
     # Derivative operations
@@ -637,6 +876,7 @@ class Qube(object):
         self.__derivs_[key] = deriv
         setattr(self, 'd_d' + key, deriv)
 
+        deriv.__is_deriv_ = True
         return self
 
     def insert_derivs(self, dict, override=False):
@@ -973,6 +1213,9 @@ class Qube(object):
         if type(self.__mask_) == np.ndarray:
             if Qube._array_is_readonly(self.__mask_):
                 self.__mask_ = self.__mask_.copy()
+                self.__antimask_ = None
+                self.__corners_  = None
+                self.__slicer_   = None
 
         # Update the derivatives
         if recursive:
@@ -1030,8 +1273,14 @@ class Qube(object):
         # Copy the mask
         if isinstance(self.__mask_, np.ndarray):
             obj.__mask_ = self.__mask_.copy()
+            obj.__antimask_ = None
+            obj.__corners_  = None
+            obj.__slicer_   = None
         else:
             obj.__mask_ = self.__mask_
+            obj.__antimask_ = None
+            obj.__corners_  = None
+            obj.__slicer_   = None
 
         # Set the read-only state
         if readonly is True:
@@ -2181,6 +2430,10 @@ class Qube(object):
         self.__mask_ = self.__mask_ | arg.__mask_
         self.__units_ = self.__units_ or arg.__units_
         self.insert_derivs(new_derivs)
+
+        self.__antimask_ = None
+        self.__corners_  = None
+        self.__slicer_   = None
         return self
 
     def add_derivs(self, arg):
@@ -2291,6 +2544,10 @@ class Qube(object):
         self.__mask_ = self.__mask_ | arg.__mask_
         self.__units_ = self.__units_ or arg.__units_
         self.insert_derivs(new_derivs)
+
+        self.__antimask_ = None
+        self.__corners_  = None
+        self.__slicer_   = None
         return self
 
     def sub_derivs(self, arg):
@@ -2411,6 +2668,10 @@ class Qube(object):
             self.__mask_ = self.__mask_ | arg.__mask_
             self.__units_ = Units.mul_units(self.__units_, arg.__units_)
             self.insert_derivs(new_derivs)
+
+            self.__antimask_ = None
+            self.__corners_  = None
+            self.__slicer_   = None
             return self
 
         # Matrix multiply case
@@ -2737,6 +2998,10 @@ class Qube(object):
             self.__mask_ = self.__mask_ | divisor.__mask_
             self.__units_ = Units.div_units(self.__units_, arg.__units_)
             self.delete_derivs()
+
+            self.__antimask_ = None
+            self.__corners_  = None
+            self.__slicer_   = None
             return self
 
         # Nothing else is implemented
@@ -2860,6 +3125,9 @@ class Qube(object):
             self.__mask_ = self.__mask_ | divisor.__mask_
             self.__units_ = Units.div_units(self.__units_, arg.__units_)
 
+            self.__antimask_ = None
+            self.__corners_  = None
+            self.__slicer_   = None
             return self
 
         # Nothing else is implemented
@@ -3099,7 +3367,7 @@ class Qube(object):
             raise ValueError('the truth value of an entirely masked object ' +
                              'is undefined.')
 
-        return bool(np.all(self.__values_[~self.__mask_]))
+        return bool(np.all(self.__values_[self.antimask]))
 
     def any(self):
         """Returns True if any unmasked value is nonzero.
@@ -3113,7 +3381,7 @@ class Qube(object):
             raise ValueError('the truth value of an entirely masked object ' +
                              'is undefined.')
  
-        return bool(np.any(self.__values_[~self.__mask_]))
+        return bool(np.any(self.__values_[self.antimask]))
 
     ############################################################################
     # Special operators
@@ -3282,6 +3550,10 @@ class Qube(object):
         else:
             self.__mask_ = np.zeros(self.shape, dtype='bool')
             self.__mask_[imask] = arg.__mask_
+
+        self.__antimask_ = None
+        self.__corners_  = None
+        self.__slicer_   = None
 
         # Also update the derivatives (ignoring those not in self)
         for (key, self_deriv) in self.__derivs_.iteritems():

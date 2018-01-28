@@ -16,6 +16,9 @@ class RasterSlit1D(Observation):
     slit.
     """
 
+    PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
+                    '**subfields']
+
     def __init__(self, axes, det_size, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterSlit observation.
 

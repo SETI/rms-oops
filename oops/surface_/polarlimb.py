@@ -32,6 +32,8 @@ class PolarLimb(Surface):
     intercept_DERIVS_ARE_IMPLEMENTED = False
     normal_DERIVS_ARE_IMPLEMENTED = False
 
+    PACKRAT_ARGS = ['ground', 'limits']
+
     def __init__(self, ground, limits=None):
         """Constructor for a Limb surface.
 

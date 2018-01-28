@@ -25,6 +25,9 @@ class RingPlane(Surface):
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = False
 
+    PACKRAT_ARGS = ['origin', 'frame', 'radii', 'gravity', 'elevation',
+                    'modes', 'epoch']
+
     def __init__(self, origin, frame, radii=None, gravity=None,
                        elevation=0., modes=[], epoch=0.):
         """Constructor for a RingPlane surface.

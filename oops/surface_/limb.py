@@ -32,6 +32,8 @@ class Limb(Surface):
     IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
 
+    PACKRAT_ARGS = ['ground', 'limits']
+
     def __init__(self, ground, limits=None):
         """Constructor for a Limb surface.
 

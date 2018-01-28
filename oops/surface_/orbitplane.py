@@ -33,6 +33,8 @@ class OrbitPlane(Surface):
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = False
 
+    PACKRAT_ARGS = ['elements', 'epoch', 'origin', 'frame', 'id']
+
     def __init__(self, elements, epoch, origin, frame, id=None):
         """Constructor for an OrbitPlane surface.
 

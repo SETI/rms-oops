@@ -16,6 +16,9 @@ class CirclePath(Path):
     frame.
     """
 
+    PACKRAT_ARGS = ['radius', 'lon', 'rate', 'epoch', 'origin', 'frame',
+                    'path_id']
+
     def __init__(self, radius, lon, rate, epoch, origin, frame=None, id=None):
         """Constructor for a CirclePath.
 

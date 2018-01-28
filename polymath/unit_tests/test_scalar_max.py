@@ -59,7 +59,7 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertEqual(maxval, x.max())
 
     # If we mask the maximum value(s), the maximum should decrease
-    x.mask[x.values == maxval] = -np.inf
+    x = x.mask_where_eq(maxval)
     self.assertTrue(x.max() < maxval)
 
     masked = Scalar(x, mask=True)

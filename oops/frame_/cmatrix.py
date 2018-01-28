@@ -17,6 +17,8 @@ class Cmatrix(Frame):
     points rightward, and the Y-axis points downward.
     """
 
+    PACKRAT_ARGS = ['cmatrix', 'reference', 'frame_id']
+
     def __init__(self, cmatrix, reference=None, id=None):
         """Constructor for a Cmatrix frame.
 
@@ -28,13 +30,13 @@ class Cmatrix(Frame):
                         to leave the frame unregistered
         """
 
-        cmatrix = Matrix3.as_matrix3(cmatrix)
+        self.cmatrix = Matrix3.as_matrix3(cmatrix)
 
         # Required attributes
         self.frame_id  = id
         self.reference = Frame.as_wayframe(reference) or Frame.J2000
         self.origin    = self.reference.origin
-        self.shape     = cmatrix.shape
+        self.shape     = self.cmatrix.shape
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary

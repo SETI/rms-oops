@@ -16,6 +16,8 @@ class RingFrame(Frame):
     ascending node of the equator within the reference frame.
     """
 
+    PACKRAT_ARGS = ['planet_frame', 'epoch', 'retrograde', 'frame_id']
+
     def __init__(self, frame, epoch=None, retrograde=False, id='+'):
         """Constructor for a RingFrame Frame.
 

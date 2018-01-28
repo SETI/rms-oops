@@ -15,6 +15,8 @@ class Synchronous(Frame):
     direction of motion.
     """
 
+    PACKRAT_ARGS = ['body_path', 'planet_path', 'frame_id']
+
     def __init__(self, body_path, planet_path, id=None):
         """Constructor for a Synchronous Frame.
 

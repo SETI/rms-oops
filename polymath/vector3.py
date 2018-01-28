@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/vector3.py: Vector3 subclass of PolyMath Vector
+# polymath/vector3.py: Vector3 subclass of PolyMath Vector
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -27,6 +27,8 @@ class Vector3(Vector):
     UNITS_OK = True     # True to allow units; False to disallow them.
     MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+
+    DEFAULT_VALUE = np.array([1.,1.,1.])
 
     @staticmethod
     def as_vector3(arg, recursive=True):

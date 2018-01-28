@@ -17,6 +17,9 @@ class Polynomial(FOV):
 
     DEBUG = False       # True to print convergence steps on xy_from_uv()
 
+    PACKRAT_ARGS = ['uv_shape', 'coefft_xy_from_uv', 'coefft_uv_from_xy',
+                    'uv_los', 'uv_area', 'iters']
+
     def __init__(self, uv_shape, coefft_xy_from_uv=None,
                  coefft_uv_from_xy=None, uv_los=None, uv_area=None,
                  iters=8):
@@ -53,10 +56,6 @@ class Polynomial(FOV):
             uv_area     an optional parameter defining the nominal area of a
                         pixel in steradians after distortion has been removed.
 
-            uv_from_xy    True to indicate that the polynomial converts from
-                        (x,y) to (u,v). The default is that it converts from
-                        (u,v) to (x,y).
-                        
             iters       the number of iterations of Newton's method to use when
                         evaluating uv_from_xy().
         """

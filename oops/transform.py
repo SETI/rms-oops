@@ -63,6 +63,13 @@ class Transform(object):
         return cls.SAVED_FRAME_CLASS
     ############################################################################
 
+    PACKRAT_ARGS = ['matrix', 'omega', 'frame', 'reference', 'origin',
+                    '+filled_shape',
+                    '+filled_omega1',
+                    '+filled_matrix_with_deriv',
+                    '+filled_inverse_matrix',
+                    '+filled_inverse_with_deriv']
+
     def __init__(self, matrix, omega, frame, reference, origin=None):
         """Constructor for a Transform object.
 

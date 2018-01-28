@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/vector.py: Vector subclass of PolyMath base class
+# polymath/vector.py: Vector subclass of PolyMath base class
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -262,7 +262,7 @@ class Vector(Qube):
 
         elif masked is None:
             obj = obj.flatten()
-            values = obj[~obj.mask].values
+            values = obj[obj.antimask].values
 
         else:
             obj = obj.copy()
@@ -308,7 +308,7 @@ class Vector(Qube):
                     mask = obj.mask
                 else: # Some masked
                     obj = obj.flatten()
-                    values = obj[~obj.mask].values
+                    values = obj[obj.antimask].values
                     mask = obj.mask
             else:
                 obj = obj.copy()

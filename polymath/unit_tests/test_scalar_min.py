@@ -59,7 +59,7 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertEqual(minval, x.min())
 
     # If we mask the minimum value(s), the minimum should increase
-    x.mask[x.values == minval] = np.inf
+    x = x.mask_where_eq(minval)
     self.assertTrue(x.min() > minval)
 
     masked = Scalar(x, mask=True)

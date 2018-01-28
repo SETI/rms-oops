@@ -3,14 +3,14 @@
 ################################################################################
 
 import numpy as np
-import gravity
 from polymath import *
 
-from oops.event        import Event
-from oops.path_.path   import Path
-from oops.frame_.frame import Frame
-from oops.fittable     import Fittable
-from oops.config       import PATH_PHOTONS
+from oops.event            import Event
+from oops.path_.path       import Path
+from oops.frame_.frame     import Frame
+from oops.gravity_.gravity import Gravity
+from oops.fittable         import Fittable
+from oops.config           import PATH_PHOTONS
 import oops.constants  as constants
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
@@ -36,6 +36,9 @@ class Kepler(Path, Fittable):
     first order in eccentricity and inclination. It is defined using nine
     orbital elements.
     """
+
+    PACKRAT_ARGS = ['planet', 'epoch', 'elements', 'observer', 'wobbles',
+                    'path_id']
 
     def __init__(self, body, epoch, elements=None, observer=None, wobbles=(),
                        id=None):
@@ -914,7 +917,7 @@ class Test_Kepler(unittest.TestCase):
 
         a = 140000.
 
-        saturn = gravity.SATURN
+        saturn = Gravity.lookup('SATURN')
         dmean_dt = saturn.n(a)
         dperi_dt = saturn.dperi_dt(a)
         dnode_dt = saturn.dnode_dt(a)

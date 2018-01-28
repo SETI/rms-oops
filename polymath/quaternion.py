@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/quaternion.py: Quaternion subclass of PolyMath base class
+# polymath/quaternion.py: Quaternion subclass of PolyMath base class
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -29,6 +29,8 @@ class Quaternion(Vector):
     UNITS_OK = False    # True to allow units; False to disallow them.
     MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+
+    DEFAULT_VALUE = np.array([1.,0.,0.,0.])
 
     @staticmethod
     def as_quaternion(arg, recursive=True):

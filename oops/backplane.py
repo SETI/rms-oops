@@ -40,6 +40,13 @@ class Backplane(object):
     sets of backplanes associated with a particular observation. It caches
     intermediate results to speed up calculations."""
 
+    PACKRAT_ARGS = ['obs', 'meshgrid', 'time',
+                    '+surface_events_w_derivs',
+                    '+surface_events',
+                    '+path_events',
+                    '+gridless_events',
+                    '+gridless_arrivals']
+
     def __init__(self, obs, meshgrid=None, time=None):
         """The constructor.
 
@@ -170,8 +177,8 @@ class Backplane(object):
                               str(type(backplane_key)))
 
     @staticmethod
-    def get_surface(surface_id):
-        """Return a surface based on its ID.
+    def get_body_and_modifier(surface_id):
+        """Return a body object and modifier based on the give surface ID.
 
         The string is normally a registered body ID (case insensitive), but it
         can be modified with ':ansa', ':ring' or ':limb' to indicate an
@@ -197,7 +204,13 @@ class Backplane(object):
             modifier = None
             body_id = surface_id
 
-        body = Body.lookup(body_id)
+        return (Body.lookup(body_id), modifier)
+
+    @staticmethod
+    def get_surface(surface_id):
+        """Return a surface based on its ID."""
+
+        (body, modifier) = Backplane.get_body_and_modifier(surface_id)
 
         if modifier is None:
             return body.surface
@@ -248,12 +261,12 @@ class Backplane(object):
 
         # Create the event and save it in the dictionary
         event = surface.photon_to_event(dest)[0]
+        self.surface_events[event_key] = event
 
         # Save extra information in the event object
         event.event_key = event_key
         event.surface = surface
-
-        self.surface_events[event_key] = event
+        event.body = Backplane.get_body_and_modifier(event_key[0])[0]
 
         return event
 
@@ -278,6 +291,8 @@ class Backplane(object):
         # Save extra information in the event object
         event.event_key = event_key
         event.surface = surface
+        event.body = Backplane.get_body_and_modifier(event_key[0])[0]
+
         self.surface_events_w_derivs[event_key] = event
 
         # Make a copy without derivs, collapsing if possible
@@ -2607,7 +2622,7 @@ class Backplane(object):
         key = ('where_intercepted', event_key)
         if key not in self.backplanes:
             event = self.get_surface_event(event_key)
-            mask = self.mask_as_boolean(np.logical_not(event.mask))
+            mask = self.mask_as_boolean(event.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2622,8 +2637,7 @@ class Backplane(object):
         if key not in self.backplanes:
             event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
-            mask = self.mask_as_boolean(np.logical_not(event.mask) &
-                                        np.logical_not(shadow_event.mask))
+            mask = self.mask_as_boolean(event.antimask & shadow_event.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2638,8 +2652,7 @@ class Backplane(object):
         if key not in self.backplanes:
             event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
-            mask = self.mask_as_boolean(np.logical_not(event.mask) &
-                                       shadow_event.mask)
+            mask = self.mask_as_boolean(event.antimask & shadow_event.mask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2659,8 +2672,7 @@ class Backplane(object):
 
             # A surface is in front if it is unmasked and the second surface is
             # either masked or further away.
-            front_unmasked = np.logical_not(
-                                    self.get_surface_event(event_key).mask)
+            front_unmasked = self.get_surface_event(event_key).antimask
             back_masked = self.get_surface_event(back_body).mask
             mask = self.mask_as_boolean(front_unmasked & (back_masked |
                                             (self.distance(event_key).vals <
@@ -2681,10 +2693,8 @@ class Backplane(object):
 
             # A surface is in back if it is unmasked and the second surface is
             # both unmasked and closer.
-            back_unmasked  = np.logical_not(
-                                    self.get_surface_event(event_key).mask)
-            front_unmasked = np.logical_not(
-                                    self.get_surface_event(front_body).mask)
+            back_unmasked  = self.get_surface_event(event_key).antimask
+            front_unmasked = self.get_surface_event(front_body).antimask
             mask = self.mask_as_boolean(back_unmasked & front_unmasked &
                                     (self.distance(event_key).vals >
                                      self.distance(front_body).vals))
@@ -2700,7 +2710,7 @@ class Backplane(object):
         if key not in self.backplanes:
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_boolean((incidence.vals <= constants.HALFPI) &
-                                       np.logical_not(incidence.mask))
+                                        incidence.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2713,7 +2723,7 @@ class Backplane(object):
         if key not in self.backplanes:
             incidence = self.incidence_angle(event_key)
             mask = self.mask_as_boolean((incidence.vals > constants.HALFPI) &
-                                       np.logical_not(incidence.mask))
+                                        incidence.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2730,7 +2740,7 @@ class Backplane(object):
         if key not in self.backplanes:
             backplane = self.evaluate(backplane_key)
             mask = self.mask_as_boolean((backplane.vals <= value) &
-                                        np.logical_not(backplane.mask))
+                                        backplane.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2743,7 +2753,7 @@ class Backplane(object):
         if key not in self.backplanes:
             backplane = self.evaluate(backplane_key)
             mask = self.mask_as_boolean((backplane.vals >= value) &
-                                        np.logical_not(backplane.mask))
+                                        backplane.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2757,7 +2767,7 @@ class Backplane(object):
             backplane = self.evaluate(backplane_key)
             mask = self.mask_as_boolean((backplane.vals >= low) &
                                         (backplane.vals <= high) &
-                                        np.logical_not(backplane.mask))
+                                        backplane.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2827,8 +2837,7 @@ class Backplane(object):
                 xborder[1:]  |= ((xbackplane[1:]  >= 0) &
                                  (xbackplane[:-1] < 0))
 
-            self.register_backplane(key, Boolean(border &
-                                                np.logical_not(backplane.mask)))
+            self.register_backplane(key, Boolean(border & backplane.antimask))
 
         return self.backplanes[key]
 
@@ -3965,6 +3974,8 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16):
 
     config.LOGGING.off()
 
+    return bp
+
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -4209,8 +4220,8 @@ class Test_Backplane_Exercises(unittest.TestCase):
             undersample = 32
 
         if TEST_LEVEL > 0:
-            exercise_backplanes(filespec, printing, logging, saving,
-                                undersample)
+            bp = exercise_backplanes(filespec, printing, logging, saving,
+                                     undersample)
         else:
             print 'test skipped'
 

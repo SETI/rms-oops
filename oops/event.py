@@ -117,6 +117,21 @@ class Event(object):
         return cls.SAVED_PATH_CLASS
     ############################################################################
 
+    PACKRAT_ARGS = ['_Event__time_', '_Event__state_', '_Event__origin_',
+                    '_Event__frame_',
+                    '**_Event__subfields_',
+                    '+_Event__arr_',
+                    '+_Event__arr_lt_',
+                    '+_Event__dep_',
+                    '+_Event__dep_lt_',
+                    '+_Event__perp_',
+                    '+_Event__vflat_',
+                    '+_Event__ssb_',
+                    '+_Event__shape_',
+                    '+_Event__mask_',
+                    '+_Event__xform_to_j2000_',
+                    '+event_key', '+surface', '+body']
+
     def __init__(self, time, state, origin, frame=None, **subfields):
         """Constructor for the Event class
 
@@ -180,8 +195,14 @@ class Event(object):
         self.__ssb_   = None
         self.__shape_ = None
         self.__mask_  = None
+        self.__antimask_ = None
 
         self.__xform_to_j2000_ = None
+
+        # These three are only used by Backplane
+        self.event_key = None
+        self.surface = None
+        self.body = None
 
         # Fill in any given subfields
         self.__subfields_ = {}
@@ -247,6 +268,13 @@ class Event(object):
                                                 self.vel.mask)
 
         return self.__mask_
+
+    @property
+    def antimask(self):
+        if self.__antimask_ is None:
+            self.__antimask_ = np.logical_not(self.mask)
+
+        return self.__antimask_
 
     @property
     def ssb(self):

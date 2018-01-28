@@ -18,6 +18,9 @@ class Slit(Observation):
     uniformly space intervals in time.
     """
 
+    PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
+                    '**subfields']
+
     def __init__(self, axes, det_size, cadence, fov, path, frame, **subfields):
         """Constructor for a Slit observation.
 

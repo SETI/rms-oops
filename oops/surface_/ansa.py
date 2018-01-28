@@ -26,6 +26,8 @@ class Ansa(Surface):
     COORDINATE_TYPE = "cylindrical"
     IS_VIRTUAL = True
 
+    PACKRAT_ARGS = ['origin', 'frame', 'gravity', 'ringplane']
+
     def __init__(self, origin, frame, gravity=None, ringplane=None):
         """Constructor for an Ansa Surface.
 

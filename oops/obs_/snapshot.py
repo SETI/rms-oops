@@ -15,6 +15,9 @@ class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
     all exposed at the same time."""
 
+    PACKRAT_ARGS = ['axes', 'tstart', 'texp', 'fov', 'path', 'frame',
+                    '**subfields']
+
     def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
         """Constructor for a Snapshot.
 
@@ -52,8 +55,9 @@ class Snapshot(Observation):
         self.v_axis = self.axes.index('v')
         self.uv_shape = list(self.fov.uv_shape.vals)
 
-        self.t_axis = -1
+        self.tstart = tstart
         self.texp = texp
+        self.t_axis = -1
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 

@@ -14,6 +14,8 @@ class Rotation(Frame, Fittable):
     of another frame.
     """
 
+    PACKRAT_ARGS = ['angle', 'axis2', 'reference', 'frame_id']
+
     def __init__(self, angle, axis, reference, id=None):
         """Constructor for a Rotation Frame.
 

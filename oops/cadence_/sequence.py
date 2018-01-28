@@ -9,6 +9,8 @@ from oops.cadence_.cadence import Cadence
 class Sequence(Cadence):
     """Sequence is a Cadence subclass in which time steps are defined by a list."""
 
+    PACKRAT_ARGS = ['times', 'texp']
+
     def __init__(self, times, texp):
         """Constructor for a Sequence.
 

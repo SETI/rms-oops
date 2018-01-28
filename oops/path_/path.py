@@ -21,6 +21,8 @@ class Path(object):
     PATH_CACHE = {}
     TEMPORARY_PATH_ID = 10000
 
+    STANDARD_PATHS = set()     # Paths that always have the same definition
+
     ############################################################################
     # Each subclass must override...
     ############################################################################
@@ -92,6 +94,28 @@ class Path(object):
                                              self.frame_id + ')')
 
     def __repr__(self): return self.__str__()
+
+    ############################################################################
+    # For serialization, standard paths are uniquely identified by ID
+    ############################################################################
+
+    def PACKRAT__args__(self):
+        if self.path_id in Path.STANDARD_PATHS:
+            return ['path_id']
+
+        return Path.as_primary_path(self)
+
+    @staticmethod
+    def PACKRAT__init__(cls, **args):
+        try:
+            path_id = args['path_id']
+            if path_id in Path.STANDARD_PATHS:
+                return Path.as_path(path_id)
+
+        except KeyError:
+            pass
+
+        return None
 
     ############################################################################
     # Registry Management
@@ -873,6 +897,8 @@ class Waypoint(Path):
     When evaluated, it always places itself at the origin of its own path. A
     Waypoint cannot be registered by the user."""
 
+    PACKRAT_ARGS = ['path_id', 'frame', 'shape']
+
     def __init__(self, path_id, frame=None, shape=()):
         """Constructor for a Waypoint.
 
@@ -908,6 +934,8 @@ class AliasPath(Path):
     Used to create a quick, temporary path that returns events relative to a
     particular path and frame. An AliasPath cannot be registered.
     """
+
+    PACKRAT_ARGS = ['path', 'frame']
 
     def __init__(self, path, frame=None):
         """Constructor for an AliasPath.
@@ -959,6 +987,8 @@ class LinkedPath(Path):
     the parent and in the parent's frame.
     """
 
+    PACKRAT_ARGS = ['path', 'parent']
+
     def __init__(self, path, parent):
         """Constructor for a Linked Path.
 
@@ -1006,6 +1036,8 @@ class RelativePath(Path):
     The new path uses the coordinate frame of the origin path.
     """
 
+    PACKRAT_ARGS = ['path', 'origin']
+
     def __init__(self, path, origin):
         """Constructor for a RelativePath.
 
@@ -1051,6 +1083,8 @@ class RelativePath(Path):
 class ReversedPath(Path):
     """ReversedPath generates the reversed Events from that of a given Path."""
 
+    PACKRAT_ARGS = ['path']
+
     def __init__(self, path):
         """Constructor for a ReversedPath.
 
@@ -1079,6 +1113,8 @@ class ReversedPath(Path):
 
 class RotatedPath(Path):
     """RotatedPath returns event objects rotated to another coordinate frame."""
+
+    PACKRAT_ARGS = ['path', 'frame']
 
     def __init__(self, path, frame):
         """Constructor for a RotatedPath.
@@ -1112,6 +1148,8 @@ class RotatedPath(Path):
 class QuickPath(Path):
     """QuickPath returns positions and velocities by interpolating another path.
     """
+
+    # PACKRAT_ARGS is undefined; save every attribute to keep this up to date
 
     def __init__(self, path, interval, quickdict):
         """Constructor for a QuickPath.
@@ -1325,6 +1363,7 @@ Path.SSB.wrt_ssb = Path.SSB
 
 # Initialize the registry
 Path.initialize_registry()
+Path.STANDARD_PATHS.add(Path.SSB)
 
 ###############################################################################
 # UNIT TESTS

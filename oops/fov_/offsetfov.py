@@ -15,6 +15,8 @@ class OffsetFOV(FOV, Fittable):
     corrections.
     """
 
+    PACKRAT_ARGS = ['fov', 'uv_offset', 'xy_offset']
+
     def __init__(self, fov, uv_offset=None, xy_offset=None):
         """Constructor for an OffsetFOV.
 

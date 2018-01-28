@@ -14,6 +14,8 @@ class Navigation(Frame, Fittable):
     another frame, defined by two or three rotation angles.
     """
 
+    PACKRAT_ARGS = ['angles', 'reference', 'frame_id']
+
     def __init__(self, angles, reference, id=None, matrix=None):
         """Constructor for a Navigation Frame.
 

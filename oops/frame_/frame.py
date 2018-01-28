@@ -21,6 +21,8 @@ class Frame(object):
     FRAME_CACHE = {}
     TEMPORARY_FRAME_ID = 10000
 
+    STANDARD_FRAMES = set()     # Frames that always have the same definition
+
     ############################################################################
     # Each subclass must override...
     ############################################################################
@@ -132,6 +134,27 @@ class Frame(object):
                                             self.reference_id + ')')
 
     def __repr__(self): return self.__str__()
+
+    ############################################################################
+    # For serialization, standard frames are uniquely identified by ID
+    ############################################################################
+
+    def PACKRAT__args__(self):
+        if self.frame_id in Frame.STANDARD_FRAMES:
+            return ['frame_id']
+
+        return Frame.as_primary_frame(self)
+
+    @staticmethod
+    def PACKRAT__init__(cls, **args):
+        try:
+            frame_id = args['frame_id']
+            if frame_id in Frame.STANDARD_FRAMES:
+                return Frame.as_frame(frame_id)
+        except KeyError:
+            pass
+
+        return None
 
     ############################################################################
     # Registry Management
@@ -534,6 +557,8 @@ class Wayframe(Frame):
     When evaluated, it always returns a null transform. A Wayframe cannot be
     registered by the user."""
 
+    PACKRAT_ARGS = ['frame_id', 'origin', 'shape']
+
     def __init__(self, frame_id, origin=None, shape=()):
         """Constructor for a Wayframe.
 
@@ -569,6 +594,8 @@ class AliasFrame(Frame):
     frame to this one. An AliasFrame cannot be registered.
     """
 
+    PACKRAT_ARGS = ['alias']
+
     def __init__(self, frame):
 
         self.alias = Frame.as_frame(frame)
@@ -598,6 +625,8 @@ class LinkedFrame(Frame):
     The new frame describes coordinates in one frame relative to the reference
     of the second frame.
     """
+
+    PACKRAT_ARGS = ['frame', 'parent']
 
     def __init__(self, frame, parent):
         """Constructor for a LinkedFrame.
@@ -656,6 +685,8 @@ class RelativeFrame(Frame):
     two frames must have a common reference. The combined frame converts
     coordinates from the second frame to the first."""
 
+    PACKRAT_ARGS = ['frame1', 'frame2']
+
     def __init__(self, frame1, frame2):
 
         self.frame1 = frame1
@@ -704,6 +735,8 @@ class ReversedFrame(Frame):
     """A Frame that generates the inverse Transform of a given Frame.
     """
 
+    PACKRAT_ARGS = ['frame']
+
     def __init__(self, frame):
 
         self.oldframe = frame
@@ -733,6 +766,8 @@ class ReversedFrame(Frame):
 class QuickFrame(Frame):
     """QuickFrame is a Frame subclass that returns Transform objects based on
     interpolation of another Frame within a specified time window."""
+
+    # PACKRAT_ARGS is undefined; save every attribute to keep this up to date
 
     def __init__(self, frame, interval, quickdict):
         """Constructor for a QuickFrame.
@@ -1201,6 +1236,7 @@ Frame.J2000.wrt_j2000 = Frame.J2000
 
 # Initialize the registry
 Frame.initialize_registry()
+Frame.STANDARD_FRAMES.add(Frame.J2000)
 
 ################################################################################
 # UNIT TESTS

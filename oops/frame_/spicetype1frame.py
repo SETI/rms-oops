@@ -18,6 +18,9 @@ class SpiceType1Frame(Frame):
     """A SpiceType1Frame is a Frame object defined within the SPICE toolkit as a
     Type 1 (discrete) C kernel."""
 
+    PACKRAT_ARGS = ['spice_frame', 'spice_host', 'tick_tolerance',
+                    'spice_reference', 'id']
+
     def __init__(self, spice_frame, spice_host, tick_tolerance,
                        spice_reference="J2000", id=None):
         """Constructor for a SpiceType1Frame.
@@ -40,6 +43,12 @@ class SpiceType1Frame(Frame):
                             spice_id if that is given as a string; otherwise
                             it will be the name as used by the SPICE toolkit.
         """
+
+        # Preserve the inputs
+        self.spice_frame = spice_frame
+        self.spice_host = spice_host
+        self.spice_reference = spice_reference
+        self.id = id
 
         # Interpret the SPICE frame and reference IDs
         (self.spice_frame_id,

@@ -21,6 +21,9 @@ class InclinedFrame(Frame):
     frame's equator to the ascending node, and thence along the ascending node.
     """
 
+    PACKRAT_ARGS = ['inc', 'node', 'rate', 'epoch', 'reference', 'despin',
+                    'frame_id']
+
     def __init__(self, inc, node, rate, epoch, reference, despin=True, id=None):
         """Constructor for a InclinedFrame.
 
@@ -69,6 +72,7 @@ class InclinedFrame(Frame):
                                 reference=self.reference)
         self.rotate = Rotation(self.inc, axis=0, reference=self.spin1)
 
+        self.despin = despin
         if despin:
             self.spin2 = SpinFrame(-self.node, -self.rate, self.epoch, axis=2,
                                    reference=self.rotate)

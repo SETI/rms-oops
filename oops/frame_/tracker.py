@@ -17,6 +17,8 @@ class Tracker(Frame):
     the light travel time to the target not change significantly.)
     """
 
+    PACKRAT_ARGS = ['fixed_frame', 'target_path', 'observer_path', 'frame_id']
+
     def __init__(self, frame, target, observer, epoch, id=None):
         """Constructor for a Tracker Frame.
 

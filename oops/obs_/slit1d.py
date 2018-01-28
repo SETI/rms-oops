@@ -16,6 +16,9 @@ class Slit1D(Observation):
     with no time-dependence. However, it may still have additional axes.
     """
 
+    PACKRAT_ARGS = ['axes', 'det_size', 'tstart', 'texp', 'fov', 'path',
+                    'frame', '**subfields']
+
     def __init__(self, axes, det_size, tstart, texp, fov, path, frame,
                        **subfields):
         """Constructor for a Slit1D observation.
@@ -81,9 +84,9 @@ class Slit1D(Observation):
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size < 1)
 
-        self.t_axis = -1
         self.tstart = tstart
         self.texp = texp
+        self.t_axis = -1
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 

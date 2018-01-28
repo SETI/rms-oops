@@ -20,6 +20,9 @@ import oops.spice_support as spice
 class SpiceFrame(Frame):
     """A SpiceFrame is a Frame object defined within the SPICE toolkit."""
 
+    PACKRAT_ARGS = ['spice_frame', 'spice_reference', 'frame_id',
+                    'omega_type', 'omega_dt']
+
     def __init__(self, spice_frame, spice_reference='J2000', id=None,
                        omega_type='tabulated', omega_dt=1.):
         """Constructor for a SpiceFrame.
@@ -42,6 +45,12 @@ class SpiceFrame(Frame):
             omega_dt        default time step in seconds to use for spline-based
                             numerical derivatives of omega.
         """
+
+        # Preserve the inputs
+        self.spice_frame = spice_frame
+        self.spice_reference = spice_reference
+        self.omega_type = omega_type
+        self.omega_dt = omega_dt
 
         # Interpret the SPICE frame and reference IDs
         (self.spice_frame_id,
@@ -77,11 +86,9 @@ class SpiceFrame(Frame):
 
         # Save interpolation method
         assert omega_type in ('tabulated', 'numerical', 'zero')
-        self.omega_type = omega_type
         self.omega_tabulated = (omega_type == 'tabulated')
         self.omega_numerical = (omega_type == 'numerical')
         self.omega_zero = (omega_type == 'zero')
-        self.omega_dt = omega_dt
 
         # Always register a SpiceFrame
         # This also fills in the waypoint

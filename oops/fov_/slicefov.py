@@ -13,6 +13,8 @@ class SliceFOV(FOV):
     in that the optic axis is not modified.
     """
 
+    PACKRAT_ARGS = ['fov', 'origin', 'shape']
+
     def __init__(self, fov, origin, shape):
         """Constructor for a SliceFOV.
 

@@ -17,6 +17,8 @@ class GraphicEllipsoid(Surface):
     COORDINATE_TYPE = "spherical"
     IS_VIRTUAL = False
 
+    PACKRAT_ARGS = ['origin', 'frame', 'radii', 'exclusion']
+
     def __init__(self, origin, frame, radii, exclusion=0.95):
         """Constructor for a GraphicEllipsoid object.
 
@@ -419,7 +421,7 @@ class Test_GraphicEllipsoid(unittest.TestCase):
             ref = Vector3(cept.d_dobs.vals[...,i], cept.d_dobs.mask)
 
             errors = abs(dcept_dobs - ref) / abs(ref)
-            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
+            sorted = np.sort(errors.vals[errors.antimask])
                         # mask=True where the line of sight missed the surface
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
@@ -428,7 +430,7 @@ class Test_GraphicEllipsoid(unittest.TestCase):
             ref = t.d_dobs.vals[...,i]
 
             errors = abs(dt_dobs/ref - 1)
-            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
+            sorted = np.sort(errors.vals[errors.antimask])
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
 
@@ -444,7 +446,7 @@ class Test_GraphicEllipsoid(unittest.TestCase):
             ref = Vector3(cept.d_dlos.vals[...,i], cept.d_dlos.mask)
 
             errors = abs(dcept_dlos - ref) / abs(ref)
-            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
+            sorted = np.sort(errors.vals[errors.antimask])
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
 
@@ -452,7 +454,7 @@ class Test_GraphicEllipsoid(unittest.TestCase):
             ref = t.d_dlos.vals[...,i]
 
             errors = abs(dt_dlos/ref - 1)
-            sorted = np.sort(errors.vals[np.logical_not(errors.mask)])
+            sorted = np.sort(errors.vals[errors.antimask])
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
 

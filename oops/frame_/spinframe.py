@@ -16,6 +16,8 @@ class SpinFrame(Frame):
     therefore be used as a component of another frame.
     """
 
+    PACKRAT_ARGS = ['offset', 'rate', 'epoch', 'axis2', 'reference', 'frame_id']
+
     def __init__(self, offset, rate, epoch, axis, reference, id=None):
         """Constructor for a Spin Frame.
 

@@ -12,6 +12,8 @@ class FlatFOV(FOV):
     distortion, implementing an exact pinhole camera model.
     """
 
+    PACKRAT_ARGS = ['uv_scale', 'uv_shape', 'uv_los', 'uv_area']
+
     def __init__(self, uv_scale, uv_shape, uv_los=None, uv_area=None):
         """Constructor for a FlatFOV.
 

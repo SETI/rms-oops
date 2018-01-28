@@ -13,6 +13,9 @@ class LinearCoordPath(Path):
     """A path defined by coordinates changing linearly on a specified Surface.
     """
 
+    PACKRAT_ARGS = ['surface', 'coords', 'coords_dot', 'epoch', 'obs_path',
+                    'path_id']
+
     def __init__(self, surface, coords, coords_dot, epoch, obs=None, id=None):
         """Constructor for a CoordPath.
 

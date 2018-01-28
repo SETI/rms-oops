@@ -16,6 +16,8 @@ class NullSurface(Surface):
 
     COORDINATE_TYPE = "rectangular"
 
+    PACKRAT_ARGS = ['origin', 'frame']
+
     def __init__(self, origin, frame):
         """Constructor for a NullSurface surface.
 

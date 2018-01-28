@@ -22,6 +22,9 @@ class Pushbroom(Observation):
     virtual array samples a diagonal ramp through the cube.
     """
 
+    PACKRAT_ARGS = ['axes', 'uv_size', 'cadence', 'fov', 'path', 'frame',
+                    '**subfields']
+
     def __init__(self, axes, uv_size, cadence, fov, path, frame, **subfields):
         """Constructor for a Slit observation.
 

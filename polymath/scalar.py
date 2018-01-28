@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/scalar.py: Scalar subclass of PolyMath base class
+# polymath/scalar.py: Scalar subclass of PolyMath base class
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -28,6 +28,8 @@ class Scalar(Qube):
     UNITS_OK = True     # True to allow units; False to disallow them.
     MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+
+    DEFAULT_VALUE = 1
 
     @staticmethod
     def as_scalar(arg, recursive=True):
@@ -77,7 +79,7 @@ class Scalar(Qube):
                     return None
                 else:
                     return obj.values
-            return obj.values[~obj.mask]
+            return obj.values[obj.antimask]
         else:
             obj = obj.copy()
             obj.values[obj.mask] = masked
@@ -120,7 +122,7 @@ class Scalar(Qube):
             obj = obj.flatten()
             if np.shape(obj.values) == () and obj.mask:
                 return None, None
-            return obj[~obj.mask].values, obj.mask
+            return obj[obj.antimask].values, obj.mask
 
         obj = obj.copy()
         values = obj.values
@@ -548,7 +550,7 @@ class Scalar(Qube):
         if not np.any(self.mask):
             maxval = np.max(self.values)
         else:
-            maxval = np.max(self.values[~self.mask])
+            maxval = np.max(self.values[self.antimask])
 
         if self.units is None or self.units == Units.UNITLESS:
             if self.is_float():
@@ -577,7 +579,7 @@ class Scalar(Qube):
         if not np.any(self.mask):
             minval = np.min(self.values)
         else:
-            minval = np.min(self.values[~self.mask])
+            minval = np.min(self.values[self.antimask])
 
         if self.units is None or self.units == Units.UNITLESS:
             if self.is_float():
@@ -617,7 +619,7 @@ class Scalar(Qube):
 
         # Get a flattened array of unmasked values
         if np.any(self.mask):
-            values = self.values[~self.mask]
+            values = self.values[self.antimask]
         elif self.drank == 0:
             values = self.values.ravel()
         else:
@@ -674,7 +676,7 @@ class Scalar(Qube):
         if not np.any(self.mask):
             sumval = np.sum(self.values)
         else:
-            sumval = np.sum(self.values[~self.mask])
+            sumval = np.sum(self.values[self.antimask])
 
         if self.units is None or self.units == Units.UNITLESS:
             if self.is_float():

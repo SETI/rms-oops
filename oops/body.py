@@ -7,7 +7,6 @@ import os
 
 import spicedb
 import julian
-import gravity
 import cspyce
 
 from polymath import *
@@ -26,6 +25,9 @@ from oops.surface_.nullsurface import NullSurface
 from oops.surface_.ringplane   import RingPlane
 from oops.surface_.orbitplane  import OrbitPlane
 from oops.surface_.spicebody   import spice_body
+
+from oops.gravity_.gravity       import Gravity
+from oops.gravity_.oblategravity import OblateGravity
 
 import oops.constants     as constants
 import oops.spice_support as spice_support
@@ -125,7 +127,8 @@ class Body(object):
                         its parent and also the children of its barycenter.
     """
 
-    BODY_REGISTRY = {}      # global dictionary of body objects
+    BODY_REGISTRY = {}          # global dictionary of body objects
+    STANDARD_BODIES = set()     # Bodies that always have the same definition
 
     def __init__(self, name, path, frame, parent, barycenter,
                  spice_name=None):
@@ -135,6 +138,8 @@ class Body(object):
 
         if spice_name is None:
             spice_name = name
+
+        self.spice_name = name
 
         try:
             self.spice_id = cspyce.bodn2c(spice_name)
@@ -146,12 +151,12 @@ class Body(object):
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
-        if type(parent) == type(""):
+        if type(parent) == str:
             self.parent = Body.lookup(parent)
         else:
             self.parent = parent
 
-        if type(barycenter) == type(""):
+        if type(barycenter) == str:
             self.barycenter = Body.lookup(barycenter)
         else:
             self.barycenter = barycenter
@@ -159,6 +164,11 @@ class Body(object):
         self.surface = None
         self.radius = 0.
         self.inner_radius = 0.
+
+        self.ring_epoch = None
+        self.ring_is_retrograde = False
+        self.ring_pole = None
+
         self.gravity = None
         self.keywords = [self.name]
 
@@ -176,7 +186,43 @@ class Body(object):
         # Save it in the Solar System dictionary
         Body.BODY_REGISTRY[self.name] = self
 
-    ########################################
+    ############################################################################
+    # For serialization, standard bodies are uniquely identified by name
+    ############################################################################
+
+    INIT_ARGS  = ['name', 'path', 'frame', 'parent', 'barycenter', 'spice_name']
+    EXTRA_ARGS = ['surface', 'radius', 'inner_radius',
+                  'ring_epoch', 'ring_is_retrograde', 'ring_pole',
+                  'gravity']
+
+    def PACKRAT__args__(self):
+        if self.name in Body.STANDARD_BODIES:
+            return ['name'] + Body.EXTRA_ARGS
+
+        return Body.INIT_ARGS + Body.EXTRA_ARGS
+
+    @staticmethod
+    def PACKRAT__init__(cls, **args):
+
+        name = args['name']
+        if name in Body.STANDARD_BODIES:
+            obj = Body.lookup(name)
+        else:
+            obj = Body.__init__(name, args['path'], args['frame'],
+                                      args['parent'], args['barycenter'],
+                                      args['spice_name'])
+
+        # Override parameters that might change
+        obj.apply_surface(args['surface'], args['radius'], args['inner_radius'])
+
+        obj.apply_ring_frame(args['ring_epoch'], args['ring_is_retrograde'],
+                             args['ring_pole'])
+
+        obj.apply_gravity(args['gravity'])
+
+        return obj
+
+    ############################################################################
 
     def apply_surface(self, surface, radius, inner_radius=0.):
         """Add the surface attribute to a Body."""
@@ -208,7 +254,9 @@ class Body(object):
             self.ring_frame = RingFrame(self.frame, epoch=epoch,
                                                     retrograde=retrograde)
 
+        self.ring_epoch = epoch
         self.ring_is_retrograde = retrograde
+        self.ring_pole = pole
 
     def apply_gravity(self, gravity):
         """Add the gravity attribute to a Body."""
@@ -681,7 +729,7 @@ URANUS_MU_LIMIT = [97700. - 17000./2, 97700. + 17700./2]
 URANUS_NU_LIMIT = [67300. -  3800./2, 67300. +  3800./2]
 
 # Special definitions of Uranian eccentric/inclined rings
-URANUS_OLD_GRAVITY = gravity.Gravity(5793939., [3.34343e-3, -2.885e-5], 26200.)
+URANUS_OLD_GRAVITY = OblateGravity(5793939., [3.34343e-3, -2.885e-5], 26200.)
 
 # Local function used to adapt the tabulated elements from French et al. 1991.
 def _uranus_ring_elements(a, e, peri, i, node, da):
@@ -866,7 +914,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
         # Add the gravity object if it exists
         try:
-            body.apply_gravity(gravity.LOOKUP[name])
+            body.apply_gravity(Gravity.lookup(name))
         except KeyError: pass
 
         # Add the surface object if shape information is available
@@ -883,6 +931,11 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
         if "BARYCENTER" in body.keywords and parent is not None:
             body.add_keywords(parent)
+
+        # Save solar system bodies as standard for serialization
+        Body.STANDARD_BODIES.add(body.name)
+        Path.STANDARD_PATHS.add(body.path.path_id)
+        Frame.STANDARD_FRAMES.add(body.frame.frame_id)
 
 def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                 barycenter_name=None, pole=None):
@@ -1006,7 +1059,7 @@ def define_small_body(spice_id, name=None, spk=None, keywords=[],
 
     # Add the gravity object if it exists
     try:
-        body.apply_gravity(gravity.LOOKUP[name])
+        body.apply_gravity(Gravity.LOOKUP[name])
     except KeyError: pass
 
     # Add the surface object if shape information is available

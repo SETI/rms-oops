@@ -8,6 +8,8 @@ from oops.cadence_.cadence import Cadence
 class Metronome(Cadence):
     """A Cadence subclass where time steps occur at uniform intervals."""
 
+    PACKRAT_ARGS = ['tstart', 'tstride', 'texp', 'steps']
+
     def __init__(self, tstart, tstride, texp, steps):
         """Constructor for a Metronome.
 

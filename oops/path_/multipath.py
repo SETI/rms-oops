@@ -12,6 +12,8 @@ from oops.frame_.frame import Frame
 class MultiPath(Path):
     """Gathers a set of paths into a single 1-D Path object."""
 
+    PACKRAT_ARGS = ['paths', 'origin', 'frame', 'path_id']
+
     def __init__(self, paths, origin=None, frame=None, id='+'):
         """Constructor for a MultiPath Path.
 

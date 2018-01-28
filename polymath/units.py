@@ -1,7 +1,7 @@
 ################################################################################
-# polymath/modules/empty.py: Units class
+# polymath/units.py: Units class
 #
-# Mark Showalter, PDS Rings Node, SETI Institute, February 2014
+# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -13,6 +13,8 @@ import numbers
 class Units(object):
     """Units is a class defining units names and the methods for converting
     between values that include units."""
+
+    PACKRAT_ARGS = ['exponents', 'triple', 'name']
 
     def __init__(self, exponents, triple, name=None):
         """Constructor for a Units object.

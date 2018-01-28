@@ -12,6 +12,8 @@ from oops.frame_.frame import Frame
 class LinearPath(Path):
     """A path defining linear motion relative to another path and frame."""
 
+    PACKRAT_ARGS = ['pos', 'epoch', 'origin', 'frame', 'path_id']
+
     def __init__(self, pos, epoch, origin, frame=None, id=None):
         """Constructor for a LinearPath.
 
