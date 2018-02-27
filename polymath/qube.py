@@ -7,6 +7,7 @@
 from __future__ import division
 import numpy as np
 import numbers
+import sys
 
 from units import Units
 
@@ -155,9 +156,9 @@ class Qube(object):
         example     optionally, another Qube object from which to copy any input
                     arguments that have not been explicitly specified.
 
-        default     value to use where masked. Typically a nonzero constant that
-                    will not "break" most arithmetic calculations. Default is
-                    None, in which case the class constant DEFAULT_VALUE is
+        default     value to use where masked. Typically a nonzero Qube constant
+                    that will not "break" most arithmetic calculations. Default
+                    is None, in which case the class constant DEFAULT_VALUE is
                     used, or else a reasonable value is constructed.
         """
 
@@ -321,6 +322,9 @@ class Qube(object):
         self.__values_ = arg
 
         # Fill in the mask
+        if isinstance(mask, Qube):
+            mask = mask.as_mask_where_nonzero_or_masked()
+
         if mask is None:
             mask = False
 
@@ -439,42 +443,22 @@ class Qube(object):
 
         obj = object.__new__(type(self))
 
-        obj.__shape_ = self.__shape_
+        for (attr, value) in self.__dict__.iteritems():
+            if attr.startswith('d_d') and attr[3:] in self.__derivs_:
+                continue
 
-        obj.__rank_ = self.__rank_
-        obj.__nrank_ = self.__nrank_
-        obj.__drank_ = self.__drank_
+            obj.__dict__[attr] = value
 
-        obj.__item_ = self.__item_
-        obj.__numer_ = self.__numer_
-        obj.__denom_ = self.__denom_
-
-        obj.__units_ = self.__units_
-
-        obj.__values_ = self.__values_
-        obj.__mask_   = self.__mask_
-        obj.__default_ = self.__default_
-        
-        obj.__antimask_ = self.__antimask_
-        obj.__corners_  = self.__corners_
-        obj.__slicer_   = self.__slicer_
-
-        obj.__readonly_ = self.__readonly_
-
-        obj.__is_deriv_ = self.__is_deriv_
-
-        # Install the derivs
+        # Clone the derivs
         obj.__derivs_ = {}
         if recursive:
-            obj.insert_derivs(self.__derivs_)
-        elif preserve:
-            for (key,deriv) in self.__derivs_.iteritems():
-                if key not in preserve:
-                    obj.insert_deriv(key, deriv)
+            for (key, deriv) in self.__derivs_.iteritems():
+                obj.insert_deriv(key, deriv.clone(recursive=False))
 
-        # Used only for if clauses
-        obj.__truth_if_any_ = self.__truth_if_any_
-        obj.__truth_if_all_ = self.__truth_if_all_
+        elif preserve:
+            for (key, deriv) in self.__derivs_.iteritems():
+                if key not in preserve:
+                    obj.insert_deriv(key, deriv.clone(recursive=False))
 
         return obj
 
@@ -512,7 +496,7 @@ class Qube(object):
 
         # Include derivatives and units as needed
         if self.__derivs_:
-            args.append('_Qube__derivs_')
+            args.append('_Qube__derivs_{"single":True}')
 
         if self.__units_:
             args.append('_Qube__units_')
@@ -576,79 +560,106 @@ class Qube(object):
 
         return obj
 
-    def PACKRAT_params(self, params):
-        """Return an updated copy of the parameter dictionary, including
-        precision parameters to be used by Packrat when storing this object."""
-
-        if self.__is_deriv_:
-            params = params.copy()
-            params['single'] = True
-
-        return params
-
     ############################################################################
     # Properties and low-level access
     ############################################################################
 
-    def __set_values_(self, values, mask=None):
+    def _set_values_(self, values, mask=None, antimask=None):
         """Low-level method to update the values of an array.
 
-        The read-only status of the object will be modified accordingly.
-
+        The read-only status of the object is defined by that of the given
+        value.
         If a mask is provided, it is also updated.
+        If antimask is not None, then only the array locations associated with
+        the antimask are modified.
         """
 
         # Confirm shapes
-        assert np.shape(values) == np.shape(self.__values_)
-        if type(mask) == np.ndarray:
-            assert np.shape(mask) == self.shape
-
-        # Determine the new read-only state
-        new_readonly = Qube._array_is_readonly(values)
+        if antimask is None:
+            assert np.shape(values) == np.shape(self.__values_), \
+                'shape mismatch'
+            if type(mask) == np.ndarray:
+                assert np.shape(mask) == self.shape, 'mask shape mismatch'
+        else:
+            if np.shape(antimask):
+                assert np.shape(antimask) == self.shape, \
+                    'antimask shape mismatch'
 
         # Update values
-        self.__values_ = values
+        if antimask is None:
+            self.__values_ = values
+        elif np.shape(values) == ():
+            self.__values_ = values
+        else:
+            self.__values_[antimask] = values[antimask]
+
+        self.__readonly_ = Qube._array_is_readonly(self.__values_)
 
         # Update the mask if necessary
         if mask is not None:
 
-            # Mask must match the read-only state of the object
-            if new_readonly:
-                Qube._array_to_readonly(mask)
+            if antimask is None:
+                self.__mask_ = mask
+            elif np.shape(mask) == ():
+                if np.shape(self.__mask_) == ():
+                    old_mask = self.__mask_
+                    self.__mask_ = np.empty(self.shape, dtype='bool')
+                    self.__mask_.fill(old_mask)
+                self.__mask_[antimask] = mask
+            else:
+                self.__mask_[antimask] = mask[antimask]
 
-            self.__mask_ = mask
             self.__antimask_ = None
             self.__corners_  = None
             self.__slicer_   = None
 
-        # If the object is newly read-only, confirm the mask and derivs are also
-        if new_readonly and not self.__readonly_:
-            if mask is None:
-                Qube._array_to_readonly(self.__mask_)
+        # Set the readonly state based on the values given
+        if self.__readonly_:
+            self.__mask_ = Qube._array_to_readonly(self.__mask_)
 
-            for derivs in self.__derivs_.values():
-                derivs.as_readonly()
+        elif Qube._array_is_readonly(self.__mask_):
+            self.__mask_ = self.__mask_.copy()
 
-        # Update the internal read-only state
-        self.__readonly_ = new_readonly
+        return self
 
-    def __set_mask_(self, mask):
+    def _set_mask_(self, mask, antimask=None):
         """Low-level method to update the mask of an array.
 
-        If the object is read-only, then the mask will be set to read-only.
+        The read-only status of the object will be preserved.
+        If antimask is not None, then only the mask locations associated with
+        the antimask are modified
         """
 
         # Confirm the shape
-        assert type(mask)==bool or mask.shape == self.shape
+        assert type(mask)==bool or mask.shape == self.shape, \
+            'mask shape mismatch'
 
-        # Mask must match the read-only state of the object
-        if self.__readonly_:
-            Qube._array_to_readonly(mask)
+        is_readonly = self.__readonly_
 
-        self.__mask_ = mask
+        # Update the mask
+        if antimask is None:
+            self.__mask_ = mask
+        elif np.shape(mask) == ():
+            if np.shape(self.__mask_) == ():
+                old_mask = self.__mask_
+                self.__mask_ = np.empty(self.shape, dtype='bool')
+                self.__mask_.fill(old_mask)
+            self.__mask_[antimask] = mask
+        else:
+            self.__mask_[antimask] = mask[antimask]
+
         self.__antimask_ = None
         self.__corners_  = None
         self.__slicer_   = None
+
+        if isinstance(self.__mask_, np.ndarray):
+            if is_readonly:
+                self.__mask_ = Qube._array_to_readonly(self.__mask_)
+
+            elif Qube._array_is_readonly(self.__mask_):
+                self.__mask_ = self.__mask_.copy()
+
+        return self
 
     @property
     def values(self): return self.__values_
@@ -796,6 +807,9 @@ class Qube(object):
 
     @staticmethod
     def slicer_from_corners(corners):
+        """A slice object based on corners specified as a tuple of indices.
+        """
+
         slice_objects = []
         for axis in range(len(corners[0])):
             slice_objects.append(slice(corners[0][axis], corners[1][axis]))
@@ -804,7 +818,8 @@ class Qube(object):
 
     @property
     def slicer(self):
-        """A slice object containing all the unmasked array elements."""
+        """A slice object containing all the array elements inside the current
+        corners."""
 
         if self.__slicer_ is None:
             self.__slicer_ = Qube.slicer_from_corners(self.corners)
@@ -866,7 +881,7 @@ class Qube(object):
         if deriv.shape != self.shape:
             deriv = deriv.broadcast_into_shape(self.shape, False).as_readonly()
         elif self.__readonly_ and not deriv.__readonly_:
-            deriv = deriv.clone().as_readonly()
+            deriv = deriv.clone(recursive=False).as_readonly()
 
         # Save in the derivative dictionary and as an attribute
         if self.readonly and (key in self.__derivs_) and not override:
@@ -970,7 +985,7 @@ class Qube(object):
         if preserve:
 
             # Create a fast copy with derivatives
-            obj = self.clone(True)
+            obj = self.clone(recursive=True)
 
             # Delete derivatives not on the list
             deletions = []
@@ -984,7 +999,7 @@ class Qube(object):
             return obj
 
         # Return a fast copy without derivatives
-        return self.clone(False)
+        return self.clone(recursive=False)
 
     def without_deriv(self, key):
         """Return a shallow copy of this object without a particular derivative.
@@ -1097,7 +1112,7 @@ class Qube(object):
 
         # Construct the new object
         obj = self.clone(recursive)
-        obj.__set_values_(Units.into_units(self.__units_, self.__values_))
+        obj._set_values_(Units.into_units(self.__units_, self.__values_))
 
         # Fill in derivatives if necessary
         if recursive:
@@ -1123,7 +1138,7 @@ class Qube(object):
 
         # Construct the new object
         obj = self.clone(recursive)
-        obj.__set_values_(Units.from_units(self.__units_, self.__values_))
+        obj._set_values_(Units.from_units(self.__units_, self.__values_))
 
         # Fill in derivatives if necessary
         if recursive:
@@ -1177,6 +1192,9 @@ class Qube(object):
         the internal __values_ and __mask_ arrays are modified as necessary.
         Once this happens, the internal arrays will also cease to be writable in
         any other object that shares them.
+
+        Note that as_readonly() cannot be undone. Use copy() to create a
+        writable copy of a readonly object.
         """
 
         # If it is already read-only, return
@@ -1194,43 +1212,15 @@ class Qube(object):
 
         return self
 
-    def as_writable(self, recursive=True):
-        """Convert this object to read-writeable. It is modified and returned.
-
-        If this object is already writable, it is returned as is. Otherwise,
-        the internal __values_ and __mask_ arrays are copied.
-        """
-
-        # If it is already writable, return
-        if not self.__readonly_: return self
-
-        # Update the value if it is an array
-        if type(self.__values_) == np.ndarray:
-            if Qube._array_is_readonly(self.__values_):
-                self.__values_ = self.__values_.copy()
-
-        # Update the mask if it is an array
-        if type(self.__mask_) == np.ndarray:
-            if Qube._array_is_readonly(self.__mask_):
-                self.__mask_ = self.__mask_.copy()
-                self.__antimask_ = None
-                self.__corners_  = None
-                self.__slicer_   = None
-
-        # Update the derivatives
-        if recursive:
-            for key in self.__derivs_:
-                self.__derivs_[key].as_writable()
-
-        return self
-
     def match_readonly(self, arg):
         """Sets the read-only status of this object equal to that of another."""
 
         if arg.__readonly_:
             return self.as_readonly()
-        else:
-            return self.as_writeable()
+        elif self.__readonly_:
+            raise ValueError('object is read-only')
+
+        return self
 
     def require_writable(self):
         """Raises a ValueError if the object is read-only.
@@ -1239,7 +1229,7 @@ class Qube(object):
         object.
         """
 
-        if self.readonly:
+        if self.__readonly_:
             raise ValueError('object is read-only')
 
     ############################################################################
@@ -1256,13 +1246,15 @@ class Qube(object):
             readonly    if True, the copy will be read-only. If the source is
                         already read-only, no array duplication is required.
                         if False, the returned copy is guaranteed to be an
-                        entirely new copy, suitable for modification. If None,
-                        then the copy will have the read-only state of this
-                        object.
+                        entirely new copy, suitable for modification.
         """
 
         # Create a shallow copy
-        obj = self.clone(False)
+        obj = self.clone(recursive=False)
+
+        # Copying a readonly object is easy
+        if self.__readonly_ and readonly:
+            return obj
 
         # Copy the values
         if isinstance(self.__values_, np.ndarray):
@@ -1273,22 +1265,18 @@ class Qube(object):
         # Copy the mask
         if isinstance(self.__mask_, np.ndarray):
             obj.__mask_ = self.__mask_.copy()
-            obj.__antimask_ = None
-            obj.__corners_  = None
-            obj.__slicer_   = None
         else:
             obj.__mask_ = self.__mask_
-            obj.__antimask_ = None
-            obj.__corners_  = None
-            obj.__slicer_   = None
+
+        obj.__antimask_ = None
+        obj.__corners_  = None
+        obj.__slicer_   = None
 
         # Set the read-only state
-        if readonly is True:
+        if readonly:
             obj.as_readonly()
-        elif readonly is False:
-            obj.__readonly_ = False
         else:
-            obj.match_readonly(self)
+            obj.__readonly_ = False
 
        # Make the derivatives read-only if necessary
         if recursive:
@@ -1302,7 +1290,7 @@ class Qube(object):
     def __copy__(self):
         """Return a deep copy of this object unless it is read-only."""
 
-        return self.copy(readonly=self.readonly, recursive=True)
+        return self.copy(recursive=True, readonly=False)
 
     ############################################################################
     # Floats vs. integers vs. booleans
@@ -1351,6 +1339,10 @@ class Qube(object):
             if recursive: return self
             return self.without_derivs()
 
+        # Handle a Boolean
+        if isinstance(self, Qube.BOOLEAN_CLASS):
+            self = self.as_float()
+
         # If object cannot contain floats, raise an error
         if not self.FLOATS_OK:
             raise TypeError("floats are disallowed in class '%s'" %
@@ -1364,7 +1356,7 @@ class Qube(object):
 
         # Construct a new copy
         obj = self.clone(recursive)
-        obj.__set_values_(new_values)
+        obj._set_values_(new_values)
         return obj
 
     def is_int(self):
@@ -1375,6 +1367,9 @@ class Qube(object):
             return np.issubdtype(self.__values_.dtype, int)
 
         # Scalar case
+        if isinstance(self.__values_, bool):
+            return False
+
         return isinstance(self.__values_, numbers.Rational)
 
     def as_int(self, recursive=True):
@@ -1389,6 +1384,10 @@ class Qube(object):
             if recursive: return self
             return self.without_derivs()
 
+        # Handle a Boolean
+        if isinstance(self, Qube.BOOLEAN_CLASS):
+            self = self.as_int()
+
         # If object cannot contain ints, raise an error
         if not self.INTS_OK:
             raise TypeError("ints are disallowed in class '%s'" %
@@ -1402,8 +1401,27 @@ class Qube(object):
 
         # Construct a new copy
         obj = self.clone(recursive)
-        obj.__set_values_(new_values)
+        obj._set_values_(new_values)
         return obj
+
+    def is_bool(self):
+        """True if this object contains booleans; False otherwise."""
+
+        return isinstance(self, Qube.BOOLEAN_CLASS)
+
+    def as_bool(self):
+        """Return an boolean version of this object."""
+
+        # If already boolean, return as is
+        if self.is_bool():
+            return self
+
+        return Qube.BOOLEAN_CLASS.as_boolean(self)
+
+    def is_all_masked(self):
+        """Return True if this is entirely masked."""
+
+        return np.all(self.__mask_)
 
     ############################################################################
     # Subclass operations
@@ -1417,7 +1435,7 @@ class Qube(object):
     def is_real_number(arg):
         """Return True if arg is of a Python numeric or NumPy numeric type.""" 
         return isinstance(arg, numbers.Real) or isinstance(arg, np.number) 
-            
+
     def masked_single(self):
         """Return an object of this subclass containing one masked value."""
 
@@ -1464,13 +1482,55 @@ class Qube(object):
             # Copy the derivatives if necessary
             if recursive:
                 for (key, deriv) in arg.__derivs_.iteritems():
-                    obj.insert_deriv(key, self.as_this_type(deriv,False))
+                    obj.insert_deriv(key, self.as_this_type(deriv, False))
 
         else:
             obj.__init__(arg, mask=False, units=None, derivs={},
                               nrank=nrank, drank=drank, example=self)
 
         return obj
+
+    def as_this_type_unless_boolean(self, arg, recursive=True,
+                                          nrank=None, drank=None):
+        """Works the same as as_this_type() except when arg contains int or
+        float values, the value returned is a Scalar instead.
+        """
+
+        if not isinstance(self, Qube.BOOLEAN_CLASS):
+            return self.as_this_type(arg, recursive, nrank, drank)
+
+        arg_type = None
+
+        if isinstance(arg, Qube):
+            if arg.is_int():
+                arg_type = 'int'
+            if arg.is_float():
+                arg_type = 'float'
+
+        elif isinstance(arg, np.ndarray):
+            if arg.dtype.kind in 'ui':
+                arg_type = 'int'
+            elif arg.dtype.kind == 'f':
+                arg_type = 'float'
+            elif arg.dtype.kind == 'b':
+                arg_type = 'bool'
+
+        elif isinstance(arg, bool):
+            arg_type = 'bool'
+
+        elif isinstance(arg, numbers.Rational):
+            arg_type = 'int'
+
+        elif isinstance(arg, numbers.Real):
+            arg_type = 'float'
+
+        if arg_type == 'int':
+            return self.as_int().as_this_type(arg, recursive, nrank, drank)
+
+        if arg_type == 'float':
+            return self.as_float().as_this_type(arg, recursive, nrank, drank)
+
+        return self.as_this_type(arg, recursive, nrank, drank)
 
     def cast(self, classes):
         """Return a shallow copy of this object casted to another subclass.
@@ -1517,8 +1577,10 @@ class Qube(object):
 
         Inputs:
             mask            the mask to apply as a boolean array.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask in the object's mask;
                             False to replace the values but leave them unmasked.
@@ -1527,52 +1589,84 @@ class Qube(object):
         # Convert to boolean array if necessary
         if isinstance(mask, np.ndarray):
             mask = mask.astype('bool')
+        elif isinstance(mask, Qube):
+            mask = mask.as_mask_where_nonzero_or_masked()
         else:
-            mask = Qube.BOOLEAN_CLASS.as_boolean(mask).values
+            mask = Qube.BOOLEAN_CLASS.as_boolean(mask).__values_
 
         # If the mask is empty, return the object as is
         if not np.any(mask): return self
 
-        # Get the replacement value as a scalar or NumPy ndarray
-        if isinstance(replace, Qube):
-            replace = replace.__values_
-        elif np.shape(replace) != ():
-            replace = np.asarray(replace)
+        # Get the replacement value as this type
+        if replace is not None:
+            replace = self.as_this_type(replace, recursive=False,
+                                        nrank=self.nrank, drank=self.drank)
+            if replace.shape != () and replace.shape != self.shape:
+                raise ValueError('shape of replacement is incompatible with ' +
+                                 'shape of object being masked')
 
         # Shapeless case
         if np.shape(self.__values_) == ():
-            if replace is not None:
-                new_values = replace
-            else:
+            if replace is None:
                 new_values = self.__values_
+            else:
+                new_values = replace.__values_
 
-            if remask:
+            if remask or replace.__mask_:
                 new_mask = True
             else:
                 new_mask = self.__mask_
 
-            obj = self.clone(True)
-            obj.__set_values_(new_values, new_mask)
+            obj = self.clone(recursive=True)
+            obj._set_values_(new_values, new_mask)
             return obj
 
-        # Insert replacement values if necessary
-        mask_union = self.__mask_ | mask    # change masked values too
-
-        if replace is not None:
-            new_values = self.__values_.copy()
-            new_values[mask_union] = replace
+        # Construct the new mask
+        if remask:
+            new_mask = self.__mask_ | mask
+        elif np.shape(self.__mask_) == ():
+            new_mask = self.__mask_
         else:
+            new_mask = self.__mask_.copy()
+
+        # Construct the new array of values
+        if replace is None:
             new_values = self.__values_
 
-        # Update the mask if necessary
-        if remask:
-            new_mask = mask_union
-        else:
-            new_mask = self.__mask_
+        # If replacement is a single value...
+        elif replace.shape == ():
+            new_values = self.__values_.copy()
+            new_values[mask] = replace.__values_
 
-        # Construct the object
-        obj = self.clone(True)
-        obj.__set_values_(new_values, new_mask)
+            # Update the mask if replacement values are masked
+            if replace.__mask_:
+                if np.shape(new_mask) == ():
+                    new_mask = True
+                else:
+                    new_mask[mask] = True
+
+        # If replacement is an array of values...
+        else:
+            new_values = self.__values_.copy()
+            new_values[mask] = replace.__values_[mask]
+
+            # Update the mask if replacement values are masked
+            if new_mask is True:
+                pass
+            elif replace.__mask_ is False:
+                pass
+            else:
+                if new_mask is False:
+                    new_mask = np.zeros(self.shape, dtype='bool')
+
+                if replace.__mask_ is True:
+                    new_mask[mask] = True
+                else:
+                    new_mask[mask] = replace.__mask_[mask]
+
+        # Construct the new object and return
+        obj = self.clone(recursive=True)
+        obj._set_values_(new_values, new_mask)
         return obj
 
     def mask_where_eq(self, match, replace=None, remask=True):
@@ -1584,8 +1678,10 @@ class Qube(object):
 
         Inputs:
             match           the item value to match.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
@@ -1593,7 +1689,7 @@ class Qube(object):
 
         match = self.as_this_type(match, recursive=False)
 
-        mask = (self.values == match.values)
+        mask = (self.__values_ == match.__values_)
         for r in range(self.__rank_):
             mask = np.all(mask, axis=-1)
 
@@ -1608,8 +1704,10 @@ class Qube(object):
 
         Inputs:
             match           the item value to match.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
@@ -1617,7 +1715,7 @@ class Qube(object):
 
         match = self.as_this_type(match, recursive=False)
 
-        mask = (self.values != match.values)
+        mask = (self.__values_ != match.__values_)
         for r in range(self.__rank_):
             mask = np.any(mask, axis=-1)
 
@@ -1632,15 +1730,21 @@ class Qube(object):
 
         Inputs:
             limit           the limiting value.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
         assert self.item == ()
-        return self.mask_where((self.__values_ <= limit), replace, remask)
+
+        if isinstance(limit, Qube):
+            limit = limit.__values_
+
+        return self.mask_where(self.__values_ <= limit, replace, remask)
 
     def mask_where_ge(self, limit, replace=None, remask=True):
         """Return a copy of this object with items >= a limit value masked.
@@ -1651,15 +1755,21 @@ class Qube(object):
 
         Inputs:
             limit           the limiting value.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
         assert self.item == ()
-        return self.mask_where((self.__values_ >= limit), replace, remask)
+
+        if isinstance(limit, Qube):
+            limit = limit.__values_
+
+        return self.mask_where(self.__values_ >= limit, replace, remask)
 
     def mask_where_lt(self, limit, replace=None, remask=True):
         """Return a copy with items less than a limit value masked.
@@ -1670,15 +1780,21 @@ class Qube(object):
 
         Inputs:
             limit           the limiting value.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
         assert self.item == ()
-        return self.mask_where((self.__values_ < limit), replace, remask)
+
+        if isinstance(limit, Qube):
+            limit = limit.__values_
+
+        return self.mask_where(self.__values_ < limit, replace, remask)
 
     def mask_where_gt(self, limit, replace=None, remask=True):
         """Return a copy with items greater than a limit value masked.
@@ -1689,15 +1805,21 @@ class Qube(object):
 
         Inputs:
             limit           the limiting value.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
         assert self.item == ()
-        return self.mask_where((self.__values_ > limit), replace, remask)
+
+        if isinstance(limit, Qube):
+            limit = limit.__values_
+
+        return self.mask_where(self.__values_ > limit, replace, remask)
 
     def mask_where_between(self, lower, upper, mask_endpoints=False,
                                  replace=None, remask=True):
@@ -1713,14 +1835,22 @@ class Qube(object):
             mask_endpoints  True to mask the endpoints, where values are equal
                             to the lower or upper limits; False to exclude the
                             endpoints.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
         assert self.item == ()
+
+        if isinstance(lower, Qube):
+            lower = lower.__values_
+
+        if isinstance(upper, Qube):
+            upper = upper.__values_
 
         if mask_endpoints:      # end points are included in the mask
             mask = (self.__values_ >= lower) & (self.__values_ <= upper)
@@ -1743,14 +1873,22 @@ class Qube(object):
             mask_endpoints  True to mask the endpoints, where values are equal
                             to the lower or upper limits; False to exclude the
                             endpoints.
-            replace         a single replacement value, inserted into the values
-                            array at every masked location. Use None (the
+            replace         a single replacement value or, an object of the same
+                            shape and class as this object, containing
+                            replacement values. These are inserted into returned
+                            object at every masked location. Use None (the
                             default) to leave values unchanged.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
         assert self.item == ()
+
+        if isinstance(lower, Qube):
+            lower = lower.__values_
+
+        if isinstance(upper, Qube):
+            upper = upper.__values_
 
         if mask_endpoints:      # end points are included in the mask
             mask = (self.__values_ <= lower) | (self.__values_ >= upper)
@@ -1770,17 +1908,32 @@ class Qube(object):
         unchanged.
 
         Inputs:
-            lower           the lower limit.
-            upper           the upper limit.
+            lower           the lower limit or an object of the same shape and
+                            type as this, containing lower limits. None or
+                            masked values to ignore.
+            upper           the upper limit or an object of the same shape and
+                            type as this, containing upper limits. None or
+                            masked values to ignore.
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
 
-        temp   = self.mask_where((self.__values_ < lower), lower, remask)
-        result = temp.mask_where((self.__values_ > upper), upper, remask)
+        result = self
+
+        if lower is not None:
+            if isinstance(lower, Qube):
+                lower = lower.__values_
+            result = result.mask_where(result.__values_ < lower, lower, remask)
+
+        if upper is not None:
+            if isinstance(upper, Qube):
+                upper = upper.__values_
+
+            result = result.mask_where(result.__values_ > upper, upper, remask)
+
         return result
 
-    def masked(self):
+    def count_masked(self):
         """Return the number of masked items in this object."""
 
         if self.__mask_ is True:
@@ -1790,7 +1943,13 @@ class Qube(object):
         else:
             return np.count_nonzero(self.__mask_)
 
-    def unmasked(self):
+    def masked(self):
+        """Return the number of masked items in this object. DEPRECATED NAME;
+        use count_masked()."""
+
+        return self.count_masked()
+
+    def count_unmasked(self):
         """Return the number of unmasked items in this object."""
 
         if self.__mask_ is True:
@@ -1800,13 +1959,19 @@ class Qube(object):
         else:
             return self.size - np.count_nonzero(self.__mask_)
 
+    def unmasked(self):
+        """Return the number of unmasked items in this object. DEPRECATED NAME;
+        use count_unmasked()"""
+
+        return self.count_unmasked()
+
     def without_mask(self, recursive=True):
         """Return a shallow copy of this object without its mask."""
 
         if self.__mask_ is False: return self
 
-        obj = self.clone(False)
-        obj.__set_mask_(False)
+        obj = self.clone(recursive=False)
+        obj._set_mask_(False)
 
         if recursive:
             for (key,deriv) in self.__derivs_.iteritems():
@@ -1814,19 +1979,25 @@ class Qube(object):
 
         return obj
 
-    def all_masked(self, recursive=True):
+    def as_all_masked(self, recursive=True):
         """Return a shallow copy of this object with everything masked."""
 
         if self.__mask_ is True: return self
 
-        obj = self.clone(False)
-        obj.__set_mask_(True)
+        obj = self.clone(recursive=False)
+        obj._set_mask_(True)
 
         if recursive:
             for (key,deriv) in self.__derivs_.iteritems():
                 obj.insert_deriv(key, deriv.all_masked())
 
         return obj
+
+    def all_masked(self, recursive=True):
+        """Return a shallow copy of this object with everything masked.
+        DEPRECATED NAME; use as_all_masked()"""
+
+        return self.as_all_masked(recursive)
 
     def remask(self, mask, recursive=True):
         """Return a shallow copy of this object with a replaced mask.
@@ -1840,8 +2011,8 @@ class Qube(object):
                              str(np.shape(mask)) + ', ' + str(self.shape))
 
         # Construct the new object
-        obj = self.clone(False)
-        obj.__set_mask_(mask)
+        obj = self.clone(recursive=False)
+        obj._set_mask_(mask)
 
         if recursive:
             for (key,deriv) in self.__derivs_.iteritems():
@@ -1849,7 +2020,7 @@ class Qube(object):
 
         return obj
 
-    def all_constant(self, constant=None, recursive=True):
+    def as_all_constant(self, constant=None, recursive=True):
         """Return a shallow, read-only copy of this object with constant values.
 
         Derivatives are all set to zero. The mask is unchanged.
@@ -1860,14 +2031,182 @@ class Qube(object):
 
         constant = self.as_this_type(constant, recursive=False)
 
-        obj = self.clone(False)
-        obj.__set_values_(Qube.broadcast(constant, obj)[0].__values_)
+        obj = self.clone(recursive=False)
+        obj._set_values_(Qube.broadcast(constant, obj)[0].__values_)
         obj.as_readonly()
 
         if recursive:
             for (key,deriv) in self.__derivs_.iteritems():
                 obj.insert_deriv(key, deriv.all_constant(recursive=False))
 
+        return obj
+
+    def all_constant(self, constant=None, recursive=True):
+        """Return a shallow, read-only copy of this object with constant values.
+        DEPRECATED NAME; use as_all_constant().
+
+        Derivatives are all set to zero. The mask is unchanged.
+        """
+
+        return self.as_all_constant(constant, recursive)
+
+    def as_mask_where_nonzero(self):
+        """A scalar or NumPy array where values are nonzero and unmasked."""
+
+        if self.__mask_ is True:
+            return False
+
+        if self.__mask_ is False:
+            if self.__rank_:
+                axes = tuple(range(-self.__rank_, 0))
+                return np.any(self.__values_, axis=axes)
+            else:
+                return (self.__values_ != 0)
+
+        if self.__rank_:
+            axes = tuple(range(-self.__rank_, 0))
+            return np.any(self.__values_, axis=axes) & self.antimask
+        else:
+            return (self.__values_ != 0) & self.antimask
+
+    def as_mask_where_zero(self):
+        """A scalar or NumPy array where values are zero and unmasked."""
+
+        if self.__mask_ is True:
+            return False
+
+        if self.__mask_ is False:
+            if self.__rank_:
+                axes = tuple(range(-self.__rank_, 0))
+                return np.all(self.__values_ == 0, axis=axes)
+            else:
+                return (self.__values_ == 0)
+
+        if self.__rank_:
+            axes = tuple(range(-self.__rank_, 0))
+            return np.all(self.__values_ == 0, axis=axes) & self.antimask
+        else:
+            return (self.__values_ == 0) & self.antimask
+
+    def as_mask_where_nonzero_or_masked(self):
+        """A scalar or NumPy array where values are nonzero or masked."""
+
+        if self.__mask_ is True:
+            return True
+
+        if self.__mask_ is False:
+            if self.__rank_:
+                axes = tuple(range(-self.__rank_, 0))
+                return np.any(self.__values_, axis=axes)
+            else:
+                return (self.__values_ != 0)
+
+        if self.__rank_:
+            axes = tuple(range(-self.__rank_, 0))
+            return np.any(self.__values_, axis=axes) | self.__mask_
+        else:
+            return (self.__values_ != 0) | self.__mask_
+
+    def as_mask_where_zero_or_masked(self):
+        """A scalar or NumPy array where values are zero or masked."""
+
+        if self.__mask_ is True:
+            return True
+
+        if self.__mask_ is False:
+            if self.__rank_:
+                axes = tuple(range(-self.__rank_, 0))
+                return np.all(self.__values_ == 0, axis=axes)
+            else:
+                return (self.__values_ == 0)
+
+        if self.__rank_:
+            axes = tuple(range(-self.__rank_, 0))
+            return np.all(self.__values_ == 0, axis=axes) | self.__mask_
+        else:
+            return (self.__values_ == 0) | self.__mask_
+
+    def shrink(self, antimask=None):
+        """Return a 1-D version of this object, containing only the samples
+        in the antimask provided.
+
+        The antimask is ignored if it is None. Otherwise, a value of True
+        indicates that a value should be included; False means that is should be
+        discarded. A scalar value of True or False applies to the entire object.
+        If this object has no shape, then it is returned unchanged.
+        """
+
+        if antimask is None or antimask is True or self.shape == (): return self
+
+        if antimask is False:
+            obj = self.flatten[:0]
+            obj.__shrink_source_ = self
+            return obj
+
+        if antimask.shape == (): return self
+
+        if self.shape != antimask.shape:
+            raise ValueError('antimask shape %s ' % str(np.shape(antimask)) +
+                             'does not match object shape %s' % str(self.shape))
+
+        if self.__mask_ is False:
+            mask = np.zeros(self.shape, dtype='bool')
+        elif self.__mask_ is True:
+            mask = np.ones(self.shape, dtype='bool')
+        else:
+            mask = self.__mask_
+
+        obj = Qube.__new__(type(self))
+        obj.__init__(self.__values_[antimask], mask[antimask], derivs={},
+                     example=self)
+
+        for (key, deriv) in self.__derivs_.iteritems():
+            obj.insert_deriv(key, deriv.shrink(antimask))
+
+        obj.match_readonly(self)
+
+        obj.__shrink_source_ = self       # Save a pointer to the original
+        return obj
+
+    def unshrink(self, antimask=None):
+        """Return the results of a shrink operation to its original dimensions.
+        """
+
+        if np.shape(antimask) == () or self.shape == ():
+            try:
+                return self.__shrink_source_
+            except AttributeError:
+                return self
+
+        # Copy the source if it's still available
+        try:
+            clone = self.__shrink_source_.clone(recursive=True)
+            new_values = clone.__values_.copy()
+            new_mask = clone.__mask_.copy()
+
+        # Otherwise, fill in default values
+        except AttributeError:
+            default = self.__default_
+
+            new_values = np.empty(antimask.shape + self.__item_,
+                                  dtype=self.__values_.dtype)
+
+            if isinstance(default, Qube): default = default.__values_
+            new_values[...] = default
+            new_values[antimask] = self.__values_
+
+            new_mask = np.ones(antimask.shape, dtype='bool')
+            new_mask[antimask] = self.__mask_
+
+        # Create the new object
+        obj = Qube.__new__(type(self))
+        obj.__init__(new_values, new_mask, example=self.without_derivs())
+
+        # Unshrink the derivatives
+        for (key, deriv) in self.__derivs_.iteritems():
+            obj.insert_deriv(key, deriv.unshrink(antimask))
+
+        obj.match_readonly(self)
         return obj
 
     ############################################################################
@@ -2312,13 +2651,13 @@ class Qube(object):
     ############################################################################
 
     def __pos__(self):
-        return self.clone()
+        return self.clone(recursive=True)
 
     def __neg__(self, recursive=True):
 
         # Construct a copy with negative values
-        obj = self.clone(False)
-        obj.__set_values_(-self.__values_)
+        obj = self.clone(recursive=False)
+        obj._set_values_(-self.__values_)
 
         # Fill in the negative derivatives
         if recursive and self.__derivs_:
@@ -2334,8 +2673,8 @@ class Qube(object):
             Qube.raise_unsupported_op('abs()', self)
 
         # Construct a copy with absolute values
-        obj = self.clone(False)
-        obj.__set_values_(np.abs(self.__values_))
+        obj = self.clone(recursive=False)
+        obj._set_values_(np.abs(self.__values_))
 
         # Fill in the derivatives, multiplied by sign(self)
         if recursive and self.__derivs_:
@@ -2677,7 +3016,7 @@ class Qube(object):
         # Matrix multiply case
         if self.__nrank_ == 2 and arg.__nrank_ == 2 and arg.__drank_ == 0:
             result = Qube.dot(self, arg, -1, 0, type(self), recursive=True)
-            self.__set_values_(result.__values_, result.__mask_)
+            self._set_values_(result.__values_, result.__mask_)
             self.insert_derivs(result.__derivs_)
             return self
 
@@ -2687,8 +3026,8 @@ class Qube(object):
     def mul_by_number(self, arg, recursive=True):
         """Internal multiply op when the arg is a Python scalar."""
 
-        obj = self.clone(False)
-        obj.__set_values_(self.__values_ * arg)
+        obj = self.clone(recursive=False)
+        obj._set_values_(self.__values_ * arg)
 
         if recursive and self.__derivs_:
             for (key, deriv) in self.__derivs_.iteritems():
@@ -2852,13 +3191,13 @@ class Qube(object):
     def div_by_number(self, arg, recursive=True):
         """Internal division op when the arg is a Python scalar."""
 
-        obj = self.clone(False)
+        obj = self.clone(recursive=False)
 
         # Mask out zeros
         if arg == 0:
-            obj.__set_mask_(True)
+            obj._set_mask_(True)
         else:
-            obj.__set_values_(self.__values_ / arg)
+            obj._set_values_(self.__values_ / arg)
 
         if recursive and self.__derivs_:
             for (key, deriv) in self.__derivs_.iteritems():
@@ -3011,12 +3350,12 @@ class Qube(object):
     def floordiv_by_number(self, arg):
         """Internal floor division op when the arg is a Python scalar."""
 
-        obj = self.clone(False)
+        obj = self.clone(recursive=False)
 
         if arg == 0:
-            obj.__set_mask_(True)
+            obj._set_mask_(True)
         else:
-            obj.__set_values_(self.__values_ // arg)
+            obj._set_values_(self.__values_ // arg)
 
         return obj
 
@@ -3137,13 +3476,13 @@ class Qube(object):
     def mod_by_number(self, arg, recursive=True):
         """Internal modulus op when the arg is a Python scalar."""
 
-        obj = self.clone(False)
+        obj = self.clone(recursive=False)
 
         # Mask out zeros
         if arg == 0:
-            obj.__set_mask_(True)
+            obj._set_mask_(True)
         else:
-            obj.__set_values_(self.__values_ % arg)
+            obj._set_values_(self.__values_ % arg)
 
         if recursive and self.__derivs_:
             for (key, deriv) in self.__derivs_.iteritems():
@@ -3187,10 +3526,10 @@ class Qube(object):
 
         # Arrays of exponents are not supported
         if isinstance(expo, Qube):
-            if expo.mask:
+            if expo.__mask_:
                 Qube.raise_unsupported_op('**', self, expo)
 
-            expo = expo.values
+            expo = expo.__values_
 
         if np.shape(expo):
             Qube.raise_unsupported_op('**', self, expo)
@@ -3215,8 +3554,8 @@ class Qube(object):
         elif no_zeros_allowed:
                 arg = arg.mask_where_eq(0., 1.)
 
-        obj = arg.clone(False)
-        obj.__set_values_(arg.__values_**expo)
+        obj = arg.clone(recursive=False)
+        obj._set_values_(arg.__values_**expo)
         obj.__units_ = Units.units_power(self.__units_, expo)
 
         # Evaluate the derivatives if necessary
@@ -3342,9 +3681,10 @@ class Qube(object):
         """
 
         if self.__truth_if_all_:
-            return bool(np.all(self.__values_))
+            return bool(np.all(self.as_mask_where_nonzero()))
+
         if self.__truth_if_any_:
-            return bool(np.any(self.__values_))
+            return bool(np.any(self.as_mask_where_nonzero()))
 
         if self.__shape_:
             raise ValueError('the truth value requires any() or all()')
@@ -3353,35 +3693,160 @@ class Qube(object):
             raise ValueError('the truth value of an entirely masked object ' +
                              'is undefined.')
 
-        return bool(np.all(self.__values_))
+        return bool(np.all(self.as_mask_where_nonzero()))
 
-    def all(self):
-        """Returns True if every unmasked value is nonzero.
+    ############################################################################
+    # Any and all
+    ############################################################################
 
-        The truth value of an entirely masked object is undefined."""
+    def all(self, axis=None):
+        """Return True if and only if all the matching items are nonzero.
 
-        if self.__mask_ is False:
-            return bool(np.all(self.__values_))
+        If the result is a single scalar, it is returned as a Python bool value;
+        otherwise it is returned as a Boolean.
 
-        if np.all(self.__mask_):
-            raise ValueError('the truth value of an entirely masked object ' +
-                             'is undefined.')
+        Input:
+            axis        an integer axis or a tuple of axes. The all operatation
+                        is performed across these axes, leaving any remaining
+                        axes in the returned value. If None (the default), then
+                        the all operation is performed across all axes if the
+                        object.
+        """
 
-        return bool(np.all(self.__values_[self.antimask]))
+        self = Qube.BOOLEAN_CLASS.as_boolean(self)
 
-    def any(self):
-        """Returns True if any unmasked value is nonzero.
+        if self.shape == ():
+            result = Qube.BOOLEAN_CLASS(self)
 
-        The truth value of an entirely masked object is undefined."""
+        elif not np.any(self.__mask_):
+            result = Qube.BOOLEAN_CLASS(np.all(self.__values_, axis=axis),
+                                        mask=False)
 
-        if self.__mask_ is False:
-            return bool(np.any(self.__values_))
+        elif axis is None:
+            if np.shape(self.__mask_) == ():
+                result = Qube.BOOLEAN_CLASS(np.all(self.__values_),
+                                            mask=self.__mask_)
+            elif np.all(self.__mask_):
+                result = Qube.BOOLEAN_CLASS(np.all(self.__values_), mask=True)
+            else:
+                result = Qube.BOOLEAN_CLASS(np.all(
+                                            self.__values_[self.antimask]),
+                                            mask=False)
 
-        if np.all(self.__mask_):
-            raise ValueError('the truth value of an entirely masked object ' +
-                             'is undefined.')
- 
-        return bool(np.any(self.__values_[self.antimask]))
+        else:
+
+            # Create new array
+            if self.__values_.dtype == np.dtype('bool'):
+                new_values = self.__values_.copy()
+            else:
+                new_values = self.__values_.astype('bool')
+
+            new_values[self.__mask_] = True
+            new_values = np.all(new_values, axis=axis)
+
+            # Create new mask
+            if self.__mask_ is True:
+                new_mask = True
+            elif self.__mask_ is False:
+                new_mask = False
+            else:
+                new_mask = np.all(self.__mask_, axis=axis)
+
+            # Use the all of the unmasked values if all are masked
+            if np.all(new_mask):
+                unmasked_alls = np.all(self.__values_, axis=axis)
+                new_values = unmasked_alls
+                new_mask = True
+            elif np.any(new_mask):
+                unmasked_alls = np.all(self.__values_, axis=axis)
+                new_values[new_mask] = unmasked_alls[new_mask]
+            else:
+                new_mask = False
+
+            result = Qube.BOOLEAN_CLASS(new_values, new_mask)
+
+        # Convert result to a Python bool if necessary
+        if result.shape == () and not result.__mask_:
+            if result:
+                return True
+            else:
+                return False
+
+        return result
+
+    def any(self, axis=None):
+        """Return True if any of the matching items are nonzero.
+
+        If the result is a single scalar, it is returned as a Python bool value
+        rather than as a Boolean.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The any operatation
+                        is performed across these axes, leaving any remaining
+                        axes in the returned value. If None (the default), then
+                        the any operation is performed across all axes if the
+                        object.
+        """
+
+        self = Qube.BOOLEAN_CLASS.as_boolean(self)
+
+        if self.shape == ():
+            result = Qube.BOOLEAN_CLASS(self, derivs={})
+
+        elif not np.any(self.__mask_):
+            result = Qube.BOOLEAN_CLASS(np.any(self.__values_, axis=axis),
+                                        mask=False)
+
+        elif axis is None:
+            if np.shape(self.__mask_) == ():
+                result = Qube.BOOLEAN_CLASS(np.any(self.__values_),
+                                            mask=self.__mask_)
+            elif np.all(self.__mask_):
+                result = Qube.BOOLEAN_CLASS(np.any(self.__values_), mask=True)
+            else:
+                result = Qube.BOOLEAN_CLASS(np.any(
+                                            self.__values_[self.antimask]))
+
+        else:
+
+            # Create new array
+            if self.__values_.dtype == np.dtype('bool'):
+                new_values = self.__values_.copy()
+            else:
+                new_values = self.__values_.astype('bool')
+
+            new_values[self.__mask_] = False
+            new_values = np.any(new_values, axis=axis)
+
+            # Create new mask
+            if self.__mask_ is True:
+                new_mask = True
+            elif self.__mask_ is False:
+                new_mask = False
+            else:
+                new_mask = np.all(self.__mask_, axis=axis)
+
+            # Use the all of the unmasked values if all are masked
+            if np.all(new_mask):
+                unmasked_anys = np.any(self.__values_, axis=axis)
+                new_values = unmasked_anys
+                new_mask = True
+            elif np.any(new_mask):
+                unmasked_anys = np.any(self.__values_, axis=axis)
+                new_values[new_mask] = unmasked_anys[new_mask]
+            else:
+                new_mask = False
+
+            result = Qube.BOOLEAN_CLASS(new_values, new_mask)
+
+        # Convert result to a Python bool if necessary
+        if result.shape == () and not result.__mask_:
+            if result:
+                return True
+            else:
+                return False
+
+        return result
 
     ############################################################################
     # Special operators
@@ -3450,56 +3915,70 @@ class Qube(object):
         else:
             raise TypeError('len of unsized object')
 
-    def __getitem__(self, i):
+    def __getitem__(self, indx):
 
         # A shapeless object cannot be indexed
         if self.__shape_ == ():
             raise IndexError('too many indices')
 
         # Interpret and adapt the index
-        (i,imask,idxmask) = self.prep_index(i, remove_masked=False)
+        # (index to apply to values array, index to apply to mask array
+        #  index to define additional items to be masked)
+        (vals_index, mask_index, new_mask_index) = self.prep_index(indx)
 
-        # Apply index
-        item_value = self.__values_[i]
-
-        if np.shape(self.__mask_) == ():
-            item_mask = self.__mask_
-        else:
-            item_mask = self.__mask_[imask]
-
-        if idxmask is not None:
-            val_shape = np.shape(item_value)
-            mask_shape = val_shape[:len(val_shape)-self.drank-self.nrank]
-            if np.shape(idxmask) != mask_shape:
-                # Index is not of the same rank as the values
-                if np.shape(idxmask) == ():
-                    if idxmask: # Single True
-                        new_idxmask = np.ones(mask_shape, dtype='bool')
-                    else:
-                        new_idxmask = idxmask # Single False
-                else: # Need to reshape
-                    new_idxmask = np.zeros(mask_shape, dtype='bool')
-                    new_idxmask[idxmask] = True
-                idxmask = new_idxmask
-            item_mask |= idxmask
+        # Apply index to values
+        result_values = self.__values_[vals_index]
+        result_vals_shape = np.shape(result_values)
 
         # Make sure we have not indexed into the item
-        item_shape = np.shape(item_value)
-        if len(item_shape) < self.__rank_:
+        if len(result_vals_shape) < self.__rank_:
             raise IndexError('too many indices')
+
+        # Apply index to mask
+        if np.shape(self.__mask_) == ():
+            result_mask = self.__mask_
+        else:
+            result_mask = self.__mask_[mask_index]
+
+        # Apply an additional mask if provided
+        # Note that this is to be applied after the first mask index.
+        if new_mask_index is not None:
+
+            # Get shape of results
+            result_mask_shape = result_vals_shape[:len(result_vals_shape) -
+                                                   self.__rank_]
+
+            # If everything is newly masked...
+            if new_mask_index is True:
+                new_mask = True
+
+            # If nothing is newly masked...
+            elif new_mask_index is False:
+                new_mask = False
+
+            # If the new mask is an array..
+            elif np.shape(new_mask_index) == result_mask_shape:
+                new_mask = new_mask_index
+
+            # If the new mask is partial..
+            else:
+                new_mask = np.zeros(result_mask_shape, dtype='bool')
+                new_mask[new_mask_index] = True
+
+            result_mask = result_mask | new_mask
 
         # Construct the object
         obj = Qube.__new__(type(self))
-        obj.__init__(item_value, item_mask, derivs={}, example=self)
+        obj.__init__(result_values, result_mask, derivs={}, example=self)
         obj.__readonly_ = self.__readonly_
 
         # Apply the same indexing to any derivatives
         for (key, deriv) in self.__derivs_.iteritems():
-            obj.insert_deriv(key, deriv[imask])
+            obj.insert_deriv(key, deriv[mask_index])
 
         return obj
 
-    def __setitem__(self, i, arg):
+    def __setitem__(self, indx, arg):
         self.require_writable()
 
         # A shapeless object cannot be indexed
@@ -3517,39 +3996,51 @@ class Qube(object):
                                  key)
 
         # Interpret and adapt the index
-        (i,imask,idxmask) = self.prep_index(i, remove_masked=True)
+        # (index to apply to values array, index to apply to mask array
+        #  index to define additional items to be masked)
+        (vals_index, mask_index, new_mask_index) = self.prep_index(indx)
 
-# Annoyingly, "None in i" raises a FutureWarning and also just doesn't work
-#         if i is None or (np.shape(i) != () and None in i):
-#             # Fully flattened index along at least one dimension; nothing to do
-#             return
-
-        # Fully flattened index along at least one dimension; nothing to do
-        if i is None:
-            return
-
-        if np.shape(i) != ():
-            for element in i:
-                if element is None: return
-
-        # Insert the values
-        if (idxmask is None or (np.shape(idxmask) == () and idxmask == False) or
-            np.shape(arg.__values_) == ()):
-            self.__values_[i] = arg.__values_
-        else:
-            self.__values_[i] = new_vals[idxmask]
+        # Insert the replacement values
+        self.__values_[vals_index] = arg.__values_
 
         # Update the mask if necessary
+
+        # If mask is already an array...
         if np.shape(self.__mask_):
-            self.__mask_[imask] = arg.__mask_
-        elif np.all(self.__mask_ == arg.__mask_):
+            self.__mask_[mask_index] = arg.__mask_
+
+        # If the replacement is already an array...
+        elif np.shape(arg.__mask_):
+            maskval = self.__mask_
+            self.__mask_ = np.empty(self.shape, dtype='bool')
+            self.__mask_.fill(maskval)
+            self.__mask_[mask_index] = arg.__mask_
+
+        # If mask is a scalar and can remain that way...
+        elif self.__mask_ == arg.__mask_ and new_mask_index is None:
             pass
+
+        # If mask is True but needs to become an array...
         elif self.__mask_:
             self.__mask_ = np.ones(self.shape, dtype='bool')
-            self.__mask_[imask] = arg.__mask_
+            self.__mask_[mask_index] = arg.__mask_
+
+        # If mask is False but needs to become an array...
         else:
             self.__mask_ = np.zeros(self.shape, dtype='bool')
-            self.__mask_[imask] = arg.__mask_
+            self.__mask_[mask_index] = arg.__mask_
+
+        # Apply the new mask if any...
+        if new_mask_index is not None:
+            if np.shape(self.__mask_[mask_index]) == ():
+                self.__mask_[mask_index] = True
+            else:
+                # This doesn't work because getitem preceeds setitem
+                # self.__mask_[mask_index][new_mask_index] = True
+                # This works instead...
+                indexed_mask = self.__mask_[mask_index]
+                indexed_mask[new_mask_index] = True
+                self.__mask_[mask_index] = indexed_mask
 
         self.__antimask_ = None
         self.__corners_  = None
@@ -3557,66 +4048,87 @@ class Qube(object):
 
         # Also update the derivatives (ignoring those not in self)
         for (key, self_deriv) in self.__derivs_.iteritems():
-            self.__derivs_[key][imask] = arg.__derivs_[key]
+            self.__derivs_[key][mask_index] = arg.__derivs_[key]
 
         return
 
-    def prep_index(self, index, remove_masked):
-        """Repair the index for use in a Qube, returning one for the values and
-        one for the mask.
+    def prep_index(self, indx):
+        """Prepare the index for application to a Qube.
 
-        If remove_masked is False:
-            If the index is a single Qube object, then we also allow the return
-            of a mask indicating which index values are masked. However, if
-            the index is multiple objects, then no masked indices are allowed.
-        If remove_masked is True:
-            If the index is a single Qube object, then any masked items are
-            removed.
+        Return: A tuple (vals_index, mask_index, new_mask_index)
+            vals_index      index to apply to values array.
+            mask_index      index to apply to mask array.
+            new_mask_index  index to define additional items to be masked.
+
+        Note that the third index is applied after the second, so it should
+        define indexing into the new mask, not the original mask.
+
+        The index is represented by a single object or a list/tuple of objects.
+        If the index contains a single Qube object, then we take the mask of
+        that object into consideration, and values at the associated indices
+        will become masked.
+
+        If the index contains multiple Qube objects, then no masking is allowed.
 
         If the index contains a Ellipsis, we need to append additional null
-        slices for the item elements of the array in order to make the axes
-        align properly.
-
-        This code also works around a "feature" that makes the simple construct
-            if Ellipsis in index
-        fail when the index contains a NumPy array.
+        slices for the elements of the values array to account for rank > 0;
+        otherwise, the axes will not align properly.
 
         The code also replaces a Qube with the result of its as_index_and_mask()
         method.
         """
 
-        # Replace a Qube with its index equivalent
-        if isinstance(index, Qube):
-            index, idxmask = index.as_index_and_mask(remove_masked=remove_masked)
-            return (index, index, idxmask)
+        # If a list or tuple contains only one element, extract it
+        if type(indx) in (tuple,list) and len(indx) == 1:
+            indx = indx[0]
 
-        # There's only a problem with indices of type list or tuple
-        # By definition these are N-d array references with N>1
-        if type(index) not in (tuple,list):
-            return (index, index, None) # NOTE we don't handle NP MaskedArrays
+        # Replace a Qube with its index equivalent
+        if isinstance(indx, Qube):
+            (mask_index, new_mask_index) = indx.as_index_and_mask()
+
+            # Note that a mask_index works as a vals_index because it operates
+            # on leading dimensions of the values array, leaving individual
+            # items whole.
+            return (mask_index, mask_index, new_mask_index)
+
+        # There can only a problem with indices of type list or tuple
+        # By definition these are N-d array references with N > 1
+        if type(indx) not in (tuple,list):
+            return (indx, indx, None)
 
         # Search for Ellipses and Qubes
+        # Note:
+        #   if Ellipsis in index
+        # fails when the index contains a NumPy array.
+
         new_index = []
         has_ellipsis = False
-        for item in index:
+        new_mask_count = 0
+        new_mask_index = None
+        for item in indx:
             if type(item) == type(Ellipsis):
                 has_ellipsis = True
 
             if isinstance(item, Qube):
-                index, idxmask = item.as_index_and_mask(remove_masked=remove_masked)
-                if idxmask is not None:
-                    raise ValueError("illegal masked index for " +
-                                     "multi-dimensional indexing")
-                new_index.append(index)
+                (qube_index, qube_mask_index) = item.as_index_and_mask()
+                if qube_mask_index is not None:
+                    new_mask_count += 1
+                    new_mask_index = qube_mask_index
+                    if new_mask_count > 1:
+                        raise ValueError("illegal masked index for " +
+                                         "multi-dimensional indexing")
+                new_index.append(qube_index)
             else:
                 new_index.append(item)
 
+        # If an ellipsis appeared, then create safe space for the items in the
+        # values array index
         if has_ellipsis:
             value_index = new_index + self.__rank_ * [slice(None)]
         else:
             value_index = new_index
 
-        return (tuple(value_index), tuple(new_index), None)
+        return (tuple(value_index), tuple(new_index), new_mask_index)
 
     ############################################################################
     # Utilities for arithmetic operations
@@ -4232,7 +4744,7 @@ class Qube(object):
         for r in range(self.__rank_):
             sum_sq = np.sum(sum_sq, axis=-1)
 
-        return Qube.SCALAR_CLASS(np.sqrt(sum_sq/self.isize), self.mask)
+        return Qube.SCALAR_CLASS(np.sqrt(sum_sq/self.isize), self.__mask_)
 
     ############################################################################
     # General shaping operations
@@ -4326,6 +4838,73 @@ class Qube(object):
         if recursive:
             for (key, deriv) in self.__derivs_.iteritems():
                 obj.insert_deriv(key, deriv.swap_axes(a1, a2, False))
+
+        return obj
+
+    def roll_axis(self, axis, start=0, recursive=True, rank=None):
+        """Return a shallow copy of the object with the specified axis rolled to
+        a new position.
+
+        Input:
+            axis        the axis to roll.
+            start       the axis will be rolled to fall in front of this axis;
+                        default is zero.
+            recursive   True to perform the same axis roll on the derivatives.
+                        Otherwise, derivatives are deleted from the returned
+                        object.
+            rank        rank to assume for the object, which could be larger
+                        than len(self.shape) because of broadcasting
+        """
+
+        # Validate the rank
+        len_shape = len(self.__shape_)
+        if rank is None:
+            rank = len_shape
+        if rank < len_shape:
+            raise ValueError('roll rank %d is too small for object' % rank)
+
+        # Identify the axis to roll, which could be negative
+        if axis < 0:
+            a1 = axis + rank
+        else:
+            a1 = axis
+
+        if a1 < 0 or a1 >= rank:
+            raise ValueError('roll axis %d out of range' % axis)
+
+        # Identify the start axis, which could be negative
+        if start < 0:
+            a2 = start + rank
+        else:
+            a2 = start
+
+        if a2 < 0 or a2 >= rank:
+            raise ValueError('roll axis %d out of range' % start)
+
+        # No need to modify a shapeless object
+        if self.__shape_ == ():
+            return self
+
+        # Add missing axes if necessary
+        if len_shape < rank:
+            self = self.reshape((rank - len_shape) * (1,) + self.__shape_,
+                                recursive=recursive)
+
+        # Roll the values and mask of the object
+        new_values = np.rollaxis(self.__values_, a1, a2)
+
+        if np.shape(self.__mask_):
+            new_mask = np.rollaxis(self.__mask_, a1, a2)
+        else:
+            new_mask = self.__mask_
+
+        obj = Qube.__new__(type(self))
+        obj.__init__(new_values, new_mask, derivs={}, example=self)
+        obj.__readonly_ = self.__readonly_
+
+        if recursive:
+            for (key, deriv) in self.__derivs_.iteritems():
+                obj.insert_deriv(key, deriv.roll_axis(a1, a2, False, rank))
 
         return obj
 
@@ -4503,5 +5082,170 @@ class Qube(object):
             results.append(new_obj)
 
         return tuple(results)
+
+    @staticmethod
+    def stack(*args, **keywords):
+        """Stack objects of the same class into one with a new leading axis.
+
+        Inputs:
+            args        any number of Scalars or arguments that can be casted
+                        to Scalars. They need not have the same shape, but it
+                        must be possible to cast them to the same shape. A value
+                        of None is converted to a zero-valued Scalar that
+                        matches the denominator shape of the other arguments.
+
+            recursive   True to include all the derivatives. The returned object
+                        will have derivatives representing the union of all the
+                        derivatives found amongst the scalars. Default is True.
+
+        Note that the 'recursive' input is handled as a keyword argument in
+        order to distinguish it from the Qube inputs.
+        """
+
+        # Search the keywords for "recursive"
+        recursive = True
+        if 'recursive' in keywords:
+            recursive = keywords['recursive']
+            del keywords['recursive']
+
+        # No other keyword is allowed
+        if keywords:
+          raise TypeError(("stack() got an unexpected keyword argument " +
+                           "'%s'") % keywords.keys()[0])
+
+        args = list(args)
+
+        # Get the properties of the first argument as a PolyMath subclass
+        # However, do not give preference to Booleans
+        denom = ()
+        subclass_arg = None
+        for (i,arg) in enumerate(args):
+            if (isinstance(arg, Qube) and not
+                isinstance(arg, Qube.BOOLEAN_CLASS)):
+                denom = arg.denom
+                subclass_arg = arg
+                subclass_indx = i
+                break
+
+        if subclass_arg is None:
+            for (i,arg) in enumerate(args):
+                if isinstance(arg, Qube):
+                    denom = arg.denom
+                    subclass_arg = arg
+                    subclass_indx = i
+                    break
+
+        if subclass_arg is None:
+            raise ValueError('unidentified subclass for stack()')
+
+        drank = len(denom)
+
+        # Convert to subclass, identify units, select dtype
+        units = None
+        floats_found = False
+        ints_found = False
+        bools_found = False
+        for (i,arg) in enumerate(args):
+            if arg is None: continue        # Used as placehold for derivs
+
+            arg = subclass_arg.as_this_type_unless_boolean(arg,
+                                            recursive=recursive, drank=drank)
+            args[i] = arg
+
+            # Remember any units encountered
+            if arg.units is not None:
+                if units is None:
+                    units = arg.units
+                else:
+                    arg.confirm_units(units)
+
+            # Remember any floats, ints, bools encountered
+            if arg.is_float():
+                floats_found = True
+            elif arg.is_int():
+                ints_found = True
+            elif arg.is_bool():
+                bools_found = True
+
+        # Determine the dtype
+        if floats_found:
+            dtype = 'float'
+            for (i,arg) in enumerate(args):
+                if arg is not None:
+                    args[i] = arg.as_float()
+
+        elif ints_found:
+            dtype = 'int'
+            for (i,arg) in enumerate(args):
+                if arg is not None:
+                    args[i] = arg.as_int()
+        else:
+            dtype = 'bool'
+
+        # Broadcast all inputs into a common shape
+        args = Qube.broadcast(*args, recursive=True)
+
+        # Determine what type of mask is needed:
+        mask_true_found = False
+        mask_false_found = False
+        mask_array_found = False
+        for arg in args:
+            if arg is None:
+                continue
+            elif arg.mask is True:
+                mask_true_found = True
+            elif arg.mask is False:
+                mask_false_found = True
+            else:
+                mask_array_found = True
+
+        # Construct the mask
+        if  mask_array_found or (mask_false_found and mask_true_found):
+            mask = np.zeros((len(args),) + args[subclass_indx].shape,
+                            dtype='bool')
+            for i in range(len(args)):
+                if args[i] is None:
+                    mask[i] = False
+                else:
+                    mask[i] = args[i].mask
+        else:
+            mask = mask_true_found
+
+        # Construct the array
+        values = np.empty((len(args),) + args[subclass_indx].values.shape,
+                          dtype=dtype)
+        for i in range(len(args)):
+            if args[i] is None:
+                values[i] = 0
+            else:
+                values[i] = args[i].values
+
+        # Construct the result
+        result = Qube.__new__(type(args[subclass_indx]))
+        result.__init__(values, mask, units, drank=drank)
+
+        # Fill in derivatives if necessary
+        if recursive:
+            keys = []
+            for arg in args:
+                if arg is None: continue
+                keys += arg.derivs.keys()
+
+            keys = set(keys)        # remove duplicates
+
+            derivs = {}
+            for key in keys:
+                deriv_list = []
+                for arg in args:
+                    if arg is None:
+                        deriv_list.append(None)
+                    else:
+                        deriv_list.append(arg.derivs.get(key, None))
+
+                derivs[key] = Qube.stack(*deriv_list, recursive=False)
+
+            result.insert_derivs(derivs)
+
+        return result
 
 ################################################################################

@@ -100,7 +100,6 @@ class Pair(Vector):
 
         # Construct the object
         obj = Pair(new_values, derivs={}, example=self)
-        if self.readonly: obj.as_readonly()
 
         # Fill in the derivatives if necessary
         if recursive:
@@ -109,9 +108,89 @@ class Pair(Vector):
 
         return obj
 
+    def rot90(self, recursive=True):
+        """A pair object rotated 90 degrees from the origin, (x,y) -> (y,-x).
+
+        If recursive is True, derivatives will also be rotated.
+        """
+
+        # Roll the array axis to the end
+        lshape = len(self.values.shape)
+        new_values = np.rollaxis(self.values, lshape - self.drank - 1, lshape)
+
+        # Swap the axes and negate the new y
+        new_values = new_values[..., ::-1]
+
+        # Roll the axis back
+        new_values = np.rollaxis(new_values, -1, lshape - self.drank - 1)
+
+        # Construct the object
+        new_values[...,1] = -new_values[...,1]      # negate the new y-axis
+        obj = Pair(new_values, derivs={}, example=self)
+
+        # Fill in the derivatives if necessary
+        if recursive:
+            for (key, deriv) in self.derivs.iteritems():
+                obj.insert_deriv(key, deriv.rot90(False))
+
+        return obj
+
+    def clip2d(self, lower, upper, remask=False):
+        """Return a copy with values clipped to fall within 2D limits.
+
+        Values get moved to the nearest location within a rectangle defined by
+        the lower and upper limits.
+
+        Optionally, the clipped values can also be masked.
+
+        Inputs:
+            lower           coordinates of the lower limit. None or masked value
+                            to ignore.
+            upper           coordinates of the upper limit (inclusive). None or
+                            masked value to ignore.
+            remask          True to include the new mask into the object's mask;
+                            False to replace the values but leave them unmasked.
+        """
+
+        # Make sure the lower limit is either None or an unmasked Pair
+        if lower is not None:
+            lower = Pair.as_pair(lower)
+            assert lower.shape == (), \
+                            'Lower limit must contain exactly two values'
+            if lower.mask:
+                lower = None
+
+        # Make sure the upper limit is either None or an unmasked Pair
+        if upper is not None:
+            upper = Pair.as_pair(upper)
+            assert upper.shape == (), \
+                            'Upper limit must contain exactly two values'
+            if upper.mask:
+                upper = None
+
+        # Define the clipping limits
+        if lower is None:
+            lower0 = None
+            lower1 = None
+        else:
+            (lower0, lower1) = lower.to_scalars()
+
+        if upper is None:
+            upper0 = None
+            upper1 = None
+        else:
+            (upper0, upper1) = upper.to_scalars()
+
+        # Clip...
+        result = self
+        result = result.clip_component(0, lower0, upper0, remask)
+        result = result.clip_component(1, lower1, upper1, remask)
+        return result
+
 # A useful class constant
 
 Pair.ZERO   = Pair((0.,0.)).as_readonly()
+Pair.ZEROS  = Pair((0.,0.)).as_readonly()
 Pair.ONES   = Pair((1.,1.)).as_readonly()
 Pair.XAXIS  = Pair((1.,0.)).as_readonly()
 Pair.YAXIS  = Pair((0.,1.)).as_readonly()

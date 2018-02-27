@@ -102,13 +102,17 @@ import unittest
 
 class Test_Tracker(unittest.TestCase):
 
-    def runTest(self):
-
+    def setUp(self):
         import oops.body as body
         import oops.spice_support as spice
 
         body.Body.reset_registry()
-        body.define_solar_system("1990-01-01", "2020-01-01")
+        body.define_solar_system('1990-01-01', '2020-01-01')
+
+    def tearDown(self):
+        pass
+
+    def runTest(self):
 
         tracker = Tracker("J2000", "MARS", "EARTH", 0., id="TEST")
         mars = AliasPath("MARS")

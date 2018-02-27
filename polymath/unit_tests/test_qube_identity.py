@@ -25,7 +25,7 @@ class Test_Qube_identity(unittest.TestCase):
     self.assertEqual(a.identity().shape, ())
 
     a = Boolean([True,False])
-    self.assertRaises(TypeError, a.identity)
+    self.assertEqual(a.identity(), True)
 
     a = Vector([(1,2,3),(4,5,6)])
     self.assertRaises(TypeError, a.identity)

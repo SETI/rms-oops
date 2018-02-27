@@ -13,7 +13,7 @@ from oops.surface_.orbitplane  import Test_OrbitPlane
 from oops.surface_.ringplane   import Test_RingPlane
 from oops.surface_.polarlimb   import Test_PolarLimb
 from oops.surface_.spheroid    import Test_Spheroid
-from oops.surface_.spicebody   import Test_spice_body
+from oops.surface_.spice_shape import Test_spice_shape
 
 from oops.surface_.centricellipsoid import Test_CentricEllipsoid
 from oops.surface_.centricspheroid  import Test_CentricSpheroid

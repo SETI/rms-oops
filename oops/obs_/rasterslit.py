@@ -13,10 +13,10 @@ from oops.event            import Event
 class RasterSlit(Observation):
     """A RasterSlit is subclass of Observation consisting of a 2-D image in
     which one dimension is constructed by sweeping a single pixel along a slit,
-    and the second dimension is simulated by rotation of the camera. This
-    differs from a Slit subclass in that a single sensor is moving to emulate a
-    1-D slit. It differs from a RasterScan in that there is no movement of the
-    line of sight within the instrument's frame.
+    and the second dimension is simulated by rotation of the camera. The FOV
+    describes the 1-D slit. This differs from a Slit subclass in that a single
+    sensor is moving to emulate the 1-D slit. It differs from a RasterScan in
+    that the FOV describes a 1-D slit and not a 2-D image.
     """
 
     PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
@@ -74,33 +74,35 @@ class RasterSlit(Observation):
             self.v_axis = self.axes.index('vslow')
             self.fast_axis = self.u_axis
             self.slow_axis = self.v_axis
-            self.cross_slit_uv_index = 1
-            self.along_slit_uv_index = 0
+            self.cross_slit_uv_axis = 1
+            self.along_slit_uv_axis = 0
             self.uv_shape = [self.cadence.shape[1], self.cadence.shape[0]]
         else:
             self.u_axis = self.axes.index('uslow')
             self.v_axis = self.axes.index('vfast')
             self.fast_axis = self.v_axis
             self.slow_axis = self.u_axis
-            self.cross_slit_uv_index = 0
-            self.along_slit_uv_index = 1
+            self.cross_slit_uv_axis = 0
+            self.along_slit_uv_axis = 1
             self.uv_shape = [self.cadence.shape[0], self.cadence.shape[1]]
 
-        self.along_slit_shape = self.uv_shape[self.along_slit_uv_index]
+        self.swap_uv = (self.u_axis > self.v_axis)
+
+        self.along_slit_shape = self.uv_shape[self.along_slit_uv_axis]
 
         self.t_axis = [self.slow_axis, self.fast_axis]
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
-        assert self.fov.uv_shape.vals[self.cross_slit_uv_index] == 1
-        assert (self.fov.uv_shape.vals[self.along_slit_uv_index] ==
+        assert self.fov.uv_shape.vals[self.cross_slit_uv_axis] == 1
+        assert (self.fov.uv_shape.vals[self.along_slit_uv_axis] ==
                 self.cadence.shape[1])
 
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size != 1)
 
         duv_dt_basis_vals = np.zeros(2)
-        duv_dt_basis_vals[self.along_slit_uv_index] = 1.
+        duv_dt_basis_vals[self.along_slit_uv_axis] = 1.
         self.duv_dt_basis = Pair(duv_dt_basis_vals)
 
         self.shape = len(axes) * [0]
@@ -147,8 +149,8 @@ class RasterSlit(Observation):
 
         # Create (u,v) Pair
         uv_vals = np.empty(indices.shape + (2,))
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_index] = 0.5
+        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self.cross_slit_uv_axis] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
         # Create time Scalar
@@ -190,8 +192,8 @@ class RasterSlit(Observation):
         slit_coord = indices.to_scalar(self.fast_axis)
 
         uv_vals = np.empty(indices.shape + (2,), dtype='int')
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_index] = 0
+        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self.cross_slit_uv_axis] = 0
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
@@ -206,7 +208,7 @@ class RasterSlit(Observation):
                           (v_index < 0) |
                           (u_index >= self.uv_shape[0]) |
                           (v_index >= self.uv_shape[1]))
-            
+
             if np.any(is_outside):
                 uv_min = uv_min.mask_where(is_outside)
                 uv_max = uv_max.mask_where(is_outside)
@@ -214,6 +216,26 @@ class RasterSlit(Observation):
                 time_max = time_max.mask_where(is_outside)
 
         return (uv_min, uv_max, time_min, time_max)
+
+    def uv_range_at_tstep(self, *tstep):
+        """Return a tuple defining the range of (u,v) coordinates active at a
+        particular time step.
+
+        Input:
+            tstep       a time step index (one or two integers). Not checked for
+                        out-of-range errors.
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive).
+        """
+
+        if self.along_slit_uv_axis == 0:
+            return (Pair(tstep[1], 0), Pair(tstep[1]+1, 1))
+        else:
+            return (Pair(0, tstep[1]), Pair(1, tstep[1]+1))
 
     def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).
@@ -229,8 +251,8 @@ class RasterSlit(Observation):
         """
 
         uv_pair = Pair.as_pair(uv_pair).as_int()
-        tstep = uv_pair.to_pair((self.cross_slit_uv_index,
-                                 self.along_slit_uv_index))
+        tstep = uv_pair.to_pair((self.cross_slit_uv_axis,
+                                 self.along_slit_uv_axis))
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
@@ -245,7 +267,7 @@ class RasterSlit(Observation):
         """
 
         uv_pair = Pair.as_pair(uv_pair)
-        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
+        tstep = uv_pair.to_scalar(self.cross_slit_uv_axis)
 
         return self.duv_dt_basis / self.cadence.tstride_at_tstep(tstep)
 

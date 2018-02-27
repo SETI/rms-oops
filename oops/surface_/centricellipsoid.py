@@ -425,7 +425,7 @@ class Test_CentricEllipsoid(unittest.TestCase):
             sorted = np.sort(errors.vals[errors.antimask])
                         # mask=True where the line of sight missed the surface
             selected_error = sorted[int(sorted.size * frac)]
-            self.assertTrue(selected_error < 1.e-5)
+            self.assertTrue(selected_error < 2.e-5)
 
             dt_dobs = (t1 - t2) / (2*eps)
             ref = t.d_dobs.vals[...,i]
@@ -449,7 +449,7 @@ class Test_CentricEllipsoid(unittest.TestCase):
             errors = abs(dcept_dlos - ref) / abs(ref)
             sorted = np.sort(errors.vals[errors.antimask])
             selected_error = sorted[int(sorted.size * frac)]
-            self.assertTrue(selected_error < 1.e-5)
+            self.assertTrue(selected_error < 2.e-5)
 
             dt_dlos = (t1 - t2) / (2*eps)
             ref = t.d_dlos.vals[...,i]
@@ -457,7 +457,7 @@ class Test_CentricEllipsoid(unittest.TestCase):
             errors = abs(dt_dlos/ref - 1)
             sorted = np.sort(errors.vals[errors.antimask])
             selected_error = sorted[int(sorted.size * frac)]
-            self.assertTrue(selected_error < 1.e-5)
+            self.assertTrue(selected_error < 2.e-5)
 
         # Test normal()
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)

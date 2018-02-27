@@ -10,7 +10,6 @@ from oops.config          import LOGGING, PATH_PHOTONS
 from oops.event           import Event
 from oops.frame_.frame    import Frame
 from oops.meshgrid        import Meshgrid
-from oops.path_.multipath import MultiPath
 from oops.body            import Body
 
 class Observation(object):
@@ -45,6 +44,8 @@ class Observation(object):
         u_axis, v_axis  integers identifying the axes of the data array
                         associated with the u-axis and the v-axis. Use -1 if
                         that axis is not associated with an array index.
+        swap_uv         True if the v-axis comes before the u-axis;
+                        False otherwise.
         t_axis          integers or lists of integers identifying the axes of
                         the data array associated with time. When a list has
                         multiple values, this is the sequence of array indices
@@ -65,6 +66,8 @@ class Observation(object):
             data        a reserved subfield to contain the NumPy array of
                         numbers associated with the observation.
     """
+
+    INVENTORY_IMPLEMENTED = False
 
     ####################################################
     # Methods to be defined for each subclass
@@ -110,6 +113,23 @@ class Observation(object):
         """
 
         raise NotImplementedException("uvt_range() is not implemented")
+
+    def uvt_ranges(self):
+        """Return a list of tuples defining the ranges of FOV coordinates and
+        time limits at which they are applicable.
+
+        Return:         a list of tuples (uv_min, uv_max, time_min, time_max)
+            uv_min      a Pair defining the minimum values of (u,v) associated
+                        a tile of the FOV.
+            uv_max      a Pair defining the maximum values of (u,v) associated
+                        a tile of the FOV.
+            time_min    a Scalar defining the minimum time associated with this
+                        tile. It is given in seconds TDB.
+            time_max    a Scalar defining the maximum time associated with this
+                        tile. It is given in seconds TDB.
+        """
+
+        raise NotImplementedException("uvt_ranges() is not implemented")
 
     def indices_at_uvt(self, uv_pair, time, fovmask=False):
         """Return a vector of indices for given FOV coordinates (u,v) and time.
@@ -704,116 +724,9 @@ class Observation(object):
                                            in each direction.
         """
 
-        assert return_type in ('list', 'flags', 'full')
-
-        if fov is None:
-            fov = self.fov
-
-        body_names = [Body.as_body_name(body) for body in bodies]
-        bodies  = [Body.as_body(body) for body in bodies]
-        nbodies = len(bodies)
-
-        path_ids = [body.path for body in bodies]
-        multipath = MultiPath(path_ids)
-
-        obs_time = self.time[0] + time_frac * (self.time[1] - self.time[0])
-        obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
-        (_,
-         arrival_event) = multipath.photon_to_event(obs_event, quick=quick,
-                                                    converge=converge)
-
-        centers = arrival_event.neg_arr_ap
-        ranges = centers.norm()
-        radii = Scalar([body.radius for body in bodies])
-        radius_angles = (radii/ranges).arcsin()
-
-        inner_radii = Scalar([body.inner_radius for body in bodies])
-        inner_angles = (inner_radii / ranges).arcsin()
-
-        # This array equals True for each body falling somewhere inside the FOV
-        falls_inside = np.empty(nbodies, dtype='bool')
-        for i in range(nbodies):
-            falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i])
-
-        # This array equals True for each body completely hidden by another
-        is_hidden = np.zeros(nbodies, dtype='bool')
-        for i in range(nbodies):
-          if not falls_inside[i]: continue
-
-          for j in range(nbodies):
-            if not falls_inside[j]: continue
-
-            if ranges[i] < ranges[j]: continue
-            if radius_angles[i] > inner_angles[j]: continue
-
-            sep = centers[i].sep(centers[j])
-            if sep < inner_angles[j] - radius_angles[i]:
-                is_hidden[i] = True
-
-        flags = falls_inside & ~is_hidden
-
-        # Return as flags
-        if return_type == 'flags':
-            return flags
-
-        # Return as list
-        if return_type == 'list':
-            ret_list = []
-            for i in range(nbodies):
-                if flags[i]: ret_list.append(body_names[i])
-            return ret_list
-
-        # Return full info
-        ret_dict = {}
-
-        u_scale = fov.uv_scale.vals[0]
-        v_scale = fov.uv_scale.vals[1]
-        body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
-        for i in range(nbodies):
-            if flags[i]:
-                body_data = {}
-                body_data['name'] = body_names[i]
-                body_data['center_uv'] = body_uv[i]
-                body_data['center'] = centers[i].vals
-                body_data['range'] = ranges[i].vals
-                body_data['outer_radius'] = radii[i].vals
-                body_data['inner_radius'] = inner_radii[i].vals
-                u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
-                v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
-                body_data['resolution'] = Pair.from_scalars(u_res, v_res).vals
-                u = body_uv[i][0]
-                v = body_uv[i][1]
-                body_data['u_min_unclipped'] = np.floor(
-                                    u-radius_angles[i].vals/u_scale)
-                body_data['u_max_unclipped'] = np.ceil(
-                                    u+radius_angles[i].vals/u_scale)
-                body_data['v_min_unclipped'] = np.floor(
-                                    v-radius_angles[i].vals/v_scale)
-                body_data['v_max_unclipped'] = np.ceil(
-                                    v+radius_angles[i].vals/v_scale)
-                body_data['u_min'] = np.clip(body_data['u_min_unclipped'],
-                                             0, self.data.shape[1]-1)
-                body_data['u_max'] = np.clip(body_data['u_max_unclipped'],
-                                             0, self.data.shape[1]-1)
-                body_data['v_min'] = np.clip(body_data['v_min_unclipped'],
-                                             0, self.data.shape[0]-1)
-                body_data['v_max'] = np.clip(body_data['v_max_unclipped'],
-                                             0, self.data.shape[0]-1)
-                body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
-                body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
-                
-                # Final sanity check - the moon HAS to be actually inside the
-                # FOV. There are times previous tests fail when we are really
-                # close to the moon. (See Enceladus in N1669812089_1 for
-                # an example)
-                if (body_data['u_min_unclipped'] >= self.data.shape[1] or
-                    body_data['u_max_unclipped'] < 0 or
-                    body_data['v_min_unclipped'] >= self.data.shape[0] or
-                    body_data['v_max_unclipped'] < 0):
-                    continue
-                ret_dict[body_names[i]] = body_data
-
-        return ret_dict
+        raise NotImplementedError(
+                'Observation subclass "%s" ' % type(self).__name__ +
+                'does not implement method inventory()')
 
 ################################################################################
 # UNIT TESTS

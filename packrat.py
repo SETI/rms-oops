@@ -74,9 +74,15 @@ class Packrat(object):
     the file.
 
     Note: In the list of attribute names, one can be prefixed with "**" and any
-    number can be prefixed with "+". These attributes are handled specially
-    when the object is read and reconstructed, as discussed below.
+    number can be prefixed with "+". These attributes are handled
+    specially when the object is read and reconstructed, as discussed below.
 
+    Any attribute name can have a the definition of a Python dictionary as a
+    suffix, starting with "{". This suffix is converted to a dictionary as used
+    to provide additional parameters passed to function encode_array, which
+    define how to pack the attribute. For example, "time{'single':True}" will
+    save the time attribute in single precision.
+    
     Packrat's procedure for reading and reconstructing objects:
 
     1. If the class has a function PACKRAT__init__, then Packrat calls the
@@ -309,7 +315,7 @@ class Packrat(object):
     # Write methods
     ############################################################################
 
-    def write(self, obj, name=None):
+    def write(self, obj, name=None, **params):
         """Write an object into a Packrat file, top-level version.
 
         The object is appended to the end of file.
@@ -317,9 +323,11 @@ class Packrat(object):
         Input:
             obj         the object to write.
             name        optional name of the object.
+            params      additional parameters, e.g., for defining the
+                        compression to use on float arrays.
         """
 
-        self._write(obj, name, self.write_index, level=0)
+        self._write(obj, name, self.write_index, level=0, **params)
         self.write_index += 1
 
     def _write(self, obj, name=None, index=None, level=0, **params):
@@ -333,8 +341,8 @@ class Packrat(object):
             index       optional integer index of the object.
             level       the indent level of this element relative to the
                         previous indentation.
-            params      a dictionary of additional parameters, e.g., for
-                        defining the compression to use on float arrays.
+            params      additional parameters, e.g., for defining the
+                        compression to use on float arrays.
         """
 
         # Determine the type name
@@ -364,6 +372,17 @@ class Packrat(object):
             typename = 'tuple'
         else:
             typename = 'object'
+
+        # Get the parameter name and dictionary
+        if name is not None:
+            name = name.lstrip('*').lstrip('+')
+            brace = name.find('{')
+            if brace >= 0:
+                new_params = eval(name[brace:])
+                params = params.copy()
+                for (key,value) in new_params.iteritems():
+                    params[key] = value
+                name = name[:brace]
 
         # Determine the Python id; None for elementary objects and if len == 0
         python_id = None
@@ -544,8 +563,7 @@ class Packrat(object):
         # Use the class attribute list if available
         if obj_attr is None:
             if hasattr(obj, 'PACKRAT_ARGS'):
-                obj_attr = [argname.lstrip('*').lstrip('+')
-                            for argname in obj.PACKRAT_ARGS]
+                obj_attr = obj.PACKRAT_ARGS
 
         # Otherwise, use all the attributes
         if obj_attr is None:
@@ -554,11 +572,8 @@ class Packrat(object):
 
         # Generate (name, value) pairs
         # Also clean up the internal names of attributes
-        pairs = [(clean_attr(k), obj.__dict__[k]) for k in obj_attr]
-
-        # Get precision information if available
-        if hasattr(obj, 'PACKRAT_params'):
-            params = obj.PACKRAT_params(params)
+        stripped = [k.lstrip('*').lstrip('+') for k in obj_attr]
+        pairs = [(clean_attr(k), obj.__dict__[k]) for k in stripped]
 
         # Write the subnodes
         for indx in range(len(pairs)):

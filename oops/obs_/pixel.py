@@ -52,6 +52,7 @@ class Pixel(Observation):
         self.axes = list(axes)
         self.u_axis = -1
         self.v_axis = -1
+        self.swap_uv = False
         if 't' in self.axes:
             self.t_axis = self.axes.index('t')
         else:
@@ -132,7 +133,7 @@ class Pixel(Observation):
 
         (time_min,
          time_max) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
-        uv_min = Pair.ZERO
+        uv_min = Pair.ZEROS
         uv_max = Pair.ONES
 
         if fovmask:
@@ -145,6 +146,22 @@ class Pixel(Observation):
                 uv_max = Pair(uv_max_vals, mask)
 
         return (uv_min, uv_max, time_min, time_max)
+
+    def uv_range_at_tstep(self, *tstep):
+        """Return a tuple defining the range of (u,v) coordinates active at a
+        particular time step.
+
+        Input:
+            tstep       a time step index (one or two integers).
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive).
+        """
+
+        return (Pair.ZEROS, Pair.ONES)
 
     def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).
@@ -187,7 +204,7 @@ class Pixel(Observation):
                         pixels per second in the (u,v) directions.
         """
 
-        return Pair.ZERO
+        return Pair.ZEROS
 
     def time_shift(self, dtime):
         """Return a copy of the observation object with a time-shift.

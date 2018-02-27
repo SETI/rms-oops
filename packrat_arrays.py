@@ -386,7 +386,9 @@ def decode_bool_array(value, attr):
     array extracted from the npz file."""
 
     shape = eval(attr['shape'])
-    if np.prod(shape) == 0:
+    size = np.prod(shape)
+
+    if size == 0:
         return np.array([False])[:0].reshape(shape)
 
     encoding = attr['encoding']
@@ -415,7 +417,7 @@ def decode_bool_array(value, attr):
 
     # Handle packbits
     if method == 'packbits':
-        decoded = np.unpackbits(value).astype('bool')
+        decoded = np.unpackbits(value).astype('bool')[:size]
 
     # Handle list_false
     elif method == 'list_false':

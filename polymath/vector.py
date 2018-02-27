@@ -271,64 +271,57 @@ class Vector(Qube):
 
         return tuple(np.rollaxis(values, -1, 0))
 
-    def as_index_and_mask(self, remove_masked=False, masked=None):
-        """An object suitable for indexing an N-dimensional array and a mask.
-
-        The returned object is a tuple of NumPy arrays, each of the same shape.
-        Each array contains indices along the corresponding axis of the array
-        being indexed.
+    def as_index_and_mask(self, purge=False, masked=None):
+        """Objects suitable for indexing an N-dimensional array and its mask.
 
         Input:
-            remove_masked True if the index should have masked values removed.
-            masked        the index or list/tuple/array of indices to insert in
-                          the place of a masked item. If None and the object
-                          contains masked elements, the array will be flattened
-                          and masked elements will be skipped over.
-
-        Return: (valueidx, mask)
-            valueidx    the indices corresponding to this Vector's value
-            mask        a boolean array indicating which indices are masked
+            purge           True to eliminate masked elements from the index;
+                            False to retain them but leave them masked.
+            masked          the index value to insert in place of any masked.
+                            item. This may be needed because each value in the
+                            returned index array must be an integer and in
+                            range. If None (the default), then masked values
+                            in the index will retain their unmasked values when
+                            the index is applied.
         """
 
         if (self.drank > 0):
             raise ValueError('an indexing object cannot have a denominator')
 
-        obj = self.as_int()
-        mask = None
-        
+        ints = self.as_int()
+
+        # If nothing is masked, this is easy
         if not np.any(self.mask):
-            values = obj.values
+            return (tuple(np.rollaxis(ints.values, -1, 0)), None)
 
+        # If purging...
+        if purge:
+            # If all masked...
+            if ints.mask is True:
+                return ((), None)
+
+            # If partially masked...
+            new_values = ints.values[ints.antimask]
+            return (tuple(np.rollaxis(ints.values, -1, 0)), None)
+
+        # Without a replacement...
         if masked is None:
-            if remove_masked:
-                if np.all(obj.mask): # All masked
-                    return None, None
-                elif not np.any(obj.mask): # None masked
-                    values = obj.values
-                    mask = obj.mask
-                else: # Some masked
-                    obj = obj.flatten()
-                    values = obj[obj.antimask].values
-                    mask = obj.mask
-            else:
-                obj = obj.copy()
-                values = obj.values
-                mask = obj.mask
-                if np.shape(values) == ():
-                    if mask:
-                        values = 0
-                else:
-                    if np.shape(mask) == ():
-                        if mask:
-                            values[:] = 0 # All masked
-                    else: # Partially masked
-                        values[mask] = 0 # Always a safe index
-        else:
-            obj = obj.copy()
-            obj.values[obj.mask] = masked
-            values = obj.values
+            new_values = ints.values
 
-        return tuple(np.rollaxis(values, -1, 0)), mask
+        # If all masked...
+        elif ints.mask is True:
+            new_values = np.empty(ints.shape, dtype='int')
+            if np.shape(masked) == ():
+                new_values = new_values.fill(masked)
+            else:
+                new_values = new_values[...,:] = masked
+
+        # If partially masked...
+        else:
+            new_values = ints.values.copy()
+            new_values = new_values[ints.mask,:] = masked
+
+        return (tuple(np.rollaxis(new_values, -1, 0)), ints.mask)
 
     def as_column(self, recursive=True):
         """Convert the Vector to an Nx1 column matrix.
@@ -734,6 +727,127 @@ class Vector(Qube):
             after -= rank
 
         return cls(data, mask)
+
+    def mask_where_component_le(self, axis, limit, replace=None, remask=True):
+        """Return a copy of this object where values of a specified component
+        <= a limit value are masked.
+
+        Instead of or in addition to masking the items, the values can be
+        replaced. If no items need to be masked, this object is returned
+        unchanged.
+
+        Inputs:
+            axis            the index of the component to use for comparison.
+            limit           the limiting value or a Scalar of limiting values.
+            replace         a single replacement value or an array of
+                            replacement values, inserted into the returned
+                            object at every masked location. Use None (the
+                            default) to leave values unchanged.
+            remask          True to include the new mask into the object's mask;
+                            False to replace the values but leave them unmasked.
+        """
+
+        scalar = self.to_scalar(axis)
+        return self.mask_where(scalar <= limit, replace, remask)
+
+    def mask_where_component_ge(self, axis, limit, replace=None, remask=True):
+        """Return a copy of this object where values of a specified component
+        >= a limit value are masked.
+
+        Instead of or in addition to masking the items, the values can be
+        replaced. If no items need to be masked, this object is returned
+        unchanged.
+
+        Inputs:
+            axis            the index of the component to use for comparison.
+            limit           the limiting value or a Scalar of limiting values.
+            replace         a single replacement value or an array of
+                            replacement values, inserted into the returned
+                            object at every masked location. Use None (the
+                            default) to leave values unchanged.
+            remask          True to include the new mask into the object's mask;
+                            False to replace the values but leave them unmasked.
+        """
+
+        scalar = self.to_scalar(axis)
+        return self.mask_where(scalar >= limit, replace, remask)
+
+    def mask_where_component_lt(self, axis, limit, replace=None, remask=True):
+        """Return a copy of this object where values of a specified component
+        < a limit value are masked.
+
+        Instead of or in addition to masking the items, the values can be
+        replaced. If no items need to be masked, this object is returned
+        unchanged.
+
+        Inputs:
+            axis            the index of the component to use for comparison.
+            limit           the limiting value or a Scalar of limiting values.
+            replace         a single replacement value or an array of
+                            replacement values, inserted into the returned
+                            object at every masked location. Use None (the
+                            default) to leave values unchanged.
+            remask          True to include the new mask into the object's mask;
+                            False to replace the values but leave them unmasked.
+        """
+
+        scalar = self.to_scalar(axis)
+        return self.mask_where(scalar < limit, replace, remask)
+
+    def mask_where_component_gt(self, axis, limit, replace=None, remask=True):
+        """Return a copy of this object where values of a specified component
+        > a limit value are masked.
+
+        Instead of or in addition to masking the items, the values can be
+        replaced. If no items need to be masked, this object is returned
+        unchanged.
+
+        Inputs:
+            axis            the index of the component to use for comparison.
+            limit           the limiting value or a Scalar of limiting values.
+            replace         a single replacement value or an array of
+                            replacement values, inserted into the returned
+                            object at every masked location. Use None (the
+                            default) to leave values unchanged.
+            remask          True to include the new mask into the object's mask;
+                            False to replace the values but leave them unmasked.
+        """
+
+        scalar = self.to_scalar(axis)
+        return self.mask_where(scalar > limit, replace, remask)
+
+    def clip_component(self, axis, lower, upper, remask=False):
+        """Return a copy of this object where values of a specified component
+        outside a given range are shifted to the closest in-range value.
+
+        Optionally, the clipped items can also be masked.
+
+        If no items need to be clipped, this object is returned unchanged.
+
+        Inputs:
+            axis            the index of the component to use for comparison.
+            lower           a Pair of minimum values defining the lower limits.
+                            None to ignore.
+            upper           a Pair of maximum values defining the lower limits.
+                            None to ignore.
+            remask          True to include the new mask into the object's mask;
+                            False to replace the values but leave them unmasked.
+        """
+
+        scalars = list(self.to_scalars(recursive=True))
+        scalar = scalars[axis]
+
+        if lower is not None:
+            scalar = scalar.mask_where(scalar < lower, lower, remask)
+
+        if upper is not None:
+            scalar = scalar.mask_where(scalar > upper, upper, remask)
+
+        scalars[axis] = scalar
+        scalars = tuple(scalars)
+
+        result = Vector.from_scalars(*scalars, recursive=True)
+        return result
 
     ############################################################################
     # Overrides of superclass operators

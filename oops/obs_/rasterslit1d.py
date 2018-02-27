@@ -13,7 +13,8 @@ from oops.event            import Event
 class RasterSlit1D(Observation):
     """A RasterSlit1D is subclass of Observation consisting of a 1-D observation
     in which the one dimension is constructed by sweeping a single pixel along a
-    slit.
+    slit. The FOV describes the single pixel; the slit is simulated by rotating
+    the camera.
     """
 
     PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
@@ -79,6 +80,8 @@ class RasterSlit1D(Observation):
             self.cross_slit_uv_index = 0
             self.shape[self.v_axis] = self.fov.uv_shape.vals[1]
             self.along_slit_shape = self.shape[self.v_axis]
+
+        self.swap_uv = False
 
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size != 1)
@@ -191,6 +194,23 @@ class RasterSlit1D(Observation):
                 time_max = time_max.mask_where(is_outside)
 
         return (uv_min, uv_max, time_min, time_max)
+
+    def uv_range_at_tstep(self, *tstep):
+        """Return a tuple defining the range of (u,v) coordinates active at a
+        particular time step.
+
+        Input:
+            tstep       a time step index (one or two integers). Not checked for
+                        out-of-range errors.
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive).
+        """
+
+        return (Pair.ZEROS, Pair.ONES)
 
     def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).

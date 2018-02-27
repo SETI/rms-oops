@@ -1,5 +1,5 @@
 ################################################################################
-# oops/surface_/spicebody.py: For bodies shaped defined in SPICE.
+# oops/surface_/spice_shape.py: For bodies with shapes defined in SPICE.
 ################################################################################
 
 import cspyce
@@ -10,7 +10,7 @@ from oops.path_.spicepath    import SpicePath
 from oops.frame_.spiceframe  import SpiceFrame
 import oops.spice_support as spice
 
-def spice_body(spice_id, frame_id=None, default_radii=None):
+def spice_shape(spice_id, frame_id=None, default_radii=None):
     """Returns a Spheroid or Ellipsoid defining the path, orientation and shape
     of a body defined in the SPICE toolkit.
 
@@ -53,7 +53,7 @@ def spice_body(spice_id, frame_id=None, default_radii=None):
 
 import unittest
 
-class Test_spice_body(unittest.TestCase):
+class Test_spice_shape(unittest.TestCase):
     
     def runTest(self):
 
@@ -68,7 +68,7 @@ class Test_spice_body(unittest.TestCase):
         ignore = SpicePath("VENUS", "SSB", "J2000", "APHRODITE")
         ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
 
-        body = spice_body("VENUS")
+        body = spice_shape("VENUS")
         self.assertEqual(Path.as_path_id(body.origin), "APHRODITE")
         self.assertEqual(Frame.as_frame_id(body.frame),  "SLOWSPINNER")
         self.assertEqual(body.req, 6051.8)

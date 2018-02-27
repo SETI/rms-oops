@@ -65,21 +65,23 @@ class Slit1D(Observation):
             self.u_axis = self.axes.index('u')
             self.v_axis = -1
             self.along_slit_index = self.u_axis
-            self.along_slit_uv_index = 0
-            self.cross_slit_uv_index = 1
+            self.along_slit_uv_axis = 0
+            self.cross_slit_uv_axis = 1
             self.shape[self.u_axis] = self.fov.uv_shape.vals[0]
             self.along_slit_shape = self.shape[self.u_axis]
         else:
             self.u_axis = -1
             self.v_axis = self.axes.index('v')
             self.along_slit_index = self.v_axis
-            self.along_slit_uv_index = 1
-            self.cross_slit_uv_index = 0
+            self.along_slit_uv_axis = 1
+            self.cross_slit_uv_axis = 0
             self.shape[self.v_axis] = self.fov.uv_shape.vals[1]
             self.along_slit_shape = self.shape[self.v_axis]
 
+        self.swap_uv = False
+
         self.uv_shape = self.fov.uv_shape.vals
-        assert self.fov.uv_shape.vals[self.cross_slit_uv_index] == 1
+        assert self.fov.uv_shape.vals[self.cross_slit_uv_axis] == 1
 
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size < 1)
@@ -134,8 +136,8 @@ class Slit1D(Observation):
 
         # Create (u,v) Pair
         uv_vals = np.empty(indices.shape + (2,))
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.values
-        uv_vals[..., self.cross_slit_uv_index] = 0.5
+        uv_vals[..., self.along_slit_uv_axis] = slit_coord.values
+        uv_vals[..., self.cross_slit_uv_axis] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
         # Create time Scalar
@@ -179,8 +181,8 @@ class Slit1D(Observation):
         slit_coord = indices.to_scalar(self.along_slit_index)
 
         uv_vals = np.empty(indices.shape + (2,), dtype='int')
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_index] = 0
+        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self.cross_slit_uv_axis] = 0
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
@@ -203,6 +205,23 @@ class Slit1D(Observation):
                 time_max = Scalar(time_max_vals, is_outside)
 
         return (uv_min, uv_max, time_min, time_max)
+
+    def uv_range_at_tstep(self, *tstep):
+        """Return a tuple defining the range of (u,v) coordinates active at a
+        particular time step.
+
+        Input:
+            tstep       a time step index (one or two integers). Not checked for
+                        out-of-range errors.
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive).
+        """
+
+        return (Pair.ZERO, self.fov.uv_shape)
 
     def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).

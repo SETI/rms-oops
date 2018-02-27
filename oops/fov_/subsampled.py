@@ -26,10 +26,8 @@ class Subsampled(FOV):
         """
 
         self.fov = fov
-        if np.shape(rescale) == ():
-            self.rescale = Pair.as_pair((rescale,rescale))
-        else:
-            self.rescale  = Pair.as_pair(rescale)
+        self.rescale  = Pair.as_pair(rescale)
+
         self.rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
         self.rescale_mat = Matrix([[self.rescale.vals[0], 0.],
                                    [0., self.rescale.vals[1]]])

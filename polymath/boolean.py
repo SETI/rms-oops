@@ -10,10 +10,11 @@ import numpy as np
 from qube   import Qube
 from scalar import Scalar
 
-class Boolean(Qube):
-    """A PolyMath subclass involving dimensionless booleans.
+class Boolean(Scalar):
+    """A PolyMath subclass involving booleans. Masked values are unknown,
+    neither True nor False.
 
-    Masks, units and derivatives are disallowed."""
+    Units and derivatives are disallowed."""
 
     NRANK = 0           # the number of numerator axes.
     NUMER = ()          # shape of the numerator.
@@ -23,45 +24,41 @@ class Boolean(Qube):
     BOOLS_OK = True     # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    MASKS_OK = False    # True to allow masks; False to disallow them.
+    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = False   # True to disallow derivatives; False to allow them.
 
     DEFAULT_VALUE = False
 
     def __init__(self, arg=None, mask=None, units=None, derivs={},
                        nrank=None, drank=None, example=None):
-        """Default constructor; True where nonzero and unmasked."""
+        """Default constructor; True where nonzero."""
 
         original_arg = arg
 
         # Interpret the example
         if example is not None:
-            if mask is None: mask = example.mask
+            if mask is None:
+                mask = example.mask
 
             if arg is None:
-                arg = (example.values != 0)
-                for r in range(example.rank):
-                    arg = np.any(arg, axis=-1)
+                axes = tuple(range(-example.rank,0))
+                arg = np.any(example.values != 0, axis=axes)
 
         # Interpret the arg if it is a PolyMath object
         if isinstance(arg, Qube):
-            if mask is None or mask is False:
+            if mask is None:
                 mask = arg.mask
-            else:
-                mask = arg.mask | mask
 
-            rank = arg.rank
-            arg = (arg.values != 0)
-            for r in range(rank):
-                arg = np.any(arg, axis=-1)
+            axes = tuple(range(-arg.rank,0))
+            arg = np.any(arg.values != 0, axis=axes)
 
         # Interpret the arg if it is a NumPy MaskedArray
         if isinstance(arg, np.ma.MaskedArray):
             if arg.mask is not np.ma.nomask:
-                if mask is None or mask is False:
+                if mask is None:
                     mask = arg.mask
                 else:
-                    mask = arg.mask | mask
+                    mask = mask | arg.mask
 
             arg = (arg.data != 0)
 
@@ -70,28 +67,7 @@ class Boolean(Qube):
             arg = np.asarray(arg)
             arg = (arg != 0)
 
-        # Value is False where mask is True
-        if mask is None:
-            mask = False
-
-        if np.shape(arg) == ():
-            if mask:
-                arg = False
-            else:
-                arg = bool(arg)
-        elif np.shape(mask) == ():
-            if mask:
-                if arg is original_arg:
-                    arg = arg.copy()
-
-                arg.fill(False)
-        else:
-            if arg is original_arg:
-                arg = arg.copy()
-
-            arg[mask] = False
-
-        Qube.__init__(self, arg, mask=False, units=units, derivs=derivs,
+        Qube.__init__(self, arg, mask, units=units, derivs=derivs,
                             nrank=0, drank=0, example=None)
 
     @staticmethod
@@ -144,12 +120,25 @@ class Boolean(Qube):
     def as_index(self):
         """Return an object suitable for indexing a NumPy ndarray."""
 
-        return self.values
+        return (self.values & self.antimask)
 
-    def as_index_and_mask(self, remove_masked=False):
-        """Return an object suitable for indexing a NumPy ndarray plus a mask."""
+    def as_index_and_mask(self):
+        """Objects suitable for indexing an N-dimensional array and its mask.
 
-        return self.values, None
+        Return: (indx, mask_indx)
+            indx        the index to apply to an array.
+            mask_indx1  the index to apply to the mask before the array has
+                        already been indexed.
+            mask_indx2  the index to apply to the mask after the array has
+                        already been indexed.
+        """
+
+        if self.mask is True:
+            return (False, False)
+        elif self.mask is False:
+            return (self.values, None)
+        else:
+            return (self.values, self.mask[self.values])
 
     def is_numeric(self):
         """Return True if this object is numeric; False otherwise.
@@ -160,18 +149,26 @@ class Boolean(Qube):
 
         return False
 
-    def sum(self, value=True):
-        """Return the number of items matching True or False."""
+    def sum(self, axis=None, value=True):
+        """Return the number of items matching True or False.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The sum is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        sum is performed across all axes if the object.
+            value       value to match.
+        """
 
         if value:
-            return self.as_int().sum()
+            return self.as_int().sum(axis=axis)
         else:
-            return self.size - self.as_int().sum()
+            return (Scalar.ONE - self.as_int()).sum(axis=axis)
 
-    def masked_single(self):
-        """Return an object of this subclass containing one masked value."""
+    def identity(self):
+        """An object of this subclass equivalent to the identity."""
 
-        raise TypeError("class 'Boolean' does not support masking")
+        return Boolean(True).as_readonly()
 
     ############################################################################
     # Arithmetic operators
@@ -305,6 +302,7 @@ class Boolean(Qube):
 
 Boolean.TRUE = Boolean(True).as_readonly()
 Boolean.FALSE = Boolean(False).as_readonly()
+Boolean.MASKED = Boolean(False,True).as_readonly()
 
 ################################################################################
 # Once the load is complete, we can fill in a reference to the Boolean class

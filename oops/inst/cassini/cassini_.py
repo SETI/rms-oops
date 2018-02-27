@@ -72,7 +72,7 @@ class Cassini(object):
     ############################################################################
 
     @staticmethod
-    def initialize(ck='reconstructed', planets=None):
+    def initialize(ck='reconstructed', planets=None, asof=None):
         """Intialize the Cassini mission internals.
 
         After the first call, later calls to this function are ignored.
@@ -84,17 +84,20 @@ class Cassini(object):
                     'none' to allow manual control of the C kernels.
             planets A list of planets to pass to define_solar_system. None or
                     0 means all.
+            asof    Only use SPICE kernels that existed before this date; None
+                    to ignore.
         """
 
         if Cassini.initialized: return
 
         # Define some important paths and frames
         oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME,
-                                 planets=planets)
+                                 planets=planets, asof=asof)
         ignore = oops.path.SpicePath("CASSINI", "SATURN")
 
         spicedb.open_db()
-        kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"))
+        kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"),
+                                          asof=asof)
         Cassini.initialize_kernels(kernels, Cassini.SPK_LIST)
 
         ck = ck.upper()
@@ -102,7 +105,8 @@ class Cassini(object):
             Cassini.initialize_kernels([], Cassini.CK_LIST)
         else:
             kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"),
-                                             name="CAS-CK-" + ck)
+                                             name="CAS-CK-" + ck,
+                                             asof=asof)
             Cassini.initialize_kernels(kernels, Cassini.CK_LIST)
 
         spicedb.close_db()

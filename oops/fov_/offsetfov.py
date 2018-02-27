@@ -52,8 +52,8 @@ class OffsetFOV(FOV, Fittable):
                                   self.fov.uv_los)
 
         else:                                   # default is a (0,0) offset
-                self.uv_offset = Pair.ZERO
-                self.xy_offset = Pair.ZERO
+                self.uv_offset = Pair.ZEROS
+                self.xy_offset = Pair.ZEROS
 
         # Required attributes of an FOV
         self.uv_shape = self.fov.uv_shape

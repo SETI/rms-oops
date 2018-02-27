@@ -184,7 +184,9 @@ class Test_Qube_types(unittest.TestCase):
     self.assertEqual(a.masked_single().shape, ())
 
     a = Boolean([True,False])
-    self.assertRaises(TypeError, a.masked_single)
+    self.assertEqual(a.masked_single(), Boolean.MASKED)
+    self.assertEqual(type(a.masked_single()), Boolean)
+    self.assertEqual(a.masked_single().shape, ())
 
     a = Vector([(1,2,3),(4,5,6)])
     self.assertEqual(a.masked_single(), Vector.MASKED3)

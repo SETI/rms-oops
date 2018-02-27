@@ -28,30 +28,30 @@ def from_file(filespec, fast_distortion=True, **parameters):
 
     # Load the VICAR file
     vic = vicar.VicarImage.from_file(filespec)
-    dict = vic.as_dict()
+    vicar_dict = vic.as_dict()
 
     # Get key information from the header
     tstart = julian.tdb_from_tai(julian.tai_from_iso(vic["START_TIME"]))
-    texp = max(1.e-3, dict["EXPOSURE_DURATION"]) / 1000.
-    mode = dict["INSTRUMENT_MODE_ID"]
+    texp = max(1.e-3, vicar_dict["EXPOSURE_DURATION"]) / 1000.
+    mode = vicar_dict["INSTRUMENT_MODE_ID"]
 
-    name = dict["INSTRUMENT_NAME"]
+    name = vicar_dict["INSTRUMENT_NAME"]
     if "WIDE" in name:
         camera = "WAC"
     else:
         camera = "NAC"
 
-    filter1, filter2 = dict["FILTER_NAME"]
+    filter1, filter2 = vicar_dict["FILTER_NAME"]
 
     gain_mode = None
 
-    if dict["GAIN_MODE_ID"][:3] == "215":
+    if vicar_dict["GAIN_MODE_ID"][:3] == "215":
         gain_mode = 0
-    elif dict["GAIN_MODE_ID"][:2] == "95":
+    elif vicar_dict["GAIN_MODE_ID"][:2] == "95":
         gain_mode = 1
-    elif dict["GAIN_MODE_ID"][:2] == "29":
+    elif vicar_dict["GAIN_MODE_ID"][:2] == "29":
         gain_mode = 2
-    elif dict["GAIN_MODE_ID"][:2] == "12":
+    elif vicar_dict["GAIN_MODE_ID"][:2] == "12":
         gain_mode = 3
 
     # Make sure the SPICE kernels are loaded
@@ -62,7 +62,7 @@ def from_file(filespec, fast_distortion=True, **parameters):
     result = oops.obs.Snapshot(("v","u"), tstart, texp,
                                ISS.fovs[camera,mode, fast_distortion],
                                "CASSINI", "CASSINI_ISS_" + camera,
-                               dict = dict,             # Add the VICAR dict
+                               dict = vicar_dict,       # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
                                instrument = "ISS",
                                detector = camera,
@@ -72,6 +72,9 @@ def from_file(filespec, fast_distortion=True, **parameters):
                                gain_mode = gain_mode)
 
     result.spice_kernels = Cassini.used_kernels(result.time, 'iss')
+
+    result.filespec = filespec
+    result.basename = os.path.basename(filespec)
 
     return result
 
@@ -92,13 +95,13 @@ def from_index(filespec, **parameters):
 
     # Create a list of Snapshot objects
     snapshots = []
-    for dict in row_dicts:
+    for row_dict in row_dicts:
 
-        tstart = julian.tdb_from_tai(dict["START_TIME"])
-        texp = max(1.e-3, dict["EXPOSURE_DURATION"]) / 1000.
-        mode = dict["INSTRUMENT_MODE_ID"]
+        tstart = julian.tdb_from_tai(row_dict["START_TIME"])
+        texp = max(1.e-3, row_dict["EXPOSURE_DURATION"]) / 1000.
+        mode = row_dict["INSTRUMENT_MODE_ID"]
 
-        name = dict["INSTRUMENT_NAME"]
+        name = row_dict["INSTRUMENT_NAME"]
         if "WIDE" in name:
             camera = "WAC"
         else:
@@ -107,13 +110,18 @@ def from_index(filespec, **parameters):
         item = oops.obs.Snapshot(("v","u"), tstart, texp,
                                  ISS.fovs[camera,mode,False],
                                  "CASSINI", "CASSINI_ISS_" + camera,
-                                 dict = dict,       # Add index dictionary
-                                 index_dict = dict, # Old name
+                                 dict = row_dict,       # Add index dictionary
+                                 index_dict = row_dict, # Old name
                                  instrument = "ISS",
                                  detector = camera,
                                  sampling = mode)
 
         item.spice_kernels = Cassini.used_kernels(item.time, 'iss')
+
+        item.filespec = os.path.join(row_dict['VOLUME_ID'],
+                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.basename = row_dict['FILE_NAME']
+
         snapshots.append(item)
 
     # Make sure all the SPICE kernels are loaded
@@ -127,24 +135,24 @@ def from_index(filespec, **parameters):
 
 ################################################################################
 
-def initialize(ck='reconstructed', planets=None,
-               offset_wac=True):
+def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None):
     """Initialize key information about the ISS instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
 
     Input:
-        ck      'predicted' or 'reconstructed' depending on which C kernels
-                are to be used. Default is 'reconstructed'.
-        planets A list of planets to pass to define_solar_system. None or
-                0 means all.
-        offset_wac
-                True to offset the WAC frame relative to the NAC frame as
-                determined by star positions.
+        ck          'predicted' or 'reconstructed' depending on which C kernels
+                    are to be used. Default is 'reconstructed'.
+        planets     A list of planets to pass to define_solar_system. None or
+                    0 means all.
+        offset_wac  True to offset the WAC frame relative to the NAC frame as
+                    determined by star positions.
+        asof        Only use SPICE kernels that existed before this date; None
+                    to ignore.
     """
 
-    ISS.initialize(ck, planets, offset_wac)
+    ISS.initialize(ck, planets, offset_wac, asof)
 
 ################################################################################
 
@@ -263,27 +271,29 @@ class ISS(object):
     ######################################################################
     
     @staticmethod
-    def initialize(ck='reconstructed', planets=None,
-                   offset_wac=True):
-        """Fill in key information about the WAC and NAC.
+    def initialize(ck='reconstructed', planets=None, offset_wac=True,
+                                       asof=None):
+        """Initialize key information about the ISS instrument; fill in key
+        information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
 
         Input:
-            ck      'predicted' or 'reconstructed' depending on which C kernels
-                    are to be used. Default is 'reconstructed'.
-            planets A list of planets to pass to define_solar_system. None or
-                    0 means all.
-            offset_wac
-                    True to offset the WAC frame relative to the NAC frame as
-                    determined by star positions.
+            ck          'predicted' or 'reconstructed' depending on which C
+                        kernels are to be used. Default is 'reconstructed'.
+            planets     A list of planets to pass to define_solar_system. None
+                        or 0 means all.
+            offset_wac  True to offset the WAC frame relative to the NAC frame
+                        as determined by star positions.
+            asof        Only use SPICE kernels that existed before this date;
+                        None to ignore.
         """
 
         # Quick exit after first call
         if ISS.initialized: return
 
-        Cassini.initialize(ck, planets)
+        Cassini.initialize(ck, planets, asof)
         Cassini.load_instruments()
 
         # Load the instrument kernel

@@ -80,6 +80,8 @@ class RasterScan(Observation):
             self.fast_uv_axis = 1
             self.slow_uv_axis = 0
 
+        self.swap_uv = (self.u_axis > self.v_axis)
+
         self.t_axis = [self.slow_axis, self.fast_axis]
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
@@ -194,6 +196,25 @@ class RasterScan(Observation):
                 time_max = time_max.mask_where(is_outside)
 
         return (uv_min, uv_max, time_min, time_max)
+
+    def uv_range_at_tstep(self, *tstep):
+        """Return a tuple defining the range of (u,v) coordinates active at a
+        particular time step.
+
+        Input:
+            tstep       a time step index (one or two integers).
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive).
+        """
+
+        if self.fast_uv_axis == 0:
+            return (Pair(tstep[1], tstep[0]), Pair(tstep[1]+1, tstep[0]+1))
+        else:
+            return (Pair(tstep[0], tstep[1]), Pair(tstep[0]+1, tstep[1]+1))
 
     def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).

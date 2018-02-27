@@ -8,12 +8,16 @@ from polymath import *
 from oops.obs_.observation   import Observation
 from oops.cadence_.metronome import Metronome
 from oops.path_.path         import Path
+from oops.path_.multipath    import MultiPath
 from oops.frame_.frame       import Frame
+from oops.body               import Body
 from oops.event              import Event
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
     all exposed at the same time."""
+
+    INVENTORY_IMPLEMENTED = True
 
     PACKRAT_ARGS = ['axes', 'tstart', 'texp', 'fov', 'path', 'frame',
                     '**subfields']
@@ -54,6 +58,8 @@ class Snapshot(Observation):
         self.u_axis = self.axes.index('u')
         self.v_axis = self.axes.index('v')
         self.uv_shape = list(self.fov.uv_shape.vals)
+
+        self.swap_uv = (self.u_axis > self.v_axis)
 
         self.tstart = tstart
         self.texp = texp
@@ -148,6 +154,22 @@ class Snapshot(Observation):
                     time_max = Scalar(time_max_vals, mask)
 
         return (uv_min, uv_max, time_min, time_max)
+
+    def uv_range_at_tstep(self, *tstep):
+        """Return a tuple defining the range of (u,v) coordinates active at a
+        particular time step.
+
+        Input:
+            tstep       a time step index (one or two integers).
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive).
+        """
+
+        return (Pair.ZEROS, self.fov.uv_shape)
 
 # Untested...
 #     def indices_at_uvt(self, uv_pair, time, fovmask=False):
@@ -262,7 +284,7 @@ class Snapshot(Observation):
                         pixels per second in the (u,v) directions.
         """
 
-        return Pair.ZERO
+        return Pair.ZEROS
 
     def time_shift(self, dtime):
         """Return a copy of the observation object with a time-shift.
@@ -393,6 +415,192 @@ class Snapshot(Observation):
             neg_arr_ap = neg_arr_ap.mask_where(mask)
 
         return self.fov.uv_from_los(neg_arr_ap, derivs=derivs)
+
+    def inventory(self, bodies, expand=0., return_type='list', fov=None,
+                        quick={}, converge={}, time_frac=0.5):
+        """Return the body names that appear unobscured inside the FOV.
+
+        Restrictions: All inventory calculations are performed at a single
+        observation time specified by time_frac. All bodies are assumed to be
+        spherical.
+
+        Input:
+            bodies      a list of the names of the body objects to be included
+                        in the inventory.
+            expand      an optional angle in radians by which to extend the
+                        limits of the field of view. This can be used to
+                        accommodate pointing uncertainties. XXX NOT IMPLEMENTED XXX
+            return_type 'list' returns the inventory as a list of names.
+                        'flags' returns the inventory as an array of boolean
+                                flag values in the same order as bodies.
+                        'full' returns the inventory as a dictionary of
+                                dictionaries. The main dictionary is indexed by
+                                body name. The subdictionaries contain
+                                attributes of the body in the FOV.
+            fov         use this fov; if None, use self.fov.
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+            converge    an optional dictionary of parameters to override the
+                        configured default convergence parameters. The default
+                        configuration is defined in config.py.
+            time_frac   fractional time from the beginning to the end of the
+                        observation for which the inventory applies. 0. for the
+                        beginning; 0.5 for the midtime, 1. for the end time.
+
+        Return:         list, array, or dictionary
+
+            If return_type is 'list', it returns a list of the names of all the
+            body objects that fall at least partially inside the FOV and are
+            not completely obscured by another object in the list.
+
+            If return_type is 'flags', it returns a boolean array containing
+            True everywhere that the body falls at least partially inside the
+            FOV and is not completely obscured.
+
+            If return_type is 'full', it returns a dictionary with one entry
+            per body that falls at least partially inside the FOV and is not
+            completely obscured. Each dictionary entry is itself a dictionary
+            containing data about the body in the FOV:
+
+                body_data['name']          The body name
+                body_data['center_uv']     The U,V coord of the center point
+                body_data['center']        The Vector3 direction of the center
+                                           point
+                body_data['range']         The range in km
+                body_data['outer_radius']  The outer radius of the body in km
+                body_data['inner_radius']  The inner radius of the body in km
+                body_data['resolution']    The resolution (km/pix) in the (U,V)
+                                           directions at the given range.
+                body_data['u_min']         The minimum U value covered by the
+                                           body (clipped to the FOV size) 
+                body_data['u_max']         The maximum U value covered by the
+                                           body (clipped to the FOV size)
+                body_data['v_min']         The minimum V value covered by the
+                                           body (clipped to the FOV size)
+                body_data['v_max']         The maximum V value covered by the
+                                           body (clipped to the FOV size)
+                body_data['u_min_unclipped']  Same as above, but not clipped
+                body_data['u_max_unclipped']  to the FOV size.
+                body_data['v_min_unclipped']
+                body_data['v_max_unclipped']
+                body_data['u_pixel_size']  The number of pixels (non-integer)
+                body_data['v_pixel_size']  covered by the diameter of the body 
+                                           in each direction.
+        """
+
+        assert return_type in ('list', 'flags', 'full')
+
+        if fov is None:
+            fov = self.fov
+
+        body_names = [Body.as_body_name(body) for body in bodies]
+        bodies  = [Body.as_body(body) for body in bodies]
+        nbodies = len(bodies)
+
+        path_ids = [body.path for body in bodies]
+        multipath = MultiPath(path_ids)
+
+        obs_time = self.time[0] + time_frac * (self.time[1] - self.time[0])
+        obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
+        (_,
+         arrival_event) = multipath.photon_to_event(obs_event, quick=quick,
+                                                    converge=converge)
+
+        centers = arrival_event.neg_arr_ap
+        ranges = centers.norm()
+        radii = Scalar([body.radius for body in bodies])
+        radius_angles = (radii/ranges).arcsin()
+
+        inner_radii = Scalar([body.inner_radius for body in bodies])
+        inner_angles = (inner_radii / ranges).arcsin()
+
+        # This array equals True for each body falling somewhere inside the FOV
+        falls_inside = np.empty(nbodies, dtype='bool')
+        for i in range(nbodies):
+            falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i])
+
+        # This array equals True for each body completely hidden by another
+        is_hidden = np.zeros(nbodies, dtype='bool')
+        for i in range(nbodies):
+          if not falls_inside[i]: continue
+
+          for j in range(nbodies):
+            if not falls_inside[j]: continue
+
+            if ranges[i] < ranges[j]: continue
+            if radius_angles[i] > inner_angles[j]: continue
+
+            sep = centers[i].sep(centers[j])
+            if sep < inner_angles[j] - radius_angles[i]:
+                is_hidden[i] = True
+
+        flags = falls_inside & ~is_hidden
+
+        # Return as flags
+        if return_type == 'flags':
+            return flags
+
+        # Return as list
+        if return_type == 'list':
+            ret_list = []
+            for i in range(nbodies):
+                if flags[i]: ret_list.append(body_names[i])
+            return ret_list
+
+        # Return full info
+        returned_dict = {}
+
+        u_scale = fov.uv_scale.vals[0]
+        v_scale = fov.uv_scale.vals[1]
+        body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
+        for i in range(nbodies):
+            if flags[i]:
+                body_data = {}
+                body_data['name'] = body_names[i]
+                body_data['center_uv'] = body_uv[i]
+                body_data['center'] = centers[i].vals
+                body_data['range'] = ranges[i].vals
+                body_data['outer_radius'] = radii[i].vals
+                body_data['inner_radius'] = inner_radii[i].vals
+                u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
+                v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
+                body_data['resolution'] = Pair.from_scalars(u_res, v_res).vals
+                u = body_uv[i][0]
+                v = body_uv[i][1]
+                body_data['u_min_unclipped'] = int(np.floor(
+                                    u-radius_angles[i].vals/u_scale))
+                body_data['u_max_unclipped'] = int(np.ceil(
+                                    u+radius_angles[i].vals/u_scale))
+                body_data['v_min_unclipped'] = int(np.floor(
+                                    v-radius_angles[i].vals/v_scale))
+                body_data['v_max_unclipped'] = int(np.ceil(
+                                    v+radius_angles[i].vals/v_scale))
+                body_data['u_min'] = np.clip(body_data['u_min_unclipped'],
+                                             0, self.uv_shape[0]-1)
+                body_data['u_max'] = np.clip(body_data['u_max_unclipped'],
+                                             0, self.uv_shape[0]-1)
+                body_data['v_min'] = np.clip(body_data['v_min_unclipped'],
+                                             0, self.uv_shape[1]-1)
+                body_data['v_max'] = np.clip(body_data['v_max_unclipped'],
+                                             0, self.uv_shape[1]-1)
+                body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
+                body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
+
+                # Final sanity check - the moon HAS to be actually inside the
+                # FOV. There are times previous tests fail when we are really
+                # close to the moon. (See Enceladus in N1669812089_1 for
+                # an example)
+                if (body_data['u_min_unclipped'] >= self.uv_shape[0] or
+                    body_data['u_max_unclipped'] < 0 or
+                    body_data['v_min_unclipped'] >= self.uv_shape[1] or
+                    body_data['v_max_unclipped'] < 0):
+                    continue
+
+                returned_dict[body_names[i]] = body_data
+
+        return returned_dict
 
 ################################################################################
 # UNIT TESTS

@@ -53,9 +53,9 @@ class FOV(object):
                     e.g., the size of a pixel in steradians.
     """
 
-########################################################
-# Methods to be defined for each FOV subclass
-########################################################
+    ########################################################
+    # Methods to be defined for each FOV subclass
+    ########################################################
 
     def __init__(self):
         """A constructor."""
@@ -86,9 +86,9 @@ class FOV(object):
 
         pass
 
-########################################################
-# Derived methods, to override only if necessary
-########################################################
+    ########################################################
+    # Derived methods, to override only if necessary
+    ########################################################
 
     def area_factor(self, uv_pair, **keywords):
         """The relative area of a pixel or other sensor at (u,v).
@@ -182,7 +182,7 @@ class FOV(object):
         xy_pair = self.xy_from_los(los, derivs)
         return self.uv_from_xy(xy_pair, derivs, **keywords)
 
-    def uv_is_outside(self, uv_pair, inclusive=True):
+    def uv_is_outside(self, uv_pair, inclusive=True, uv_min=None, uv_max=None):
         """Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
@@ -190,26 +190,45 @@ class FOV(object):
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpet them as
                         outside.
+            uv_min      an integer Pair representing the lower (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
+            uv_max      an integer Pair representing the upper (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
 
         Return:         a Boolean indicating True where the point is outside the
                         FOV.
         """
 
+        # Interpret the (u,v) coordinates
         uv_pair = Pair.as_pair(uv_pair)
         (u,v) = uv_pair.to_scalars()
-        (umax, vmax) = self.uv_shape.values
 
+        # Fill in the corners
+        if uv_min is None:
+            uv_min = Pair.ZEROS
+
+        if uv_max is None:
+            uv_max = self.uv_shape
+
+        (umin, vmin) = uv_min.values
+        (umax, vmax) = uv_max.values
+
+        # Create the mask
         if inclusive:
-            result = (u < 0) | ( v < 0) | (u > umax) | (v > vmax)
+            result = (u < umin) | ( v < vmin) | (u > umax) | (v > vmax)
         else:
-            result = (u < 0) | (v < 0) | (u >= umax) | (v >= vmax)
+            result = (u < umin) | (v < vmin) | (u >= umax) | (v >= vmax)
 
+        # Convert to a boolean mask if necessary
         if isinstance(result, Qube):
             return result.values        # Convert to NumPy
         else:
             return result               # bool
 
-    def u_or_v_is_outside(self, uv_coord, uv_index, inclusive=True):
+    def u_or_v_is_outside(self, uv_coord, uv_index, inclusive=True,
+                                          uv_min=None, uv_max=None):
         """Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
@@ -218,22 +237,82 @@ class FOV(object):
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpet them as
                         outside.
+            uv_min      an integer Pair representing the lower (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
+            uv_max      an integer Pair representing the upper (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
 
         Return:         a boolean NumPy array indicating True where the point is
                         outside the FOV.
         """
 
+        # Interpret the (u,v) coordinates
         uv_coord = Scalar.to_scalar(uv_coord)
         shape = self.uv_shape.values
+
+        # Fill in the corners
+        if uv_min is None:
+            uv_min = Pair.ZEROS
+
+        if uv_max is None:
+            uv_max = self.uv_shape
+
+        (umin, vmin) = uv_min.values
+        (umax, vmax) = uv_max.values
+
+        # Create the mask
         if inclusive:
             result = (uv_coord < 0) | (uv_coord > shape[uv_index])
         else:
             result = (uv_coord < 0) | (uv_coord >= shape[uv_index])
 
+        # Convert to a boolean mask if necessary
         if isinstance(result, Qube):
             return result.values        # Convert to NumPy
         else:
             return result               # bool
+
+    def xy_is_outside(self, xy_pair, inclusive=True, uv_min=None, uv_max=None,
+                                                                    **keywords):
+        """Return a boolean mask identifying coordinates outside the FOV.
+
+        Input:
+            xy_pair     a Pair of (x,y) coordinates, assuming z == 1.
+            inclusive   True to interpret coordinate values at the upper end of
+                        each range as inside the FOV; False to interpet them as
+                        outside.
+            uv_min      an integer Pair representing the lower (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
+            uv_max      an integer Pair representing the upper (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
+        """
+
+        uv = self.uv_from_xy(xy_pair, derivs=False, **keywords)
+        return self.uv_is_outside(uv, inclusive, uv_min, uv_max)
+
+    def los_is_outside(self, los, inclusive=True, uv_min=None, uv_max=None,
+                                                               **keywords):
+        """Return a boolean mask identifying lines of sight outside the FOV.
+
+        Input:
+            los         an outward line-of-sight vector.
+            inclusive   True to interpret coordinate values at the upper end of
+                        each range as inside the FOV; False to interpet them as
+                        outside.
+            uv_min      an integer Pair representing the lower (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
+            uv_max      an integer Pair representing the upper (u,v) corner of
+                        the area observed at the FOV's active area; None for the
+                        full FOV.
+        """
+
+        xy = self.xy_from_los(derivs=False)
+        return self.xy_is_outside(xy, inclusive, uv_min, uv_max, **keywords)
 
     def nearest_uv(self, uv_pair, remask=False):
         """Return the closest (u,v) coordinates inside the FOV.
@@ -254,25 +333,12 @@ class FOV(object):
         else:
             return clipped
 
-    def xy_is_outside(self, xy_pair, inclusive=True, **keywords):
-        """Return a boolean mask identifying coordinates outside the FOV.
-        """
-
-        uv = self.uv_from_xy(xy_pair, derivs=False, **keywords)
-        return self.uv_is_outside(uv, inclusive)
-
-    def los_is_outside(self, los, inclusive=True, **keywords):
-        """Return a boolean mask identifying lines of sight outside the FOV.
-        """
-
-        xy = self.xy_from_los(derivs=False)
-        return self.xy_is_outside(xy, inclusive, **keywords)
-
-################################################################################
-# Properties and methods to support body inventories
-#
-# These might need to be overridden for FOV subclasses that are not rectangular.
-################################################################################
+    ############################################################################
+    # Properties and methods to support body inventories
+    #
+    # These might need to be overridden for FOV subclasses that are not
+    # rectangular.
+    ############################################################################
 
     @property
     def center_xy(self):
@@ -341,6 +407,46 @@ class FOV(object):
 
         return self.inner_radius_filled
 
+    @property
+    def corner00_xy(self):
+        """The (x,y) Pair at (u,v) coordinates (0,0)
+        """
+
+        if not hasattr(self, 'corner00_filled'):
+            self.corner00_filled = self.xy_from_uv(Scalar.ZEROS)
+
+        return self.corner00_filled
+
+    @property
+    def corner01_xy(self):
+        """The (x,y) Pair at (u,v) coordinates (0,v_max)
+        """
+
+        if not hasattr(self, 'corner01_filled'):
+            self.corner01_filled = self.xy_from_uv([0,self.uv_shape[1]])
+
+        return self.corner01_filled
+
+    @property
+    def corner10_xy(self):
+        """The (x,y) Pair at (u,v) coordinates (u_max,0)
+        """
+
+        if not hasattr(self, 'corner10_filled'):
+            self.corner10_filled = self.xy_from_uv([self.uv_shape[0],0])
+
+        return self.corner10_filled
+
+    @property
+    def corner11_xy(self):
+        """The (x,y) Pair at (u,v) coordinates (u_max,v_max)
+        """
+
+        if not hasattr(self, 'corner11_filled'):
+            self.corner11_filled = self.xy_from_uv(self.uv_shape)
+
+        return self.corner11_filled
+
     def sphere_falls_inside(self, center, radius, border=0.):
         """Return True if any piece of sphere falls inside a field of view.
 
@@ -349,14 +455,13 @@ class FOV(object):
                         internal coordinate frame of the FOV.
             radius      the radius of the spheres.
             border      an optional angular extension to the field of view, in
-                        radians, to allow for pointing uncertainties
+                        radians, to allow for pointing uncertainties.
         """
 
         # Perform quick tests based on the separation angles
         sphere_center_los = Vector3.as_vector3(center, recursive=False)
 
-        scaled_radius = radius / sphere_center_los.norm()
-        radius_angle = scaled_radius.arcsin()
+        radius_angle = (radius / sphere_center_los.norm()).arcsin()
         center_sep = self.center_los.sep(sphere_center_los)
 
         if center_sep > self.outer_radius + border + radius_angle: return False

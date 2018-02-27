@@ -198,6 +198,16 @@ class Surface(object):
         return Vector3.ZERO
 
     ############################################################################
+    # Support for surfaces derived from other surfaces. E.g., surfaces using
+    # different coordinates or with boundaries applied.
+    ############################################################################
+
+    def reference(self):
+        """Return the reference surface for this one."""
+
+        return self     # default is to return self
+
+    ############################################################################
     # Event-coordinate conversions. Generally should not require overrides
     ############################################################################
 
@@ -309,26 +319,26 @@ class Surface(object):
     # Photon Solver based on line of sight
     ############################################################################
 
-    def photon_to_event(self, arrival, derivs=False, guess=None,
+    def photon_to_event(self, arrival, derivs=False, guess=None, antimask=None,
                               quick={}, converge={}):
         """Photon departure from this surface, given arrival and line of sight.
 
         See _solve_photon_by_los() for details."""
 
-        return self._solve_photon_by_los(arrival, -1, derivs, guess,
+        return self._solve_photon_by_los(arrival, -1, derivs, guess, antimask,
                                                       quick, converge)
 
     def photon_from_event(self, departure, derivs=False, guess=None,
-                                quick={}, converge={}):
+                                antimask=None, quick={}, converge={}):
         """Photon arrival at this surface, given departure and line of sight.
 
         See _solve_photon_by_los() for details."""
 
-        return self._solve_photon_by_los(departure, +1, derivs, guess,
+        return self._solve_photon_by_los(departure, +1, derivs, guess, antimask,
                                                         quick, converge)
 
     def _solve_photon_by_los(self, link, sign, derivs=False, guess=None,
-                                               quick={}, converge={}):
+                                    antimask=None, quick={}, converge={}):
         """Solve for a photon surface intercept from event and line of sight.
 
         Input:
@@ -346,8 +356,12 @@ class Surface(object):
                         with respect to time are always retained.
 
             guess       an initial guess to use as the event time for the
-                        surface; otherwise None. Should only be used if the event
+                        surface; otherwise None. Should be used if the event
                         time was already returned from a similar calculation.
+
+            antimask    if not None, this is a boolean array to be applied to
+                        event times and positions. Only the indices where
+                        antimask=True will be used in the solution.
 
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
@@ -401,6 +415,41 @@ class Surface(object):
                         divergence of the solution in some cases.
         """
 
+        # Internal functions to return an entirely masked result
+        def fully_masked_results():
+            new_link = link.all_masked()
+
+            scalar = new_link.time.clone()
+            vector3 = new_link.pos.clone()
+
+            if derivs:
+                scalar.insert_deriv('t', Scalar(1., True), override=True)
+                scalar.insert_deriv('los',
+                                    Scalar(np.ones((1,3)), True, drank=1),
+                                    override=True)
+
+                vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
+                vector3.insert_deriv('los',
+                                     Vector3(np.ones((3,3)), True, drank=1),
+                                     override=True)
+
+                new_link.state.insert_deriv('los', vector3.d_dlos)
+
+            new_link = new_link.replace(link_key, vector3,
+                                        link_key + '_lt', scalar)
+
+            surf_event = Event(new_link.time, new_link.state,
+                               self.origin, self.frame.wayframe)
+            surf_event.insert_subfield(surface_key, vector3)
+            surf_event.insert_subfield(surface_key + '_lt', scalar)
+            surf_event.insert_subfield('perp', vector3.without_derivs())
+            surf_event.insert_subfield('vflat', vector3.without_derivs())
+            surf_event.insert_subfield('coord1', scalar)
+            surf_event.insert_subfield('coord2', scalar)
+            surf_event.insert_subfield('coord3', scalar)
+
+            return (surf_event, new_link)
+
         # Handle derivatives
         if not derivs:
             link = link.without_derivs()        # preserves time-dependence
@@ -433,24 +482,28 @@ class Surface(object):
             link_key = 'dep'
             surface_key = 'arr'
 
+        # Define the antimask
+        if antimask is None:
+            antimask = link.antimask
+        else:
+            antimask &= link.antimask
+
         # If the link is entirely masked...
-        if np.all(link.time.mask):
-            surface_event = Event(link.time, link.state.all_masked(True),
-                                  self.origin, self.frame.wayframe)
-            surface_event.insert_subfield(surface_key, Vector3.MASKED)
-            surface_event.insert_subfield(surface_key + '_lt', Scalar.MASKED)
+        if not np.any(antimask):
+            return fully_masked_results()
 
-            new_link = link.replace(link_key + '_lt', Scalar.MASKED)
-
-            return (surface_event, new_link)
+        # Shrink the event
+        original_link = link
+        link = link.shrink(antimask)
 
         # Define the link event relative to the SSB in J2000
         link_wod = link.without_derivs()
-        link_time = link_wod.time
         link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
-        obs_wrt_ssb = link_wrt_ssb.pos
         los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).without_derivs()
-        los_wrt_ssb = los_wrt_ssb.unit() * constants.C  # scale factor is lt
+
+        link_time = link_wod.time
+        obs_wrt_ssb = link_wrt_ssb.pos
+        los_wrt_ssb = los_wrt_ssb.unit() * constants.C 
 
         # Define the surface path and frame relative to the SSB in J2000
         origin_wrt_ssb  = self.origin.wrt(Path.SSB, Frame.J2000)
@@ -502,19 +555,6 @@ class Surface(object):
                                                        guess=new_lt)
 
             new_lt = new_lt.clip(lt_min, lt_max, False)
-
-#             tmin = new_lt.min()
-#             tmax = new_lt.max()
-#             span = tmax - tmin
-# 
-#             collapsed_mask = (span == Scalar.MASKED)
-# 
-#             if span <= collapse_threshold:
-#                 if LOGGING.surface_time_collapse:
-#                     print LOGGING.prefix, "Surface.collapse_time()",
-#                     print tmin, tmax - tmin
-#                 new_lt = Scalar((tmin + tmax)/2., collapsed_mask, new_lt.units)
-
             dlt = new_lt - lt
             lt = new_lt
 
@@ -526,8 +566,8 @@ class Surface(object):
                 print LOGGING.prefix, "Surface._solve_photon_by_los",
                 print iter, max_dlt
 
-            if max_dlt <= precision or max_dlt >= prev_max_dlt or \
-               max_dlt == Scalar.MASKED:
+            if (max_dlt <= precision) or (max_dlt >= prev_max_dlt) or \
+               (max_dlt == Scalar.MASKED):
                     break
 
             # Re-evaluate the surface time
@@ -535,19 +575,31 @@ class Surface(object):
 
         #### END OF LOOP
 
+        # If the link is entirely masked now
+        if max_dlt == Scalar.MASKED:
+            return fully_masked_results()
+
         # Update the mask on light time to hide intercepts outside the defined
         # limits
-        mask = (link.mask | lt.mask | (lt.vals * sign < 0.) |
+        mask = (lt.mask | (lt.vals * sign < 0.) |
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        # The remasking will fail if lt has been time-collapsed
-        try:
-            lt = lt.remask(mask)
-        except ValueError:
-            pass
+        lt = lt.remask(mask)
+        surface_time = link_wod.time + lt
 
-        surface_time = link_time + lt
+        # Unshrink and re-shrink if that would be beneficial
+        if mask is not False and np.shape(antimask) != ():
+            surface_time = surface_time.unshrink(antimask)
+            lt = lt.unshrink(antimask)
+            link = original_link
+
+            antimask = np.logical_not(surface_time.mask)
+            surface_time = surface_time.shrink(antimask)
+            lt = lt.shrink(antimask)
+            link = link.shrink(antimask)
+
+            link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
 
         # Put the derivatives back as needed (at least the time derivative)
         obs_wrt_ssb = link_wrt_ssb.state
@@ -572,16 +624,11 @@ class Surface(object):
 
         # Update the mask on light time to hide intercepts behind the observer
         # or outside the defined limits
-        mask = (link.mask | lt.mask | (lt.vals * sign < 0.) |
+        mask = (lt.mask | (lt.vals * sign < 0.) |
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        # The remasking will fail if lt has been time-collapsed
-        try:
-            lt = lt.remask(mask)
-        except ValueError:
-            pass
-
+        lt = lt.remask(mask)
         pos_wrt_surface = pos_wrt_surface.remask(mask)
 
         # Create the surface event in its own frame
@@ -614,6 +661,10 @@ class Surface(object):
         # Constructed the updated link_event
         new_link = link.replace(link_key + '_lt', lt)
 
+        # Unshrink
+        surface_event = surface_event.unshrink(antimask)
+        new_link = new_link.unshrink(antimask)
+
         return (surface_event, new_link)
 
     ############################################################################
@@ -621,25 +672,28 @@ class Surface(object):
     ############################################################################
 
     def photon_to_event_by_coords(self, arrival, coords, derivs=False,
-                                        guess=None, quick={}, converge={}):
+                                        guess=None, antimask=None,
+                                        quick={}, converge={}):
         """Photon departure event from surface coordinates, given arrival event.
 
         See _solve_photon_by_coords() for details."""
 
         return self._solve_photon_by_coords(arrival, coords, -1, derivs,
-                                            guess, quick, converge)
+                                            guess, antimask, quick, converge)
 
     def photon_from_event_by_coords(self, departure, coords, derivs=False,
-                                          guess=None, quick={}, converge={}):
+                                          guess=None, antimask=None,
+                                          quick={}, converge={}):
         """Photon arrival event at surface coordinates, given departure event.
 
         See _solve_photon_by_coords() for details."""
 
         return self._solve_photon_by_coords(departure, coords, +1, derivs,
-                                            guess, quick, converge)
+                                            guess, antimask, quick, converge)
 
     def _solve_photon_by_coords(self, link, coords, sign, derivs=False,
-                                      guess=None, quick={}, converge={}):
+                                      guess=None, antimask=None,
+                                      quick={}, converge={}):
         """Solve for a photon surface intercept from event and coordinates.
 
         Input:
@@ -662,6 +716,10 @@ class Surface(object):
             guess       an initial guess to use as the event time for the
                         surface; otherwise None. Should only be used if the event
                         time was already returned from a similar calculation.
+
+            antimask    if not None, this is a boolean array to be applied to
+                        event times and positions. Only the indices where
+                        antimask=True will be used in the solution.
 
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
@@ -711,6 +769,38 @@ class Surface(object):
                         divergence of the solution in some cases.
         """
 
+        # Internal functions to return an entirely masked result
+        def fully_masked_results():
+            new_link = link.all_masked()
+
+            scalar = new_link.time.clone()
+            vector3 = new_link.pos.clone()
+
+            if derivs:
+                scalar.insert_deriv('t', Scalar(1., True), override=True)
+                scalar.insert_deriv('los',
+                                    Scalar(np.ones((1,3)), True, drank=1),
+                                    override=True)
+
+                vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
+                vector3.insert_deriv('los',
+                                     Vector3(np.ones((3,3)), True, drank=1),
+                                     override=True)
+
+                new_link.state.insert_deriv('los', vector3.d_dlos)
+
+            new_link = new_link.replace(link_key, vector3,
+                                        link_key + '_lt', scalar)
+
+            surf_event = Event(new_link.time, new_link.state,
+                               self.origin, self.frame.wayframe)
+            surf_event.insert_subfield(surface_key, vector3)
+            surf_event.insert_subfield(surface_key + '_lt', scalar)
+            surf_event.insert_subfield('perp', vector3.without_derivs())
+            surf_event.insert_subfield('vflat', vector3.without_derivs())
+
+            return (surf_event, new_link)
+
         # Handle derivatives
         if not derivs:
             link = link.without_derivs()        # preserves time-dependence
@@ -742,22 +832,25 @@ class Surface(object):
             link_key = 'dep'
             surface_key = 'arr'
 
+        # Define the antimask
+        if antimask is None:
+            antimask = link.antimask
+        else:
+            antimask &= link.antimask
+
         # If the link is entirely masked...
-        if np.all(link.time.mask):
-            surface_event = Event(link.time, link.state.all_masked(True),
-                                  self.origin, self.frame.wayframe)
-            surface_event.insert_subfield(surface_key, Vector3.MASKED)
-            surface_event.insert_subfield(surface_key + '_lt', Scalar.MASKED)
+        if not np.any(antimask):
+            return fully_masked_results()
 
-            new_link = link.replace(link_key, Vector3.MASKED,
-                                    link_key + '_lt', Scalar.MASKED)
-
-            return (surface_event, new_link)
+        # Shrink the event
+        original_link = link
+        link = link.shrink(antimask)
 
         # Define the link event relative to the SSB in J2000
         link_wod = link.without_derivs()
-        link_time = link_wod.time
         link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
+
+        link_time = link_wod.time
         obs_wrt_ssb = link_wrt_ssb.pos
 
         # Define the surface path and frame relative to the SSB in J2000
@@ -812,8 +905,7 @@ class Surface(object):
             if self.IS_VIRTUAL:
                obs_wrt_origin_frame = surface_xform.rotate(obs_wrt_origin_j2000)
                pos_wrt_origin_frame = self.vector3_from_coords(coords,
-                                                    obs=obs_wrt_origin_frame,
-                                                    time=surface_time)
+                                    obs=obs_wrt_origin_frame, time=surface_time)
 
             # Locate the coordinate position in J2000
             pos_wrt_origin_j2000 = surface_xform.unrotate(pos_wrt_origin_frame)
@@ -844,13 +936,19 @@ class Surface(object):
             # Re-evaluate the surface time
             surface_time = link_time + lt
 
+        #### END OF LOOP
+    
+        # If the link is entirely masked now
+        if max_dlt == Scalar.MASKED:
+            return fully_masked_results()
+
         # Update the mask on light time to hide intercepts outside the defined
         # limits
-        mask = (link.mask | lt.mask | (lt.vals * sign < 0.) |
+        mask = (lt.mask | (lt.vals * sign < 0.) |
                 (lt.vals == lt_min) | (lt.vals == lt_max))
         if not np.any(mask): mask = False
 
-        if lt.shape != (): lt = lt.remask(mask)
+        lt = lt.remask(mask)
         surface_time = link_time + lt
 
         # Determine the line of sight vector in J2000
@@ -876,6 +974,10 @@ class Surface(object):
         # Construct the updated link_event
         new_link = link.replace(link_key + '_j2000', los_in_j2000,
                                 link_key + '_lt', lt)
+
+        # Unshrink
+        surface_event = surface_event.unshrink(antimask)
+        new_link = new_link.unshrink(antimask)
 
         return (surface_event, new_link)
 

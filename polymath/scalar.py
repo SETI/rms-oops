@@ -31,6 +31,33 @@ class Scalar(Qube):
 
     DEFAULT_VALUE = 1
 
+    def _maxval(self):
+        """Internal method returns the maximum value associated with a dtype."""
+
+        dtype = self.values.dtype
+        if dtype.kind == 'f':
+            return np.inf
+        elif dtype.kind == 'u':
+            return 256**dtype.itemsize - 1
+        elif dtype.kind == 'i':
+            return 256**dtype.itemsize//2 - 1
+        else:
+            raise ValueError('invalid dtype %s' % str(dtype))
+
+    def _minval(self):
+        """Internal method returns the minimum value associated with a dtype."""
+
+        # Define constant maxval
+        dtype = self.values.dtype
+        if dtype.kind == 'f':
+            return -np.inf
+        elif dtype.kind == 'u':
+            return 0
+        elif dtype.kind == 'i':
+            return -256**dtype.itemsize//2
+        else:
+            raise ValueError('invalid dtype %s' % str(dtype))
+
     @staticmethod
     def as_scalar(arg, recursive=True):
         """Return the argument converted to Scalar if possible.
@@ -85,57 +112,53 @@ class Scalar(Qube):
             obj.values[obj.mask] = masked
             return obj.values
 
-    def as_index_and_mask(self, remove_masked=False, masked=None):
-        """Return an object suitable for indexing a NumPy ndarray along with a mask.
+    def as_index_and_mask(self, purge=False, masked=None):
+        """Objects suitable for indexing an N-dimensional array and its mask.
 
         Input:
-            remove_masked True if the index should have masked values removed.
-            masked        the index or list/tuple/array of indices to insert in
-                          the place of a masked item. If None and the object
-                          contains masked elements, the array will be flattened
-                          and masked elements will be skipped over.
-                        
-        Return: (valueidx, mask)
-            valueidx    the indices corresponding to this Scalar's value
-            mask        a boolean array indicating which indices are masked
+            purge           True to eliminate masked elements from the index;
+                            False to retain them but leave them masked.
+            masked          the index value to insert in place of any masked.
+                            item. This may be needed because each value in the
+                            returned index array must be an integer and in
+                            range. If None (the default), then masked values
+                            in the index will retain their unmasked values when
+                            the index is applied.
         """
 
-        obj = self.as_int()
+        ints = self.as_int()
 
+        # If nothing is masked, this is easy
         if not np.any(self.mask):
-            return obj.values, None
+            return (ints.values, None)
 
-        if masked is not None:
-            obj = obj.copy()
-            if np.shape(obj.mask) == () and obj.mask:
-                # All masked
-                obj.values[:] = masked
+        # If purging...
+        if purge:
+            # If all masked...
+            if ints.mask is True:
+                return ((), None)
+
+            # If partially masked...
+            return (ints.values[ints.antimask], None)
+
+        # Without a replacement...
+        if masked is None:
+            new_values = ints.values
+
+        # If all masked...
+        elif ints.mask is True:
+            if type(ints.values) == np.ndarray:
+                new_values = np.empty(ints.shape, dtype='int').fill(masked)
             else:
-                # Partially masked
-                obj.values[obj.mask] = masked
-            return obj.values, None
+                new_values = masked
 
-        if remove_masked:
-            if np.all(obj.mask): # All masked
-                return None, None
-            # Partially masked
-            obj = obj.flatten()
-            if np.shape(obj.values) == () and obj.mask:
-                return None, None
-            return obj[obj.antimask].values, obj.mask
-
-        obj = obj.copy()
-        values = obj.values
-        if np.shape(obj.values) == ():
-            if obj.mask:
-                values = 0
+        # If partially masked...
         else:
-            if np.shape(obj.mask) == ():
-                if obj.mask:
-                    values[:] = 0 # All masked
-            else: # Partially masked
-                values[obj.mask] = 0 # Always a safe index
-        return (values, obj.mask)
+            new_values = ints.values.copy()
+            new_values[ints.mask] = masked
+
+        # Return results
+        return (new_values, ints.mask)
 
     def int(self):
         """Return an integer (floor) version of this Scalar.
@@ -531,160 +554,602 @@ class Scalar(Qube):
         return Scalar(np.sign(self.values), units=False, derivs={},
                       example=self)
 
-    def max(self):
-        """Returns the maximum of the unmasked values.
+    def max(self, axis=None):
+        """Return the maximum of the unmasked values.
 
-        A Python scalar is returned unless the result is masked, in which case
-        a single masked Scalar is returned. Denominators are not supported.
+        If the result is a single scalar, it is returned as a Python value
+        rather than as a Scalar. Denominators are not supported.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The maximum is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        maximum is performed across all axes if the object.
         """
 
         if self.drank:
             raise ValueError('denominators are not supported in max()')
 
-        if np.all(self.mask):
-            if self.is_float():
-                return Scalar(1., True, self.units)
+        if self.shape == ():
+            result = self
+
+        elif not np.any(self.mask):
+            result = Scalar(np.max(self.values, axis=axis), mask=False,
+                            example=self)
+
+        elif axis is None:
+            if np.shape(self.mask) == ():
+                result = Scalar(np.max(self.values), mask=self.mask,
+                                example=self)
+            elif np.all(self.mask):
+                result = Scalar(np.max(self.values), mask=True,
+                                example=self)
             else:
-                return Scalar(1, True, self.units)
+                result = Scalar(np.max(self.values[self.antimask]),
+                                mask=False, example=self)
 
-        if not np.any(self.mask):
-            maxval = np.max(self.values)
         else:
-            maxval = np.max(self.values[self.antimask])
 
-        if self.units is None or self.units == Units.UNITLESS:
-            if self.is_float():
-                return float(maxval)
+            # Create new array
+            minval = self._minval()
+
+            new_values = self.values.copy()
+            new_values[self.mask] = minval
+            new_values = np.max(new_values, axis=axis)
+
+            # Create new mask
+            if self.mask is True:
+                new_mask = True
+            elif self.mask is False:
+                new_mask = False
             else:
-                return int(maxval)
-        else:
-            return Scalar(maxval, False, self.units)
+                new_mask = np.all(self.mask, axis=axis)
 
-    def min(self):
+            # Use the max of the unmasked values if all are masked
+            if np.all(new_mask):
+                unmasked_maxes = np.max(self.values, axis=axis)
+                new_values = unmasked_maxes
+                new_mask = True
+            elif np.any(new_mask):
+                unmasked_maxes = np.max(self.values, axis=axis)
+                new_values[new_mask] = unmasked_maxes[new_mask]
+            else:
+                new_mask = False
+
+            result = Scalar(new_values, new_mask, example=self)
+
+        # Convert result to a Python constant if necessary
+        if result.shape == () and not result.mask and \
+           result.units in (None, Units.UNITLESS):
+                if result.is_float():
+                    return float(result.values)
+                else:
+                    return int(result.values)
+
+        return result
+
+    def min(self, axis=None):
         """Return the minimum of the unmasked values.
 
-        A Python scalar is returned unless the result is masked, in which case
-        a single masked Scalar is returned. Denominators are not supported.
+        If the result is a single scalar, it is returned as a Python value
+        rather than as a Scalar. Denominators are not supported.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The minimum is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        minimum is performed across all axes if the object.
         """
 
         if self.drank:
             raise ValueError('denominators are not supported in min()')
 
-        if np.all(self.mask):
-            if self.is_float():
-                return Scalar(1., True, self.units)
+        if self.shape == ():
+            result = self
+
+        elif not np.any(self.mask):
+            result = Scalar(np.min(self.values, axis=axis), mask=False,
+                            example=self)
+
+        elif axis is None:
+            if np.shape(self.mask) == ():
+                result = Scalar(np.min(self.values), mask=self.mask,
+                                example=self)
+            elif np.all(self.mask):
+                result = Scalar(np.min(self.values), mask=True,
+                                example=self)
             else:
-                return Scalar(1, True, self.units)
+                result = Scalar(np.min(self.values[self.antimask]),
+                                mask=False, example=self)
+
+        else:
+            # Create new array
+            maxval = self._maxval()
+
+            new_values = self.values.copy()
+            new_values[self.mask] = maxval
+            new_values = np.min(new_values, axis=axis)
+
+            # Create new mask
+            if self.mask is True:
+                new_mask = True
+            elif self.mask is False:
+                new_mask = False
+            else:
+                new_mask = np.all(self.mask, axis=axis)
+
+            # Use the min of the unmasked values if all are masked
+            if np.all(new_mask):
+                unmasked_mins = np.min(self.values, axis=axis)
+                new_values = unmasked_mins
+                new_mask = True
+            elif np.any(new_mask):
+                unmasked_mins = np.min(self.values, axis=axis)
+                new_values[new_mask] = unmasked_mins[new_mask]
+            else:
+                new_mask = False
+
+            result = Scalar(new_values, new_mask, example=self)
+
+        # Convert result to a Python constant if necessary
+        if result.shape == () and not result.mask and \
+           result.units in (None, Units.UNITLESS):
+                if result.is_float():
+                    return float(result.values)
+                else:
+                    return int(result.values)
+
+        return result
+
+    def argmax(self, axis=None):
+        """Return the index of the maximum of the unmasked values.
+
+        Input:
+            axis        an optional integer axis.
+
+        If axis is None, then it returns the index of the maximum argument in
+        the flattened array. Otherwise, it returns an integer Scalar array of
+        the same shape as self except that the specified axis has been removed.
+        Each value indicates the index of the maximum along that axis. The index
+        is masked where the axis is entirely masked.
+        """
+
+        if self.drank:
+            raise ValueError('denominators are not supported in argmax()')
+
+        if self.shape == ():
+            raise ValueError('no argmax for Scalar with shape = ()')
 
         if not np.any(self.mask):
-            minval = np.min(self.values)
-        else:
-            minval = np.min(self.values[self.antimask])
+            result = Scalar(np.argmax(self.values, axis=axis), mask=False)
 
-        if self.units is None or self.units == Units.UNITLESS:
-            if self.is_float():
-                return float(minval)
+        elif axis is None:
+            if np.shape(self.mask) == ():
+                result = Scalar(np.argmax(self.values), mask=self.mask)
+            elif np.all(self.mask):
+                result = Scalar(np.argmax(self.values), mask=True)
             else:
-                return int(minval)
+                minval = self._minval()
+                values = self.values.copy()
+                values[self.mask] = minval
+                if np.all(values == minval):
+                    result = Scalar(np.argmin(self.mask), mask=False)
+                else:
+                    result = Scalar(np.argmax(values), mask=False)
+
         else:
-            return Scalar(minval, False, self.units)
 
-    def mean(self, recursive=False, operator=np.mean):
-        """Return the mean of the unmasked values.
+            # Create new array
+            minval = self._minval()
+            new_values = self.values.copy()
+            new_values[self.mask] = minval
+            argmaxes = np.argmax(new_values, axis=axis)
 
-        Denominators are supported and derivatives are supported. The value is
-        returned as a single Python scalar if possible
+            # Create new mask
+            if self.mask is True:
+                new_mask = True
+            elif self.mask is False:
+                new_mask = False
+            else:
+                new_mask = np.all(self.mask, axis=axis)
+
+            # Use the argmax of the unmasked values if all are masked
+            if np.all(new_mask):
+                unmasked_argmaxes = np.argmax(self.values, axis=axis)
+                argmaxes = unmasked_argmaxes
+                new_mask = True
+            elif np.any(new_mask):
+                unmasked_argmaxes = np.argmax(self.values, axis=axis)
+                argmaxes[new_mask] = unmasked_argmaxes[new_mask]
+            else:
+                new_mask = False
+
+            result = Scalar(argmaxes, new_mask)
+
+        # Convert result to a Python constant if necessary
+        if result.shape == () and not result.mask:
+            return int(result.values)
+
+        return result
+
+    def argmin(self, axis=None):
+        """Return the index of the minimum of the unmasked values.
+
+        Input:
+            axis        an optional integer axis.
+
+        If axis is None, then it returns the index of the minimum argument in
+        the flattened array. Otherwise, it returns an integer Scalar array of
+        the same shape as self except that the specified axis has been removed.
+        Each value indicates the index of the minimum along that axis. The index
+        is masked where the axis is entirely masked.
         """
 
-        # Deal with the fully masked Scalar
-        if np.all(self.mask):
-            if self.is_float():
-                values = np.ones(self.denom, dtype='float')
-            else:
-                values = np.ones(self.denom, dtype='int')
+        if self.drank:
+            raise ValueError('denominators are not supported in argmin()')
 
-            return Scalar(values, True, example=self)
-
-        is_simple = ((self.units is None or self.units == Units.UNITLESS) and
-                     self.drank == 0 and (self.derivs == {} or not recursive))
-
-        # Deal with a single value
         if self.shape == ():
-            if not is_simple:
-                return self.clone()
-            elif self.is_float():
-                return float(self.values)
-            else:
-                return int(self.values)
+            raise ValueError('no argmin for Scalar with shape = ()')
 
-        # Get a flattened array of unmasked values
-        if np.any(self.mask):
-            values = self.values[self.antimask]
-        elif self.drank == 0:
-            values = self.values.ravel()
+        if not np.any(self.mask):
+            result = Scalar(np.argmin(self.values, axis=axis), mask=False)
+
+        elif axis is None:
+            if np.shape(self.mask) == ():
+                result = Scalar(np.argmin(self.values), mask=self.mask)
+            elif np.all(self.mask):
+                result = Scalar(np.argmin(self.values), mask=True)
+            else:
+                maxval = self._maxval()
+                values = self.values.copy()
+                values[self.mask] = maxval
+                if np.all(values == maxval):
+                    result = Scalar(np.argmin(self.mask), mask=False)
+                else:
+                    result = Scalar(np.argmin(values), mask=False)
+
         else:
-            values = self.values.reshape((self.size,) + self.denom)
 
-        # Average over the first axis
-        meanval = operator(values, axis=0)
+            # Create new array
+            maxval = self._maxval()
+            new_values = self.values.copy()
+            new_values[self.mask] = maxval
+            argmins = np.argmin(new_values, axis=axis)
 
-        # Convert to int(s) if appropriate
-        if self.is_int() and np.all(meanval % 1 == 0):
-            if np.shape(meanval) == ():
-                meanval = int(meanval)
+            # Create new mask
+            if self.mask is True:
+                new_mask = True
+            elif self.mask is False:
+                new_mask = False
             else:
-                meanval = meanval.astype('int')
+                new_mask = np.all(self.mask, axis=axis)
 
-        # Return a scalar if possible
-        if is_simple:
-            if type(meanval) == int: return meanval
-            return float(meanval)
+            # Use the argmin of the unmasked values if all are masked
+            if np.all(new_mask):
+                unmasked_argmins = np.argmin(self.values, axis=axis)
+                argmins = unmasked_argmins
+                new_mask = True
+            elif np.any(new_mask):
+                unmasked_argmins = np.argmin(self.values, axis=axis)
+                argmins[new_mask] = unmasked_argmins[new_mask]
+            else:
+                new_mask = False
 
-        obj = Scalar(meanval, False, derivs={}, example=self)
+            result = Scalar(argmins, new_mask)
 
-        if recursive:
-            for (key, deriv) in self.derivs.iteritems():
-                obj.insert_deriv(key, Scalar.as_scalar(deriv.mean(False)))
+        # Convert result to a Python constant if necessary
+        if result.shape == () and not result.mask:
+            return int(result.values)
 
-        return obj
+        return result
 
-    def median(self, recursive=False):
-        """Return the median of the unmasked values.
+    @staticmethod
+    def maximum(*scalars):
+        """Return a Scalar composed of the maximum among the given Scalars after
+        they are all broadcasted to the same shape."""
 
-        Denominators are supported and derivatives are supported. The value is
-        returned as a single Python scalar if possible
-        """
+        if len(scalars) == 0:
+            raise ValueError('invalid number of arguments')
 
-        return self.mean(recursive=False, operator=np.median)
+        # Convert to scalars of the same shape
+        scalars = [Scalar.as_scalar(s,recursive=False) for s in scalars]
+        scalars = Qube.broadcast(*scalars)
 
-    def sum(self, recursive=False):
+        # Make sure there are no denominators
+        for scalar in scalars:
+          if scalar.drank:
+            raise ValueError('denominators are not supported in maximum()')
+
+        # len == 1 case is easy
+        if len(scalars) == 1:
+            return scalars[0]
+
+        # Convert to floats if any scalar uses floats
+        floats_found = False
+        ints_found = False
+        for scalar in scalars:
+            if scalar.is_float(): floats_found = True
+            if scalar.is_int(): ints_found = True
+
+        if floats_found and ints_found:
+            scalars = [s.as_float() for s in scalars]
+
+        # Create the scalar containing maxima
+        maxes = scalars[0].copy()
+        for scalar in scalars[1:]:
+            scalar = scalar.mask_where(scalar <= maxes)
+            maxes._set_values_(scalar.values, False, scalar.antimask)
+
+        return maxes
+
+    @staticmethod
+    def minimum(*scalars):
+        """Return a Scalar composed of the minimum among the given Scalars after
+        they are all broadcasted to the same shape."""
+
+        if len(scalars) == 0:
+            raise ValueError('invalid number of arguments')
+
+        # Convert to scalars of the same shape
+        scalars = [Scalar.as_scalar(s,recursive=False) for s in scalars]
+        scalars = Qube.broadcast(*scalars)
+
+        # Make sure there are no denominators
+        for scalar in scalars:
+          if scalar.drank:
+            raise ValueError('denominators are not supported in minimum()')
+
+        # len == 1 case is easy
+        if len(scalars) == 1:
+            return scalars[0]
+
+        # Convert to floats if any scalar uses floats
+        floats_found = False
+        ints_found = False
+        for scalar in scalars:
+            if scalar.is_float(): floats_found = True
+            if scalar.is_int(): ints_found = True
+
+        if floats_found and ints_found:
+            scalars = [s.as_float() for s in scalars]
+
+        # Create the scalar containing minima
+        mins = scalars[0].copy()
+        for scalar in scalars[1:]:
+            scalar = scalar.mask_where(scalar >= mins)
+            mins._set_values_(scalar.values, False, scalar.antimask)
+
+        return mins
+
+    def sum(self, axis=None):
         """Return the sum of the unmasked values.
 
-        If recursive, the derivatives are summed too. Denominators are not
-        supported.
+        If the result is a single scalar, it is returned as a Python value
+        rather than as a Scalar. Denominators are not supported.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The sum is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        sum is performed across all axes if the object.
         """
 
         if self.drank:
             raise ValueError('denominators are not supported in sum()')
 
-        if np.all(self.mask):
-            if self.is_float():
-                return Scalar(0., True, self.units)
-            else:
-                return Scalar(0, True, self.units)
+        if self.shape == ():
+            result = self
 
-        if not np.any(self.mask):
-            sumval = np.sum(self.values)
-        else:
-            sumval = np.sum(self.values[self.antimask])
+        elif not np.any(self.mask):
+            result = Scalar(np.sum(self.values, axis=axis), mask=False,
+                            example=self)
 
-        if self.units is None or self.units == Units.UNITLESS:
-            if self.is_float():
-                return float(sumval)
+        elif axis is None:
+            if np.shape(self.mask) == ():
+                result = Scalar(np.sum(self.values), mask=self.mask,
+                                example=self)
+            elif np.all(self.mask):
+                result = Scalar(np.sum(self.values), mask=True,
+                                example=self)
             else:
-                return int(sumval)
+                result = Scalar(np.sum(self.values[self.antimask]),
+                                mask=False, example=self)
+
         else:
-            return Scalar(sumval, False, self.units)
+            # Create new array and mask
+            new_values = self.values.copy()
+            new_values[self.mask] = 0
+            new_values = np.sum(new_values, axis=axis)
+
+            if np.shape(self.mask):
+                new_mask = np.all(self.mask, axis=axis)
+            else:
+                new_mask = self.mask
+
+            # Fill in masked items using unmasked sums
+            if np.any(new_mask):
+                if np.shape(new_values):
+                    new_values[new_mask] = np.sum(self.values,
+                                                  axis=axis)[new_mask]
+                else:
+                    new_values = np.sum(self.values, axis=axis)
+
+            result = Scalar(new_values, new_mask, example=self)
+
+        # Convert result to a Python constant if necessary
+        if result.shape == () and not result.mask and \
+           result.units in (None, Units.UNITLESS):
+                if result.is_float():
+                    return float(result.values)
+                else:
+                    return int(result.values)
+
+        return result
+
+    def mean(self, axis=None):
+        """Return the mean of the unmasked values.
+
+        If the result is a single scalar, it is returned as a Python value
+        rather than as a Scalar. Denominators are not supported.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The mean is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        mean is performed across all axes if the object.
+        """
+
+        if self.drank:
+            raise ValueError('denominators are not supported in sum()')
+
+        if self.shape == ():
+            result = self
+
+        elif not np.any(self.mask):
+            result = Scalar(np.mean(self.values, axis=axis), mask=False,
+                            example=self)
+
+        elif axis is None:
+            if np.shape(self.mask) == ():
+                result = Scalar(np.mean(self.values), mask=self.mask,
+                                example=self)
+            elif np.all(self.mask):
+                result = Scalar(np.mean(self.values), mask=True,
+                                example=self)
+            else:
+                result = Scalar(np.mean(self.values[self.antimask]),
+                                mask=False, example=self)
+
+        else:
+            # Create new array and mask
+            new_values = self.values.copy()
+            new_values[self.mask] = 0
+            new_values = np.sum(new_values, axis=axis).astype('float')
+
+            if self.mask is True:
+                count = 0.
+            elif self.mask is False:
+                count = np.size(self.values) / float(np.size(new_values))
+            else:
+                count = np.sum(self.mask == False, axis=axis).astype('float')
+
+            new_mask = (count == 0.)
+            new_values /= np.maximum(count, 1.)
+
+            # Fill in masked items using unmasked means
+            if np.any(new_mask):
+                if np.shape(new_values):
+                    new_values[new_mask] = np.mean(self.values,
+                                                   axis=axis)[new_mask]
+                else:
+                    new_values = np.mean(self.values, axis=axis)
+
+            result = Scalar(new_values, new_mask, example=self)
+
+        # Convert result to a Python constant if necessary
+        if result.shape == () and not result.mask and \
+           result.units in (None, Units.UNITLESS):
+                return float(result.values)
+
+        return result
+
+    def median(self, axis=None):
+        """Return the median of the unmasked values.
+
+        If the result is a single scalar, it is returned as a Python value
+        rather than as a Scalar. Denominators are not supported.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The median is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        median is performed across all axes if the object.
+        """
+
+        if self.drank:
+            raise ValueError('denominators are not supported in sum()')
+
+        if self.shape == ():
+            result = self
+
+        elif not np.any(self.mask):
+            result = Scalar(np.median(self.values, axis=axis), mask=False,
+                            example=self)
+
+        elif axis is None:
+            if np.shape(self.mask) == ():
+                result = Scalar(np.median(self.values), mask=self.mask,
+                                example=self)
+            elif np.all(self.mask):
+                result = Scalar(np.median(self.values), mask=True,
+                                example=self)
+            else:
+                result = Scalar(np.median(self.values[self.antimask]),
+                                mask=False, example=self)
+
+        else:
+            # Interpret the axis selection
+            len_shape = len(self.shape)
+            if isinstance(axis, int):
+                axis = (axis,)
+
+            axes = list(axis)
+            axes = [a % len_shape for a in axes]
+            axes = list(set(axes))
+            axes.sort(reverse=True)
+
+            # Reorganize so that the leading axis is a flattened version of all
+            # the axes over which the median is to be performed. Remaining axes
+            # stay in their original order.
+            new_scalar = self.roll_axis(axes[0], 0, recursive=False)
+            for k in axes[1:]:
+                new_scalar.roll_axis(k+1, 0)
+                shape = new_scalar.shape
+                new_scalar = new_scalar.reshape((shape[0] * shape[1],) +
+                                                shape[2:])
+
+            # Sort along the leading axis, with masked values at the top
+            maxval = self._maxval()
+
+            new_values = new_scalar.values.copy()
+            new_values[new_scalar.mask] = maxval
+            new_values = np.sort(new_values, axis=0)
+
+            # Count the number of unmasked values
+            if new_scalar.mask is True:
+                count = 0
+            elif new_scalar.mask is False:
+                count = self.values.size // new_values[0].size
+            else:
+                count = np.sum(new_scalar.mask == False, axis=0)
+
+            # Define the indices of the middle one or two
+            klo = np.maximum((count - 1) // 2, 0)
+            khi = count // 2
+            indices = tuple(np.indices(new_values.shape[1:]))
+            values_lo = new_values[(klo,) + indices]
+            values_hi = new_values[(khi,) + indices]
+
+            # Derive the median
+            new_values = 0.5 * (values_lo + values_hi)
+            new_mask = (count == 0)
+
+            # Fill in masked items using unmasked medians
+            if np.any(new_mask):
+                if np.shape(new_values):
+                    new_values[new_mask] = np.median(self.values,
+                                                     axis=axis)[new_mask]
+                else:
+                    new_values = np.median(self.values, axis=axis)
+
+            result = Scalar(new_values, new_mask, example=self)
+
+        # Convert result to a Python constant if necessary
+        if result.shape == () and not result.mask and \
+           result.units in (None, Units.UNITLESS):
+                return float(result.values)
+
+        return result
 
     ############################################################################
     # Overrides of arithmetic operators
@@ -846,6 +1311,8 @@ class Scalar(Qube):
 
 Scalar.ONE = Scalar(1).as_readonly()
 Scalar.ZERO = Scalar(0).as_readonly()
+Scalar.INF  = Scalar(np.inf).as_readonly()
+Scalar.NEGINF = Scalar(-np.inf).as_readonly()
 Scalar.MASKED = Scalar(1, True).as_readonly()
 
 ################################################################################

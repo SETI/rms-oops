@@ -27,6 +27,7 @@ if __name__ == '__main__':
     from unit_tests.test_matrix3_twovec         import *
 
     from unit_tests.test_pair_as_pair           import *
+    from unit_tests.test_pair_clip2d            import *
     from unit_tests.test_pair_misc              import *
     from unit_tests.test_pair_swapxy            import *
 
@@ -36,6 +37,8 @@ if __name__ == '__main__':
     from unit_tests.test_quaternion_parts       import *
     from unit_tests.test_quaternion_ops         import *
 
+    from unit_tests.test_qube_all               import *
+    from unit_tests.test_qube_any               import *
     from unit_tests.test_qube_derivs            import *
     from unit_tests.test_qube_getitem           import *
     from unit_tests.test_qube_identity          import *
@@ -45,6 +48,8 @@ if __name__ == '__main__':
     from unit_tests.test_qube_readonly          import *
     from unit_tests.test_qube_reshaping         import *
     from unit_tests.test_qube_setitem           import *
+    from unit_tests.test_qube_shrink            import *
+    from unit_tests.test_qube_stack             import *
     from unit_tests.test_qube_units             import *
     from unit_tests.test_qube_zero              import *
 
@@ -60,8 +65,11 @@ if __name__ == '__main__':
     from unit_tests.test_scalar_int             import *
     from unit_tests.test_scalar_log             import *
     from unit_tests.test_scalar_max             import *
+    from unit_tests.test_scalar_maximum         import *
     from unit_tests.test_scalar_mean            import *
+    from unit_tests.test_scalar_median          import *
     from unit_tests.test_scalar_min             import *
+    from unit_tests.test_scalar_minimum         import *
     from unit_tests.test_scalar_misc            import *
     from unit_tests.test_scalar_ops             import *
     from unit_tests.test_scalar_reciprocal      import *
@@ -81,6 +89,7 @@ if __name__ == '__main__':
     from unit_tests.test_vector_dot             import *
     from unit_tests.test_vector_element_div     import *
     from unit_tests.test_vector_element_mul     import *
+    from unit_tests.test_vector_masking         import *
     from unit_tests.test_vector_norm            import *
     from unit_tests.test_vector_norm_sq         import *
     from unit_tests.test_vector_ops             import *

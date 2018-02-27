@@ -451,17 +451,17 @@ class Test_SpicePath(unittest.TestCase):
 
         # Check light travel time corrections, Saturn to Earth wrt SSB
         earth_event = earth.event_at_time(times)
-        (saturn_event,earth_event) = saturn.photon_to_event(earth_event)
+        (saturn_event, earth_event) = saturn.photon_to_event(earth_event)
 
         saturn_rel = saturn_event.sub(earth_event)
         self.assertTrue(abs(saturn_rel.dep - earth_event.arr).max() < 1.e-6)
 
         saturn_rel_ssb = saturn_rel.wrt_ssb()
         saturn_abs_ssb = saturn_event.wrt_ssb()
-        self.assertTrue(abs(saturn_rel_ssb.time - saturn_abs_ssb.time).max() < 1.e-6)
-        self.assertTrue(abs(saturn_rel_ssb.pos  - saturn_abs_ssb.pos).max()  < 1.e-6)
-        self.assertTrue(abs(saturn_rel_ssb.vel  - saturn_abs_ssb.vel).max()  < 1.e-6)
-        self.assertTrue(abs(saturn_rel_ssb.dep  - saturn_abs_ssb.dep).max()  < 1.e-6)
+        self.assertTrue(abs(saturn_rel_ssb.time - saturn_abs_ssb.time).max() < 2.e-6)
+        self.assertTrue(abs(saturn_rel_ssb.pos  - saturn_abs_ssb.pos).max()  < 2.e-6)
+        self.assertTrue(abs(saturn_rel_ssb.vel  - saturn_abs_ssb.vel).max()  < 2.e-6)
+        self.assertTrue(abs(saturn_rel_ssb.dep  - saturn_abs_ssb.dep).max()  < 2.e-6)
 
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(6,times[i],"J2000","CN",399)

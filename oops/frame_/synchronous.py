@@ -64,6 +64,8 @@ class Test_Synchronous(unittest.TestCase):
 
     def setUp(self):
         import oops.body
+
+        oops.body.Body.reset_registry()
         oops.body.define_solar_system('2000-01-01', '2020-01-01')
 
     def tearDown(self):

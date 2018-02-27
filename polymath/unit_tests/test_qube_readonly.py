@@ -26,15 +26,26 @@ class Test_Qube_readonly(unittest.TestCase):
                       (0,0,0,0,0), 1.)
 
     ####
-    a = Vector(np.random.randn(4,5,6,3,2), drank=1).as_readonly()
+    a = Scalar(np.arange(10)).as_readonly()
     b = a.copy()
+    c = a.clone()
     self.assertEqual(a.readonly, True)
     self.assertEqual(b.readonly, False)
+    self.assertEqual(c.readonly, True)
 
-    a = Vector(np.random.randn(4,5,6,3,2), drank=1).as_readonly()
+    b[0] = 10
+    self.assertEqual(a[0], 0)
+    self.assertEqual(b[0], 10)
+    self.assertEqual(c[0], 0)
+    self.assertRaises(ValueError, a.__setitem__, 0, 10)
+    self.assertRaises(ValueError, c.__setitem__, 0, 10)
+
+    a = Scalar(np.arange(10)).as_readonly()
     b = a.copy(readonly=True)
     self.assertEqual(a.readonly, True)
     self.assertEqual(b.readonly, True)
+    self.assertRaises(ValueError, b.__setitem__, 0, 10)
+    self.assertRaises(ValueError, b[0].__iadd__, 10)
 
     ####
     a = Vector(np.random.randn(5,3))

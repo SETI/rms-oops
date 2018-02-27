@@ -66,6 +66,69 @@ class Test_Scalar_sum(unittest.TestCase):
     a = Scalar([1.,2.], drank=1)
     self.assertRaises(ValueError, a.sum)
 
+    # Sums over axes
+    x = Scalar(np.arange(30).reshape(2,3,5))
+    m0 = x.sum(axis=0)
+    m01 = x.sum(axis=(0,1))
+    m012 = x.sum(axis=(-1,1,0))
+
+    self.assertEqual(m0.shape, (3,5))
+    for j in range(3):
+      for k in range(5):
+        self.assertEqual(m0[j,k], np.sum(x.values[:,j,k]))
+
+    self.assertEqual(m01.shape, (5,))
+    for k in range(5):
+        self.assertEqual(m01[k], np.sum(x.values[:,:,k]))
+
+    self.assertEqual(np.shape(m012), ())
+    self.assertEqual(type(m012), int)
+    self.assertEqual(m012, np.sum(np.arange(30)))
+
+    # Sums with masks
+    mask = np.zeros((2,3,5), dtype='bool')
+    mask[0,0,0] = True
+    mask[1,1,1] = True
+    x = Scalar(np.arange(30).reshape(2,3,5), mask)
+    m0 = x.sum(axis=0)
+    m01 = x.sum(axis=(0,1))
+    m012 = x.sum(axis=(-1,1,0))
+
+    self.assertEqual(m0.shape, (3,5))
+    self.assertEqual(m0[0,0], x.values[1,0,0])
+    self.assertEqual(m0[1,1], x.values[0,1,1])
+    for j in range(3):
+      for k in range(5):
+        if (j,k) in [(0,0), (1,1)]: continue
+        self.assertEqual(m0[j,k], np.sum(x.values[:,j,k]))
+
+    self.assertEqual(m01.shape, (5,))
+    self.assertEqual(m01[0], (np.sum(x.values[:,:,0]) - x.values[0,0,0]))
+    self.assertEqual(m01[1], (np.sum(x.values[:,:,1]) - x.values[1,1,1]))
+    self.assertEqual(m01[2],  np.sum(x.values[:,:,2]))
+    self.assertEqual(m01[3],  np.sum(x.values[:,:,3]))
+    self.assertEqual(m01[4],  np.sum(x.values[:,:,4]))
+
+    self.assertEqual(m012, np.sum(x.values) - x.values[0,0,0] - x.values[1,1,1])
+
+    values = np.arange(30).reshape(2,3,5)
+    mask[0,0,0] = True
+    mask[1,1,1] = True
+    mask[:,1] = True
+    x = Scalar(values, mask)
+    m0 = x.sum(axis=0)
+
+    self.assertEqual(m0[0,0], x.values[1,0,0])
+    for j in (0,2):
+      for k in range(5):
+        if (j,k) in [(0,0), (1,1)]: continue
+        self.assertEqual(m0[j,k], np.sum(x.values[:,j,k]))
+
+    j = 1
+    for k in range(5):
+        self.assertEqual(m0[j,k], Scalar.MASKED)
+        self.assertTrue(np.all(m0[j,k].values == np.sum(x.values[:,j,k])))
+
 ################################################################################
 # Execute from command line...
 ################################################################################

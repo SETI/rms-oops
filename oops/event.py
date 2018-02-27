@@ -105,6 +105,28 @@ class Event(object):
     must all be broadcastable to the same shape.
     """
 
+    SPECIAL_PROPERTIES = set([
+       'arr', 'arr_ap', 'arr_j2000', 'arr_ap_j2000', 'arr_lt',
+       'dep', 'dep_ap', 'dep_j2000', 'dep_j2000_ap', 'dep_lt',
+       'neg_arr', 'neg_arr_ap', 'neg_arr_j2000', 'neg_arr_ap_j2000',
+       'perp', 'vflat'
+    ])
+
+    @staticmethod
+    def attr_name(prop_name):
+        return '_Event__' + prop_name + '_'
+
+    def get_prop(self, prop_name):
+        return Event.__dict__[prop_name].fget(self)
+
+    def set_prop(self, prop_name, value):
+        Event.__dict__[prop_name].fset(self, value)
+
+    MORE_ATTRIBUTES = set([
+        '_Event__ssb_', '_Event__shape_', '_Event__mask_', '_Event__antimask_',
+        '_Event__xform_to_j2000_',
+    ])
+
     ############################################################################
     # Avoid circular dependencies with Path class at load time
     SAVED_PATH_CLASS = None
@@ -132,7 +154,7 @@ class Event(object):
                     '+_Event__xform_to_j2000_',
                     '+event_key', '+surface', '+body']
 
-    def __init__(self, time, state, origin, frame=None, **subfields):
+    def __init__(self, time, state, origin, frame=None, **more):
         """Constructor for the Event class
 
         If a link is specified, then either the arriving or the departing
@@ -150,10 +172,10 @@ class Event(object):
             frame       the frame or frame ID identifying the coordinate frame
                         of this event. By default, it matches the default frame
                         of the origin.
-            **subfields an arbitrary set of subfields that are will also be
-                        accessible as attributes of the Event object. A subfield
-                        given as the name of one of the optional properties is
-                        treated as that property.
+            **more      an arbitrary set of properties and subfields that are
+                        will also be accessible as attributes of the Event
+                        object. Properties have fixed names and purposes;
+                        subfields can be anything.
         """
 
         self.__time_ = Scalar.as_scalar(time).as_readonly()
@@ -176,38 +198,18 @@ class Event(object):
         self.__origin_ = Event.PATH_CLASS().as_waypoint(origin)
         self.__frame_ = Frame.as_wayframe(frame) or origin.frame
 
-        # Fill in default values for attributes and properties
-        self.__arr_     = None
-        self.__arr_ap_  = None
-        self.__arr_lt_  = None
+        # Set default values for properties
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            self.__dict__[Event.attr_name(prop_name)] = None
 
-        self.__dep_     = None
-        self.__dep_ap_  = None
-        self.__dep_lt_  = None
+        # Initialize additional attributes
+        for attr in Event.MORE_ATTRIBUTES:
+            self.__dict__[attr] = None
 
-        self.__perp_    = None
-        self.__vflat_   = None
-
-        self.__neg_arr_    = None
-        self.__neg_arr_ap_ = None
-
-        # Used if needed
-        self.__ssb_   = None
-        self.__shape_ = None
-        self.__mask_  = None
-        self.__antimask_ = None
-
-        self.__xform_to_j2000_ = None
-
-        # These three are only used by Backplane
-        self.event_key = None
-        self.surface = None
-        self.body = None
-
-        # Fill in any given subfields
+        # Fill in any given subfields or properties
         self.__subfields_ = {}
-        for (key,subfield) in subfields.iteritems():
-            self.insert_subfield(key, subfield.as_readonly())
+        for (name, value) in more.iteritems():
+            self.insert_subfield(name, value)
 
     ############################################################################
     # Read-only properties
@@ -280,7 +282,8 @@ class Event(object):
     def ssb(self):
         if self.__ssb_ is None:
             self.__ssb_ = self.wrt_ssb(derivs=True)
-
+            self.__ssb_.__ssb_ = self.__ssb_
+    
         return self.__ssb_
 
     @property
@@ -290,6 +293,8 @@ class Event(object):
 
         if self.__ssb_ is None:
             self.__ssb_ = self.wrt_ssb(derivs=True)
+            self.__ssb_.__ssb_ = self.__ssb_
+
         elif self.__xform_to_j2000_ is None:
             frame = Frame.J2000.wrt(self.__frame_)
             self.__xform_to_j2000_ = frame.transform_at_time(self.__time_)
@@ -297,7 +302,7 @@ class Event(object):
         return self.__xform_to_j2000_
 
     ############################################################################
-    # Photon arrival vectors
+    # Special properties: Photon arrival vectors
     ############################################################################
 
     @property
@@ -314,12 +319,12 @@ class Event(object):
             raise ValueError('arriving photons were already defined in ' + 
                              str(self))
 
-        self.__arr_ = Vector3.as_vector3(value).as_readonly()
-
-        if ABERRATION.old: self.__arr_ap_ = self.__arr_
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__arr_)
+        arr = Vector3.as_vector3(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, arr)
+
+        self.__arr_ = arr
+        if ABERRATION.old: self.__arr_ap_ = arr
 
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_ is None):
             self.__ssb_.__arr_ = self.xform_to_j2000.rotate(self.__arr_)
@@ -344,10 +349,11 @@ class Event(object):
             raise ValueError('arriving photons were already defined in ' + 
                              str(self))
 
-        self.__arr_ap_ = Vector3.as_vector3(value).as_readonly()
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__arr_ap_)
+        arr_ap = Vector3.as_vector3(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, arr_ap)
+
+        self.__arr_ap_ = arr_ap
 
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_ap_ is None):
             self.__ssb_.__arr_ap_ = self.xform_to_j2000.rotate(self.__arr_ap_)
@@ -398,16 +404,17 @@ class Event(object):
             raise ValueError('arriving photons were already defined in ' + 
                              str(self))
 
-        self.__arr_lt_ = Scalar.as_scalar(value).as_readonly()
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__arr_lt_)
+        arr_lt = Scalar.as_scalar(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, arr_lt)
+
+        self.__arr_lt_ = arr_lt
 
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_lt_ is None):
             self.__ssb_.__arr_lt_ = self.__arr_lt_
 
     ############################################################################
-    # Photon departure vectors
+    # Special properties: Photon departure vectors
     ############################################################################
 
     @property
@@ -424,12 +431,12 @@ class Event(object):
             raise ValueError('departing photons were already defined in ' + 
                              str(self))
 
-        self.__dep_ = Vector3.as_vector3(value).as_readonly()
-
-        if ABERRATION.old: self.__dep_ap_ = self.__dep_
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__dep_)
+        dep = Vector3.as_vector3(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, dep)
+
+        self.__dep_ = dep
+        if ABERRATION.old: self.__dep_ap_ = dep
 
         if (self.__ssb_ is not None) and (self.__ssb_.__dep_ is None):
             self.__ssb_.__dep_ = self.xform_to_j2000.rotate(self.__dep_)
@@ -452,10 +459,11 @@ class Event(object):
             raise ValueError('departing photons were already defined in ' + 
                              str(self))
 
-        self.__dep_ap_ = Vector3.as_vector3(value).as_readonly()
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__dep_ap_)
+        dep_ap = Vector3.as_vector3(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, dep_ap)
+
+        self.__dep_ap_ = dep_ap
 
         if (self.__ssb_ is not None) and (self.__ssb_.__dep_ap_ is None):
             self.__ssb_.__dep_ap_ = self.xform_to_j2000.rotate(self.__dep_ap_)
@@ -506,16 +514,17 @@ class Event(object):
             raise ValueError('departing photons were already defined in ' + 
                              str(self))
 
-        self.__dep_lt_ = Scalar.as_scalar(value).as_readonly()
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__dep_lt_)
+        dep_lt = Scalar.as_scalar(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, dep_lt)
+
+        self.__dep_lt_ = dep_lt
 
         if (self.__ssb_ is not None):
             self.__ssb_.__dep_lt_ = self.__dep_lt_
 
     ############################################################################
-    # Photon arrival vectors, reversed
+    # Special properties: Photon arrival vectors, reversed
     ############################################################################
 
     @property
@@ -561,7 +570,7 @@ class Event(object):
         self.ssb.__neg_arr_ = value
 
         if self.ssb is not self:
-            self.arr = self.__xform_to_j2000_.unrotate(self.ssb.__arr_)
+            self.arr = self.xform_to_j2000.unrotate(self.ssb.__arr_)
 
     @property
     def neg_arr_ap_j2000(self):
@@ -580,10 +589,10 @@ class Event(object):
         self.ssb.__neg_arr_ap_ = value
 
         if self.ssb is not self:
-            self.arr_ap = self.__xform_to_j2000_.unrotate(self.ssb.__arr_ap_)
+            self.arr_ap = self.xform_to_j2000.unrotate(self.ssb.__arr_ap_)
 
     ############################################################################
-    # Additional surface properties
+    # Special properties: Additional surface properties
     ############################################################################
 
     @property
@@ -596,10 +605,11 @@ class Event(object):
             raise ValueError('perpendiculars were already defined in ' + 
                              str(self))
 
-        self.__perp_ = Vector3.as_vector(value).as_readonly()
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__perp_)
+        perp = Vector3.as_vector(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, perp)
+
+        self.__perp_ = perp
 
         if (self.__ssb_ is not None) and (self.__ssb_.__perp_ is None):
             self.__ssb_.__perp_ = self.xform_to_j2000.rotate(self.__perp_)
@@ -617,10 +627,11 @@ class Event(object):
             raise ValueError('surface velocities were already defined in ' + 
                              str(self))
 
-        self.__vflat_ = Vector3.as_vector(value).as_readonly()
-
         # Raise a ValueError if the shape is incompatible
-        self.__shape_ = Qube.broadcasted_shape(self.shape, self.__vflat_)
+        vflat = Vector3.as_vector(value).as_readonly()
+        self.__shape_ = Qube.broadcasted_shape(self.shape, vflat)
+
+        self.__vflat_ = vflat
 
         if (self.__ssb_ is not None) and (self.__ssb_.__vflat_ is None):
             self.__ssb_.__vflat_ = self.xform_to_j2000.rotate(self.__vflat_)
@@ -677,115 +688,92 @@ class Event(object):
         return ''.join(str_list)
 
     ############################################################################
-    # Subfield methods
+    # Subfield and property methods
     ############################################################################
 
-    def insert_subfield(self, key, value):
+    def insert_subfield(self, name, value):
         """Insert a given subfield into this Event."""
 
-        special = False
-        if key[:3] == 'arr':
-            if key == 'arr':
-                self.arr = value
-            elif key == 'arr_ap':
-                self.arr_ap = value
-            elif key == 'arr_j2000':
-                self.arr_j2000 = value
-            elif key == 'arr_ap_j2000':
-                self.arr_ap_j2000 = value
-            elif key == 'arr_lt':
-                self.arr_lt = value
-            else:
-                special = True
-        elif key[:3] == 'dep':
-            if key == 'dep':
-                self.dep = value
-            elif key == 'dep_ap':
-                self.dep_ap = value
-            elif key == 'dep_j2000':
-                self.dep_j2000 = value
-            elif key == 'dep_ap_j2000':
-                self.dep_ap_j2000 = value
-            elif key == 'dep_lt':
-                self.dep_lt = value
-            else:
-                special = True
-        elif key[:3] == 'neg':
-            if key == 'neg_arr':
-                self.neg_arr = value
-            elif key == 'neg_arr_ap':
-                self.neg_arr_ap = value
-            elif key == 'neg_arr_j2000':
-                self.neg_arr_j2000 = value
-            elif key == 'neg_arr_ap_j2000':
-                self.neg_arr_ap_j2000 = value
-            else:
-                special = True
-        elif key == 'perp':
-            self.perp = value
-        elif key == 'vflat':
-            self.vflat = value
+        if name in Event.SPECIAL_PROPERTIES:
+            self.set_prop(name, value)
         else:
-            special = True
+            self.__dict__[name] = value
+            self.__subfields_[name] = value
 
-        if special:
-            self.__subfields_[key] = value
-            self.__dict__[key] = value      # This makes it an attribute as well
-
-            if self.__ssb_ is not None:
+            if self.__ssb_ is not None and self.__ssb_ is not self:
                 try:
                     rotated = self.xform_to_j2000.unrotate(value)
                 except:
                     rotated = value
 
-                self.__ssb_.__subfields_[key] = rotated
+                self.__ssb_.insert_subfield(name, rotated)
 
-    def get_subfield(self, key):
+    def get_subfield(self, name):
         """Return the value of a given subfield or property."""
 
-        if key[:3] == 'arr':
-            if key == 'arr':
-                return self.arr
-            elif key == 'arr_ap':
-                return self.arr_ap
-            elif key == 'arr_lt':
-                return self.arr_lt
-            else:
-                return self.__subfields_[key]
-        elif key[:3] == 'dep':
-            if key == 'dep':
-                return self.dep
-            elif key == 'dep_ap':
-                return self.dep_ap
-            elif key == 'dep_lt':
-                return self.dep_lt
-            else:
-                return self.__subfields_[key]
-        if key[:6] == 'neg_arr':
-            if key == 'neg_arr':
-                return self.neg_arr
-            elif key == 'neg_arr_ap':
-                return self.neg_arr_ap
-            else:
-                return self.__subfields_[key]
-        elif key == 'perp':
-            return self.perp
-        elif key == 'vflat':
-            return self.vflat
-        else:
-            return self.__subfields_[key]
+        if name in Event.SPECIAL_PROPERTIES:
+            return self.get_prop(name)
+
+        return self.subfields[name]
 
     ############################################################################
-    # Derivative methods
+    # Constructors for event variants
     ############################################################################
 
-    def with_time_derivs(self):
-        """Return a clone of this event containing unit time derivatives d_dt.
+    def clone(self, recursive=False):
+        """A shallow copy of the Event.
+
+        Inputs:
+            recursive   True also to clone (shallow-copy) the attributes of the
+                        Event. This is necessary if derivatives of the subfields
+                        are going to be modified.
         """
 
-        event = self.clone(subfields=True, recursive=True)
+        def clone_attr(arg):
+            if recursive:
+                try:
+                    return arg.clone()
+                except:
+                    return arg
+            else:
+                return arg
+
+        result = Event(clone_attr(self.__time_),
+                       clone_attr(self.__state_),
+                       self.__origin_, self.__frame_)
+
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = clone_attr(self.__dict__[attr])
+
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = self.__dict__[attr]
+
+        if result.__ssb_ == self:   # This needs to point to self if possible
+            result.__ssb_ = result
+        elif self.__ssb_ is None:
+            result.__ssb_ = None
+        else:
+            result.__ssb_ = self.__ssb_.clone(recursive=recursive)
+            result.__ssb_.__ssb_ = result.__ssb_
+
+        for (name, value) in self.__subfields_.iteritems():
+            result.insert_subfield(name, clone_attr(value))
+
+        return result
+
+    #### Does this handle time dilation correctly??
+    def with_time_derivs(self):
+        """Return a clone of this event containing unit time derivatives d_dt
+        in the frame of the event.
+        """
+
+        if 't' in self.__time_.derivs: return self
+
+        event = self.clone(recursive=True)
         event.__time_.insert_deriv('t', Scalar.ONE, override=True)
 
+        #### Does this handle time dilation correctly??
         if event.__ssb_ is not None and event.__ssb_ is not event:
             event.ssb.__time_.insert_deriv('t', Scalar.ONE, override=True)
 
@@ -795,7 +783,9 @@ class Event(object):
         """Clone of this event with unit photon arrival derivatives d_dlos.
         """
 
-        event = self.clone(subfields=True, recursive=True)
+        if 'los' in self.neg_arr_ap.derivs: return self
+
+        event = self.clone(recursive=True)
 
         event.neg_arr_ap.insert_deriv('los', Vector3.IDENTITY, override=True)
         event.arr_ap.insert_deriv('los', -Vector3.IDENTITY, override=True)
@@ -804,227 +794,156 @@ class Event(object):
 
         if event.ssb is not None and event.ssb is not event and \
            event.ssb.__arr_ap_ is not None:
-            event.ssb.__arr_ap_ = event.__xform_to_j2000_.rotate(
-                                                            event.__arr_ap_,
-                                                            derivs=True)
+            event.ssb.__arr_ap_ = event.xform_to_j2000.rotate(event.__arr_ap_,
+                                                              derivs=True)
             event.ssb.__neg_arr_ap_ = None
 
             if not ABERRATION.old: event.ssb.__arr_ = None
 
         return event
 
-    ############################################################################
-    # More constructors
-    ############################################################################
-
-    def clone(self, subfields=True, recursive=False):
-        """A shallow copy of the Event.
-
-        Inputs:
-            subfields   True to transfer the subfields.
-            recursive   True also to clone (shallow-copy) the attributes of the
-                        Event. This is necessary if derivatives of the subfields
-                        are going to be modified.
+    #### Needs validation
+    def with_pos_derivs(self):
+        """Return a clone of this event containing unit position derivatives
+        d_dpos in the frame of the event.
         """
 
-        def clone_attr(arg):
-            if arg is None: return None
-            if recursive: return arg.clone()
-            return arg
+        if 'pos' in event.__state__.derivs: return self
 
-        if recursive:
-            result = Event(self.__time_.clone(), self.__state_.clone(),
-                           self.__origin_, self.__frame_)
+        event = self.clone(recursive=True)
+        event.__state_.insert_deriv('pos', Vector3.IDENTITY, override=True)
 
-        else:
-            result = Event(self.__time_, self.__state_,
-                           self.__origin_, self.__frame_)
+        if event.__ssb_ is not None and event.__ssb_ is not event:
+            dpos_dpos_j2000 = event.xform_to_j2000.rotate(event.__state_,
+                                                          derivs=True)
+            event.ssb.__state_.insert_deriv('pos', Vector3.IDENTITY,
+                                                   override=True)
 
-        if subfields:
-            result.__arr_     = clone_attr(self.__arr_)
-            result.__arr_ap_  = clone_attr(self.__arr_ap_)
-            result.__arr_lt_  = clone_attr(self.__arr_lt_)
+        return event
 
-            result.__dep_     = clone_attr(self.__dep_)
-            result.__dep_ap_  = clone_attr(self.__dep_ap_)
-            result.__dep_lt_  = clone_attr(self.__dep_lt_)
-
-            result.__perp_    = clone_attr(self.__perp_)
-            result.__vflat_   = clone_attr(self.__vflat_)
-
-            result.__neg_arr_    = clone_attr(self.__neg_arr_)
-            result.__neg_arr_ap_ = clone_attr(self.__neg_arr_ap_)
-
-            result.__shape_   = self.__shape_
-            result.__xform_to_j2000_ = self.__xform_to_j2000_
-
-            if self.__mask_ is None:
-                result.__mask_ = None
-            else:
-                result.__mask_ = self.__mask_
-
-            for (key,subfield) in self.__subfields_.iteritems():
-                if recursive:
-                    subfield = subfield.clone()
-                result.insert_subfield(key, subfield)
-
-            if self.__ssb_ is self:
-                result.__ssb_ = result
-            elif self.__ssb_ is None:
-                result.__ssb_ = None
-            else:
-                result.__ssb_ = self.__ssb_.clone(subfields=True,
-                                                  recursive=True)
-
-        return result
-
-    def replace(self, *params, **attr):
-        """A shallow copy with specified attributes or subfields replaced.
-
-        Inputs:
-            params      an even number of names and values.
-            subfields   a dictionary of names and values for replacement.
+    #### Does this handle time dilation correctly??
+    def with_lt_derivs(self):
+        """Return a clone of this event containing unit photon arrival
+        light-time derivatives d_dlt.
         """
 
-        result = self.clone(subfields=True, recursive=False)
+        if 'lt' in self.arr_lt.derivs: return self
 
-        items = []
+        event = self.clone(recursive=True)
+        event.__arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
 
-        assert len(params) % 2 == 0
-        for k in range(0, len(params), 2):
-            assert type(params[k]) == str
-            items.append(params[k:k+2])
+        if event.__ssb_ is not None and event.__ssb_ is not event:
+            event.ssb.arr_lt.insert_deriv('lt', Scalar.ONE, override=True)
 
-        for (key,value) in attr.iteritems():
-            items.append([key, value])
+        return event
 
-        for (key,value) in items:
-            if (key.startswith('arr') or key.startswith('neg_arr')) and \
-                                         key != 'arr_lt':
-                result.__arr_ = None
-                result.__arr_j2000_ = None
-                result.__arr_ap_ = None
-                result.__arr_ap_j2000_ = None
-                result.__neg_arr_ = None
-                result.__neg_arr_j2000_ = None
-                result.__neg_arr_ap_ = None
-                result.__neg_arr_ap_j2000 = None
-            elif key == 'arr_lt':
-                result.__arr_lt_ = None
-            elif key.startswith('dep') and key != 'dep_lt':
-                result.__dep_ = None
-                result.__dep_j2000_ = None
-                result.__del_ap_ = None
-                result.__del_ap_j2000_ = None
-            elif key == 'dep_lt':
-                result.__del_lt_ = None
-            elif key == 'perp':
-                result.__perp_ = None
-            elif key == 'vflat':
-                result.__vflat_ = None
+    #### Does this handle time dilation and aberration correctly??
+    def with_dep_derivs(self):
+        """Clone of this event with unit photon departure derivatives d_ddep.
+        """
 
-            result.insert_subfield(key, value)
+        if 'dep' in self.dep_ap.derivs: return self
 
-        return result
+        event = self.clone(recursive=True)
+        event.dep_ap.insert_deriv('dep', Vector3.IDENTITY, override=True)
+
+        if not ABERRATION.old: event.__dep_ = None
+
+        if event.ssb is not None and event.ssb is not event and \
+           event.ssb.__dep_ap_ is not None:
+            event.ssb.__dep_ap_ = event.xform_to_j2000.rotate(event.__dep_ap_,
+                                                              derivs=True)
+
+            if not ABERRATION.old: event.ssb.__dep_ = None
+
+        return event
+
+    #### Does this handle time dilation correctly??
+    def with_dlt_derivs(self):
+        """Return a clone of this event containing unit photon departure
+        light-time derivatives d_ddlt.
+        """
+
+        if 'dlt' in self.dep_lt.derivs: return self
+
+        event = self.clone(recursive=True)
+        event.__dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
+
+        if event.__ssb_ is not None and event.__ssb_ is not event:
+            event.ssb.dep_lt.insert_deriv('dlt', Scalar.ONE, override=True)
+
+        return event
 
     def without_derivs(self):
         """A shallow copy of this Event without any derivatives except time.
-
-        Input:
-            subfields   True to retain derivatives; False to remove them.
         """
 
         def remove_derivs(arg):
-            if arg is None:
-                return None
-            return arg.without_derivs(preserve='t')
+            try:
+                return arg.without_derivs(preserve='t')
+            except:
+                return arg
 
         result = Event(remove_derivs(self.__time_),
                        remove_derivs(self.__state_),
                        self.__origin_, self.__frame_)
 
-        result.__arr_     = remove_derivs(self.__arr_)
-        result.__arr_ap_  = remove_derivs(self.__arr_ap_)
-        result.__arr_lt_  = remove_derivs(self.__arr_lt_)
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = remove_derivs(self.__dict__[attr])
 
-        result.__dep_     = remove_derivs(self.__dep_)
-        result.__dep_ap_  = remove_derivs(self.__dep_ap_)
-        result.__dep_lt_  = remove_derivs(self.__dep_lt_)
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = self.__dict__[attr]
 
-        result.__neg_arr_    = remove_derivs(self.__neg_arr_)
-        result.__neg_arr_ap_ = remove_derivs(self.__neg_arr_ap_)
-
-        result.__perp_    = remove_derivs(self.__perp_)
-        result.__vflat_   = remove_derivs(self.__vflat_)
-
-        result.__shape_   = self.__shape_
-        result.__mask_    = self.__mask_
-        result.__xform_to_j2000_ = self.__xform_to_j2000_
-
-        if self.__ssb_ is self:
+        if self.__ssb_ == self:     # This needs to point to self if possible
             result.__ssb_ = result
         elif self.__ssb_ is None:
             result.__ssb_ = None
         else:
             result.__ssb_ = self.__ssb_.without_derivs()
+            result.__ssb_._ssb_ = result.__ssb_
 
-        for (key,subfield) in self.__subfields_.iteritems():
-            try:
-                subfield = subfield.without_derivs(preserve='t')
-            except: pass
-
-            result.insert_subfield(key, subfield)
+        for (name, value) in self.__subfields_.iteritems():
+            result.insert_subfield(name, remove_derivs(value))
 
         return result
 
     def without_mask(self):
-        """A shallow copy of this Event with the masks on subfields removed."""
+        """A shallow copy of this Event with the masks removed."""
 
         def remove_mask(arg):
-            if arg is None:
-                return None
+            try:
+                return arg.without_mask()
+            except:
+                return arg
 
-            return arg.without_mask(recursive=True)
-
-        result = Event(self.__time_.without_mask(recursive=True),
-                       self.__state_.without_mask(recursive=True),
+        result = Event(remove_mask(self.__time_),
+                       remove_mask(self.__state_),
                        self.__origin_, self.__frame_)
 
-        result.__arr_     = remove_mask(self.__arr_)
-        result.__arr_ap_  = remove_mask(self.__arr_ap_)
-        result.__arr_lt_  = remove_mask(self.__arr_lt_)
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = remove_mask(self.__dict__[attr])
 
-        result.__dep_     = remove_mask(self.__dep_)
-        result.__dep_ap_  = remove_mask(self.__dep_ap_)
-        result.__dep_lt_  = remove_mask(self.__dep_lt_)
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = self.__dict__[attr]
 
-        result.__neg_arr_    = remove_mask(self.__neg_arr_)
-        result.__neg_arr_ap_ = remove_mask(self.__neg_arr_ap_)
-
-        result.__perp_    = remove_mask(self.__perp_)
-        result.__vflat_   = remove_mask(self.__vflat_)
-
-        result.__shape_   = self.__shape_
-        result.__mask_    = self.__mask_
-        result.__xform_to_j2000_ = self.__xform_to_j2000_
-
-        if self.__ssb_ is self:
+        if self.__ssb_ == self:     # This needs to point to self if possible
             result.__ssb_ = result
         elif self.__ssb_ is None:
             result.__ssb_ = None
         else:
-            result.__ssb_ = self.__ssb_.without_mask(recursive=recursive)
+            result.__ssb_ = self.__ssb_.remove_mask()
+            result.__ssb_._ssb_ = result.__ssb_
 
-        for (key,subfield) in self.__subfields_.iteritems():
-            try:
-                subfield = subfield.without_mask(recursive=recursive)
-            except: pass
+        self.__mask_ = False
 
-            result.insert_subfield(key, subfield)
+        for (name, value) in self.__subfields_.iteritems():
+            result.insert_subfield(name, remove_mask(value))
 
         return result
 
-    def all_masked(self, origin=None, frame=None, derivs=True):
+    def all_masked(self, origin=None, frame=None):
         """A shallow copy of this event, entirely masked.
 
         Inputs:
@@ -1032,50 +951,196 @@ class Event(object):
                         use the origin of this Event.
             frame       the frame or frame_id of the Event returned; if None,
                         use the frame of this Event.
-            derivs      True to include derivatives in the returned Event.
         """
 
         def fully_masked(arg):
-            if arg is None:
-                return None
+            try:
+                return arg.all_masked()
+            except:
+                return arg
 
-            return arg.all_masked(recursive=True)
-
-        result = Event(self.__time_.all_masked(recursive=True),
-                       self.__state_.all_masked(recursive=True),
+        result = Event(self.__time_.all_masked(),
+                       self.__state_.all_masked(),
                        self.__origin_, self.__frame_)
 
-        result.__arr_     = fully_masked(self.__arr_)
-        result.__arr_ap_  = fully_masked(self.__arr_ap_)
-        result.__arr_lt_  = fully_masked(self.__arr_lt_)
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = fully_masked(self.__dict__[attr])
 
-        result.__dep_     = fully_masked(self.__dep_)
-        result.__dep_ap_  = fully_masked(self.__dep_ap_)
-        result.__dep_lt_  = fully_masked(self.__dep_lt_)
-
-        result.__neg_arr_    = fully_masked(self.__neg_arr_)
-        result.__neg_arr_ap_ = fully_masked(self.__neg_arr_ap_)
-
-        result.__perp_    = fully_masked(self.__perp_)
-        result.__vflat_   = fully_masked(self.__vflat_)
-
-        result.__shape_   = self.__shape_
-        result.__mask_    = self.__mask_
-        result.__xform_to_j2000_ = self.__xform_to_j2000_
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = self.__dict__[attr]
 
         if self.__ssb_ is self:
             result.__ssb_ = result
         elif self.__ssb_ is None:
             result.__ssb_ = None
         else:
-            result.__ssb_ = self.__ssb_.all_masked(recursive=recursive)
+            result.__ssb_ = self.__ssb_.all_masked()
+            result.__ssb_._ssb_ = result.__ssb_
 
-        for (key,subfield) in self.__subfields_.iteritems():
+        self.__mask_ = True
+
+        for (name, value) in self.__subfields_.iteritems():
+            result.insert_subfield(name, fully_masked(value))
+
+        return result
+
+    def apply_mask(self, mask):
+        """A shallow copy of this Event with a new mask."""
+
+        def apply_mask_to(arg):
             try:
-                subfield = subfield.all_masked(recursive=recursive)
-            except: pass
+                return arg.mask_where(mask)
+            except:
+                return arg
 
-            result.insert_subfield(key, subfield)
+        result = Event(self.__time_.mask_where(mask, recursive=True),
+                       self.__state_.mask_where(mask, recursive=True),
+                       self.__origin_, self.__frame_)
+
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = apply_mask_to(self.__dict__[attr])
+
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = self.__dict__[attr]
+
+        if self.__ssb_ is self:
+            result.__ssb_ = result
+        elif self.__ssb_ is None:
+            result.__ssb_ = None
+        else:
+            result.__ssb_ = self.__ssb_.apply_mask(mask)
+            result.__ssb_._ssb_ = result.__ssb_
+
+        for (name, value) in self.__subfields_.iteritems():
+            result.insert_subfield(name, apply_mask_to(value))
+
+        return result
+
+    def replace(self, *args):
+        """A shallow copy with one property replaced.
+        """
+
+        result = self.clone()
+
+        pairs = []
+        for k in range(0,len(args),2):
+            pairs.append((args[k],args[k+1]))
+
+        for (name, value) in pairs:
+            if name in ('arr_lt', 'dep_lt', 'perp', 'vflat'):
+                result.__dict__[Event.attr_name(name)] = None
+            elif name[:3] in ('arr', 'neg'):
+                result.__arr_ = None
+                result.__arr_ap_ = None
+                result.__arr_j2000_ = None
+                result.__arr_ap_j2000_ = None
+                result.__neg_arr_ = None
+                result.__neg_arr_j2000_ = None
+                result.__neg_arr_ap_ = None
+                result.__neg_arr_ap_j2000 = None
+            elif name[:3] == 'dep':
+                result.__dep_ = None
+                result.__del_ap_ = None
+                result.__dep_j2000_ = None
+                result.__del_ap_j2000_ = None
+
+        for (name, value) in pairs:
+            result.insert_subfield(name, value)
+
+        return result
+
+    ############################################################################
+    # Shrink and unshrink operations
+    ############################################################################
+
+    def shrink(self, antimask):
+        """Return a shrunken version of this event.
+
+        Antimask is None to leave the Event unchanged; otherwise, it must be
+        True where values are kept and False where they are ignored. A single
+        boolean value of True keeps everything; a single boolean value of False
+        ignores everything
+        """
+
+        def shrink1(arg):
+            try:
+                return arg.shrink(antimask)
+            except AttributeError:
+                return arg
+
+        if antimask is None: return self
+        if antimask is True: return self
+        if antimask is False: return self.all_masked()
+
+        result = Event(self.time.shrink(antimask), self.state.shrink(antimask),
+                       self.origin, self.frame)
+
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = shrink1(self.__dict__[attr])
+
+        for attr in Event.MORE_ATTRIBUTES:
+            if attr == '_Event__ssb_': continue
+            result.__dict__[attr] = shrink1(self.__dict__[attr])
+
+        for (name, value) in self.subfields.iteritems():
+            result.insert_subfield(name, shrink1(value))
+
+        if self.__ssb_ is self:
+            result.__ssb_ = result
+        elif self.__ssb_ is None:
+            result.__ssb_ = None
+        else:
+            result.__ssb_ = self.__ssb_.shrink(antimask)
+            result.__ssb_._ssb_ = result.__ssb_
+
+        result.__shape_ = None
+
+        return result
+
+    def unshrink(self, antimask):
+        """Expand a shrunken version of this event to its original state.
+
+        Antimask is None to leave the Event unchanged; otherwise, it must be a
+        boolean array where True indicates values to be kept.
+        """
+
+        def unshrink1(arg):
+            try:
+                return arg.unshrink(antimask)
+            except AttributeError:
+                return arg
+
+        if antimask is None: return self
+        if antimask is True: return self
+        if antimask is False: return self
+
+        result = Event(self.time.unshrink(antimask),
+                       self.state.unshrink(antimask),
+                       self.origin, self.frame)
+
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = unshrink1(self.__dict__[attr])
+
+        for attr in Event.MORE_ATTRIBUTES:
+            if attr == '_Event__ssb_': continue
+            result.__dict__[attr] = unshrink1(self.__dict__[attr])
+
+        for (name, value) in self.subfields.iteritems():
+            result.insert_subfield(name, unshrink1(value))
+
+        if self.__ssb_ is self:
+            result.__ssb_ = result
+        elif self.__ssb_ is None:
+            result.__ssb_ = None
+        else:
+            result.__ssb_ = self.__ssb_.unshrink(antimask)
+            result.__ssb_._ssb_ = result.__ssb_
+
+        result.__shape_ = None
 
         return result
 
@@ -1104,6 +1169,7 @@ class Event(object):
             if (self.__origin_ == Event.PATH_CLASS().SSB) and \
                (self.__frame_ == Frame.J2000):
                     self.__ssb_ = self
+                    self.__ssb_.__ssb_ = self
                     self.__xform_to_j2000_ = Transform.identity(Frame.J2000)
             else:
                 (self.__ssb_,
@@ -1145,6 +1211,7 @@ class Event(object):
 
         event = self.wrt(path, frame, derivs=True, quick=quick)
         event.__ssb_ = self
+        event.__ssb_._ssb_ = self
 
         if derivs:
             return event
@@ -1253,24 +1320,12 @@ class Event(object):
         new_path = event.__origin_.wrt(path, path.frame)
         result = new_path.add_to_event(event, derivs=derivs, quick=quick)
 
-        result.__arr_    = event.__arr_
-        result.__arr_ap_ = event.__arr_ap_
-        result.__arr_lt_ = event.__arr_lt_
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = event.__dict__[attr]
 
-        result.__dep_    = event.__dep_
-        result.__dep_ap_ = event.__dep_ap_
-        result.__dep_lt_ = event.__dep_lt_
-
-        result.__neg_arr_    = event.__neg_arr_
-        result.__neg_arr_ap_ = event.__neg_arr_ap_
-
-        result.__vflat_  = event.__vflat_
-        result.__perp_   = event.__perp_
-
-        result.__ssb_    = event.__ssb_
-
-        result.__shape_ = event.__shape_
-        result.__mask_  = event.__mask_
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = event.__dict__[attr]
 
         if derivs:
             return result
@@ -1343,8 +1398,10 @@ class Event(object):
         """
 
         def xform_rotate(arg):
-            if arg is None: return None
-            return xform.rotate(arg, derivs=True)
+            try:
+                return xform.rotate(arg, derivs=True)
+            except:
+                return arg
 
         if derivs:
             event = self
@@ -1359,32 +1416,17 @@ class Event(object):
 
         result = Event(event.__time_, state, event.__origin_, frame.wayframe)
 
-        result.__arr_    = xform_rotate(event.__arr_)
-        result.__arr_ap_ = xform_rotate(event.__arr_ap_)
-        result.__arr_lt_ = event.__arr_lt_
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = xform_rotate(event.__dict__[attr])
 
-        result.__dep_    = xform_rotate(event.__dep_)
-        result.__dep_ap_ = xform_rotate(event.__dep_ap_)
-        result.__dep_lt_ = event.__dep_lt_
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = event.__dict__[attr]
 
-        result.__vflat_  = xform_rotate(event.__vflat_)
-        result.__perp_   = xform_rotate(event.__perp_)
- 
-        if result.__ssb_ is None:
-            result.__ssb_ = None
-        else:
-            result.__ssb_ = event.__ssb_
+        result.__xform_to_j2000_ = None
 
-        result.__shape_ = event.__shape_
-        result.__mask_  = event.__mask_
-
-        for (key,subfield) in event.__subfields_.iteritems():
-            try:
-                subfield = xform_rotate(subfield)
-            except:
-                pass
-
-            result.insert_subfield(key, subfield)
+        for (name, value) in event.__subfields_.iteritems():
+            result.insert_subfield(name, xform_rotate(value))
 
         if include_xform:
             return (result, xform)
@@ -1410,8 +1452,10 @@ class Event(object):
         """
 
         def xform_unrotate(arg):
-            if arg is None: return None
-            return xform.unrotate(arg, derivs=True)
+            try:
+                return xform.unrotate(arg, derivs=True)
+            except:
+                return arg
 
         if derivs:
             event = self
@@ -1425,38 +1469,21 @@ class Event(object):
 
         result = Event(event.__time_, state, event.__origin_, frame.reference)
 
-        result.__arr_    = xform_unrotate(event.__arr_)
-        result.__arr_ap_ = xform_unrotate(event.__arr_ap_)
-        result.__arr_lt_ = event.__arr_lt_
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            result.__dict__[attr] = xform_unrotate(event.__dict__[attr])
 
-        result.__dep_    = xform_unrotate(event.__dep_)
-        result.__dep_ap_ = xform_unrotate(event.__dep_ap_)
-        result.__dep_lt_ = event.__dep_lt_
+        for attr in Event.MORE_ATTRIBUTES:
+            result.__dict__[attr] = event.__dict__[attr]
 
-        result.__vflat_  = xform_unrotate(event.__vflat_)
-        result.__perp_   = xform_unrotate(event.__perp_)
-  
-        if derivs:
-            result.__ssb_ = event.__ssb_
-        elif result.__ssb_ is None:
-            result.__ssb_ = None
-        else:
-            result.__ssb_ = event.__ssb_.without_derivs()
+        result.__xform_to_j2000_ = None
 
-        result.__shape_ = event.__shape_
-        result.__mask_  = event.__mask_
-
-        for (key,subfield) in event.__subfields_.iteritems():
-            try:
-                subfield = xform_unrotate(subfield)
-            except:
-                pass
-
-            result.insert_subfield(key, subfield)
+        for (name, value) in event.__subfields_.iteritems():
+            result.insert_subfield(name, xform_unrotate(value))
 
         return result
 
-    def collapse_time(self, threshold=None, recursive=False):
+    def collapse_time(self, threshold=None):
         """If the time span is small, return a similar Event having fixed time.
 
         If the difference between the earliest time and the latest time is
@@ -1495,45 +1522,13 @@ class Event(object):
 
         midtime = Scalar((tmin + tmax)/2., collapsed_mask, self.__time_.units)
 
-        result = Event(midtime, self.__state_, self.__origin_, self.__frame_,
-                                **self.__subfields_)
+        result = self.clone()
+        result.__time_ = midtime
 
-        if recursive:
-            result.__arr_    = self.__arr_
-            result.__arr_ap_ = self.__arr_ap_
-            result.__arr_lt_ = self.__arr_lt_
+        if result.__ssb_ is not None and result.__ssb_ is not result:
+            result.__ssb_.__time_ = midtime
 
-            result.__dep_    = self.__dep_
-            result.__dep_ap_ = self.__dep_ap_
-            result.__dep_lt_ = self.__dep_lt_
-
-            result.__neg_arr     = self.__neg_arr
-            result.__neg_arr_ap_ = self.__neg_arr_ap_
-
-            result.__vflat_  = self.__vflat_
-            result.__perp_   = self.__perp_
-        else:
-            result.__arr_    = without_derivs(self.__arr_)
-            result.__arr_ap_ = without_derivs(self.__arr_ap_)
-            result.__arr_lt_ = without_derivs(self.__arr_lt_)
-
-            result.__dep_    = without_derivs(self.__dep_)
-            result.__dep_ap_ = without_derivs(self.__dep_ap_)
-            result.__dep_lt_ = without_derivs(self.__dep_lt_)
-
-            result.__neg_arr_    = without_derivs(self.__neg_arr_)
-            result.__neg_arr_ap_ = without_derivs(self.__neg_arr_ap_)
-
-            result.__vflat_  = without_derivs(self.__vflat_)
-            result.__perp_   = without_derivs(self.__perp_)
-
-        if self.__ssb_ is None:
-            result.__ssb_ = None
-        elif self.__ssb_ is self:
-            result.__ssb_ = result
-        else:
-            result.__ssb_ = self.collapse_time(self.__ssb_, threshold=threshold,
-                                                            recursive=recursive)
+        result.__shape_ = None
 
         return result
 
@@ -1557,10 +1552,10 @@ class Event(object):
         """
 
         def ref_unrotate(arg):
-            if arg is None:
-                return None
-
-            return reference.xform_to_j2000.unrotate(arg)
+            try:
+                return reference.xform_to_j2000.unrotate(arg)
+            except:
+                return arg
 
         event_ssb = self.wrt_ssb(derivs=True, quick=quick)
         reference_ssb = reference.wrt_ssb(derivs=True, quick=quick)
@@ -1569,18 +1564,15 @@ class Event(object):
         state = ref_unrotate(event_ssb.state - reference_ssb.state)
         diff = Event(time, state, reference.origin, reference.frame)
 
-        diff.__arr_    = ref_unrotate(event_ssb.__arr_)
-        diff.__arr_ap_ = ref_unrotate(event_ssb.__arr_ap_)
-        diff.__arr_lt_ = self.__arr_lt_
-
-        diff.__dep_    = ref_unrotate(event_ssb.__dep_)
-        diff.__dep_ap_ = ref_unrotate(event_ssb.__dep_ap_)
-        diff.__dep_lt_ = self.__dep_lt_
-
-        diff.__vflat_  = ref_unrotate(event_ssb.__vflat_)
-        diff.__perp_   = ref_unrotate(event_ssb.__perp_)
-
         diff.__ssb_ = self.__ssb_
+
+        for prop_name in Event.SPECIAL_PROPERTIES:
+            attr = Event.attr_name(prop_name)
+            diff.__dict__[attr] = ref_unrotate(event_ssb.__dict__[attr])
+
+        for attr in Event.MORE_ATTRIBUTES:
+            if attr == '_Event__ssb_': continue
+            diff.__dict__[attr] = ref_unrotate(event_ssb.__dict__[attr])
 
         for (key,subfield) in event_ssb.__subfields_.iteritems():
             try:
@@ -2002,11 +1994,16 @@ import unittest
 
 class Test_Event(unittest.TestCase):
 
-    def runTest(self):
+    def setUp(self):
+        import oops.body
+        oops.body.Body.reset_registry()
+        oops.body.define_solar_system('1990-01-01', '2010-01-01')
 
+    def tearDown(self):
+        pass
+
+    def runTest(self):
         import cspyce
-        from oops.body import define_solar_system
-        define_solar_system('1990-01-01', '2010-01-01')
 
         # This is the exact formula for stellar aberration
         #   beta = v/c

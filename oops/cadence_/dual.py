@@ -30,11 +30,11 @@ class DualCadence(Cadence):
                                         self.short.time[1] -
                                         self.short.time[0])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
-        
+
         # Arbitrary definitions and may need to be changed in the future
         self.is_continuous = self.short.is_continuous
         self.lasttime = self.long.lasttime
-        
+
         return
 
     def time_at_tstep(self, tstep, mask=True):

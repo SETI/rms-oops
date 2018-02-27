@@ -77,6 +77,8 @@ class Pushbroom(Observation):
             self.cross_slit_uv_index = 1
             self.along_slit_uv_index = 0
 
+        self.swap_uv = (self.u_axis > self.v_axis)
+
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
@@ -95,7 +97,7 @@ class Pushbroom(Observation):
         duv_dt_basis_vals[self.cross_slit_uv_index] = 1.
         self.duv_dt_basis = Pair(duv_dt_basis_vals)
 
-        self.shape = len(axes) * [0]
+        self.shape = len(axes) * [1]
         self.shape[self.u_axis] = self.uv_shape[0]
         self.shape[self.v_axis] = self.uv_shape[1]
 
@@ -198,6 +200,25 @@ class Pushbroom(Observation):
                 time_max = time_max.mask_where(mask)
 
         return (uv_min, uv_max, time_min, time_max)
+
+    def uv_range_at_tstep(self, *tstep):
+        """Return a tuple defining the range of (u,v) coordinates active at a
+        particular time step.
+
+        Input:
+            tstep       a time step index (one or two integers).
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive).
+        """
+
+        if self.along_slit_uv_axis == 0:
+            return (Pair(0, tstep[0]), Pair(self.uv_shape[0], tstep[0]+1))
+        else:
+            return (Pair(tstep[0], 0), Pair(tstep[0]+1, self.uv_shape[1]))
 
     def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).

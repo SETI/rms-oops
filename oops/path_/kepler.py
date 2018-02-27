@@ -896,7 +896,18 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
 
 class Test_Kepler(unittest.TestCase):
 
+    def setUp(self):
+        import oops.body as body
+
+        body.Body.reset_registry()
+        body.define_solar_system("2000-01-01", "2010-01-01")
+
+    def tearDown(self):
+        pass
+
     def runTest(self):
+        import oops.body as body
+
         # SEMIM = 0    elements[SEMIM] = semimajor axis (km)
         # MEAN0 = 1    elements[MEAN0] = mean longitude at epoch (radians)
         # DMEAN = 2    elements[DMEAN] = mean motion (radians/s)
@@ -906,14 +917,6 @@ class Test_Kepler(unittest.TestCase):
         # INCLI = 6    elements[INCLI] = inclination (radians)
         # NODE0 = 7    elements[NODE0] = longitude of ascending node at epoch
         # DNODE = 8    elements[DNODE] = nodal regression rate (radians/s)
-
-        import oops.body as body
-
-        Path.reset_registry()
-        Frame.reset_registry()
-        body.Body.reset_registry()
-
-        body.define_solar_system("2000-01-01", "2010-01-01")
 
         a = 140000.
 

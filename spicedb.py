@@ -20,7 +20,7 @@ import sqlite_db as db
 
 # For testing and debugging
 DEBUG = False   # If true, no files are furnished.
-ABSPATH_LIST = []  # If DEBUG, lists the files that would have been furnished.
+ABSPATH_LIST = []   # If DEBUG, lists the files that would have been furnished.
 
 IS_OPEN = False
 DB_PATH = ''
@@ -1007,7 +1007,7 @@ def set_translator(func):
         raise RuntimeError('spicedb translator can only be defined once')
 
     if FURNISHED_INFO and not DEBUG:
-        raise RuntimeError('spicedb translotor cannot be defined after ' +
+        raise RuntimeError('spicedb translator cannot be defined after ' +
                            'kernels have already been loaded.')
 
     TRANSLATOR = func
@@ -1370,6 +1370,15 @@ def furnish_kernels(kernel_list, fast=True):
         # Update the list of files to furnish
         filepaths = kernel.filespec.split(',')
         abspaths = [os.path.join(spice_path, f) for f in filepaths]
+        if TRANSLATOR:
+            new_abspaths = []
+            for oldpath in abspaths:
+                newpath = TRANSLATOR(oldpath)
+                if newpath:
+                    new_abspaths.append(newpath)
+
+            abspaths = new_abspaths
+
         for abspath in abspaths:
 
             # Remove the name from earlier in the list if necessary
@@ -1381,22 +1390,11 @@ def furnish_kernels(kernel_list, fast=True):
             abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
             # Save the info for each furnished file
-            if kernel.basename in FURNISHED_INFO:
-                FURNISHED_INFO[kernel.basename].add(kernel)
+            basename = os.path.basename(abspath)
+            if basename in FURNISHED_INFO:
+                FURNISHED_INFO[basename].add(kernel)
             else:
-                FURNISHED_INFO[kernel.basename] = set([kernel])
-
-    # Translate kernel paths if necessary
-    if TRANSLATOR:
-
-        new_abspath_list = []
-        for oldpath in abspath_list:
-            newpath = TRANSLATOR(oldpath)
-            if newpath:
-                new_abspath_list.append(newpath)
-                abspath_types[newpath] = abspath_types[oldpath]
-
-        abspath_list = new_abspath_list
+                FURNISHED_INFO[basename] = set([kernel])
 
     # Furnish the kernel files...
     if DEBUG:

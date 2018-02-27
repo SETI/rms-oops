@@ -12,10 +12,10 @@ from oops.event            import Event
 
 class Slit(Observation):
     """A Slit is subclass of Observation consisting of a 2-D image constructed
-    by rotating an instrument that has a 1-D array of sensors. This differs from
-    a Pushbroom in that the FOV is intrinsically 1-D and static in the ICS. The
-    secondary axis of the pixel array is obtained by sampling the slit at
-    uniformly space intervals in time.
+    by rotating an instrument that has a 1-D array of sensors. The FOV
+    describes the 1-D sensor array. The second axis of the pixel array is
+    simulated by sampling the slit according to the cadence as the instrument
+    rotates.
     """
 
     PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
@@ -66,27 +66,29 @@ class Slit(Observation):
             self.u_axis = self.axes.index('ut')
             self.v_axis = self.axes.index('v')
             self.t_axis = self.u_axis
-            self.along_slit_index = self.v_axis
-            self.cross_slit_uv_index = 0
-            self.along_slit_uv_index = 1
+            self.along_slit_axis = self.v_axis
+            self.cross_slit_uv_axis = 0
+            self.along_slit_uv_axis = 1
             self.uv_shape = [self.cadence.shape[0],
-                             self.fov.uv_shape.vals[self.along_slit_index]]
+                             self.fov.uv_shape.vals[self.along_slit_axis]]
         else:
             self.u_axis = self.axes.index('u')
             self.v_axis = self.axes.index('vt')
             self.t_axis = self.v_axis
-            self.along_slit_index = self.u_axis
-            self.cross_slit_uv_index = 1
-            self.along_slit_uv_index = 0
-            self.uv_shape = [self.fov.uv_shape.vals[self.along_slit_index],
+            self.along_slit_axis = self.u_axis
+            self.cross_slit_uv_axis = 1
+            self.along_slit_uv_axis = 0
+            self.uv_shape = [self.fov.uv_shape.vals[self.along_slit_axis],
                              self.cadence.shape[0]]
 
-        self.along_slit_shape = self.uv_shape[self.along_slit_uv_index]
+        self.swap_uv = (self.u_axis > self.v_axis)
+
+        self.along_slit_shape = self.uv_shape[self.along_slit_uv_axis]
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
         assert len(self.cadence.shape) == 1
-        assert self.fov.uv_shape.vals[self.cross_slit_uv_index] == 1
+        assert self.fov.uv_shape.vals[self.cross_slit_uv_axis] == 1
 
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size < 1)
@@ -118,7 +120,7 @@ class Slit(Observation):
         """
 
         indices = Vector.as_vector(indices)
-        slit_coord = indices.to_scalar(self.along_slit_index)
+        slit_coord = indices.to_scalar(self.along_slit_axis)
 
         # Handle discontinuous detectors
         if self.slit_is_discontinuous:
@@ -137,8 +139,8 @@ class Slit(Observation):
 
         # Create (u,v) Pair
         uv_vals = np.empty(indices.shape + (2,))
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_index] = 0.5
+        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self.cross_slit_uv_axis] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
         # Create time Scalar
@@ -177,11 +179,11 @@ class Slit(Observation):
 
         indices = Vector.as_vector(indices).as_int()
 
-        slit_coord = indices.to_scalar(self.along_slit_index)
+        slit_coord = indices.to_scalar(self.along_slit_axis)
 
         uv_vals = np.empty(indices.shape + (2,), dtype='int')
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_index] = 0
+        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self.cross_slit_uv_axis] = 0
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
@@ -204,6 +206,22 @@ class Slit(Observation):
 
         return (uv_min, uv_max, time_min, time_max)
 
+    def uv_range_at_tstep(self, tstep):
+        """Return a tuple defining the range of (u,v) active at a particular
+        integer time step.
+
+        Input:
+            tstep       a time step index (integer or tuple).
+
+        Return:         a tuple (uv_min, uv_max)
+            uv_min      a Pair defining the minimum values of (u,v) coordinates
+                        active at this time step.
+            uv_min      a Pair defining the maximum values of (u,v) coordinates
+                        active at this time step (exclusive)
+        """
+
+        return (Pair.ZERO, self.fov.uv_shape)
+
     def times_at_uv(self, uv_pair, fovmask=False):
         """Return start and stop times of the specified spatial pixel (u,v).
 
@@ -218,7 +236,7 @@ class Slit(Observation):
         """
 
         uv_pair = Pair.as_int(uv_pair)
-        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
+        tstep = uv_pair.to_scalar(self.cross_slit_uv_axis)
         (time0, time1) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
         if fovmask:

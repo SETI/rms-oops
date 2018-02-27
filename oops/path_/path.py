@@ -447,7 +447,8 @@ class Path(object):
         See _solve_photon() for details.
         """
 
-        return self._solve_photon(arrival, -1, derivs, guess, quick, converge)
+        return self._solve_photon(arrival, -1, derivs, guess,
+                                               quick, converge)
 
     def photon_from_event(self, departure, derivs=False, guess=None,
                                 quick={}, converge={}):
@@ -456,7 +457,8 @@ class Path(object):
         See _solve_photon() for details.
         """
 
-        return self._solve_photon(departure, 1, derivs, guess, quick, converge)
+        return self._solve_photon(departure, 1, derivs, guess,
+                                                quick, converge)
 
     def _solve_photon(self, link, sign, derivs=False, guess=None,
                             quick={}, converge={}):
@@ -524,6 +526,32 @@ class Path(object):
                         divergence of the solution in some cases.
         """
 
+        # Internal functions to return an entirely masked result
+        def fully_masked_results():
+            new_link = link.all_masked()
+            scalar = new_link.time.clone()
+            vector3 = new_link.pos.clone()
+
+            if derivs:
+                scalar.insert_deriv('t', Scalar(1., True), override=True)
+                scalar.insert_deriv('pos',
+                                    Scalar(np.ones((1,3)), True, drank=1),
+                                    override=True)
+
+                vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
+                vector3.insert_deriv('pos',
+                                     Vector3(np.ones((3,3)), True, drank=1),
+                                     override=True)
+
+            new_link = new_link.replace(link_key, vector3,
+                                        link_key + '_lt', scalar)
+
+            path_event = new_link.all_masked(self.origin, self.frame.wayframe)
+            path_event = path_event.replace(path_key, vector3,
+                                            path_key + '_lt', scalar)
+
+            return (path_event, new_link)
+
         # Handle derivatives
         if not derivs:
             link = link.without_derivs()        # preserves time-dependence
@@ -578,23 +606,30 @@ class Path(object):
 
         # If the link is entirely masked...
         if np.all(link.mask):
-            path_event = Event(link.time.all_masked(True),
-                               link.state.all_masked(True),
-                               self.waypoint, self.frame.wayframe)
-            path_event.insert_subfield(path_key, Vector3.MASKED)
-            path_event.insert_subfield(path_key + '_lt', Scalar.MASKED)
-
-            new_link = link.replace(link_key, Vector3.MASKED,
-                                    link_key + '_lt', Scalar.MASKED)
-
-            return (path_event, new_link)
+            return fully_masked_results()
 
         # Define the path and the link event relative to the SSB in J2000
+        # Apply the antimask
         link_wod = link.without_derivs()
-        link_time = link_wod.time
         link_wrt_ssb = link.wrt_ssb(derivs=True, quick=quick)
-        link_pos_ssb = link_wrt_ssb.pos
-        link_vel_ssb = link_wrt_ssb.vel
+
+        link_shape = link.shape
+        antimasked = False
+        try:
+            link_time = link_wod.time[link.antimask]
+            antimasked = True
+            link_shape = link_time.shape
+        except (TypeError, IndexError):
+            link_time = link_wod.time
+
+        try:
+            link_pos_ssb = link_wrt_ssb.pos[link.antimask]
+            link_vel_ssb = link_wrt_ssb.vel[link.antimask]
+            antimasked = True
+            link_shape = link_pos_ssb.shape
+        except (TypeError, IndexError): 
+            link_pos_ssb = link_wrt_ssb.pos
+            link_vel_ssb = link_wrt_ssb.vel
 
         # Make initial guesses at the path event time
         path_wrt_ssb = self.wrt(Path.SSB, Frame.J2000)
@@ -612,9 +647,9 @@ class Path(object):
         lt_max = (path_time - link_time).max() + limit
 
         # Broadcast the path_time to encompass the shape of the path, if any
-        shape = Qube.broadcasted_shape(path_time, link.shape)
-        if path_time.shape != shape:
-            path_time = path_time.broadcast_into_shape(shape)
+        shape = Qube.broadcasted_shape(path_time, link_shape)
+        if path_time.shape != link_shape:
+            path_time = path_time.broadcast_into_shape(link_shape)
 
         # Iterate a fixed number of times or until the threshold of error
         # tolerance is reached. Convergence takes just a few iterations.
@@ -650,6 +685,17 @@ class Path(object):
                     break
 
         #### END OF LOOP
+
+        # If the link is entirely masked...
+        if max_dlt == Scalar.MASKED:
+            return fully_masked_results()
+
+        # Remove antimask on path_time
+        if antimasked:
+            expanded_pt_values = np.empty(link.shape)
+            expanded_pt_values.fill(path_time.median())
+            expanded_pt_values[link.antimask] = path_time.values
+            path_time = Scalar(expanded_pt_values, link.mask)
 
         # Construct the returned event
         path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=False)

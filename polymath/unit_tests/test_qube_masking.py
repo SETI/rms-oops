@@ -53,6 +53,19 @@ class Test_qube_masking(unittest.TestCase):
     a = Vector(np.ones(60).reshape(20,3)) * np.arange(20)
     self.assertRaises(ValueError, a.mask_where, 20*[True], (1,2,3,4))
 
+    a = Scalar(np.arange(10))
+    b = -a
+    c = a.mask_where(a < 5, replace=b, remask=False)
+    self.assertEqual(c, [0,-1,-2,-3,-4,5,6,7,8,9])
+
+    v = Vector3(np.arange(12).reshape(4,3))
+    c = v.mask_where([1,0,0,0], replace=-v, remask=False)
+    self.assertEqual(c, [[0,-1,-2],[3,4,5],[6,7,8],[9,10,11]])
+
+    c = v.mask_where([1,0,0,0], replace=-v, remask=True)
+    self.assertEqual(c[0], Vector3.MASKED)
+    self.assertEqual(c[1:], [[3,4,5],[6,7,8],[9,10,11]])
+
     ############################################################################
     # mask_where_eq()
     ############################################################################
@@ -163,6 +176,16 @@ class Test_qube_masking(unittest.TestCase):
     a = Scalar((1,2,3,4,5,6))
     self.assertEqual(a.clip(2,4,False), (2,2,3,4,4,4))
     self.assertEqual(a.clip(2,4,True).masked(), 3)
+
+    self.assertEqual(a.clip(6*[2],6*[4],False), (2,2,3,4,4,4))
+    self.assertEqual(a.clip(None,6*[4],False), (1,2,3,4,4,4))
+    self.assertEqual(a.clip(6*[2],6*[4],True).masked(), 3)
+    self.assertEqual(a.clip(None,6*[4],True).masked(), 2)
+
+    self.assertEqual(a.clip([7,6,5,4,3,2],[8,7,6,5,4,3],False), (7,6,5,4,4,3))
+
+    upper = Scalar([8,7,6,5,4,3], 5*[False] + [True])
+    self.assertEqual(a.clip([7,6,5,4,3,2],upper,False), (7,6,5,4,4,3))
 
 ############################################
 if __name__ == '__main__':
