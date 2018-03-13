@@ -28,6 +28,7 @@ DB_PATH = ''
 TRANSLATOR = None   # Optional user-specified function to alter the absolute
                     # paths of SPICE kernels. This can be used to override the
                     # default kernels to be loaded. See set_translator().
+TRANSLATOR_ID = None
 
 ################################################################################
 # Global variables to track loaded kernels
@@ -1001,7 +1002,10 @@ def db_is_open():
 def set_translator(func):
     """Define the translator function."""
 
-    global TRANSLATOR
+    global TRANSLATOR, TRANSLATOR_ID
+
+    # Don't worry about a re-definition using the same func
+    if TRANSLATOR_ID == id(func): return
 
     if TRANSLATOR and not DEBUG:
         raise RuntimeError('spicedb translator can only be defined once')
@@ -1011,6 +1015,7 @@ def set_translator(func):
                            'kernels have already been loaded.')
 
     TRANSLATOR = func
+    TRANSLATOR_ID = id(func)
 
 ################################################################################
 # Public API for selecting kernels, returning lists of KernelInfo objects
