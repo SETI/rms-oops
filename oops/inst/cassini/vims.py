@@ -119,7 +119,7 @@ def from_file(filespec, fast=False, **parameters):
 
     # Otherwise, use the standard parser
     else:
-        # Load the ISS file or the PDS label
+        # Load the VIMS file or the PDS label
         lines = pdsparser.PdsLabel.load_file(filespec)
 
         # Fix known syntax errors

@@ -200,7 +200,8 @@ class Spheroid(Surface):
         d_div4 = b_div2**2 - a * c
 
         bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
-        t = (bsign_sqrtd_div2 - b_div2) / a
+#         t = (bsign_sqrtd_div2 - b_div2) / a
+        t = -c / (b_div2 + bsign_sqrtd_div2)     # more accurate!
 
         pos = obs + t*los
 

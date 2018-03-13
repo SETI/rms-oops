@@ -900,6 +900,15 @@ class QuickFrame(Frame):
         # time can only be a 1-D array in the splines
         time = Scalar.as_scalar(time)
         tflat = time.flatten()
+        if np.size(tflat.vals) == 0:
+            identity = np.zeros(time.shape + (3,3))
+            identity[...,0,0] = 1.
+            identity[...,1,1] = 1.
+            identity[...,2,2] = 1.
+            matrix = Matrix3(identity, True)
+            omega = Vector3(np.ones(time.shape + (3,)), True)
+            return (matrix, omega)
+
         tflat_max = np.max(tflat.vals)
         tflat_min = np.min(tflat.vals)
         time_diff = tflat_max - tflat_min

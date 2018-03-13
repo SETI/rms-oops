@@ -441,26 +441,26 @@ class Path(object):
     ############################################################################
 
     def photon_to_event(self, arrival, derivs=False, guess=None,
-                              quick={}, converge={}):
+                              antimask=None, quick={}, converge={}):
         """The photon departure event from this path to match the arrival event.
 
         See _solve_photon() for details.
         """
 
-        return self._solve_photon(arrival, -1, derivs, guess,
+        return self._solve_photon(arrival, -1, derivs, guess, antimask,
                                                quick, converge)
 
     def photon_from_event(self, departure, derivs=False, guess=None,
-                                quick={}, converge={}):
+                                antimask=None, quick={}, converge={}):
         """The photon arrival event at this path to match the departure event.
 
         See _solve_photon() for details.
         """
 
-        return self._solve_photon(departure, 1, derivs, guess,
+        return self._solve_photon(departure, 1, derivs, guess, antimask,
                                                 quick, converge)
 
-    def _solve_photon(self, link, sign, derivs=False, guess=None,
+    def _solve_photon(self, link, sign, derivs=False, guess=None, antimask=None,
                             quick={}, converge={}):
 
         """Solve for a photon arrival or departure event on this path.
@@ -480,6 +480,10 @@ class Path(object):
             guess       an initial guess to use as the event time along the
                         path; otherwise None. Should only be used if the event
                         time was already returned from a similar calculation.
+
+            antimask    if not None, this is a boolean array to be applied to
+                        event times and positions. Only the indices where
+                        antimask=True will be used in the solution.
 
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False
@@ -604,32 +608,28 @@ class Path(object):
             link_key = 'dep'
             path_key = 'arr'
 
+        # Define the antimask
+        if antimask is None:
+            antimask = link.antimask
+        else:
+            antimask &= link.antimask
+
         # If the link is entirely masked...
-        if np.all(link.mask):
+        if not np.any(antimask):
             return fully_masked_results()
 
+        # Shrink the event
+        original_link = link
+        link = link.shrink(antimask)
+
         # Define the path and the link event relative to the SSB in J2000
-        # Apply the antimask
         link_wod = link.without_derivs()
         link_wrt_ssb = link.wrt_ssb(derivs=True, quick=quick)
 
+        link_time = link_wod.time
+        link_pos_ssb = link_wrt_ssb.pos
+        link_vel_ssb = link_wrt_ssb.vel
         link_shape = link.shape
-        antimasked = False
-        try:
-            link_time = link_wod.time[link.antimask]
-            antimasked = True
-            link_shape = link_time.shape
-        except (TypeError, IndexError):
-            link_time = link_wod.time
-
-        try:
-            link_pos_ssb = link_wrt_ssb.pos[link.antimask]
-            link_vel_ssb = link_wrt_ssb.vel[link.antimask]
-            antimasked = True
-            link_shape = link_pos_ssb.shape
-        except (TypeError, IndexError): 
-            link_pos_ssb = link_wrt_ssb.pos
-            link_vel_ssb = link_wrt_ssb.vel
 
         # Make initial guesses at the path event time
         path_wrt_ssb = self.wrt(Path.SSB, Frame.J2000)
@@ -690,13 +690,6 @@ class Path(object):
         if max_dlt == Scalar.MASKED:
             return fully_masked_results()
 
-        # Remove antimask on path_time
-        if antimasked:
-            expanded_pt_values = np.empty(link.shape)
-            expanded_pt_values.fill(path_time.median())
-            expanded_pt_values[link.antimask] = path_time.values
-            path_time = Scalar(expanded_pt_values, link.mask)
-
         # Construct the returned event
         path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=False)
         link_event_ssb = link_wrt_ssb.clone()
@@ -723,6 +716,10 @@ class Path(object):
         # Transform the light ray into the link's frame
         new_link = link.replace(link_key + '_j2000', ray_vector_ssb,
                                 link_key + '_lt', lt)
+
+        # Unshrink
+        path_event = path_event.unshrink(antimask)
+        new_link = new_link.unshrink(antimask)
 
         return (path_event, new_link)
 
@@ -1287,6 +1284,10 @@ class QuickPath(Path):
                 QUICK.dictionary['quickpath_linear_interpolation_threshold']
 
         tflat = Scalar.as_scalar(time).flatten()
+        if np.size(tflat.vals) == 0:
+            vector3 = Vector3(np.ones(time.shape + (3,)), True).as_readonly()
+            return (vector3, vector3)
+
         tflat_max = np.max(tflat.vals)
         tflat_min = np.min(tflat.vals)
         time_diff = tflat_max - tflat_min

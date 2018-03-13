@@ -51,7 +51,7 @@ class Tracker(Frame):
         self.register()
 
         obs_event = Event(epoch, Vector3.ZERO, self.observer_path, Frame.J2000)
-        (path_event,obs_event) = self.target_path.photon_to_event(obs_event)
+        (path_event, obs_event) = self.target_path.photon_to_event(obs_event)
         self.trackpoint = obs_event.neg_arr_ap.unit()
 
         fixed_xform = self.fixed_frame.transform_at_time(self.epoch)

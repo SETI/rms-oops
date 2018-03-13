@@ -511,7 +511,7 @@ class Surface(object):
 
         # Make an initial guess at the light travel time
         if guess is not None:
-            surface_time = guess
+            surface_time = Scalar.as_scalar(guess).shrink(antimask)
             lt = surface_time - link_time
         else:
             # If no guess was provided, base the time on the range to the origin
@@ -863,7 +863,7 @@ class Surface(object):
 
         # Make an initial guess at the light travel time
         if guess is not None:
-            surface_time = guess
+            surface_time = Scalar.as_scalar(guess).shrink(antimask)
             lt = surface_time - link_time
         else:
             # If no guess was provided, base the time on the range to the origin
@@ -1318,7 +1318,7 @@ class Surface(object):
 
         # discr = b**2 - 4*a*c
         discr = b**2 + 4*a**2
-        t = (discr.sqrt() - b)/ (2*a)
+        t = (discr.sqrt() - b) / (2*a)
 
         # Now normalize and construct the primed partials
         cos_theta = 1. / (1 + t**2).sqrt()
