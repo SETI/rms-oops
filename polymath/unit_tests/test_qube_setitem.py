@@ -274,6 +274,53 @@ class Test_Qube_setitem(unittest.TestCase):
     self.assertTrue( np.all(a.mask[3] == False))
 
     ############################################################################
+    # Using bool True and False
+    ############################################################################
+
+    a = Vector(np.random.randn(4,5,6,3), mask=(np.random.rand(4,5,6) < 0.2))
+    b = Vector(np.random.randn(4,5,6,3), mask=True)
+    aa = a.copy()
+    bb = b.copy()
+    b[False] = a[False]
+    self.assertEqual(b,bb)
+
+    b[True] = a[True]
+    self.assertEqual(b,aa)
+
+    a = Scalar(1)
+
+    a[False] = 11
+    self.assertEqual(a, 1)
+
+    a[True] = 11
+    self.assertEqual(a, 11)
+
+    a[True] = 3.3
+    self.assertEqual(a, 3)
+
+    a = Boolean(True)
+    a[False] = False
+    self.assertEqual(a, True)
+
+    a[True] = False
+    self.assertEqual(a, False)
+
+    a = Vector3([1,2,3])
+    a[False] = (3,4,5)
+    self.assertEqual(a, (1,2,3))
+
+    a[True] = (3,4,5)
+    self.assertEqual(a, (3,4,5))
+
+    a = Scalar(np.arange(10))
+    a[False] = 1
+    self.assertEqual(a, np.arange(10))
+
+    a = Scalar(np.arange(10))
+    a[True] = 11
+    self.assertEqual(a, 10*[11])
+
+    ############################################################################
     # Using tuples, Vectors, Pairs
     ############################################################################
 

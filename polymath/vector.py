@@ -26,6 +26,18 @@ class Vector(Qube):
     MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
+    def __init__(self, arg=None, mask=None, units=None, derivs=None,
+                       nrank=None, drank=None, example=None, default=None):
+        """Tweak the default constructor to convert a Python scalar to an array
+        of shape (1,)."""
+
+        if isinstance(arg, (float,int)):
+            arg = np.array([arg])
+
+        super(Vector,self).__init__(arg, mask=mask, units=units, derivs=derivs,
+                                    nrank=nrank, drank=drank, example=example,
+                                    default=default)
+
     @staticmethod
     def as_vector(arg, recursive=True):
         """Return the argument converted to Scalar if possible.
@@ -50,7 +62,19 @@ class Vector(Qube):
 
             # Convert Scalar to shape (1,)
             if arg.nrank == 0:
-                return arg.flatten_numer(Vector, recursive)
+                if np.shape(arg.values) == ():
+                    new_values = np.array([arg.values])
+                else:
+                    new_values = arg.values.reshape(arg.shape + (1,) +
+                                                    arg.item)
+
+                result = Vector(new_values, nrank=1, drank=arg.drank,
+                                            derivs={}, example=arg)
+
+                if recursive and arg.derivs:
+                    for (key, value) in arg.derivs.iteritems():
+                        result.insert_deriv(key, Vector.as_vector(value, False))
+                return result
 
             # For any other Qube, move numerator items to the denominator
             if arg.rank > 1:
@@ -62,15 +86,15 @@ class Vector(Qube):
 
         return Vector(arg)
 
-    def to_scalar(self, axis, recursive=True):
+    def to_scalar(self, indx, recursive=True):
         """Return one of the components of a Vector as a Scalar.
 
         Input:
-            axis        axis index.
+            indx        index of the vector component.
             recursive   True to extract the derivatives as well.
         """
 
-        return self.extract_numer(0, axis, Scalar, recursive)
+        return self.extract_numer(0, indx, Scalar, recursive)
 
     def to_scalars(self, recursive=True):
         """Return the components of a Vector as a tuple of Scalars.
@@ -122,9 +146,9 @@ class Vector(Qube):
                         will have derivatives representing the union of all the
                         derivatives found amongst the scalars. Default is True.
 
-            classes     an arbitrary list of scalars defining the preferred
-                        class of the returned object. The first suitable class
-                        in the list will be used. Default is Vector.
+            classes     an arbitrary list defining the preferred class of the
+                        returned object. The first suitable class in the list
+                        will be used. Default is Vector.
 
         Note that the 'recursive' and 'classes' inputs are handled as keyword
         arguments in order to distinguish them from the scalar inputs.
@@ -143,8 +167,8 @@ class Vector(Qube):
 
         # No other keyword is allowed
         if keywords:
-          raise TypeError(("broadcast() got an unexpected keyword argument " +
-                           "'%s'") % keywords.keys()[0])
+          raise TypeError(("from_scalars() got an unexpected keyword " +
+                           "argument '%s'") % keywords.keys()[0])
 
         args = list(args)
 
@@ -686,6 +710,47 @@ class Vector(Qube):
             obj.insert_derivs(new_derivs)
 
         return obj
+
+    def vector_scale(self, factor, recursive=True):
+        """Stretch this Vector along a direction defined by a given scaling
+        vector and and by an amount equal to the magnitude of this vector.
+
+        Components of the vector perpendicular to the scaling vector are
+        unchanged.
+
+        Input:
+            factor      a Vector defining the direction and magnitude of the
+                        scaling.
+            recursive   True to include the derivatives.
+
+        Return:         a copy of this Vector scaled according to the scaling
+                        vector
+        """
+
+        projected = self.proj(factor, recursive=recursive)
+
+        if recursive:
+            return self + (projected.norm() - 1) * projected
+        else:
+            return self.without_derivs() + (projected.norm() - 1) * projected
+
+    def vector_unscale(self, factor, recursive=True):
+        """Un-stretch this Vector along a direction defined by a given scaling
+        vector and and by an amount equal to the magnitude of this vector.
+
+        Components of the vector perpendicular to the scaling vector are
+        unchanged.
+
+        Input:
+            factor      a Vector defining the direction and magnitude of the
+                        scaling.
+            recursive   True to include the derivatives.
+
+        Return:         a copy of this Vector scaled according to the scaling
+                        vector
+        """
+
+        return self.vector_scale(factor/factor.norm_sq(recursive), recursive)
 
     @classmethod
     def combos(cls, *args):

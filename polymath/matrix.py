@@ -124,6 +124,100 @@ class Matrix(Qube):
 
         return tuple(list)
 
+    def to_vector(self, axis, indx, classes=[], recursive=True):
+        """Return one of the elements of a Matrix as a Scalar.
+
+        Input:
+            axis        axis index from which to extract vector.
+            indx        index of the vector along this axis.
+            classes     a list of the Vector subclasses to return. The first
+                        valid one will be used. Default is Vector.
+            recursive   True to extract the derivatives as well.
+        """
+
+        return self.extract_numer(axis, indx, list(classes) + [Vector],
+                                  recursive)
+
+    def to_scalar(self, indx0, indx1, recursive=True):
+        """Return one of the elements of a Matrix as a Scalar.
+
+        Input:
+            indx0       index along the first matrix axis.
+            indx1       index along the second matrix axis.
+            recursive   True to extract the derivatives as well.
+        """
+
+        vector = self.extract_numer(0, axis0, Vector, recursive)
+        return   self.extract_numer(0, axis1, Scalar, recursive)
+
+    @staticmethod
+    def from_scalars(*args, **keywords):
+        """A Matrix or subclass constructed by combining scalars.
+
+        Inputs:
+            args        any number of Scalars or arguments that can be casted
+                        to Scalars. They need not have the same shape, but it
+                        must be possible to cast them to the same shape. A value
+                        of None is converted to a zero-valued Scalar that
+                        matches the denominator shape of the other arguments.
+
+            recursive   True to include all the derivatives. The returned object
+                        will have derivatives representing the union of all the
+                        derivatives found amongst the scalars. Default is True.
+
+            shape       The Matrix's item shape. If not specified but the number
+                        of Scalars is a perfect square, a square matrix is
+                        returned.
+
+            classes     an arbitrary list defining the preferred class of the
+                        returned object. The first suitable class in the list
+                        will be used. Default is Matrix.
+
+        Note that the 'recursive' and 'classes' inputs are handled as keyword
+        arguments in order to distinguish them from the scalar inputs.
+        """
+
+        # Search for keyword "shape" and "classes"
+        # Pass "recursive" to the next function
+        item = None
+        if 'shape' in keywords:
+            item = keywords['shape']
+            del keywords['shape']
+
+        classes = []
+        if 'classes' in keywords:
+            classes = keywords['classes']
+            del keywords['classes']
+
+        # Create the Vector object
+        vector = Vector.from_scalars(*args, **keywords)
+
+        # Int matrices are disallowed
+        if vector.is_int():
+            raise TypeError('Matrix objects must be of type float')
+
+        # Determine the shape
+        if item is not None:
+            if len(item) != 2:
+                raise ValueError('invalid Matrix shape %s' % str(item))
+
+            size = item[0] * item[1]
+            if len(args) != item:
+                raise ValueError('incorrect number of Scalars to create ' +
+                                 'Matrix of shape %s' % str(item))
+            item = tuple(item)
+
+        else:
+            dim = int(np.sqrt(len(args)))
+            size = dim*dim
+            if size != len(args):
+                raise ValueError('incorrect number of Scalars to construct ' +
+                                 'a square Matrix')
+            item = (dim, dim)
+
+        result = vector.reshape_numer(item, list(classes) + [Matrix],
+                                            recursive=True)
+
     def is_diagonal(self, delta=0.):
         """Return Boolean equal to True where the matrix is diagonal.
 
@@ -202,18 +296,16 @@ class Matrix(Qube):
 
         return self.transpose_numer(0, 1, recursive=True)
 
-    def inverse(self, recursive=True, delta=0.):
-        """Return the inverse of a matrix, for 2x2, 3x3 and diagonal matrices.
+    def inverse(self, recursive=True):
+        """Return the inverse of a matrix.
 
         The returned object will have the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives of the inverse.
-            delta       Relative upper limit on the off-diagonal elements of a
-                        matrix such that the matrix is still considered
-                        diagonal.
         """
 
+        # Validate array
         if self.numer[0] != self.numer[1]:
             raise ValueError("only square matrices can be inverted: shape is " +
                              str(self.numer))
@@ -221,31 +313,24 @@ class Matrix(Qube):
         if self.drank:
             raise ValueError("a matrix with denominators cannot be inverted")
 
-        # 3 x 3 case
-        if self.numer[0] == 3:
-            (new_values, new_mask) = Matrix.inverse_3x3(self.values)
+        # Check determinant
+        det = np.linalg.det(self.values)
 
-        # 2 x 2 case
-        elif self.numer[0] == 2:
-            (new_values, new_mask) = Matrix.inverse_2x2(self.values)
-
-        # All-diagonal case
-        elif self.is_diagonal(delta=delta).all():
-            (new_values, new_mask) = Matrix.inverse_diag(self.values)
-
-        # A single item
-        elif self.shape == ():
-            return Matrix(np.array(np.matrix(self.values).I))
-
-        # Remainder are TBD
+        # Mask out univertible matrices and replace with diagonal matrix values
+        mask = (det == 0.)
+        if np.any(mask):
+            self.values[mask] = np.diag(np.ones(self.numer[0]))
+            new_mask = self.mask | mask
         else:
-            raise NotImplementedError("inversion of non-diagonal matrices " +
-                                      "larger than 3x3 is not implemented")
+            new_mask = self.mask
 
-        # Construct inverse matrix
+        # Invert the arrray
+        new_values = np.linalg.inv(self.values)
+
+        # Construct the result
         obj = Matrix(new_values, new_mask,
                      units = Units.units_power(self.units,-1),
-                     derivs = {}, example = self)
+                     derivs={}, example=self)
 
         # Fill in derivatives
         if recursive and self.derivs:
@@ -289,6 +374,84 @@ class Matrix(Qube):
 
         new_mask = (rms.values > Matrix.DELTA)
         return Qube.MATRIX3_CLASS(next_m.values, self.mask | new_mask)
+
+# Algorithm has been validated but code has not been tested
+#     def solve(self, values, recursive=True):
+#         """Solve for the Vector X that satisfies A X = B, for this square matrix
+#         A and a Vector B of results."""
+# 
+#         b = Vector.as_vector(values, recursive=True)
+# 
+#         size = self.item[0]
+#         if size != self.item[1]:
+#             raise ValueError('solver requires a square Matrix')
+# 
+#         if self.drank:
+#             raise ValueError('solver does not suppart a Matrix with a ' +
+#                              'denominator')
+# 
+#         if size != b.item[0]:
+#             raise ValueError('Matrix and Vector have incompatible sizes')
+# 
+#         # Easy cases: X = A-1 B
+#         if size <= 3:
+#             if recursive:
+#                 return self.inverse(True) * b
+#             else:
+#                 return self.inverse(False) * b.without_derivs()
+# 
+#         new_shape = Qube.broadcasted_shape(self.shape, b.shape)
+# 
+#         # Algorithm is simpler with matrix indices rolled to front
+#         # Also, Vector b's elements are placed after the elements of Matrix a
+# 
+#         ab_vals = np.empty((size,size+1) + new_shape)
+#         rolled = np.rollaxis(self.values, -1, 0)
+#         rolled = np.rollaxis(rolled, -1, 0)
+# 
+#         ab_vals[:,:-1] = rolled
+#         ab_vals[:,-1] = b.values
+# 
+#         for k in range(size-1):
+#             # Zero out the leading coefficients from each row at each iteration
+#             ab_saved = ab_vals[k+1:,k:k+1]
+#             ab_vals[k+1:,k:] *= ab_vals[k,k:k+1]
+#             ab_vals[k+1:,k:] -= ab_vals[k,k:] * ab_saved
+# 
+#         # Now work backward solving for values, replacing Vector b
+#         for k in range(size,0):
+#             ab_vals[ k,-1] /= ab_vals[k,k]
+#             ab_vals[:k,-1] -= ab_vals[k,-1] * ab_vals[:k,k]
+# 
+#         ab_vals[0,-1] /= ab_vals[0,0]
+# 
+#         x = np.rollaxis(ab_vals[:,-1], 0, len(shape))
+# 
+#         x = Vector(x, self.mask | b.mask, derivs={},
+#                       units=Units.units_div(self.units, b.units))
+# 
+#         # Deal with derivatives if necessary
+#         # A x = B
+#         # A dx/dt + dA/dt x = dB/dt
+#         # A dx/dt = dB/dt - dA/dt x
+# 
+#         if recursive and (self.derivs or b.derivs):
+#             derivs = {}
+#             for key in self.derivs:
+#                 if key in b.derivs:
+#                     values = b.derivs[key] - self.derivs[key] * x
+#                 else:
+#                     values = -self.derivs[k] * x
+# 
+#             derivs[key] = self.solve(values, recursive=False)
+# 
+#             for key in b.derivs:
+#                 if key not in self.derivs:
+#                     derivs[key] = self.solve(b.derivs[k], recursive=False)
+# 
+#             self.insert_derivs(derivs)
+# 
+#         return x
 
     ############################################################################
     # Overrides of superclass operators
@@ -351,107 +514,8 @@ class Matrix(Qube):
         return self.inverse(recursive=recursive)
 
 ################################################################################
-# Matrix inverse functions
-################################################################################
-
-# For 3x3 matrix multiply
-# From http://www.dr-lex.be/random/matrix_inv.html
-#
-# |a11 a12 a13|-1          |  a33a22-a32a23  -(a33a12-a32a13)   a23a12-a22a13 |
-# |a21 a22 a23|  = 1/DET * |-(a33a21-a31a23)   a33a11-a31a13  -(a23a11-a21a13)|
-# |a31 a32 a33|            |  a32a21-a31a22  -(a32a11-a31a12)   a22a11-a21a12 |
-# 
-# with DET  =  a11(a33a22-a32a23)-a21(a33a12-a32a13)+a31(a23a12-a22a13)
-#
-# Decrement indices by one
-#
-# |a00 a01 a02|-1            |a11a22-a12a21  a21a02-a22a01  a12a01-a11a02|
-# |a10 a11 a12|   =  1/DET * |a12a20-a10a22  a22a00-a20a02  a10a02-a12a00|
-# |a20 a21 a22|              |a10a21-a11a20  a20a01-a21a00  a11a00-a10a01|
-# 
-# with DET  =  a00(a11a22-a21a12)-a12(a22a01-a21a02)+a20(a12a01-a11a02)
-
-    I1A = np.array([[1,2,1],[1,0,1],[1,2,1]])
-    J1A = np.array([[1,1,2],[2,0,0],[0,0,1]])
-    I1B = np.array([[2,0,0],[2,2,0],[2,0,0]])
-    J1B = np.array([[2,2,1],[0,2,2],[1,1,0]])
-    I2A = np.array([[1,2,1],[1,2,1],[1,2,1]])
-    J2A = np.array([[2,2,1],[0,0,2],[1,1,0]])
-    I2B = np.array([[2,0,0],[2,0,0],[2,0,0]])
-    J2B = np.array([[1,1,2],[2,2,0],[0,0,1]])
-
-    @staticmethod
-    def inverse_3x3(mats):
-        """Invert an arbitrary array of 3x3 matrices."""
-
-        inverses = (mats[..., Matrix.I1A, Matrix.J1A] *
-                    mats[..., Matrix.I1B, Matrix.J1B] -
-                    mats[..., Matrix.I2A, Matrix.J2A] *
-                    mats[..., Matrix.I2B, Matrix.J2B])
-
-        det = (mats[...,0,0] * inverses[...,0,0] +
-               mats[...,0,1] * inverses[...,1,0] +
-               mats[...,0,2] * inverses[...,2,0])
-
-        mask = (det == 0.)
-        if np.any(mask):
-            if np.shape(mask) == ():
-                det = np.array(1.)
-                mask = True
-            else:
-                det[mask] = 1.
-
-        return (inverses/det[...,np.newaxis,np.newaxis], mask)
-
-    @staticmethod
-    def inverse_2x2(mats):
-        """Invert of an arbitrary array of 2x2 matrices."""
-
-        inverses = np.empty(mats.shape)
-        inverses[...,0,0] =  mats[...,1,1]
-        inverses[...,0,1] = -mats[...,0,1]
-        inverses[...,1,0] = -mats[...,1,0]
-        inverses[...,1,1] =  mats[...,0,0]
-
-        det = mats[...,0,0] * mats[...,1,1] - mats[...,0,1] * mats[...,1,0]
-
-        mask = (det == 0.)
-        if np.any(mask):
-            if np.shape(mask) == ():
-                det = np.array(1.)
-                mask = True
-            else:
-                det[mask] = 1.
-
-        return (inverses/det[...,np.newaxis,np.newaxis], mask)
-
-    @staticmethod
-    def inverse_diag(mats):
-        """Invert of an arbitrary array of equal-sized diagonal matrices."""
-
-        diags = np.copy(mats[...,0])
-        for i in range(1, mats.shape[-1]):
-            diags[...,i] = mats[...,i,i]
-
-        mask = (diags == 0.)
-        if np.any(mask):
-            if np.shape(mask) == ():
-                diags = 1.
-                mask = True
-            else:
-                diags[mask] = 1.
-
-        reciprocals = 1. / diags
-
-        inverses = np.zeros(mats.shape)
-        for i in range(mats.shape[-1]):
-            inverses[...,i,i] = reciprocals[...,i]
-
-        mask = np.any(mask, axis=-1)
-
-        return (inverses, mask)
-
 # Useful class constants
+################################################################################
 
 Matrix.IDENTITY2 = Matrix([[1,0,],[0,1,]]).as_readonly()
 Matrix.IDENTITY3 = Matrix([[1,0,0],[0,1,0],[0,0,1]]).as_readonly()

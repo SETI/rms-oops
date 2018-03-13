@@ -102,6 +102,11 @@ class Qube(object):
 
     """
 
+    # This prevents binary operations of the form:
+    #   <np.ndarray> <op> <Qube>
+    # from executing the ndarray operation instead of the polymath operation
+    __array_priority__ = 1
+
     # Default class constants, to be overridden as needed by subclasses...
     NRANK = None        # the number of numerator axes; None to leave this
                         # unconstrained.
@@ -184,7 +189,7 @@ class Qube(object):
         if isinstance(arg, Qube):
             if (type(self).__name__ == 'Empty') ^ \
                (type(arg).__name__ == 'Empty'):
-                raise ValueError('class %s cannot be converted to class %s' %
+                raise TypeError('class %s cannot be converted to class %s' %
                                  (type(arg).__name__, type(self).__name__))
             obj = arg
             arg = obj.__values_
@@ -367,6 +372,14 @@ class Qube(object):
         self.__corners_  = None
         self.__slicer_   = None
 
+        if np.shape(self.__mask_) == ():    # Avoid type np.bool_ if possible
+            if self.__mask_:
+                self.__mask_ = True
+                self.__antimask_ = False
+            else:
+                self.__mask_ = False
+                self.__antimask_ = True
+
         # Fill in the default
         if default is not None and np.shape(default) == item:
             self.__default_ = default
@@ -474,11 +487,11 @@ class Qube(object):
                 '_Qube__readonly_', '_Qube__default_']
 
         # For a fully masked object, no need to save values
-        if self.__mask_ is True:
+        if self.mask is True:
             args.append('_Qube__mask_')
 
         # For an unmasked object, save the array values as they are
-        elif self.__mask_ is False:
+        elif self.mask is False:
             args.append('_Qube__mask_')
             args.append('_Qube__values_')
 
@@ -620,6 +633,15 @@ class Qube(object):
         elif Qube._array_is_readonly(self.__mask_):
             self.__mask_ = self.__mask_.copy()
 
+        # Avoid type np.bool_ if possible
+        if np.shape(self.__mask_) == ():
+            if self.__mask_:
+                self.__mask_ = True
+                self.__antimask_ = False
+            else:
+                self.__mask_ = False
+                self.__antimask_ = True
+
         return self
 
     def _set_mask_(self, mask, antimask=None):
@@ -659,6 +681,15 @@ class Qube(object):
             elif Qube._array_is_readonly(self.__mask_):
                 self.__mask_ = self.__mask_.copy()
 
+        # Avoid type np.bool_ if possible
+        if np.shape(self.__mask_) == ():
+            if self.__mask_:
+                self.__mask_ = True
+                self.__antimask_ = False
+            else:
+                self.__mask_ = False
+                self.__antimask_ = True
+
         return self
 
     @property
@@ -678,9 +709,9 @@ class Qube(object):
                 return self.__values_
 
         # Construct something that behaves as a suitable mask
-        if self.__mask_ is False:
+        if self.mask is False:
             newmask = np.ma.nomask
-        elif self.__mask_ is True:
+        elif self.mask is True:
             newmask = np.ones(self.__values_.shape, dtype='bool')
         elif self.__rank_ > 0:
             newmask = self.__mask_.reshape(self.__shape_ + self.__rank_ * (1,))
@@ -691,12 +722,22 @@ class Qube(object):
         return np.ma.MaskedArray(self.__values_, newmask)
 
     @property
-    def mask(self): return self.__mask_
+    def mask(self):
+        # Annoyingly, type np.bool is not a subclass of bool
+        if np.shape(self.__mask_) == () and type(self.__mask_) != bool:
+            if self.__mask_:
+                self.__mask_ = True
+                self.__antimask_ = False
+            else:
+                self.__mask_ = False
+                self.__antimask_ = True
+
+        return self.__mask_
 
     @property
     def antimask(self):
         if self.__antimask_ is None:
-            self.__antimask_ = np.logical_not(self.__mask_)
+            self.__antimask_ = np.logical_not(self.mask)
 
         return self.__antimask_
 
@@ -767,11 +808,11 @@ class Qube(object):
         if lshape == 0:
             self.__corners_ = None
 
-        if self.__mask_ is False:
+        if self.mask is False:
             self.__corners_ = (index0, shape)
             return
 
-        if self.__mask_ is True:
+        if self.mask is True:
             self.__corners_ = (index0, index0)
             return
 
@@ -1049,6 +1090,30 @@ class Qube(object):
 
         result.insert_deriv(key, value)
         return result
+
+    def unique_deriv_name(self, key, *objects):
+        """Return the given name for a deriv if it does not exist in this
+        object or any of the given objects; otherwise return a variant that is
+        unique."""
+
+        # Make a list of all the derivative keys
+        all_keys = set(self.derivs.keys())
+        for obj in objects:
+            if not hasattr(obj, 'derivs'): continue
+            all_keys |= set(obj.derivs.keys())
+
+        # Return the proposed key if it is unused
+        if key not in all_keys:
+            return key
+
+        # Otherwise, tack on a number and iterate until the name is unique
+        i = 0
+        while True:
+            unique = key + str(i)
+            if unique not in all_keys:
+                return unique
+
+            i += 1
 
     ############################################################################
     # Unit operations
@@ -1653,13 +1718,13 @@ class Qube(object):
             # Update the mask if replacement values are masked
             if new_mask is True:
                 pass
-            elif replace.__mask_ is False:
+            elif replace.mask is False:
                 pass
             else:
                 if new_mask is False:
                     new_mask = np.zeros(self.shape, dtype='bool')
 
-                if replace.__mask_ is True:
+                if replace.mask is True:
                     new_mask[mask] = True
                 else:
                     new_mask[mask] = replace.__mask_[mask]
@@ -1936,9 +2001,9 @@ class Qube(object):
     def count_masked(self):
         """Return the number of masked items in this object."""
 
-        if self.__mask_ is True:
+        if self.mask is True:
             return self.size
-        elif self.__mask_ is False:
+        elif self.mask is False:
             return 0
         else:
             return np.count_nonzero(self.__mask_)
@@ -1952,9 +2017,9 @@ class Qube(object):
     def count_unmasked(self):
         """Return the number of unmasked items in this object."""
 
-        if self.__mask_ is True:
+        if self.mask is True:
             return 0
-        elif self.__mask_ is False:
+        elif self.mask is False:
             return self.size
         else:
             return self.size - np.count_nonzero(self.__mask_)
@@ -1968,7 +2033,7 @@ class Qube(object):
     def without_mask(self, recursive=True):
         """Return a shallow copy of this object without its mask."""
 
-        if self.__mask_ is False: return self
+        if self.mask is False: return self
 
         obj = self.clone(recursive=False)
         obj._set_mask_(False)
@@ -1982,7 +2047,7 @@ class Qube(object):
     def as_all_masked(self, recursive=True):
         """Return a shallow copy of this object with everything masked."""
 
-        if self.__mask_ is True: return self
+        if self.mask is True: return self
 
         obj = self.clone(recursive=False)
         obj._set_mask_(True)
@@ -2050,13 +2115,39 @@ class Qube(object):
 
         return self.as_all_constant(constant, recursive)
 
+    def as_size_zero(self, recursive=True):
+        """Return a shallow, read-only copy of this object with size zero.
+        """
+
+        obj = Qube.__new__(type(self))
+
+        if self.shape:
+            new_values = self.__values_[:0]
+
+            if np.shape(self.mask):
+                new_mask = self.__mask_[:0]
+            else:
+                new_mask = np.array([self.mask])[:0]
+
+        else:
+            new_values = np.array([self.__values_])[:0]
+            new_mask = np.array([self.mask])[:0]
+
+        obj.__init__(new_values, new_mask, derivs={}, example=self)
+
+        if recursive:
+            for (key,deriv) in self.__derivs_.iteritems():
+                obj.insert_deriv(key, deriv.as_size_zero(recursive=False))
+
+        return obj
+
     def as_mask_where_nonzero(self):
         """A scalar or NumPy array where values are nonzero and unmasked."""
 
-        if self.__mask_ is True:
+        if self.mask is True:
             return False
 
-        if self.__mask_ is False:
+        if self.mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.any(self.__values_, axis=axes)
@@ -2072,10 +2163,10 @@ class Qube(object):
     def as_mask_where_zero(self):
         """A scalar or NumPy array where values are zero and unmasked."""
 
-        if self.__mask_ is True:
+        if self.mask is True:
             return False
 
-        if self.__mask_ is False:
+        if self.mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.all(self.__values_ == 0, axis=axes)
@@ -2091,10 +2182,10 @@ class Qube(object):
     def as_mask_where_nonzero_or_masked(self):
         """A scalar or NumPy array where values are nonzero or masked."""
 
-        if self.__mask_ is True:
+        if self.mask is True:
             return True
 
-        if self.__mask_ is False:
+        if self.mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.any(self.__values_, axis=axes)
@@ -2110,10 +2201,10 @@ class Qube(object):
     def as_mask_where_zero_or_masked(self):
         """A scalar or NumPy array where values are zero or masked."""
 
-        if self.__mask_ is True:
+        if self.mask is True:
             return True
 
-        if self.__mask_ is False:
+        if self.mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.all(self.__values_ == 0, axis=axes)
@@ -2149,9 +2240,9 @@ class Qube(object):
             raise ValueError('antimask shape %s ' % str(np.shape(antimask)) +
                              'does not match object shape %s' % str(self.shape))
 
-        if self.__mask_ is False:
+        if self.mask is False:
             mask = np.zeros(self.shape, dtype='bool')
-        elif self.__mask_ is True:
+        elif self.mask is True:
             mask = np.ones(self.shape, dtype='bool')
         else:
             mask = self.__mask_
@@ -2299,7 +2390,7 @@ class Qube(object):
     ############################################################################
 
     def extract_numer(self, axis, index, classes=(), recursive=True):
-        """Return an object sliced from one numerator axis.
+        """Return an object extracted from one numerator axis.
 
         Input:
             axis        the item axis from which to extract a slice.
@@ -3593,11 +3684,11 @@ class Qube(object):
         if not Units.can_match(self.__units_, arg.__units_):
             one_masked = True
 
-        # Return a Python scalar if the shape is ()
+        # Return a Python bool if the shape is ()
         if np.shape(compare) == ():
             if one_masked: return False
             if both_masked: return True
-            return compare
+            return bool(compare)
 
         # Apply the mask
         if np.shape(one_masked) == ():
@@ -3634,11 +3725,11 @@ class Qube(object):
         if not Units.can_match(self.__units_, arg.__units_):
             one_masked = True
 
-        # Return a Python scalar if the shape is ()
+        # Return a Python bool if the shape is ()
         if np.shape(compare) == ():
             if one_masked: return True
             if both_masked: return False
-            return compare
+            return bool(compare)
 
         # Apply the mask
         if np.shape(one_masked) == ():
@@ -3745,9 +3836,9 @@ class Qube(object):
             new_values = np.all(new_values, axis=axis)
 
             # Create new mask
-            if self.__mask_ is True:
+            if self.mask is True:
                 new_mask = True
-            elif self.__mask_ is False:
+            elif self.mask is False:
                 new_mask = False
             else:
                 new_mask = np.all(self.__mask_, axis=axis)
@@ -3819,9 +3910,9 @@ class Qube(object):
             new_values = np.any(new_values, axis=axis)
 
             # Create new mask
-            if self.__mask_ is True:
+            if self.mask is True:
                 new_mask = True
-            elif self.__mask_ is False:
+            elif self.mask is False:
                 new_mask = False
             else:
                 new_mask = np.all(self.__mask_, axis=axis)
@@ -3917,14 +4008,20 @@ class Qube(object):
 
     def __getitem__(self, indx):
 
-        # A shapeless object cannot be indexed
-        if self.__shape_ == ():
-            raise IndexError('too many indices')
-
         # Interpret and adapt the index
         # (index to apply to values array, index to apply to mask array
         #  index to define additional items to be masked)
         (vals_index, mask_index, new_mask_index) = self.prep_index(indx)
+
+        # A shapeless object cannot be indexed except by booleans
+        if self.__shape_ == ():
+            if vals_index is True:
+                return self
+
+            if vals_index is False:
+                return self.as_size_zero()
+
+            raise IndexError('too many indices')
 
         # Apply index to values
         result_values = self.__values_[vals_index]
@@ -3981,10 +4078,6 @@ class Qube(object):
     def __setitem__(self, indx, arg):
         self.require_writable()
 
-        # A shapeless object cannot be indexed
-        if self.__shape_ == ():
-            raise IndexError('too many indices')
-
         # Interpret the arg
         arg = self.as_this_type(arg, recursive=True, nrank=self.nrank,
                                                      drank=self.drank)
@@ -3999,6 +4092,31 @@ class Qube(object):
         # (index to apply to values array, index to apply to mask array
         #  index to define additional items to be masked)
         (vals_index, mask_index, new_mask_index) = self.prep_index(indx)
+
+        # A shapeless object cannot be indexed except by True or False
+        if self.__shape_ == ():
+            if vals_index is True:
+                values = self.as_this_type(arg).values
+                if isinstance(self.__values_, np.ndarray):
+                    values = values.astype(self.__values_.dtype)
+                elif isinstance(self.__values_, (bool,np.bool_)):
+                    values = bool(values)
+                elif isinstance(self.__values_, int):
+                    values = int(values)
+                else:
+                    values = float(values)
+
+                self.__values_   = values
+                self.__mask_     = arg.__mask_
+                self.__antimask_ = None
+                self.__corners_  = None
+                self.__slicer_   = None
+                return self
+
+            if vals_index is False:
+                return self
+
+            raise IndexError('too many indices')
 
         # Insert the replacement values
         self.__values_[vals_index] = arg.__values_
@@ -4094,6 +4212,11 @@ class Qube(object):
         # There can only a problem with indices of type list or tuple
         # By definition these are N-d array references with N > 1
         if type(indx) not in (tuple,list):
+
+            # However, type numpy.bool_ is not a subclass of bool
+            if np.shape(indx) == () and type(indx) == np.bool_:
+                indx = bool(indx)
+
             return (indx, indx, None)
 
         # Search for Ellipses and Qubes
@@ -4642,8 +4765,8 @@ class Qube(object):
 
         # No other keyword is allowed
         if keywords:
-          raise TypeError(("broadcast() got an unexpected keyword argument " +
-                           "'%s'") % keywords.keys()[0])
+          raise ValueError('broadcast() got an unexpected keyword argument ' +
+                           '"%s"' % keywords.keys()[0])
 
         # Convert to scalars and broadcast to the same shape
         args = []
@@ -4763,7 +4886,10 @@ class Qube(object):
         shape = tuple(shape)
         if shape == self.__shape_: return self
 
-        new_values = self.__values_.reshape(shape + self.item)
+        if np.shape(self.__values_) == ():
+            new_values = np.array([self.__values_]).reshape(shape)
+        else:
+            new_values = self.__values_.reshape(shape + self.item)
 
         if np.shape(self.__mask_) == ():
             new_mask = self.__mask_
@@ -4863,6 +4989,9 @@ class Qube(object):
         if rank < len_shape:
             raise ValueError('roll rank %d is too small for object' % rank)
 
+        if len_shape == 0:
+            rank = 1
+
         # Identify the axis to roll, which could be negative
         if axis < 0:
             a1 = axis + rank
@@ -4878,7 +5007,7 @@ class Qube(object):
         else:
             a2 = start
 
-        if a2 < 0 or a2 >= rank:
+        if a2 < 0 or a2 >= rank + 1:
             raise ValueError('roll axis %d out of range' % start)
 
         # No need to modify a shapeless object
@@ -4991,8 +5120,8 @@ class Qube(object):
 
         # No other keyword is allowed
         if keywords:
-          raise TypeError(("broadcasted_shape() got an unexpected keyword " +
-                           "argument '%s'") % keywords.keys()[0])
+          raise TypeError(('broadcasted_shape() got an unexpected keyword ' +
+                           'argument "%s"') % keywords.keys()[0])
 
         # Initialize the shape
         new_shape = []
@@ -5063,8 +5192,8 @@ class Qube(object):
 
         # No other keyword is allowed
         if keywords:
-          raise TypeError(("broadcast() got an unexpected keyword argument " +
-                           "'%s'") % keywords.keys()[0])
+          raise TypeError(('broadcast() got an unexpected keyword argument ' +
+                           '"%s"') % keywords.keys()[0])
 
         # Perform the broadcasts...
         shape = Qube.broadcasted_shape(*objects)
@@ -5110,8 +5239,8 @@ class Qube(object):
 
         # No other keyword is allowed
         if keywords:
-          raise TypeError(("stack() got an unexpected keyword argument " +
-                           "'%s'") % keywords.keys()[0])
+          raise TypeError(('stack() got an unexpected keyword argument ' +
+                           '"%s"') % keywords.keys()[0])
 
         args = list(args)
 
@@ -5212,7 +5341,7 @@ class Qube(object):
             mask = mask_true_found
 
         # Construct the array
-        values = np.empty((len(args),) + args[subclass_indx].values.shape,
+        values = np.empty((len(args),) + np.shape(args[subclass_indx].values),
                           dtype=dtype)
         for i in range(len(args)):
             if args[i] is None:

@@ -309,10 +309,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(expr.is_int())
 
     expr = np.array((1,2,3)) + Scalar(1)
-# DOES NOT WORK!!
-#     self.assertEqual(expr, (2,3,4))
-#     self.assertEqual(type(expr), Scalar)
-#     self.assertTrue(expr.is_int())
+    self.assertEqual(expr, (2,3,4))
+    self.assertEqual(type(expr), Scalar)
+    self.assertTrue(expr.is_int())
 
     expr = Scalar((1,2,3)) + 1.
     self.assertEqual(expr, (2,3,4))
@@ -508,10 +507,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(expr.is_int())
 
     expr = np.array((3,4,5)) - Scalar(1)
-# DOES NOT WORK!!
-#     self.assertEqual(expr, (2,3,4))
-#     self.assertEqual(type(expr), Scalar)
-#     self.assertTrue(expr.is_int())
+    self.assertEqual(expr, (2,3,4))
+    self.assertEqual(type(expr), Scalar)
+    self.assertTrue(expr.is_int())
 
     expr = Scalar((3,4,5)) - 1.
     self.assertEqual(expr, (2,3,4))
@@ -708,10 +706,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(expr.is_int())
 
     expr = np.array((1,2,3)) * Scalar(2)
-# DOES NOT WORK!!
-#     self.assertEqual(expr, (2,4,6))
-#     self.assertEqual(type(expr), Scalar)
-#     self.assertTrue(expr.is_int())
+    self.assertEqual(expr, (2,4,6))
+    self.assertEqual(type(expr), Scalar)
+    self.assertTrue(expr.is_int())
 
     expr = Scalar((1,2,3)) * 2.
     self.assertEqual(expr, (2,4,6))
@@ -888,10 +885,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(expr.is_float())
 
     expr = np.array((2,4,6)) / Scalar(2)
-# DOES NOT WORK!!
-#     self.assertEqual(expr, (1,2,3))
-#     self.assertEqual(type(expr), Scalar)
-#     self.assertTrue(expr.is_float())
+    self.assertEqual(expr, (1,2,3))
+    self.assertEqual(type(expr), Scalar)
+    self.assertTrue(expr.is_float())
 
     # Derivatives, readonly
     a = Scalar(1, derivs={'t':Scalar(6)})
@@ -1066,10 +1062,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(expr.is_float())
 
     expr = np.array((5,7,9)) // Scalar(2)
-# DOES NOT WORK!!
-#     self.assertEqual(expr, (2,3,4))
-#     self.assertEqual(type(expr), Scalar)
-#     self.assertTrue(expr.is_int())
+    self.assertEqual(expr, (2,3,4))
+    self.assertEqual(type(expr), Scalar)
+    self.assertTrue(expr.is_int())
 
     # Derivatives, readonly
     a = Scalar(1, derivs={'t':Scalar(2)})
@@ -1208,10 +1203,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(expr.is_float())
 
     expr = np.array((7,8,9)) % Scalar(5)
-# DOES NOT WORK!!
-#     self.assertEqual(expr, (2,3,4))
-#     self.assertEqual(type(expr), Scalar)
-#     self.assertTrue(expr.is_int())
+    self.assertEqual(expr, (2,3,4))
+    self.assertEqual(type(expr), Scalar)
+    self.assertTrue(expr.is_int())
 
     # Derivatives, readonly
     a = Scalar(9, derivs={'t':Scalar(2)})

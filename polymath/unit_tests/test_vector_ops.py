@@ -166,7 +166,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertFalse(b.d_dt.readonly)
 
     self.assertRaises(ValueError, a.__isub__, 1)    # because it's read-only
-    self.assertRaises(TypeError, b.__isub__, 1)
+    self.assertRaises(ValueError, b.__isub__, 1)
 
     ############################################################################
     # abs()
@@ -273,7 +273,7 @@ class Test_Vector_ops(unittest.TestCase):
     ############################################################################
 
     a = Vector((1,2,3))
-    self.assertRaises(TypeError, a.__add__, 1)  # rank mismatch
+    self.assertRaises(ValueError, a.__add__, 1)  # rank mismatch
 
     expr = Vector((1,2,3)) + (1,2,3)
     self.assertEqual(expr, (2,4,6))
@@ -305,12 +305,10 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-# DOES NOT WORK! NumPy tries to iterate through array elements and perform
-# 1 + Vector((1,2,3)) first. This fails.
-#     expr = np.array((1,2,3)) + Vector((1,2,3))
-#     self.assertEqual(expr, (2,4,6))
-#     self.assertEqual(type(expr), Vector)
-#     self.assertTrue(expr.is_int())
+    expr = np.array((1,2,3)) + Vector((1,2,3))
+    self.assertEqual(expr, (2,4,6))
+    self.assertEqual(type(expr), Vector)
+    self.assertTrue(expr.is_int())
 
     expr = Vector([(1,2,3),(2,3,4)]) + (1,2,3)
     self.assertEqual(expr, ((2,4,6),(3,5,7)))
@@ -457,7 +455,7 @@ class Test_Vector_ops(unittest.TestCase):
     ############################################################################
 
     a = Vector((1,2,3))
-    self.assertRaises(TypeError, a.__add__, 1)  # rank mismatch
+    self.assertRaises(ValueError, a.__add__, 1)  # rank mismatch
 
     expr = Vector((1,2,3)) - (1,2,3)
     self.assertEqual(expr, (0,0,0))
@@ -489,12 +487,10 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-# DOES NOT WORK! NumPy tries to iterate through array elements and perform
-# 1 + Vector((1,2,3)) first. This fails.
-#     expr = np.array((1,2,3)) - Vector((1,2,3))
-#     self.assertEqual(expr, (0,0,0))
-#     self.assertEqual(type(expr), Vector)
-#     self.assertTrue(expr.is_int())
+    expr = np.array((1,2,3)) - Vector((1,2,3))
+    self.assertEqual(expr, (0,0,0))
+    self.assertEqual(type(expr), Vector)
+    self.assertTrue(expr.is_int())
 
     expr = Vector([(1,2,3),(2,3,4)]) - (1,2,3)
     self.assertEqual(expr, ((0,0,0),(1,1,1)))

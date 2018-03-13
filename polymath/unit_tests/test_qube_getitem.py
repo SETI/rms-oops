@@ -271,6 +271,31 @@ class Test_Qube_getitem(unittest.TestCase):
     self.assertEqual(b.shape, (1,))
 
     ############################################################################
+    # Using bool True and False
+    ############################################################################
+
+    a = Vector(np.random.randn(4,5,6,3,2), drank=1,
+           mask=(np.random.rand(4,5,6) < 0.2))
+    self.assertEqual(a, a[True])
+    self.assertEqual(a[False].shape[0], 0)
+
+    a = Scalar(1)
+    self.assertEqual(a, a[True])
+    self.assertEqual(a[False].shape, (0,))
+
+    a = Scalar(1,True)
+    self.assertEqual(a, a[True])
+    self.assertEqual(a[False].shape, (0,))
+
+    a = Vector3([1,2,3])
+    self.assertEqual(a, a[True])
+    self.assertEqual(a[False].shape, (0,))
+
+    a = Vector3([1,2,3],True)
+    self.assertEqual(a, a[True])
+    self.assertEqual(a[False].shape, (0,))
+
+    ############################################################################
     # Using tuples, Vectors, Pairs
     ############################################################################
 

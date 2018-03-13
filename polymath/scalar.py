@@ -9,11 +9,12 @@ import numpy as np
 import sys
 import warnings
 
-from qube    import Qube
-from units   import Units
+from qube  import Qube
+from units import Units
 
 # Maximum argument to exp()
 EXP_CUTOFF = np.log(sys.float_info.max)
+TWOPI = np.pi * 2.
 
 class Scalar(Qube):
     """A PolyMath subclass involving dimensionless scalars."""
@@ -410,7 +411,8 @@ class Scalar(Qube):
         x = Scalar.as_scalar(arg)
         Units.require_compatible(y.units, x.units)
 
-        obj = Scalar(np.arctan2(y.values, x.values), x.mask | y.mask)
+        obj = Scalar(np.arctan2(y.values, x.values),
+                     x.mask | y.mask)
 
         if recursive and (x.derivs or y.derivs):
             x_wod = x.without_derivs()
@@ -545,14 +547,76 @@ class Scalar(Qube):
 
         return obj
 
-    def sign(self):
+    def sign(self, zeros=True):
         """Return the sign of each value as +1, -1 or 0.
 
-        If this object is read-only, the returned object will also be read-only.
+        If zeros is False, then only values of +1 and -1 will be returned;
+        sign(0) = +1 instead of 0.
         """
 
-        return Scalar(np.sign(self.values), units=False, derivs={},
-                      example=self)
+        result = Scalar(np.sign(self.values), units=False, derivs={},
+                                              example=self)
+
+        if not zeros:
+            result[result == 0] = 1
+
+        return result
+
+    @staticmethod
+    def solve_quadratic(a, b, c, recursive=True, include_antimask=False):
+        """Return a tuple containing the two results of a quadratic equation as
+        Scalars. Duplicates and complex values are masked.
+
+        The formula solved is:
+            a * x**2 + b * x + c = 0
+
+        The solution is implemented to provide maximal precision.
+
+        If include_mask is True, a Boolean is also returned containing True
+        where the solution exists (because the discriminant is nonnegative).
+        """
+
+        a          = Scalar.as_scalar(a, recursive=recursive)
+        neg_half_b = Scalar.as_scalar(b, recursive=recursive) * (-0.5)
+        c          = Scalar.as_scalar(c, recursive=recursive)
+
+        discr = neg_half_b*neg_half_b - a*c
+
+        term = neg_half_b + neg_half_b.sign(zeros=False) * discr.sqrt()
+        x0 = c / term
+        x1 = term / a
+
+        a_zeros = (a == 0)
+        if isinstance(a_zeros, (bool, np.bool_)):
+            if a_zeros:
+                x0 = c / (neg_half_b * 2)
+
+        else:
+            if a_zeros.any():
+                linear_x0 = c / (neg_half_b * 2)
+                linear_x0 = linear_x0.broadcast_into_shape(x0.shape)
+                a_zeros   = a_zeros.broadcast_into_shape(x0.shape)
+                x0[a_zeros] = linear_x0[a_zeros]
+
+        if include_antimask:
+            return (x0, x1, Boolean(discr.values >= 0, discr.mask))
+        else:
+            return (x0, x1)
+
+    def eval_quadratic(self, a, b, c, recursive=True):
+        """Evaluate a quadratic function for this Scalar.
+
+        The value returned is:
+            a * self**2 + b * self + c
+        """
+
+        if not recursive:
+            self = self.without_derivs()
+            a = Scalar.as_scalar(a, recursive=False)
+            b = Scalar.as_scalar(b, recursive=False)
+            c = Scalar.as_scalar(c, recursive=False)
+
+        return self * (self * a + b) + c
 
     def max(self, axis=None):
         """Return the maximum of the unmasked values.
@@ -1000,7 +1064,7 @@ class Scalar(Qube):
         """
 
         if self.drank:
-            raise ValueError('denominators are not supported in sum()')
+            raise ValueError('denominators are not supported in mean()')
 
         if self.shape == ():
             result = self
@@ -1067,7 +1131,7 @@ class Scalar(Qube):
         """
 
         if self.drank:
-            raise ValueError('denominators are not supported in sum()')
+            raise ValueError('denominators are not supported in median()')
 
         if self.shape == ():
             result = self
@@ -1151,6 +1215,48 @@ class Scalar(Qube):
 
         return result
 
+    def sort(self, axis=0):
+        """Return the array sorted along the speficied axis from minimum to
+        maximum. Masked values appear at the end.
+
+        If the result is a single scalar, it is returned as a Python value
+        rather than as a Scalar. Denominators are not supported.
+
+        Input:
+            axis        an integer axis.
+        """
+
+        if self.drank:
+            raise ValueError('denominators are not supported in sort()')
+
+        if self.shape == ():
+            result = self
+
+        elif not np.any(self.mask):
+            result = Scalar(np.sort(self.values, axis=axis), mask=False,
+                            example=self)
+
+        else:
+            maxval = self._maxval()
+            new_values = self.values.copy()
+            new_values[self.mask] = maxval
+            new_values = np.sort(new_values, axis=axis)
+
+            # Create the new mask
+            if np.shape(self.mask) == ():
+                new_mask = self.mask
+            else:
+                new_mask = self.mask.copy()
+                new_mask = np.sort(new_mask, axis=axis)
+
+            # Construct the result
+            result = Scalar(new_values, new_mask, derivs={}, example=self)
+
+            # Replace the masked values by the max
+            new_values[new_mask] = result.max()
+
+        return result
+
     ############################################################################
     # Overrides of arithmetic operators
     ############################################################################
@@ -1227,7 +1333,7 @@ class Scalar(Qube):
 
         if np.shape(compare) == ():
             if mask: compare = False
-            return compare
+            return bool(compare)
 
         if np.shape(mask) == ():
             if mask: compare.fill(False)
@@ -1248,7 +1354,7 @@ class Scalar(Qube):
 
         if np.shape(compare) == ():
             if mask: compare = False
-            return compare
+            return bool(compare)
 
         if np.shape(mask) == ():
             if mask: compare.fill(False)
@@ -1271,7 +1377,7 @@ class Scalar(Qube):
         if np.shape(compare) == ():
             if both_masked: compare = True
             if one_masked: compare = False
-            return compare
+            return bool(compare)
 
         if np.shape(both_masked) == ():
             if both_masked: compare.fill(True)
@@ -1296,7 +1402,7 @@ class Scalar(Qube):
         if np.shape(compare) == ():
             if both_masked: compare = True
             if one_masked: compare = False
-            return compare
+            return bool(compare)
 
         if np.shape(both_masked) == ():
             if both_masked: compare.fill(True)
@@ -1309,11 +1415,19 @@ class Scalar(Qube):
 
 # Useful class constants
 
-Scalar.ONE = Scalar(1).as_readonly()
-Scalar.ZERO = Scalar(0).as_readonly()
-Scalar.INF  = Scalar(np.inf).as_readonly()
-Scalar.NEGINF = Scalar(-np.inf).as_readonly()
+Scalar.ZERO   = Scalar(0).as_readonly()
+Scalar.ONE    = Scalar(1).as_readonly()
+Scalar.TWO    = Scalar(2).as_readonly()
+Scalar.THREE  = Scalar(3).as_readonly()
+
+Scalar.PI     = Scalar(np.pi).as_readonly()
+Scalar.TWOPI  = Scalar(2*np.pi).as_readonly()
+Scalar.HALFPI = Scalar(np.pi/2).as_readonly()
+
 Scalar.MASKED = Scalar(1, True).as_readonly()
+
+Scalar.INF    = Scalar(np.inf).as_readonly()
+Scalar.NEGINF = Scalar(-np.inf).as_readonly()
 
 ################################################################################
 # Once the load is complete, we can fill in a reference to the Scalar class

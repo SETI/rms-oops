@@ -13,6 +13,8 @@ from matrix     import Matrix
 from matrix3    import Matrix3
 from quaternion import Quaternion
 
+from polynomial import Polynomial
+
 from units      import Units
 
 ################################################################################

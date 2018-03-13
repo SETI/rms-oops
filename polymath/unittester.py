@@ -72,6 +72,7 @@ if __name__ == '__main__':
     from unit_tests.test_scalar_minimum         import *
     from unit_tests.test_scalar_misc            import *
     from unit_tests.test_scalar_ops             import *
+    from unit_tests.test_scalar_quadratic       import *
     from unit_tests.test_scalar_reciprocal      import *
     from unit_tests.test_scalar_sign            import *
     from unit_tests.test_scalar_sin             import *
