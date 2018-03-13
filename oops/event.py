@@ -1098,6 +1098,22 @@ class Event(object):
 
         result.__shape_ = None
 
+        if result.__xform_to_j2000_ is not None:
+            xform = result.__xform_to_j2000_
+            new_xform = Transform(xform.matrix.shrink(antimask),
+                                  xform.omega.shrink(antimask),
+                                  xform.frame, xform.reference, xform.origin)
+            result.__xform_to_j2000_ = new_xform
+
+        ssb = result.__ssb_
+        if (ssb is not None and ssb is not result and
+                                ssb.__xform_to_j2000_ is not None):
+            xform = ssb.__xform_to_j2000_
+            new_xform = Transform(xform.matrix.shrink(antimask),
+                                  xform.omega.shrink(antimask),
+                                  xform.frame, xform.reference, xform.origin)
+            ssb.__xform_to_j2000_ = new_xform
+
         return result
 
     def unshrink(self, antimask):
@@ -1141,6 +1157,22 @@ class Event(object):
             result.__ssb_._ssb_ = result.__ssb_
 
         result.__shape_ = None
+
+        if result.__xform_to_j2000_ is not None:
+            xform = result.__xform_to_j2000_
+            new_xform = Transform(xform.matrix.unshrink(antimask),
+                                  xform.omega.unshrink(antimask),
+                                  xform.frame, xform.reference, xform.origin)
+            result.__xform_to_j2000_ = new_xform
+
+        ssb = result.__ssb_
+        if (ssb is not None and ssb is not result and
+                                ssb.__xform_to_j2000_ is not None):
+            xform = ssb.__xform_to_j2000_
+            new_xform = Transform(xform.matrix.unshrink(antimask),
+                                  xform.omega.unshrink(antimask),
+                                  xform.frame, xform.reference, xform.origin)
+            ssb.__xform_to_j2000_ = new_xform
 
         return result
 

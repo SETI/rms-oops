@@ -417,7 +417,7 @@ class Surface(object):
 
         # Internal functions to return an entirely masked result
         def fully_masked_results():
-            new_link = link.all_masked()
+            new_link = original_link.all_masked()
 
             scalar = new_link.time.clone()
             vector3 = new_link.pos.clone()
@@ -449,6 +449,8 @@ class Surface(object):
             surf_event.insert_subfield('coord3', scalar)
 
             return (surf_event, new_link)
+
+        original_link = link
 
         # Handle derivatives
         if not derivs:
@@ -493,7 +495,6 @@ class Surface(object):
             return fully_masked_results()
 
         # Shrink the event
-        original_link = link
         link = link.shrink(antimask)
 
         # Define the link event relative to the SSB in J2000
@@ -771,7 +772,7 @@ class Surface(object):
 
         # Internal functions to return an entirely masked result
         def fully_masked_results():
-            new_link = link.all_masked()
+            new_link = original_link.all_masked()
 
             scalar = new_link.time.clone()
             vector3 = new_link.pos.clone()
@@ -800,6 +801,8 @@ class Surface(object):
             surf_event.insert_subfield('vflat', vector3.without_derivs())
 
             return (surf_event, new_link)
+
+        original_link = link
 
         # Handle derivatives
         if not derivs:
@@ -843,7 +846,6 @@ class Surface(object):
             return fully_masked_results()
 
         # Shrink the event
-        original_link = link
         link = link.shrink(antimask)
 
         # Define the link event relative to the SSB in J2000

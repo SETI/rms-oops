@@ -510,20 +510,28 @@ class Backplane(object):
         else:
             return Boolean(np.zeros(self.shape, dtype='bool'))
 
-    def register_backplane(self, key, backplane):
+    def register_backplane(self, key, backplane, expand=True):
         """Insert this backplane into the dictionary.
 
-        If the backplane contains just a single value, it is expanded to the
-        overall shape of the backplane."""
+        If expand is True and the backplane contains just a single value, the
+        backplane is expanded to the overall shape."""
 
-        if isinstance(backplane, (np.ndarray, np.bool_, bool)):
+        if isinstance(backplane, (np.bool_, bool)):
+            backplane = Boolean(bool(backplane))
+
+        elif isinstance(backplane, np.ndarray):
             backplane = Scalar(backplane)
 
         # Under some circumstances a derived backplane can be a scalar
-        if backplane.shape == () and self.shape != ():
-            vals = np.empty(self.shape)
-            vals[...] = backplane.vals
-            backplane = Scalar(vals, backplane.mask)
+        if expand and backplane.shape == () and self.shape != ():
+            if type(backplane) == Boolean:
+                vals = np.empty(self.shape, dtype='bool')
+                vals[...] = backplane.vals
+                backplane = Boolean(vals, backplane.mask)
+            else:
+                vals = np.empty(self.shape, dtype='float')
+                vals[...] = backplane.vals
+                backplane = Scalar(vals, backplane.mask)
 
         # For reference, we add the key as an attribute of each backplane object
         backplane = backplane.without_derivs()
@@ -537,14 +545,7 @@ class Backplane(object):
         Same as register_backplane() but without the expansion of a scalar
         value."""
 
-        if isinstance(backplane, np.ndarray):
-            backplane = Scalar(backplane)
-            backplane.key = backplane
-        elif isinstance(backplane, (Scalar,Boolean)):
-            backplane = backplane.without_derivs()
-            backplane.key = backplane
-
-        self.backplanes[key] = backplane
+        self.register_backplane(key, backplane, expand=False)
 
     ############################################################################
     # Sky geometry, surface intercept versions
@@ -1006,11 +1007,11 @@ class Backplane(object):
             if event.surface.COORDINATE_TYPE == 'polar':
 
                 # flip is True wherever incidence angle has to be changed
-                flip = (incidence > constants.HALFPI)
+                flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
                 self.register_backplane(('ring_flip', event_key), flip)
 
                 # Now flip incidence angles where necessary
-                incidence = constants.PI * flip + (1. - 2.*flip) * incidence
+                incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
 
             self.register_backplane(key, incidence)
 
@@ -1037,7 +1038,7 @@ class Backplane(object):
                 flip = self.backplanes[('ring_flip', event_key)]
 
                 # Flip emission angles where necessary
-                emission = constants.PI * flip + (1. - 2.*flip) * emission
+                emission = Scalar.PI * flip + (1. - 2.*flip) * emission
 
             self.register_backplane(key, emission)
 
@@ -1068,7 +1069,7 @@ class Backplane(object):
         event_key = self.standardize_event_key(event_key)
         key = ('scattering_angle', event_key)
         if key not in self.backplanes:
-            self.register_backplane(key, constants.PI -
+            self.register_backplane(key, Scalar.PI -
                                          self.phase_angle(event_key))
 
         return self.backplanes[key]
@@ -1143,19 +1144,19 @@ class Backplane(object):
             # Sign on event.arr is negative because photon is incoming
             latitude = (event.neg_arr_ap.to_scalar(2) /
                         event.arr_ap.norm()).arcsin()
-            incidence = constants.HALFPI - latitude
+            incidence = Scalar.HALFPI - latitude
 
             # Ring incidence angles are always 0-90 degrees
             if event.surface.COORDINATE_TYPE == 'polar':
 
                 # The flip is True wherever incidence angle has to be changed
-                flip = (incidence > constants.HALFPI)
+                flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
                 self.register_gridless_backplane(('ring_center_flip',
                                                   event_key), flip)
 
                 # Now flip incidence angles where necessary
-                if flip.sum() > 0:
-                    incidence = constants.PI * flip + (1. - 2.*flip) * incidence
+                if flip.any():
+                    incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
 
             self.register_gridless_backplane(key, incidence)
 
@@ -1177,7 +1178,7 @@ class Backplane(object):
 
             latitude = (event.dep_ap.to_scalar(2) /
                         event.dep_ap.norm()).arcsin()
-            emission = constants.HALFPI - latitude
+            emission = Scalar.HALFPI - latitude
 
             # Ring emission angles are always measured from the lit side normal
             if event.surface.COORDINATE_TYPE == 'polar':
@@ -1187,8 +1188,8 @@ class Backplane(object):
                 flip = self.backplanes[('ring_center_flip', event_key)]
 
                 # Flip emission angles where necessary
-                if flip.sum() > 0:
-                    emission = constants.PI * flip + (1. - 2.*flip) * emission
+                if flip.any():
+                    emission = Scalar.PI * flip + (1. - 2.*flip) * emission
 
             self.register_gridless_backplane(key, emission)
 
@@ -1219,7 +1220,7 @@ class Backplane(object):
         event_key = self.standardize_event_key(event_key)
         key = ('center_scattering_angle', event_key)
         if key not in self.backplanes:
-            angle = constants.PI - self.center_phase_angle(event_key)
+            angle = Scalar.PI - self.center_phase_angle(event_key)
             self.register_gridless_backplane(key, angle)
 
         return self.backplanes[key]
@@ -1297,7 +1298,7 @@ class Backplane(object):
                 ref_lon = self._sub_observer_longitude(event_key)
 
             if reference in ('sha', 'oha'):
-                ref_lon = ref_lon - constants.PI
+                ref_lon = ref_lon - Scalar.PI
 
             lon = lon - ref_lon
 
@@ -1308,7 +1309,7 @@ class Backplane(object):
         if minimum == 0:
             lon = lon % constants.TWOPI
         else:
-            lon = (lon + constants.PI) % constants.TWOPI - constants.PI
+            lon = (lon + constants.PI) % constants.TWOPI - Scalar.PI
 
         self.register_backplane(key, lon)
         return self.backplanes[key]
@@ -1549,7 +1550,7 @@ class Backplane(object):
                 ref_lon = self._sub_observer_longitude(event_key)
 
             if reference in ('sha', 'oha'):
-                ref_lon = ref_lon - constants.PI
+                ref_lon = ref_lon - Scalar.PI
 
             lon = lon - ref_lon
 
@@ -1558,9 +1559,9 @@ class Backplane(object):
 
         # Re-define the minimum
         if minimum == 0:
-            lon = lon % constants.TWOPI
+            lon = lon % Scalar.TWOPI
         else:
-            lon = (lon + constants.PI) % constants.TWOPI - constants.PI
+            lon = (lon + Scalar.PI) % constants.TWOPI - Scalar.PI
 
         return lon
 
@@ -1663,7 +1664,7 @@ class Backplane(object):
         key = ('pole_position_angle', event_key)
         if key not in self.backplanes:
             self.register_gridless_backplane(key,
-                            constants.TWOPI - self.pole_clock_angle(event_key))
+                            Scalar.TWOPI - self.pole_clock_angle(event_key))
 
         return self.backplanes[key]
 
@@ -2057,7 +2058,7 @@ class Backplane(object):
             event = self.get_surface_event_with_arr(event_key)
             dir = -event.apparent_arr()
 
-        el = constants.HALFPI - event.perp.sep(dir)
+        el = Scalar.HALFPI - event.perp.sep(dir)
         self.register_backplane(key0, el)
 
         if not signed:
@@ -2135,7 +2136,7 @@ class Backplane(object):
             return self.backplanes[key_prograde]
 
         # Otherwise, flip the incidence angles and return a new backplane
-        incidence = constants.PI - self.backplanes[key_prograde]
+        incidence = Scalar.PI - self.backplanes[key_prograde]
         self.register_backplane(key, incidence)
         return self.backplanes[key]
 
@@ -2189,7 +2190,7 @@ class Backplane(object):
             return self.backplanes[key_prograde]
 
         # Otherwise, flip the emission angles and return a new backplane
-        emission = constants.PI - self.backplanes[key_prograde]
+        emission = Scalar.PI - self.backplanes[key_prograde]
         self.register_backplane(key, emission)
         return self.backplanes[key]
 
@@ -2244,7 +2245,7 @@ class Backplane(object):
             elif reference == 'oha':
                 ref_lon = self._sub_observer_longitude(event_key) - np.pi
 
-            lon = (self.backplanes[default_key] - ref_lon) % constants.TWOPI
+            lon = (self.backplanes[default_key] - ref_lon) % Scalar.TWOPI
             self.register_gridless_backplane(key, lon)
 
         return self.backplanes[key]
@@ -2292,7 +2293,7 @@ class Backplane(object):
             elif reference == 'oha':
                 ref_lon = self._sub_observer_longitude(event_key) - np.pi
 
-            lon = (self.backplanes[default_key] - ref_lon) % constants.TWOPI
+            lon = (self.backplanes[default_key] - ref_lon) % Scalar.TWOPI
 
             self.register_gridless_backplane(key, lon)
 
@@ -2337,7 +2338,7 @@ class Backplane(object):
             # Sign on event.arr_ap is negative because photon is incoming
             latitude = (event.neg_arr_ap.to_scalar(2) /
                         event.arr_ap.norm()).arcsin()
-            incidence = constants.HALFPI - latitude
+            incidence = Scalar.HALFPI - latitude
 
             self.register_gridless_backplane(key_prograde, incidence)
 
@@ -2352,7 +2353,7 @@ class Backplane(object):
             return incidence
 
         # Otherwise, flip the incidence angle and return a new backplane
-        incidence = constants.PI - incidence
+        incidence = Scalar.PI - incidence
         self.register_gridless_backplane(key, incidence)
 
         return incidence
@@ -2397,7 +2398,7 @@ class Backplane(object):
 
             latitude = (event.dep_ap.to_scalar(2) /
                         event.dep_ap.norm()).arcsin()
-            emission = constants.HALFPI - latitude
+            emission = Scalar.HALFPI - latitude
 
             self.register_gridless_backplane(key_prograde, emission)
 
@@ -2412,7 +2413,7 @@ class Backplane(object):
             return emission
 
         # Otherwise, flip the emission angle and return a new backplane
-        emission = constants.PI - emission
+        emission = Scalar.PI - emission
         self.register_gridless_backplane(key, emission)
 
         return emission
@@ -2605,11 +2606,11 @@ class Backplane(object):
         elif reference == 'sun':
             ref_lon = self._sub_solar_ansa_longitude(event_key)
         elif reference == 'sha':
-            ref_lon = self._sub_solar_ansa_longitude(event_key) - constants.PI
+            ref_lon = self._sub_solar_ansa_longitude(event_key) - Scalar.PI
         elif reference == 'obs':
             ref_lon = self._sub_observer_ansa_longitude(event_key)
         elif reference == 'oha':
-            ref_lon = self._sub_observer_ansa_longitude(event_key) -constants.PI
+            ref_lon = self._sub_observer_ansa_longitude(event_key) - Scalar.PI
 
         lon = (self.backplanes[key_node] - ref_lon) % constants.TWOPI
         self.register_backplane(key, lon)
