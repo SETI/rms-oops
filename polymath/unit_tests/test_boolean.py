@@ -203,6 +203,14 @@ class Test_Boolean(unittest.TestCase):
     # ~ operator (not)
     ############################################################################
 
+    a = Boolean((False, False, True, True), (False, True, True, False))
+    b = ~a
+
+    self.assertEqual(b[0], True)
+    self.assertEqual(b[1], Boolean.MASKED)
+    self.assertEqual(b[2], Boolean.MASKED)
+    self.assertEqual(b[3], False)
+
     N = 100
     a = Boolean(np.random.randn(N) < 0.)
 
@@ -217,7 +225,22 @@ class Test_Boolean(unittest.TestCase):
 
     ############################################################################
     # & operator (and)
+    #
+    #           False       Masked      True
+    # False     False       False       False
+    # Masked    False       Masked      Masked
+    # True      False       Masked      True
     ############################################################################
+
+    a = Boolean((False, False, True, True), (False, True, True, False))
+    b = a[:,np.newaxis]
+    ab = a & b
+
+    self.assertEqual(ab[0],   False)
+    self.assertEqual(ab[:,0], False)
+    self.assertEqual(ab[3,3], True)
+    self.assertEqual(ab[1:,1:2], Boolean.MASKED)
+    self.assertEqual(ab[1:2,1:], Boolean.MASKED)
 
     N = 100
     a = Boolean(np.random.randn(N) < 0.)
@@ -255,7 +278,23 @@ class Test_Boolean(unittest.TestCase):
 
     ############################################################################
     # | operator (or)
+    #
+    #               False       Masked(F)   Masked(T)   True
+    # False         False       Masked      Masked      True
+    # Masked(F)     Masked      Masked      Masked      True
+    # Masked(T)     Masked      Masked      Masked      True
+    # True          True        True        True        True
     ############################################################################
+
+    a = Boolean((False, False, True, True), (False, True, True, False))
+    b = a[:,np.newaxis]
+    ab = a | b
+
+    self.assertEqual(ab[0,0], False)
+    self.assertEqual(ab[:,3], True)
+    self.assertEqual(ab[3,:], True)
+    self.assertEqual(ab[:3,1:2], Boolean.MASKED)
+    self.assertEqual(ab[1:2,:3], Boolean.MASKED)
 
     N = 100
     a = Boolean(np.random.randn(N) < 0.)
@@ -287,7 +326,24 @@ class Test_Boolean(unittest.TestCase):
 
     ############################################################################
     # ^ operator (xor)
+    #
+    #               False       Masked(F)   Masked(T)   True
+    # False         False       Masked      Masked      True
+    # Masked(F)     Masked      Masked      Masked      Masked
+    # Masked(T)     Masked      Masked      Masked      Masked
+    # True          True        Masked      Masked      False
     ############################################################################
+
+    a = Boolean((False, False, True, True), (False, True, True, False))
+    b = a[:,np.newaxis]
+    ab = a ^ b
+
+    self.assertEqual(ab[0,0], False)
+    self.assertEqual(ab[3,3], False)
+    self.assertEqual(ab[0,3], True)
+    self.assertEqual(ab[3,0], True)
+    self.assertEqual(ab[:,1:2], Boolean.MASKED)
+    self.assertEqual(ab[1:2,:], Boolean.MASKED)
 
     N = 100
     a = Boolean(np.random.randn(N) < 0.)
@@ -322,6 +378,18 @@ class Test_Boolean(unittest.TestCase):
     # &= operator
     ############################################################################
 
+    a = Boolean((False, False, True, True), (False, True, True, False))
+    b = a[:,np.newaxis]
+
+    ab = Boolean(4*[[False, False, True, True]], 4*[[False, True, True, False]])
+    ab &= b
+
+    self.assertEqual(ab[0],   False)
+    self.assertEqual(ab[:,0], False)
+    self.assertEqual(ab[3,3], True)
+    self.assertEqual(ab[1:,1:2], Boolean.MASKED)
+    self.assertEqual(ab[1:2,1:], Boolean.MASKED)
+
     N = 100
     a = Boolean(np.random.randn(4,N) < 0.)
     b = Boolean(np.random.randn(N) < 0.5)
@@ -350,6 +418,18 @@ class Test_Boolean(unittest.TestCase):
     # |= operator
     ############################################################################
 
+    a = Boolean((False, False, True, True), (False, True, True, False))
+    b = a[:,np.newaxis]
+
+    ab = Boolean(4*[[False, False, True, True]], 4*[[False, True, True, False]])
+    ab |= b
+
+    self.assertEqual(ab[0,0], False)
+    self.assertEqual(ab[:,3], True)
+    self.assertEqual(ab[3,:], True)
+    self.assertEqual(ab[:3,1:2], Boolean.MASKED)
+    self.assertEqual(ab[1:2,:3], Boolean.MASKED)
+
     N = 100
     a = Boolean(np.random.randn(4,N) < 0.)
     b = Boolean(np.random.randn(N) < 0.5)
@@ -377,6 +457,19 @@ class Test_Boolean(unittest.TestCase):
     ############################################################################
     # ^= operator
     ############################################################################
+
+    a = Boolean((False, False, True, True), (False, True, True, False))
+    b = a[:,np.newaxis]
+
+    ab = Boolean(4*[[False, False, True, True]], 4*[[False, True, True, False]])
+    ab ^= b
+
+    self.assertEqual(ab[0,0], False)
+    self.assertEqual(ab[3,3], False)
+    self.assertEqual(ab[0,3], True)
+    self.assertEqual(ab[3,0], True)
+    self.assertEqual(ab[:,1:2], Boolean.MASKED)
+    self.assertEqual(ab[1:2,:], Boolean.MASKED)
 
     N = 100
     a = Boolean(np.random.randn(4,N) < 0.)
@@ -535,4 +628,5 @@ class Test_Boolean(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
 ################################################################################

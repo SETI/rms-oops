@@ -621,6 +621,7 @@ class Scalar(Qube):
     def max(self, axis=None):
         """Return the maximum of the unmasked values.
 
+        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -683,18 +684,20 @@ class Scalar(Qube):
             result = Scalar(new_values, new_mask, example=self)
 
         # Convert result to a Python constant if necessary
-        if result.shape == () and not result.mask and \
-           result.units in (None, Units.UNITLESS):
-                if result.is_float():
-                    return float(result.values)
-                else:
-                    return int(result.values)
+        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
+                                         not result.mask and
+                                         result.units in (None,Units.UNITLESS)):
+            if result.is_float():
+                return float(result.values)
+            else:
+                return int(result.values)
 
         return result
 
     def min(self, axis=None):
         """Return the minimum of the unmasked values.
 
+        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -756,12 +759,13 @@ class Scalar(Qube):
             result = Scalar(new_values, new_mask, example=self)
 
         # Convert result to a Python constant if necessary
-        if result.shape == () and not result.mask and \
-           result.units in (None, Units.UNITLESS):
-                if result.is_float():
-                    return float(result.values)
-                else:
-                    return int(result.values)
+        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
+                                         not result.mask and
+                                         result.units in (None,Units.UNITLESS)):
+            if result.is_float():
+                return float(result.values)
+            else:
+                return int(result.values)
 
         return result
 
@@ -988,6 +992,7 @@ class Scalar(Qube):
     def sum(self, axis=None):
         """Return the sum of the unmasked values.
 
+        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -1041,18 +1046,20 @@ class Scalar(Qube):
             result = Scalar(new_values, new_mask, example=self)
 
         # Convert result to a Python constant if necessary
-        if result.shape == () and not result.mask and \
-           result.units in (None, Units.UNITLESS):
-                if result.is_float():
-                    return float(result.values)
-                else:
-                    return int(result.values)
+        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
+                                         not result.mask and
+                                         result.units in (None,Units.UNITLESS)):
+            if result.is_float():
+                return float(result.values)
+            else:
+                return int(result.values)
 
         return result
 
     def mean(self, axis=None):
         """Return the mean of the unmasked values.
 
+        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -1111,15 +1118,17 @@ class Scalar(Qube):
             result = Scalar(new_values, new_mask, example=self)
 
         # Convert result to a Python constant if necessary
-        if result.shape == () and not result.mask and \
-           result.units in (None, Units.UNITLESS):
-                return float(result.values)
+        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
+                                         not result.mask and
+                                         result.units in (None,Units.UNITLESS)):
+            return float(result.values)
 
         return result
 
     def median(self, axis=None):
         """Return the median of the unmasked values.
 
+        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -1209,18 +1218,16 @@ class Scalar(Qube):
             result = Scalar(new_values, new_mask, example=self)
 
         # Convert result to a Python constant if necessary
-        if result.shape == () and not result.mask and \
-           result.units in (None, Units.UNITLESS):
-                return float(result.values)
+        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
+                                         not result.mask and
+                                         result.units in (None,Units.UNITLESS)):
+            return float(result.values)
 
         return result
 
     def sort(self, axis=0):
         """Return the array sorted along the speficied axis from minimum to
         maximum. Masked values appear at the end.
-
-        If the result is a single scalar, it is returned as a Python value
-        rather than as a Scalar. Denominators are not supported.
 
         Input:
             axis        an integer axis.

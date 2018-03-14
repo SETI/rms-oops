@@ -251,52 +251,49 @@ class Boolean(Scalar):
     # (~) operator
     def __invert__(self):
 
-        return Boolean(~self.values)
+        return Boolean(~self.values, self.mask)
 
     # (&) operator
     def __and__(self, arg):
         if Qube.is_empty(arg): return arg
+        arg = Boolean.as_boolean(arg)
 
-        return Boolean(self.values & Boolean.as_boolean(arg).values)
+        #           False       Masked      True
+        # False     False       False       False
+        # Masked    False       Masked      Masked
+        # True      False       Masked      True
+
+        is_true = self.values & self.antimask & arg.values & arg.antimask
+        is_not_false = (self.values | self.mask) & (arg.values | arg.mask)
+
+        return Boolean(is_true, is_not_false & np.logical_not(is_true))
 
     # (|) operator
     def __or__(self, arg):
         if Qube.is_empty(arg): return arg
+        arg = Boolean.as_boolean(arg)
 
-        return Boolean(self.values | Boolean.as_boolean(arg).values)
+        #           False       Masked      True
+        # False     False       Masked      True
+        # Masked    Masked      Masked      True
+        # True      True        True        True
+
+        is_true = (self.values & self.antimask) | (arg.values & arg.antimask)
+        is_not_false = (self.values + self.mask + arg.values + arg.mask) > 0
+
+        return Boolean(is_true, is_not_false & np.logical_not(is_true))
 
     # (^) operator
     def __xor__(self, arg):
         if Qube.is_empty(arg): return arg
+        arg = Boolean.as_boolean(arg)
 
-        return Boolean(self.values ^ Boolean.as_boolean(arg).values)
+        #           False       Masked      True
+        # False     False       Masked      True
+        # Masked    Masked      Masked      Masked
+        # True      True        Masked      False
 
-    # (&=) operator
-    def __iand__(self, arg):
-        if Qube.is_empty(arg): return arg
-
-        self.require_writable()
-        self._Qube__values_ &= Boolean.as_boolean(arg).values
-
-        return self
-
-    # (|=) operator
-    def __ior__(self, arg):
-        if Qube.is_empty(arg): return arg
-
-        self.require_writable()
-        self._Qube__values_ |= Boolean.as_boolean(arg).values
-
-        return self
-
-    # (^=) operator
-    def __ixor__(self, arg):
-        if Qube.is_empty(arg): return arg
-
-        self.require_writable()
-        self._Qube__values_ ^= Boolean.as_boolean(arg).values
-
-        return self
+        return Boolean(self.values ^ arg.values, self.mask | arg.mask)
 
 # Useful class constants
 

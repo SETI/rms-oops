@@ -10,6 +10,12 @@ from polymath import Qube, Scalar, Units
 
 class Test_Scalar_sum(unittest.TestCase):
 
+  def setUp(self):
+    Qube.PREFER_PYTHON_TYPES = True
+
+  def tearDown(self):
+    Qube.PREFER_PYTHON_TYPES = False
+
   def runTest(self):
 
     # Individual values
@@ -20,6 +26,7 @@ class Test_Scalar_sum(unittest.TestCase):
     self.assertEqual(type(Scalar(4).sum()), int)
 
     self.assertTrue(Scalar(4, mask=True).sum().mask)
+    self.assertEqual(type(Scalar(4, mask=True).sum()), Scalar)
     self.assertEqual(type(Scalar(4, mask=True).sum()), Scalar)
 
     # Multiple values

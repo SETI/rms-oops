@@ -107,6 +107,12 @@ class Qube(object):
     # from executing the ndarray operation instead of the polymath operation
     __array_priority__ = 1
 
+    # Set this global attribute to True to restore a behavior removed on
+    # 3/13/18. It allowed certain functions to return a Python value (float,
+    # int, or bool) if the result had shape (), was unmasked, and had no units.
+    # Currently, these functions all return Scalar or Boolean types instead.
+    PREFER_PYTHON_TYPES = False
+
     # Default class constants, to be overridden as needed by subclasses...
     NRANK = None        # the number of numerator axes; None to leave this
                         # unconstrained.
@@ -3787,17 +3793,67 @@ class Qube(object):
         return bool(np.all(self.as_mask_where_nonzero()))
 
     ############################################################################
+    # Boolean in-place operators must be defined here because they require
+    # access to internal attributes
+    ############################################################################
+
+    # (&=) operator
+    def __iand__(self, arg):
+        if Qube.is_empty(arg): return arg
+        self.require_writable()
+
+        result = self & arg
+        if result.shape == ():
+            self.__values_ = result.__values_
+        else:
+            self.__values_[...] = result.__values_
+
+        self.__mask_ = result.__mask_
+
+        return self
+
+    # (|=) operator
+    def __ior__(self, arg):
+        if Qube.is_empty(arg): return arg
+        self.require_writable()
+
+        result = self | arg
+        if result.shape == ():
+            self.__values_ = result.__values_
+        else:
+            self.values[...] = result.__values_
+
+        self.__mask_ = result.__mask_
+
+        return self
+
+    # (^=) operator
+    def __ixor__(self, arg):
+        if Qube.is_empty(arg): return arg
+        self.require_writable()
+
+        if not isinstance(self, Qube.BOOLEAN_CLASS):
+            Qube.raise_unsupported_op('^=', self)
+
+        arg = Qube.BOOLEAN_CLASS.as_boolean(arg)
+        self.__values_ ^= arg.__values_
+        self.__mask_ |= arg.__mask_
+
+        return self
+
+    ############################################################################
     # Any and all
     ############################################################################
 
     def all(self, axis=None):
         """Return True if and only if all the matching items are nonzero.
 
+        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
         If the result is a single scalar, it is returned as a Python bool value;
         otherwise it is returned as a Boolean.
 
         Input:
-            axis        an integer axis or a tuple of axes. The all operatation
+            axis        an integer axis or a tuple of axes. The all operation
                         is performed across these axes, leaving any remaining
                         axes in the returned value. If None (the default), then
                         the all operation is performed across all axes if the
@@ -3857,7 +3913,8 @@ class Qube(object):
             result = Qube.BOOLEAN_CLASS(new_values, new_mask)
 
         # Convert result to a Python bool if necessary
-        if result.shape == () and not result.__mask_:
+        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
+                                         not result.__mask_):
             if result:
                 return True
             else:
@@ -3868,11 +3925,12 @@ class Qube(object):
     def any(self, axis=None):
         """Return True if any of the matching items are nonzero.
 
-        If the result is a single scalar, it is returned as a Python bool value
-        rather than as a Boolean.
+        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
+        If the result is a single scalar, it is returned as a Python bool value;
+        otherwise it is returned as a Boolean.
 
         Input:
-            axis        an integer axis or a tuple of axes. The any operatation
+            axis        an integer axis or a tuple of axes. The any operation
                         is performed across these axes, leaving any remaining
                         axes in the returned value. If None (the default), then
                         the any operation is performed across all axes if the
@@ -3931,7 +3989,8 @@ class Qube(object):
             result = Qube.BOOLEAN_CLASS(new_values, new_mask)
 
         # Convert result to a Python bool if necessary
-        if result.shape == () and not result.__mask_:
+        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
+                                         not result.__mask_):
             if result:
                 return True
             else:

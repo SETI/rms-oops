@@ -482,6 +482,10 @@ class Frame(object):
 
         if tmin == Scalar.MASKED: return self
 
+        if isinstance(tmin, Scalar):
+            tmin = tmin.values
+            tmax = tmax.values
+
         # If QuickFrames already exists...
         if not hasattr(self, 'quickframes'):
             self.quickframes = []

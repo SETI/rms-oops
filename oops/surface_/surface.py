@@ -521,8 +521,8 @@ class Surface(object):
             surface_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = (surface_time - link_time).min() - limit
-        lt_max = (surface_time - link_time).max() + limit
+        lt_min = (surface_time - link_time).min().values - limit
+        lt_max = (surface_time - link_time).max().values + limit
 
         # Iterate. Convergence is rapid because all speeds are non-relativistic
         max_dlt = np.inf
@@ -874,8 +874,8 @@ class Surface(object):
             surface_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = (surface_time - link_time).min() - limit
-        lt_max = (surface_time - link_time).max() + limit
+        lt_min = (surface_time - link_time).min().values - limit
+        lt_max = (surface_time - link_time).max().values + limit
 
         # For a non-virtual surface, pos_wrt_origin is fixed
         if not self.IS_VIRTUAL:
@@ -1157,8 +1157,8 @@ class Surface(object):
 #             surface_time = link_time + lt
 # 
 #         # Set light travel time limits to avoid a diverging solution
-#         lt_min = (surface_time - link_time).min() - limit
-#         lt_max = (surface_time - link_time).max() + limit
+#         lt_min = (surface_time - link_time).min().values - limit
+#         lt_max = (surface_time - link_time).max().values + limit
 # 
 #         # Iterate. Convergence is rapid because all speeds are non-relativistic
 #         max_dlt = np.inf

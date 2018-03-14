@@ -10,6 +10,12 @@ from polymath import Qube, Scalar, Vector3, Boolean, Units
 
 class Test_Qube_all(unittest.TestCase):
 
+  def setUp(self):
+    Qube.PREFER_PYTHON_TYPES = True
+
+  def tearDown(self):
+    Qube.PREFER_PYTHON_TYPES = False
+
   def runTest(self):
 
     # Individual values

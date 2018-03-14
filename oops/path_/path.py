@@ -644,8 +644,8 @@ class Path(object):
             path_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = (path_time - link_time).min() - limit
-        lt_max = (path_time - link_time).max() + limit
+        lt_min = (path_time - link_time).min().values - limit
+        lt_max = (path_time - link_time).max().values + limit
 
         # Broadcast the path_time to encompass the shape of the path, if any
         shape = Qube.broadcasted_shape(path_time, link_shape)
@@ -864,6 +864,10 @@ class Path(object):
             count = np.size(time.values)
 
         if tmin == Scalar.MASKED: return self
+
+        if isinstance(tmin, Scalar):
+            tmin = tmin.values
+            tmax = tmax.values
 
         # If QuickPaths already exist...
         if not hasattr(self, 'quickpaths'):
