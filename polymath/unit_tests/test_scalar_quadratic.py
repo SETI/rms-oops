@@ -87,7 +87,7 @@ class Test_Scalar_quadratic(unittest.TestCase):
     for k in range(2):
         dx = 0.5 * (Scalar.solve_quadratic(a + da, b, c)[k] -
                     Scalar.solve_quadratic(a - da, b, c)[k])
-        self.assertTrue(abs(dx * a.d_dt - x[k].d_dt * da).median() < 1.e-14)
+        self.assertTrue(abs(dx * a.d_dt - x[k].d_dt * da).median() < 3.e-14)
 
     # Derivatives wrt b
     a = Scalar(np.random.randn(8))
@@ -109,7 +109,7 @@ class Test_Scalar_quadratic(unittest.TestCase):
     for k in range(2):
         dx = 0.5 * (Scalar.solve_quadratic(a, b+db, c)[k] -
                     Scalar.solve_quadratic(a, b-db, c)[k])
-        self.assertTrue(abs(dx * b.d_dt - x[k].d_dt * db).median() < 1.e-14)
+        self.assertTrue(abs(dx * b.d_dt - x[k].d_dt * db).median() < 3.e-14)
 
     # Derivatives wrt c
     a = Scalar(np.random.randn(8))

@@ -7,13 +7,13 @@
 from __future__ import division
 import numpy as np
 
-from qube    import Qube
-from scalar  import Scalar
-from vector  import Vector
-from vector3 import Vector3
-from matrix  import Matrix
-from matrix3 import Matrix3
-from units   import Units
+from .qube    import Qube
+from .scalar  import Scalar
+from .vector  import Vector
+from .vector3 import Vector3
+from .matrix  import Matrix
+from .matrix3 import Matrix3
+from .units   import Units
 
 class Quaternion(Vector):
     """A PolyMath subclass containing quaternions and supporting conversions
@@ -48,7 +48,7 @@ class Quaternion(Vector):
             if arg.numer == (3,):
                 return from_parts(0., arg, recursive)
 
-            arg = Quaternion(arg, example=arg)
+            arg = Quaternion(arg, arg.mask, example=arg)
             if recursive: return arg
             return arg.without_derivs()
 
@@ -101,10 +101,10 @@ class Quaternion(Vector):
         if recursive:
             new_derivs = {}
 
-            for (key, deriv) in scalar.derivs.iteritems():
+            for (key, deriv) in scalar.derivs.items():
                 new_derivs[key] = Quaternion.from_parts(deriv, None, False)
 
-            for (key, deriv) in vector.derivs.iteritems():
+            for (key, deriv) in vector.derivs.items():
                 term = Quaternion.from_parts(None, deriv, False)
                 if key in new_derivs:
                     new_derivs[key] = new_derivs[key] + term
@@ -164,10 +164,10 @@ class Quaternion(Vector):
         if self.drank > 0:
             new_values = np.rollaxis(new_values, -1, -self.drank-1)
 
-        obj = Quaternion(new_values, example=self)
+        obj = Quaternion(new_values, self.mask, example=self)
 
         if recursive and self.derivs:
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 self.insert_deriv(key, deriv.conj(recursive=False))
 
         return obj
@@ -304,7 +304,7 @@ class Quaternion(Vector):
             dm_dp = dm_dq.chain(Quaternion(dq_dp, drank=1)) * (-np.sqrt(2) /
                                                                pnorm**3)
 
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, dm_dp.chain(deriv))
 
         if partials:
@@ -452,7 +452,7 @@ class Quaternion(Vector):
 
             dq_dQ = Quaternion(new_values, matrix.mask, drank=2)
 
-            for (key, deriv) in matrix.derivs.iteritems():
+            for (key, deriv) in matrix.derivs.items():
                 obj.insert_deriv(key, dq_dQ.chain(deriv))
 
         return obj
@@ -501,12 +501,7 @@ class Quaternion(Vector):
 
         # Construct object
         obj = Qube.__new__(type(self))
-        obj.__init__(new_values,
-                     a.mask | b.mask,
-                     units = None,
-                     derivs = {},
-                     drank = a.drank + b.drank,
-                     example = self)
+        obj.__init__(new_values, a.mask | b.mask, drank = a.drank + b.drank)
 
         # Construct the derivatives if necessary
         if recursive:
@@ -514,12 +509,12 @@ class Quaternion(Vector):
 
             if a.derivs:
                 b_wod = b.without_derivs()
-                for (key, a_deriv) in a.derivs.iteritems():
+                for (key, a_deriv) in a.derivs.items():
                     new_derivs[key] = a_deriv * b_wod
 
             if b.derivs:
                 a_wod = a.without_derivs()
-                for (key, b_deriv) in b.derivs.iteritems():
+                for (key, b_deriv) in b.derivs.items():
                     if key in new_derivs:
                         new_derivs[key] += a_wod * b_deriv
                     else:

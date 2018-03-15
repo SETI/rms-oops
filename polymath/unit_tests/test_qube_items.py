@@ -50,8 +50,8 @@ class Test_Qube_items(unittest.TestCase):
     b = a.transpose_numer(0,1,recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
 
     b = a.transpose_numer(0,1,recursive=True)
     self.assertTrue(np.all(a.d_dt.values[:,:,0] == b.d_dt.values[:,0]))
@@ -61,10 +61,10 @@ class Test_Qube_items(unittest.TestCase):
     a.d_dt.values[1,1,2] = 42.
     self.assertTrue(np.all(b.d_dt.values[1,2,1] == 42))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
-    self.assertEquals(a.d_dt.readonly, False)
-    self.assertEquals(b.d_dt.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
+    self.assertEqual(a.d_dt.readonly, False)
+    self.assertEqual(b.d_dt.readonly, False)
 
     ####
     a = Matrix(np.random.randn(5,4,3))
@@ -74,10 +74,10 @@ class Test_Qube_items(unittest.TestCase):
 
     b = a.transpose_numer(0,1,recursive=True)
 
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
-    self.assertEquals(a.d_dt.readonly, True)
-    self.assertEquals(b.d_dt.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
+    self.assertEqual(a.d_dt.readonly, True)
+    self.assertEqual(b.d_dt.readonly, True)
 
     ############################################################################
     # reshape_numer(self, shape, classes=(), recursive=True)
@@ -113,8 +113,8 @@ class Test_Qube_items(unittest.TestCase):
     b = a.reshape_numer((6,2),recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
 
     b = a.reshape_numer((6,2),recursive=True)
     self.assertTrue(np.all(a.d_dt.values[:,0,0] == b.d_dt.values[:,0,0]))
@@ -133,10 +133,10 @@ class Test_Qube_items(unittest.TestCase):
     a.d_dt.values[1,3,2] = 42.
     self.assertTrue(np.all(b.d_dt.values[1,5,1] == 42))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
-    self.assertEquals(a.d_dt.readonly, False)
-    self.assertEquals(b.d_dt.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
+    self.assertEqual(a.d_dt.readonly, False)
+    self.assertEqual(b.d_dt.readonly, False)
 
     ####
     a = Matrix(np.random.randn(5,4,3)).as_readonly()
@@ -145,14 +145,14 @@ class Test_Qube_items(unittest.TestCase):
 
     b = a.reshape_numer((6,2),recursive=True)
 
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
-    self.assertEquals(a.d_dt.readonly, True)
-    self.assertEquals(b.d_dt.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
+    self.assertEqual(a.d_dt.readonly, True)
+    self.assertEqual(b.d_dt.readonly, True)
 
     a.as_readonly()
-    self.assertEquals(a.d_dt.readonly, True)
-    self.assertEquals(b.d_dt.readonly, True)
+    self.assertEqual(a.d_dt.readonly, True)
+    self.assertEqual(b.d_dt.readonly, True)
 
     ############################################################################
     # flatten_numer(self, classes=(), recursive=True)
@@ -188,8 +188,8 @@ class Test_Qube_items(unittest.TestCase):
     b = a.flatten_numer(recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
 
     b = a.flatten_numer(recursive=True)
     self.assertTrue(np.all(a.d_dt.values[:,0,0] == b.d_dt.values[:,0]))
@@ -208,10 +208,10 @@ class Test_Qube_items(unittest.TestCase):
     a.d_dt.values[1,3,2] = 42.
     self.assertTrue(np.all(b.d_dt.values[1,11] == 42))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
-    self.assertEquals(a.d_dt.readonly, False)
-    self.assertEquals(b.d_dt.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
+    self.assertEqual(a.d_dt.readonly, False)
+    self.assertEqual(b.d_dt.readonly, False)
 
     ####
     a = Matrix(np.random.randn(5,4,3)).as_readonly()
@@ -220,10 +220,10 @@ class Test_Qube_items(unittest.TestCase):
 
     b = a.flatten_numer(recursive=True)
 
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
-    self.assertEquals(a.d_dt.readonly, True)
-    self.assertEquals(b.d_dt.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
+    self.assertEqual(a.d_dt.readonly, True)
+    self.assertEqual(b.d_dt.readonly, True)
 
     ############################################################################
     # transpose_denom(self, axis1=0, axis2=1)
@@ -241,15 +241,15 @@ class Test_Qube_items(unittest.TestCase):
     a.values[...,2,1] = 42.
     self.assertTrue(np.all(b.values[...,1,2] == 42))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
 
     ####
     a = Matrix(np.random.randn(5,4,3,2), drank=2).as_readonly()
     b = a.transpose_denom(0,1)
 
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
 
     ############################################################################
     # reshape_denom(self, shape)
@@ -271,15 +271,15 @@ class Test_Qube_items(unittest.TestCase):
     a.values[1,1,2,1] = 42.
     self.assertTrue(np.all(b.values[1,1,1,2] == 42))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
 
     ####
     a = Vector(np.random.randn(5,4,3,2), drank=2).as_readonly()
     b = a.reshape_denom((2,3))
 
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
 
     ############################################################################
     # flatten_denom(self)
@@ -305,8 +305,8 @@ class Test_Qube_items(unittest.TestCase):
     a = Matrix(np.random.randn(5,4,3)).as_readonly()
     b = a.flatten_denom()
 
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
 
     ############################################################################
     # join_items(self, classes)
@@ -315,46 +315,46 @@ class Test_Qube_items(unittest.TestCase):
     a = Vector(np.random.randn(5,4,3,2), drank=1)
     b = a.join_items(Matrix)
 
-    self.assertEquals(b.shape, (5,4))
-    self.assertEquals(b.numer, (3,2))
-    self.assertEquals(b.denom, ())
+    self.assertEqual(b.shape, (5,4))
+    self.assertEqual(b.numer, (3,2))
+    self.assertEqual(b.denom, ())
 
-    b = a.join_items((Boolean,Scalar,Empty,Matrix3,Quaternion,Matrix))
-    self.assertEquals(type(b), Matrix)
+    b = a.join_items((Boolean,Scalar,Matrix3,Quaternion,Matrix))
+    self.assertEqual(type(b), Matrix)
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
 
     a = a.as_readonly()
     b = a.join_items(Matrix)
 
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
 
     ############################################################################
     # swap_items(self, classes)
     ############################################################################
 
     a = Vector(np.random.randn(5,4,3,2), drank=2)
-    b = a.swap_items((Boolean,Scalar,Empty,Matrix3,Quaternion,Matrix))
-    self.assertEquals(type(b), Matrix)
+    b = a.swap_items((Boolean,Scalar,Matrix3,Quaternion,Matrix))
+    self.assertEqual(type(b), Matrix)
 
-    self.assertEquals(b.shape, a.shape)
-    self.assertEquals(b.numer, a.denom)
-    self.assertEquals(b.denom, a.numer)
+    self.assertEqual(b.shape, a.shape)
+    self.assertEqual(b.numer, a.denom)
+    self.assertEqual(b.denom, a.numer)
 
     self.assertTrue(np.all(a.values[:,0] == b.values[...,0]))
     self.assertTrue(np.all(a.values[:,1] == b.values[...,1]))
     self.assertTrue(np.all(a.values[:,2] == b.values[...,2]))
     self.assertTrue(np.all(a.values[:,3] == b.values[...,3]))
 
-    self.assertEquals(a.readonly, False)
-    self.assertEquals(b.readonly, False)
+    self.assertEqual(a.readonly, False)
+    self.assertEqual(b.readonly, False)
 
     a = a.as_readonly()
     b = a.swap_items(Matrix)
-    self.assertEquals(a.readonly, True)
-    self.assertEquals(b.readonly, True)
+    self.assertEqual(a.readonly, True)
+    self.assertEqual(b.readonly, True)
 
     ############################################################################
     # chain(self, arg)

@@ -55,7 +55,7 @@ class Test_Vector_perp(unittest.TestCase):
     y = Vector(np.random.randn(N,3), units=Units.SECONDS**(-1))
     z = y.perp(x)
 
-    self.assertEquals(z.units, Units.SECONDS**(-1))
+    self.assertEqual(z.units, Units.SECONDS**(-1))
 
     # Derivatives, denom = ()
     N = 100

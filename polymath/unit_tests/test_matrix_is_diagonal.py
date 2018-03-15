@@ -38,8 +38,8 @@ class Test_Matrix_is_diagonal(unittest.TestCase):
     mats[0,0,1] = 1.e-14
     self.assertEqual(Matrix(mats).is_diagonal(), [False] + (N-1)*[True])
 
-    # delta = 1.e-13
-    self.assertEqual(Matrix(mats).is_diagonal(delta=1.e-13), True)
+    # delta = 3.e-13
+    self.assertEqual(Matrix(mats).is_diagonal(delta=3.e-13), True)
 
     # all masked
     self.assertEqual(Matrix(np.random.randn(N,5,5),True).is_diagonal(), True)

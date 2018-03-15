@@ -45,7 +45,7 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertRaises(ValueError, Scalar.frac, random)
 
     random = Scalar(3.25, units=Units.UNITLESS)
-    self.assertEquals(random.frac(), 0.25)
+    self.assertEqual(random.frac(), 0.25)
 
     # Masks
     N = 100

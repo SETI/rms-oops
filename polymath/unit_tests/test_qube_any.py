@@ -6,15 +6,15 @@ from __future__ import division
 import numpy as np
 import unittest
 
-from polymath import Qube, Scalar, Vector3, Boolean, Units
+from polymath import Qube, Scalar, Boolean, Units
 
 class Test_Qube_any(unittest.TestCase):
 
   def setUp(self):
-    Qube.PREFER_PYTHON_TYPES = True
+    Qube.PREFER_BUILTIN_TYPES = True
 
   def tearDown(self):
-    Qube.PREFER_PYTHON_TYPES = False
+    Qube.PREFER_BUILTIN_TYPES = False
 
   def runTest(self):
 
@@ -31,9 +31,6 @@ class Test_Qube_any(unittest.TestCase):
     # Multiple values
     self.assertTrue(Scalar((0,0,1)).any() == True)
     self.assertEqual(type(Scalar((0,0,1)).any()), bool)
-
-    self.assertTrue(Vector3((0.,0.,0.)).any() == False)
-    self.assertEqual(type(Vector3((0.,0.,0.)).any()), bool)
 
     self.assertEqual(Scalar((1.,2.,3.), True).any(), Boolean.MASKED)
     self.assertEqual(type(Scalar((1.,2.,3.), True).any()), Boolean)
@@ -66,13 +63,13 @@ class Test_Qube_any(unittest.TestCase):
     self.assertEqual(type(random.any()), bool)
 
     # Masks
-    x = Vector3([[0,0,0],[0,0,1],[0,1,0],[1,0,0]])
+    x = Scalar([0,1,2,3])
     self.assertTrue(x.any())
 
-    x = Vector3(x.values, mask=[False,True,True,True])
+    x = Scalar(x.values, mask=[False,True,True,True])
     self.assertFalse(x.any())
 
-    x = Vector3(x.values, mask=[True,True,True,True])
+    x = Scalar(x.values, mask=[True,True,True,True])
     self.assertEqual(x.any(), Boolean.MASKED)
 
     # Any() over axes
@@ -131,7 +128,8 @@ class Test_Qube_any(unittest.TestCase):
     j = 0
     for k in range(5):
         self.assertEqual(m0[j,k], Scalar.MASKED)
-        self.assertTrue(np.any(m0[j,k].values == np.any(x.values[:,j,k])))
+#         self.assertTrue(np.any(m0[j,k].values == np.any(x.values[:,j,k])))
+# Changed 3/14. No need to set values where masked
 
     x = Scalar(values, True)
     m0 = x.any(axis=0)
@@ -146,6 +144,38 @@ class Test_Qube_any(unittest.TestCase):
         self.assertEqual(m01[k], Boolean.MASKED)
 
     self.assertEqual(m012, Boolean.MASKED)
+
+    ############################################################################
+    # Qube.tvl_any() tests
+    ############################################################################
+
+    x = Boolean([True, True, True, True])
+    self.assertEqual(x.any(), True)
+    self.assertEqual(x.tvl_any(), True)
+
+    x = Boolean([False, False, False, False], [False, False, False, False])
+    self.assertEqual(x.any(), False)
+    self.assertEqual(x.tvl_any(), False)
+
+    x = Boolean([False, False, False, True], [False, False, False, False])
+    self.assertEqual(x.any(), True)
+    self.assertEqual(x.tvl_any(), True)
+
+    x = Boolean([False, False, False, True], [False, False, False, True])
+    self.assertEqual(x.any(), False)
+    self.assertEqual(x.tvl_any(), Boolean.MASKED)
+
+    x = Boolean([True, False, False, True], [False, False, False, True])
+    self.assertEqual(x.any(), True)
+    self.assertEqual(x.tvl_any(), True)
+
+    x = Boolean([False, True, True], True)
+    self.assertEqual(x.any(), Boolean.MASKED)
+    self.assertEqual(x.tvl_any(), Boolean.MASKED)
+
+    x = Boolean([False, True, True], [True, True, True])
+    self.assertEqual(x.any(), Boolean.MASKED)
+    self.assertEqual(x.tvl_any(), Boolean.MASKED)
 
 ################################################################################
 # Execute from command line...

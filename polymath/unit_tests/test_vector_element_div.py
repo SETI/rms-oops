@@ -71,7 +71,7 @@ class Test_Vector_element_div(unittest.TestCase):
     y = Vector(np.random.randn(N,3), units=Units.KM)
     z = y.element_div(x)
 
-    self.assertEquals(z.units, Units.KM/Units.SECONDS)
+    self.assertEqual(z.units, Units.KM/Units.SECONDS)
 
     # Derivatives, denom = ()
     N = 100

@@ -61,18 +61,18 @@ class Test_Vector_as_index(unittest.TestCase):
     
     # This will create a flattened array with the first two items missing
     new_index = vec_one_masked.as_index(masked=None)
-    self.assertEquals(qube[new_index].shape, (7*11-2,))
-    self.assertEquals(qube[new_index] // 13, np.arange(2,77))
+    self.assertEqual(qube[new_index].shape, (7*11-2,))
+    self.assertEqual(qube[new_index] // 13, np.arange(2,77))
 
     # This will fill in the last item of the array in place of the first two
     # items
     new_index = vec_one_masked.as_index(masked=(9,9,9))
-    self.assertEquals(qube[new_index].shape, (7,11))
-    self.assertEquals(qube[new_index][0,0], 999)
-    self.assertEquals(qube[new_index][0,1], 999)
+    self.assertEqual(qube[new_index].shape, (7,11))
+    self.assertEqual(qube[new_index][0,0], 999)
+    self.assertEqual(qube[new_index][0,1], 999)
 
     flattened = qube[new_index].flatten()
-    self.assertEquals(flattened[2:], 13 * np.arange(2,77))
+    self.assertEqual(flattened[2:], 13 * np.arange(2,77))
 
 ################################################################################
 # Execute from command line...

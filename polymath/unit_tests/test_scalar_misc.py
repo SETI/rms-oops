@@ -217,7 +217,7 @@ class Test_Scalar_misc(unittest.TestCase):
                            [[5,12], [15,24]]])
 
     # Mask tests
-    test = Scalar(range(6))
+    test = Scalar(list(range(6)))
     self.assertEqual(str(test), "Scalar(0 1 2 3 4 5)")
 
     test = Scalar(test, mask=(3*[True] + 3*[False]))
@@ -281,7 +281,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertEqual(type(mvals), np.ma.MaskedArray)
     self.assertEqual(str(mvals), "[-- -- -- 3 4 5]")
 
-    temp = Scalar(range(6))
+    temp = Scalar(list(range(6)))
     mvals = temp.mvals
     self.assertEqual(type(mvals), np.ma.MaskedArray)
     self.assertEqual(str(mvals), "[0 1 2 3 4 5]")
@@ -295,11 +295,11 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertEqual(str(mvals), "[-- -- -- -- -- --]")
 
     # Test of units
-    test = Scalar(range(6))
+    test = Scalar(list(range(6)))
     self.assertEqual(test, np.arange(6))
     eps = 1.e-7
 
-    km = Scalar(range(6), units=Units.KM)
+    km = Scalar(list(range(6)), units=Units.KM)
     cm = Scalar(np.arange(6), units=Units.CM)
     self.assertTrue(np.all(km.values == cm.values))
 

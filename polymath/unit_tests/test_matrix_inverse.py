@@ -155,7 +155,7 @@ class Test_Matrix_inverse(unittest.TestCase):
     N = 5
     a = Matrix(np.random.randn(N,3,3), units=Units.CM**2/Units.S)
     b = a.inverse()
-    self.assertEquals(b.units, Units.S/Units.CM**2)
+    self.assertEqual(b.units, Units.S/Units.CM**2)
 
     # Derivatives, 3x3
     N = 30

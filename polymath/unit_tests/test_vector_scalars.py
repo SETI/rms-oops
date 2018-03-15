@@ -129,12 +129,12 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(test.values[...,1] == (2,3,4)))
     self.assertTrue(np.all(test.values[...,2] == c))
     self.assertTrue(np.all(test.mask == [True,False,False]))
-    self.assertEquals(test.readonly, False)
+    self.assertEqual(test.readonly, False)
 
     b = b.as_readonly()
     c = Scalar(c).as_readonly()
     test = Vector.from_scalars(a,b,c)
-    self.assertEquals(test.readonly, False)
+    self.assertEqual(test.readonly, False)
 
     #### from_scalars(*args), with derivatives
 
@@ -151,9 +151,9 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(test.values[...,2] == c))
     self.assertTrue(np.all(test.mask == [True,False,False]))
 
-    self.assertEquals(test.readonly, False)
+    self.assertEqual(test.readonly, False)
 
-    self.assertEquals(test.d_dt.values.shape, (4,3,3))
+    self.assertEqual(test.d_dt.values.shape, (4,3,3))
     self.assertTrue(np.all(test.d_dt.values[...,0] == 0))
     self.assertTrue(np.all(test.d_dt.values[...,1] == (3,4,5)))
     self.assertTrue(np.all(test.d_dt.values[...,2] == 0))
@@ -177,9 +177,9 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(test.values[...,2] == c.values))
     self.assertTrue(np.all(test.mask == (c.mask | [True,False,False])))
 
-    self.assertEquals(test.readonly, False)
+    self.assertEqual(test.readonly, False)
 
-    self.assertEquals(test.d_dt.values.shape, (4,3,3,2,2))
+    self.assertEqual(test.d_dt.values.shape, (4,3,3,2,2))
     
     self.assertTrue(np.all(test.d_dt.values[...,0,:,:] == 0))
     self.assertTrue(np.all(test.d_dt.values[...,1,:,:].ravel() == range(48)))

@@ -7,10 +7,10 @@
 from __future__ import division
 import numpy as np
 
-from qube   import Qube
-from scalar import Scalar
-from vector import Vector
-from units  import Units
+from .qube   import Qube
+from .scalar import Scalar
+from .vector import Vector
+from .units  import Units
 
 TWOPI = 2. * np.pi
 
@@ -46,7 +46,7 @@ class Vector3(Vector):
             if arg.rank > 1 and arg.numer[0] == 3:
                 arg = arg.split_items(1, Vector3)
 
-            arg = Vector3(arg, example=arg)
+            arg = Vector3(arg)
             if recursive: return arg
             return arg.without_derivs()
 

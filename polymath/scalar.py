@@ -9,8 +9,8 @@ import numpy as np
 import sys
 import warnings
 
-from qube  import Qube
-from units import Units
+from .qube  import Qube
+from .units import Units
 
 # Maximum argument to exp()
 EXP_CUTOFF = np.log(sys.float_info.max)
@@ -74,7 +74,7 @@ class Scalar(Qube):
             if type(arg) == Qube.BOOLEAN_CLASS:
                 return Qube.BOOLEAN_CLASS(arg).as_int()
 
-            arg = Scalar(arg, example=arg)
+            arg = Scalar(arg)
             if recursive: return arg
             return arg.without_derivs()
 
@@ -195,7 +195,7 @@ class Scalar(Qube):
 
         # Construct a new copy
         obj = Qube.__new__(type(self))
-        obj.__init__(new_values, example=self)
+        obj.__init__(new_values, mask=self.mask, derivs=self.derivs)
 
         return obj
 
@@ -221,11 +221,11 @@ class Scalar(Qube):
         """
 
         Units.require_angle(self.units)
-        obj = Scalar(np.sin(self.values), units=False, derivs={}, example=self)
+        obj = Scalar(np.sin(self.values), mask=self.mask)
 
         if recursive and self.derivs:
             factor = self.without_derivs().cos()
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, factor * deriv)
 
         return obj
@@ -239,11 +239,11 @@ class Scalar(Qube):
         """
 
         Units.require_angle(self.units)
-        obj = Scalar(np.cos(self.values), units=False, derivs={}, example=self)
+        obj = Scalar(np.cos(self.values), mask=self.mask)
 
         if recursive and self.derivs:
             factor = -self.without_derivs().sin()
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, factor * deriv)
 
         return obj
@@ -258,11 +258,11 @@ class Scalar(Qube):
 
         Units.require_angle(self.units)
 
-        obj = Scalar(np.tan(self.values), units=False, derivs={}, example=self)
+        obj = Scalar(np.tan(self.values), mask=self.mask)
 
         if recursive and self.derivs:
             inv_sec_sq = self.without_derivs().cos()**(-2)
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, inv_sec_sq * deriv)
 
         return obj
@@ -298,8 +298,7 @@ class Scalar(Qube):
                 temp_values = self.values
                 temp_mask = self.mask
 
-            obj = Scalar(np.arcsin(temp_values), temp_mask, units=False,
-                         derivs={}, example=self)
+            obj = Scalar(np.arcsin(temp_values), temp_mask)
 
         else:
             with warnings.catch_warnings():
@@ -309,12 +308,12 @@ class Scalar(Qube):
                 except:
                     raise ValueError('arcsin of value outside domain (-1,1)')
 
-            obj = Scalar(func_values, units=False, derivs={}, example=self)
+            obj = Scalar(func_values, mask=self.mask)
 
         if recursive and self.derivs:
             x = self.without_derivs()
             factor = (1. - x*x)**(-0.5)
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, factor * deriv)
 
         return obj
@@ -351,8 +350,7 @@ class Scalar(Qube):
                 temp_values = self.values
                 temp_mask = self.mask
 
-            obj = Scalar(np.arccos(temp_values), temp_mask, units=False,
-                        derivs={}, example=self)
+            obj = Scalar(np.arccos(temp_values), temp_mask)
 
         else:
             with warnings.catch_warnings():
@@ -362,12 +360,12 @@ class Scalar(Qube):
                 except:
                     raise ValueError('arccos of value outside domain (-1,1)')
 
-            obj = Scalar(func_values, units=False, derivs={}, example=self)
+            obj = Scalar(func_values, mask=self.mask)
 
         if recursive and self.derivs:
             x = self.without_derivs()
             factor = -(1. - x*x)**(-0.5)
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, factor * deriv)
 
         return obj
@@ -384,12 +382,11 @@ class Scalar(Qube):
 
         Units.require_unitless(self.units)
 
-        obj = Scalar(np.arctan(self.values), units=False, derivs={},
-                     example=self)
+        obj = Scalar(np.arctan(self.values), mask=self.mask)
 
         if recursive and self.derivs:
             factor = 1. / (1. + self.without_derivs()**2)
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, factor * deriv)
 
         return obj
@@ -411,8 +408,7 @@ class Scalar(Qube):
         x = Scalar.as_scalar(arg)
         Units.require_compatible(y.units, x.units)
 
-        obj = Scalar(np.arctan2(y.values, x.values),
-                     x.mask | y.mask)
+        obj = Scalar(np.arctan2(y.values, x.values), x.mask | y.mask)
 
         if recursive and (x.derivs or y.derivs):
             x_wod = x.without_derivs()
@@ -420,10 +416,10 @@ class Scalar(Qube):
             denom_inv = (x_wod**2 + y_wod**2).reciprocal()
 
             new_derivs = {}
-            for (key, y_deriv) in y.derivs.iteritems():
+            for (key, y_deriv) in y.derivs.items():
                 new_derivs[key] = x_wod * denom_inv * y_deriv
 
-            for (key, x_deriv) in x.derivs.iteritems():
+            for (key, x_deriv) in x.derivs.items():
                 term = y_wod * denom_inv * x_deriv
                 if key in new_derivs:
                     new_derivs[key] -= term
@@ -462,12 +458,12 @@ class Scalar(Qube):
                 except:
                     raise ValueError('sqrt of value negative value')
 
-        obj = Scalar(sqrt_vals, units=Units.sqrt_units(no_negs.units),
-                                derivs={}, example=no_negs)
+        obj = Scalar(sqrt_vals, mask=no_negs.mask,
+                                units=Units.sqrt_units(no_negs.units))
 
         if recursive and no_negs.derivs:
             factor = 0.5 / obj
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, factor * deriv)
 
         return obj
@@ -499,10 +495,10 @@ class Scalar(Qube):
                 except:
                     raise ValueError('log of non-positive value')
 
-        obj = Scalar(log_values, units=False, derivs={}, example=no_negs)
+        obj = Scalar(log_values, mask=no_negs.mask)
 
         if recursive and no_negs.derivs:
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv / no_negs)
 
         return obj
@@ -539,10 +535,10 @@ class Scalar(Qube):
                 except:
                     raise ValueError('overflow encountered in exp')
 
-        obj = Scalar(exp_values, units=False, derivs={}, example=no_oflow)
+        obj = Scalar(exp_values, mask=no_oflow.mask)
 
         if recursive and self.derivs:
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv * exp_values)
 
         return obj
@@ -554,8 +550,7 @@ class Scalar(Qube):
         sign(0) = +1 instead of 0.
         """
 
-        result = Scalar(np.sign(self.values), units=False, derivs={},
-                                              example=self)
+        result = Scalar(np.sign(self.values), mask=self.mask)
 
         if not zeros:
             result[result == 0] = 1
@@ -621,7 +616,7 @@ class Scalar(Qube):
     def max(self, axis=None):
         """Return the maximum of the unmasked values.
 
-        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
+        NOTE: This only occurs if Qube.PREFER_BUILTIN_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -640,18 +635,18 @@ class Scalar(Qube):
 
         elif not np.any(self.mask):
             result = Scalar(np.max(self.values, axis=axis), mask=False,
-                            example=self)
+                            units=self.units)
 
         elif axis is None:
             if np.shape(self.mask) == ():
                 result = Scalar(np.max(self.values), mask=self.mask,
-                                example=self)
+                                units=self.units)
             elif np.all(self.mask):
                 result = Scalar(np.max(self.values), mask=True,
-                                example=self)
+                                units=self.units)
             else:
                 result = Scalar(np.max(self.values[self.antimask]),
-                                mask=False, example=self)
+                                mask=False, units=self.units)
 
         else:
 
@@ -681,23 +676,20 @@ class Scalar(Qube):
             else:
                 new_mask = False
 
-            result = Scalar(new_values, new_mask, example=self)
+            result = Scalar(new_values, new_mask, units=self.units)
+
+        result = result.without_derivs()
 
         # Convert result to a Python constant if necessary
-        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
-                                         not result.mask and
-                                         result.units in (None,Units.UNITLESS)):
-            if result.is_float():
-                return float(result.values)
-            else:
-                return int(result.values)
+        if Qube.PREFER_BUILTIN_TYPES:
+            return result.as_builtin()
 
         return result
 
     def min(self, axis=None):
         """Return the minimum of the unmasked values.
 
-        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
+        NOTE: This only occurs if Qube.PREFER_BUILTIN_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -716,18 +708,18 @@ class Scalar(Qube):
 
         elif not np.any(self.mask):
             result = Scalar(np.min(self.values, axis=axis), mask=False,
-                            example=self)
+                            derivs={}, units=self.units)
 
         elif axis is None:
             if np.shape(self.mask) == ():
                 result = Scalar(np.min(self.values), mask=self.mask,
-                                example=self)
+                                derivs={}, units=self.units)
             elif np.all(self.mask):
                 result = Scalar(np.min(self.values), mask=True,
-                                example=self)
+                                derivs={}, units=self.units)
             else:
                 result = Scalar(np.min(self.values[self.antimask]),
-                                mask=False, example=self)
+                                mask=False, derivs={}, units=self.units)
 
         else:
             # Create new array
@@ -756,16 +748,11 @@ class Scalar(Qube):
             else:
                 new_mask = False
 
-            result = Scalar(new_values, new_mask, example=self)
+            result = Scalar(new_values, new_mask, derivs={}, units=self.units)
 
         # Convert result to a Python constant if necessary
-        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
-                                         not result.mask and
-                                         result.units in (None,Units.UNITLESS)):
-            if result.is_float():
-                return float(result.values)
-            else:
-                return int(result.values)
+        if Qube.PREFER_BUILTIN_TYPES:
+            return result.as_builtin()
 
         return result
 
@@ -992,7 +979,7 @@ class Scalar(Qube):
     def sum(self, axis=None):
         """Return the sum of the unmasked values.
 
-        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
+        NOTE: This only occurs if Qube.PREFER_BUILTIN_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -1010,19 +997,18 @@ class Scalar(Qube):
             result = self
 
         elif not np.any(self.mask):
-            result = Scalar(np.sum(self.values, axis=axis), mask=False,
-                            example=self)
+            result = Scalar(np.sum(self.values, axis=axis), units=self.units)
 
         elif axis is None:
             if np.shape(self.mask) == ():
                 result = Scalar(np.sum(self.values), mask=self.mask,
-                                example=self)
+                                units=self.units)
             elif np.all(self.mask):
                 result = Scalar(np.sum(self.values), mask=True,
-                                example=self)
+                                units=self.units)
             else:
                 result = Scalar(np.sum(self.values[self.antimask]),
-                                mask=False, example=self)
+                                mask=False, units=self.units)
 
         else:
             # Create new array and mask
@@ -1043,23 +1029,18 @@ class Scalar(Qube):
                 else:
                     new_values = np.sum(self.values, axis=axis)
 
-            result = Scalar(new_values, new_mask, example=self)
+            result = Scalar(new_values, new_mask, units=self.units)
 
         # Convert result to a Python constant if necessary
-        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
-                                         not result.mask and
-                                         result.units in (None,Units.UNITLESS)):
-            if result.is_float():
-                return float(result.values)
-            else:
-                return int(result.values)
+        if Qube.PREFER_BUILTIN_TYPES:
+            return result.as_builtin()
 
         return result
 
     def mean(self, axis=None):
         """Return the mean of the unmasked values.
 
-        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
+        NOTE: This only occurs if Qube.PREFER_BUILTIN_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -1074,22 +1055,22 @@ class Scalar(Qube):
             raise ValueError('denominators are not supported in mean()')
 
         if self.shape == ():
-            result = self
+            result = self.as_float()
 
         elif not np.any(self.mask):
             result = Scalar(np.mean(self.values, axis=axis), mask=False,
-                            example=self)
+                            units=self.units)
 
         elif axis is None:
             if np.shape(self.mask) == ():
                 result = Scalar(np.mean(self.values), mask=self.mask,
-                                example=self)
+                                units=self.units)
             elif np.all(self.mask):
                 result = Scalar(np.mean(self.values), mask=True,
-                                example=self)
+                                units=self.units)
             else:
                 result = Scalar(np.mean(self.values[self.antimask]),
-                                mask=False, example=self)
+                                mask=False, units=self.units)
 
         else:
             # Create new array and mask
@@ -1115,20 +1096,18 @@ class Scalar(Qube):
                 else:
                     new_values = np.mean(self.values, axis=axis)
 
-            result = Scalar(new_values, new_mask, example=self)
+            result = Scalar(new_values, new_mask, units=self.units)
 
         # Convert result to a Python constant if necessary
-        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
-                                         not result.mask and
-                                         result.units in (None,Units.UNITLESS)):
-            return float(result.values)
+        if Qube.PREFER_BUILTIN_TYPES:
+            return result.as_builtin()
 
         return result
 
     def median(self, axis=None):
         """Return the median of the unmasked values.
 
-        NOTE: This only occurs if Qube.PREFER_PYTHON_TYPES is True:
+        NOTE: This only occurs if Qube.PREFER_BUILTIN_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
         rather than as a Scalar. Denominators are not supported.
 
@@ -1143,22 +1122,22 @@ class Scalar(Qube):
             raise ValueError('denominators are not supported in median()')
 
         if self.shape == ():
-            result = self
+            result = self.as_float()
 
         elif not np.any(self.mask):
             result = Scalar(np.median(self.values, axis=axis), mask=False,
-                            example=self)
+                            units=self.units)
 
         elif axis is None:
             if np.shape(self.mask) == ():
                 result = Scalar(np.median(self.values), mask=self.mask,
-                                example=self)
+                                units=self.units)
             elif np.all(self.mask):
                 result = Scalar(np.median(self.values), mask=True,
-                                example=self)
+                                units=self.units)
             else:
                 result = Scalar(np.median(self.values[self.antimask]),
-                                mask=False, example=self)
+                                mask=False, units=self.units)
 
         else:
             # Interpret the axis selection
@@ -1215,13 +1194,13 @@ class Scalar(Qube):
                 else:
                     new_values = np.median(self.values, axis=axis)
 
-            result = Scalar(new_values, new_mask, example=self)
+            result = Scalar(new_values, new_mask, units=self.units)
+
+        result = result.without_derivs()
 
         # Convert result to a Python constant if necessary
-        if Qube.PREFER_PYTHON_TYPES and (result.shape == () and
-                                         not result.mask and
-                                         result.units in (None,Units.UNITLESS)):
-            return float(result.values)
+        if Qube.PREFER_BUILTIN_TYPES:
+            return result.as_builtin()
 
         return result
 
@@ -1241,7 +1220,7 @@ class Scalar(Qube):
 
         elif not np.any(self.mask):
             result = Scalar(np.sort(self.values, axis=axis), mask=False,
-                            example=self)
+                            units=self.units)
 
         else:
             maxval = self._maxval()
@@ -1257,11 +1236,12 @@ class Scalar(Qube):
                 new_mask = np.sort(new_mask, axis=axis)
 
             # Construct the result
-            result = Scalar(new_values, new_mask, derivs={}, example=self)
+            result = Scalar(new_values, new_mask, units=self.units)
 
             # Replace the masked values by the max
             new_values[new_mask] = result.max()
 
+        result = result.without_derivs()
         return result
 
     ############################################################################
@@ -1301,13 +1281,12 @@ class Scalar(Qube):
         # Construct the object
         obj = Qube.__new__(type(self))
         obj.__init__(denom_inv_values, denom_inv_mask,
-                     Units.units_power(self.units, -1),
-                     derivs={}, example=denom)
+                     Units.units_power(self.units, -1))
 
         # Fill in derivatives if necessary
         if recursive and self.derivs:
             factor = -obj*obj       # At this point it has no derivs
-            for (key,deriv) in self.derivs.iteritems():
+            for (key,deriv) in self.derivs.items():
                 obj.insert_deriv(key, factor * deriv)
 
         return obj

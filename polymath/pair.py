@@ -8,10 +8,10 @@ from __future__ import division
 import numpy as np
 import numbers
 
-from qube   import Qube
-from scalar import Scalar
-from vector import Vector
-from units  import Units
+from .qube   import Qube
+from .scalar import Scalar
+from .vector import Vector
+from .units  import Units
 
 class Pair(Vector):
     """A PolyMath subclass containing coordinate pairs or 2-vectors.
@@ -54,7 +54,7 @@ class Pair(Vector):
             if arg.rank > 1 and arg.numer[0] == 2:
                 arg = arg.split_items(1, Pair)
 
-            arg = Pair(arg, example=arg)
+            arg = Pair(arg.values, arg.mask, example=arg)
             if recursive: return arg
             return arg.without_derivs()
 
@@ -88,6 +88,9 @@ class Pair(Vector):
         If recursive is True, derivatives will also be swapped.
         """
 
+        if not recursive:
+            self = self.without_derivs()
+
         # Roll the array axis to the end
         lshape = len(self.values.shape)
         new_values = np.rollaxis(self.values, lshape - self.drank - 1, lshape)
@@ -99,11 +102,11 @@ class Pair(Vector):
         new_values = np.rollaxis(new_values, -1, lshape - self.drank - 1)
 
         # Construct the object
-        obj = Pair(new_values, derivs={}, example=self)
+        obj = Pair(new_values, self.mask, example=self)
 
         # Fill in the derivatives if necessary
         if recursive:
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv.swapxy(False))
 
         return obj
@@ -126,11 +129,11 @@ class Pair(Vector):
 
         # Construct the object
         new_values[...,1] = -new_values[...,1]      # negate the new y-axis
-        obj = Pair(new_values, derivs={}, example=self)
+        obj = Pair(new_values, self.mask, example=self)
 
         # Fill in the derivatives if necessary
         if recursive:
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv.rot90(False))
 
         return obj

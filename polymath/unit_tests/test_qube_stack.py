@@ -78,16 +78,16 @@ class Test_Qube_stack(unittest.TestCase):
     a.insert_deriv('t', a_d_dt)
     b.insert_deriv('t', b_d_dx)
     ab = Scalar(np.arange(20).reshape(2,10))
-    self.assertEquals(Qube.stack(a,b,recursive=False), ab)
-    self.assertEquals(Qube.stack(a,b,recursive=False).derivs, {})
+    self.assertEqual(Qube.stack(a,b,recursive=False), ab)
+    self.assertEqual(Qube.stack(a,b,recursive=False).derivs, {})
 
     # Ranks
-    a = Scalar(np.arange(30.).reshape(10,3), nrank=1)
+    a = Scalar(np.arange(30.).reshape(10,3), drank=1)
     b = Scalar(np.arange(10.))
     self.assertRaises(ValueError, Qube.stack, a, b)
 
-    a = Scalar(np.arange(30.).reshape(10,3), nrank=1)
-    b = Scalar(np.arange(30.,60.).reshape(10,3), nrank=1)
+    a = Scalar(np.arange(30.).reshape(10,3), drank=1)
+    b = Scalar(np.arange(30.,60.).reshape(10,3), drank=1)
     ab = Qube.stack(a,b)
     self.assertTrue(np.all(ab.values.flatten() == np.arange(60)))
 
@@ -143,20 +143,20 @@ class Test_Qube_stack(unittest.TestCase):
     b = Scalar(11.)
     c = Boolean(5*[True] + 5*[False])
     d = None
-    self.assertEquals(Qube.stack(a,b,c,d).shape, (4,10,10))
+    self.assertEqual(Qube.stack(a,b,c,d).shape, (4,10,10))
 
     a = Scalar(np.arange(10), mask=[0,0,0,0,0,1,1,1,1,1])
     b = Scalar(11., mask=False)
     c = Boolean(5*[True] + 5*[False], mask=True)
     d = None
     abcd = Qube.stack(a,b,c,d)
-    self.assertEquals(abcd.shape, (4,10))
-    self.assertEquals(abcd.mask.shape, (4,10))
-    self.assertEquals(abcd[0][:5], np.arange(5))
-    self.assertEquals(abcd[0][5:], Scalar.MASKED)
-    self.assertEquals(abcd[1], 10*[11.])
-    self.assertEquals(abcd[2], Scalar.MASKED)
-    self.assertEquals(abcd[3], 0.)
+    self.assertEqual(abcd.shape, (4,10))
+    self.assertEqual(abcd.mask.shape, (4,10))
+    self.assertEqual(abcd[0][:5], np.arange(5))
+    self.assertEqual(abcd[0][5:], Scalar.MASKED)
+    self.assertEqual(abcd[1], 10*[11.])
+    self.assertEqual(abcd[2], Scalar.MASKED)
+    self.assertEqual(abcd[3], 0.)
 
     a = Scalar(np.arange(10), mask=False)
     b = Scalar(np.arange(10.,20.), mask=True)
@@ -182,37 +182,37 @@ class Test_Qube_stack(unittest.TestCase):
     d = Scalar(np.arange(10))
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_int())
-    self.assertEquals(type(cd), Scalar)
+    self.assertEqual(type(cd), Scalar)
 
     d = np.arange(10)
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_int())
-    self.assertEquals(type(cd), Scalar)
+    self.assertEqual(type(cd), Scalar)
 
     d = np.arange(10.)
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_float())
-    self.assertEquals(type(cd), Scalar)
+    self.assertEqual(type(cd), Scalar)
 
     d = 1
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_int())
-    self.assertEquals(type(cd), Scalar)
+    self.assertEqual(type(cd), Scalar)
 
     d = 1.
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_float())
-    self.assertEquals(type(cd), Scalar)
+    self.assertEqual(type(cd), Scalar)
 
     d = True
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_bool())
-    self.assertEquals(type(cd), Boolean)
+    self.assertEqual(type(cd), Boolean)
 
     d = np.array([True])
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_bool())
-    self.assertEquals(type(cd), Boolean)
+    self.assertEqual(type(cd), Boolean)
 
 ################################################################################
 # Execute from command line...

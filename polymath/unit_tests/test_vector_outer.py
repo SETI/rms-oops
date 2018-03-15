@@ -14,9 +14,9 @@ class Test_Vector_outer(unittest.TestCase):
 
     a = Vector(np.random.randn(10,5))
     b = Vector(np.random.randn(3,10,2))
-    self.assertEquals(a.outer(b).shape, (3,10))
-    self.assertEquals(a.outer(b).numer, (5,2))
-    self.assertEquals(a.outer(b).denom, ())
+    self.assertEqual(a.outer(b).shape, (3,10))
+    self.assertEqual(a.outer(b).numer, (5,2))
+    self.assertEqual(a.outer(b).denom, ())
 
     a = Vector(np.random.randn(10,5))
     b = Vector(np.random.randn(3,10,5))
@@ -29,8 +29,8 @@ class Test_Vector_outer(unittest.TestCase):
     a = Vector(np.random.randn(3), units=Units.KM)
     b = Vector(np.random.randn(3), units=Units.SECONDS**(-1))
 
-    self.assertEquals(a.outer(b).units, Units.KM/Units.SECONDS)
-    self.assertEquals(b.outer(a).units, Units.KM/Units.SECONDS)
+    self.assertEqual(a.outer(b).units, Units.KM/Units.SECONDS)
+    self.assertEqual(b.outer(a).units, Units.KM/Units.SECONDS)
 
     # Derivatives
     N = 100

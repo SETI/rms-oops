@@ -7,10 +7,10 @@
 from __future__ import division
 import numpy as np
 
-from qube   import Qube
-from scalar import Scalar
-from vector import Vector
-from units  import Units
+from .qube   import Qube
+from .scalar import Scalar
+from .vector import Vector
+from .units  import Units
 
 class Polynomial(Vector):
     """This is a Vector subclass in which the elements are interpreted as the
@@ -37,13 +37,13 @@ class Polynomial(Vector):
         if (len(args) == 1 and len(keywords) == 0 and
             isinstance(args[0], Vector)):
 
-                for (key, value) in args[0].__dict__.iteritems():
+                for (key, value) in args[0].__dict__.items():
                     self.__dict__[key] = value
 
                 # Convert derivatives to class Polynomial if necessary
                 if type(self) != Polynomial:
                     derivs = {}
-                    for (key,value) in args[0].derivs.iteritems():
+                    for (key,value) in args[0].derivs.items():
                         derivs[key] = Polynomial(value)
 
                     self.derivs = derivs
@@ -85,12 +85,12 @@ class Polynomial(Vector):
 
         obj = Qube.__new__(Vector)
 
-        for (key, value) in self.__dict__.iteritems():
+        for (key, value) in self.__dict__.items():
             obj.__dict__[key] = value
 
         derivs = {}
         if recursive:
-            for (key, value) in self.derivs.iteritems():
+            for (key, value) in self.derivs.items():
                 derivs[key] = self.as_vector(recursive=False)
 
         obj.insert_derivs(derivs)
@@ -117,7 +117,7 @@ class Polynomial(Vector):
         result = Polynomial(new_values, self.mask, derivs={}, example=self)
 
         if recursive and self.derivs:
-            for (key, value) in self.derivs.iteritems():
+            for (key, value) in self.derivs.items():
                 result.insert_deriv(key, value.at_least_order(order,
                                                               recursive=False))
 
@@ -227,10 +227,10 @@ class Polynomial(Vector):
             self_wd = self.without_derivs()
             arg_wd  = arg.without_derivs()
             derivs = {}
-            for (key, value) in self.derivs.iteritems():
+            for (key, value) in self.derivs.items():
                 derivs[key] = arg_wd * value
 
-            for (key, value) in arg.derivs.iteritems():
+            for (key, value) in arg.derivs.items():
                 if key in derivs:
                     derivs[key] = derivs[key] + self_wd * value
                 else:
@@ -315,7 +315,7 @@ class Polynomial(Vector):
         result = Polynomial(new_values, self.mask, derivs={}, example=self)
 
         if recursive and self.derivs:
-            for (key,value) in self.derivs.iteritems():
+            for (key,value) in self.derivs.items():
                 result.insert_deriv(key, value.deriv(recursive=False))
 
         return result
@@ -467,7 +467,7 @@ class Polynomial(Vector):
         # dx/dt = -Sum_j dc[j]/dt x**j / Sum_j c[j] j x**(j-1)
 
         if recursive:
-            for (key, value) in self.derivs.iteritems():
+            for (key, value) in self.derivs.items():
                 deriv = (-value.eval(roots, recursive=False) /
                          self.deriv.eval(roots, recursive=False))
                 roots.insert_deriv(key, deriv)

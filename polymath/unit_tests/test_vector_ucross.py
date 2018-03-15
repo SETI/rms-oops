@@ -38,9 +38,9 @@ class Test_Vector_ucross(unittest.TestCase):
         self.assertAlmostEqual(z.dot(z)[i], 1., delta=1.e-12)
 
     # Units are stripped
-    N = 100
+    N = 10
     x = Vector(np.random.randn(N*3).reshape(N,3), units=Units.KM)
-    y = Vector(np.random.randn(N*3).reshape(N,3), units=Units.SECONDS**(-1))
+    y = Vector(np.random.randn(N*3).reshape(N,3), units=Units.SEC)
     z = x.ucross(y)
     self.assertEqual(z.units, Units.UNITLESS)
 

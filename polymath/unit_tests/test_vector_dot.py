@@ -31,8 +31,8 @@ class Test_Vector_dot(unittest.TestCase):
     cross1 = omega_as_matrix * vec
     cross2 = omega.dot(vec)
 
-    self.assertEquals(cross1.units, Units.KM/Units.SECONDS)
-    self.assertEquals(cross2.units, Units.KM/Units.SECONDS)
+    self.assertEqual(cross1.units, Units.KM/Units.SECONDS)
+    self.assertEqual(cross2.units, Units.KM/Units.SECONDS)
 
     # Derivatives
     N = 100

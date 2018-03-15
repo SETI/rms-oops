@@ -4,15 +4,15 @@
 # Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 
-from qube    import Qube
-from scalar  import Scalar
-from boolean import Boolean
-from vector  import Vector
-from vector3 import Vector3
-from units   import Units
+from .qube    import Qube
+from .scalar  import Scalar
+from .boolean import Boolean
+from .vector  import Vector
+from .vector3 import Vector3
+from .units   import Units
 
 ################################################################################
 # Matrix Subclass...
@@ -48,7 +48,7 @@ class Matrix(Qube):
             if isinstance(arg, Vector) and arg.drank == 1:
                 return arg.join_items([Matrix])
 
-            arg = Matrix(arg, example=arg)
+            arg = Matrix(arg.values, arg.mask, example=arg)
             if recursive: return arg
             return arg.without_derivs()
 
@@ -329,15 +329,14 @@ class Matrix(Qube):
 
         # Construct the result
         obj = Matrix(new_values, new_mask,
-                     units = Units.units_power(self.units,-1),
-                     derivs={}, example=self)
+                     units = Units.units_power(self.units,-1))
 
         # Fill in derivatives
         if recursive and self.derivs:
             new_derivs = {}
 
             # -M^-1 * dM/dt * M^-1
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 new_derivs[key] = -obj * deriv * obj
 
             obj.insert_derivs(new_derivs)
@@ -368,7 +367,7 @@ class Matrix(Qube):
 
             if Matrix.DEBUG:
                 sorted = np.sort(rms.values.ravel())
-                print i, sorted[-4:]
+                print(i, sorted[-4:])
 
             if rms.max() <= Matrix.DELTA: break
 

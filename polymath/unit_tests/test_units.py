@@ -22,7 +22,7 @@ class Test_Units(unittest.TestCase):
     self.assertEqual((Units.KM/Units.S).exponents, (1,-1,0))
     self.assertEqual((Units.KM/Units.S/Units.S).exponents, (1,-2,0))
 
-    self.assertEquals(Units.KM.convert(3.,Units.CM), 3.e5)
+    self.assertEqual(Units.KM.convert(3.,Units.CM), 3.e5)
     self.assertTrue(np.all(Units.KM.convert(np.array([1.,2.,3.]), Units.CM) ==
                            [1.e5, 2.e5, 3.e5]))
 

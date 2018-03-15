@@ -32,7 +32,7 @@ class Test_Vector_cross_2x2(unittest.TestCase):
     vec = Vector(np.random.randn(2), units=Units.SECONDS**(-1))
     cross = omega.cross(vec)
 
-    self.assertEquals(cross.units, Units.KM/Units.SECONDS)
+    self.assertEqual(cross.units, Units.KM/Units.SECONDS)
 
     # Derivatives, denom = ()
     N = 10

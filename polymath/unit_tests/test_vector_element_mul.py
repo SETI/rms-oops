@@ -47,7 +47,7 @@ class Test_Vector_element_mul(unittest.TestCase):
     y = Vector(np.random.randn(N,3), units=Units.SECONDS**(-1))
     z = y.element_mul(x)
 
-    self.assertEquals(z.units, Units.KM/Units.SECONDS)
+    self.assertEqual(z.units, Units.KM/Units.SECONDS)
 
     # Derivatives, denom = ()
     N = 100

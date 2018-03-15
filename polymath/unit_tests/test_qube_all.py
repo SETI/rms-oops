@@ -6,15 +6,15 @@ from __future__ import division
 import numpy as np
 import unittest
 
-from polymath import Qube, Scalar, Vector3, Boolean, Units
+from polymath import Qube, Scalar, Boolean, Units
 
 class Test_Qube_all(unittest.TestCase):
 
   def setUp(self):
-    Qube.PREFER_PYTHON_TYPES = True
+    Qube.PREFER_BUILTIN_TYPES = True
 
   def tearDown(self):
-    Qube.PREFER_PYTHON_TYPES = False
+    Qube.PREFER_BUILTIN_TYPES = False
 
   def runTest(self):
 
@@ -66,13 +66,13 @@ class Test_Qube_all(unittest.TestCase):
     self.assertEqual(type(random.all()), bool)
 
     # Masks
-    x = Vector3([[0,0,0],[0,0,1],[0,1,0],[1,0,0]])
+    x = Scalar([0,1,2,3])
     self.assertFalse(x.all())
 
-    x = Vector3(x.values, mask=[True,False,False,False])
+    x = Scalar(x.values, mask=[True,False,False,False])
     self.assertTrue(x.all())
 
-    x = Vector3(x.values, mask=[True,True,True,True])
+    x = Scalar(x.values, mask=[True,True,True,True])
     self.assertEqual(x.all(), Boolean.MASKED)
 
     # All() over axes
@@ -147,6 +147,38 @@ class Test_Qube_all(unittest.TestCase):
         self.assertEqual(m01[k], Boolean.MASKED)
 
     self.assertEqual(m012, Boolean.MASKED)
+
+    ############################################################################
+    # Qube.tvl_all() tests
+    ############################################################################
+
+    x = Boolean([True, True, True, True])
+    self.assertEqual(x.all(), True)
+    self.assertEqual(x.tvl_all(), True)
+
+    x = Boolean([True, True, True, True], [False, False, False, False])
+    self.assertEqual(x.all(), True)
+    self.assertEqual(x.tvl_all(), True)
+
+    x = Boolean([True, True, True, True], [False, False, False, True])
+    self.assertEqual(x.all(), True)
+    self.assertEqual(x.tvl_all(), Boolean.MASKED)
+
+    x = Boolean([False, True, True], [False, False, False])
+    self.assertEqual(x.all(), False)
+    self.assertEqual(x.tvl_all(), False)
+
+    x = Boolean([False, True, True], [False, True, True])
+    self.assertEqual(x.all(), False)
+    self.assertEqual(x.tvl_all(), False)
+
+    x = Boolean([False, True, True], [True, True, True])
+    self.assertEqual(x.all(), Boolean.MASKED)
+    self.assertEqual(x.tvl_all(), Boolean.MASKED)
+
+    x = Boolean([False, True, True], [True, False, True])
+    self.assertEqual(x.all(), True)
+    self.assertEqual(x.tvl_all(), Boolean.MASKED)
 
 ################################################################################
 # Execute from command line...

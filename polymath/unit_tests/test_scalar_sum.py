@@ -11,10 +11,10 @@ from polymath import Qube, Scalar, Units
 class Test_Scalar_sum(unittest.TestCase):
 
   def setUp(self):
-    Qube.PREFER_PYTHON_TYPES = True
+    Qube.PREFER_BUILTIN_TYPES = True
 
   def tearDown(self):
-    Qube.PREFER_PYTHON_TYPES = False
+    Qube.PREFER_BUILTIN_TYPES = False
 
   def runTest(self):
 
@@ -63,7 +63,7 @@ class Test_Scalar_sum(unittest.TestCase):
         if not x.mask[i]:
             sumval += x.values[i]
 
-    self.assertTrue(abs((sumval - x.sum()) / sumval) < 2.e-14)
+    self.assertTrue(abs((sumval - x.sum()) / sumval) < 3.e-14)
 
     masked = Scalar(x, mask=True)
     self.assertTrue(masked.sum().mask)

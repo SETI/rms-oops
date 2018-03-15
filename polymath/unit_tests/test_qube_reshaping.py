@@ -550,7 +550,6 @@ class Test_qube_reshaping(unittest.TestCase):
     a = Scalar(np.random.randn(2,1,4,1,3,1,3, 2,2), drank=2)
     b = Vector(np.random.randn(  7,4,1,3,7,3, 3))
     c = Matrix(np.random.randn(      4,1,1,1, 3,3,5), drank=1)
-    d = Empty()
 
     self.assertEqual(Qube.broadcasted_shape(b,c), (7,4,4,3,7,3))
     self.assertEqual(Qube.broadcasted_shape(b,c,item=(2,)), (7,4,4,3,7,3,2))
@@ -568,7 +567,7 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertRaises(ValueError, Qube.broadcasted_shape, c, (5,2,2,2))
 
-    self.assertEqual(Qube.broadcasted_shape(a,b,c,d,(),None,(3,),item=(2,2)),
+    self.assertEqual(Qube.broadcasted_shape(a,b,c,(),None,(3,),item=(2,2)),
                                             (2,7,4,4,3,7,3,2,2))
 
     ############################################################################
@@ -578,7 +577,6 @@ class Test_qube_reshaping(unittest.TestCase):
     a = Scalar(np.random.randn(2,1,1,3, 2,2), drank=2)
     b = Pair(np.random.randn(    3,1,1, 2))
     c = Matrix(np.random.randn(    4,1, 3,3))
-    d = Empty()
     e = np.array(np.random.randn(3,4,3))
     f = None
 
@@ -586,12 +584,11 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(b.d_dt.shape, (3,1,1))
     self.assertTrue(b.d_dt.readonly)
 
-    (aa,bb,cc,dd,ee,ff) = Qube.broadcast(a,b,c,d,e,f,recursive=False)
+    (aa,bb,cc,ee,ff) = Qube.broadcast(a,b,c,e,f,recursive=False)
 
     self.assertEqual(aa.shape, (2,3,4,3))
     self.assertEqual(bb.shape, (2,3,4,3))
     self.assertEqual(cc.shape, (2,3,4,3))
-    self.assertEqual(d, Empty())
     self.assertEqual(ee.shape, (2,3,4,3))
     self.assertEqual(ff, None)
 
@@ -601,7 +598,7 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertFalse((hasattr(bb, 'd_dt')))
 
-    (aa,bb,cc,dd,ee,ff) = Qube.broadcast(a,b,c,d,e,f,recursive=True)
+    (aa,bb,cc,ee,ff) = Qube.broadcast(a,b,c,e,f,recursive=True)
     self.assertEqual(bb.d_dt.shape, (2,3,4,3))
     self.assertTrue(bb.d_dt.readonly)
 

@@ -7,8 +7,8 @@
 from __future__ import division
 import numpy as np
 
-from qube   import Qube
-from scalar import Scalar
+from .qube   import Qube
+from .scalar import Scalar
 
 class Boolean(Scalar):
     """A PolyMath subclass involving booleans. Masked values are unknown,
@@ -29,54 +29,13 @@ class Boolean(Scalar):
 
     DEFAULT_VALUE = False
 
-    def __init__(self, arg=None, mask=None, units=None, derivs={},
-                       nrank=None, drank=None, example=None):
-        """Default constructor; True where nonzero."""
-
-        original_arg = arg
-
-        # Interpret the example
-        if example is not None:
-            if mask is None:
-                mask = example.mask
-
-            if arg is None:
-                axes = tuple(range(-example.rank,0))
-                arg = np.any(example.values != 0, axis=axes)
-
-        # Interpret the arg if it is a PolyMath object
-        if isinstance(arg, Qube):
-            if mask is None:
-                mask = arg.mask
-
-            axes = tuple(range(-arg.rank,0))
-            arg = np.any(arg.values != 0, axis=axes)
-
-        # Interpret the arg if it is a NumPy MaskedArray
-        if isinstance(arg, np.ma.MaskedArray):
-            if arg.mask is not np.ma.nomask:
-                if mask is None:
-                    mask = arg.mask
-                else:
-                    mask = mask | arg.mask
-
-            arg = (arg.data != 0)
-
-        # Convert a list or tuple to a NumPy ndarray
-        if type(arg) in (list,tuple):
-            arg = np.asarray(arg)
-            arg = (arg != 0)
-
-        Qube.__init__(self, arg, mask, units=units, derivs=derivs,
-                            nrank=0, drank=0, example=None)
-
     @staticmethod
     def as_boolean(arg, recursive=True):
         """Return the argument converted to Boolean if possible."""
 
         if type(arg) == Boolean: return arg
 
-        return Boolean(arg)
+        return Boolean(arg, units=False, derivs={})
 
     def as_int(self):
         """Return a Scalar equal to one where True, zero where False.
@@ -184,7 +143,6 @@ class Boolean(Scalar):
         return self.as_int()
 
     def __add__(self, arg, recursive=True):
-        if Qube.is_empty(arg): return arg
         return self.as_int() + arg
 
     def __radd__(self, arg, recursive=True):
@@ -243,57 +201,6 @@ class Boolean(Scalar):
 
     def __pow__(self, arg):
         return self.as_int()**arg
-
-    ############################################################################
-    # Logical operators
-    ############################################################################
-
-    # (~) operator
-    def __invert__(self):
-
-        return Boolean(~self.values, self.mask)
-
-    # (&) operator
-    def __and__(self, arg):
-        if Qube.is_empty(arg): return arg
-        arg = Boolean.as_boolean(arg)
-
-        #           False       Masked      True
-        # False     False       False       False
-        # Masked    False       Masked      Masked
-        # True      False       Masked      True
-
-        is_true = self.values & self.antimask & arg.values & arg.antimask
-        is_not_false = (self.values | self.mask) & (arg.values | arg.mask)
-
-        return Boolean(is_true, is_not_false & np.logical_not(is_true))
-
-    # (|) operator
-    def __or__(self, arg):
-        if Qube.is_empty(arg): return arg
-        arg = Boolean.as_boolean(arg)
-
-        #           False       Masked      True
-        # False     False       Masked      True
-        # Masked    Masked      Masked      True
-        # True      True        True        True
-
-        is_true = (self.values & self.antimask) | (arg.values & arg.antimask)
-        is_not_false = (self.values + self.mask + arg.values + arg.mask) > 0
-
-        return Boolean(is_true, is_not_false & np.logical_not(is_true))
-
-    # (^) operator
-    def __xor__(self, arg):
-        if Qube.is_empty(arg): return arg
-        arg = Boolean.as_boolean(arg)
-
-        #           False       Masked      True
-        # False     False       Masked      True
-        # Masked    Masked      Masked      Masked
-        # True      True        Masked      False
-
-        return Boolean(self.values ^ arg.values, self.mask | arg.mask)
 
 # Useful class constants
 

@@ -53,7 +53,6 @@ class Test_Qube_types(unittest.TestCase):
     self.assertEqual(Pair.XAXIS.is_numeric(), True)
     self.assertEqual(Matrix.IDENTITY2.is_numeric(), True)
     self.assertEqual(Matrix3.IDENTITY.is_numeric(), True)
-    self.assertEqual(Empty.EMPTY.is_numeric(), True)
 
     ############################################################################
     # is_numeric(self)
@@ -66,7 +65,6 @@ class Test_Qube_types(unittest.TestCase):
     self.assertEqual(Pair.XAXIS.is_numeric(), True)
     self.assertEqual(Matrix.IDENTITY2.is_numeric(), True)
     self.assertEqual(Matrix3.IDENTITY.is_numeric(), True)
-    self.assertEqual(Empty.EMPTY.is_numeric(), True)
 
     ############################################################################
     # as_numeric(self)
@@ -83,7 +81,6 @@ class Test_Qube_types(unittest.TestCase):
     self.assertEqual(Pair.XAXIS.as_numeric(), Pair.XAXIS)
     self.assertEqual(Matrix.IDENTITY2.as_numeric(), Matrix.IDENTITY2)
     self.assertEqual(Matrix3.IDENTITY.as_numeric(), Matrix3.IDENTITY)
-    self.assertEqual(Empty.EMPTY.as_numeric(), Empty.EMPTY)
 
     ############################################################################
     # is_float(self)

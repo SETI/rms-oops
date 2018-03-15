@@ -48,7 +48,7 @@ class Test_Scalar_int(unittest.TestCase):
     self.assertRaises(ValueError, Scalar.int, random)
 
     random = Scalar(3.14, units=Units.UNITLESS)
-    self.assertEquals(random.int(), 3)
+    self.assertEqual(random.int(), 3)
 
     # Masks
     N = 100

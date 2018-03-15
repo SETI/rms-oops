@@ -7,9 +7,9 @@
 from __future__ import division
 import numpy as np
 
-from qube   import Qube
-from scalar import Scalar
-from units  import Units
+from .qube   import Qube
+from .scalar import Scalar
+from .units  import Units
 
 class Vector(Qube):
     """A PolyMath subclass containing 1-D vectors of arbitrary length.
@@ -68,11 +68,11 @@ class Vector(Qube):
                     new_values = arg.values.reshape(arg.shape + (1,) +
                                                     arg.item)
 
-                result = Vector(new_values, nrank=1, drank=arg.drank,
+                result = Vector(new_values, arg.mask, nrank=1, drank=arg.drank,
                                             derivs={}, example=arg)
 
                 if recursive and arg.derivs:
-                    for (key, value) in arg.derivs.iteritems():
+                    for (key, value) in arg.derivs.items():
                         result.insert_deriv(key, Vector.as_vector(value, False))
                 return result
 
@@ -80,7 +80,7 @@ class Vector(Qube):
             if arg.rank > 1:
                 return arg.split_items(1, Vector)
 
-            arg = Vector(arg, example=arg)
+            arg = Vector(arg)
             if recursive: return arg
             return arg.without_derivs()
 
@@ -123,10 +123,11 @@ class Vector(Qube):
         i1 = i0 + 2 * di
         idx = (Ellipsis, slice(i0,i1,di)) + self.drank * (slice(None),)
 
-        result = Qube.PAIR_CLASS(self.values[idx], derivs={}, example=self)
+        result = Qube.PAIR_CLASS(self.values[idx], self.mask, derivs={},
+                                                              example=self)
 
         if recursive and self.derivs:
-            for (key,deriv) in self.derivs.iteritems():
+            for (key,deriv) in self.derivs.items():
                 result.insert_deriv(key, deriv.to_pair(axes,False))
 
         return result
@@ -242,7 +243,7 @@ class Vector(Qube):
         if recursive:
             derivs = {}
             for (i,arg) in enumerate(args):
-                for (key,deriv) in arg.derivs.iteritems():
+                for (key,deriv) in arg.derivs.items():
 
                     # Create a buffer empty except for one component
                     deriv_args = len(args) * [None]
@@ -553,10 +554,10 @@ class Vector(Qube):
         for i in range(self.drank):
             new_values = np.rollaxis(new_values, -3, len(new_values.shape))
 
-        obj = Qube.MATRIX_CLASS(new_values, derivs={}, example=self)
+        obj = Qube.MATRIX_CLASS(new_values, self.mask, derivs={}, example=self)
 
         if recursive:
-            for (key, deriv) in self.derivs.iteritems():
+            for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv.cross_product_as_matrix(False))
 
         return obj
@@ -602,8 +603,7 @@ class Vector(Qube):
 
         # Construct the object
         obj = Qube.__new__(type(self))
-        obj.__init__(self_values * arg_values,
-                     self.mask | arg.mask,
+        obj.__init__(self_values * arg_values, self.mask | arg.mask,
                      Units.mul_units(self.units, arg.units),
                      derivs = {},
                      drank = self.drank + arg.drank,
@@ -614,12 +614,12 @@ class Vector(Qube):
             new_derivs = {}
             if self.derivs:
                 arg_wod = arg.without_derivs()
-                for (key, self_deriv) in self.derivs.iteritems():
+                for (key, self_deriv) in self.derivs.items():
                     new_derivs[key] = self_deriv.element_mul(arg_wod, False)
 
             if arg.derivs:
                 self_wod = self.without_derivs()
-                for (key, arg_deriv) in arg.derivs.iteritems():
+                for (key, arg_deriv) in arg.derivs.items():
                     term = self_wod.element_mul(arg_deriv, False)
                     if key in new_derivs:
                         new_derivs[key] += term
@@ -690,7 +690,7 @@ class Vector(Qube):
                 arg_inv.__init__(1. / divisor, divisor_mask,
                                  Units.units_power(arg.units,-1))
 
-                for (key, self_deriv) in self.derivs.iteritems():
+                for (key, self_deriv) in self.derivs.items():
                     new_derivs[key] = self_deriv.element_mul(arg_inv)
 
             if arg.derivs:
@@ -699,7 +699,7 @@ class Vector(Qube):
                                     Units.units_power(arg.units,-1))
                 factor = self.without_derivs().element_mul(arg_inv_sq)
 
-                for (key, arg_deriv) in arg.derivs.iteritems():
+                for (key, arg_deriv) in arg.derivs.items():
                     term = arg_deriv.element_mul(factor)
 
                     if key in new_derivs:

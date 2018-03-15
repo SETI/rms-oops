@@ -11,10 +11,10 @@ from polymath import Qube, Scalar, Units
 class Test_Scalar_median(unittest.TestCase):
 
   def setUp(self):
-    Qube.PREFER_PYTHON_TYPES = True
+    Qube.PREFER_BUILTIN_TYPES = True
 
   def tearDown(self):
-    Qube.PREFER_PYTHON_TYPES = False
+    Qube.PREFER_BUILTIN_TYPES = False
 
   def runTest(self):
 
@@ -101,7 +101,7 @@ class Test_Scalar_median(unittest.TestCase):
     self.assertTrue(isinstance(m012, float))
 
     self.assertEqual(m0.shape, (3,5))
-    self.assertEqual(m0[0,0], x.values[1,0,0])
+    self.assertTrue(m0[0,0] == x.values[1,0,0])
     self.assertEqual(m0[1,1], x.values[0,1,1])
     for j in range(3):
       for k in range(5):

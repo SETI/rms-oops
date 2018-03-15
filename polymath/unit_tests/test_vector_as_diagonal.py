@@ -18,9 +18,9 @@ class Test_Vector_as_diagonal(unittest.TestCase):
     for i in range(6):
         for j in range(6):
             if i == j:
-                self.assertEquals(b.values[i,i], a.values[i])
+                self.assertEqual(b.values[i,i], a.values[i])
             else:
-                self.assertEquals(b.values[i,j], 0.)
+                self.assertEqual(b.values[i,j], 0.)
 
     # Check an array of matrices, some masked
     N = 10
@@ -42,7 +42,7 @@ class Test_Vector_as_diagonal(unittest.TestCase):
     # Test units
     a = Vector(np.random.randn(4), units=Units.KM)
 
-    self.assertEquals(a.as_diagonal().units, Units.KM)
+    self.assertEqual(a.as_diagonal().units, Units.KM)
 
     # Derivatives
     N = 100

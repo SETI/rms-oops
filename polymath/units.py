@@ -7,8 +7,22 @@
 from __future__ import division
 
 import numpy as np
-import fractions
 import numbers
+
+# Definition of the gcd function is under the fractions module in Python 2 but
+# under the math module in Python 3. Rather than deal with the inconsistency,
+# we simply define it again here.
+
+def gcd(a, b):
+    """Calculate the Greatest Common Divisor of a and b.
+
+    Unless b==0, the result will have the same sign as b (so that when
+    b is divided by it, the result comes out positive).
+    """
+
+    while b:
+        a, b = b, a%b
+    return a
 
 class Units(object):
     """Units is a class defining units names and the methods for converting
@@ -39,9 +53,23 @@ class Units(object):
 
         self.exponents = tuple(exponents)
 
-        gcd = fractions.gcd(triple[0], triple[1])
-        numer = triple[0] // gcd
-        denom = triple[1] // gcd
+        # Convert to coefficients to ints with lowest common denominator
+        # if possible
+        (numer, denom) = triple[:2]
+
+        # Scale by 256 to compensate for possible floats that can be represented
+        # exactly
+        numer = int(triple[0] * 256)
+        denom = int(triple[1] * 256)
+
+        gcd_value = gcd(numer, denom)
+        numer //= gcd_value
+        denom //= gcd_value
+
+        if numer * triple[1] != denom * triple[0]:
+            numer = triple[0]
+            denom = triple[1]
+
         pi_expo = triple[2]
 
         self.triple = (numer, denom, pi_expo)
@@ -394,7 +422,7 @@ class Units(object):
         name2 = Units.name_to_dict(name2)
 
         new_name = name1.copy()
-        for (key,expo) in name2.iteritems():
+        for (key,expo) in name2.items():
             if key in new_name:
                 expo += new_name[key]
 
@@ -413,7 +441,7 @@ class Units(object):
         name2 = Units.name_to_dict(name2)
 
         new_name = name1.copy()
-        for (key,expo) in name2.iteritems():
+        for (key,expo) in name2.items():
             if key in new_name:
                 expo -= new_name[key]
 
@@ -440,7 +468,7 @@ class Units(object):
 
         new_name = {}
 
-        for (key,expo) in name.iteritems():
+        for (key,expo) in name.items():
             new_power = expo * power
             int_power = int(new_power)
             if new_power != int_power:
@@ -603,7 +631,7 @@ class Units(object):
         # Make list of numerator and denominator units
         numers = []
         denoms = []
-        for (key,expo) in namedict.iteritems():
+        for (key,expo) in namedict.items():
             if key == '':
                 numers.append(key)
             elif expo > 0:
@@ -682,9 +710,9 @@ class Units(object):
                     denom = d_denom * t_denom * a_denom
                     expo  = d_expo  + t_expo  + a_expo
 
-                    gcd = fractions.gcd(numer, denom)
-                    numer //= gcd
-                    denom //= gcd
+                    gcd_value = gcd(numer, denom)
+                    numer //= gcd_value
+                    denom //= gcd_value
 
                     if (numer, denom, expo) == self.triple:
                         successes.append({d_unit.name: d_power,

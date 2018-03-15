@@ -224,7 +224,8 @@ class Test_Vector3_misc(unittest.TestCase):
         # New tests 2/1/12 (MRS)
 
         test = Vector3(np.arange(6).reshape(2,3))
-        self.assertEqual(str(test), "Vector3([ 0.  1.  2.]\n [ 3.  4.  5.])")
+        str_test = str(test).replace('  ', ' ').replace('[ ','[')
+        self.assertEqual(str_test, "Vector3([0. 1. 2.]\n [3. 4. 5.])")
 
         test = Vector3(np.arange(6).reshape(2,3), mask = [True, False])
         self.assertEqual(str(test),
@@ -245,14 +246,14 @@ class Test_Vector3_misc(unittest.TestCase):
 
         self.assertEqual(str(test[0]),
                 "Vector3(-- -- --; mask)")
-        self.assertEqual(str(test[1]),
-                "Vector3( 3.  4.  5.)")
+        self.assertEqual(str(test[1]).replace('( ','(').replace('  ',' '),
+                "Vector3(3. 4. 5.)")
         self.assertEqual(str(test[0:2]),
                 "Vector3([-- -- --]\n [3.0 4.0 5.0]; mask)")
         self.assertEqual(str(test[0:1]),
                 "Vector3([-- -- --]; mask)")
-        self.assertEqual(str(test[1:2]),
-                "Vector3([ 3.  4.  5.])")
+        self.assertEqual(str(test[1:2]).replace('[ ','[').replace('  ',' '),
+                "Vector3([3. 4. 5.])")
 
 ########################################
 if __name__ == '__main__':
