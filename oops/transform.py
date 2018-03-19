@@ -52,15 +52,10 @@ class Transform(object):
     """
 
     ############################################################################
-    # Avoid circular dependencies with Frame class at load time
-    SAVED_FRAME_CLASS = None
-
-    @classmethod
-    def FRAME_CLASS(cls):
-        if cls.SAVED_FRAME_CLASS: return cls.SAVED_FRAME_CLASS
-        if 'oops.frame_.frame' in sys.modules:
-            cls.SAVED_FRAME_CLASS = sys.modules['oops.frame_.frame'].Frame
-        return cls.SAVED_FRAME_CLASS
+    # Note:
+    # The class constants are defined at the end of __init__.py:
+    #   Transform.FRAME_CLASS
+    #   Transform.IDENTITY
     ############################################################################
 
     PACKRAT_ARGS = ['matrix', 'omega', 'frame', 'reference', 'origin',
@@ -89,8 +84,8 @@ class Transform(object):
 
         self.is_fixed = (self.omega == Vector3.ZERO)
 
-        self.frame     = Transform.FRAME_CLASS().as_wayframe(frame)
-        self.reference = Transform.FRAME_CLASS().as_wayframe(reference)
+        self.frame     = Transform.FRAME_CLASS.as_wayframe(frame)
+        self.reference = Transform.FRAME_CLASS.as_wayframe(reference)
 
         if origin is not None:
             self.origin = origin
@@ -207,7 +202,7 @@ class Transform(object):
         if derivs:
             return self.matrix_with_deriv * pos
         else:
-            return self.matrix * pos.without_derivs()
+            return self.matrix * pos.wod
 
     def rotate_pos_vel(self, pos, vel):
         """Rotate the coordinates of a position and velocity.
@@ -268,7 +263,7 @@ class Transform(object):
         if derivs:
             return self.inverse_with_deriv * pos
         else:
-            return self.inverse_matrix * pos.without_derivs()
+            return self.inverse_matrix * pos.wod
 
     def unrotate_pos_vel(self, pos, vel):
         """Un-rotates the coordinates of a position and velocity.

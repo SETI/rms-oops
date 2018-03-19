@@ -147,7 +147,6 @@ class Qube(object):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     def __new__(subtype, *values, **keywords):
@@ -203,10 +202,6 @@ class Qube(object):
         if type(mask) in (list, tuple):
             mask = np.array(mask)
 
-        if mask is not None and not self.MASKS_OK:
-            raise ValueError('masks are disallowed for class ' +
-                             '%s' % type(self).__name__)
-
         if self.NRANK is not None:
             if nrank is not None and nrank != self.NRANK:
                 raise ValueError('invalid numerator rank for class ' +
@@ -224,13 +219,10 @@ class Qube(object):
         # Interpret the arg if it is a PolyMath object
         if isinstance(arg, Qube):
 
-            if self.MASKS_OK:
-                if mask is None:
-                    mask = arg.__mask_
-                else:
-                    mask = mask | arg.__mask_
-            else:
+            if mask is None:
                 mask = arg.__mask_
+            else:
+                mask = mask | arg.__mask_
 
             if self.UNITS_OK and units is None:
                 units = arg.__units_
@@ -353,7 +345,7 @@ class Qube(object):
                         raise TypeError("floats are disallowed in class '%s'" %
                                         type(self).__name__)
             else:
-                raise ValueError("unsupported data type: '%s'" % str(arg.dtype))
+                raise ValueError("unsupported data type: '%s'" % str(arg))
 
         self.__values_ = arg
 
@@ -364,9 +356,7 @@ class Qube(object):
         if mask is None:
             mask = False
 
-        if np.shape(mask) == ():
-            mask = bool(mask)
-        else:
+        if np.shape(mask) != ():
             mask = np.asarray(mask).astype('bool')
 
         if mask_from_array is not None:
@@ -375,41 +365,17 @@ class Qube(object):
 
             mask = mask | mask_from_array
 
-        if not self.MASKS_OK and mask is not False:
-            raise TypeError("masks are disallowed in class '%s'" %
-                            type(self).__name__)
-
         # Broadcast the mask to the shape of the values if necessary
         if np.shape(mask) not in ((), shape):
-            mask_mismatch = True
             try:
                 dummy = np.empty(shape, dtype='bool')
                 new_mask = np.broadcast_arrays(mask, dummy)[0]
-
-                if new_mask.shape == shape:
-                    mask = new_mask.copy()
-                    mask_mismatch = False
-
             except:
-                pass
-
-            if mask_mismatch:
                 raise ValueError(("object shape and mask shape are " +
                                   "incompatible: %s, %s") %
                                   (str(shape), str(np.shape(mask))))
 
         self.__mask_ = mask
-        self.__antimask_ = None
-        self.__corners_  = None
-        self.__slicer_   = None
-
-        if np.shape(self.__mask_) == ():    # Avoid type np.bool_ if possible
-            if self.__mask_:
-                self.__mask_ = True
-                self.__antimask_ = False
-            else:
-                self.__mask_ = False
-                self.__antimask_ = True
 
         # Fill in the default
         if default is not None and np.shape(default) == item:
@@ -448,7 +414,7 @@ class Qube(object):
         self.__shape_ = shape
 
         # Fill in the units
-        if units is False:
+        if Qube.is_one_false(units):
             self.__units_ = None
         else:
             self.__units_ = units
@@ -470,6 +436,10 @@ class Qube(object):
         self.__truth_if_any_ = False
         self.__truth_if_all_ = False
 
+        # Used for anything we want to cache in association with an object
+        # This cache will be cleared whenever the object is modified in any way
+        self.__cache_ = {}
+
         return
 
     def clone(self, recursive=True, preserve=None):
@@ -489,6 +459,9 @@ class Qube(object):
                 continue
 
             obj.__dict__[attr] = value
+
+        # Don't clone the cache
+        obj.__cache_ = {}
 
         # Clone the derivs
         obj.__derivs_ = {}
@@ -515,18 +488,19 @@ class Qube(object):
                 '_Qube__readonly_', '_Qube__default_']
 
         # For a fully masked object, no need to save values
-        if self.mask is True:
+        flag = Qube.as_one_bool(self.mask)
+        if flag is True:
             args.append('_Qube__mask_')
 
         # For an unmasked object, save the array values as they are
-        elif self.mask is False:
+        elif flag is False:
             args.append('_Qube__mask_')
             args.append('_Qube__values_')
 
         # For a partially masked object, take advantage of the corners and also
         # only save the unmasked values
         else:
-            _ = self.corners
+            self.__corners_ = self.corners
             args.append('_Qube__corners_')
 
             self.__sliced_mask_ = self.__mask_[self.slicer]
@@ -554,7 +528,7 @@ class Qube(object):
         drank = args['drank']
         readonly = args['readonly']
         default  = args['default']
-        derivs   = args.get('derivs', None)
+        derivs   = args.get('derivs', {})
         units    = args.get('units', None)
 
         try:
@@ -650,25 +624,15 @@ class Qube(object):
             else:
                 self.__mask_[antimask] = mask[antimask]
 
-            self.__antimask_ = None
-            self.__corners_  = None
-            self.__slicer_   = None
+        self.__cache_.clear()
 
         # Set the readonly state based on the values given
-        if self.__readonly_:
-            self.__mask_ = Qube._array_to_readonly(self.__mask_)
+        if np.shape(self.__mask_):
+            if self.__readonly_:
+                self.__mask_ = Qube._array_to_readonly(self.__mask_)
 
-        elif Qube._array_is_readonly(self.__mask_):
-            self.__mask_ = self.__mask_.copy()
-
-        # Avoid type np.bool_ if possible
-        if np.shape(self.__mask_) == ():
-            if self.__mask_:
-                self.__mask_ = True
-                self.__antimask_ = False
-            else:
-                self.__mask_ = False
-                self.__antimask_ = True
+            elif Qube._array_is_readonly(self.__mask_):
+                self.__mask_ = self.__mask_.copy()
 
         return self
 
@@ -698,9 +662,7 @@ class Qube(object):
         else:
             self.__mask_[antimask] = mask[antimask]
 
-        self.__antimask_ = None
-        self.__corners_  = None
-        self.__slicer_   = None
+        self.__cache_.clear()
 
         if isinstance(self.__mask_, np.ndarray):
             if is_readonly:
@@ -713,10 +675,10 @@ class Qube(object):
         if np.shape(self.__mask_) == ():
             if self.__mask_:
                 self.__mask_ = True
-                self.__antimask_ = False
+                self.__cache_['antimask'] = False
             else:
                 self.__mask_ = False
-                self.__antimask_ = True
+                self.__cache_['antimask'] = True
 
         return self
 
@@ -737,9 +699,10 @@ class Qube(object):
                 return self.__values_
 
         # Construct something that behaves as a suitable mask
-        if self.mask is False:
+        flag = Qube.as_one_bool(self.mask)
+        if flag is False:
             newmask = np.ma.nomask
-        elif self.mask is True:
+        elif flag is True:
             newmask = np.ones(self.__values_.shape, dtype='bool')
         elif self.__rank_ > 0:
             newmask = self.__mask_.reshape(self.__shape_ + self.__rank_ * (1,))
@@ -755,19 +718,25 @@ class Qube(object):
         if np.shape(self.__mask_) == () and type(self.__mask_) != bool:
             if self.__mask_:
                 self.__mask_ = True
-                self.__antimask_ = False
+                self.__cache_['antimask'] = False
             else:
                 self.__mask_ = False
-                self.__antimask_ = True
+                self.__cache_['antimask'] = True
 
         return self.__mask_
 
     @property
     def antimask(self):
-        if self.__antimask_ is None:
-            self.__antimask_ = np.logical_not(self.mask)
+        """The inverse of the mask, True where an element is valid."""
 
-        return self.__antimask_
+        try:
+            return self.__cache_['antimask']
+
+        except KeyError:
+            antimask = np.logical_not(self.mask)
+            self.__cache_['antimask'] = antimask
+
+        return antimask
 
     @property
     def default(self): return self.__default_
@@ -823,6 +792,29 @@ class Qube(object):
     def is_deriv(self):
         return self.__is_deriv_
 
+    @property
+    def wod(self):
+        """A shallow clone without derivatives, cached."""
+
+        if not self.__derivs_:
+            return self
+
+        try:
+            return self.__cache_['wod']
+        except KeyError:
+            pass
+
+        wod = Qube.__new__(type(self))
+        for (key,attr) in self.__dict__.items():
+            if key[0] == '_':
+               wod.__dict__[key] = attr
+
+        wod.__derivs_ = {}
+        wod.__cache_['wod'] = wod
+        self.__cache_['wod'] = wod
+
+        return wod
+
     def find_corners(self):
         """Update the corner indices such that everything outside this defined
         "hypercube" is masked."""
@@ -831,23 +823,19 @@ class Qube(object):
         lshape = len(shape)
         index0 = lshape * (0,)
 
-        self.__slicer_  = None
-
         if lshape == 0:
-            self.__corners_ = None
+            return None
 
-        if self.mask is False:
-            self.__corners_ = (index0, shape)
-            return
+        flag = Qube.as_one_bool(self.mask)
+        if flag is False:
+            return (index0, shape)
 
-        if self.mask is True:
-            self.__corners_ = (index0, index0)
-            return
+        if Qube.is_one_true(self.mask):
+            return (index0, index0)
 
         lower = []
         upper = []
         antimask = self.antimask
-        self.__masked_value_ = None
 
         for axis in range(lshape):
             other_axes = list(range(lshape))
@@ -856,23 +844,32 @@ class Qube(object):
             occupied = np.any(antimask, tuple(other_axes))
             indices = np.where(occupied)[0]
             if len(indices) == 0:
-                self.__corners_ = (index0, index0)
-                return
+                return (index0, index0)
 
             lower.append(indices[0])
             upper.append(indices[-1] + 1)
 
-        self.__corners_ = (tuple(lower), tuple(upper))
+        return (tuple(lower), tuple(upper))
+
+    @property
+    def cache(self):
+        """A dictionary for anything to be cached. The cache is cleared whenever
+        the object is modified."""
+
+        return self.__cache_
 
     @property
     def corners(self):
         """Corners of a "hypercube" that contain all the unmasked array
         elements."""
 
-        if self.__corners_ is None:
-            self.find_corners()
+        try:
+            return self.__cache_['corners']
+        except KeyError:
+            corners = self.find_corners()
+            self.__cache_['corners'] = corners
 
-        return self.__corners_
+        return corners
 
     @staticmethod
     def slicer_from_corners(corners):
@@ -890,10 +887,40 @@ class Qube(object):
         """A slice object containing all the array elements inside the current
         corners."""
 
-        if self.__slicer_ is None:
-            self.__slicer_ = Qube.slicer_from_corners(self.corners)
+        try:
+            return self.__cache_['slicer']
+        except KeyError:
+            slicer = Qube.slicer_from_corners(self.corners)
+            self.__cache_['slicer'] = slicer
 
-        return self.__slicer_
+        return slicer
+
+    @staticmethod
+    def as_one_bool(value):
+        """Convert a single value to a bool; leave other values unchanged."""
+
+        if np.shape(value) == () and isinstance(value, (bool, np.bool_)):
+            return bool(value)
+
+        return value
+
+    @staticmethod
+    def is_one_true(value):
+        """True if the value is a single boolean True"""
+
+        if np.shape(value) == () and isinstance(value, (bool, np.bool_)):
+            if value: return True
+
+        return False
+
+    @staticmethod
+    def is_one_false(value):
+        """True if the value is a single boolean False"""
+
+        if np.shape(value) == () and isinstance(value, (bool, np.bool_)):
+            if not value: return True
+
+        return False
 
     ############################################################################
     # Derivative operations
@@ -944,7 +971,7 @@ class Qube(object):
                                                       str(self.__numer_)))
 
         # Prevent recursion, convert to floating point
-        deriv = deriv.without_derivs().as_float()
+        deriv = deriv.wod.as_float()
 
         # Broadcast the shape to match the parent object if necessary
         if deriv.shape != self.shape:
@@ -963,7 +990,7 @@ class Qube(object):
         deriv.__is_deriv_ = True
         return self
 
-    def insert_derivs(self, dict, override=False):
+    def insert_derivs(self, derivs, override=False):
         """Insert or replace the derivatives in this object from a dictionary.
 
         You cannot replace the pre-existing values of any derivative in a
@@ -971,7 +998,7 @@ class Qube(object):
         inserting a new derivative into a read-only object is not prevented.
 
         Input:
-            dict        the dictionary of derivatives, keyed by their names.
+            derivs      the dictionary of derivatives, keyed by their names.
 
             override    True to allow the value of a pre-existing derivative to
                         be replaced.
@@ -979,13 +1006,13 @@ class Qube(object):
 
         # Check every insert before proceeding with any
         if self.readonly and not override:
-            for key in dict:
+            for key in derivs:
                 if key in self.__derivs_:
                     raise ValueError('derivative d_d' + key + ' cannot be ' +
                                      'replaced in a read-only object')
 
         # Insert derivatives
-        for (key, deriv) in dict.items():
+        for (key, deriv) in derivs.items():
             self.insert_deriv(key, deriv, override)
 
     def delete_deriv(self, key, override=False):
@@ -1361,9 +1388,7 @@ class Qube(object):
         else:
             obj.__mask_ = self.__mask_
 
-        obj.__antimask_ = None
-        obj.__corners_  = None
-        obj.__slicer_   = None
+        obj.__cache_ = {}
 
         # Set the read-only state
         if readonly:
@@ -1431,7 +1456,7 @@ class Qube(object):
         # If already floating, return as is
         if self.is_float():
             if recursive: return self
-            return self.without_derivs()
+            return self.wod
 
         # Handle a Boolean
         if isinstance(self, Qube.BOOLEAN_CLASS):
@@ -1476,7 +1501,7 @@ class Qube(object):
         # If already integers, return as is
         if self.is_int():
             if recursive: return self
-            return self.without_derivs()
+            return self.wod
 
         # Handle a Boolean
         if isinstance(self, Qube.BOOLEAN_CLASS):
@@ -1519,7 +1544,6 @@ class Qube(object):
         if self.shape != (): return self
         if self.item  != (): return self
         if self.mask:        return self
-        if self.derivs:      return self
 
         if self.units not in (None, Units.UNITLESS): return self
 
@@ -1546,22 +1570,21 @@ class Qube(object):
         """Return True if arg is of a Python numeric or NumPy numeric type.""" 
         return isinstance(arg, numbers.Real) or isinstance(arg, np.number) 
 
-    def masked_single(self):
+    def masked_single(self, recursive=True):
         """Return an object of this subclass containing one masked value."""
 
         if self.__item_ == ():
-            if self.is_float():
-                new_value = 1.
-            else:
-                new_value = 1
+            new_value = self.__default_
         else:
-            if self.is_float():
-                new_value = np.ones(self.__item_, dtype='float')
-            else:
-                new_value = np.ones(self.__item_, dtype='int')
+            new_value = self.__default_.copy()
 
         obj = Qube.__new__(type(self))
         obj.__init__(new_value, True, derivs={}, example=self)
+
+        if recursive and self.__derivs_:
+            for (key, value) in self.__derivs_.items():
+                obj.insert_deriv(key, value.masked_single(recursive=False))
+
         obj.as_readonly()
         return obj
 
@@ -1761,15 +1784,15 @@ class Qube(object):
             new_values[mask] = replace.__values_[mask]
 
             # Update the mask if replacement values are masked
-            if new_mask is True:
+            if Qube.is_one_true(new_mask):
                 pass
-            elif replace.mask is False:
+            elif Qube.is_one_false(replace.mask):
                 pass
             else:
-                if new_mask is False:
+                if Qube.is_one_false(new_mask):
                     new_mask = np.zeros(self.shape, dtype='bool')
 
-                if replace.mask is True:
+                if Qube.is_one_true(replace.mask):
                     new_mask[mask] = True
                 else:
                     new_mask[mask] = replace.__mask_[mask]
@@ -2046,9 +2069,10 @@ class Qube(object):
     def count_masked(self):
         """Return the number of masked items in this object."""
 
-        if self.mask is True:
+        mask = Qube.as_one_bool(self.mask)
+        if mask is True:
             return self.size
-        elif self.mask is False:
+        elif mask is False:
             return 0
         else:
             return np.count_nonzero(self.__mask_)
@@ -2062,9 +2086,10 @@ class Qube(object):
     def count_unmasked(self):
         """Return the number of unmasked items in this object."""
 
-        if self.mask is True:
+        mask = Qube.as_one_bool(self.mask)
+        if mask is True:
             return 0
-        elif self.mask is False:
+        elif mask is False:
             return self.size
         else:
             return self.size - np.count_nonzero(self.__mask_)
@@ -2078,7 +2103,7 @@ class Qube(object):
     def without_mask(self, recursive=True):
         """Return a shallow copy of this object without its mask."""
 
-        if self.mask is False: return self
+        if Qube.is_one_false(self.mask): return self
 
         obj = self.clone(recursive=False)
         obj._set_mask_(False)
@@ -2092,7 +2117,7 @@ class Qube(object):
     def as_all_masked(self, recursive=True):
         """Return a shallow copy of this object with everything masked."""
 
-        if self.mask is True: return self
+        if Qube.is_one_true(self.mask): return self
 
         obj = self.clone(recursive=False)
         obj._set_mask_(True)
@@ -2127,6 +2152,27 @@ class Qube(object):
         if recursive:
             for (key,deriv) in self.__derivs_.items():
                 obj.insert_deriv(key, deriv.remask(mask))
+
+        return obj
+
+    def expand_mask(self, recursive=True):
+        """Return a shallow copy where a single mask value of True or False is
+        converted to an array."""
+
+        if np.shape(self.__mask_) != () and not (recursive and self.__derivs_):
+            return self
+
+        # Construct the new object
+        obj = self.clone(recursive=False)
+
+        if Qube.is_one_false(obj.__mask_):
+            obj._set_mask_(np.zeros(self.shape, dtype='bool'))
+        elif Qube.is_one_true(obj.__mask_):
+            obj._set_mask_(np.ones(self.shape, dtype='bool'))
+
+        if recursive and self.__derivs_:
+            for (key,deriv) in self.__derivs_.items():
+                obj.insert_deriv(key, deriv.expand_mask(recursive=False))
 
         return obj
 
@@ -2189,10 +2235,11 @@ class Qube(object):
     def as_mask_where_nonzero(self):
         """A scalar or NumPy array where values are nonzero and unmasked."""
 
-        if self.mask is True:
+        mask = Qube.as_one_bool(self.mask)
+        if mask is True:
             return False
 
-        if self.mask is False:
+        if mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.any(self.__values_, axis=axes)
@@ -2208,10 +2255,11 @@ class Qube(object):
     def as_mask_where_zero(self):
         """A scalar or NumPy array where values are zero and unmasked."""
 
-        if self.mask is True:
+        mask = Qube.as_one_bool(self.mask)
+        if mask is True:
             return False
 
-        if self.mask is False:
+        if mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.all(self.__values_ == 0, axis=axes)
@@ -2227,10 +2275,11 @@ class Qube(object):
     def as_mask_where_nonzero_or_masked(self):
         """A scalar or NumPy array where values are nonzero or masked."""
 
-        if self.mask is True:
+        mask = Qube.as_one_bool(self.mask)
+        if mask is True:
             return True
 
-        if self.mask is False:
+        if mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.any(self.__values_, axis=axes)
@@ -2246,10 +2295,11 @@ class Qube(object):
     def as_mask_where_zero_or_masked(self):
         """A scalar or NumPy array where values are zero or masked."""
 
-        if self.mask is True:
+        mask = Qube.as_one_bool(self.mask)
+        if mask is True:
             return True
 
-        if self.mask is False:
+        if mask is False:
             if self.__rank_:
                 axes = tuple(range(-self.__rank_, 0))
                 return np.all(self.__values_ == 0, axis=axes)
@@ -2272,65 +2322,89 @@ class Qube(object):
         If this object has no shape, then it is returned unchanged.
         """
 
-        if antimask is None or antimask is True or self.shape == (): return self
+        # If the antimask is shapeless...
+        if antimask is None or Qube.is_one_true(antimask): return self
 
-        if antimask is False:
-            obj = self.flatten[:0]
-            obj.__shrink_source_ = self
-            return obj
+        if Qube.is_one_false(antimask):
+            return self.masked_single()
 
-        if antimask.shape == (): return self
+        if self.__shape_ != antimask.shape:
+            self = self.broadcast_into_shape(antimask.shape)
 
-        if self.shape != antimask.shape:
-            raise ValueError('antimask shape %s ' % str(np.shape(antimask)) +
-                             'does not match object shape %s' % str(self.shape))
+        # Return the previous shrink if it is the same
+        try:
+            prev_antimask = self.__cache_['shrink_antimask']
+            if np.all(prev_antimask == antimask):
+                return self.__cache_['shrunk']
+        except KeyError:
+            pass
 
-        if self.mask is False:
-            mask = np.zeros(self.shape, dtype='bool')
-        elif self.mask is True:
-            mask = np.ones(self.shape, dtype='bool')
-        else:
-            mask = self.__mask_
+        # Otherwise shrink anew and save
+        self = self.expand_mask()
 
         obj = Qube.__new__(type(self))
-        obj.__init__(self.__values_[antimask], mask[antimask], derivs={},
-                     example=self)
+        obj.__init__(self.__values_[antimask], self.__mask_[antimask],
+                     derivs={}, example=self)
 
         for (key, deriv) in self.__derivs_.items():
             obj.insert_deriv(key, deriv.shrink(antimask))
 
         obj.match_readonly(self)
 
-        obj.__shrink_source_ = self       # Save a pointer to the original
+        self.__cache_['shrunk'] = obj
+        self.__cache_['shrink_antimask'] = antimask
+
+        obj.__cache_['unshrunk'] = self
         return obj
 
-    def unshrink(self, antimask=None):
+    def unshrink(self, antimask, shape=None):
         """Return the results of a shrink operation to its original dimensions.
+
+        Input:
+            antimask    the antimask passed to shrink().
+            shape       in cases where the antimask is False, this defines the
+                        shape of the returned object. Otherwise a shapeless
+                        object is returned.
         """
 
-        if np.shape(antimask) == () or self.shape == ():
-            try:
-                return self.__shrink_source_
-            except AttributeError:
+        # If the antimask is shapeless...
+        if np.shape(antimask) == ():
+            if antimask:
                 return self
+            elif shape is None or shape == ():
+                return self.masked_single()
 
-        # Copy the source if it's still available
+        # Return the previous unshrink if this object has not changed
         try:
-            clone = self.__shrink_source_.clone(recursive=True)
-            new_values = clone.__values_.copy()
-            new_mask = clone.__mask_.copy()
+            unshrunk = self.__cache_['unshrunk']
+            if not np.all(antimask == unshrunk.antimask):
+                unshrunk = unshrunk.mask_where(np.logical_not(antimask))
+                self.__cache_['unshrunk'] = unshrunk
+            return unshrunk
+        except KeyError:
+            pass
 
-        # Otherwise, fill in default values
-        except AttributeError:
-            default = self.__default_
+        # Interpret the default
+        default = self.__default_
+        if isinstance(default, Qube):
+            default = self.__default_.__values_
 
+        # Create the new values
+        if np.shape(antimask) == ():
+            if self.__item_ == ():
+                new_values = self.__default_
+            else:
+                new_values = self.__default_.copy()
+        else:
             new_values = np.empty(antimask.shape + self.__item_,
                                   dtype=self.__values_.dtype)
-
-            if isinstance(default, Qube): default = default.__values_
-            new_values[...] = default
+            new_values[...] = self.__default_
             new_values[antimask] = self.__values_
 
+        # Create the new mask
+        if np.shape(antimask) == ():
+            new_mask = True
+        else:
             new_mask = np.ones(antimask.shape, dtype='bool')
             new_mask[antimask] = self.__mask_
 
@@ -2338,11 +2412,22 @@ class Qube(object):
         obj = Qube.__new__(type(self))
         obj.__init__(new_values, new_mask, derivs={}, example=self)
 
+        # Broadcast to the new shape if necessary
+        if shape is not None and shape != obj.shape:
+            obj = obj.broadcast_into_shape(shape)
+
         # Unshrink the derivatives
         for (key, deriv) in self.__derivs_.items():
-            obj.insert_deriv(key, deriv.unshrink(antimask))
+            obj.insert_deriv(key, deriv.unshrink(antimask, shape))
 
-        obj.match_readonly(self)
+        # Make it readonly if necessary
+        if self.__readonly_:
+            obj = obj.as_readonly()
+
+        self.__cache_['unshrunk'] = obj
+
+        obj.__cache_['shrunk'] = self
+        obj.__cache_['shrink_antimask'] = antimask
         return obj
 
     ############################################################################
@@ -2717,7 +2802,7 @@ class Qube(object):
                         the first suitable subclass in the list.
         """
 
-        if not self.__drank_: return self.without_derivs()
+        if not self.__drank_: return self.wod
 
         obj = Qube(self.__values_, self.__mask_, derivs={},
                    nrank=(self.__nrank_ + self.__drank_), drank=0,
@@ -2818,7 +2903,7 @@ class Qube(object):
 
         # Fill in the derivatives, multiplied by sign(self)
         if recursive and self.__derivs_:
-            sign = self.without_derivs().sign()
+            sign = self.wod.sign()
             for (key, deriv) in self.__derivs_.items():
                 obj.insert_deriv(key, deriv * sign)
 
@@ -2907,9 +2992,8 @@ class Qube(object):
         self.__units_ = self.__units_ or arg.__units_
         self.insert_derivs(new_derivs)
 
-        self.__antimask_ = None
-        self.__corners_  = None
-        self.__slicer_   = None
+        self.__cache_.clear()
+
         return self
 
     def add_derivs(self, arg):
@@ -3018,9 +3102,7 @@ class Qube(object):
         self.__units_ = self.__units_ or arg.__units_
         self.insert_derivs(new_derivs)
 
-        self.__antimask_ = None
-        self.__corners_  = None
-        self.__slicer_   = None
+        self.__cache_.clear()
         return self
 
     def sub_derivs(self, arg):
@@ -3139,9 +3221,7 @@ class Qube(object):
             self.__units_ = Units.mul_units(self.__units_, arg.__units_)
             self.insert_derivs(new_derivs)
 
-            self.__antimask_ = None
-            self.__corners_  = None
-            self.__slicer_   = None
+            self.__cache_.clear()
             return self
 
         # Matrix multiply case
@@ -3199,18 +3279,17 @@ class Qube(object):
         new_derivs = {}
 
         if self.__derivs_:
-            arg_wod = arg.without_derivs()
+            arg_wod = arg.wod
             for (key, self_deriv) in self.__derivs_.items():
                 new_derivs[key] = self_deriv * arg_wod
 
         if arg.__derivs_:
-            self_wod = self.without_derivs()
+            self_wod = self.wod
             for (key, arg_deriv) in arg.__derivs_.items():
-                term = self_wod * arg_deriv
                 if key in new_derivs:
-                    new_derivs[key] = new_derivs[key] + term
+                    new_derivs[key] = new_derivs[key] + self_wod * arg_deriv
                 else:
-                    new_derivs[key] = term
+                    new_derivs[key] = self_wod * arg_deriv
 
         return new_derivs
 
@@ -3369,13 +3448,13 @@ class Qube(object):
         if not nozeros:
             arg = arg.mask_where_eq(0., 1.)
 
-        arg_wod_inv = arg.without_derivs().reciprocal(nozeros=True)
+        arg_wod_inv = arg.wod.reciprocal(nozeros=True)
 
         for (key, self_deriv) in self.__derivs_.items():
             new_derivs[key] = self_deriv * arg_wod_inv
 
         if arg.__derivs_:
-            self_wod = self.without_derivs()
+            self_wod = self.wod
             for (key, arg_deriv) in arg.__derivs_.items():
                 term = self_wod * (arg_deriv * arg_wod_inv**2)
                 if key in new_derivs:
@@ -3461,9 +3540,7 @@ class Qube(object):
             self.__units_ = Units.div_units(self.__units_, arg.__units_)
             self.delete_derivs()
 
-            self.__antimask_ = None
-            self.__corners_  = None
-            self.__slicer_   = None
+            self.__cache_.clear()
             return self
 
         # Nothing else is implemented
@@ -3583,9 +3660,7 @@ class Qube(object):
             self.__mask_ = self.__mask_ | divisor.__mask_
             self.__units_ = Units.div_units(self.__units_, arg.__units_)
 
-            self.__antimask_ = None
-            self.__corners_  = None
-            self.__slicer_   = None
+            self.__cache_.clear()
             return self
 
         # Nothing else is implemented
@@ -3614,7 +3689,7 @@ class Qube(object):
         arg has no denominator."""
 
         # Mask out zeros
-        arg = arg.without_derivs().mask_where_eq(0,1)
+        arg = arg.wod.mask_where_eq(0,1)
 
         # Align axes
         arg_values = arg.__values_
@@ -3677,7 +3752,7 @@ class Qube(object):
 
         # Evaluate the derivatives if necessary
         if recursive and self.__derivs_:
-            factor = expo * arg.without_derivs()**(expo-1.)
+            factor = expo * arg.wod**(expo-1.)
             for (key, deriv) in self.__derivs_.items():
                 obj.insert_deriv(key, factor * deriv)
 
@@ -3944,11 +4019,8 @@ class Qube(object):
             new_values = np.any(new_values, axis=axis)
 
             # Create new mask
-            if self.mask is True:
-                new_mask = True
-            elif self.mask is False:
-                new_mask = False
-            else:
+            new_mask = Qube.as_one_bool(self.mask)
+            if np.shape(new_mask):
                 new_mask = np.all(self.__mask_, axis=axis)
 
             result = Qube.BOOLEAN_CLASS(new_values, new_mask)
@@ -4006,11 +4078,8 @@ class Qube(object):
             new_values = np.all(new_values, axis=axis)
 
             # Create new mask
-            if self.mask is True:
-                new_mask = True
-            elif self.mask is False:
-                new_mask = False
-            else:
+            new_mask = Qube.as_one_bool(self.mask)
+            if np.shape(new_mask):
                 new_mask = np.all(self.__mask_, axis=axis)
 
             result = Qube.BOOLEAN_CLASS(new_values, new_mask)
@@ -4145,11 +4214,8 @@ class Qube(object):
             new_values = np.any(new_values, axis=axis)
 
             # Create new mask
-            if self.mask is True:
-                new_mask = True
-            elif self.mask is False:
-                new_mask = False
-            else:
+            new_mask = Qube.as_one_bool(self.mask)
+            if np.shape(new_mask):
                 # False values are masked if any value is True or masked
                 new_mask = np.any(self.__values_ | self.__mask_, axis=axis)
 
@@ -4224,11 +4290,8 @@ class Qube(object):
             new_values = np.all(new_values, axis=axis)
 
             # Create new mask
-            if self.mask is True:
-                new_mask = True
-            elif self.mask is False:
-                new_mask = False
-            else:
+            new_mask = Qube.as_one_bool(self.mask)
+            if np.shape(new_mask):
                 # False values are masked if every value is True or masked
                 new_mask = np.all(self.__values_ | self.__mask_, axis=axis)
 
@@ -4345,6 +4408,7 @@ class Qube(object):
 
         # A shapeless object cannot be indexed except by booleans
         if self.__shape_ == ():
+            vals_index = Qube.as_one_bool(vals_index)
             if vals_index is True:
                 return self
 
@@ -4375,16 +4439,11 @@ class Qube(object):
             result_mask_shape = result_vals_shape[:len(result_vals_shape) -
                                                    self.__rank_]
 
-            # If everything is newly masked...
-            if new_mask_index is True:
-                new_mask = True
-
-            # If nothing is newly masked...
-            elif new_mask_index is False:
-                new_mask = False
+            # If everything or nothing is newly masked...
+            new_mask = Qube.as_one_bool(new_mask_index)
 
             # If the new mask is an array..
-            elif np.shape(new_mask_index) == result_mask_shape:
+            if np.shape(new_mask_index) == result_mask_shape:
                 new_mask = new_mask_index
 
             # If the new mask is partial..
@@ -4425,6 +4484,7 @@ class Qube(object):
 
         # A shapeless object cannot be indexed except by True or False
         if self.__shape_ == ():
+            vals_index = Qube.as_one_bool(vals_index)
             if vals_index is True:
                 values = self.as_this_type(arg).values
                 if isinstance(self.__values_, np.ndarray):
@@ -4438,9 +4498,8 @@ class Qube(object):
 
                 self.__values_   = values
                 self.__mask_     = arg.__mask_
-                self.__antimask_ = None
-                self.__corners_  = None
-                self.__slicer_   = None
+
+                self.__cache_.clear()
                 return self
 
             if vals_index is False:
@@ -4490,9 +4549,7 @@ class Qube(object):
                 indexed_mask[new_mask_index] = True
                 self.__mask_[mask_index] = indexed_mask
 
-        self.__antimask_ = None
-        self.__corners_  = None
-        self.__slicer_   = None
+        self.__cache_.clear()
 
         # Also update the derivatives (ignoring those not in self)
         for (key, self_deriv) in self.__derivs_.items():
@@ -4705,13 +4762,13 @@ class Qube(object):
             new_derivs = {}
 
             if arg1.__derivs_:
-                arg2_wod = arg2.without_derivs()
+                arg2_wod = arg2.wod
                 for (key, arg1_deriv) in arg1.__derivs_.items():
                     new_derivs[key] = Qube.dot(arg1_deriv, arg2_wod, a1, a2,
                                                classes, recursive=False)
 
             if arg2.__derivs_:
-                arg1_wod = arg1.without_derivs()
+                arg1_wod = arg1.wod
                 for (key, arg2_deriv) in arg2.__derivs_.items():
                     term = Qube.dot(arg1_wod, arg2_deriv, a1, a2,
                                     classes, recursive=False)
@@ -4762,7 +4819,7 @@ class Qube(object):
 
         # Insert derivatives if necessary
         if recursive and arg.__derivs_:
-            factor = arg.without_derivs() / obj
+            factor = arg.wod / obj
             for (key, arg_deriv) in arg.__derivs_.items():
                 obj.insert_deriv(key, Qube.dot(factor, arg_deriv, a1, a1,
                                                classes, recursive=False))
@@ -4808,7 +4865,7 @@ class Qube(object):
 
         # Insert derivatives if necessary
         if recursive and arg.__derivs_:
-            factor = 2.* arg.without_derivs()
+            factor = 2.* arg.wod
             for (key, arg_deriv) in arg.__derivs_.items():
                 obj.insert_deriv(key, Qube.dot(factor, arg_deriv, a1, a1,
                                                classes, recursive=False))
@@ -4903,13 +4960,13 @@ class Qube(object):
             new_derivs = {}
 
             if arg1.__derivs_:
-              arg2_wod = arg2.without_derivs()
+              arg2_wod = arg2.wod
               for (key, arg1_deriv) in arg1.__derivs_.items():
                 new_derivs[key] = Qube.cross(arg1_deriv, arg2_wod, a1, a2,
                                              classes, recursive=False)
 
             if arg2.__derivs_:
-              arg1_wod = arg1.without_derivs()
+              arg1_wod = arg1.wod
               for (key, arg2_deriv) in arg2.__derivs_.items():
                 term = Qube.cross(arg1_wod, arg2_deriv, a1, a2, classes, False)
                 if key in new_derivs:
@@ -4994,13 +5051,13 @@ class Qube(object):
             new_derivs = {}
 
             if arg1.__derivs_:
-              arg_wod = arg2.without_derivs()
+              arg_wod = arg2.wod
               for (key, self_deriv) in arg1.__derivs_.items():
                 new_derivs[key] = Qube.outer(self_deriv, arg_wod, classes,
                                              recursive=False)
 
             if arg2.__derivs_:
-              self_wod = arg1.without_derivs()
+              self_wod = arg1.wod
               for (key, arg_deriv) in arg2.__derivs_.items():
                 term = Qube.outer(self_wod, arg_deriv, classes, recursive=False)
                 if key in new_derivs:
@@ -5387,7 +5444,10 @@ class Qube(object):
 
         # If no broadcast is needed, return the object
         if shape == self.__shape_:
-            if recursive or not self.__derivs_: return self
+            if recursive:
+                return self
+            else:
+                return self.wod
 
         # Prepare or validate the sample array
         if sample_array is None:
@@ -5403,8 +5463,13 @@ class Qube(object):
             self.as_readonly(recursive=False)
 
         # Broadcast the values array
+        if np.shape(self.__values_) == ():
+            self_values = np.array([self.__values_])
+        else:
+            self_values = self.__values_
+
         values_shape = shape + self.__rank_ * (1,)
-        new_values = np.broadcast_arrays(self.__values_,
+        new_values = np.broadcast_arrays(self_values,
                                          sample_array.reshape(values_shape))[0]
         Qube._array_to_readonly(new_values)
 
@@ -5651,9 +5716,9 @@ class Qube(object):
         for arg in args:
             if arg is None:
                 continue
-            elif arg.mask is True:
+            elif Qube.is_one_true(arg.mask):
                 mask_true_found = True
-            elif arg.mask is False:
+            elif Qube.is_one_false(arg.mask):
                 mask_false_found = True
             else:
                 mask_array_found = True

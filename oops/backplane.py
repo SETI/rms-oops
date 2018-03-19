@@ -14,6 +14,8 @@
 #       barycenter of its motion.
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 import os.path
 
@@ -47,7 +49,7 @@ class Backplane(object):
                     '+gridless_events',
                     '+gridless_arrivals']
 
-    def __init__(self, obs, meshgrid=None, time=None, inventory=False,
+    def __init__(self, obs, meshgrid=None, time=None, inventory=None,
                             inventory_border=0):
         """The constructor.
 
@@ -92,8 +94,11 @@ class Backplane(object):
             self.time = Scalar(obs.midtime)
 
         # Intialize the inventory
-        inventory &= obs.INVENTORY_IMPLEMENTED
-        self.inventory = {} if inventory else ()
+        if type(inventory) == dict:
+            self.inventory = inventory
+        else:
+            self.inventory = None
+
         self.inventory_border = inventory_border
 
         # Define events
@@ -117,13 +122,12 @@ class Backplane(object):
         # Note that body names in event keys are case-insensitive.
 
         self.surface_events_w_derivs = {(): self.obs_event}
-        self.surface_events = {(): self.obs_event.without_derivs()}
+        self.surface_events = {(): self.obs_event.wod}
 
         # The path_events dictionary holds photon departure events from paths.
         # All photons originate from the Sun so this name is implied. For
         # example, ('SATURN',) is the key for the event of a photon departing
-        # the Sun such that it later arrives at the Saturn surface arrival
-        # event.
+        # the Sun such that it later arrives at the Saturn surface.
 
         self.path_events = {}
 
@@ -152,6 +156,10 @@ class Backplane(object):
         # planetographic latitudes at Saturn.
 
         self.backplanes = {}
+
+        # Antimasks of surfaces, by body name
+
+        self.antimasks = {}
 
     ############################################################################
     # Event manipulations
@@ -187,16 +195,6 @@ class Backplane(object):
         else:
             raise ValueError('illegal event key type: ' + str(type(event_key)))
 
-        # Update the inventory if necessary
-        if type(self.inventory) is dict:
-            for item in event_key:
-                item = item.split(':')[0]       # skip anything after the colon
-                item = item.upper()
-                if item not in self.inventory:
-                    item_dict = self.obs.inventory([item], return_type='full')
-                    if item_dict:
-                        self.inventory[item] = item_dict[item]
-
         return event_key
 
     @staticmethod
@@ -222,7 +220,7 @@ class Backplane(object):
 
     @staticmethod
     def get_body_and_modifier(event_key):
-        """Return a body object and modifier based on the give surface ID.
+        """Return a body object and modifier based on the given surface ID.
 
         The string is normally a registered body ID (case insensitive), but it
         can be modified with ':ansa', ':ring' or ':limb' to indicate an
@@ -280,43 +278,72 @@ class Backplane(object):
 
         return Body.lookup(path_id.upper()).path
 
-    def prep_antimask(self, event_key, antimask=None):
+    def get_antimask(self, event_key):
         """Prepare an antimask for a particular surface event."""
 
-        # Start with the antimask of the arrival event
-        dest = self.get_surface_event_w_derivs(event_key[1:])
-        if antimask is None:
-            antimask = dest.antimask
-        else:
-            antimask = antimask & dest.antimask
+        # The basic meshgrid is unmasked
+        if len(event_key) == 0:
+            return True
 
-        # If we have body limits in the inventory, use them
-        if event_key[0] in self.inventory:
-            body_dict = self.inventory[event_key[0]]
+        body_name = event_key[0]
+
+        # Return from the antimask cache if present
+        try:
+            return self.antimasks[body_name]
+        except KeyError:
+            pass
+
+        # For a name with a colon, we're done
+        if ':' in body_name:
+            return True
+
+        # Otherwise, use the inventory if available
+        if self.inventory is not None:
+            try:
+                body_dict = self.inventory[body_name]
+
+            # If it is not already in the inventory, try to make a new entry
+            except KeyError:
+              body_dict = None
+              if self.obs.INVENTORY_IMPLEMENTED:
+                try:
+                  body_dict = self.obs.inventory([body_name],
+                                                 return_type='full')[body_name]
+                except KeyError:
+                  pass
+
+              self.inventory[body_name] = body_dict
+
+            if body_dict is None:
+                return False
+
+            if not body_dict['inside']:
+                return False
+
             u_min = body_dict['u_min'] - self.inventory_border
             u_max = body_dict['u_max'] + self.inventory_border
             v_min = body_dict['v_min'] - self.inventory_border
             v_max = body_dict['v_max'] + self.inventory_border
 
-            new_antimask = np.ones(self.meshgrid.shape, dtype='bool')
-            new_antimask[self.meshgrid.uv.values[...,0] <  u_min] = False
-            new_antimask[self.meshgrid.uv.values[...,0] >= u_max] = False
-            new_antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
-            new_antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
+            antimask = np.ones(self.meshgrid.shape, dtype='bool')
+            antimask[self.meshgrid.uv.values[...,0] <  u_min] = False
+            antimask[self.meshgrid.uv.values[...,0] >= u_max] = False
+            antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
+            antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
 
             # Swap axes if necessary
             for c in self.obs.axes:
                 if c[0] == 'v':
-                    new_mask = new_antimask.swapaxes(0,1)
+                    new_mask = antimask.swapaxes(0,1)
                     break
                 if c[0] == 'u':
                     break
 
-            antimask = antimask & new_antimask
+            return antimask
 
-        return antimask
+        return True
 
-    def get_surface_event(self, event_key, antimask=None):
+    def get_surface_event(self, event_key):
         """Return the photon departure event from a surface based on its key.
         """
 
@@ -333,6 +360,7 @@ class Backplane(object):
         # Look up the photon's departure surface and destination
         dest = self.get_surface_event(event_key[1:])
         surface = Backplane.get_surface(event_key)
+        antimask = dest.antimask
 
         # Calculate derivatives for the first step from the observer, if allowed
         if len(event_key) == 1 and surface.intercept_DERIVS_ARE_IMPLEMENTED:
@@ -343,11 +371,13 @@ class Backplane(object):
                 pass
 
         # Define the antimask
-        antimask = self.prep_antimask(event_key, antimask)
+        antimask = self.get_antimask(event_key)
 
         # Create the event and save it in the dictionary
         event = surface.photon_to_event(dest, antimask=antimask)[0]
         self.surface_events[event_key] = event
+        if event_key not in self.antimasks:
+            self.antimasks[event_key] = event.antimask
 
         # Save extra information in the event object
         event.insert_subfield('event_key', event_key)
@@ -356,9 +386,13 @@ class Backplane(object):
         body = Backplane.get_body_and_modifier(event_key)[0]
         event.insert_subfield('body', body)
 
+        # Save the antimask
+        if len(event_key) == 1 and event_key[0] not in self.antimasks:
+            self.antimasks[event_key] = event.antimask
+
         return event
 
-    def get_surface_event_w_derivs(self, event_key, antimask=None):
+    def get_surface_event_w_derivs(self, event_key):
         """The photon departure event from a surface including derivatives.
         """
 
@@ -375,10 +409,12 @@ class Backplane(object):
         dest = dest.with_time_derivs().with_los_derivs()
 
         # Define the antimask
-        antimask = self.prep_antimask(event_key, antimask)
+        antimask = self.get_antimask(event_key)
 
         # Create the event and save it in the dictionary
         event = surface.photon_to_event(dest, derivs=True, antimask=antimask)[0]
+        if event_key not in self.antimasks:
+            self.antimasks[event_key] = event.antimask
 
         # Save extra information in the event object
         event.insert_subfield('event_key', event_key)
@@ -390,7 +426,7 @@ class Backplane(object):
         self.surface_events_w_derivs[event_key] = event
 
         # Make a copy without derivs, collapsing if possible
-        event_wo_derivs = event.without_derivs().collapse_time()
+        event_wo_derivs = event.wod.collapse_time()
 
         event_wo_derivs.insert_subfield('event_key', event_key)
         event_wo_derivs.insert_subfield('surface', surface)
@@ -403,6 +439,9 @@ class Backplane(object):
         if len(event_key) == 1:
             self.surface_events_w_derivs[event_key[0]] = event
             self.surface_events[event_key[0]] = event_wo_derivs
+
+            # Also save the antimask
+            self.antimasks[event_key[0]] = event.antimask
 
         return event
 
@@ -434,8 +473,9 @@ class Backplane(object):
         """Return the specified event with arrival photons filled in."""
 
         event = self.get_surface_event(event_key)
-        if event.arr is None:
-            new_event = AliasPath('SUN').photon_to_event(event)[1]
+        if event.arr is None and event.arr_ap is None:
+            new_event = AliasPath('SUN').photon_to_event(event,
+                                                    antimask=event.antimask)[1]
             new_event.insert_subfield('event_key', event_key)
             new_event.insert_subfield('surface', event.surface)
             new_event.insert_subfield('body', event.body)
@@ -534,7 +574,7 @@ class Backplane(object):
                 backplane = Scalar(vals, backplane.mask)
 
         # For reference, we add the key as an attribute of each backplane object
-        backplane = backplane.without_derivs()
+        backplane = backplane.wod
         backplane.key = key
 
         self.backplanes[key] = backplane
@@ -1791,7 +1831,6 @@ class Backplane(object):
             self._fill_ring_intercepts(event_key)
 
         rad = self.backplanes[default_key]
-
         if rmin is None and rmax is None:
             return rad
 
@@ -1805,8 +1844,10 @@ class Backplane(object):
         else:
             mask1 = False
 
-        rad = rad.remask(mask0 | mask1)
+        rad = rad.mask_where(mask0 | mask1)
         self.register_backplane(key, rad)
+
+        temp = self.backplanes[default_key]
 
         return rad
 
@@ -1867,7 +1908,7 @@ class Backplane(object):
             return self.backplanes[key]
 
         mask = self.ring_radius(event_key, rmin, rmax).mask
-        lon = lon.remask(mask)
+        lon = lon.mask_where(mask)
         self.register_backplane(key, lon)
 
         return lon
@@ -1897,27 +1938,25 @@ class Backplane(object):
                             axis, measured at semimajor axis a0 in radians/km.
             reference       the reference longitude used to describe the mode;
                             same options as for ring_longitude
-            rmin            minimum radius in km including modes; None to
-                            ignore.
-            rmax            maximum radius in km including modes; None to
-                            ignore.
         """
 
         key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, speed,
-                                             a0, dperi_da, reference)
+                              a0, dperi_da, reference)
+
         if key in self.backplanes:
             return self.backplanes[key]
 
-        # Get the backplane with modes, no mask
-        rad = self.evaluate(backplane_key).without_mask()
+        # Get the backplane with modes
+        rad = self.evaluate(backplane_key)
 
-        # Get radius, longitude and ring event time, without modes, no mask
+        # Get longitude and ring event time, without modes
         ring_radius_key = backplane_key
         while ring_radius_key[0] == 'radial_mode':
             ring_radius_key = ring_radius_key[1]
 
         (backplane_type, event_key, rmin, rmax) = ring_radius_key
-        assert backplane_type == 'ring_radius'
+        assert backplane_type == 'ring_radius', \
+            'radial modes only apply to ring_radius backplanes'
 
         a = self.ring_radius(event_key)
         lon = self.ring_longitude(event_key, reference)
@@ -1944,6 +1983,8 @@ class Backplane(object):
 
         if mask is not False:
             mode = mode.mask_where(mask)
+
+        temp = self.backplanes[ring_radius_key]
 
         self.register_backplane(key, mode)
         return self.backplanes[key]
@@ -2074,7 +2115,8 @@ class Backplane(object):
         # Get the ring intercept coordinates
         event_key = self.standardize_event_key(event_key)
         event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == 'polar'
+        assert event.surface.COORDINATE_TYPE == 'polar', \
+            'ring geometry requires a polar coordinate system'
 
         self.register_backplane(('ring_radius', event_key, None, None),
                                 event.coord1)
@@ -3187,11 +3229,11 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
         if not printing and not saving: return
 
-        if printing: print title
+        if printing: print(title)
 
         # Scalar summary
         if isinstance(array, numbers.Number):
-            print '  ', array
+            print('  ', array)
 
         # Mask summary
         elif type(array.vals) == bool or \
@@ -3200,8 +3242,8 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
             count = np.sum(array.vals)
             total = np.size(array.vals)
             percent = int(count / float(total) * 100. + 0.5)
-            print '  ', (count, total-count),
-            print (percent, 100-percent), '(True, False pixels)'
+            print('  ', (count, total-count),
+                        (percent, 100-percent), '(True, False pixels)')
             minval = 0.
             maxval = 1.
 
@@ -3210,28 +3252,26 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
             minval = np.min(array.vals)
             maxval = np.max(array.vals)
             if minval == maxval:
-                print '  ', minval
+                print('  ', minval)
             else:
-                print '  ', (minval, maxval), '(min, max)'
+                print('  ', (minval, maxval), '(min, max)')
 
         # Masked backplane summary
         else:
-#             print '  ', (np.min(array.vals),
-#                            np.max(array.vals)), '(unmasked min, max)'
-            print '  ', (array.min(),
-                           array.max()), '(masked min, max)'
+            print('  ', (array.min().as_builtin(),
+                         array.max().as_builtin()), '(masked min, max)')
             total = np.size(array.mask)
             masked = np.sum(array.mask)
             percent = int(masked / float(total) * 100. + 0.5)
-            print '  ', (masked, total-masked),
-            print         (percent, 100-percent), '(masked, unmasked pixels)'
+            print('  ', (masked, total-masked),
+                        (percent, 100-percent), '(masked, unmasked pixels)')
 
             if total == masked:
                 minval = np.min(array.vals)
                 maxval = np.max(array.vals)
             else:
-                minval = array.min()
-                maxval = array.max()
+                minval = array.min().as_builtin()
+                maxval = array.max().as_builtin()
 
         if saving and array.shape != ():
             if minval == maxval:
@@ -3258,16 +3298,19 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     if printing and logging: config.LOGGING.on('        ')
 
-    if printing: print
+    if printing: print()
 
     snap = iss.from_file(filespec)
     meshgrid = Meshgrid.for_fov(snap.fov, undersample=undersample, swap=True)
 
-    bp = Backplane(snap, meshgrid, inventory=use_inventory)
+    if use_inventory:
+        bp = Backplane(snap, meshgrid, inventory={})
+    else:
+        bp = Backplane(snap, meshgrid, inventory=None)
 
     ########################
 
-    if printing: print '\n********* right ascension'
+    if printing: print('\n********* right ascension')
 
     test = bp.right_ascension(apparent=False)
     show_info('Right ascension (deg, actual)', test * constants.DPR)
@@ -3291,7 +3334,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* declination'
+    if printing: print('\n********* declination')
 
     test = bp.declination(apparent=False)
     show_info('Declination (deg, actual)', test * constants.DPR)
@@ -3315,7 +3358,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* celestial and polar angles'
+    if printing: print('\n********* celestial and polar angles')
 
     test = bp.celestial_north_angle()
     show_info('Celestial north angle (deg)', test * constants.DPR)
@@ -3331,7 +3374,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* observer distances'
+    if printing: print('\n********* observer distances')
 
     test = bp.distance('saturn')
     show_info('Distance observer to Saturn (km)', test)
@@ -3362,7 +3405,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* Sun distances'
+    if printing: print('\n********* Sun distances')
 
     test = bp.distance('saturn', direction='arr')
     show_info('Distance Sun to Saturn, arrival (km)', test)
@@ -3396,7 +3439,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* observer light time'
+    if printing: print('\n********* observer light time')
 
     test = bp.light_time('saturn')
     show_info('Light-time observer to Saturn (sec)', test)
@@ -3427,7 +3470,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* Sun light time'
+    if printing: print('\n********* Sun light time')
 
     test = bp.light_time('saturn', direction='arr')
     show_info('Light-time Sun to Saturn via arr (sec)', test)
@@ -3452,7 +3495,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* event time'
+    if printing: print('\n********* event time')
 
     test = bp.event_time(())
     show_info('Event time at Cassini (sec, TDB)', test)
@@ -3483,7 +3526,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* resolution'
+    if printing: print('\n********* resolution')
 
     test = bp.resolution('saturn', 'u')
     show_info('Saturn resolution along u axis (km)', test)
@@ -3592,7 +3635,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* surface latitude'
+    if printing: print('\n********* surface latitude')
 
     test = bp.latitude('saturn', lat_type='centric')
     show_info('Saturn latitude, planetocentric (deg)', test * constants.DPR)
@@ -3626,7 +3669,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* surface longitude'
+    if printing: print('\n********* surface longitude')
 
     test = bp.longitude('saturn')
     show_info('Saturn longitude (deg)', test * constants.DPR)
@@ -3713,7 +3756,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* surface incidence, emission, phase'
+    if printing: print('\n********* surface incidence, emission, phase')
 
     test = bp.phase_angle('saturn')
     show_info('Saturn phase angle (deg)', test * constants.DPR)
@@ -3732,7 +3775,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* ring radius, radial modes'
+    if printing: print('\n********* ring radius, radial modes')
 
     test = bp.ring_radius('saturn_main_rings')
     show_info('Ring radius (km)', test)
@@ -3754,7 +3797,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* ring longitude, azimuth'
+    if printing: print('\n********* ring longitude, azimuth')
 
     test = bp.ring_longitude('saturn_main_rings', reference='node')
     show_info('Ring longitude wrt node (deg)', test * constants.DPR)
@@ -3843,7 +3886,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* ring phase angle'
+    if printing: print('\n********* ring phase angle')
 
     test = bp.phase_angle('saturn_main_rings')
     show_info('Ring phase angle (deg)', test * constants.DPR)
@@ -3853,7 +3896,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* ring incidence, solar elevation'
+    if printing: print('\n********* ring incidence, solar elevation')
 
     test = bp.ring_incidence_angle('saturn_main_rings', 'sunward')
     show_info('Ring incidence angle, sunward (deg)', test * constants.DPR)
@@ -3897,7 +3940,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* ring emission, observer elevation'
+    if printing: print('\n********* ring emission, observer elevation')
 
     test = bp.ring_emission_angle('saturn_main_rings', 'sunward')
     show_info('Ring emission angle, sunward (deg)', test * constants.DPR)
@@ -3940,7 +3983,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* ansa geometry'
+    if printing: print('\n********* ansa geometry')
 
     test = bp.ansa_radius('saturn:ansa')
     show_info('Ansa radius (km)', test)
@@ -3968,14 +4011,14 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* limb altitude'
+    if printing: print('\n********* limb altitude')
 
     test = bp.limb_altitude('saturn:limb')
     show_info('Limb altitude (km)', test)
 
     ########################
 
-    if printing: print '\n********* limb longitude'
+    if printing: print('\n********* limb longitude')
 
     test = bp.longitude('saturn:limb', 'iau')
     show_info('Limb longitude wrt IAU (deg)', test * constants.DPR)
@@ -3998,7 +4041,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* limb latitude'
+    if printing: print('\n********* limb latitude')
 
     test = bp.latitude('saturn:limb', lat_type='centric')
     show_info('Limb planetocentric latitude (deg)', test * constants.DPR)
@@ -4011,7 +4054,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* masks'
+    if printing: print('\n********* masks')
 
     test = bp.where_intercepted('saturn')
     show_info('Mask of Saturn intercepted', test)
@@ -4072,7 +4115,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* borders'
+    if printing: print('\n********* borders')
 
     mask = bp.where_intercepted('saturn')
     test = bp.border_inside(mask)
@@ -4095,7 +4138,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
     ########################
 
-    if printing: print '\n********* EMPTY EVENTS'
+    if printing: print('\n********* EMPTY EVENTS')
 
     test = bp.where_below(('ring_radius', 'saturn_main_rings'), 10.e3)
     show_info('Empty mask of Saturn ring radius below 10 kkm', test)
@@ -4291,7 +4334,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-        #print diff.norm().min(), diff.norm().max()
+        #print(diff.norm().min(), diff.norm().max())
         self.assertTrue(diff.norm().max() < 2.e-7)
 
         # CentricEllipsoid (lon,lat)
@@ -4306,7 +4349,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-        #print diff.norm().min(), diff.norm().max()
+        #print(diff.norm().min(), diff.norm().max())
         self.assertTrue(diff.norm().max() < 2.e-7)
 
         # GraphicEllipsoid (lon,lat)
@@ -4321,7 +4364,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-        #print diff.norm().min(), diff.norm().max()
+        #print(diff.norm().min(), diff.norm().max())
         self.assertTrue(diff.norm().max() < 2.e-7)
 
 ########################################
@@ -4360,9 +4403,9 @@ class Test_Backplane_Exercises(unittest.TestCase):
         if TEST_LEVEL > 0:
             bp = exercise_backplanes(filespec, printing, logging, saving,
                                      undersample,
-                                     use_inventory=True, inventory_border=2)
+                                     use_inventory=True, inventory_border=4)
         else:
-            print 'test skipped'
+            print('test skipped')
 
 ########################################
 

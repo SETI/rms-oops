@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 import pylab
 import oops
@@ -8,22 +10,22 @@ DISPLAY = False
 OBJC_DISPLAY = True
 
 def show_info(title, array):
-    """Internal method to print summary information and display images as
+    """Internal method to print(summary information and display images as)
         desired."""
     
     global PRINT, DISPLAY
     if not PRINT: return
     
-    print ""
-    print title
+    print("")
+    print(title)
     
     if isinstance(array, np.ndarray):
         if array.dtype == np.dtype("bool"):
             count = np.sum(array)
             total = np.size(array)
             percent = int(count / float(total) * 100. + 0.5)
-            print "   ", (count, total-count),
-            print (percent, 100-percent), "(True, False pixels)"
+            print("   ", (count, total-count), end='')
+            print((percent, 100-percent), "(True, False pixels)")
             if DISPLAY:
                 ignore = pylab.imshow(array, norm=None, vmin=0, vmax=1)
                 ignore = raw_input(title + ": ")
@@ -35,9 +37,9 @@ def show_info(title, array):
             minval = np.min(array)
             maxval = np.max(array)
             if minval == maxval:
-                print "    ", minval
+                print("    ", minval)
             else:
-                print "    ", (minval, maxval), "(min, max)"
+                print("    ", (minval, maxval), "(min, max)")
                 
                 if DISPLAY:
                     ignore = pylab.imshow(array)
@@ -48,15 +50,15 @@ def show_info(title, array):
     
     elif isinstance(array, oops.Array):
         if np.any(array.mask):
-            print "    ", (np.min(array.vals),
+            print("    ", (np.min(array.vals), end='')
                            np.max(array.vals)), "(unmasked min, max)"
-            print "    ", (array.min(),
+            print("    ", (array.min(), end='')
                            array.max()), "(masked min, max)"
             masked = np.sum(array.mask)
             total = np.size(array.mask)
             percent = int(masked / float(total) * 100. + 0.5)
-            print "    ", (masked, total-masked),
-            print         (percent, 100-percent), "(masked, unmasked pixels)"
+            print("    ", (masked, total-masked), end='')
+            print(        (percent, 100-percent), "(masked, unmasked pixels)")
             
             if DISPLAY and array.vals.size > 1:
                 ignore = pylab.imshow(array.vals)
@@ -81,9 +83,9 @@ def show_info(title, array):
             minval = np.min(array.vals)
             maxval = np.max(array.vals)
             if minval == maxval:
-                print "    ", minval
+                print("    ", minval)
             else:
-                print "    ", (minval, maxval), "(min, max)"
+                print("    ", (minval, maxval), "(min, max)")
                 
                 if DISPLAY:
                     ignore = pylab.imshow(array.vals)
@@ -93,7 +95,7 @@ def show_info(title, array):
                                  array.vals)
     
     else:
-        print "    ", array
+        print("    ", array)
 
 def uvis_test_suite(filespec, derivs, info, display):
     """Master test suite for a Cassini UVIS image.
@@ -103,7 +105,7 @@ def uvis_test_suite(filespec, derivs, info, display):
         derivs      True to calculate derivatives where needed to derive
                     quantities related to spatial resolution; False to omit all
                     resolution calculations.
-        info        True to print out geometry information as it progresses.
+        info        True to print(out geometry information as it progresses.)
         display     True to display each backplane using Pylab, and pause until
                     the user hits RETURN.
         """
@@ -123,8 +125,8 @@ def uvis_test_suite(filespec, derivs, info, display):
     # Create the pushbroom event
     # ... with a grid point at the middle of each pixel
     fov_shape = pushbroom.fov.uv_shape
-    print "fov_shape:"
-    print fov_shape
+    print("fov_shape:")
+    print(fov_shape)
     
     uv_pair = oops.Pair.cross_scalars(np.arange(fov_shape.vals[0]) + 0.5,
                                       np.arange(fov_shape.vals[1]) + 0.5)
@@ -323,17 +325,17 @@ def uvis_test_suite(filespec, derivs, info, display):
     
     # Get the ring plane resolution
     if derivs:
-        print "pushbroom_event.arr.shape: ", pushbroom_event.arr.shape
-        print "ring_event.pos.shape: ", ring_event.pos.shape
-        print "pushbroom.fov.uv_shape: ", pushbroom.fov.uv_shape
-        print "ring_radius shape: ", ring_radius.shape
-        print "los shape:", los.shape
-        print "ring_event_w_derivs.pos.d_dlos shape:", ring_event_w_derivs.pos.d_dlos.shape
-        print "los.d_duv.shape: ", los.d_duv.shape
+        print("pushbroom_event.arr.shape: ", pushbroom_event.arr.shape)
+        print("ring_event.pos.shape: ", ring_event.pos.shape)
+        print("pushbroom.fov.uv_shape: ", pushbroom.fov.uv_shape)
+        print("ring_radius shape: ", ring_radius.shape)
+        print("los shape:", los.shape)
+        print("ring_event_w_derivs.pos.d_dlos shape:", ring_event_w_derivs.pos.d_dlos.shape)
+        print("los.d_duv.shape: ", los.d_duv.shape)
         dpos_duv = ring_event_w_derivs.pos.d_dlos * los.d_duv
         
-        print "ring_radius.d_pos shape:", ring_radius.d_dpos.shape
-        print "dpos_duv shape:", dpos_duv.shape
+        print("ring_radius.d_pos shape:", ring_radius.d_dpos.shape)
+        print("dpos_duv shape:", dpos_duv.shape)
         gradient = ring_radius.d_dpos * dpos_duv
         ring_radial_resolution = gradient.as_pair().norm()
         

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 import numpy.ma as ma
 import scipy.ndimage.filters as filters
@@ -63,7 +65,7 @@ if umax > image.shape[0]/2: umax -= image.shape[0]
 
 if vmax > image.shape[1]/2: vmax -= image.shape[1]
 
-print (umax,vmax)
+print((umax,vmax))
 
 # Update the FOV object with the new pointing offset
 snapshot.fov = oops.fov.Offset(snapshot.fov, (umax,vmax))

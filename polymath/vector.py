@@ -23,7 +23,6 @@ class Vector(Qube):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     def __init__(self, arg=None, mask=None, units=None, derivs=None,
@@ -48,7 +47,7 @@ class Vector(Qube):
 
         if type(arg) == Vector:
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         if isinstance(arg, Qube):
 
@@ -82,7 +81,7 @@ class Vector(Qube):
 
             arg = Vector(arg)
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         return Vector(arg)
 
@@ -322,7 +321,7 @@ class Vector(Qube):
         # If purging...
         if purge:
             # If all masked...
-            if ints.mask is True:
+            if Qube.is_one_true(ints.mask):
                 return ((), None)
 
             # If partially masked...
@@ -334,7 +333,7 @@ class Vector(Qube):
             new_values = ints.values
 
         # If all masked...
-        elif ints.mask is True:
+        elif Qube.is_one_true(ints.mask):
             new_values = np.empty(ints.shape, dtype='int')
             if np.shape(masked) == ():
                 new_values = new_values.fill(masked)
@@ -414,10 +413,10 @@ class Vector(Qube):
             recursive   True to include the derivatives.
         """
 
-        if not recursive:
-            self = self.without_derivs()
-
-        return self / self.norm(recursive)
+        if recursive:
+            return self / self.norm(True)
+        else:
+            return self.wod / self.norm(False)
 
     def cross(self, arg, recursive=True):
         """Return the cross product of this vector with another.
@@ -468,8 +467,8 @@ class Vector(Qube):
         if recursive:
             arg = self.as_this_type(arg, recursive).unit()
         else:
-            arg = self.as_this_type(arg).without_derivs().unit()
-            self = self.without_derivs()
+            arg = self.as_this_type(arg).wod.unit()
+            self = self.wod
 
         # Return the component of this vector perpendicular to the arg
         return self - arg * self.dot(arg, recursive)
@@ -487,7 +486,7 @@ class Vector(Qube):
         if recursive:
             arg = self.as_this_type(arg, recursive).unit()
         else:
-            arg = self.as_this_type(arg).without_derivs().unit()
+            arg = self.as_this_type(arg).wod.unit()
 
         # Return the component of this vector projected into the arg
         return arg * self.dot(arg, recursive)
@@ -613,14 +612,12 @@ class Vector(Qube):
         if recursive:
             new_derivs = {}
             if self.derivs:
-                arg_wod = arg.without_derivs()
                 for (key, self_deriv) in self.derivs.items():
-                    new_derivs[key] = self_deriv.element_mul(arg_wod, False)
+                    new_derivs[key] = self_deriv.element_mul(arg.wod, False)
 
             if arg.derivs:
-                self_wod = self.without_derivs()
                 for (key, arg_deriv) in arg.derivs.items():
-                    term = self_wod.element_mul(arg_deriv, False)
+                    term = self.wod.element_mul(arg_deriv, False)
                     if key in new_derivs:
                         new_derivs[key] += term
                     else:
@@ -697,7 +694,7 @@ class Vector(Qube):
                 arg_inv_sq = Qube.__new__(type(self))
                 arg_inv_sq.__init__(divisor**(-2), divisor_mask,
                                     Units.units_power(arg.units,-1))
-                factor = self.without_derivs().element_mul(arg_inv_sq)
+                factor = self.wod.element_mul(arg_inv_sq)
 
                 for (key, arg_deriv) in arg.derivs.items():
                     term = arg_deriv.element_mul(factor)
@@ -732,7 +729,7 @@ class Vector(Qube):
         if recursive:
             return self + (projected.norm() - 1) * projected
         else:
-            return self.without_derivs() + (projected.norm() - 1) * projected
+            return self.wod + (projected.norm() - 1) * projected
 
     def vector_unscale(self, factor, recursive=True):
         """Un-stretch this Vector along a direction defined by a given scaling

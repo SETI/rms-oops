@@ -537,17 +537,12 @@ class Ellipse(Shape2D, Conic):
             #   dot(e0(t).slope2d(), e0(t) - e1(s)) = 0
             # where e1(s) is the closest point on the second ellipse to e0(t)
 
-            e0 = type(self).__init__(self.pt0.without_derivs(),
-                                     self.pt1.without_derivs(),
-                                     self.ratio.without_derivs())
-            e0.fill_limits(self.tmin.without_derivs(),
-                           self.tmax.without_derivs())
+            e0 = type(self).__init__(self.pt0.wod, self.pt1.wod, self.ratio.wod)
+            e0.fill_limits(self.tmin.wod, self.tmax.wod)
 
-            e1 = type(self).__init__(ellipse.pt0.without_derivs(),
-                                     ellipse.pt1.without_derivs(),
-                                     ellipse.ratio.without_derivs())
-            e1.fill_limits(self.tmin.without_derivs(),
-                           self.tmax.without_derivs())
+            e1 = type(self).__init__(ellipse.pt0.wod, ellipse.pt1.wod,
+                                     ellipse.ratio.wod)
+            e1.fill_limits(self.tmin.wod, self.tmax.wod)
 
             # Initial guess
             t = e0.param_at(e1.pt0)
@@ -566,8 +561,7 @@ class Ellipse(Shape2D, Conic):
             # dt_dx = df_dx / df_dt
 
             df_dt = f.d_dt
-            t = t.without_derivs()
-            ept = self.point_at(t)
+            ept = self.point_at(t.wod)
             e1pt = ellipse.closest(ept)
             f = self.slope2d(ept).dot(ept - e1pt)
 
@@ -847,22 +841,35 @@ class Ellipse(Shape2D, Conic):
         if type(arg) in (Point, Pair):
             affine = self._affine_to_centered_unit_circle()
             pt = affine.apply(arg)
-            return (pt.norm_sq() - 1.).abs() < 2.*Shape2D.PREC
+            return (((pt.norm_sq() - 1.).abs() < 2.*Shape2D.PREC) &
+                    self.param_at(pt).antimask)
 
         # Touches, Ellipse to Line
         if isinstance(type(arg), Line):
             affine = self._affine_to_centered_unit_circle()
             line = Line(affine.apply(arg.pt0), affine.apply(arg.pt1))
-            closest = line.closest(Pair.ZEROS)[1]
-            touches = (closest.norm_sq() - 1.).abs() <= 2.*Shape2D.PREC
+            closest = line.closest(Pair.ZEROS)[0]
+
+            # Touches if line's closest point to origin is on unit circle and
+            # circle is unmasked here
+            touches = (((closest.norm_sq() - 1.).abs() <= 2.*Shape2D.PREC) &
+                        self.param_at(closest).antimask)
             if type(arg) == Line: return touches
 
+            if type(self).__name__ == 'Arc':
+                touches |= (self.end0.is_subset_of(line) |
+                            self.end1.is_subset_of(line))
+
             touches2 = (line.pt0.norm_sq() - 1.).abs() <= 2.*Shape2D.PREC
-            touches2 &= line.pt0.dot(line.dpt) >= 1.
+            if type(self).__name__ != 'Arc':
+                touches2 &= line.pt0.dot(line.dpt) >= 1.
+
             if type(arg) == HalfLine: return touches | touches2
 
-            touches3 - (line.pt1.norm_sq() - 1.).abs() <= 2.*Shape2D.PREC
-            touches3 &= line.pt1.dot(line.dpt) <= 1.
+            touches3 = (line.pt1.norm_sq() - 1.).abs() <= 2.*Shape2D.PREC
+            if type(self).__name__ != 'Arc':
+                touches3 &= line.pt1.dot(line.dpt) <= 1.
+
             return touches | touches2 | touches3
 
         # Otherwise use the general method

@@ -2,6 +2,8 @@
 # oops/surface_/limb.py: Limb subclass of class Surface
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 from polymath import *
 
@@ -225,7 +227,7 @@ class Limb(Surface):
                                                              guess=ground_guess)
             normal = self.ground.normal(track, derivs=True)
 
-            f = normal.without_derivs().dot(los)
+            f = normal.wod.dot(los)
             df_dt = normal.d_dpos.chain(los).dot(los)
             dt = f / df_dt
 
@@ -235,12 +237,12 @@ class Limb(Surface):
             max_abs_dt = abs(dt).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print LOGGING.prefix, "Limb.intercept", iter, max_abs_dt
+                print(LOGGING.prefix, "Limb.intercept", iter, max_abs_dt)
 
             if (max_abs_dt <= SURFACE_PHOTONS.dlt_precision or
                 max_abs_dt >= prev_max_abs_dt): break
 
-        t = t.without_derivs()
+        t = t.wod
         pos = obs + t * los
 
         if groundtrack:
@@ -362,19 +364,19 @@ class Limb(Surface):
 
             df_dv = f.d_dv
 
-            dv = f.without_derivs() / df_dv
+            dv = f.wod / df_dv
             v -= dv
 
             max_abs_dv = abs(dv).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print LOGGING.prefix, "Limb.groundtrack_from_clock",
-                print iter, max_abs_dv
+                print(LOGGING.prefix, "Limb.groundtrack_from_clock",
+                                      iter, max_abs_dv)
 
             if max_abs_dv <= DV_CUTOFF: break
             prev_max_abs_dv = max_abs_dv
 
-        track = u.without_derivs() * a1 + v.without_derivs() * a2
+        track = u.wod * a1 + v.wod * a2
         return track
 
     def z_clock_from_intercept(self, cept, obs, derivs=False, guess=None,
@@ -496,20 +498,20 @@ class Limb(Surface):
 
             df_dv = f.d_dv
 
-            dv = f.without_derivs() / df_dv
+            dv = f.wod / df_dv
             v -= dv
 
             max_abs_dv = abs(dv).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print LOGGING.prefix, "Limb.groundtrack_from_clock",
-                print iter, max_abs_dv
+                print(LOGGING.prefix, "Limb.groundtrack_from_clock", 
+                                      iter, max_abs_dv)
 
             if max_abs_dv <= DV_CUTOFF: break
             prev_max_abs_dv = max_abs_dv
 
-        track = u.without_derivs() * a1 + v.without_derivs() * a2
-        cept = track + z * perp.without_derivs()
+        track = u.wod * a1 + v.wod * a2
+        cept = track + z * perp.wod
 
         if groundtrack:
             return (cept, track)

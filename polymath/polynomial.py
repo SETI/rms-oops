@@ -69,7 +69,7 @@ class Polynomial(Vector):
 
         if isinstance(arg, Vector):
             if not recursive:
-                arg = arg.without_derivs()
+                arg = arg.wod
 
             return Polynomial(arg)
 
@@ -77,7 +77,7 @@ class Polynomial(Vector):
         if recursive:
             return Polynomial(vector)
         else:
-            return Polynomial(vector.without_derivs())
+            return Polynomial(vector.wod)
 
     def as_vector(self, recursive=True):
         """Return this object converted to class Vector.
@@ -109,7 +109,7 @@ class Polynomial(Vector):
             if recursive:
                 return self
             else:
-                return self.without_derivs()
+                return self.wod
 
         new_values = np.zeros(self.shape + (order+1,))
         new_values[...,-self.order-1:] = self.values
@@ -224,17 +224,15 @@ class Polynomial(Vector):
                                 units=Units.mul_units(self.units,arg.units))
 
             # Deal with derivatives
-            self_wd = self.without_derivs()
-            arg_wd  = arg.without_derivs()
             derivs = {}
             for (key, value) in self.derivs.items():
-                derivs[key] = arg_wd * value
+                derivs[key] = arg.wod * value
 
             for (key, value) in arg.derivs.items():
                 if key in derivs:
-                    derivs[key] = derivs[key] + self_wd * value
+                    derivs[key] = derivs[key] + self.wod * value
                 else:
-                    derivs[key] = self_wd * value
+                    derivs[key] = self.wod * value
 
             result.insert_derivs(derivs)
 
@@ -335,7 +333,7 @@ class Polynomial(Vector):
             if recursive:
                 return Scalar(example=self)
             else:
-                return Scalar(example=self.without_derivs())
+                return Scalar(example=self.wod)
 
         x = Scalar.as_scalar(x, recursive=recursive)
         x_powers = [1., x]

@@ -42,7 +42,7 @@ class Test_Matrix3_quaternion(unittest.TestCase):
 
     EPS = 1.e-6
     dq = q.d_dt * EPS
-    q_prime = q.without_derivs() + dq
+    q_prime = q.wod + dq
     m_prime = Matrix3.as_matrix3(q_prime)
 
     dm = m_prime - m

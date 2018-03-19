@@ -100,7 +100,7 @@ class FOV(object):
         """
 
         # Prepare for the partial derivatives
-        uv_pair = Pair.as_pair(uv_pair).without_derivs()
+        uv_pair = Pair.as_pair(uv_pair).wod
         uv_pair = uv_pair.with_deriv('uv', Pair.IDENTITY, 'insert')
         xy_pair = self.xy_from_uv(uv_pair, derivs=True, **keywords)
 

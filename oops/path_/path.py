@@ -2,6 +2,8 @@
 # oops/path/path.py: Abstract class Path and its required subclasses
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 import scipy.interpolate as interp
 from polymath import *
@@ -393,7 +395,7 @@ class Path(object):
 
         # Strip derivatives from the given event if necessary
         if not derivs:
-            event = event.without_derivs()
+            event = event.wod
 
         # Subtract
         return Event(event.time, event.state - path_event.state,
@@ -430,7 +432,7 @@ class Path(object):
 
         # Strip derivatives from the given event if necessary
         if not derivs:
-            event = event.without_derivs()
+            event = event.wod
 
         # Add
         return Event(event.time, event.state + path_event.state,
@@ -532,25 +534,26 @@ class Path(object):
 
         # Internal functions to return an entirely masked result
         def fully_masked_results():
-            new_link = original_link.all_masked()
-            scalar = new_link.time.clone()
-            vector3 = new_link.pos.clone()
+            vector3 = Vector3(np.ones(original_link.shape + (3,)), True)
+            scalar = Scalar(vector3.values[...,0], True)
 
             if derivs:
                 scalar.insert_deriv('t', Scalar(1., True), override=True)
-                scalar.insert_deriv('pos',
+                scalar.insert_deriv('los',
                                     Scalar(np.ones((1,3)), True, drank=1),
                                     override=True)
 
                 vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
-                vector3.insert_deriv('pos',
+                vector3.insert_deriv('los',
                                      Vector3(np.ones((3,3)), True, drank=1),
                                      override=True)
 
-            new_link = new_link.replace(link_key, vector3,
-                                        link_key + '_lt', scalar)
+            new_link = original_link.replace(link_key, vector3,
+                                             link_key + '_lt', scalar)
+            new_link = new_link.all_masked()
 
-            path_event = new_link.all_masked(self.origin, self.frame.wayframe)
+            path_event = new_link.all_masked(origin=self.origin,
+                                             frame=self.frame.wayframe)
             path_event = path_event.replace(path_key, vector3,
                                             path_key + '_lt', scalar)
 
@@ -560,7 +563,7 @@ class Path(object):
 
         # Handle derivatives
         if not derivs:
-            link = link.without_derivs()        # preserves time-dependence
+            link = link.wod        # preserves time-dependence
 
         # If the path has a shape of its own, QuickPaths are disallowed
         if self.shape != (): quick = None
@@ -624,7 +627,7 @@ class Path(object):
         link = link.shrink(antimask)
 
         # Define the path and the link event relative to the SSB in J2000
-        link_wod = link.without_derivs()
+        link_wod = link.wod
         link_wrt_ssb = link.wrt_ssb(derivs=True, quick=quick)
 
         link_time = link_wod.time
@@ -644,8 +647,11 @@ class Path(object):
             path_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = (path_time - link_time).min().values - limit
-        lt_max = (path_time - link_time).max().values + limit
+        lt_min = (path_time - link_time).min() - limit
+        lt_max = (path_time - link_time).max() + limit
+
+        lt_min = lt_min.as_builtin()
+        lt_max = lt_max.as_builtin()
 
         # Broadcast the path_time to encompass the shape of the path, if any
         shape = Qube.broadcasted_shape(path_time, link_shape)
@@ -679,7 +685,7 @@ class Path(object):
             max_dlt = abs(dlt).max()
 
             if LOGGING.surface_iterations:
-                print LOGGING.prefix, 'Path._solve_photon', iter, max_dlt
+                print(LOGGING.prefix, 'Path._solve_photon', iter, max_dlt)
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt or \
                max_dlt == Scalar.MASKED:
@@ -692,8 +698,8 @@ class Path(object):
             return fully_masked_results()
 
         # Construct the returned event
-        path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=False)
-        link_event_ssb = link_wrt_ssb.clone()
+        path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=quick)
+        link_event_ssb = link_wrt_ssb.copy()
 
         # Put the derivatives back as needed (at least the time derivative)
         path_pos_ssb = path_event_ssb.state
@@ -878,8 +884,8 @@ class Path(object):
             if tmin >= quickpath.t0 and tmax <= quickpath.t1:
 
                 if LOGGING.quickpath_creation:
-                    print LOGGING.prefix, 'Re-using QuickPath: ' + str(self),
-                    print '(%.3f, %.3f)' % (tmin, tmax)
+                    print(LOGGING.prefix, 'Re-using QuickPath: ' + str(self),
+                                          '(%.3f, %.3f)' % (tmin, tmax))
 
                 return quickpath
 
@@ -909,8 +915,8 @@ class Path(object):
             effort_extending_quickpath = OVERHEAD + steps + count/SPEEDUP
             if count >= effort_extending_quickpath: 
                 if LOGGING.quickpath_creation:
-                    print LOGGING.prefix, 'Extending QuickPath: ' + str(self),
-                    print '(%.3f, %.3f)' % (tmin, tmax)
+                    print(LOGGING.prefix, 'Extending QuickPath: ' + str(self),
+                                          '(%.3f, %.3f)' % (tmin, tmax))
 
                 quickpath.extend((tmin,tmax))
                 return quickpath
@@ -922,8 +928,8 @@ class Path(object):
             return self
 
         if LOGGING.quickpath_creation:
-            print LOGGING.prefix, 'New QuickPath: ' + str(self),
-            print '(%.3f, %.3f)' % (tmin, tmax)
+            print(LOGGING.prefix, 'New QuickPath: ' + str(self),
+                                  '(%.3f, %.3f)' % (tmin, tmax))
 
         result = QuickPath(self, (tmin, tmax), quickdict)
 

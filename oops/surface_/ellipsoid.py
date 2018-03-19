@@ -2,6 +2,8 @@
 # oops/surface_/ellipsoid.py: Ellipsoid subclass of class Surface
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 from polymath import *
 
@@ -287,7 +289,7 @@ class Ellipsoid(Surface):
         pos_with_derivs = Vector3.as_vector3(pos, derivs)
         pos_with_derivs = self._apply_exclusion(pos_with_derivs)
 
-        pos = pos_with_derivs.without_derivs()
+        pos = pos_with_derivs.wod
 
         # The intercept point satisfies:
         #   cept + p * perp(cept) = pos
@@ -357,8 +359,8 @@ class Ellipsoid(Surface):
             max_dp = abs(dt).max()
 
             if LOGGING.surface_iterations or Ellipsoid.DEBUG:
-                print LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
-                print iter, max_dp
+                print(LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
+                                      iter, max_dp)
 
             if (np.all(Scalar.as_scalar(max_dp).mask) or
                 max_dp <= SURFACE_PHOTONS.dlt_precision or
@@ -437,9 +439,9 @@ class Ellipsoid(Surface):
 
             mat = Matrix.as_matrix(Vector3.IDENTITY + p * perp.d_dcept)
             dcept_dpos = mat.reciprocal() * (Vector3.IDENTITY -
-                                             perp.without_derivs() * dp_dpos)
+                                             perp.wod * dp_dpos)
 
-            for (key,deriv) in pos_with_derivs.derivs.iteritems():
+            for (key,deriv) in pos_with_derivs.derivs.items():
                 cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
                 p.insert_deriv(key, dp_dpos.chain(deriv), override=True)
 

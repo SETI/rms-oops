@@ -45,3 +45,18 @@ import oops.config        as config
 import oops.utils as utils
 
 ################################################################################
+# Class cross-references and other class attributes to be defined after startup
+################################################################################
+
+from polymath import Vector3, Matrix3
+
+Transform.FRAME_CLASS = frame.Frame
+Transform.IDENTITY = Transform(Matrix3.IDENTITY,
+                               Vector3.ZERO,
+                               frame.Frame.J2000,
+                               frame.Frame.J2000,
+                               path.Path.SSB)
+
+Event.PATH_CLASS = path.Path
+
+################################################################################

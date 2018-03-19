@@ -2,6 +2,8 @@
 # oops/surface_/surface.py: Abstract class Surface
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 from polymath import *
 
@@ -236,7 +238,7 @@ class Surface(object):
         if any_derivs:
             pos_wrt_surface.insert_deriv('pos', Vector3.IDENTITY, override=True)
         else:
-            pos_wrt_surface = pos_wrt_surface.without_derivs()
+            pos_wrt_surface = pos_wrt_surface.wod
 
         if obs is not None:
             obs_wrt_surface = obs.wrt(self.origin, self.frame,
@@ -245,7 +247,7 @@ class Surface(object):
                 obs_wrt_surface.insert_deriv('obs', Vector3.IDENTITY,
                                                     override=True)
             else:
-                obs_wrt_surface = obs_wrt_surface.without_derivs()
+                obs_wrt_surface = obs_wrt_surface.wod
         else:
             obs_wrt_surface = None
 
@@ -262,7 +264,7 @@ class Surface(object):
 
         for i in range(3):
             if not derivs[i]:
-                coords[i] = coords[i].without_derivs()
+                coords[i] = coords[i].wod
 
         return coords
 
@@ -417,44 +419,38 @@ class Surface(object):
 
         # Internal functions to return an entirely masked result
         def fully_masked_results():
-            new_link = original_link.all_masked()
-
-            scalar = new_link.time.clone()
-            vector3 = new_link.pos.clone()
+            vector3 = Vector3(np.ones(original_link.shape + (3,)), True)
+            scalar = Scalar(vector3.values[...,0], True)
 
             if derivs:
-                scalar.insert_deriv('t', Scalar(1., True), override=True)
-                scalar.insert_deriv('los',
-                                    Scalar(np.ones((1,3)), True, drank=1),
-                                    override=True)
+                scalar.insert_deriv('t', Scalar(1., True))
+                scalar.insert_deriv('los', Scalar(np.ones((1,3)), True,
+                                                  drank=1))
 
-                vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
-                vector3.insert_deriv('los',
-                                     Vector3(np.ones((3,3)), True, drank=1),
-                                     override=True)
+                vector3.insert_deriv('t', Vector3((1,1,1), True))
+                vector3.insert_deriv('los', Vector3(np.ones((3,3)), True,
+                                                    drank=1))
 
-                new_link.state.insert_deriv('los', vector3.d_dlos)
+            new_link = original_link.replace(link_key, vector3,
+                                             link_key + '_lt', scalar)
+            new_link = new_link.all_masked()
 
-            new_link = new_link.replace(link_key, vector3,
-                                        link_key + '_lt', scalar)
+            surface_event = Event(scalar, vector3, self.origin, self.frame)
+            surface_event.insert_subfield(surface_key, vector3)
+            surface_event.insert_subfield(surface_key + '_lt', scalar)
+            surface_event.insert_subfield('perp', vector3.wod)
+            surface_event.insert_subfield('vflat', vector3.wod)
+            surface_event.insert_subfield('coord1', scalar)
+            surface_event.insert_subfield('coord2', scalar)
+            surface_event.insert_subfield('coord3', scalar)
 
-            surf_event = Event(new_link.time, new_link.state,
-                               self.origin, self.frame.wayframe)
-            surf_event.insert_subfield(surface_key, vector3)
-            surf_event.insert_subfield(surface_key + '_lt', scalar)
-            surf_event.insert_subfield('perp', vector3.without_derivs())
-            surf_event.insert_subfield('vflat', vector3.without_derivs())
-            surf_event.insert_subfield('coord1', scalar)
-            surf_event.insert_subfield('coord2', scalar)
-            surf_event.insert_subfield('coord3', scalar)
-
-            return (surf_event, new_link)
+            return (surface_event, new_link)
 
         original_link = link
 
         # Handle derivatives
         if not derivs:
-            link = link.without_derivs()        # preserves time-dependence
+            link = link.wod        # preserves time-dependence
 
         # Assemble convergence parameters
         if converge:
@@ -498,9 +494,9 @@ class Surface(object):
         link = link.shrink(antimask)
 
         # Define the link event relative to the SSB in J2000
-        link_wod = link.without_derivs()
+        link_wod = link.wod
         link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
-        los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).without_derivs()
+        los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).wod
 
         link_time = link_wod.time
         obs_wrt_ssb = link_wrt_ssb.pos
@@ -521,8 +517,11 @@ class Surface(object):
             surface_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = (surface_time - link_time).min().values - limit
-        lt_max = (surface_time - link_time).max().values + limit
+        lt_min = (surface_time - link_time).min() - limit
+        lt_max = (surface_time - link_time).max() + limit
+
+        lt_min = lt_min.as_builtin()
+        lt_max = lt_max.as_builtin()
 
         # Iterate. Convergence is rapid because all speeds are non-relativistic
         max_dlt = np.inf
@@ -564,8 +563,8 @@ class Surface(object):
             max_dlt = abs(dlt).max()
 
             if LOGGING.surface_iterations:
-                print LOGGING.prefix, "Surface._solve_photon_by_los",
-                print iter, max_dlt
+                print(LOGGING.prefix, "Surface._solve_photon_by_los", end='')
+                print(iter, max_dlt)
 
             if (max_dlt <= precision) or (max_dlt >= prev_max_dlt) or \
                (max_dlt == Scalar.MASKED):
@@ -576,14 +575,14 @@ class Surface(object):
 
         #### END OF LOOP
 
-        # If the link is entirely masked now
+        # If the link is entirely masked now, return masked results
         if max_dlt == Scalar.MASKED:
             return fully_masked_results()
 
         # Update the mask on light time to hide intercepts outside the defined
         # limits
-        mask = (lt.mask | (lt.vals * sign < 0.) |
-                (lt.vals == lt_min) | (lt.vals == lt_max))
+        mask = (lt.mask | (lt.values * sign < 0.) |
+                (lt.values == lt_min) | (lt.values == lt_max))
         if not np.any(mask): mask = False
 
         lt = lt.remask(mask)
@@ -600,18 +599,18 @@ class Surface(object):
             lt = lt.shrink(antimask)
             link = link.shrink(antimask)
 
-            link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
+        if not np.any(antimask): return fully_masked_results()
 
         # Put the derivatives back as needed (at least the time derivative)
-        obs_wrt_ssb = link_wrt_ssb.state
-        los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).unit() * constants.C
+        obs_wrt_ssb = link.ssb.state
+        los_wrt_ssb = link.ssb.get_subfield(link_key).unit() * constants.C
         pos_in_j2000 = obs_wrt_ssb + lt * los_wrt_ssb - \
                        origin_wrt_ssb.event_at_time(surface_time,
-                                                    quick=False).state
+                                                    quick=quick).state
 
         # Re-rotate into the surface-fixed frame
         surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
-                                                          quick=False)
+                                                          quick=quick)
         pos_wrt_surface = surface_xform.rotate(pos_in_j2000, derivs=True)
         los_wrt_surface = surface_xform.rotate(los_wrt_ssb, derivs=True)
         obs_wrt_surface = pos_wrt_surface - lt * los_wrt_surface
@@ -625,8 +624,8 @@ class Surface(object):
 
         # Update the mask on light time to hide intercepts behind the observer
         # or outside the defined limits
-        mask = (lt.mask | (lt.vals * sign < 0.) |
-                (lt.vals == lt_min) | (lt.vals == lt_max))
+        mask = (lt.mask | (lt.values * sign < 0.) |
+                (lt.values == lt_min) | (lt.values == lt_max))
         if not np.any(mask): mask = False
 
         lt = lt.remask(mask)
@@ -659,8 +658,8 @@ class Surface(object):
         surface_event.insert_subfield('coord2', coord2)
         surface_event.insert_subfield('coord3', coord3)
 
-        # Constructed the updated link_event
-        new_link = link.replace(link_key + '_lt', lt)
+        # Construct the updated link_event
+        new_link = link.replace(link_key + '_lt', -lt)
 
         # Unshrink
         surface_event = surface_event.unshrink(antimask)
@@ -772,41 +771,35 @@ class Surface(object):
 
         # Internal functions to return an entirely masked result
         def fully_masked_results():
-            new_link = original_link.all_masked()
-
-            scalar = new_link.time.clone()
-            vector3 = new_link.pos.clone()
+            vector3 = Vector3(np.ones(original_link.shape + (3,)), True)
+            scalar = Scalar(vector3.values[...,0], True)
 
             if derivs:
-                scalar.insert_deriv('t', Scalar(1., True), override=True)
-                scalar.insert_deriv('los',
-                                    Scalar(np.ones((1,3)), True, drank=1),
-                                    override=True)
+                scalar.insert_deriv('t', Scalar(1., True))
+                scalar.insert_deriv('los', Scalar(np.ones((1,3)), True,
+                                                  drank=1))
 
-                vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
-                vector3.insert_deriv('los',
-                                     Vector3(np.ones((3,3)), True, drank=1),
-                                     override=True)
+                vector3.insert_deriv('t', Vector3((1,1,1), True))
+                vector3.insert_deriv('los', Vector3(np.ones((3,3)), True,
+                                            drank=1))
 
-                new_link.state.insert_deriv('los', vector3.d_dlos)
+            new_link = original_link.replace(link_key, vector3,
+                                             link_key + '_lt', scalar)
+            new_link = new_link.all_masked()
 
-            new_link = new_link.replace(link_key, vector3,
-                                        link_key + '_lt', scalar)
+            surface_event = Event(scalar, vector3, self.origin, self.frame)
+            surface_event.insert_subfield(surface_key, vector3)
+            surface_event.insert_subfield(surface_key + '_lt', scalar)
+            surface_event.insert_subfield('perp', vector3.wod)
+            surface_event.insert_subfield('vflat', vector3.wod)
 
-            surf_event = Event(new_link.time, new_link.state,
-                               self.origin, self.frame.wayframe)
-            surf_event.insert_subfield(surface_key, vector3)
-            surf_event.insert_subfield(surface_key + '_lt', scalar)
-            surf_event.insert_subfield('perp', vector3.without_derivs())
-            surf_event.insert_subfield('vflat', vector3.without_derivs())
-
-            return (surf_event, new_link)
+            return (surface_event, new_link)
 
         original_link = link
 
         # Handle derivatives
         if not derivs:
-            link = link.without_derivs()        # preserves time-dependence
+            link = link.wod        # preserves time-dependence
 
         # Assemble convergence parameters
         if converge:
@@ -849,7 +842,7 @@ class Surface(object):
         link = link.shrink(antimask)
 
         # Define the link event relative to the SSB in J2000
-        link_wod = link.without_derivs()
+        link_wod = link.wod
         link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
 
         link_time = link_wod.time
@@ -874,8 +867,11 @@ class Surface(object):
             surface_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = (surface_time - link_time).min().values - limit
-        lt_max = (surface_time - link_time).max().values + limit
+        lt_min = (surface_time - link_time).min() - limit
+        lt_max = (surface_time - link_time).max() + limit
+
+        lt_min = lt_min.as_builtin()
+        lt_max = lt_max.as_builtin()
 
         # For a non-virtual surface, pos_wrt_origin is fixed
         if not self.IS_VIRTUAL:
@@ -928,8 +924,8 @@ class Surface(object):
             max_dlt = abs(dlt).max()
 
             if LOGGING.surface_iterations:
-                print LOGGING.prefix, "Surface._solve_photon_by_coords",
-                print iter, max_dlt
+                print(LOGGING.prefix, "Surface._solve_photon_by_coords", end='')
+                print(iter, max_dlt)
 
             if max_dlt <= precision or max_dlt >= prev_max_dlt or \
                max_dlt == Scalar.MASKED:
@@ -946,8 +942,8 @@ class Surface(object):
 
         # Update the mask on light time to hide intercepts outside the defined
         # limits
-        mask = (lt.mask | (lt.vals * sign < 0.) |
-                (lt.vals == lt_min) | (lt.vals == lt_max))
+        mask = (lt.mask | (lt.values * sign < 0.) |
+                (lt.values == lt_min) | (lt.values == lt_max))
         if not np.any(mask): mask = False
 
         lt = lt.remask(mask)
@@ -1089,7 +1085,7 @@ class Surface(object):
 # 
 #         # Handle derivatives
 #         if not derivs:
-#             link = link.without_derivs()        # preserves time-dependence
+#             link = link.wod        # preserves time-dependence
 # 
 #         # Assemble convergence parameters
 #         if converge:
@@ -1131,11 +1127,11 @@ class Surface(object):
 #             return (surface_event, new_link)
 # 
 #         # Define the link event relative to the SSB in J2000
-#         link_wod = link.without_derivs()
+#         link_wod = link.wod
 #         link_time = link_wod.time
 #         link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
 #         obs_wrt_ssb = link_wrt_ssb.pos
-#         los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).without_derivs()
+#         los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).wod
 #         los_wrt_ssb = los_wrt_ssb.unit() * constants.C  # scale factor is lt
 # 
 #         # Define the surface path and frame relative to the SSB in J2000
@@ -1157,8 +1153,11 @@ class Surface(object):
 #             surface_time = link_time + lt
 # 
 #         # Set light travel time limits to avoid a diverging solution
-#         lt_min = (surface_time - link_time).min().values - limit
-#         lt_max = (surface_time - link_time).max().values + limit
+#         lt_min = (surface_time - link_time).min() - limit
+#         lt_max = (surface_time - link_time).max() + limit
+# 
+#         lt_min = lt_min.as_builtin()
+#         lt_max = lt_max.as_builtin()
 # 
 #         # Iterate. Convergence is rapid because all speeds are non-relativistic
 #         max_dlt = np.inf
@@ -1191,16 +1190,16 @@ class Surface(object):
 # 
 #             new_lt = new_lt.clip(lt_min, lt_max, False)
 # 
-#             tmin = new_lt.min()
-#             tmax = new_lt.max()
+#             tmin = new_lt.min().as_builtin()
+#             tmax = new_lt.max().as_builtin()
 #             span = tmax - tmin
 # 
 #             collapsed_mask = (span == Scalar.MASKED)
 # 
 #             if span <= collapse_threshold:
 #                 if LOGGING.surface_time_collapse:
-#                     print LOGGING.prefix, "Surface.collapse_time()",
-#                     print tmin, tmax - tmin
+#                     print(LOGGING.prefix, "Surface.collapse_time()", end='')
+#                     print(tmin, tmax - tmin)
 #                 new_lt = Scalar((tmin + tmax)/2., collapsed_mask)
 # 
 #             dlt = new_lt - lt
@@ -1211,8 +1210,8 @@ class Surface(object):
 #             max_dlt = abs(dlt).max()
 # 
 #             if LOGGING.surface_iterations:
-#                 print LOGGING.prefix, "Surface._solve_photon_by_normal",
-#                 print iter, max_dlt
+#                 print(LOGGING.prefix, "Surface._solve_photon_by_normal", end='')
+#                 print(iter, max_dlt)
 # 
 #             if max_dlt <= precision or max_dlt >= prev_max_dlt or \
 #                max_dlt == Scalar.MASKED:
@@ -1225,8 +1224,8 @@ class Surface(object):
 # 
 #         # Update the mask on light time to hide intercepts outside the defined
 #         # limits
-#         mask = (link.mask | lt.mask | (lt.vals * sign < 0.) |
-#                 (lt.vals == lt_min) | (lt.vals == lt_max))
+#         mask = (link.mask | lt.mask | (lt.values * sign < 0.) |
+#                 (lt.values == lt_min) | (lt.values == lt_max))
 #         if not np.any(mask): mask = False
 # 
 #         # The remasking will fail if lt has been time-collapsed

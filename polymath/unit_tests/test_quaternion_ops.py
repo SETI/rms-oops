@@ -40,7 +40,7 @@ class Test_Quaternion_ops(unittest.TestCase):
     DEL = 1.e-14
     self.assertTrue((ab - a*b).rms().max() < DEL)
 
-    dab_dt = a.without_derivs() * b.d_dt + a.d_dt * b.without_derivs()
+    dab_dt = a.wod * b.d_dt + a.d_dt * b.wod
     self.assertTrue((dab_dt - (a*b).d_dt).rms().max() < DEL)
 
     # Divide...
@@ -51,10 +51,7 @@ class Test_Quaternion_ops(unittest.TestCase):
     test = ab * b_inv
     self.assertTrue((test - a).rms().max() < DEL)
 
-    ab_wod = ab.without_derivs()
-    b_inv_wod = b_inv.without_derivs()
-
-    dtest_dt = ab.d_dt * b_inv_wod + ab_wod * b_inv.d_dt
+    dtest_dt = ab.d_dt * b_inv.wod + ab.wod * b_inv.d_dt
     self.assertTrue((dtest_dt - a.d_dt).rms().max() < DEL)
 
 ################################################################################

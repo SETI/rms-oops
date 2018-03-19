@@ -88,6 +88,7 @@ class Arc(Ellipse):
         if type(arg) in (Point, Pair):
             pt = Point(arg)
 
+            # Only possible if the arc radius = 0 or the arc length = 0
             return ((self.pt0.is_subset_of(pt) & self.r <= Shape2D.PREC)) |
                     (self.end0.is_subset_of(pt) & self.tmax <= Shape2D.PREC))
 
@@ -95,20 +96,27 @@ class Arc(Ellipse):
         if isinstance(type(arg), Line):
             line = arg
 
+            # Only possible if the arc radius = 0 or the arc length = 0
             return ((self.pt0.is_subset_of(line) & self.r <= Shape2D.PREC)) |
                     (self.end0.is_subset_of(line) & self.tmax <= Shape2D.PREC))
 
-        # Is subset of, Arc to Circle
-        if isinstance(type(arg), Circle):
-            circle = arg
+        # Is subset of, Arc to Ellipse
+        if isinstance(type(arg), Ellipse):
+            ellipse = arg
 
-            return (self.as_circle.is_subset_of(circle) |
-                    (self.is_short & self.end0.is_subset_of(circle) &
-                                     self.end1.is_subset_of(circle)))
+            # Require three points on arc to overlap Ellipse and to be unmasked
+            self_pt2 = self.point_at(self.t0 + 0.5 * self.dt)
+            ellipse0 = ellipse.point_at(ellipse.param_at(self.end0))
+            ellipse1 = ellipse.point_at(ellipse.param_at(self.end1))
+            ellipse2 = ellipse.point_at(ellipse.param_at(self_pt2))
 
-        # Is subset of, Arc to Arc
-        if isinstance(type(arg), Arc):
-            raise NotImplementedError('Arc.is_subset_of(Arc) not implemented')
+            result = ((self.end0 - ellipse0).norm_sq() <= Shape2D.PRECx2) & \
+                     ((self.end1 - ellipse1).norm_sq() <= Shape2D.PRECx2) & \
+                     ((self_xpt  - ellipse2).norm_sq() <= Shape2D.PRECx2)
+
+            result[result.mask & self.antimask & pt.antimask] = False
+
+            return result
 
         # For other cases, use the method of the other object's class
         return arg.is_superset_of(self)
@@ -129,10 +137,11 @@ class Arc(Ellipse):
         if type(arg) in (Point, Pair):
             pt = Point(arg)
 
-            inside_circle = (pt - self.pt0).norm_sq() <= self.r_sq
-            inside_seg = self.seg.perp.dot(pt - self.seg.pt0) <= 0
+            arcpt = self.point_at(self.param_at(pt))
+            result = (arcpt - pt).norm_sq() <= Shape2D.PRECx2
+            result[result.mask & self.antimask & pt.antimask] = False
 
-            return inside_circle & inside_seg
+            return result
 
         # Is superset of, Arc to Line or HalfLine
         if type(arg) in (Line, HalfLine):
@@ -142,61 +151,17 @@ class Arc(Ellipse):
         if isinstance(type(arg), Segment):
             line = arg
 
-            return self.is_superset_of(line.pt0) & self.is_superset_of(line.pt1)
+            # Only possible if the segment length = 0
+            return ((line.pt0 - line.pt1).norm_sq() <= Shape2D.PREC)) &
+                    (self.is_superset_of(line.pt0))
 
-        # Is superset of, Arc to Circle
-        if isinstance(type(arg), Circle):
-
-            # An arc is a superset of a circle if...
-            # 1. The circle's center is inside the arc
-            # 2. The circle's radius is smaller than the arc's radius
-            # 3. None of the sides intersect (although they can touch)
-            raise NotImplementedError('Arc.is_superset_of(Circle) ' +
-                                      'not implemented')
-
-        # Is superset of, Arc to Arc
-        if isinstance(type(arg), Arc):
-            raise NotImplementedError('Arc.is_superset_of(Arc) not implemented')
+        # Is superset of, Arc to Ellipse
+        if isinstance(type(arg), Ellipse):
+            ellipse = arc
+            return ellipse.is_subset_of(self)
 
         # For other cases, use the method of the other object's class
         return arg.is_superset_of(self)
-
-    def is_disjoint_from(self, arg):
-        """True if the this object and the given Shape2D object are disjoint
-        (i.e., do not touch or overlap).
-
-        Input:
-            self        this shape.
-            arg         another Shape2D object.
-
-        Return:         Boolean True if this shape is disjoing from the given
-                        shape.
-        """
-
-        # Is disjoint from, Arc to Point
-        if type(arg) in (Point, Pair):
-            pt = Point(arg)
-
-            outside_circle = (pt - self.pt0).norm_sq() > self.r_sq
-
-            below_tmax = self.param_at(pt, mask=False) <= self.tmax
-            seg_side = self.seg.perp.dot(pt - self.seg.pt0)
-
-            in_short_arc = ~self.is_long & (t <= self.tmax) & (seg_side >= 0)
-            in_long_arc  =  self.is_long & (t <= self.tmax) | (seg_side <= 0)
-
-            return inside_circle & (in_short_arc | in_long_arc)
-
-
-        # Is disjoint from, Arc to Line
-        if isinstance(type(arg), Line):
-            line = arg
-
-            line_pt = self.pt0.closest(line)
-            return (line_pt - self.pt0).norm_sq() > self.r_sq
-
-        # Otherwise use the general method
-        return super(Shape2D, self).is_disjoint_from(arg)
 
     def touches(self, arg):
         """True if the this object and the given Shape2D touch but do not share
@@ -213,15 +178,11 @@ class Arc(Ellipse):
         # Touches, Arc to Point
         if type(arg) in (Point, Pair):
             pt = Point(arg)
+            return arc.is_superset_of(pt)
 
-            return (pt - self.pt0).norm_sq != self.r_sq
-
-        # Touches, Arc to Line
+        # Touches, Arc to Line (handled by Ellipse.touches())
         if isinstance(type(arg), Line):
-            line = arg
-
-            line_pt = self.pt0.closest(line)
-            return ((line_pt - self.pt0).norm() - self.r).abs() <= Shape2D.PREC
+            return super(Arc,self).touches(arg)
 
         # Otherwise use the general method
         return super(Shape2D, self).touches(arg)

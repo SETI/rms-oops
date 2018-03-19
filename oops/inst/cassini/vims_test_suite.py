@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 import pylab
 import oops
@@ -7,22 +9,22 @@ PRINT = True
 DISPLAY = True
 
 def show_info(title, array):
-    """Internal method to print summary information and display images as
+    """Internal method to print(summary information and display images as)
         desired."""
     
     global PRINT, DISPLAY
     if not PRINT: return
     
-    print ""
-    print title
+    print("")
+    print(title)
     
     if isinstance(array, np.ndarray):
         if array.dtype == np.dtype("bool"):
             count = np.sum(array)
             total = np.size(array)
             percent = int(count / float(total) * 100. + 0.5)
-            print "   ", (count, total-count),
-            print (percent, 100-percent), "(True, False pixels)"
+            print("   ", (count, total-count), end='')
+            print((percent, 100-percent), "(True, False pixels)")
             if DISPLAY:
                 ignore = pylab.imshow(array, norm=None, vmin=0, vmax=1)
                 ignore = raw_input(title + ": ")
@@ -31,9 +33,9 @@ def show_info(title, array):
             minval = np.min(array)
             maxval = np.max(array)
             if minval == maxval:
-                print "    ", minval
+                print("    ", minval)
             else:
-                print "    ", (minval, maxval), "(min, max)"
+                print("    ", (minval, maxval), "(min, max)")
                 
                 if DISPLAY:
                     ignore = pylab.imshow(array)
@@ -41,15 +43,15 @@ def show_info(title, array):
     
     elif isinstance(array, oops.Array):
         if np.any(array.mask):
-            print "    ", (np.min(array.vals),
+            print("    ", (np.min(array.vals), end='')
                            np.max(array.vals)), "(unmasked min, max)"
-            print "    ", (array.min(),
+            print("    ", (array.min(), end='')
                            array.max()), "(masked min, max)"
             masked = np.sum(array.mask)
             total = np.size(array.mask)
             percent = int(masked / float(total) * 100. + 0.5)
-            print "    ", (masked, total-masked),
-            print         (percent, 100-percent), "(masked, unmasked pixels)"
+            print("    ", (masked, total-masked), end='')
+            print(        (percent, 100-percent), "(masked, unmasked pixels)")
             
             if DISPLAY and array.vals.size > 1:
                 ignore = pylab.imshow(array.vals)
@@ -65,16 +67,16 @@ def show_info(title, array):
             minval = np.min(array.vals)
             maxval = np.max(array.vals)
             if minval == maxval:
-                print "    ", minval
+                print("    ", minval)
             else:
-                print "    ", (minval, maxval), "(min, max)"
+                print("    ", (minval, maxval), "(min, max)")
                 
                 if DISPLAY:
                     ignore = pylab.imshow(array.vals)
                     ignore = raw_input(title + ": ")
     
     else:
-        print "    ", array
+        print("    ", array)
 
 def vims_test_suite(filespec, derivs, info, display):
     """Master test suite for a Cassini VIMS image.
@@ -84,7 +86,7 @@ def vims_test_suite(filespec, derivs, info, display):
         derivs      True to calculate derivatives where needed to derive
         quantities related to spatial resolution; False to omit all
         resolution calculations.
-        info        True to print out geometry information as it progresses.
+        info        True to print(out geometry information as it progresses.)
         display     True to display each backplane using Pylab, and pause until
         the user hits RETURN.
         """
@@ -214,8 +216,8 @@ def vims_test_suite(filespec, derivs, info, display):
      obs_wrt_saturn_latitude,
      obs_wrt_saturn_elevation) = saturn_body.surface.event_as_coords(obs_wrt_saturn_center.event,
                                                                      axes=3)
-    #print "obs_wrt_saturn_longitude.shape: ", obs_wrt_saturn_longitude.shape
-    #print this_doesnt_work
+    #print("obs_wrt_saturn_longitude.shape: ", obs_wrt_saturn_longitude.shape)
+    #print(this_doesnt_work)
 
     show_info("Saturn range to observer (km)", obs_wrt_saturn_range)
     show_info("Saturn longitude of observer (deg)", obs_wrt_saturn_longitude *
@@ -274,7 +276,7 @@ def vims_test_suite(filespec, derivs, info, display):
     #ring_event = ring_event_w_derivs.copy()
     #ring_event.delete_sub_subfields()
     ring_event = ring_event_w_derivs.plain()
-    print "ring_event.pos: ", ring_event.pos
+    print("ring_event.pos: ", ring_event.pos)
     
     # This mask is True inside the rings, False outside
     ring_mask = np.logical_not(ring_event.mask)

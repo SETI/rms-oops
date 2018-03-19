@@ -5,7 +5,9 @@
 ################################################################################
 
 from __future__ import division
+
 import numpy as np
+from polymath import Scalar, Pair, Matrix3, Qube
 
 class Affine(object):
     """An class that describes 2-D affine transformations. These are transforms
@@ -17,15 +19,15 @@ class Affine(object):
     def __init__(self, a, b, c, d, e, f):
         """Constructor for an Affine transform."""
 
-        self.a = Scalar.as_scalar(self.a)
-        self.b = Scalar.as_scalar(self.b)
-        self.c = Scalar.as_scalar(self.c)
-        self.d = Scalar.as_scalar(self.d)
-        self.e = Scalar.as_scalar(self.e)
-        self.f = Scalar.as_scalar(self.f)
+        self.a = Scalar.as_scalar(a).as_float()
+        self.b = Scalar.as_scalar(b).as_float()
+        self.c = Scalar.as_scalar(c).as_float()
+        self.d = Scalar.as_scalar(d).as_float()
+        self.e = Scalar.as_scalar(e).as_float()
+        self.f = Scalar.as_scalar(f).as_float()
 
         # Indexed by recursive = True/False
-        self.scalars = (self.a, self.b. self.c, self.d, self.d, self.f)
+        self.scalars = (self.a, self.b, self.c, self.d, self.e, self.f)
         self.scalars_wod = (self.a.without_derivs(),
                             self.b.without_derivs(),
                             self.c.without_derivs(),
@@ -33,8 +35,8 @@ class Affine(object):
                             self.e.without_derivs(),
                             self.f.without_derivs())
     
-        self.abcdef[self.abcdef_wod, self.abcdef]
-        self.affine_shape = np.broadcasted_shape(*self.scalars)
+        self.abcdef = [self.scalars_wod, self.scalars]
+        self.shape = Qube.broadcasted_shape(*self.scalars)
 
         self.inverted = None        # Use to track the inverse transform
 
@@ -82,10 +84,10 @@ class Affine(object):
     def to_matrix(self):
         """Matrix representation of the transform."""
 
-        return Matrix.from_scalars(self.a, self.b, self.c,
-                                   self.d, self.e, self.f,
-                                      0.0,    0.0,    1.0,
-                                   recursive=True)
+        return Matrix3.from_scalars(self.a, self.b, self.c,
+                                    self.d, self.e, self.f,
+                                       0.0,    0.0,    1.0,
+                                    recursive=True)
 
     @staticmethod
     def from_matrix(matrix, tol=1.e-12):
@@ -94,7 +96,8 @@ class Affine(object):
         Input:
             matrix      matrix to convert to a Affine transform object.
             tol         numeric tolerance to apply to the bottom row of the
-                        array, e.g., 1.e-12. Use None to skip this validation
+                        array, which should always equal (0,0,1). The value is
+                        1.e-12 by default. Use None to skip this validation
                         step.
         """
 
@@ -138,8 +141,6 @@ class Affine(object):
 
         return self.inverse().apply(pt, recursive)
 
-    def intersections_with_unit_circle(self, recursive=True):
-        
     ############################################################################
     # Operations
     ############################################################################
@@ -147,4 +148,100 @@ class Affine(object):
     def __mul__(self, arg):
         return Matrix.from_matrix(self.to_matrix() * arg.to_matrix(), tol=None)
 
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+
+class Test_Affine(unittest.TestCase):
+
+  def runTest(self):
+
+    # Simple transformation
+    T = Affine(0,1,1,1,0,1) # swap x/y and add 1 to each
+    p = Pair(np.random.randn(12,13,2))
+    (x,y) = p.to_scalars()
+
+    p2 = T.apply(p)
+    (x2,y2) = p2.to_scalars()
+
+    dx = x2 - (y + 1)
+    dy = y2 - (x + 1)
+    self.assertTrue(dx.abs().max() < 1.e-15)
+    self.assertTrue(dy.abs().max() < 1.e-15)
+
+    # Simple transformation, derivatives on transformed point
+    dp_dvec = Pair(np.random.randn(12,13,2,3), drank=1)
+    p.insert_deriv('vec', dp_dvec)
+    (x,y) = p.to_scalars()
+
+    p2 = T.apply(p, recursive=True)
+    (x2,y2) = p2.to_scalars()
+
+    dx = x2 - (y + 1)
+    dy = y2 - (x + 1)
+    self.assertTrue(dx.abs().max() < 1.e-15)
+    self.assertTrue(dy.abs().max() < 1.e-15)
+
+    self.assertTrue(abs(x2.d_dvec.values - y.d_dvec.values).max() < 1.e-15)
+    self.assertTrue(abs(y2.d_dvec.values - x.d_dvec.values).max() < 1.e-15)
+
+    # Multidimensional transformation with derivatives on coefficients
+    b = Scalar(np.random.randn(13),
+               derivs={'v': Scalar(np.random.randn(13,3), drank=1)})
+    d = Scalar(np.random.randn(12,1),
+               derivs={'v': Scalar(np.random.randn(13,3), drank=1),
+                       't': Scalar(np.random.randn(13), drank=0)})
+
+    T = Affine(0,b,1,d,0,1) # scale x/y and add 1 to each
+    self.assertEqual(T.shape, (12,13))
+
+    p = Pair(np.random.randn(12,13,2))
+    (x,y) = p.to_scalars()
+
+    p2 = T.apply(p)
+    (x2,y2) = p2.to_scalars()
+
+    dx = x2 - (b*y + 1)
+    dy = y2 - (d*x + 1)
+    self.assertTrue(dx.abs().max() < 1.e-15)
+    self.assertTrue(dy.abs().max() < 1.e-15)
+
+    dx_dt_diff = x2.d_dt
+    dy_dt_diff = y2.d_dt - x*d.d_dt
+    self.assertTrue(dx_dt_diff.abs().max() < 1.e-15)
+    self.assertTrue(dy_dt_diff.abs().max() < 1.e-15)
+
+    dx_dv_diff = x2.d_dv - y*b.d_dv
+    dy_dv_diff = y2.d_dv - x*d.d_dv
+    self.assertTrue(np.all(dx_dv_diff.abs().values < 1.e-15))
+    self.assertTrue(np.all(dy_dv_diff.abs().values < 1.e-15))
+
+    # Transformation with derivatives on coefficients and point
+    p.insert_deriv('v', Pair(np.random.randn(12,13,2,3), drank=1))
+    p.insert_deriv('t', Pair(np.random.randn(12,13,2),   drank=0))
+    (x,y) = p.to_scalars()
+
+    p2 = T.apply(p)
+    (x2,y2) = p2.to_scalars()
+
+    dx = x2 - (b*y + 1)
+    dy = y2 - (d*x + 1)
+    self.assertTrue(dx.abs().max() < 1.e-15)
+    self.assertTrue(dy.abs().max() < 1.e-15)
+
+    dx_dt_diff = x2.d_dt -  b.wod * y.d_dt
+    dy_dt_diff = y2.d_dt - (d.wod * x.d_dt + x.wod * d.d_dt)
+    self.assertTrue(dx_dt_diff.abs().max() < 1.e-15)
+    self.assertTrue(dy_dt_diff.abs().max() < 1.e-15)
+
+    dx_dv_diff = x2.d_dv - (b.wod * y.d_dv + y.wod * b.d_dv)
+    dy_dv_diff = y2.d_dv - (d.wod * x.d_dv + x.wod * d.d_dv)
+    self.assertTrue(np.all(dx_dv_diff.abs().values < 1.e-15))
+    self.assertTrue(np.all(dy_dv_diff.abs().values < 1.e-15))
+
+#########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

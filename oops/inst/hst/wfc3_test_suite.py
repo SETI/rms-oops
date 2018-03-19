@@ -2,6 +2,8 @@
 # oops/inst/hst/wfc3/wfc3_test_suite.py
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 import scipy.ndimage.filters as filters
 import pylab
@@ -15,7 +17,7 @@ import oops.inst.hst as hst
 
 # At this point, a Body class object has been created for every planet and moon
 # (including Pluto). If you don't believe me...
-print oops.Body.BODY_REGISTRY.keys()
+print(oops.Body.BODY_REGISTRY.keys())
 
 from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
@@ -28,18 +30,18 @@ PAUSE = False
 def show_info(title, array):
     global PRINT, DISPLAY, PAUSE
     if not PRINT: return
-    print ""
-    print title
+    print("")
+    print(title)
     if np.any(array.mask):
-        print "  ", (np.min(array.vals),
+        print("  ", (np.min(array.vals), end='')
                        np.max(array.vals)), "(unmasked min, max)"
-        print "  ", (array.min(),
+        print("  ", (array.min(), end='')
                        array.max()), "(masked min, max)"
         masked = np.sum(array.mask)
         total = np.size(array.mask)
         percent = int(masked / float(total) * 100. + 0.5)
-        print "  ", (masked, total-masked),
-        print         (percent, 100-percent), "(masked, unmasked pixels)"
+        print("  ", (masked, total-masked), end='')
+        print(        (percent, 100-percent), "(masked, unmasked pixels)")
         if DISPLAY:
             ignore = pylab.imshow(array.vals)
             ignore = raw_input(title + ": ")
@@ -53,8 +55,8 @@ def show_info(title, array):
         masked = np.sum(array.vals)
         total = np.size(array.vals)
         percent = int(masked / float(total) * 100. + 0.5)
-        print "  ", (masked, total-masked),
-        print         (percent, 100-percent), "(masked, unmasked pixels)"
+        print("  ", (masked, total-masked), end='')
+        print(        (percent, 100-percent), "(masked, unmasked pixels)")
         if DISPLAY and masked != 0 and masked != total:
             ignore = pylab.imshow(array.vals)
             if PAUSE: ignore = raw_input(title + ": ")
@@ -62,9 +64,9 @@ def show_info(title, array):
         minval = np.min(array.vals)
         maxval = np.max(array.vals)
         if minval == maxval:
-            print "  ", minval
+            print("  ", minval)
         else:
-            print "  ", (minval, maxval), "(min, max)"
+            print("  ", (minval, maxval), "(min, max)")
             if DISPLAY:
                 ignore = pylab.imshow(array.vals)
                 if PAUSE: ignore = raw_input(title + ": ")
@@ -78,7 +80,7 @@ filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/ibht02v5q_flt.fits")
 snapshot = hst.from_file(filespec)
 
 # Wanna know the target body?
-print snapshot.target.name
+print(snapshot.target.name)
 
 # Display the image (upside-down by default in pylab)
 pylab.imshow(snapshot.data)
@@ -200,7 +202,7 @@ show_info("Roughly centered on 100,000 km",
 
 epsilon = bp.ring_radius("epsilon_ring")
 centered = bp.ring_radius("uranus_ring_plane")
-print (epsilon - centered).min(), (epsilon - centered).max()
+print((epsilon - centered).min(), (epsilon - centered).max())
 
 # So here is a plot of the nominal epsilon ring
 
@@ -232,7 +234,7 @@ moons = snapshot.target.select_children(include_all=["REGULAR", "SATELLITE"])
 
 # Extract the names in order
 names = [moon.name for moon in moons]
-print names
+print(names)
 
 # Create a "multipath" that defines the path of each
 multipath = oops.Body.define_multipath(moons, id="URANIAN_MOONS")
@@ -248,10 +250,10 @@ moon_event, image_event = multipath.photon_to_event(image_event)
 
 # This is the (u,v) image coordinate pair for each moon
 moon_uv = snapshot.fov.uv_from_los(-image_event.arr)
-print moon_uv
+print(moon_uv)
 
 # Or we can convert them to ra and dec with full sub-pixel precision
 (ra,dec) = image_event.ra_and_dec()
 radec = oops.Pair.from_scalars(ra, dec) * oops.DPR  # converted to degrees
-print radec
+print(radec)
 

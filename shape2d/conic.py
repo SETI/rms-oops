@@ -44,12 +44,8 @@ class Conic(object):
         self.f = Scalar.as_scalar(self.f)
 
         self.scalars= (self.a, self.b. self.c, self.d, self.d, self.f)
-        self.scalars_wod = (self.a.without_derivs(),
-                            self.b.without_derivs(),
-                            self.c.without_derivs(),
-                            self.d.without_derivs(),
-                            self.e.without_derivs(),
-                            self.f.without_derivs())
+        self.scalars_wod = (self.a.wod, self.b.wod, self.c.wod,
+                            self.d.wod, self.e.wod, self.f.wod)
 
         # Conic coefficients indexed by recursive = True/False
         self.abcdef[self.abcdef_wod, self.abcdef]

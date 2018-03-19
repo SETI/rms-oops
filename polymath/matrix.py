@@ -29,7 +29,6 @@ class Matrix(Qube):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     DEBUG = False       # Set to True for some debugging tasks
@@ -40,7 +39,7 @@ class Matrix(Qube):
 
         if type(arg) == Matrix:
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         if isinstance(arg, Qube):
 
@@ -50,7 +49,7 @@ class Matrix(Qube):
 
             arg = Matrix(arg.values, arg.mask, example=arg)
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         return Matrix(arg)
 
@@ -351,7 +350,7 @@ class Matrix(Qube):
 
         MAX_ITERS = 10      # Adequate iterations unless convergence is failing
 
-        m0 = self.without_derivs()
+        m0 = self.wod
         if m0.drank:
             raise ValueError('a denominator is not supported for unitary()')
 
@@ -397,7 +396,7 @@ class Matrix(Qube):
 #             if recursive:
 #                 return self.inverse(True) * b
 #             else:
-#                 return self.inverse(False) * b.without_derivs()
+#                 return self.inverse(False) * b.wod
 # 
 #         new_shape = Qube.broadcasted_shape(self.shape, b.shape)
 # 

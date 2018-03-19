@@ -913,7 +913,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertFalse(hasattr(a, 'd_dt'))
     self.assertTrue(hasattr(b, 'd_dt'))
 
-    da_dt = -(a/b/b).without_derivs() * b.d_dt
+    da_dt = -(a/b/b).wod * b.d_dt
 
     a /= b
     self.assertTrue(hasattr(a, 'd_dt'))

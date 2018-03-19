@@ -2,6 +2,8 @@
 # oops/obs_/observation.py: Abstract class Observation
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 import numbers
 from polymath import *
@@ -633,7 +635,7 @@ class Observation(object):
             obs_time = new_obs_time
 
             if LOGGING.observation_iterations:
-                print LOGGING.prefix, "Observation.uv_from_path", iter, max_dt
+                print(LOGGING.prefix, "Observation.uv_from_path", iter, max_dt)
 
             if max_dt <= PATH_PHOTONS.dlt_precision or max_dt >= prev_max_dt:
                 break

@@ -27,7 +27,6 @@ class Quaternion(Vector):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     DEFAULT_VALUE = np.array([1.,0.,0.,0.])
@@ -38,7 +37,7 @@ class Quaternion(Vector):
 
         if type(arg) == Quaternion:
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         if type(arg) == Matrix3:
             return Quaternion.from_matrix3(arg, recursive)
@@ -50,7 +49,7 @@ class Quaternion(Vector):
 
             arg = Quaternion(arg, arg.mask, example=arg)
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         return Quaternion(arg)
 
@@ -130,8 +129,8 @@ class Quaternion(Vector):
         vector = Vector3.as_vector3(vector)
 
         if not recursive:
-            angle = angle.without_derivs()
-            vector = vector.without_derivs()
+            angle = angle.wod
+            vector = vector.wod
 
         (angle, vector) = Qube.broadcast(angle, vector)
 
@@ -508,17 +507,15 @@ class Quaternion(Vector):
             new_derivs = {}
 
             if a.derivs:
-                b_wod = b.without_derivs()
                 for (key, a_deriv) in a.derivs.items():
-                    new_derivs[key] = a_deriv * b_wod
+                    new_derivs[key] = a_deriv * b.wod
 
             if b.derivs:
-                a_wod = a.without_derivs()
                 for (key, b_deriv) in b.derivs.items():
                     if key in new_derivs:
-                        new_derivs[key] += a_wod * b_deriv
+                        new_derivs[key] += a.wod * b_deriv
                     else:
-                        new_derivs[key] = a_wod * b_deriv
+                        new_derivs[key] = a.wod * b_deriv
 
             obj.insert_derivs(new_derivs)
 

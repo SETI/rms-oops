@@ -2,6 +2,8 @@
 # oops/frame_/frame.py: Abstract class Frame and its required subclasses
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 from polymath import *
@@ -495,8 +497,8 @@ class Frame(object):
             if tmin >= quickframe.t0 and tmax <= quickframe.t1:
 
                 if LOGGING.quickframe_creation:
-                    print LOGGING.prefix, 'Re-using QuickFrame: ' + str(self),
-                    print '(%.3f, %.3f)' % (tmin, tmax)
+                    print(LOGGING.prefix, 'Re-using QuickFrame: ' + str(self),
+                                          '(%.3f, %.3f)' % (tmin, tmax))
 
                 return quickframe
 
@@ -526,8 +528,8 @@ class Frame(object):
             effort_extending_quickframe = OVERHEAD + steps + count/SPEEDUP
             if count >= effort_extending_quickframe:
                 if LOGGING.quickframe_creation:
-                    print LOGGING.prefix, 'Extending QuickFrame: ' + str(self),
-                    print '(%.3f, %.3f)' % (tmin, tmax)
+                    print(LOGGING.prefix, 'Extending QuickFrame: ' + str(self),
+                                          '(%.3f, %.3f)' % (tmin, tmax))
 
                 quickframe.extend((tmin,tmax))
                 return quickframe
@@ -539,8 +541,8 @@ class Frame(object):
             return self
 
         if LOGGING.quickframe_creation:
-            print LOGGING.prefix, 'New QuickFrame: ' + str(self),
-            print '(%.3f, %.3f)' % (tmin, tmax)
+            print(LOGGING.prefix, 'New QuickFrame: ' + str(self),
+                                  '(%.3f, %.3f)' % (tmin, tmax))
 
         result = QuickFrame(self, (tmin, tmax), quickdict)
 

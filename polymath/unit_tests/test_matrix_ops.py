@@ -457,7 +457,7 @@ class Test_Matrix_ops(unittest.TestCase):
 
     a = Matrix([(2,4),(6,8)], derivs={'t':Matrix([(6,4),(2,2)])})
     b = Matrix([(2,0),(0,2)], derivs={'t':Matrix([(-1,0),(0,-1)])})
-    da_dt = -a/b/b*b.d_dt + a.d_dt/b
+    da_dt = -a/b.wod/b.wod*b.d_dt + a.d_dt/b.wod
     a /= b
     self.assertEqual(a, [(1,2),(3,4)])
     self.assertEqual(a.d_dt, da_dt)

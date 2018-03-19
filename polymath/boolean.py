@@ -24,7 +24,6 @@ class Boolean(Scalar):
     BOOLS_OK = True     # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = False   # True to disallow derivatives; False to allow them.
 
     DEFAULT_VALUE = False
@@ -92,9 +91,10 @@ class Boolean(Scalar):
                         already been indexed.
         """
 
-        if self.mask is True:
+        mask = Qube.as_one_bool(self.mask)
+        if mask is True:
             return (False, False)
-        elif self.mask is False:
+        elif mask is False:
             return (self.values, None)
         else:
             return (self.values, self.mask[self.values])

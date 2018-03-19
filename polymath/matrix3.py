@@ -25,7 +25,6 @@ class Matrix3(Matrix):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     DEFAULT_VALUE = np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])
@@ -43,7 +42,7 @@ class Matrix3(Matrix):
 
         if type(arg) == Matrix3:
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         if isinstance(arg, Qube):
             if isinstance(arg, Qube.QUATERNION_CLASS):
@@ -51,7 +50,7 @@ class Matrix3(Matrix):
 
             arg = Matrix3(arg.values, arg.mask, example=arg)
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         return Matrix3(arg)
 
@@ -68,8 +67,8 @@ class Matrix3(Matrix):
 
         # Based on the SPICE source code for TWOVEC()
 
-        unit1 = Vector3.as_vector3(vector1).without_derivs().unit()
-        vector2 = Vector3.as_vector3(vector2).without_derivs()
+        unit1 = Vector3.as_vector3(vector1).wod.unit()
+        vector2 = Vector3.as_vector3(vector2).wod
         (unit1, vector2) = Qube.broadcast(unit1, vector2)
 
         new_values = np.empty(unit1.values.shape + (3,))
@@ -302,7 +301,7 @@ class Matrix3(Matrix):
 
         # Rotate a scalar, returning the scalar unchanged except for new derivs
         if arg.nrank == 0:
-            if not recursive: return arg.without_derivs()
+            if not recursive: return arg.wod
             return arg
 
         # For every other purpose, use the default multiply

@@ -168,28 +168,28 @@ class Test_Vector_perp(unittest.TestCase):
     self.assertTrue(hasattr(z, 'd_dh'))
 
     EPS = 1.e-6
-    z1 = y.perp(x + (EPS,0,0))
-    z0 = y.perp(x - (EPS,0,0))
+    z1 = y.perp(x.wod + (EPS,0,0))
+    z0 = y.perp(x.wod - (EPS,0,0))
     dz_dx0 = 0.5 * (z1 - z0) / EPS
 
-    z1 = y.perp(x + (0,EPS,0))
-    z0 = y.perp(x - (0,EPS,0))
+    z1 = y.perp(x.wod + (0,EPS,0))
+    z0 = y.perp(x.wod - (0,EPS,0))
     dz_dx1 = 0.5 * (z1 - z0) / EPS
 
-    z1 = y.perp(x + (0,0,EPS))
-    z0 = y.perp(x - (0,0,EPS))
+    z1 = y.perp(x.wod + (0,0,EPS))
+    z0 = y.perp(x.wod - (0,0,EPS))
     dz_dx2 = 0.5 * (z1 - z0) / EPS
 
-    z1 = (y + (EPS,0,0)).perp(x)
-    z0 = (y - (EPS,0,0)).perp(x)
+    z1 = (y.wod + (EPS,0,0)).perp(x.wod)
+    z0 = (y.wod - (EPS,0,0)).perp(x.wod)
     dz_dy0 = 0.5 * (z1 - z0) / EPS
 
-    z1 = (y + (0,EPS,0)).perp(x)
-    z0 = (y - (0,EPS,0)).perp(x)
+    z1 = (y.wod + (0,EPS,0)).perp(x.wod)
+    z0 = (y.wod - (0,EPS,0)).perp(x.wod)
     dz_dy1 = 0.5 * (z1 - z0) / EPS
 
-    z1 = (y + (0,0,EPS)).perp(x)
-    z0 = (y - (0,0,EPS)).perp(x)
+    z1 = (y.wod + (0,0,EPS)).perp(x.wod)
+    z0 = (y.wod - (0,0,EPS)).perp(x.wod)
     dz_dy2 = 0.5 * (z1 - z0) / EPS
 
     dz_df0 = (dz_dx0 * x.d_df.values[:,0,0] +

@@ -143,9 +143,7 @@ class Test_Qube_shrink(unittest.TestCase):
     c = b.unshrink(antimask)
     self.assertEqual(a.shape, c.shape)
     self.assertEqual(a[0], c[0])
-    self.assertEqual(a,c)   # because of retained link
 
-    delattr(b, '_Qube__shrink_source_')
     c = b.unshrink(antimask)
     self.assertEqual(a.shape, c.shape)
     self.assertEqual(a[0], c[0])
@@ -158,7 +156,6 @@ class Test_Qube_shrink(unittest.TestCase):
     self.assertEqual(a.corners, ((10,60),(91,141)))
 
     b = a.shrink(a.antimask)
-    delattr(b, '_Qube__shrink_source_')
     c = b.unshrink(a.antimask)
     self.assertEqual(a, c)
 
@@ -167,16 +164,40 @@ class Test_Qube_shrink(unittest.TestCase):
                 mask=np.random.randn(100,200) < 0.)
     v2 = v.shrink(antimask)
     v3 = v2.unshrink(antimask)
-    self.assertEqual(v, v3)
+    self.assertEqual(v[antimask], v3[antimask])
 
     v = v.mask_where(~antimask)
     v2 = v.shrink(antimask)
     v3 = v2.unshrink(antimask)
     self.assertEqual(v, v3)
 
-    delattr(v2, '_Qube__shrink_source_')
     v3 = v2.unshrink(antimask)
     self.assertEqual(v, v3)
+
+    #### Shape control
+
+    a = Vector3(np.random.randn(100,3,3), drank=1, mask=True)
+    b = a.shrink(False)
+    aa = b.unshrink(False, shape=a.shape)
+    self.assertEqual(aa, a)
+
+    aa = b.unshrink(False)
+    self.assertEqual(aa.shape, ())
+
+    #### Zero-sized objects
+
+    a = a[:0]
+    self.assertEqual(a.shape, (0,))
+    b = a.shrink(True)
+    self.assertEqual(b.shape, (0,))
+    aa = b.unshrink(True, (0,))
+    self.assertEqual(aa.shape, (0,))
+
+    aa = b.unshrink(True)
+    self.assertEqual(aa.shape, (0,))
+
+    aa = b.unshrink(False)
+    self.assertEqual(aa.shape, ())
 
 ################################################################################
 # Execute from command line...

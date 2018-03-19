@@ -33,8 +33,8 @@ class LinearPath(Path):
 
         # Interpret the position
         if type(pos) in (tuple,list) and len(pos) == 2:
-            self.pos = Vector3.as_vector3(pos[0]).without_derivs().as_readonly()
-            self.vel = Vector3.as_vector3(pos[1]).without_derivs().as_readonly()
+            self.pos = Vector3.as_vector3(pos[0]).wod.as_readonly()
+            self.vel = Vector3.as_vector3(pos[1]).wod.as_readonly()
         else:
             pos = Vector3.as_vector3(pos)
 
@@ -43,7 +43,7 @@ class LinearPath(Path):
             else:
                 self.vel = Vector3.ZERO
 
-            self.pos = pos.without_derivs().as_readonly()
+            self.pos = pos.wod.as_readonly()
 
         self.epoch = Scalar.as_scalar(epoch)
 

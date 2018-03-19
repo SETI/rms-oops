@@ -25,7 +25,6 @@ class Vector3(Vector):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    MASKS_OK = True     # True to allow masks; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
     DEFAULT_VALUE = np.array([1.,1.,1.])
@@ -34,7 +33,7 @@ class Vector3(Vector):
     def as_vector3(arg, recursive=True):
         if type(arg) == Vector3:
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         if isinstance(arg, Qube):
 
@@ -48,7 +47,7 @@ class Vector3(Vector):
 
             arg = Vector3(arg)
             if recursive: return arg
-            return arg.without_derivs()
+            return arg.wod
 
         return Vector3(arg)
 
@@ -182,8 +181,8 @@ class Vector3(Vector):
 
         pole = Vector3.as_vector3(pole)
         if not recursive:
-            pole = pole.without_derivs()
-            self = self.without_derivs()
+            pole = pole.wod
+            self = self.wod
 
         if angle is None:
             norm = pole.norm()
@@ -191,7 +190,7 @@ class Vector3(Vector):
             zaxis = pole / norm
         else:
             angle = Scalar.as_scalar(angle)
-            if not recursive: angle = angle.without_derivs()
+            if not recursive: angle = angle.wod
 
             mask = (angle == 0.)
             if np.any(mask):
@@ -214,6 +213,7 @@ Vector3.XAXIS  = Vector3((1.,0.,0.)).as_readonly()
 Vector3.YAXIS  = Vector3((0.,1.,0.)).as_readonly()
 Vector3.ZAXIS  = Vector3((0.,0.,1.)).as_readonly()
 Vector3.MASKED = Vector3((1,1,1), True).as_readonly()
+Vector3.SIZE0  = Vector3([(0.,0.,0.)]).as_readonly()[:0]
 
 Vector3.ZERO_POS_VEL = Vector3((0.,0.,0.)).as_readonly()
 Vector3.ZERO_POS_VEL.insert_deriv('t', Vector3.ZERO).as_readonly()

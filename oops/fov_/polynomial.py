@@ -2,6 +2,8 @@
 # oops/fov_/polynomial.py: Polynomial subclass of FOV
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 from polymath import *
 
@@ -15,7 +17,7 @@ class Polynomial(FOV):
     that can be associated with time, wavelength band, etc.
     """
 
-    DEBUG = False       # True to print convergence steps on xy_from_uv()
+    DEBUG = False       # True to print(convergence steps on xy_from_uv())
 
     PACKRAT_ARGS = ['uv_shape', 'coefft_xy_from_uv', 'coefft_uv_from_xy',
                     'uv_los', 'uv_area', 'iters']
@@ -184,7 +186,7 @@ class Polynomial(FOV):
             dxy_duv = Pair(dxy_duv_vals, uv_pair.mask, drank=1)
 
             new_derivs = {}
-            for (key, uv_deriv) in uv_pair.derivs.iteritems():
+            for (key, uv_deriv) in uv_pair.derivs.items():
                 new_derivs[key] = dxy_duv.chain(uv_deriv)
 
             xy.insert_derivs(new_derivs)
@@ -203,7 +205,7 @@ class Polynomial(FOV):
         order = coefft.shape[0]-1
 
         xy_pair = Pair.as_pair(xy_pair, derivs)
-        xy_wod = xy_pair.without_derivs()
+        xy_wod = xy_pair.wod
 
         # Make a rough initial guess
         if uv_from_xy:
@@ -221,7 +223,7 @@ class Polynomial(FOV):
             dxy_duv = xy.d_duv
 
             # Apply one step of Newton's method in 2-D
-            dxy = xy_wod - xy.without_derivs()
+            dxy = xy_wod - xy.wod
 
             duv_dxy = dxy_duv.reciprocal()
             duv = duv_dxy.chain(dxy)
@@ -230,18 +232,18 @@ class Polynomial(FOV):
             # Test for convergence
             duv_max = abs(duv).max()
             if Polynomial.DEBUG:
-                print iter, duv_max
+                print(iter, duv_max)
 
             if duv_max >= prev_duv_max: break
 
             prev_duv_max = duv_max
 
-        uv = uv.without_derivs()
+        uv = uv.wod
 
         # Fill in derivatives if necessary
         if xy_pair.derivs:
             new_derivs = {}
-            for (key, xy_deriv) in xy_pair.derivs.iteritems():
+            for (key, xy_deriv) in xy_pair.derivs.items():
                 new_derivs[key] = duv_dxy.chain(xy_deriv)
 
             uv.insert_derivs(new_derivs)

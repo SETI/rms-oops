@@ -2,6 +2,8 @@
 # oops/surface_/spheroid.py: Spheroid subclass of class Surface
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 from polymath import *
 
@@ -277,7 +279,7 @@ class Spheroid(Surface):
         pos_with_derivs = Vector3.as_vector3(pos, derivs)
         pos_with_derivs = self._apply_exclusion(pos_with_derivs)
 
-        pos = pos_with_derivs.without_derivs()
+        pos = pos_with_derivs.wod
 
         # The intercept point satisfies:
         #   cept + p * perp(cept) = pos
@@ -345,8 +347,8 @@ class Spheroid(Surface):
             max_dp = abs(dp).max()
 
             if LOGGING.surface_iterations or Spheroid.DEBUG:
-                print LOGGING.prefix, "Spheroid.intercept_normal_to",
-                print iter, max_dp
+                print(LOGGING.prefix, "Spheroid.intercept_normal_to",
+                                      iter, max_dp)
 
             if (np.all(Scalar.as_scalar(max_dp).mask) or
                 max_dp <= SURFACE_PHOTONS.dlt_precision or
@@ -410,9 +412,9 @@ class Spheroid(Surface):
 
             mat = Matrix.as_matrix(Vector3.IDENTITY + p * perp.d_dcept)
             dcept_dpos = mat.reciprocal() * (Vector3.IDENTITY -
-                                             perp.without_derivs() * dp_dpos)
+                                             perp.wod * dp_dpos)
 
-            for (key,deriv) in pos_with_derivs.derivs.iteritems():
+            for (key,deriv) in pos_with_derivs.derivs.items():
                 cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
                 p.insert_deriv(key, dp_dpos.chain(deriv), override=True)
 

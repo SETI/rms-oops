@@ -556,49 +556,40 @@ class Snapshot(Observation):
         v_scale = fov.uv_scale.vals[1]
         body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
         for i in range(nbodies):
-            if flags[i]:
-                body_data = {}
-                body_data['name'] = body_names[i]
-                body_data['center_uv'] = body_uv[i]
-                body_data['center'] = centers[i].vals
-                body_data['range'] = ranges[i].vals
-                body_data['outer_radius'] = radii[i].vals
-                body_data['inner_radius'] = inner_radii[i].vals
-                u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
-                v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
-                body_data['resolution'] = Pair.from_scalars(u_res, v_res).vals
-                u = body_uv[i][0]
-                v = body_uv[i][1]
-                body_data['u_min_unclipped'] = int(np.floor(
-                                    u-radius_angles[i].vals/u_scale))
-                body_data['u_max_unclipped'] = int(np.ceil(
-                                    u+radius_angles[i].vals/u_scale))
-                body_data['v_min_unclipped'] = int(np.floor(
-                                    v-radius_angles[i].vals/v_scale))
-                body_data['v_max_unclipped'] = int(np.ceil(
-                                    v+radius_angles[i].vals/v_scale))
-                body_data['u_min'] = np.clip(body_data['u_min_unclipped'],
-                                             0, self.uv_shape[0]-1)
-                body_data['u_max'] = np.clip(body_data['u_max_unclipped'],
-                                             0, self.uv_shape[0]-1)
-                body_data['v_min'] = np.clip(body_data['v_min_unclipped'],
-                                             0, self.uv_shape[1]-1)
-                body_data['v_max'] = np.clip(body_data['v_max_unclipped'],
-                                             0, self.uv_shape[1]-1)
-                body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
-                body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
+            body_data = {}
+            body_data['name'] = body_names[i]
+            body_data['inside'] = flags[i]
+            body_data['center_uv'] = body_uv[i]
+            body_data['center'] = centers[i].vals
+            body_data['range'] = ranges[i].vals
+            body_data['outer_radius'] = radii[i].vals
+            body_data['inner_radius'] = inner_radii[i].vals
 
-                # Final sanity check - the moon HAS to be actually inside the
-                # FOV. There are times previous tests fail when we are really
-                # close to the moon. (See Enceladus in N1669812089_1 for
-                # an example)
-                if (body_data['u_min_unclipped'] >= self.uv_shape[0] or
-                    body_data['u_max_unclipped'] < 0 or
-                    body_data['v_min_unclipped'] >= self.uv_shape[1] or
-                    body_data['v_max_unclipped'] < 0):
-                    continue
+            u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
+            v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
+            body_data['resolution'] = Pair.from_scalars(u_res, v_res).vals
 
-                returned_dict[body_names[i]] = body_data
+            u = body_uv[i][0]
+            v = body_uv[i][1]
+            u_min_unclipped = int(np.floor(u-radius_angles[i].vals/u_scale))
+            u_max_unclipped = int(np.ceil( u+radius_angles[i].vals/u_scale))
+            v_min_unclipped = int(np.floor(v-radius_angles[i].vals/v_scale))
+            v_max_unclipped = int(np.ceil( v+radius_angles[i].vals/v_scale))
+
+            body_data['u_min_unclipped'] = u_min_unclipped
+            body_data['u_max_unclipped'] = u_max_unclipped
+            body_data['v_min_unclipped'] = v_min_unclipped
+            body_data['v_max_unclipped'] = v_max_unclipped
+
+            body_data['u_min'] = np.clip(u_min_unclipped, 0, self.uv_shape[0]-1)
+            body_data['u_max'] = np.clip(u_max_unclipped, 0, self.uv_shape[0]-1)
+            body_data['v_min'] = np.clip(v_min_unclipped, 0, self.uv_shape[1]-1)
+            body_data['v_max'] = np.clip(v_max_unclipped, 0, self.uv_shape[1]-1)
+
+            body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
+            body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
+
+            returned_dict[body_names[i]] = body_data
 
         return returned_dict
 

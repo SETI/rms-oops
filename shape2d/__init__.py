@@ -8,8 +8,8 @@ from polymath import *
 class Shape2D(object):
     """Abstract class for 2D shapes."""
 
-    PREC = 1.e-15       # precision required in tests for equality
-    PREC_SQ = PREC**2
+    PREC   = 1.e-15         # precision required in tests for equality
+    PRECx2 = PREC * 2.
 
 ################################################################################
 # Method prototypes

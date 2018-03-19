@@ -41,7 +41,7 @@ class Meshgrid(object):
         """
 
         self.fov = fov
-        self.uv = Pair.as_pair(uv_pair).without_derivs()
+        self.uv = Pair.as_pair(uv_pair).wod
         self.fov_keywords = fov_keywords
         self.shape = self.uv.shape
 
@@ -131,7 +131,7 @@ class Meshgrid(object):
     def los(self):
         if self.filled_los is None:
             if self.filled_los_w_derivs is not None:
-                self.filled_los = self.filled_los_w_derivs.without_derivs()
+                self.filled_los = self.filled_los_w_derivs.wod
             else:
                 self.filled_los = self.fov.los_from_uv(self.uv, derivs=False,
                                                        **self.fov_keywords)
