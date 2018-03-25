@@ -334,7 +334,7 @@ class Event(object):
     def arr(self):
         if self.__arr_ is None:
           if self.__arr_ap_ is not None:
-            ignore = self.actual_arr(derivs=True)   # fill internal attribute
+            _ = self.actual_arr(derivs=True)    # fill internal attribute
 
         return self.__arr_                  # returns None if still undefined
 
@@ -364,7 +364,7 @@ class Event(object):
 
         if self.__arr_ap_ is None:
           if self.__arr_ is not None:
-            ignore = self.apparent_arr(derivs=True) # fill internal attribute
+            _ = self.apparent_arr(derivs=True)  # fill internal attribute
 
         return self.__arr_ap_               # returns None if still undefined
 
@@ -563,7 +563,7 @@ class Event(object):
     def dep(self):
         if self.__dep_ is None:
           if self.__dep_ap_ is not None:
-            ignore = self.actual_dep(derivs=True)   # fill internal attribute
+            _ = self.actual_dep(derivs=True)    # fill internal attribute
 
         return self.__dep_                  # returns None if still undefined
 
@@ -591,7 +591,7 @@ class Event(object):
 
         if self.__dep_ap_ is None:
           if self.__dep_ is not None:
-            ignore = self.apparent_dep(derivs=True) # fill internal attribute
+            _ = self.apparent_dep(derivs=True)  # fill internal attribute
 
         return self.__dep_ap_
 
@@ -797,7 +797,7 @@ class Event(object):
 
                 self.__ssb_.insert_subfield(name, value_j2000)
 
-            self.__wod_ = None
+        self.__wod_ = None
 
     def get_subfield(self, name):
         """Return the value of a given subfield or property."""
@@ -958,10 +958,13 @@ class Event(object):
             result.__frame_ = frame
 
         # Fill in __ssb_, also masked
-        if result.__ssb_ is None:
-            result.__ssb_ = result
-            result.__ssb_ = Event(result.time, result.state,
-                                  Event.PATH_CLASS.SSB, Frame.J2000)
+        if (result.__origin_ == Event.PATH_CLASS.SSB and
+            result.__frame_ == Frame.J2000):
+                result.__ssb_ == result
+        else:
+                result.__ssb_ = result.all_masked(Event.PATH_CLASS.SSB,
+                                                  Frame.J2000)
+                result.__ssb_.__xform_to_j2000_ = Transform.IDENTITY
 
         if result.__xform_to_j2000_ is None:
             result.__xform_to_j2000_ = Transform.IDENTITY
@@ -1344,9 +1347,13 @@ class Event(object):
         new_path = event.__origin_.wrt(path, path.frame)
         result = new_path.add_to_event(event, derivs=derivs, quick=quick)
 
+        # Other attributes do not depend on the path
         for prop_name in Event.SPECIAL_PROPERTIES:
             attr = Event.attr_name(prop_name)
             result.__dict__[attr] = event.__dict__[attr]
+
+        for (name, value) in event.__subfields_.items():
+            result.insert_subfield(name, value)
 
         if derivs:
             return result
@@ -1789,7 +1796,7 @@ class Event(object):
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        dep_ap_ssb = self.apparent_ray_ssb(wrt_ssb.dep, derivs, quick=quick)
+        dep_ap_ssb = self.apparent_ray_ssb(wrt_ssb.__dep_, derivs, quick=quick)
         wrt_ssb.__dep_ap_ = dep_ap_ssb
 
         # Convert to this event's frame
@@ -1828,7 +1835,7 @@ class Event(object):
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        dep_ssb = self.actual_ray_ssb(wrt_ssb.dep_ap, derivs, quick=quick)
+        dep_ssb = self.actual_ray_ssb(wrt_ssb.__dep_ap_, derivs, quick=quick)
         wrt_ssb.__dep_ = dep_ssb
 
         # Convert to this event's frame
@@ -1869,7 +1876,7 @@ class Event(object):
             raise ValueError('Undefined perpendicular vector in ' + str(self))
 
         shrunk = self.shrink(self.antimask)
-        ignore = shrunk.wrt_ssb(derivs=True, quick=quick)
+        _ = shrunk.wrt_ssb(derivs=True, quick=quick)
 
         if apparent:
             arr = shrunk.arr_ap
@@ -1902,7 +1909,7 @@ class Event(object):
             raise ValueError('Undefined perpendicular vector in ' + str(self))
 
         shrunk = self.shrink(self.antimask)
-        ignore = shrunk.wrt_ssb(derivs=True, quick=quick)
+        _ = shrunk.wrt_ssb(derivs=True, quick=quick)
 
         if apparent:
             dep = shrunk.dep_ap
@@ -1935,7 +1942,7 @@ class Event(object):
             raise ValueError('Undefined departure vector in ' + str(self))
 
         shrunk = self.shrink(self.antimask)
-        ignore = shrunk.wrt_ssb(derivs=True, quick=quick)
+        _ = shrunk.wrt_ssb(derivs=True, quick=quick)
 
         if apparent:
             dep = shrunk.dep_ap

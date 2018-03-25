@@ -67,9 +67,8 @@ class Backplane(object):
             inventory   True to keep an inventory of bodies in the field of
                         view and to keep track of their locations. This option
                         can speed up backplane calculations for bodies that
-                        occupy a small fraction of the field of view. However,
-                        it is not recommended for observations other than
-                        snapshot images.
+                        occupy a small fraction of the field of view. If a
+                        dictionary is provided, this dictionary is used.
 
             inventory_border
                         number of pixels to extend the box surrounding each body
@@ -96,6 +95,8 @@ class Backplane(object):
         # Intialize the inventory
         if type(inventory) == dict:
             self.inventory = inventory
+        elif inventory:
+            self.inventory = {}
         else:
             self.inventory = None
 
@@ -160,6 +161,11 @@ class Backplane(object):
         # Antimasks of surfaces, by body name
 
         self.antimasks = {}
+
+        # Minimum radius of each ":RING" object is the radius of the central
+        # body
+
+        self.min_ring_radius = {}
 
     ############################################################################
     # Event manipulations
@@ -248,8 +254,7 @@ class Backplane(object):
 
         return (Body.lookup(body_id), modifier)
 
-    @staticmethod
-    def get_surface(event_key):
+    def get_surface(self, event_key):
         """Return a surface based on its ID."""
 
         (body, modifier) = Backplane.get_body_and_modifier(event_key)
@@ -258,6 +263,9 @@ class Backplane(object):
             return body.surface
 
         if modifier == 'RING':
+            if event_key not in self.min_ring_radius:
+                self.min_ring_radius[event_key] = body.surface.radii[0]
+
             if body.ring_body is not None:
                 return body.ring_body.surface
 
@@ -359,7 +367,7 @@ class Backplane(object):
 
         # Look up the photon's departure surface and destination
         dest = self.get_surface_event(event_key[1:])
-        surface = Backplane.get_surface(event_key)
+        surface = self.get_surface(event_key)
         antimask = dest.antimask
 
         # Calculate derivatives for the first step from the observer, if allowed
@@ -404,7 +412,7 @@ class Backplane(object):
 
         # Create the event
         dest = self.get_surface_event_w_derivs(event_key[1:])
-        surface = Backplane.get_surface(event_key)
+        surface = self.get_surface(event_key)
 
         dest = dest.with_time_derivs().with_los_derivs()
 
@@ -497,7 +505,7 @@ class Backplane(object):
 
         # Create the event and save it in the dictionary
         dest = self.get_gridless_event(event_key[1:])
-        surface = Backplane.get_surface(event_key)
+        surface = self.get_surface(event_key)
 
         (event, arrival) = surface.origin.photon_to_event(dest)
         event = event.wrt_frame(surface.frame)
@@ -540,11 +548,17 @@ class Backplane(object):
         return new_event
 
     def mask_as_boolean(self, mask):
-        """Converts a mask represented by a single boolean into a Boolean.
+        """Converts a mask represented by a single boolean into a Boolean and
+        makes sure Boolean us unmasked.
         """
+
+        # Undefined values are treated as False
+        if isinstance(mask, Qube):
+            mask = mask.as_mask_where_nonzero()
 
         if isinstance(mask, np.ndarray): return Boolean(mask)
 
+        # Convert a single value to a full array
         if mask:
             return Boolean(np.ones(self.shape, dtype='bool'))
         else:
@@ -1614,6 +1628,8 @@ class Backplane(object):
                             "graphic" for planetographic latitude.
         """
 
+        event_key = self.standardize_event_key(event_key)
+
         key = ('sub_observer_latitude', event_key, lat_type)
         assert lat_type in ('centric', 'graphic')
 
@@ -1638,6 +1654,8 @@ class Backplane(object):
             lat_type        "centric" for planetocentric latitude;
                             "graphic" for planetographic latitude.
         """
+
+        event_key = self.standardize_event_key(event_key)
 
         key = ('sub_solar_latitude', event_key, lat_type)
         assert lat_type in ('centric', 'graphic')
@@ -1827,7 +1845,7 @@ class Backplane(object):
             return self.backplanes[key]
 
         default_key = ('ring_radius', event_key, None, None)
-        if key not in self.backplanes:
+        if default_key not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
         rad = self.backplanes[default_key]
@@ -1846,8 +1864,6 @@ class Backplane(object):
 
         rad = rad.mask_where(mask0 | mask1)
         self.register_backplane(key, rad)
-
-        temp = self.backplanes[default_key]
 
         return rad
 
@@ -1984,8 +2000,6 @@ class Backplane(object):
         if mask is not False:
             mode = mode.mask_where(mask)
 
-        temp = self.backplanes[ring_radius_key]
-
         self.register_backplane(key, mode)
         return self.backplanes[key]
 
@@ -2118,6 +2132,12 @@ class Backplane(object):
         assert event.surface.COORDINATE_TYPE == 'polar', \
             'ring geometry requires a polar coordinate system'
 
+        # Apply the minimum radius if available
+        rmin = self.min_ring_radius.get(event_key, None)
+        if rmin:
+            event = event.mask_where(event.coord1 < rmin)
+
+        # Register radius and longitude
         self.register_backplane(('ring_radius', event_key, None, None),
                                 event.coord1)
         self.register_backplane(('ring_longitude', event_key, 'node',
@@ -2161,8 +2181,11 @@ class Backplane(object):
         # Derive the prograde incidence angle if necessary
         key_prograde = key[:-1] + ('prograde',)
         if key_prograde not in self.backplanes:
-            event = self.get_surface_event_with_arr(event_key)
-            incidence = event.incidence_angle()
+
+            # Un-flip incidence angles where necessary
+            incidence = self.incidence_angle(event_key)
+            flip = self.backplanes[('ring_flip', event_key)]
+            incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
             self.register_backplane(key_prograde, incidence)
 
         if pole == 'prograde':
@@ -2215,8 +2238,11 @@ class Backplane(object):
         # Derive the prograde emission angle if necessary
         key_prograde = key[:-1] + ('prograde',)
         if key_prograde not in self.backplanes:
-            event = self.get_surface_event(event_key)
-            emission = event.emission_angle()
+
+            # Un-flip incidence angles where necessary
+            emission = self.emission_angle(event_key)
+            flip = self.backplanes[('ring_flip', event_key)]
+            emission = Scalar.PI * flip + (1. - 2.*flip) * emission
             self.register_backplane(key_prograde, emission)
 
         if pole == 'prograde' :
@@ -2540,20 +2566,35 @@ class Backplane(object):
     ############################################################################
     # Ring shadow calculation
     #   ring_shadow_radius()
+    #   ring_in_front_radius()
     ############################################################################
 
     def ring_shadow_radius(self, event_key, ring_body):
-        """Radius in the ring plane that casts a shadow at each point on another
+        """Radius in the ring plane that casts a shadow at each point on this
         body."""
 
         event_key = self.standardize_event_key(event_key)
-        ring_body = self.standardize_event_key(ring_body)
+        ring_body = self.standardize_event_key(ring_body)[0]
 
-        key = ('ring_shadow_radius', event_key, ring_body[0])
+        key = ('ring_shadow_radius', event_key, ring_body)
         if key not in self.backplanes:
             event = self.get_surface_event_with_arr(event_key)
-            ring_event = self.get_surface_event(ring_body + event_key)
+            ring_event = self.get_surface_event((ring_body,) + event_key)
             radius = ring_event.coord1
+            self.register_backplane(key, radius)
+
+        return self.backplanes[key]
+
+    def ring_in_front_radius(self, event_key, ring_body):
+        """Radius in the ring plane that obscures this body."""
+
+        event_key = self.standardize_event_key(event_key)
+        ring_body = self.standardize_event_key(ring_body)[0]
+
+        key = ('ring_in_front_radius', event_key, ring_body)
+        if key not in self.backplanes:
+            radius = self.ring_radius(ring_body)
+            radius.mask_where(~self.where_intercepted(event_key))
             self.register_backplane(key, radius)
 
         return self.backplanes[key]
@@ -2705,7 +2746,7 @@ class Backplane(object):
                                          event.origin, event.frame)
         center_event = self.obs_event.origin.photon_from_event(center_event)[1]
 
-        surface = Backplane.get_surface(event_key).ringplane
+        surface = self.get_surface(event_key).ringplane
         (r,lon) = surface.coords_from_vector3(center_event.apparent_dep(),
                                               axes=2)
 
@@ -2730,7 +2771,7 @@ class Backplane(object):
                                          event.origin, event.frame)
         center_event = AliasPath('SUN').photon_to_event(center_event)[1]
 
-        surface = Backplane.get_surface(event_key).ringplane
+        surface = self.get_surface(event_key).ringplane
         (r,lon) = surface.coords_from_vector3(-center_event.apparent_arr(),
                                               axes=2)
 
@@ -2847,15 +2888,8 @@ class Backplane(object):
 
         key = ('where_in_front', event_key, back_body[0])
         if key not in self.backplanes:
-
-            # A surface is in front if it is unmasked and the second surface is
-            # either masked or further away.
-            front_unmasked = self.get_surface_event(event_key).antimask
-            back_masked = self.get_surface_event(back_body).mask
-            mask = self.mask_as_boolean(front_unmasked & (back_masked |
-                                            (self.distance(event_key).vals <
-                                             self.distance(back_body).vals)))
-            self.register_backplane(key, mask)
+            boolean = (self.distance(event_key) < self.distance(back_body))
+            self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
 
@@ -2868,15 +2902,8 @@ class Backplane(object):
 
         key = ('where_in_back', event_key, front_body[0])
         if key not in self.backplanes:
-
-            # A surface is in back if it is unmasked and the second surface is
-            # both unmasked and closer.
-            back_unmasked  = self.get_surface_event(event_key).antimask
-            front_unmasked = self.get_surface_event(front_body).antimask
-            mask = self.mask_as_boolean(back_unmasked & front_unmasked &
-                                    (self.distance(event_key).vals >
-                                     self.distance(front_body).vals))
-            self.register_backplane(key, mask)
+            boolean = (self.distance(event_key) > self.distance(front_body))
+            self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
 
@@ -2887,9 +2914,8 @@ class Backplane(object):
         key = ('where_sunward',) + event_key
         if key not in self.backplanes:
             incidence = self.incidence_angle(event_key)
-            mask = self.mask_as_boolean((incidence.vals <= constants.HALFPI) &
-                                        incidence.antimask)
-            self.register_backplane(key, mask)
+            boolean = (incidence <= constants.HALFPI)
+            self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
 
@@ -2900,9 +2926,8 @@ class Backplane(object):
         key = ('where_antisunward',) + event_key
         if key not in self.backplanes:
             incidence = self.incidence_angle(event_key)
-            mask = self.mask_as_boolean((incidence.vals > constants.HALFPI) &
-                                        incidence.antimask)
-            self.register_backplane(key, mask)
+            boolean = (incidence > constants.HALFPI)
+            self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
 
@@ -2917,9 +2942,8 @@ class Backplane(object):
         key = ('where_below', backplane_key, value)
         if key not in self.backplanes:
             backplane = self.evaluate(backplane_key)
-            mask = self.mask_as_boolean((backplane.vals <= value) &
-                                        backplane.antimask)
-            self.register_backplane(key, mask)
+            boolean = (backplane <= value)
+            self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
 
@@ -2930,9 +2954,8 @@ class Backplane(object):
         key = ('where_above', backplane_key, value)
         if key not in self.backplanes:
             backplane = self.evaluate(backplane_key)
-            mask = self.mask_as_boolean((backplane.vals >= value) &
-                                        backplane.antimask)
-            self.register_backplane(key, mask)
+            boolean = (backplane >= value)
+            self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
 
@@ -2943,10 +2966,8 @@ class Backplane(object):
         key = ('where_between', backplane_key, low, high)
         if key not in self.backplanes:
             backplane = self.evaluate(backplane_key)
-            mask = self.mask_as_boolean((backplane.vals >= low) &
-                                        (backplane.vals <= high) &
-                                        backplane.antimask)
-            self.register_backplane(key, mask)
+            boolean = (backplane >= low) & (backplane <= high)
+            self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
 
@@ -3149,6 +3170,7 @@ class Backplane(object):
         'ring_center_incidence_angle', 'ring_center_emission_angle',
         'ring_radial_resolution', 'ring_angular_resolution',
         'ring_gradient_angle',
+        'ring_shadow_radius', 'ring_in_front_radius',
 
         'ansa_radius', 'ansa_altitude', 'ansa_longitude',
         'ansa_radial_resolution', 'ansa_vertical_resolution',
@@ -3168,7 +3190,7 @@ class Backplane(object):
         to calling the function directly, but the name of the function is the
         first argument in the tuple passed to the function."""
 
-        if type(backplane_key) == type(""): backplane_key = (backplane_key,)
+        if type(backplane_key) == str: backplane_key = (backplane_key,)
 
         func = backplane_key[0]
         if func not in Backplane.CALLABLES:

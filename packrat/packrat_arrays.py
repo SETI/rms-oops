@@ -421,12 +421,15 @@ def encode_bool_array(values, b64_savings, npz_savings):
 
     # Hold the data for the npz file if the savings is large enough
     if min(text_bytes, b64_bytes) > npz_bytes + npz_savings:
+        attr_list += [('method', compressed_method)]
+
         if compressed_method == 'packbits':
             compressed = np.packbits(values)
         else:
             compressed = np.where(values == list_value)[0].astype(index_dtype)
+            attr_list += [('index_dtype', encode_dtype(index_dtype))]
 
-        attr_list += [('method', compressed_method), ('encoding', 'npz')]
+        attr_list += [('encoding', 'npz')]
         return ('', compressed, attr_list)  # XML value, npz value, attributes
 
     # For something short, return text
@@ -437,18 +440,19 @@ def encode_bool_array(values, b64_savings, npz_savings):
             indices = np.where(values == list_value)[0]
             string = ','.join([str(i) for i in indices])
 
-        attr_list += [('method', text_method),
-                      ('index_dtype', encode_dtype(index_dtype)),
-                      ('encoding', 'text')]
+        attr_list += [('method', text_method), ('encoding', 'text')]
         return (string, None, attr_list)
 
     # Otherwise, base64 encode
+    attr_list += [('method', compressed_method)]
+
     if compressed_method == 'packbits':
         compressed = np.packbits(values)
     else:
         compressed = np.where(values == list_value)[0].astype(index_dtype)
+        attr_list += [('index_dtype', encode_dtype(index_dtype))]
 
-    attr_list += [('method', compressed_method), ('encoding', 'base64')]
+    attr_list += [('encoding', 'base64')]
     return (base64.b64encode(compressed.tobytes()), None, attr_list)
 
 def decode_bool_array(value, attr):
@@ -950,9 +954,33 @@ class Test_Packrat_arrays(unittest.TestCase):
     self.assertEqual(attr['encoding'], 'text')
     self.assertEqual(attr['method'], 'list_false')
 
+    attr = test_bool_array([10*[0] + 65525*[1]], 0, 1000000)
+    self.assertEqual(attr['encoding'], 'base64')
+    self.assertEqual(attr['method'], 'list_false')
+    self.assertEqual(attr['index_dtype'][1:], 'u2')
+    self.assertNotEqual(attr['index_dtype'][0], '|')
+
+    attr = test_bool_array([10*[0] + 999990*[1]], 0, 1000000)
+    self.assertEqual(attr['encoding'], 'base64')
+    self.assertEqual(attr['method'], 'list_false')
+    self.assertEqual(attr['index_dtype'][1:], 'u4')
+    self.assertNotEqual(attr['index_dtype'][0], '|')
+
     attr = test_bool_array([[1] + 99*[0]], 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
     self.assertEqual(attr['method'], 'list_true')
+
+    attr = test_bool_array([10*[1] + 65525*[0]], 0, 1000000)
+    self.assertEqual(attr['encoding'], 'base64')
+    self.assertEqual(attr['method'], 'list_true')
+    self.assertEqual(attr['index_dtype'][1:], 'u2')
+    self.assertNotEqual(attr['index_dtype'][0], '|')
+
+    attr = test_bool_array([10*[1] + 999990*[0]], 0, 1000000)
+    self.assertEqual(attr['encoding'], 'base64')
+    self.assertEqual(attr['method'], 'list_true')
+    self.assertEqual(attr['index_dtype'][1:], 'u4')
+    self.assertNotEqual(attr['index_dtype'][0], '|')
 
     attr = test_bool_array([[50*[1,0]]], 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
