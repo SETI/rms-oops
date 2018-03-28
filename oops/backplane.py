@@ -858,7 +858,6 @@ class Backplane(object):
 
         (ra, dec) = event.ra_and_dec(apparent, subfield=direction)
 
-        print (11111, event_key, apparent, direction)
         self.register_gridless_backplane(
                 ('center_right_ascension', event_key, apparent, direction), ra)
         self.register_gridless_backplane(
