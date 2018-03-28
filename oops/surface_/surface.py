@@ -463,7 +463,6 @@ class Surface(object):
         iters = converge['max_iterations']
         precision = converge['dlt_precision']
         limit = converge['dlt_limit']
-#         collapse_threshold = converge['collapse_threshold']
 
         # Interpret the quick parameters
         if type(quick) == dict:
@@ -634,7 +633,6 @@ class Surface(object):
         # Create the surface event in its own frame
         surface_event = Event(link.time + lt, pos_wrt_surface,
                               self.origin, self.frame)
-        surface_event.collapse_time()
 
         surface_event.insert_subfield('perp',
                                       self.normal(pos_wrt_surface,
@@ -956,7 +954,6 @@ class Surface(object):
         # Create the surface event in its own frame
         surface_event = Event(surface_time, pos_wrt_origin_frame,
                               self.origin, self.frame)
-        surface_event.collapse_time()
 
         los_in_frame = surface_xform.rotate(los_in_j2000)
         surface_event.insert_subfield(surface_key, los_in_frame)
@@ -1098,7 +1095,7 @@ class Surface(object):
 #         iters = converge['max_iterations']
 #         precision = converge['dlt_precision']
 #         limit = converge['dlt_limit']
-#         collapse_threshold = converge['collapse_threshold']
+#         # collapse_threshold = converge['collapse_threshold']
 # 
 #         # Interpret the quick parameters
 #         if type(quick) == dict:
@@ -1243,7 +1240,7 @@ class Surface(object):
 # 
 #         surface_event = Event(surface_time, pos_wrt_surface,
 #                               self.origin, self.frame)
-#         surface_event.collapse_time()
+#         # surface_event.collapse_time()
 #         los_j2000 = sign * (surface_event.ssb.pos - obs_event.ssb.pos)
 # 
 #         surface_event.insert_subfield('perp',

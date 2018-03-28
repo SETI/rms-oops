@@ -975,6 +975,9 @@ class Event(object):
         """A shallow copy of this Event with a new mask."""
 
         def apply_mask(arg):
+            if arg.shape != self.shape:
+                arg = arg.broadcast_into_shape(self.shape)
+
             return arg.mask_where(mask)
 
         result = self._apply_this_func(apply_mask)

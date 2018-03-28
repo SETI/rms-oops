@@ -179,7 +179,6 @@ class Backplane(object):
         """Repair an event key to make it suitable for indexing a dictionary.
 
         Strings are converted to uppercase. A string gets turned into a tuple.
-        This method adds a new body to the inventory if necessary.
         """
 
         if type(event_key) == str:
@@ -293,13 +292,18 @@ class Backplane(object):
         if len(event_key) == 0:
             return True
 
-        body_name = event_key[0]
-
         # Return from the antimask cache if present
         try:
-            return self.antimasks[body_name]
+            return self.antimasks[event_key]
         except KeyError:
             pass
+
+        try:
+            return self.antimasks[event_key[1:]]
+        except KeyError:
+            pass
+
+        body_name = event_key[-1]
 
         # For a name with a colon, we're done
         if ':' in body_name:
@@ -361,14 +365,12 @@ class Backplane(object):
         if event_key in self.surface_events:
             return self.surface_events[event_key]
 
-        # The Sun is treated as a path, not a surface, unless it is listed first
+        # The Sun is treated as a path, not a surface, unless it is listed last
         if event_key[0] == 'SUN' and len(event_key) > 1:
             return self.get_path_event(event_key)
 
-        # Look up the photon's departure surface and destination
-        dest = self.get_surface_event(event_key[1:])
+        # Look up the photon's departure surface
         surface = self.get_surface(event_key)
-        antimask = dest.antimask
 
         # Calculate derivatives for the first step from the observer, if allowed
         if len(event_key) == 1 and surface.intercept_DERIVS_ARE_IMPLEMENTED:
@@ -377,6 +379,9 @@ class Backplane(object):
                 return self.surface_events[event_key]
             except NotImplementedError:
                 pass
+
+        # Look up the photon's destination
+        dest = self.get_surface_event_with_arr(event_key[1:])
 
         # Define the antimask
         antimask = self.get_antimask(event_key)
@@ -410,10 +415,11 @@ class Backplane(object):
         if event_key in self.surface_events_w_derivs:
             return self.surface_events_w_derivs[event_key]
 
-        # Create the event
-        dest = self.get_surface_event_w_derivs(event_key[1:])
+        # Look up the photon's departure surface
         surface = self.get_surface(event_key)
 
+        # Look up the photons destination and prepare derivatives
+        dest = self.get_surface_event_w_derivs(event_key[1:])
         dest = dest.with_time_derivs().with_los_derivs()
 
         # Define the antimask
@@ -433,9 +439,8 @@ class Backplane(object):
 
         self.surface_events_w_derivs[event_key] = event
 
-        # Make a copy without derivs, collapsing if possible
-        event_wo_derivs = event.wod.collapse_time()
-
+        # Make a copy without derivs
+        event_wo_derivs = event.wod
         event_wo_derivs.insert_subfield('event_key', event_key)
         event_wo_derivs.insert_subfield('surface', surface)
         event_wo_derivs.insert_subfield('body', body)
@@ -546,6 +551,28 @@ class Backplane(object):
 
         self.gridless_events[event_key] = new_event
         return new_event
+
+    def apply_mask_to_event(self, event_key, mask):
+        """Apply the given mask to the event(s) associated with this event_key.
+        """
+
+        event_key = self.standardize_event_key(event_key)
+
+        if event_key in self.surface_events:
+            event = self.surface_events[event_key]
+            new_event = event.mask_where(mask)
+            new_event.insert_subfield('event_key', event_key)
+            new_event.insert_subfield('surface', event.surface)
+            new_event.insert_subfield('body', event.body)
+            self.surface_events[event_key] = new_event
+
+        if event_key in self.surface_events_w_derivs:
+            event = self.surface_events_w_derivs[event_key]
+            new_event = event.mask_where(mask)
+            new_event.insert_subfield('event_key', event_key)
+            new_event.insert_subfield('surface', event.surface)
+            new_event.insert_subfield('body', event.body)
+            self.surface_events_w_derivs[event_key] = new_event
 
     def mask_as_boolean(self, mask):
         """Converts a mask represented by a single boolean into a Boolean and
@@ -831,6 +858,7 @@ class Backplane(object):
 
         (ra, dec) = event.ra_and_dec(apparent, subfield=direction)
 
+        print (11111, event_key, apparent, direction)
         self.register_gridless_backplane(
                 ('center_right_ascension', event_key, apparent, direction), ra)
         self.register_gridless_backplane(
@@ -1780,45 +1808,84 @@ class Backplane(object):
 
     ############################################################################
     # Limb geometry
-    #   limb_altitude()
+    #   limb_altitude(limit)
     #   Note: longitude() and latitude() work for limb coordinates,
     ############################################################################
 
-    def altitude(self, event_key):
+    def altitude(self, event_key, limit=None):
         """Deprecated name for limb_altitude()."""
 
         return self.limb_altitude(event_key)
 
-    def limb_altitude(self, event_key):
+    def limb_altitude(self, event_key, limit=None, remask=False):
         """Elevation of a limb point above the body's surface.
 
         Input:
             event_key       key defining the ring surface event.
+            limit           upper limit to altitude in km. Higher altitudes are
+                            masked.
+            remask          if True, the limit will be applied to the default
+                            event, so that all backplanes generated from this
+                            event_key will have the same upper limit. This can
+                            only be applied the first time this event_key is
+                            used.
         """
 
         event_key = self.standardize_event_key(event_key)
-        key = ('limb_altitude', event_key)
-        if key not in self.backplanes:
-            self._fill_limb_intercepts(event_key)
+        key = ('limb_altitude', event_key, limit)
+        if key in self.backplanes:
+            return self.backplanes[key]
 
+        self._fill_limb_intercepts(event_key, limit, remask)
         return self.backplanes[key]
 
-    def _fill_limb_intercepts(self, event_key):
+    def _fill_limb_intercepts(self, event_key, limit=None, remask=False):
         """Internal method to fill in the limb intercept geometry backplanes.
+
+        Input:
+            event_key       key defining the ring surface event.
+            limit           upper limit to altitude in km. Higher altitudes are
+                            masked.
+            remask          if True, the limit will be applied to the default
+                            event, so that all backplanes generated from this
+                            event_key will share the same limit. This can
+                            only be applied the first time this event_key is
+                            used.
         """
 
-        # Get the limb intercept coordinates
-        event_key = self.standardize_event_key(event_key)
-        event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == 'limb'
+        # Don't allow remask if the backplane was already generated
+        if limit is None: remask = False
 
+        if remask and event_key in self.surface_events:
+            raise ValueError('remask disallowed for pre-existing ' +
+                             'limb event key ' + str(event_key))
+
+        # Get the limb intercept coordinates
+        event = self.get_surface_event(event_key)
+        if event.surface.COORDINATE_TYPE != 'limb':
+            raise ValueError('limb intercepts require a "limb" surface type')
+
+        # Limit the event if necessary
+        if remask:
+
+            # Apply the upper limit to the event
+            altitude = event.coord3
+            self.apply_mask_to_event(event_key, altitude > limit)
+            event = self.get_surface_event(event_key)
+
+        # Register the default backplanes
         self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
-                                 'squashed'),
-                                event.coord1)
+                                 'squashed'), event.coord1)
         self.register_backplane(('latitude', event_key, 'squashed'),
                                 event.coord2)
-        self.register_backplane(('limb_altitude', event_key),
+        self.register_backplane(('limb_altitude', event_key, None),
                                 event.coord3)
+
+        # Apply a mask just to this backplane if necessary
+        if limit is not None:
+            altitude = event.coord3.mask_where_gt(limit)
+            self.register_backplane(('limb_altitude', event_key, limit),
+                                    altitude)
 
     ############################################################################
     # Ring plane geometry, surface intercept version
@@ -1828,7 +1895,7 @@ class Backplane(object):
     #   ring_elevation()
     ############################################################################
 
-    def ring_radius(self, event_key, rmin=None, rmax=None):
+    def ring_radius(self, event_key, rmin=None, rmax=None, remask=False):
         """Radius of the ring intercept point in the observation.
 
         Input:
@@ -1837,6 +1904,11 @@ class Backplane(object):
                             by the event_key.
             rmax            maximum radius in km; None to allow it to be defined
                             by the event_key.
+            remask          if True, the rmin and rmax values will be applied to
+                            the default event, so that all backplanes generated
+                            from this event_key will have the same limits. This
+                            option can only be applied the first time this
+                            event_key is used.
         """
 
         event_key = self.standardize_event_key(event_key)
@@ -1846,19 +1918,19 @@ class Backplane(object):
 
         default_key = ('ring_radius', event_key, None, None)
         if default_key not in self.backplanes:
-            self._fill_ring_intercepts(event_key)
+            self._fill_ring_intercepts(event_key, rmin, rmax, remask)
 
         rad = self.backplanes[default_key]
         if rmin is None and rmax is None:
             return rad
 
         if rmin is not None:
-            mask0 = (rad.vals < rmin)
+            mask0 = (rad < rmin)
         else:
             mask0 = False
 
         if rmax is not None:
-            mask1 = (rad.vals > rmax)
+            mask1 = (rad > rmax)
         else:
             mask1 = False
 
@@ -1867,7 +1939,8 @@ class Backplane(object):
 
         return rad
 
-    def ring_longitude(self, event_key, reference='node', rmin=None, rmax=None):
+    def ring_longitude(self, event_key, reference='node', rmin=None, rmax=None,
+                             remask=False):
         """Longitude of the ring intercept point in the image.
 
         Input:
@@ -1884,6 +1957,11 @@ class Backplane(object):
                             by the event_key.
             rmax            maximum radius in km; None to allow it to be defined
                             by the event_key.
+            remask          if True, the rmin and rmax values will be applied to
+                            the default event, so that all backplanes generated
+                            from this event_key will have the same limits. This
+                            option can only be applied the first time this
+                            event_key is used.
         """
 
         event_key = self.standardize_event_key(event_key)
@@ -1897,7 +1975,7 @@ class Backplane(object):
         # If it is not found with reference='node', fill in those backplanes
         default_key = key[:2] + ('node', None, None)
         if default_key not in self.backplanes:
-            self._fill_ring_intercepts(event_key)
+            self._fill_ring_intercepts(event_key, rmin, rmax, remask)
 
         # Now apply the reference longitude
         reflon_key = key[:3] + (None, None)
@@ -2122,27 +2200,75 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def _fill_ring_intercepts(self, event_key):
+    def _fill_ring_intercepts(self, event_key, rmin=None, rmax=None,
+                                    remask=False):
         """Internal method to fill in the ring intercept geometry backplanes.
+
+        Input:
+            event_key       key defining the ring surface event.
+            rmax            lower limit to the ring radius in km. Smaller radii
+                            are masked. Note that radii inside the planet are
+                            always masked.
+            rmax            upper limit to the ring radius in km. Larger radii
+                            are masked.
+            remask          if True, the limits will be applied to the default
+                            event, so that all backplanes generated from this
+                            event_key will share the same limit. This can
+                            only be applied the first time this event_key is
+                            used.
         """
 
+        # Don't allow remask if the backplane was already generated
+        if rmin is None and rmax is None: remask = False
+
+        if remask and event_key in self.surface_events:
+            raise ValueError('remask disallowed for pre-existing ' +
+                             'ring event key ' + str(event_key))
+
         # Get the ring intercept coordinates
-        event_key = self.standardize_event_key(event_key)
         event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == 'polar', \
-            'ring geometry requires a polar coordinate system'
+        if event.surface.COORDINATE_TYPE != 'polar':
+            raise ValueError('ring geometry requires a polar coordinate system')
 
         # Apply the minimum radius if available
-        rmin = self.min_ring_radius.get(event_key, None)
-        if rmin:
-            event = event.mask_where(event.coord1 < rmin)
+        planet_radius = self.min_ring_radius.get(event_key, None)
+        if planet_radius:
+            radius = event.coord1
+            self.apply_mask_to_event(event_key, radius < planet_radius)
 
-        # Register radius and longitude
+        # Apply the limits to the backplane if necessary
+        if remask:
+
+            radius = event.coord1
+            mask = False
+            if rmin is not None:
+                mask = mask | (radius < rmin)
+            if rmax is not None:
+                mask = mask | (radius > rmax)
+
+            self.apply_mask_to_event(event_key, mask)
+            event = self.get_surface_event(event_key)
+
+        # Register the default ring_radius and ring_longitude backplanes
         self.register_backplane(('ring_radius', event_key, None, None),
                                 event.coord1)
         self.register_backplane(('ring_longitude', event_key, 'node',
-                                                   None, None),
-                                event.coord2)
+                                 None, None), event.coord2)
+
+        # Apply a mask just to these backplanes if necessary
+        if rmin is not None or rmax is not None:
+
+            radius = event.coord1
+            mask = False
+            if rmin is not None:
+                mask = mask | (radius < rmin)
+            if rmax is not None:
+                mask = mask | (radius > rmax)
+
+            self.register_backplane(('ring_radius', event_key, rmin, rmax),
+                                    radius.mask_where(mask))
+            self.register_backplane(('ring_longitude', event_key, 'node',
+                                     rmin, rmax), event.coord2.mask_where(mask))
 
     ############################################################################
     # Ring plane lighting geometry, surface intercept version
@@ -2566,7 +2692,7 @@ class Backplane(object):
     ############################################################################
     # Ring shadow calculation
     #   ring_shadow_radius()
-    #   ring_in_front_radius()
+    #   ring_radius_in_front()
     ############################################################################
 
     def ring_shadow_radius(self, event_key, ring_body):
@@ -2585,7 +2711,7 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def ring_in_front_radius(self, event_key, ring_body):
+    def ring_radius_in_front(self, event_key, ring_body):
         """Radius in the ring plane that obscures this body."""
 
         event_key = self.standardize_event_key(event_key)
@@ -2606,34 +2732,46 @@ class Backplane(object):
     #   ansa_longitude()
     ############################################################################
 
-    def ansa_radius(self, event_key, radius_type='right'):
+    def ansa_radius(self, event_key, radius_type='positive', rmax=None,
+                          remask=False):
         """Radius of the ring ansa intercept point in the image.
 
         Input:
             event_key       key defining the ring surface event.
+            radius_type     'right' for radii increasing rightward when prograde
+                                    rotation pole is 'up';
+                            'left' for the opposite of 'right';
+                            'positive' for all radii using positive values.
+            rmax            maximum absolute value of the radius in km; None to
+                            allow it to be defined by the event_key.
+            remask          if True, the rmax value will be applied to the
+                            default event, so that all backplanes generated
+                            from this event_key will have the same limits. This
+                            option can only be applied the first time this
+                            event_key is used.
         """
 
         # Look up under the desired radius type
         event_key = self.standardize_event_key(event_key)
         key0 = ('ansa_radius', event_key)
-        key = key0 + (radius_type,)
+        key = key0 + (radius_type, rmax)
         if key in self.backplanes:
             return self.backplanes[key]
 
         # If not found, look up the default 'right'
         assert radius_type in ('right', 'left', 'positive')
 
-        key_default = key0 + ('right',)
+        key_default = key0 + ('right', None)
         if key_default not in self.backplanes:
-            self._fill_ansa_intercepts(event_key)
+            self._fill_ansa_intercepts(event_key, rmax, remask)
 
-            backplane = self.backplanes[key_default]
-            if radius_type == 'left':
-                backplane = -backplane
-            else:
-                backplane = abs(backplane)
+        key_right = key0 + ('right', rmax)
+        backplane = self.backplanes[key_right]
 
-            self.register_backplane(key, backplane)
+        if radius_type == 'left':
+            self.register_backplane(key, -backplane)
+        elif radius_type == 'positive':
+            self.register_backplane(key, backplane.abs())
 
         return self.backplanes[key]
 
@@ -2700,19 +2838,53 @@ class Backplane(object):
 
         return self.backplanes[key]
 
-    def _fill_ansa_intercepts(self, event_key):
+    def _fill_ansa_intercepts(self, event_key, rmax=None, remask=False):
         """Internal method to fill in the ansa intercept geometry backplanes.
+
+        Input:
+            rmax            maximum absolute value of the radius in km; None to
+                            allow it to be defined by the event_key.
+            remask          if True, the rmax value will be applied to the
+                            default event, so that all backplanes generated
+                            from this event_key will have the same limits. This
+                            option can only be applied the first time this
+                            event_key is used.
         """
 
-        # Get the ansa intercept coordinates
-        event_key = self.standardize_event_key(event_key)
-        event = self.get_surface_event(event_key)
-        assert event.surface.COORDINATE_TYPE == 'cylindrical'
+        # Don't allow remask if the backplane was already generated
+        if rmax is None: remask = False
 
-        self.register_backplane(('ansa_radius', event_key, 'right'),
+        if remask and event_key in self.surface_events:
+            raise ValueError('remask disallowed for pre-existing ' +
+                             'ansa event key ' + str(event_key))
+
+        # Get the ansa intercept coordinates
+        event = self.get_surface_event(event_key)
+        if event.surface.COORDINATE_TYPE != 'cylindrical':
+            raise ValueError('ansa intercepts require a "cylindrical" ' +
+                             'surface type')
+
+        # Limit the event if necessary
+        if remask:
+
+            # Apply the upper limit to the event
+            radius = event.coord1.abs()
+            self.apply_mask_to_event(event_key, radius > rmax)
+            event = self.get_surface_event(event_key)
+
+        # Register the default backplanes
+        self.register_backplane(('ansa_radius', event_key, 'right', None),
                                 event.coord1)
         self.register_backplane(('ansa_altitude', event_key),
                                 event.coord2)
+
+        # Apply a mask just to these backplanes if necessary
+        if rmax is not None:
+            mask = (event.coord1 > rmax)
+            self.register_backplane(('ansa_radius', event_key, 'right', rmax),
+                                    event.coord1.mask_where(mask))
+            self.register_backplane(('ansa_altitude', event_key, rmax),
+                                    event.coord2.mask_where(mask))
 
     def _fill_ansa_longitudes(self, event_key):
         """Internal method to fill in the ansa intercept longitude backplane.
@@ -2854,9 +3026,8 @@ class Backplane(object):
 
         key = ('where_inside_shadow', event_key, shadow_body[0])
         if key not in self.backplanes:
-            event = self.get_surface_event_with_arr(event_key)
             shadow_event = self.get_surface_event(shadow_body + event_key)
-            mask = self.mask_as_boolean(event.antimask & shadow_event.antimask)
+            mask = self.mask_as_boolean(shadow_event.antimask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2869,9 +3040,9 @@ class Backplane(object):
 
         key = ('where_outside_shadow', event_key, shadow_body[0])
         if key not in self.backplanes:
-            event = self.get_surface_event_with_arr(event_key)
-            shadow_event = self.get_surface_event(shadow_body + event_key)
-            mask = self.mask_as_boolean(event.antimask & shadow_event.mask)
+            mask = self.where_intercepted(event_key)
+            mask = mask & ~self.where_inside_shadow(event_key, shadow_body)
+            mask = self.mask_as_boolean(mask)
             self.register_backplane(key, mask)
 
         return self.backplanes[key]
@@ -2888,7 +3059,11 @@ class Backplane(object):
 
         key = ('where_in_front', event_key, back_body[0])
         if key not in self.backplanes:
-            boolean = (self.distance(event_key) < self.distance(back_body))
+            front_distance = self.distance(event_key)
+            back_distance  = self.distance(back_body)
+            boolean = front_distance.values < back_distance.values
+            boolean |= back_distance.mask
+            boolean &= front_distance.antimask
             self.register_backplane(key, self.mask_as_boolean(boolean))
 
         return self.backplanes[key]
@@ -3170,7 +3345,7 @@ class Backplane(object):
         'ring_center_incidence_angle', 'ring_center_emission_angle',
         'ring_radial_resolution', 'ring_angular_resolution',
         'ring_gradient_angle',
-        'ring_shadow_radius', 'ring_in_front_radius',
+        'ring_shadow_radius', 'ring_radius_in_front',
 
         'ansa_radius', 'ansa_altitude', 'ansa_longitude',
         'ansa_radial_resolution', 'ansa_vertical_resolution',

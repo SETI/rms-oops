@@ -3923,6 +3923,9 @@ class Qube(object):
         return Qube.BOOLEAN_CLASS(self.values & arg.values,
                                   self.mask | arg.mask)
 
+    def __rand__(self, arg):
+        return self.__and__(arg)
+
     # (|) operator
     def __or__(self, arg):
         self = Qube.BOOLEAN_CLASS.as_boolean(self)
@@ -3931,6 +3934,9 @@ class Qube(object):
         return Qube.BOOLEAN_CLASS(self.values | arg.values,
                                   self.mask | arg.mask)
 
+    def __ror__(self, arg):
+        return self.__or__(arg)
+
     # (^) operator
     def __xor__(self, arg):
         self = Qube.BOOLEAN_CLASS.as_boolean(self)
@@ -3938,6 +3944,9 @@ class Qube(object):
 
         return Qube.BOOLEAN_CLASS(self.values ^ arg.values,
                                   self.mask | arg.mask)
+
+    def __rxor__(self, arg):
+        return self.__xor__(arg)
 
     # (&=) operator
     def __iand__(self, arg):
