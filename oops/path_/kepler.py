@@ -765,7 +765,8 @@ class Kepler(Path, Fittable):
             (path_event,
              link_event) = super(Kepler,
                                  self).photon_to_event(arrival, derivs, guess,
-                                                       quick, converge)
+                                                       quick=quick,
+                                                       converge=converge)
             if partials:
                 (pos, vel) = self.xyz_planet(event.time, partials=True)
                 path_event.pos.insert_deriv('elements', pos.d_delements)
