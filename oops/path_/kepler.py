@@ -72,13 +72,13 @@ class Kepler(Path, Fittable):
 
                         Alternatively, None to leave the object un-initialized.
 
-            observer    NOT IMPLEMENTED. An optional Path object or ID defining
-                        the observation point. Used for astrometry. If provided,
-                        the path is returned relative to the observer, in J2000
-                        coordinates, and with light travel time from the central
-                        planet already accounted for. If None (the default),
-                        then the path is defined relative to the central planet
-                        in that planet's ring_frame.
+            observer    an optional Path object or ID defining the observation
+                        point. Used for astrometry. If provided, the path is
+                        returned relative to the observer, in J2000 coordinates,
+                        and with light travel time from the central planet
+                        already accounted for. If None (the default), then the
+                        path is defined relative to the central planet in that
+                        planet's ring_frame.
 
             wobbles     a string or tuple of strings containing the name of each
                         element to which the corresponding wobble applies. Use
