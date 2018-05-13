@@ -73,7 +73,7 @@ class HRC(ACS):
         # Define the key into the dictionary
         idc_key = (hst_file[0].header["FILTER1"], hst_file[0].header["FILTER2"])
 
-        # Define the plane scale
+        # Define the plate scale
         if 'platescale' in parameters:
             platescale = parameters['platescale']
         elif idc_key == ('CLEAR1S', 'CLEAR2S'):

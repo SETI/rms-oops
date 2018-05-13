@@ -1209,7 +1209,8 @@ class Test_Body(unittest.TestCase):
         self.assertEqual(len(moons), 8)     # Mimas-Iapetus
 
         rings = saturn.select_children(include_any=("RING"))
-        self.assertEqual(len(rings), 8)     # A, B, C, AB, Main, all, plane, system
+        self.assertEqual(len(rings), 8)     # A, B, C, AB, Main, all, plane,
+                                            # system
 
         moons = saturn.select_children(include_all="SATELLITE",
                                        exclude=("IRREGULAR"), radius=1000)

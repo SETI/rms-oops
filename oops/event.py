@@ -319,6 +319,20 @@ class Event(object):
 
         return self.__wod_
 
+    def empty_cache(self):
+        """Remove cached properties; call every time an attribute is set."""
+
+        self.__wod_ = None
+        self.__mask_ = None
+        self.__antimask_ = None
+        self.__shape_ = None
+
+        if self.__ssb_:
+            self.__ssb_.__wod_ = None
+            self.__ssb_.__mask_ = None
+            self.__ssb_.__antimask_ = None
+            self.__ssb_.__shape_ = None
+
     ############################################################################
     # Special properties: Photon arrival vectors
     # 
@@ -354,9 +368,7 @@ class Event(object):
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_ is None):
             self.__ssb_.__arr_ = self.xform_to_j2000.rotate(self.__arr_)
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     @property
     def arr_ap(self):
@@ -387,9 +399,7 @@ class Event(object):
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_ap_ is None):
             self.__ssb_.__arr_ap_ = self.xform_to_j2000.rotate(self.__arr_ap_)
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     @property
     def arr_j2000(self):
@@ -406,9 +416,7 @@ class Event(object):
             self.arr = self.xform_to_j2000.unrotate(value)
             ssb_event.__arr_ = value
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     @property
     def arr_ap_j2000(self):
@@ -431,9 +439,7 @@ class Event(object):
             self.arr_ap = self.xform_to_j2000.unrotate(value)
             ssb_event.__arr_ap_ = value
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     @property
     def arr_lt(self):
@@ -454,9 +460,7 @@ class Event(object):
         if (self.__ssb_ is not None) and (self.__ssb_.__arr_lt_ is None):
             self.__ssb_.__arr_lt_ = self.__arr_lt_
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     ############################################################################
     # Special properties: Photon arrival vectors, reversed
@@ -481,9 +485,7 @@ class Event(object):
         self.arr = -value
         self.__neg_arr_ = value
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     @property
     def neg_arr_ap(self):
@@ -504,9 +506,7 @@ class Event(object):
         self.arr_ap = -value
         self.__neg_arr_ap_ = value
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     @property
     def neg_arr_j2000(self):
@@ -521,9 +521,7 @@ class Event(object):
         if self.ssb is not self:
             self.arr = self.xform_to_j2000.unrotate(self.ssb.__arr_)
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     @property
     def neg_arr_ap_j2000(self):
@@ -544,9 +542,7 @@ class Event(object):
         if self.ssb is not self:
             self.arr_ap = self.xform_to_j2000.unrotate(self.ssb.__arr_ap_)
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__shape_ = None
+        self.empty_cache()
 
     ############################################################################
     # Special properties: Photon departure vectors
@@ -583,7 +579,7 @@ class Event(object):
         if (self.__ssb_ is not None) and (self.__ssb_.__dep_ is None):
             self.__ssb_.__dep_ = self.xform_to_j2000.rotate(self.__dep_)
 
-        self.__wod_ = None
+        self.empty_cache()
 
     @property
     def dep_ap(self):
@@ -612,7 +608,7 @@ class Event(object):
         if (self.__ssb_ is not None) and (self.__ssb_.__dep_ap_ is None):
             self.__ssb_.__dep_ap_ = self.xform_to_j2000.rotate(self.__dep_ap_)
 
-        self.__wod_ = None
+        self.empty_cache()
 
     @property
     def dep_j2000(self):
@@ -629,7 +625,7 @@ class Event(object):
             self.dep = self.xform_to_j2000.unrotate(value)
             ssb_event.__dep_ = value
 
-        self.__wod_ = None
+        self.empty_cache()
 
     @property
     def dep_ap_j2000(self):
@@ -652,7 +648,7 @@ class Event(object):
             self.dep_ap = self.xform_to_j2000.unrotate(value)
             ssb_event.__dep_ap_ = value
 
-        self.__wod_ = None
+        self.empty_cache()
 
     @property
     def dep_lt(self):
@@ -673,7 +669,7 @@ class Event(object):
         if (self.__ssb_ is not None):
             self.__ssb_.__dep_lt_ = self.__dep_lt_
 
-        self.__wod_ = None
+        self.empty_cache()
 
     ############################################################################
     # Special properties: Additional surface properties
@@ -698,7 +694,7 @@ class Event(object):
         if (self.__ssb_ is not None) and (self.__ssb_.__perp_ is None):
             self.__ssb_.__perp_ = self.xform_to_j2000.rotate(self.__perp_)
 
-        self.__wod_ = None
+        self.empty_cache()
 
     @property
     def vflat(self):
@@ -722,7 +718,7 @@ class Event(object):
         if (self.__ssb_ is not None) and (self.__ssb_.__vflat_ is None):
             self.__ssb_.__vflat_ = self.xform_to_j2000.rotate(self.__vflat_)
 
-        self.__wod_ = None
+        self.empty_cache()
 
     ############################################################################
     # Standard methods
@@ -797,7 +793,7 @@ class Event(object):
 
                 self.__ssb_.insert_subfield(name, value_j2000)
 
-        self.__wod_ = None
+        self.empty_cache()
 
     def get_subfield(self, name):
         """Return the value of a given subfield or property."""
@@ -919,15 +915,13 @@ class Event(object):
 
     def without_derivs(self):
         """A shallow copy of this Event without any derivatives except time.
+        Unlike the .wod property, this version does not cache the result.
         """
 
         def remove_derivs(arg):
             return arg.without_derivs(preserve='t')
 
-        result = self._apply_this_func(remove_derivs)
-        result.__wod_ = result
-
-        return result
+        return self._apply_this_func(remove_derivs)
 
     def all_masked(self, origin=None, frame=None, broadcast=None):
         """A shallow copy of this event, entirely masked.
@@ -1209,9 +1203,9 @@ class Event(object):
                                             Frame.J2000,
                                             derivs=derivs, quick=quick,
                                             include_xform=True)
-        self.__ssb_.__ssb_ = self.__ssb_
 
         if self.__ssb_ is not self:
+            self.__ssb_.__ssb_ = self.__ssb_
             self.__ssb_.__xform_to_j2000_ = Transform.IDENTITY
 
         if derivs:

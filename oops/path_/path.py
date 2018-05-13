@@ -563,7 +563,8 @@ class Path(object):
 
         # Handle derivatives
         if not derivs:
-            link = link.wod        # preserves time-dependence
+            link = link.without_derivs()    # preserves time-dependence; does
+                                            # not affect .wod property
 
         # If the path has a shape of its own, QuickPaths are disallowed
         if self.shape != (): quick = None
