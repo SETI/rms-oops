@@ -1010,13 +1010,17 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         except KeyError: pass
 
         # Add the surface object if shape information is available
+        # RuntimeError was raised by old version of cspyce;
+        # KeyError is raised during a name lookup if the body name is unknown;
+        # ValueError is raised during a SPICE ID lookup if the ID is unknown.
         try:
             shape = spice_shape(spice_id, frame.frame_id, (1.,1.,1.))
-            body.apply_surface(shape, shape.req, shape.rpol)
-            shape.body = body
         except (RuntimeError, ValueError, KeyError):
             shape = NullSurface(path, frame)
             body.apply_surface(shape, 0., 0.)
+            shape.body = body
+        else:
+            body.apply_surface(shape, shape.req, shape.rpol)
             shape.body = body
 
         # Add a planet name to any satellite or barycenter
@@ -1025,7 +1029,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
         if "BARYCENTER" in body.keywords and parent is not None:
             body.add_keywords(parent)
-        
+
         # Save solar system bodies as standard for serialization
         Body.STANDARD_BODIES.add(body.name)
         Path.STANDARD_PATHS.add(body.path.path_id)
@@ -1033,7 +1037,7 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
 
     keys = Body.BODY_REGISTRY.keys()
     keys.sort()
-    
+
 def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                 barycenter_name=None, pole=None):
     """Define and return the body object associate with a ring around another
