@@ -302,7 +302,7 @@ class Test_Qube_getitem(unittest.TestCase):
     a = Vector(np.random.randn(4,5,6,3,2), drank=1,
                mask=(np.random.rand(4,5,6) < 0.2))
 
-    tuple = [(0,1,3),(0,1,3)]
+    tuple = ((0,1,3),(0,1,3))
     b = a[tuple]
     self.assertTrue(np.all(b.values == a.values[tuple]))
     self.assertTrue(np.all(b.mask == a.mask[tuple]))
@@ -316,7 +316,7 @@ class Test_Qube_getitem(unittest.TestCase):
 
     self.assertEqual(a[pair], a[tuple])
 
-    tuple = [(0,1,3),(0,1,3),(0,0,0)]
+    tuple = ((0,1,3),(0,1,3),(0,0,0))
     b = a[tuple]
     self.assertTrue(np.all(b.values == a.values[tuple]))
     self.assertTrue(np.all(b.mask == a.mask[tuple]))
@@ -446,7 +446,7 @@ class Test_Qube_getitem(unittest.TestCase):
     self.assertTrue(np.all(b.d_dt.mask == a.d_dt.mask[0,mask]))
     self.assertEqual(b.d_dt.shape, (1,))
 
-    tuple = [(0,1,3),(0,1,3)]
+    tuple = ((0,1,3),(0,1,3))
     b = a[tuple]
     self.assertTrue(np.all(b.d_dt.values == a.d_dt.values[tuple]))
     self.assertTrue(np.all(b.d_dt.mask == a.d_dt.mask[tuple]))
@@ -460,7 +460,7 @@ class Test_Qube_getitem(unittest.TestCase):
 
     self.assertEqual(a.d_dt[pair], a.d_dt[tuple])
 
-    tuple = [(0,1,3),(0,1,3),(0,0,0)]
+    tuple = ((0,1,3),(0,1,3),(0,0,0))
     b = a[tuple]
     self.assertTrue(np.all(b.d_dt.values == a.d_dt.values[tuple]))
     self.assertTrue(np.all(b.d_dt.mask == a.d_dt.mask[tuple]))

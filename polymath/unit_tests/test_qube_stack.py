@@ -136,7 +136,7 @@ class Test_Qube_stack(unittest.TestCase):
     d = None
     abcd = Qube.stack(a,b,c,d)
     self.assertTrue(np.all(abcd[0:3].mask == 3*[[1,1,1,1,1,0,0,0,0,0]]))
-    self.assertTrue(np.all(abcd[3] == False))
+    self.assertTrue((abcd[3] == False).all())
 
     # Broadcasting
     a = Scalar(np.arange(10).reshape(10,1))
@@ -175,7 +175,7 @@ class Test_Qube_stack(unittest.TestCase):
     d = None
     abcd = Qube.stack(a,b,c,d)
     self.assertTrue(np.all(abcd[0:3].mask == 3*[[1,1,1,1,1,0,0,0,0,0]]))
-    self.assertTrue(np.all(abcd[3] == False))
+    self.assertTrue((abcd[3] == False).all())
 
     # Booleans
     c = Boolean(5*[True] + 5*[False])

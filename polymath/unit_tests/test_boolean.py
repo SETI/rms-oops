@@ -610,18 +610,18 @@ class Test_Boolean(unittest.TestCase):
     a = Boolean(values, mask)
 
     mask = a.as_mask_where_nonzero()
-    self.assertTrue(np.all(a[mask]))
-    self.assertTrue(np.all(a[mask] == True))
+    self.assertTrue(a[mask].all())
+    self.assertTrue((a[mask] == True).all())
 
     mask = a.as_mask_where_zero()
-    self.assertTrue(not np.any(a[mask]))
-    self.assertTrue(np.all(a[mask] == False))
+    self.assertTrue(not a[mask].all())
+    self.assertTrue((a[mask] == False).all())
 
     mask = a.as_mask_where_nonzero_or_masked()
-    self.assertTrue(not np.any(a[mask] == False))
+    self.assertTrue(not (a[mask] == False).any())
 
     mask = a.as_mask_where_zero_or_masked()
-    self.assertTrue(not np.any(a[mask] == True))
+    self.assertTrue(not (a[mask] == True).any())
 
 ################################################################################
 # Execute from command line...
