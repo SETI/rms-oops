@@ -102,7 +102,7 @@ class Pixel(Observation):
 
         if fovmask:
             is_inside = self.cadence.time_is_inside(time, inclusive=True)
-            if not np.all(is_inside):
+            if not is_inside.all():
                 mask = indices.mask | np.logical_not(is_inside)
                 time = Scalar(time, mask)
 
