@@ -176,30 +176,30 @@ class Snapshot(Observation):
 #         """Returns a Tuple of indices corresponding to a given spatial location
 #         and time. This method supports non-integer positions and time steps, and
 #         returns fractional indices.
-# 
+#
 #         Input:
 #             uv_pair     a Pair of spatial (u,v) coordinates in or near the field
 #                         of view.
 #             time        a Scalar of times in seconds TDB.
 #             fovmask     True to mask values outside the field of view.
-# 
+#
 #         Return:
 #             indices     a Tuple of array indices. Any array indices not
 #                         constrained by (u,v) or time are returned with value 0.
 #                         Note that returned indices can fall outside the nominal
 #                         limits of the data object.
 #         """
-# 
+#
 #         uv_pair = Pair.as_pair(uv_pair)
 #         time = Scalar.as_scalar(time)
 #         (uv_pair, time) = Array_.broadcast_arrays(uv_pair, time)
-# 
+#
 #         (u,v) = uv_pair.to_scalars()
-# 
+#
 #         index_vals = np.zeros(uv_pair.shape + [len(self.axes)])
 #         index_vals[..., self.u_axis] = u.vals
 #         index_vals[..., self.v_axis] = v.vals
-# 
+#
 #         if fovmask:
 #             is_inside = ((self.uv_is_inside(uv_pair, inclusive=True) &
 #                          (time >= self.time[0]) & (time <= self.time[1]))
@@ -207,7 +207,7 @@ class Snapshot(Observation):
 #                 mask = uv_pair.mask | np.logical_not(is_inside)
 #             else:
 #                 mask = uv_pair.mask
-# 
+#
 #         return Vector(index_vals, mask)
 
     def times_at_uv(self, uv_pair, fovmask=False):
@@ -243,35 +243,35 @@ class Snapshot(Observation):
 #     def uv_at_time(self, time, fovmask=False):
 #         """Returns the (u,v) ranges of spatial pixel observed at the specified
 #         time.
-# 
+#
 #         Input:
 #             uv_pair     a Scalar of time values in seconds TDB.
 #             fovmask     True to mask values outside the time limits and/or the
 #                         field of view.
-# 
+#
 #         Return:         (uv_min, uv_max)
 #             uv_min      the lower (u,v) corner of the area observed at the
 #                         specified time.
 #             uv_max      the upper (u,v) corner of the area observed at the
 #                         specified time.
 #         """
-# 
+#
 #         uv_min = Scalar((0,0))
 #         uv_max = Scalar(self.uv_shape)
-# 
+#
 #         if fovmask or np.any(time.mask):
 #             is_inside = (time >= self.time[0]) & (time <= self.time[1])
 #             if not np.all(is_inside):
 #                 uv_min_vals = np.zeros(time.shape + (2,))
-# 
+#
 #                 uv_max_vals = np.empty(time.shape + (2,))
 #                 uv_max_vals[...,0] = self.uv_shape[0]
 #                 uv_max_vals[...,1] = self.uv_shape[1]
-# 
+#
 #                 uv_min = Pair(uv_min_vals, time.mask |
 #                                            np.logical_not(is_inside))
 #                 uv_max = Pair(uv_max_vals, mask)
-# 
+#
 #         return (uv_min, uv_max)
 
     def sweep_duv_dt(self, uv_pair):
@@ -474,7 +474,7 @@ class Snapshot(Observation):
                 body_data['resolution']    The resolution (km/pix) in the (U,V)
                                            directions at the given range.
                 body_data['u_min']         The minimum U value covered by the
-                                           body (clipped to the FOV size) 
+                                           body (clipped to the FOV size)
                 body_data['u_max']         The maximum U value covered by the
                                            body (clipped to the FOV size)
                 body_data['v_min']         The minimum V value covered by the
@@ -486,7 +486,7 @@ class Snapshot(Observation):
                 body_data['v_min_unclipped']
                 body_data['v_max_unclipped']
                 body_data['u_pixel_size']  The number of pixels (non-integer)
-                body_data['v_pixel_size']  covered by the diameter of the body 
+                body_data['v_pixel_size']  covered by the diameter of the body
                                            in each direction.
         """
 
@@ -556,6 +556,8 @@ class Snapshot(Observation):
         v_scale = fov.uv_scale.vals[1]
         body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
         for i in range(nbodies):
+            if not flags[i]:
+                continue
             body_data = {}
             body_data['name'] = body_names[i]
             body_data['inside'] = flags[i]
