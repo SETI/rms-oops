@@ -180,7 +180,7 @@ class SpiceFrame(Frame):
             for i,t in np.ndenumerate(time.values):
                 matrix6 = cspyce.sxform(self.spice_reference_name,
                                         self.spice_frame_name,
-                                       t )
+                                        t)
                 (matrix[i], omega[i]) = cspyce.xf2rav(matrix6)
 
         # Case 2: omega_type = zero

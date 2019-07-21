@@ -16,9 +16,11 @@ class RingFrame(Frame):
     ascending node of the equator within the reference frame.
     """
 
-    PACKRAT_ARGS = ['planet_frame', 'epoch', 'retrograde', 'frame_id']
+    PACKRAT_ARGS = ['planet_frame', 'epoch', 'retrograde', 'aries', 'frame_id',
+                    'given_cache_size']
 
-    def __init__(self, frame, epoch=None, retrograde=False, id='+'):
+    def __init__(self, frame, epoch=None, retrograde=False, aries=False,
+                       id='+', cache_size=1000):
         """Constructor for a RingFrame Frame.
 
         Input:
@@ -29,29 +31,51 @@ class RingFrame(Frame):
                         this is specified, then the frame will be precisely
                         inertial, based on the orientation of the pole at the
                         specified epoch. If it is unspecified, then the frame
-                        could wobble slowly due to precession of the planet's
-                        pole.
+                        could wobble or rotate slowly due to precession of the
+                        planet's pole.
 
             retrograde  True to flip the sign of the Z-axis. Necessary for
                         retrograde systems like Uranus.
+
+            aries       True to use the First Point of Aries as the longitude
+                        reference; False to use the ascending node of the ring
+                        plane. Note that the former might be preferred in a
+                        situation where the ring plane is uncertain, wobbles, or
+                        is nearly parallel to the celestial equator. In these
+                        situations, using Aries as a reference will reduce the
+                        uncertainties related to the pole orientation.
 
             id          the ID under which the frame will be registered. None to
                         leave the frame unregistered. If the value is "+", then
                         the registered name is the planet frame's name with the
                         suffix "_DESPUN" if epoch is None, or "_INERTIAL" if an
                         epoch is specified.
+
+            cache_size  number of transforms to cache. This can be useful
+                        because it avoids unnecessary SPICE calls when the frame
+                        is being used repeatedly at a finite set of times.
         """
 
         self.planet_frame = Frame.as_frame(frame).wrt(Frame.J2000)
-        self.reference    = self.planet_frame.reference
+        self.reference    = Frame.J2000
         self.epoch = epoch
         self.retrograde = retrograde
         self.shape = frame.shape
         self.keys = set()
 
+        self.aries = aries
+
         # The frame might not be exactly inertial due to polar precession, but
         # it is good enough
         self.origin = None
+
+        # Define cache
+        self.cache = {}
+        self.trim_size = max(cache_size//10, 1)
+        self.given_cache_size = cache_size
+        self.cache_size = cache_size + self.trim_size
+        self.cache_counter = 0
+        self.cached_value_returned = False          # Just used for debugging
 
         # Fill in the frame ID
         if id is None:
@@ -72,11 +96,9 @@ class RingFrame(Frame):
 
         # For a fixed epoch, derive the inertial tranform now
         self.transform = None
-        self.node = None
 
         if self.epoch is not None:
             self.transform = self.transform_at_time(self.epoch)
-            self.node = self.node_at_time(self.epoch)
 
     ########################################
 
@@ -87,56 +109,79 @@ class RingFrame(Frame):
         if self.transform is not None:
             return self.transform
 
+        time = Scalar.as_scalar(time)
+
+        # Check cache first if time is a Scalar
+        if time.shape == ():
+            key = time.values
+
+            if key in self.cache:
+                self.cached_value_returned = True
+                (count, key, xform) = self.cache[key]
+                self.cache_counter += 1
+                count[0] = self.cache_counter
+                return xform
+
+        self.cached_value_returned = False
+
         # Otherwise, calculate it for the current time
         xform = self.planet_frame.transform_at_time(time, quick=quick)
-        matrix = xform.matrix.values.copy()
 
-        # The bottom row of the matrix is the z-axis of the frame
+        # The bottom row of the matrix is the Z-axis of the ring frame in J2000
+        z_axis = xform.matrix.row_vector(2)
+
+        # For a retrograde ring, reverse Z
         if self.retrograde:
-            matrix[...,2,:] = -matrix[...,2,:]
+            z_axis = -z_axis
 
-        z_axis = matrix[...,2,:]
+        x_axis = Vector3.ZAXIS.cross(z_axis)
+        matrix = Matrix3.twovec(z_axis, 2, x_axis, 0)
 
-        # Replace the X-axis of the matrix using (0,0,1) cross Z-axis
-        #   (0,0,1) x (a,b,c) = (-b,a,0)
-        # with the norm of the vector scaled to unity.
+        # This is the RingFrame matrix. It rotates from J2000 to the frame where
+        # the pole at epoch is along the Z-axis and the ascending node relative
+        # to the J2000 equator is along the X-axis.
 
-        norm = np.sqrt(z_axis[...,0]**2 + z_axis[...,1]**2)
-        matrix[...,0,0] = -z_axis[...,1] / norm
-        matrix[...,0,1] =  z_axis[...,0] / norm
-        matrix[...,0,2] =  0.
+        if self.aries:
+            (x,y,z) = x_axis.to_scalars()
+            node_lon = y.arctan2(x)
+            matrix = Matrix3.z_rotation(node_lon) * matrix
 
-        # Replace the Y-axis of the matrix using Y = Z cross X
-        matrix[...,1,:] = utils.cross3d(z_axis, matrix[...,0,:])
+        # Create transform
+        xform = Transform(matrix, Vector3.ZERO,
+                          self.wayframe, self.reference, None)
 
-        return Transform(Matrix3(matrix, xform.matrix.mask), Vector3.ZERO,
-                         self.wayframe, self.reference, None)
+        # Cache the transform if necessary
+        if time.shape == () and self.given_cache_size > 0:
+
+            # Trim the cache, removing the values used least recently
+            if len(self.cache) >= self.cache_size:
+                all_keys = self.cache.values()
+                all_keys.sort()
+                for (_, old_key, _) in all_keys[:self.trim_size]:
+                    del self.cache[old_key]
+
+            # Insert into the cache
+            key = time.values
+            self.cache_counter += 1
+            count = np.array([self.cache_counter])
+            self.cache[key] = (count, key, xform)
+
+        return xform
 
     ########################################
 
     def node_at_time(self, time, quick={}):
-        """Angle from the original X-axis to the ring plane ascending node.
+        """Angle from the frame's X-axis to the ring plane ascending node on
+        the J2000 equator."""
 
-        This serves as the X-axis of this frame."""
+        xform = self.transform_at_time(time, quick=quick)
+        z_axis_wrt_j2000 = xform.unrotate(Vector3.ZAXIS)
+        (x,y,_) = z_axis_wrt_j2000.to_scalars()
 
-        # For a fixed epoch, return the fixed node
-        if self.transform is not None:
-            return 0.
+        if (x,y) == (0.,0.):
+            return Scalar(0.)
 
-        # Otherwise, calculate it for the current time
-        xform = self.planet_frame.transform_at_time(time, quick=quick)
-        matrix = xform.matrix.values
-
-        # The bottom row of the matrix is the pole
-        z_axis = matrix[...,2,:]
-
-        if self.retrograde:
-            z_axis = -z_axis
-
-        # The ascending node is 90 degrees ahead of the pole
-        angle = np.arctan2(z_axis[...,0], -z_axis[...,1])
-
-        return Scalar(angle % TWOPI)
+        return (y.arctan2(x) + np.pi) % TWOPI
 
 ################################################################################
 # UNIT TESTS

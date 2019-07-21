@@ -118,6 +118,7 @@ class SpicePath(Path):
                                        'NONE',
                                        self.spice_origin_id)
 
+            x = Event(time, (state[0:3],state[3:6]), self.origin, self.frame)
             return Event(time, (state[0:3],state[3:6]), self.origin, self.frame)
 
         # Use a QuickPath if warranted, possibly making a recursive call
@@ -139,7 +140,7 @@ class SpicePath(Path):
 
         else:
             state = cspyce.spkez_vector(self.spice_target_id,
-                                        time.flatten().vals,
+                                        time.vals.ravel(),
                                         self.spice_frame_name,
                                         'NONE',
                                         self.spice_origin_id)[0]

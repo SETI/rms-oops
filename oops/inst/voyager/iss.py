@@ -252,7 +252,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
             image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) * 
                                              oops.Matrix3(j2000_to_platform))
 
-        except LookupError:
+        except (LookupError, IOError):
             warnings.warn('C kernel is unavailable for ' +
                           label_dict['PRODUCT_ID'], RuntimeWarning)
             if omit: continue

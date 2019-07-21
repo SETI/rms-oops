@@ -454,7 +454,8 @@ class HST(object):
 
         texp_factor = self.dn_per_sec_factor(hst_file)
         factor = (photflam * texp_factor / fov.uv_area /
-                             self.solar_f(hst_file, solar_range, solar_model))
+                             self.solar_f(hst_file, solar_range, solar_model,
+                                          **parameters))
 
         # Create and return the calibration for solar reflectivity
         if extended:
@@ -865,13 +866,13 @@ class HST(object):
 
         return HST_SYN_PATH
 
-    def load_syn_throughput(self, hst_file):
+    def load_syn_throughput(self, hst_file, **parameters):
         """Returns a Tabulation of throughput vs. wavelength in Angstroms for
         the combined set of SYN files returned by self.select_syn_files().
         """
 
         # Multiply all the Tabulations of throughputs
-        syn_filenames = self.select_syn_files(hst_file)
+        syn_filenames = self.select_syn_files(hst_file, **parameters)
 
         tabulation = self._load_syn_file(syn_filenames[0])
         for syn_filename in syn_filenames[1:]:
@@ -906,7 +907,7 @@ class HST(object):
 
         return tab.Tabulation(x,y)
 
-    def solar_f(self, hst_file, sun_range=1., model="STIS"):
+    def solar_f(self, hst_file, sun_range=1., model="STIS", **parameters):
         """Returns the solar F averaged over the instrument throughput.
 
         Input:
@@ -921,7 +922,7 @@ class HST(object):
         """
 
         # Convert bandpass tabulation from Angstroms to microns
-        bandpass = self.load_syn_throughput(hst_file)
+        bandpass = self.load_syn_throughput(hst_file, **parameters)
         bandpass = tab.Tabulation(bandpass.x * 1.e-4, bandpass.y)
 
         # Convert units of solar F back to CGS per Angstrom

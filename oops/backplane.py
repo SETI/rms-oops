@@ -1065,10 +1065,11 @@ class Backplane(object):
 
     ############################################################################
     # Lighting geometry, surface intercept version
-    #   incidence_angle()   incidence angle at surface, radians.
-    #   emission_angle()    emission angle at surface, radians.
-    #   lambert_law()       Lambert Law model for surface, cos(incidence).
-    #   minnaert_law()      Minnaert Law model for surface.
+    #   incidence_angle()       incidence angle at surface, radians.
+    #   emission_angle()        emission angle at surface, radians.
+    #   lambert_law()           Lambert Law model for surface, cos(incidence).
+    #   minnaert_law()          Minnaert Law model for surface.
+    #   lommel_seeliger_law()   Lommel-Seeliger Law model for surface.
     ############################################################################
 
     def incidence_angle(self, event_key):
@@ -1165,10 +1166,8 @@ class Backplane(object):
         event_key = self.standardize_event_key(event_key)
         key = ('lambert_law', event_key)
         if key not in self.backplanes:
-            incidence = self.incidence_angle(event_key)
-            lambert_law = incidence.cos()
-            lambert_law = lambert_law.mask_where(incidence >= constants.HALFPI,
-                                                 0.)
+            lambert_law = self.incidence_angle(event_key).cos()
+            lambert_law = lambert_law.mask_where(lambert_law <= 0., 0.)
             self.register_backplane(key, lambert_law)
 
         return self.backplanes[key]
@@ -1189,10 +1188,29 @@ class Backplane(object):
             if k2 is None:
                 k2 = k-1.
             mu0 = self.lambert_law(event_key) # Masked
-            emission = self.emission_angle(event_key)
-            mu = emission.cos()
+            mu = self.emission_angle(event_key).cos()
             minnaert_law = mu0 ** k * mu ** k2
             self.register_backplane(key, minnaert_law)
+
+        return self.backplanes[key]
+
+    def lommel_seeliger_law(self, event_key):
+        """Lommel-Seeliger law model for the surface.
+
+        Returns mu0 / (mu + mu0)
+
+        Input:
+            event_key       key defining the surface event.
+        """
+
+        event_key = self.standardize_event_key(event_key)
+        key = ('lommel_seeliger_law', event_key)
+        if key not in self.backplanes:
+            mu0 = self.incidence_angle(event_key).cos()
+            mu  = self.emission_angle(event_key).cos()
+            lommel_seeliger_law = mu0 / (mu + mu0)
+            lommel_seeliger_law = lommel_seeliger_law.mask_where(mu0 <= 0., 0.)
+            self.register_backplane(key, lommel_seeliger_law)
 
         return self.backplanes[key]
 

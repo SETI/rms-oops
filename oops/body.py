@@ -20,6 +20,7 @@ from oops.frame_.ringframe   import RingFrame
 from oops.frame_.poleframe   import PoleFrame
 from oops.frame_.spiceframe  import SpiceFrame
 from oops.frame_.synchronous import Synchronous
+from oops.frame_.twovector   import TwoVector
 
 from oops.surface_.nullsurface import NullSurface
 from oops.surface_.ringplane   import RingPlane
@@ -142,7 +143,7 @@ class Body(object):
         if spice_name is None:
             spice_name = name
 
-        self.spice_name = name
+        self.spice_name = spice_name
 
         try:
             self.spice_id = cspyce.bodn2c(spice_name)
@@ -157,6 +158,9 @@ class Body(object):
         self.ring_is_retrograde = False
         self.ring_pole = None
         self.ring_body = None
+
+        self.invariable_pole = None
+        self.invariable_frame = None
 
         if type(parent) == str:
             self.parent = Body.lookup(parent)
@@ -251,15 +255,29 @@ class Body(object):
             return
 
         if pole is not None:
+            pole = Vector3.as_vector3(pole)
             self.ring_frame = PoleFrame(self.frame, pole=pole,
                                                     retrograde=retrograde)
+
+            x_axis = Vector3.ZAXIS.ucross(pole)
+            self.invariable_frame = TwoVector(Frame.J2000,
+                                              pole, 'Z', x_axis, 'X',
+                                              id=self.name + '_INVARIABLE')
+            self.invariable_pole = pole
+
         else:
             self.ring_frame = RingFrame(self.frame, epoch=epoch,
                                                     retrograde=retrograde)
+            self.invariable_frame = self.ring_frame
 
         self.ring_epoch = epoch
         self.ring_is_retrograde = retrograde
-        self.ring_pole = pole
+
+        if epoch is not None:
+            xform = self.frame.wrt(Frame.J2000).transform_at_time(epoch)
+            self.ring_pole = xform.matrix.row_vector(2, Vector3)
+            if self.invariable_frame is self.ring_frame:
+                self.invariable_pole = self.ring_pole
 
     def apply_gravity(self, gravity):
         """Add the gravity attribute to a Body."""
@@ -894,6 +912,11 @@ NEPTUNE_IRREGULAR = range(809,814)
 
 NEPTUNE_ADAMS_LIMIT = 62940.
 
+# From Table 5 of Jacobson. The orbits of the Neptunian Satellites and the
+# Orientation of the Pole of Neptune. Astron. J. 137, 4322-4329 (2009).
+NEPTUNE_INVARIABLE_RA = 299.46086 * np.pi/180.
+NEPTUNE_INVARIABLE_DEC = 43.40481 * np.pi/180.
+
 def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Neptune system."""
 
@@ -913,8 +936,10 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
         define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
                       ["SATELLITE", "IRREGULAR"])
 
-    ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
-    dec = cspyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
+#     ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
+#     dec = cspyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
+    ra  = NEPTUNE_INVARIABLE_RA
+    dec = NEPTUNE_INVARIABLE_DEC
     pole = Vector3.from_ra_dec_length(ra,dec)
 
     ring = define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [], pole=pole)
@@ -1062,8 +1087,9 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                         planet's IAU-defined pole.
         barycenter_name the name of the ring's barycenter if this is not the
                         same as the name of the central planet.
-        pole            if not None, the pole of the invariable plane to be used
-                        in the PoleFrame (instead of a RingFrame).
+        pole            if not None, this is the pole of the invariable plane.
+                        It will be used to define the ring_frame as a
+                        PoleFrame instead of a RingFrame.
     """
 
     # If the ring body already exists, skip it
@@ -1165,7 +1191,7 @@ def define_small_body(spice_id, name=None, spk=None, keywords=[],
 
     # Add the gravity object if it exists
     try:
-        body.apply_gravity(Gravity.LOOKUP[name])
+        body.apply_gravity(Gravity.lookup(name))
     except KeyError: pass
 
     # Add the surface object if shape information is available

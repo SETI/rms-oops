@@ -10,20 +10,20 @@ from oops.frame_.cmatrix import Cmatrix
 from oops.transform      import Transform
 from oops.constants      import *
 
-import oops.utils as utils
-
 class PoleFrame(Frame):
     """PoleFrame is a Frame subclass describing a non-rotating frame centered on
     the Z-axis of a body's pole vector. This differs from RingFrame in that the
-    pole may precess around a separate, invariable pole for the system. It is
-    recommended for Neptune in particular. Longitudes are measured from the
-    ascending node of the invariable plane on the J2000 equator.
+    pole may precess around a separate, invariable pole for the system. Because
+    of this behavior, the reference longitude is defined as the ascending node
+    of the invariable plane rather than as the ascending node of the ring plane.
+    This frame is recommended for Neptune in particular.
     """
 
-    PACKRAT_ARGS = ['planet_frame', 'invariable_pole', 'retrograde', 'frame_id',
-                    'given_cache_size']
+    PACKRAT_ARGS = ['planet_frame', 'invariable_pole', 'retrograde', 'aries',
+                    'frame_id', 'given_cache_size']
 
-    def __init__(self, frame, pole, retrograde=False, id='+', cache_size=1000):
+    def __init__(self, frame, pole, retrograde=False, aries=False, id='+',
+                       cache_size=1000):
         """Constructor for a PoleFrame.
 
         Input:
@@ -33,15 +33,25 @@ class PoleFrame(Frame):
 
             pole        The pole of the invariable plane, about which planet's
                         pole precesses. This enables the reference longitude to
-                        be defined properly.
+                        be defined properly. Defined in J2000 coordinates.
 
             retrograde  True to flip the sign of the Z-axis. Necessary for
                         retrograde systems like Uranus.
 
+            aries       True to use the First Point of Aries as the longitude
+                        reference; False to use the ascending node of the
+                        invariable plane. Note that the former might be
+                        preferred in a situation where the invariable pole is
+                        uncertain, because small changes in the invariable pole
+                        will have only a limited effect on the absolute
+                        reference longitude.
+
             id          the ID under which the frame will be registered. None to
                         leave the frame unregistered. If the value is "+", then
                         the registered name is the planet frame's name with the
-                        suffix "_POLE".
+                        suffix "_POLE". Note that this default ID will not be
+                        unique if frames are defined for multiple Laplace Planes
+                        around the same planet.
 
             cache_size  number of transforms to cache. This can be useful
                         because it avoids unnecessary SPICE calls when the frame
@@ -51,7 +61,19 @@ class PoleFrame(Frame):
         # Rotates from J2000 to the invariable frame
         (ra,dec,_) = Vector3.as_vector3(pole).to_ra_dec_length(recursive=False)
         self.invariable_matrix = Matrix3.pole_rotation(ra,dec)
+            # Rotates J2000 coordinates into a frame where the Z-axis is the
+            # invariable pole and the X-axis is the ascending node of the
+            # invariable plane on J2000
         self.invariable_pole = pole
+        self.invariable_node = Vector3.ZAXIS.ucross(pole)
+
+        self.aries = aries
+        if self.aries:
+            # The ascending node of the invariable plane falls 90 degrees ahead
+            # pole's RA
+            self.invariable_node_lon = ra + np.pi/2.
+        else:
+            self.invariable_node_lon = 0.
 
         self.planet_frame = Frame.as_frame(frame).wrt(Frame.J2000)
         self.origin = self.planet_frame.origin
@@ -60,11 +82,21 @@ class PoleFrame(Frame):
         self.keys = set()
         self.reference = Frame.J2000
 
+        # Define cache
+        self.cache = {}
+        self.trim_size = max(cache_size//10, 1)
+        self.given_cache_size = cache_size
+        self.cache_size = cache_size + self.trim_size
+        self.cache_counter = 0
+        self.cached_value_returned = False          # Just used for debugging
+
         # Fill in the frame ID
         if id is None:
             self.frame_id = Frame.temporary_frame_id()
         elif id == '+':
             self.frame_id = self.planet_frame.frame_id + '_POLE'
+        elif id.startswith('+'):
+            self.frame_id = self.planet_frame.frame_id + '_' + id[1:]
         else:
             self.frame_id = id
 
@@ -74,20 +106,14 @@ class PoleFrame(Frame):
         else:
             self.wayframe = self
 
-        self.cache = {}
-        self.trim_size = max(cache_size//10, 1)
-        self.given_cache_size = cache_size
-        self.cache_size = cache_size + self.trim_size
-        self.cache_counter = 0
-        self.cached_value_returned = False          # Just used for debugging
-
     ########################################
 
     def transform_at_time(self, time, quick={}):
         """The Transform into the this Frame at a Scalar of times."""
 
-        # Check cache first if time is a Scalar
         time = Scalar.as_scalar(time)
+
+        # Check cache first if time is a Scalar
         if time.shape == ():
             key = time.values
 
@@ -100,35 +126,18 @@ class PoleFrame(Frame):
 
         self.cached_value_returned = False
 
-        # Calculate the planet frame for the current time
+        # Calculate the planet frame for the current time in J2000
         xform = self.planet_frame.transform_at_time(time, quick=quick)
-        matrix = xform.matrix.values
 
-        # The bottom row of the matrix is the pole
-        z_axis = matrix[...,2,:]
+        # The bottom row of the matrix is the Z-axis of the ring frame in J2000
+        z_axis = xform.matrix.row_vector(2)
 
+        # For a retrograde ring, reverse Z
         if self.retrograde:
             z_axis = -z_axis
 
-        # The bottom row of the matrix is the z-axis of the frame
-        if self.retrograde:
-            matrix[...,2,:] = -matrix[...,2,:]
-
-        z_axis = matrix[...,2,:]
-
-        # Replace the X-axis of the matrix using (0,0,1) cross Z-axis
-        #   (0,0,1) x (a,b,c) = (-b,a,0)
-        # with the norm of the vector scaled to unity.
-
-        norm = np.sqrt(z_axis[...,0]**2 + z_axis[...,1]**2)
-        matrix[...,0,0] = -z_axis[...,1] / norm
-        matrix[...,0,1] =  z_axis[...,0] / norm
-        matrix[...,0,2] =  0.
-
-        # Replace the Y-axis of the matrix using Y = Z cross X
-        matrix[...,1,:] = utils.cross3d(z_axis, matrix[...,0,:])
-
-        planet_matrix = Matrix3(matrix)
+        planet_matrix = Matrix3.twovec(z_axis, 2,
+                                       Vector3.ZAXIS.cross(z_axis), 0)
 
         # This is the RingFrame matrix. It rotates from J2000 to the frame where
         # the pole at epoch is along the Z-axis and the ascending node relative
@@ -146,15 +155,15 @@ class PoleFrame(Frame):
         node_lon_wrt_frame = joint_node_wrt_frame.to_ra_dec_length()[0]
 
         # Align the X-axis with the node of the invariable plane
-        matrix = Matrix3.z_rotation(node_lon_wrt_planet -
-                                    node_lon_wrt_frame) * planet_matrix
+        matrix = Matrix3.z_rotation(node_lon_wrt_planet - node_lon_wrt_frame +
+                                    self.invariable_node_lon) * planet_matrix
 
         # Create the transform
         xform = Transform(Matrix3(matrix, xform.matrix.mask), Vector3.ZERO,
-                          self.wayframe, self.reference)
+                          self.wayframe, self.reference, self.origin)
 
         # Cache the transform if necessary
-        if time.shape == () and self.cache_size > 0:
+        if time.shape == () and self.given_cache_size > 0:
 
             # Trim the cache, removing the values used least recently
             if len(self.cache) >= self.cache_size:
@@ -174,12 +183,24 @@ class PoleFrame(Frame):
     ########################################
 
     def node_at_time(self, time, quick={}):
-        """Angle from the original X-axis to the invariable plane's ascending
-        node.
+        """Angle from the frame's X-axis to the ring plane ascending node on the
+        invariable plane."""
 
-        This serves as the X-axis of this frame."""
+        # Calculate the pole for the current time
+        xform = self.planet_frame.transform_at_time(time, quick=quick)
 
-        return 0.
+        # The bottom row of the matrix is the pole in J2000 coordinates
+        z_axis = xform.matrix.row_vector(2)
+        if self.retrograde:
+            z_axis = -z_axis
+
+        # Locate this pole relative to the invariable plane
+        z_axis_wrt_invar = self.invariable_matrix * z_axis
+
+        # The ascending node is 90 degrees ahead of the pole
+        (x, y, _) = z_axis_wrt_invar.to_scalars()
+
+        return (y.arctan2(x) + np.pi/2. + self.invariable_node_lon) % TWOPI
 
 ################################################################################
 # UNIT TESTS
@@ -214,36 +235,57 @@ class Test_PoleFrame(unittest.TestCase):
 
         # This invariable pole is aligned with the planet's pole, so this should
         # behave just like a RingFrame
-        pole = planet.transform_at_time(0.).matrix.inverse() * Vector3.ZAXIS
-        poleframe = PoleFrame(planet, pole, cache_size=0)
-        ringframe = RingFrame(planet, epoch=0.)
-        self.assertEqual(Frame.as_wayframe('IAU_MARS_POLE'), poleframe.wayframe)
+        for aries in (False, True):
+            pole = planet.transform_at_time(0.).matrix.inverse() * Vector3.ZAXIS
+            poleframe = PoleFrame(planet, pole, cache_size=0, aries=aries)
+            ringframe = RingFrame(planet, epoch=0., aries=aries)
+            self.assertEqual(Frame.as_wayframe('IAU_MARS_POLE'), poleframe.wayframe)
+            vectors = Vector3(np.random.rand(3,4,2,3)).unit()
 
-        vectors = Vector3(np.random.rand(3,4,2,3)).unit()
+            ring_vecs = ringframe.transform_at_time(0.).rotate(vectors)
+            pole_vecs = poleframe.transform_at_time(0.).rotate(vectors)
+            diffs = ring_vecs - pole_vecs
+            self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
 
-        ring_vecs = ringframe.transform_at_time(0.).rotate(vectors)
-        pole_vecs = poleframe.transform_at_time(0.).rotate(vectors)
-        diffs = ring_vecs - pole_vecs
-        self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
+            posvel = np.random.rand(3,4,2,6)
+            event = Event(0., (posvel[...,0:3], posvel[...,3:6]), 'SSB', 'J2000')
+            rotated = event.wrt_frame('IAU_MARS')
+            fixed   = event.wrt_frame(poleframe)
 
-        posvel = np.random.rand(3,4,2,6)
-        event = Event(0., (posvel[...,0:3], posvel[...,3:6]), 'SSB', 'J2000')
-        rotated = event.wrt_frame('IAU_MARS')
-        fixed   = event.wrt_frame(poleframe)
+            # Confirm Z axis is tied to planet's pole
+            diffs = Scalar(rotated.pos.vals[...,2]) - Scalar(fixed.pos.vals[...,2])
+            self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
 
-        # Confirm Z axis is tied to planet's pole
-        diffs = Scalar(rotated.pos.vals[...,2]) - Scalar(fixed.pos.vals[...,2])
-        self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
+            # Confirm X-axis is tied to the J2000 equator
+            xaxis = Event(0., Vector3.XAXIS, 'SSB', poleframe)
+            test = xaxis.wrt_frame('J2000').pos
+            self.assertTrue(abs(test.values[2]) < 1.e-15)
 
-        # Confirm X-axis is tied to the J2000 equator
-        xaxis = Event(0., Vector3.XAXIS, 'SSB', poleframe)
-        test = xaxis.wrt_frame('J2000').pos
-        self.assertTrue(abs(test.values[2]) < 1.e-15)
+            # Confirm it's the ascending node
+            xaxis = Event(0., (1,1.e-8,0), 'SSB', poleframe)
+            test = xaxis.wrt_frame('J2000').pos
+            self.assertTrue(test.values[2] > 0.)
 
-        # Confirm it's the ascending node
-        xaxis = Event(0., (1,1.e-8,0), 'SSB', poleframe)
-        test = xaxis.wrt_frame('J2000').pos
-        self.assertTrue(test.values[2] > 0.)
+        # Test reference angles, Aries = True vs. False
+        vectors = Vector3(np.random.rand(100,3)).unit()
+        poleframe1 = PoleFrame(planet, pole, cache_size=0, aries=True)
+        poleframe2 = PoleFrame(planet, pole, cache_size=0, aries=False)
+        pole1_vecs = poleframe1.transform_at_time(0.).rotate(vectors)
+        pole2_vecs = poleframe2.transform_at_time(0.).rotate(vectors)
+        (x1,y1,z1) = pole1_vecs.to_scalars()
+        (x2,y2,z2) = pole2_vecs.to_scalars()
+
+        # Z axes are the same
+        self.assertTrue(np.max(np.abs(z1.values - z2.values)) < 1.e-15)
+
+        # Longitudes have a fixed, nonzero offset
+        dlon = (y1.arctan2(x1) - y2.arctan2(x2)) % (2.*np.pi)
+        self.assertTrue(dlon[0] != 0.)
+        self.assertTrue(np.max(np.abs(dlon - dlon[0])) < 1.e-15)
+
+        diff = dlon[0] - poleframe1.invariable_node_lon
+        diff = (diff - np.pi) % (2.*np.pi) - np.pi
+        self.assertTrue(np.abs(diff) < 1.e-15)
 
         #### Now try for Neptune
 
@@ -252,67 +294,90 @@ class Test_PoleFrame(unittest.TestCase):
 
         # This invariable pole is aligned with the planet's pole, so this should
         # behave just like a RingFrame
-        pole = planet.transform_at_time(0.).matrix.inverse() * Vector3.ZAXIS
-        poleframe = PoleFrame(planet, pole, cache_size=0)
-        ringframe = RingFrame(planet, epoch=0.)
+        for aries in (False, True):
+            pole = planet.transform_at_time(0.).matrix.inverse() * Vector3.ZAXIS
+            poleframe = PoleFrame(planet, pole, cache_size=0, aries=aries)
+            ringframe = RingFrame(planet, epoch=0., aries=aries)
 
-        vectors = Vector3(np.random.rand(3,4,2,3)).unit()
+            vectors = Vector3(np.random.rand(3,4,2,3)).unit()
 
-        ring_vecs = ringframe.transform_at_time(0.).rotate(vectors)
-        pole_vecs = poleframe.transform_at_time(0.).rotate(vectors)
-        diffs = ring_vecs - pole_vecs
-        self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
+            ring_vecs = ringframe.transform_at_time(0.).rotate(vectors)
+            pole_vecs = poleframe.transform_at_time(0.).rotate(vectors)
+            diffs = ring_vecs - pole_vecs
+            self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
 
-        posvel = np.random.rand(3,4,2,6)
-        event = Event(0., (posvel[...,0:3], posvel[...,3:6]), 'SSB', 'J2000')
-        rotated = event.wrt_frame('IAU_NEPTUNE')
-        fixed   = event.wrt_frame(poleframe)
+            posvel = np.random.rand(3,4,2,6)
+            event = Event(0., (posvel[...,0:3], posvel[...,3:6]), 'SSB', 'J2000')
+            rotated = event.wrt_frame('IAU_NEPTUNE')
+            fixed   = event.wrt_frame(poleframe)
 
-        # Confirm Z axis is tied to planet's pole
-        diffs = Scalar(rotated.pos.vals[...,2]) - Scalar(fixed.pos.vals[...,2])
-        self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
+            # Confirm Z axis is tied to planet's pole
+            diffs = Scalar(rotated.pos.vals[...,2]) - Scalar(fixed.pos.vals[...,2])
+            self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
 
-        # Confirm X-axis is tied to the J2000 equator
-        xaxis = Event(0., Vector3.XAXIS, 'SSB', poleframe)
-        test = xaxis.wrt_frame('J2000').pos
-        self.assertTrue(abs(test.values[2]) < 1.e-15)
+            # Confirm X-axis is tied to the J2000 equator
+            xaxis = Event(0., Vector3.XAXIS, 'SSB', poleframe)
+            test = xaxis.wrt_frame('J2000').pos
+            self.assertTrue(abs(test.values[2]) < 1.e-15)
 
-        # Confirm it's the ascending node
-        xaxis = Event(0., (1,1.e-8,0), 'SSB', poleframe)
-        test = xaxis.wrt_frame('J2000').pos
-        self.assertTrue(test.values[2] > 0.)
+            # Confirm it's the ascending node
+            xaxis = Event(0., (1,1.e-8,0), 'SSB', poleframe)
+            test = xaxis.wrt_frame('J2000').pos
+            self.assertTrue(test.values[2] > 0.)
+
+        # Test reference angles, Aries = True vs. False
+        vectors = Vector3(np.random.rand(100,3)).unit()
+        poleframe1 = PoleFrame(planet, pole, cache_size=0, aries=True)
+        poleframe2 = PoleFrame(planet, pole, cache_size=0, aries=False)
+        pole1_vecs = poleframe1.transform_at_time(0.).rotate(vectors)
+        pole2_vecs = poleframe2.transform_at_time(0.).rotate(vectors)
+        (x1,y1,z1) = pole1_vecs.to_scalars()
+        (x2,y2,z2) = pole2_vecs.to_scalars()
+
+        # Z axes are the same
+        self.assertTrue(np.max(np.abs(z1.values - z2.values)) < 1.e-15)
+
+        # Longitudes have a fixed, nonzero offset
+        dlon = (y1.arctan2(x1) - y2.arctan2(x2)) % (2.*np.pi)
+        self.assertTrue(dlon[0] != 0.)
+        self.assertTrue(np.max(np.abs(dlon - dlon[0])) < 1.e-15)
+
+        diff = dlon[0] - poleframe1.invariable_node_lon
+        diff = (diff - np.pi) % (2.*np.pi) - np.pi
+        self.assertTrue(np.abs(diff) < 1.e-15)
 
         #### Neptune at multiple times, with actual polar precession
 
         times = Scalar(np.arange(1000) * 86400. * 365.)     # 1000 years
+        for aries in (False, True):
+            ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
+            dec = cspyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
+            pole = Vector3.from_ra_dec_length(ra,dec)
+            poleframe = PoleFrame(planet, pole, cache_size=0, aries=aries)
 
-        ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
-        dec = cspyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
-        pole = Vector3.from_ra_dec_length(ra,dec)
-        poleframe = PoleFrame(planet, pole, cache_size=0)
+            # Make sure Z-axis tracks Neptune pole
+            pole_vecs = poleframe.transform_at_time(times).unrotate(Vector3.ZAXIS)
+            test_vecs = planet.transform_at_time(times).unrotate(Vector3.ZAXIS)
+            diffs = pole_vecs - test_vecs
+            self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
 
-        # Make sure Z-axis tracks Neptune pole
-        pole_vecs = poleframe.transform_at_time(times).unrotate(Vector3.ZAXIS)
-        test_vecs = planet.transform_at_time(times).unrotate(Vector3.ZAXIS)
-        diffs = pole_vecs - test_vecs
-        self.assertTrue(np.max(np.abs(diffs.values)) < 1.e-15)
+            # Make sure Z-axis circles the pole at uniform distance
+            seps = pole_vecs.sep(pole)
+            sep_mean = seps.mean()
+            self.assertTrue(np.max(np.abs(seps.values - sep_mean)) < 3.e-5)
 
-        # Make sure Z-axis circles the pole at uniform distance
-        seps = pole_vecs.sep(pole)
-        sep_mean = seps.mean()
-        self.assertTrue(np.max(np.abs(seps.values - sep_mean)) < 3.e-5)
+            # Make sure the X-axis stays close to the ecliptic
+            if not aries:
+                node_vecs = poleframe.transform_at_time(times).unrotate(Vector3.XAXIS)
+                min_node_z = np.min(node_vecs.values[:,2])
+                max_node_z = np.max(node_vecs.values[:,2])
+                self.assertTrue(min_node_z > -0.0062)
+                self.assertTrue(max_node_z <  0.0062)
+                self.assertTrue(abs(min_node_z + max_node_z) < 1.e-8)
 
-        # Make sure the X-axis stays close to the ecliptic
-        node_vecs = poleframe.transform_at_time(times).unrotate(Vector3.XAXIS)
-        min_node_z = np.min(node_vecs.values[:,2])
-        max_node_z = np.max(node_vecs.values[:,2])
-        self.assertTrue(min_node_z > -0.0062)
-        self.assertTrue(max_node_z <  0.0062)
-        self.assertTrue(abs(min_node_z + max_node_z) < 1.e-8)
-
-        # Make sure the X-axis stays in a generally fixed direction
-        diffs = node_vecs - node_vecs[0]
-        self.assertTrue(diffs.norm().max() < 0.02)
+            # Make sure the X-axis stays in a generally fixed direction
+            diffs = node_vecs - node_vecs[0]
+            self.assertTrue(diffs.norm().max() < 0.02)
 
         #### Test cache
 

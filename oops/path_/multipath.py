@@ -43,7 +43,7 @@ class MultiPath(Path):
         self.path_id = id
 
         if self.path_id == '+':
-            self.path_id = self.paths[0].path_id + '+'
+            self.path_id = self.paths[0].path_id + '+others'
 
         # Update waypoint and path_id; register only if necessary
         self.register()
@@ -90,7 +90,7 @@ class MultiPath(Path):
         elif np.all(mask):
             mask = True
 
-        return Event(Scalar(time.values,mask), (pos,vel),
+        return Event(Scalar(time.values, mask), (pos,vel),
                             self.origin, self.frame)
 
 ################################################################################
@@ -122,7 +122,7 @@ class Test_MultiPath(unittest.TestCase):
 
         test = MultiPath([sun,earth,moon], "SSB")
 
-        self.assertEqual(test.path_id, "SUN+")
+        self.assertEqual(test.path_id, "SUN+others")
         self.assertEqual(test.shape, (3,))
 
         # Single time

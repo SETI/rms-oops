@@ -38,10 +38,10 @@ class Kepler(Path, Fittable):
     """
 
     PACKRAT_ARGS = ['planet', 'epoch', 'elements', 'observer', 'wobbles',
-                    'path_id']
+                    'frame', 'path_id']
 
     def __init__(self, body, epoch, elements=None, observer=None, wobbles=(),
-                       id=None):
+                       frame=None, id=None):
         """Constructor for a Kepler path.
 
         Input:
@@ -87,6 +87,10 @@ class Kepler(Path, Fittable):
                         and 'i2d' for a forced inclination. Use 'pole' for a
                         Laplace plane offset).
 
+            frame       an optional frame in which the orbit is defined. By
+                        default, this is the ring_frame of the planet. Ignored
+                        if observer is defined.
+
             id          the name under which to register the path.
         """
 
@@ -117,13 +121,13 @@ class Kepler(Path, Fittable):
         if observer is None:
             self.observer = None
             self.origin = self.planet.path
-            self.frame  = body.ring_frame
+            self.frame  = frame or body.ring_frame
             self.to_j2000 = Matrix3.IDENTITY
         else:
             self.observer = Path.as_path(observer)
             assert self.observer.shape == ()
             self.origin = self.observer
-            self.frame = Frame.J2000
+            self.frame = frame or Frame.J2000
             frame = self.frame.wrt(body.ring_frame)
             self.to_j2000 = frame.transform_at_time(epoch).matrix
 
@@ -751,6 +755,39 @@ class Kepler(Path, Fittable):
         # Otherwise, return the event WRT the observer
         (pos, vel) = self.xyz_observed(time, quick, partials, planet_event)
         return Event(time, (pos, vel), self.observer, Frame.J2000)
+
+    ########################################
+
+    def node_at_time(self, time):
+        """Return the longitude of ascending node at the specified time. Wobbles
+        are ignored. The angle is a positive rotation about the planet's ring
+        frame."""
+
+        global NODE0, DNODE
+
+        time = Scalar.as_scalar(time)
+        return self.elements[NODE0] + (time-self.epoch) * self.elements[DNODE]
+
+    def pole_at_time(self, time):
+        """Return the J2000 vector pointing toward the orbit's pole at the
+        specified time. Wobbles are ignored."""
+
+        xform = self.frame_wrt_j2000.transform_at_time(time)
+        x_axis_in_j2000 = xform.unrotate(Vector3.XAXIS)
+        y_axis_in_j2000 = xform.unrotate(Vector3.YAXIS)
+        z_axis_in_j2000 = xform.unrotate(Vector3.ZAXIS)
+
+        node = self.node_at_time(time)
+        cos_node = np.cos(node)
+        sin_node = np.sin(node)
+        node_in_j2000 = (cos_node * x_axis_in_j2000 +
+                         sin_node * y_axis_in_j2000)
+
+        # This vector is 90 degrees behind of the node in the reference equator
+        target_in_j2000 = ( sin_node * x_axis_in_j2000 +
+                           -cos_node * y_axis_in_j2000)
+
+        return self.cos_i * z_axis_in_j2000 + self.sin_i * target_in_j2000
 
     ####################################################
     # Override for the case where observer != None
