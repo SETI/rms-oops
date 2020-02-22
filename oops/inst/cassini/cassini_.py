@@ -58,9 +58,6 @@ class Cassini(object):
     CK_DICT   = {}      # Dictionary keyed by filespec returns kernel info
                         # object, but only if loaded.
 
-    # SPKs are now furnished all at once via a metakernel. DISABLED
-    SPK_SUBPATH = os.path.join("Cassini", "SPK-reconstructed")
-    SPK_PREDICT = os.path.join("Cassini", "SPK-predicted")
     SPK_LOADED  = np.zeros(MONTHS, dtype="bool")
     SPK_LIST    = np.empty(MONTHS, dtype="object")
     SPK_DICT    = {}
@@ -155,7 +152,6 @@ class Cassini(object):
 
         Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                    Cassini.SPK_DICT)
-# DISABLED  pass    # SPKs are now loaded all at once via a metakernel
 
     @staticmethod
     def load_spks(t0, t1):
@@ -164,7 +160,6 @@ class Cassini(object):
 
         Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                      Cassini.SPK_DICT)
-# DISABLED  pass    # SPKs are now loaded all at once via a metakernel
 
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
@@ -241,8 +236,11 @@ class Cassini(object):
         spicedb.open_db()
 
         # Furnish instruments and frames
-        kernels = spicedb.furnish_inst(-82, inst=instruments, asof=asof,
-                                            fast=True)
+        _ = spicedb.furnish_inst(-82, inst=instruments, asof=asof)
+
+        # Always load the "gapfill" CK and the Tiscareno moon kernels
+        _ = spicedb.furnish_ck(-82, name="CAS-CK-GAPFILL")
+        _ = spicedb.furnish_pck(name="SAT-PCK-MST")
 
         spicedb.close_db()
 

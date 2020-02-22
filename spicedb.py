@@ -77,7 +77,7 @@ SPICE_PATH = None
 TABLE_NAME = "SPICEDB"
 COLUMN_NAMES = ["KERNEL_NAME", "KERNEL_VERSION", "KERNEL_TYPE",
                 "FILESPEC", "START_TIME", "STOP_TIME", "RELEASE_DATE",
-                "SPICE_ID", "LOAD_PRIORITY", "FULL_NAME", "FILE_NO"]
+                "SPICE_ID", "LOAD_PRIORITY", "FILE_NO"]
 
 # Derived constants
 COLUMN_STRING = ", ".join(COLUMN_NAMES)
@@ -91,7 +91,6 @@ STOP_TIME_INDEX      = COLUMN_NAMES.index("STOP_TIME")
 RELEASE_DATE_INDEX   = COLUMN_NAMES.index("RELEASE_DATE")
 SPICE_ID_INDEX       = COLUMN_NAMES.index("SPICE_ID")
 LOAD_PRIORITY_INDEX  = COLUMN_NAMES.index("LOAD_PRIORITY")
-FULL_NAME_INDEX      = COLUMN_NAMES.index("FULL_NAME")
 FILE_NO_INDEX        = COLUMN_NAMES.index("FILE_NO")
 
 KERNEL_TYPE_SORT_DICT = {'LSK': 0, 'SCLK': 1, 'FK': 2, 'IK': 3, 'PCK': 4,
@@ -589,7 +588,7 @@ def _query_kernels(kernel_type, name=None, body=None, time=None, asof=None,
         name        a SQL match string for the name of the kernel; use "%" for
                     multiple wildcards and "_" for a single wildcard.
 
-        body        one or more SPICE body IDs.
+        body        zero or more SPICE body IDs.
 
         time        a tuple consisting of a start and stop time, each expressed
                     as a string in ISO format, "yyyy-mm-ddThh:mm:ss".
@@ -691,7 +690,9 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
         else:
             bodies = len(body)
 
-            if bodies == 1:
+            if bodies == 0:
+                pass
+            elif bodies == 1:
                 query_list += ["AND SPICE_ID = ", str(body[0]), "\n"]
             else:
                 query_list += ["AND SPICE_ID in (", str(list(body))[1:-1],
@@ -719,7 +720,7 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
         path = path.replace('\\', '/')  # Must change Windows file separator
         query_list += ["AND FILESPEC LIKE '%", path, "%'\n"]
 
-    # Insert after constraint except on second pass
+    # Insert 'after' constraint except on second pass
     if after is not None:
         if type(after) != str:
             after = julian.ymdhms_format_from_tai(after, sep="T", digits=0,
@@ -1990,6 +1991,7 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
 
 ################################################################################
 # DEPRECATED: Special kernel loader for Cassini
+# Deleted 2/22/2020
 ################################################################################
 
 def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
@@ -2120,8 +2122,8 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
 class test_KernelInfo(unittest.TestCase):
 
   # For reference...
-  # ['KERNEL_NAME','KERNEL_VERSION', 'KERNEL_TYPE', 'FILESPEC', 'START_TIME',
-  #  'STOP_TIME', 'RELEASE_DATE', 'SPICE_ID', 'LOAD_PRIORITY']
+  # ['KERNEL_NAME','KERNEL_VERSION', 'KERNEL_TYPE', 'FILESPEC',
+  #  'START_TIME', 'STOP_TIME', 'RELEASE_DATE', 'SPICE_ID', 'LOAD_PRIORITY']
 
   def runTest(self):
 
@@ -2705,8 +2707,8 @@ class test_spicedb(unittest.TestCase):
         ########
         ABSPATH_LIST = []
         kernels = furnish_spk([-82], asof='2013-12-13', time=None)
-        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-134]'])
-        self.assertEqual(len(ABSPATH_LIST), 134)
+        self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-133]'])
+        self.assertEqual(len(ABSPATH_LIST), 133)
         self.assertTrue(ABSPATH_LIST[ 0].endswith('/000331R_SK_LP0_V1P32.bsp'))
         self.assertTrue(ABSPATH_LIST[-1].endswith('/131212R_SCPSE_13273_13314.bsp'))
 
@@ -2830,10 +2832,10 @@ class test_spicedb(unittest.TestCase):
         ########################################################################
 
         ABSPATH_LIST = []
-        kernels = furnish_inst(-82, inst=[], asof='2014-03-10')
-        self.assertEqual(kernels, ['CAS-SCLK-00158', 'CAS-FK-V04'])
+        kernels = furnish_inst(-82, inst=[], asof='2017-06-01')
+        self.assertEqual(kernels, ['CAS-SCLK-00171', 'CAS-FK-V04'])
         self.assertEqual(len(ABSPATH_LIST), 3)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00158.tsc'))
+        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00171.tsc'))
         self.assertTrue(ABSPATH_LIST[1].endswith('/cas_v40.tf'))
         self.assertTrue(ABSPATH_LIST[2].endswith('/cas_status_v04.tf'))
 
@@ -2846,11 +2848,11 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        kernels = furnish_inst(-82, inst='ISS', asof='2014-03-10')
-        self.assertEqual(kernels, ['CAS-SCLK-00158', 'CAS-FK-V04',
+        kernels = furnish_inst(-82, inst='ISS', asof='2017-06-01')
+        self.assertEqual(kernels, ['CAS-SCLK-00171', 'CAS-FK-V04',
                                    'CAS-IK-ISS-V10'])
         self.assertEqual(len(ABSPATH_LIST), 4)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00158.tsc'))
+        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00171.tsc'))
         self.assertTrue(ABSPATH_LIST[1].endswith('/cas_v40.tf'))
         self.assertTrue(ABSPATH_LIST[2].endswith('/cas_status_v04.tf'))
         self.assertTrue(ABSPATH_LIST[3].endswith('/cas_iss_v10.ti'))
@@ -2864,7 +2866,7 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        kernels = furnish_inst(-82, inst=None, asof='2014-03-10')
+        kernels = furnish_inst(-82, inst=None, asof='2017-06-01')
         for file in ABSPATH_LIST[3:]:      # skip over one .tsc and two .tf files
             self.assertTrue(file.endswith('.ti'))
 
@@ -2877,7 +2879,7 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        kernels = furnish_inst(-31, inst='ISS', asof='2014-03-10')
+        kernels = furnish_inst(-31, inst='ISS', asof='2017-06-01')
         self.assertEqual(kernels, ['VG1-SCLK-00019', 'VG1-FK-V02',
                                    'VG1-IK-ISSNA-V02', 'VG1-IK-ISSWA-V01'])
 
@@ -2889,13 +2891,13 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(F1, ABSPATH_LIST)
 
         ########################################################################
-        # furnish_ck(ids, time=None, asof=None, after=None, redo=True)
+        # furnish_ck(ids, name=None, time=None, asof=None, after=None, redo=True)
         ########################################################################
 
         ABSPATH_LIST = []
-        kernels = furnish_ck(-82)
-        self.assertEqual(kernels[0], 'CAS-CK-PREDICTED-V01[1-104]')
-        self.assertTrue(kernels[1].startswith('CAS-CK-JUP-V01[1-'))
+        kernels = furnish_ck(-82, name="%PREDICTED%")
+        self.assertEqual(kernels[0], 'CAS-CK-PREDICTED-V01[1]')
+        self.assertTrue(kernels[1], 'CAS-CK-PREDICTED-V02[1-104]')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2906,11 +2908,22 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        kernels = furnish_ck(-82, asof='2014-02-18')
-        self.assertEqual(kernels, ['CAS-CK-PREDICTED-V01[1-81]',
-                                   'CAS-CK-JUP-V01[1-64]',
-                                   'CAS-CK-RECONSTRUCTED-V01[1-744]'])
-        self.assertEqual(len(ABSPATH_LIST), 81+64+744)
+        kernels = furnish_ck(-82, name="%PREDICTED%",
+                                  time=('2004-02-01','2018-01-01'))
+        self.assertTrue(kernels[0], 'CAS-CK-PREDICTED-V02[1-104]')
+
+        F1 = ABSPATH_LIST
+        k1 = kernels
+        ABSPATH_LIST = []
+        kernels = furnish_by_name(k1)
+        self.assertEqual(k1, kernels)
+        self.assertEqual(F1, ABSPATH_LIST)
+
+        ########
+        ABSPATH_LIST = []
+        kernels = furnish_ck(-82, asof='2014-02-18', name="%PREDICTED%")
+        self.assertEqual(kernels, ['CAS-CK-PREDICTED-V01[1-81]'])
+        self.assertEqual(len(ABSPATH_LIST), 81)
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2923,47 +2936,37 @@ class test_spicedb(unittest.TestCase):
         ABSPATH_LIST = []
         kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
                                   asof='2014-01-01')
-        self.assertEqual(kernels, ['CAS-CK-PREDICTED-V01[10,11]',
-                                   'CAS-CK-RECONSTRUCTED-V01[69-75]'])
-        self.assertEqual(len(ABSPATH_LIST), 2+7)
-        self.assertTrue(ABSPATH_LIST[2].endswith('/05002_05007ra.bc'))
-        self.assertTrue(ABSPATH_LIST[3].endswith('/05007_05012ra.bc'))
-        self.assertTrue(ABSPATH_LIST[4].endswith('/05012_05017ra.bc'))
-        self.assertTrue(ABSPATH_LIST[5].endswith('/05017_05022ra.bc'))
-        self.assertTrue(ABSPATH_LIST[6].endswith('/05022_05027ra.bc'))
-        self.assertTrue(ABSPATH_LIST[7].endswith('/04361_05002ra.bc'))
-        self.assertTrue(ABSPATH_LIST[8].endswith('/05027_05032ra.bc'))
+        self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[69-75]'])
+        self.assertEqual(len(ABSPATH_LIST), 7)
 
-        F1 = ABSPATH_LIST
-        k1 = kernels
-        ABSPATH_LIST = []
-        kernels = furnish_by_name(k1, time=('2005-01-01','2005-02-01'))
-        self.assertEqual(k1, kernels)
-        self.assertEqual(F1, ABSPATH_LIST)
-
-        ABSPATH_LIST = []
-        kernels = furnish_by_name(k1)
-        self.assertEqual(k1, kernels)
-        self.assertEqual(F1, ABSPATH_LIST)
+        filenames = list(ABSPATH_LIST)
+        filenames.sort()
+        self.assertTrue(filenames[0].endswith('/04361_05002ra.bc'))
+        self.assertTrue(filenames[1].endswith('/05002_05007ra.bc'))
+        self.assertTrue(filenames[2].endswith('/05007_05012ra.bc'))
+        self.assertTrue(filenames[3].endswith('/05012_05017ra.bc'))
+        self.assertTrue(filenames[4].endswith('/05017_05022ra.bc'))
+        self.assertTrue(filenames[5].endswith('/05022_05027ra.bc'))
+        self.assertTrue(filenames[6].endswith('/05027_05032ra.bc'))
 
         ########
         ABSPATH_LIST = []
         kernels = furnish_ck(-82, time=('2005-01-01','2005-02-01'),
-                                  asof='2005-02-01')
-        self.assertEqual(kernels, ['CAS-CK-RECONSTRUCTED-V01[69-73]'])
-        self.assertEqual(len(ABSPATH_LIST), 5)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/05002_05007ra.bc'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/05007_05012ra.bc'))
-        self.assertTrue(ABSPATH_LIST[2].endswith('/05012_05017ra.bc'))
-        self.assertTrue(ABSPATH_LIST[3].endswith('/05017_05022ra.bc'))
-        self.assertTrue(ABSPATH_LIST[4].endswith('/05022_05027ra.bc'))
+                                  asof='2014-01-01', name="%PREDICTED%")
+        self.assertEqual(kernels, ['CAS-CK-PREDICTED-V01[10,11]'])
+        self.assertEqual(len(ABSPATH_LIST), 2)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/04351_05022ph_fsiv.bc'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/05022_05058pj_fsiv.bc'))
 
         F1 = ABSPATH_LIST
-        k1 = kernels
+        k1 = ['CAS-CK-PREDICTED-V01[9-20]']
         ABSPATH_LIST = []
         kernels = furnish_by_name(k1, time=('2005-01-01','2005-02-01'))
-        self.assertEqual(k1, kernels)
         self.assertEqual(F1, ABSPATH_LIST)
+
+        self.assertEqual(len(ABSPATH_LIST), 2)
+        self.assertTrue(ABSPATH_LIST[0].endswith('/04351_05022ph_fsiv.bc'))
+        self.assertTrue(ABSPATH_LIST[1].endswith('/05022_05058pj_fsiv.bc'))
 
         ########
         ABSPATH_LIST = []
@@ -3063,8 +3066,19 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(len(FURNISHED_NAMES['SPK']), 0)
 
         ########
-        kernels1 = furnish_solar_system(asof='2014-03-10')
-        self.assertEqual(kernels, kernels1)
+        kernels1 = furnish_solar_system(asof='2014-03-10')  # no time limits
+        self.assertEqual(kernels[:6], kernels1[:6])     # Non-SPKs are the same
+        self.assertEqual(kernels[-1], 'DE430')
+
+        self.assertTrue(kernels.index('JUP300') < kernels.index('JUP310'))
+        self.assertTrue(kernels.index('SAT357') < kernels.index('SAT360'))
+        self.assertTrue(kernels.index('SAT360') < kernels.index('SAT362'))
+        self.assertTrue(kernels.index('SAT362') < kernels.index('SAT363'))
+        self.assertTrue(kernels.index('URA091') < kernels.index('URA111'))
+        self.assertTrue(kernels.index('URA111') < kernels.index('URA112'))
+        self.assertTrue(kernels.index('NEP077') < kernels.index('NEP081'))
+        self.assertTrue(kernels.index('NEP081') < kernels.index('NEP087'))
+        self.assertTrue(kernels.index('NEP087') < kernels.index('NEP086'))
 
         ########################################################################
         # furnish_cassini_kernels(start_time, stop_time, instrument=None,
@@ -3074,147 +3088,148 @@ class test_spicedb(unittest.TestCase):
         # furnished_names(types=None)
         ########################################################################
 
-        unload_by_type()
-        kernels = furnish_cassini_kernels('2010-01-01', '2010-04-01',
-                                          instrument='ISS', asof='2014-03-10')
-
-        self.assertIn('NAIF-LSK-0010', kernels[0:1])
-        self.assertIn('CAS-SCLK-00158', kernels[1:2])
-        self.assertIn('CAS-FK-V04', kernels[2:4])
-        self.assertIn('CAS-IK-ISS-V10', kernels[2:4])
-        self.assertIn('CAS-FK-ROCKS-V18', kernels[4:8])
-        self.assertIn('CAS-PCK-ROCKS-2011-01-21', kernels[4:8])
-        self.assertIn('CAS-PCK-2014-02-19', kernels[4:8])
-        self.assertIn('NAIF-PCK-00010-EDIT-V01', kernels[4:8])
-        self.assertIn('SAT357', kernels[8:12])
-        self.assertIn('SAT360', kernels[8:12])
-        self.assertIn('SAT362', kernels[8:12])
-        self.assertIn('SAT363', kernels[8:12])
-        self.assertIn('CAS-SPK-RECONSTRUCTED-V01[90-94]', kernels[12:13])
-        self.assertIn('DE430', kernels[13:14])
-        self.assertIn('CAS-CK-RECONSTRUCTED-V01[438-456]', kernels[-1:])
-
-        self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
-        self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00158'])
-        self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
-        self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10'])
-
-        self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
-        self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
-        self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
-        self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
-        self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
-
-        self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('SAT363', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('CAS-SPK-RECONSTRUCTED-V01', FURNISHED_NAMES['SPK'][4:5])
-        self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
-        self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
-                         range(90,95))
-        self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 5 + 5)
-
-        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
-                                                 'CAS-CK-RECONSTRUCTED-V01'])
-        self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
-                         range(59,62))
-        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
-                         range(438,457))
-        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 457 - 438 + 62 - 59)
-
-        ########
-        kernels1 = furnish_cassini_kernels('2010-03-01', '2010-06-01',
-                                          instrument='VIMS', asof='2014-03-10')
-
-        self.assertIn('NAIF-LSK-0010', kernels1[0:1])
-        self.assertIn('CAS-SCLK-00158', kernels1[1:2])
-        self.assertIn('CAS-FK-V04', kernels1[2:4])
-        self.assertIn('CAS-IK-VIMS-V06', kernels1[2:4])
-        self.assertIn('CAS-FK-ROCKS-V18', kernels1[4:8])
-        self.assertIn('CAS-PCK-ROCKS-2011-01-21', kernels1[4:8])
-        self.assertIn('CAS-PCK-2014-02-19', kernels1[4:8])
-        self.assertIn('NAIF-PCK-00010-EDIT-V01', kernels1[4:8])
-        self.assertIn('SAT357', kernels1[8:12])
-        self.assertIn('SAT360', kernels1[8:12])
-        self.assertIn('SAT362', kernels1[8:12])
-        self.assertIn('SAT363', kernels1[8:12])
-        self.assertIn('CAS-SPK-RECONSTRUCTED-V01[93-97]', kernels1[12:13])
-        self.assertIn('DE430', kernels1[13:14])
-        self.assertIn('CAS-CK-RECONSTRUCTED-V01[450-468]', kernels1[-1:])
-
-        self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
-        self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00158'])
-        self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
-        self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10',
-                                                 'CAS-IK-VIMS-V06'])
-
-        self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
-        self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
-        self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
-        self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
-        self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
-
-        self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('SAT363', FURNISHED_NAMES['SPK'][:4])
-        self.assertIn('CAS-SPK-RECONSTRUCTED-V01', FURNISHED_NAMES['SPK'][4:5])
-        self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
-        self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
-                         range(90,98))
-        self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 8 + 5)
-
-        self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
-                                                 'CAS-CK-RECONSTRUCTED-V01'])
-        self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
-                         range(59,64))
-        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
-                         range(438,469))
-        self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 469 - 438 + 64 - 59)
-        # SPK and CK file_no lists get merged
-
-        ########
-        self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-PREDICTED-V01[59-63]',
-                          'CAS-CK-RECONSTRUCTED-V01[438-468]'])
-
-        unload_by_name('CAS-CK-RECONSTRUCTED-V01[440]')
-
-        self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-PREDICTED-V01[59-63]',
-                          'CAS-CK-RECONSTRUCTED-V01[438,439,441-468]'])
-        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
-                         [438,439] + range(441,469))
-
-        unload_by_name('CAS-CK-RECONSTRUCTED-V01[1-438]')
-
-        self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-PREDICTED-V01[59-63]',
-                          'CAS-CK-RECONSTRUCTED-V01[439,441-468]'])
-        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
-                         [439] + range(441,469))
-
-        unload_by_name('CAS-CK-RECONSTRUCTED-V01[439,442-465]')
-
-        self.assertEqual(furnished_names('CK'),
-                         ['CAS-CK-PREDICTED-V01[59-63]',
-                          'CAS-CK-RECONSTRUCTED-V01[441,466-468]'])
-        self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
-                         [441] + range(466,469))
-
-        unload_by_name('CAS-CK-RECONSTRUCTED-V01[441-468]')
-
-        self.assertEqual(furnished_names('CK'), ['CAS-CK-PREDICTED-V01[59-63]'])
-        self.assertNotIn('CAS-CK-RECONSTRUCTED-V01', FURNISHED_FILENOS)
-
-        self.assertEqual(furnished_names('SPK'),
-                         ['SAT357', 'SAT360', 'SAT362', 'SAT363',
-                          'CAS-SPK-RECONSTRUCTED-V01[90-97]', 'DE430'])
-
-        self.assertEqual(furnished_names(['IK','FK','LSK','SCLK']),
-                         ['CAS-IK-ISS-V10', 'CAS-IK-VIMS-V06',
-                          'CAS-FK-V04', 'NAIF-LSK-0010', 'CAS-SCLK-00158'])
+# Function disabled 2/22/2020
+#         unload_by_type()
+#         kernels = furnish_cassini_kernels('2010-01-01', '2010-04-01',
+#                                           instrument='ISS', asof='2014-03-10')
+# 
+#         self.assertIn('NAIF-LSK-0010', kernels[0:1])
+#         self.assertIn('CAS-SCLK-00171', kernels[1:2])
+#         self.assertIn('CAS-FK-V04', kernels[2:4])
+#         self.assertIn('CAS-IK-ISS-V10', kernels[2:4])
+#         self.assertIn('CAS-FK-ROCKS-V18', kernels[4:8])
+#         self.assertIn('CAS-PCK-ROCKS-2011-01-21', kernels[4:8])
+#         self.assertIn('CAS-PCK-2014-02-19', kernels[4:8])
+#         self.assertIn('NAIF-PCK-00010-EDIT-V01', kernels[4:8])
+#         self.assertIn('SAT357', kernels[8:12])
+#         self.assertIn('SAT360', kernels[8:12])
+#         self.assertIn('SAT362', kernels[8:12])
+#         self.assertIn('SAT363', kernels[8:12])
+#         self.assertIn('CAS-SPK-RECONSTRUCTED-V01[90-94]', kernels[12:13])
+#         self.assertIn('DE430', kernels[13:14])
+#         self.assertIn('CAS-CK-RECONSTRUCTED-V01[438-456]', kernels[-1:])
+# 
+#         self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
+#         self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00171'])
+#         self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
+#         self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10'])
+# 
+#         self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
+#         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
+#         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
+#         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
+#         self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
+# 
+#         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('SAT363', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('CAS-SPK-RECONSTRUCTED-V01', FURNISHED_NAMES['SPK'][4:5])
+#         self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
+#         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
+#                          range(90,95))
+#         self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 5 + 5)
+# 
+#         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
+#                                                  'CAS-CK-RECONSTRUCTED-V01'])
+#         self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
+#                          range(59,62))
+#         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+#                          range(438,457))
+#         self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 457 - 438 + 62 - 59)
+# 
+#         ########
+#         kernels1 = furnish_cassini_kernels('2010-03-01', '2010-06-01',
+#                                           instrument='VIMS', asof='2014-03-10')
+# 
+#         self.assertIn('NAIF-LSK-0010', kernels1[0:1])
+#         self.assertIn('CAS-SCLK-00171', kernels1[1:2])
+#         self.assertIn('CAS-FK-V04', kernels1[2:4])
+#         self.assertIn('CAS-IK-VIMS-V06', kernels1[2:4])
+#         self.assertIn('CAS-FK-ROCKS-V18', kernels1[4:8])
+#         self.assertIn('CAS-PCK-ROCKS-2011-01-21', kernels1[4:8])
+#         self.assertIn('CAS-PCK-2014-02-19', kernels1[4:8])
+#         self.assertIn('NAIF-PCK-00010-EDIT-V01', kernels1[4:8])
+#         self.assertIn('SAT357', kernels1[8:12])
+#         self.assertIn('SAT360', kernels1[8:12])
+#         self.assertIn('SAT362', kernels1[8:12])
+#         self.assertIn('SAT363', kernels1[8:12])
+#         self.assertIn('CAS-SPK-RECONSTRUCTED-V01[93-97]', kernels1[12:13])
+#         self.assertIn('DE430', kernels1[13:14])
+#         self.assertIn('CAS-CK-RECONSTRUCTED-V01[450-468]', kernels1[-1:])
+# 
+#         self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
+#         self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00171'])
+#         self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
+#         self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10',
+#                                                  'CAS-IK-VIMS-V06'])
+# 
+#         self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
+#         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
+#         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
+#         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
+#         self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
+# 
+#         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('SAT363', FURNISHED_NAMES['SPK'][:4])
+#         self.assertIn('CAS-SPK-RECONSTRUCTED-V01', FURNISHED_NAMES['SPK'][4:5])
+#         self.assertIn('DE430', FURNISHED_NAMES['SPK'][5:6])
+#         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
+#                          range(90,98))
+#         self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 8 + 5)
+# 
+#         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
+#                                                  'CAS-CK-RECONSTRUCTED-V01'])
+#         self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
+#                          range(59,64))
+#         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+#                          range(438,469))
+#         self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 469 - 438 + 64 - 59)
+#         # SPK and CK file_no lists get merged
+# 
+#         ########
+#         self.assertEqual(furnished_names('CK'),
+#                          ['CAS-CK-PREDICTED-V01[59-63]',
+#                           'CAS-CK-RECONSTRUCTED-V01[438-468]'])
+# 
+#         unload_by_name('CAS-CK-RECONSTRUCTED-V01[440]')
+# 
+#         self.assertEqual(furnished_names('CK'),
+#                          ['CAS-CK-PREDICTED-V01[59-63]',
+#                           'CAS-CK-RECONSTRUCTED-V01[438,439,441-468]'])
+#         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+#                          [438,439] + range(441,469))
+# 
+#         unload_by_name('CAS-CK-RECONSTRUCTED-V01[1-438]')
+# 
+#         self.assertEqual(furnished_names('CK'),
+#                          ['CAS-CK-PREDICTED-V01[59-63]',
+#                           'CAS-CK-RECONSTRUCTED-V01[439,441-468]'])
+#         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+#                          [439] + range(441,469))
+# 
+#         unload_by_name('CAS-CK-RECONSTRUCTED-V01[439,442-465]')
+# 
+#         self.assertEqual(furnished_names('CK'),
+#                          ['CAS-CK-PREDICTED-V01[59-63]',
+#                           'CAS-CK-RECONSTRUCTED-V01[441,466-468]'])
+#         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
+#                          [441] + range(466,469))
+# 
+#         unload_by_name('CAS-CK-RECONSTRUCTED-V01[441-468]')
+# 
+#         self.assertEqual(furnished_names('CK'), ['CAS-CK-PREDICTED-V01[59-63]'])
+#         self.assertNotIn('CAS-CK-RECONSTRUCTED-V01', FURNISHED_FILENOS)
+# 
+#         self.assertEqual(furnished_names('SPK'),
+#                          ['SAT357', 'SAT360', 'SAT362', 'SAT363',
+#                           'CAS-SPK-RECONSTRUCTED-V01[90-97]', 'DE430'])
+# 
+#         self.assertEqual(furnished_names(['IK','FK','LSK','SCLK']),
+#                          ['CAS-IK-ISS-V10', 'CAS-IK-VIMS-V06',
+#                           'CAS-FK-V04', 'NAIF-LSK-0010', 'CAS-SCLK-00171'])
 
         ########################################################################
         # Test translator
