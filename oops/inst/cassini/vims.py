@@ -831,20 +831,24 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
 
 ################################################################################
 
-def initialize(ck='reconstructed', planets=None):
+def initialize(ck='reconstructed', planets=None, asof=None,
+               spk='reconstructed'):
     """Initialize key information about the VIMS instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
 
     Input:
-        ck      'predicted' or 'reconstructed' depending on which C kernels
-                are to be used. Default is 'reconstructed'.
+        ck,spk  'predicted', 'reconstructed', or 'none', depending on
+                which kernels are to be used. Defaults are 'reconstructed'.
+                Use 'none' if the kernels are to be managed manually.
         planets A list of planets to pass to define_solar_system. None or
                 0 means all.
+        asof    Only use SPICE kernels that existed before this date;
+                None to ignore.
     """
 
-    VIMS.initialize(ck, planets)
+    VIMS.initialize(ck=ck, spk=spk, asof=asof, planets=planets)
 
 ################################################################################
 
@@ -855,23 +859,27 @@ class VIMS(object):
     instrument_kernel = None
 
     @staticmethod
-    def initialize(ck='reconstructed', planets=None):
+    def initialize(ck='reconstructed', planets=None, asof=None,
+                   spk='reconstructed'):
         """Fills in key information about the VIS and IR channels.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
 
         Input:
-            ck      'predicted' or 'reconstructed' depending on which C kernels
-                    are to be used. Default is 'reconstructed'.
+            ck,spk  'predicted', 'reconstructed', or 'none', depending on
+                    which kernels are to be used. Defaults are 'reconstructed'.
+                    Use 'none' if the kernels are to be managed manually.
             planets A list of planets to pass to define_solar_system. None or
                     0 means all.
+            asof    Only use SPICE kernels that existed before this date;
+                    None to ignore.
         """
 
         # Quick exit after first call
         if VIMS.initialized: return
 
-        Cassini.initialize(ck, planets)
+        Cassini.initialize(ck=ck, spk=spk, asof=asof, planets=planets)
         Cassini.load_instruments()
 
         # Load the instrument kernel

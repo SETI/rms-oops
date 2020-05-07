@@ -30,7 +30,7 @@ oops.spice.load_leap_seconds()
 
 # We load CK and SPK files on a very rough month-by-month basis. This is simpler
 # than a more granular approach involving detailed calendar calculations. We
-# divide the period October 1, 1997 to January 1, 2018 up into 243 "months" of
+# divide the period October 1, 1997 to October 1, 2017 up into 240 "months" of
 # equal length. Given any TDB, we quickly determine the month within which it
 # falls. Each month is associated with a list of kernels that should be loaded
 # whenever information is needed about any time within that month +/- 12 hours.
@@ -45,11 +45,11 @@ class Cassini(object):
     """A instance-free class to hold Cassini-specific parameters."""
 
     START_TIME = "1997-10-01"
-    STOP_TIME  = "2018-01-01"
+    STOP_TIME  = "2017-10-01"
+    MONTHS = 240        # 20 years * 12 months/year
 
     TDB0 = julian.tdb_from_tai(julian.tai_from_iso(START_TIME))
     TDB1 = julian.tdb_from_tai(julian.tai_from_iso(STOP_TIME))
-    MONTHS = 243
     DTDB = (TDB1 - TDB0) / MONTHS
     SLOP = 43200.
 
@@ -69,13 +69,14 @@ class Cassini(object):
     ############################################################################
 
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None):
+    def initialize(ck='reconstructed', planets=None, asof=None,
+                   spk='reconstructed'):
         """Intialize the Cassini mission internals.
 
         After the first call, later calls to this function are ignored.
 
         Input:
-            ck      Used to specify which C kernels are used.:
+            ck,spk  Used to specify which C and SPK kernels are used.:
                     'reconstructed' for the reconstructed kernels (default);
                     'predicted' for the predicted kernels;
                     'none' to allow manual control of the C kernels.
@@ -93,16 +94,26 @@ class Cassini(object):
         ignore = oops.path.SpicePath("CASSINI", "SATURN")
 
         spicedb.open_db()
-        kernels = spicedb.select_spk(-82, time=("1000-01-01", "2999-12-31"),
-                                          asof=asof)
-        Cassini.initialize_kernels(kernels, Cassini.SPK_LIST)
+
+        spk = spk.upper()
+        if spk == 'NONE':
+            # This means no SPK will ever be loaded; handling is manual
+            Cassini.initialize_kernels([], Cassini.SPK_LIST)
+            Cassini.SPK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
+        else:
+            kernels = spicedb.select_spk(-82, name="CAS-SPK-" + spk,
+                                              time=(Cassini.START_TIME, Cassini.STOP_TIME),
+                                              asof=asof)
+            Cassini.initialize_kernels(kernels, Cassini.SPK_LIST)
 
         ck = ck.upper()
         if ck == 'NONE':
+            # This means no CK will ever be loaded; handling is manual
             Cassini.initialize_kernels([], Cassini.CK_LIST)
+            Cassini.CK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
         else:
-            kernels = spicedb.select_ck(-82, time=("1000-01-01", "2999-12-31"),
-                                             name="CAS-CK-" + ck,
+            kernels = spicedb.select_ck(-82, name="CAS-CK-" + ck,
+                                             time=(Cassini.START_TIME, Cassini.STOP_TIME),
                                              asof=asof)
             Cassini.initialize_kernels(kernels, Cassini.CK_LIST)
 
@@ -168,6 +179,9 @@ class Cassini(object):
         m1 = int((t0 - Cassini.TDB0) // Cassini.DTDB)
         m2 = int((t1 - Cassini.TDB0) // Cassini.DTDB) + 1
 
+        m1 = max(m1, 0)         # ignore time limits outside mission duration
+        m2 = min(m2, Cassini.MONTHS - 1)
+
         # Load any months not already loaded
         for m in range(m1, m2):
           if not loaded[m]:
@@ -184,6 +198,8 @@ class Cassini(object):
 
     @staticmethod
     def initialize_kernels(kernels, lists):
+        """After initialization, lists[m] is a the KernelInfo objects needed
+        within the specified month."""
 
         for i in range(Cassini.MONTHS):
             lists[i] = []
@@ -196,6 +212,9 @@ class Cassini(object):
 
             m1 = int((t0 - Cassini.TDB0) // Cassini.DTDB)
             m2 = int((t1 - Cassini.TDB0) // Cassini.DTDB) + 1
+
+            m1 = max(m1, 0)     # ignore time limits outside mission duration
+            m2 = min(m2, Cassini.MONTHS - 1)
 
             # Add this kernel to each month's list
             for m in range(m1, m2):

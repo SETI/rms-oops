@@ -181,7 +181,7 @@ class RingFrame(Frame):
         if (x,y) == (0.,0.):
             return Scalar(0.)
 
-        return (y.arctan2(x) + np.pi) % TWOPI
+        return (y.arctan2(x) + np.pi/2.) % TWOPI
 
 ################################################################################
 # UNIT TESTS

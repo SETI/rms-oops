@@ -71,10 +71,10 @@ def from_file(filespec, fast_distortion=True, **parameters):
                                filter2 = filter2,
                                gain_mode = gain_mode)
 
-    result.spice_kernels = Cassini.used_kernels(result.time, 'iss')
-
-    result.filespec = filespec
-    result.basename = os.path.basename(filespec)
+    result.insert_subfield('spice_kernels',
+                           Cassini.used_kernels(result.time, 'iss'))
+    result.insert_subfield('filespec', filespec)
+    result.insert_subfield('basename', os.path.basename(filespec))
 
     return result
 
@@ -135,15 +135,17 @@ def from_index(filespec, **parameters):
 
 ################################################################################
 
-def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None):
+def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
+               spk='reconstructed'):
     """Initialize key information about the ISS instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
 
     Input:
-        ck          'predicted' or 'reconstructed' depending on which C kernels
-                    are to be used. Default is 'reconstructed'.
+        ck,spk      'predicted', 'reconstructed', or 'none', depending on which
+                    kernels are to be used. Defaults are 'reconstructed'. Use
+                    'none' if the kernels are to be managed manually.
         planets     A list of planets to pass to define_solar_system. None or
                     0 means all.
         offset_wac  True to offset the WAC frame relative to the NAC frame as
@@ -152,7 +154,8 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None):
                     to ignore.
     """
 
-    ISS.initialize(ck, planets, offset_wac, asof)
+    ISS.initialize(ck=ck, spk=spk, asof=asof, planets=planets,
+                   offset_wac=offset_wac)
 
 ################################################################################
 
@@ -264,15 +267,15 @@ class ISS(object):
 #                            [  7.61904762e-01,  4.33089979e-14,  1.25388484e-16,  0.00000000e+00],
 #                            [  7.96957986e-14,  1.53755115e-16,  0.00000000e+00,  0.00000000e+00],
 #                            [  4.82114213e-17,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-    
+
     DISTORTION_COEFF_UV_TO_XY = {'NAC': NAC_INV_COEFF,
                                  'WAC': WAC_INV_COEFF}
-    
+
     ######################################################################
-    
+
     @staticmethod
     def initialize(ck='reconstructed', planets=None, offset_wac=True,
-                                       asof=None):
+                                       asof=None, spk='reconstructed'):
         """Initialize key information about the ISS instrument; fill in key
         information about the WAC and NAC.
 
@@ -280,8 +283,10 @@ class ISS(object):
         are ignored.
 
         Input:
-            ck          'predicted' or 'reconstructed' depending on which C
-                        kernels are to be used. Default is 'reconstructed'.
+            ck,spk      'predicted', 'reconstructed', or 'none', depending on
+                        which kernels are to be used. Defaults are
+                        'reconstructed'. Use 'none' if the kernels are to be
+                        managed manually.
             planets     A list of planets to pass to define_solar_system. None
                         or 0 means all.
             offset_wac  True to offset the WAC frame relative to the NAC frame
@@ -293,7 +298,7 @@ class ISS(object):
         # Quick exit after first call
         if ISS.initialized: return
 
-        Cassini.initialize(ck, planets, asof)
+        Cassini.initialize(ck=ck, spk=spk, asof=asof, planets=planets)
         Cassini.load_instruments()
 
         # Load the instrument kernel
