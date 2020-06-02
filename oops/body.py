@@ -597,8 +597,6 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
     Return              an ordered list of SPICE kernel names
     """
 
-    print(22222, args)
-
     # Interpret the keyword args
     irregulars = args.get('irregulars',True)
 

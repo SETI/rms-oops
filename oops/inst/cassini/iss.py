@@ -311,8 +311,6 @@ class ISS(object):
                         False otherwise.
         """
 
-        print(11111, gapfill, mst_pck, irregulars)
-
         # Quick exit after first call
         if ISS.initialized: return
 
