@@ -4,6 +4,7 @@
 
 import numpy as np
 import os
+import numbers
 
 import spicedb
 import julian
@@ -566,8 +567,7 @@ class Body(object):
 # General function to load Solar System components
 ################################################################################
 
-def define_solar_system(start_time=None, stop_time=None, asof=None,
-                        irregulars=True, planets=(1,2,3,4,5,6,7,8,9)):
+def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
     """Construct bodies, paths and frames for planets and their moons.
 
     Each planet is defined relative to the SSB. Each moon is defined relative to
@@ -581,24 +581,51 @@ def define_solar_system(start_time=None, stop_time=None, asof=None,
                         or date-time format.
         asof            a UTC date such that only kernels released earlier
                         than that date will be included, in ISO format.
-        irregulars      True to include the outer irregular satellites.
+
+    Additional keyword-only parameters
         planets         1-9 to load kernels for a particular planet and its
-                        moons. 0 or None to load nine planets (including Pluto).
+                        moons. Omit to load the nine planets (including Pluto).
                         Use a tuple to list more than one planet number.
+        irregulars      Omit this keyword or set to True to include the outer
+                        irregular satellites. Specify irregulars=False to omit
+                        these bodies.
+        mst_pck         Omit this keyword or set to True to include the
+                        MST PCKs, which define the rotation states of Saturn's
+                        small moons during the Cassini era. Specify
+                        mst_pck=False to omit these kernels.
 
     Return              an ordered list of SPICE kernel names
     """
 
+    print(22222, args)
+
+    # Interpret the keyword args
+    irregulars = args.get('irregulars',True)
+
+    planets = args.get('planets', None)
     if planets is None or planets == 0:
         planets = (1,2,3,4,5,6,7,8,9)
-    if type(planets) == int:
+    if isinstance(planets, numbers.Integral):
         planets = (planets,)
+
+    mst_pck = args.get('mst_pck', True)
 
     # Load the necessary SPICE kernels
     spicedb.open_db()
-    names = spicedb.furnish_solar_system(start_time, stop_time, asof,
-                                         planets=planets)
-    spicedb.close_db()
+
+    _ = spicedb.furnish_lsk(asof=asof)
+    _ = spicedb.furnish_pck(name='NAIF-PCK', asof=asof)
+
+    # Special handling for Saturn
+    if 6 in planets:
+        _ = spicedb.furnish_pck(name='CAS-FK-ROCKS', asof=asof)
+        _ = spicedb.furnish_pck(name='CAS-PCK', asof=asof)
+        _ = spicedb.furnish_pck(name='CAS-PCK-ROCKS', asof=asof)
+
+        if mst_pck:
+            _ = spicedb.furnish_pck(name='SAT-PCK-MST', asof=asof)
+
+    _ = spicedb.furnish_spk(planets, time=(start_time, stop_time), asof=asof)
 
     # Define B1950 in addition to J2000
     ignore = SpiceFrame("B1950", "J2000")
@@ -616,7 +643,7 @@ def define_solar_system(start_time=None, stop_time=None, asof=None,
 
     # Define planetary systems
     if 4 in planets:
-        _define_mars(start_time, stop_time, asof, irregulars)
+        _define_mars(start_time, stop_time, asof)
     if 5 in planets:
         _define_jupiter(start_time, stop_time, asof, irregulars)
     if 6 in planets:
@@ -626,7 +653,9 @@ def define_solar_system(start_time=None, stop_time=None, asof=None,
     if 8 in planets:
         _define_neptune(start_time, stop_time, asof, irregulars)
     if 9 in planets:
-        _define_pluto(start_time, stop_time, asof, irregulars)
+        _define_pluto(start_time, stop_time, asof)
+
+    spicedb.close_db()
 
     return names
 
@@ -636,8 +665,11 @@ def define_solar_system(start_time=None, stop_time=None, asof=None,
 
 MARS_ALL_MOONS = range(401,403)
 
-def _define_mars(start_time, stop_time, asof=None, irregulars=False):
+def _define_mars(start_time, stop_time, asof=None):
     """Define components of the Mars system."""
+
+    _ = spicedb.furnish_spk(MARS_ALL_MOONS,
+                            time=(start_time, stop_time), asof=asof)
 
     # Mars and the Mars barycenter orbit the Sun
     define_bodies([499], "SUN", "SUN", ["PLANET"])
@@ -672,6 +704,13 @@ JUPITER_MAIN_RING_LIMIT = 128940.
 def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Jupiter system."""
 
+    # Load Jupiter system SPKs
+    bodies = (JUPITER_CLASSICAL + JUPITER_REGULAR)
+    if irregulars:
+        bodies += JUPITER_IRREGULAR
+
+    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
+
     # Jupiter and the Jupiter barycenter orbit the Sun
     define_bodies([599], "SUN", "SUN", ["PLANET"])
     define_bodies([5], "SUN", "SUN", ["BARYCENTER"])
@@ -697,7 +736,8 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
     unbounded_ring = ring
     Body.BODY_REGISTRY['JUPITER'].ring_body = ring
 
-    ring = define_ring("JUPITER", "JUPITER_RING_SYSTEM", JUPITER_MAIN_RING_LIMIT, [])
+    ring = define_ring("JUPITER", "JUPITER_RING_SYSTEM",
+                       JUPITER_MAIN_RING_LIMIT, [])
     ring.backplane_id = 'JUPITER:RING'
     ring.backplane_limits = (0., JUPITER_MAIN_RING_LIMIT)
     ring.unbounded_surface = unbounded_ring
@@ -725,6 +765,14 @@ SATURN_AB_RINGS     = (SATURN_B_RING[0], SATURN_A_RING[1])
 
 def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Saturn system."""
+
+    # Load Saturn system SPKs
+    bodies = (SATURN_CLASSICAL_INNER + SATURN_CLASSICAL_OUTER +
+              SATURN_CLASSICAL_IRREG + SATURN_REGULAR)
+    if irregulars:
+        bodies += SATURN_IRREGULAR
+
+    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
 
     # Saturn and the Saturn barycenter orbit the SSB
     define_bodies([699], "SUN", "SSB", ["PLANET"])
@@ -836,6 +884,13 @@ URANUS_EPSILON_ELEMENTS = _uranus_ring_elements(
 def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Uranus system."""
 
+    # Load Uranus system SPKs
+    bodies = (URANUS_INNER + URANUS_CLASSICAL)
+    if irregulars:
+        bodies += URANUS_IRREGULAR
+
+    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
+
     # Uranus and the Uranus barycenter orbit the SSB
     define_bodies([799], "SUN", "SSB", ["PLANET"])
     define_bodies([7], "SUN", "SSB", ["BARYCENTER"])
@@ -845,8 +900,10 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(URANUS_INNER, "URANUS", "URANUS",
                   ["SATELLITE", "REGULAR"])
-    define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
-                  ["SATELLITE", "IRREGULAR"])
+
+    if irregulars:
+        define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
+                      ["SATELLITE", "IRREGULAR"])
 
     ring = define_ring("URANUS", "URANUS_RING_PLANE", None,
                        [], retrograde=True)
@@ -920,6 +977,14 @@ NEPTUNE_INVARIABLE_DEC = 43.40481 * np.pi/180.
 def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Neptune system."""
 
+    # Load Neptune system SPKs
+    bodies = (NEPTUNE_CLASSICAL_INNER + NEPTUNE_CLASSICAL_OUTER +
+              NEPTUNE_REGULAR)
+    if irregulars:
+        bodies += NEPTUNE_IRREGULAR
+
+    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
+
     # Neptune and the Neptune barycenter orbit the SSB
     define_bodies([899], "SUN", "SSB", ["PLANET"])
     define_bodies([8], "SUN", "SSB", ["BARYCENTER"])
@@ -933,6 +998,9 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
                   ["SATELLITE", "REGULAR"])
 
     if irregulars:
+        _ = spicedb.furnish_spk(NEPTUNE_IRREGULAR,
+                                time=(start_time, stop_time), asof=asof)
+
         define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
                       ["SATELLITE", "IRREGULAR"])
 
@@ -966,8 +1034,11 @@ PLUTO_RADIUS = 19591.
 CHARON_RADIUS = 606.
 PLUTO_CHARON_DISTANCE = 19591.
 
-def _define_pluto(start_time, stop_time, asof=None, irregulars=False):
+def _define_pluto(start_time, stop_time, asof=None):
     """Define components of the Pluto system."""
+
+    _ = spicedb.furnish_spk(CHARON + PLUTO_REGULAR,
+                            time=(start_time, stop_time), asof=asof)
 
     # Pluto and the Pluto barycenter orbit the SSB
     define_bodies([999], "SUN", "SSB", ["PLANET"])

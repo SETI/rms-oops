@@ -24,7 +24,8 @@ def from_file(filespec, fast_distortion=True, **parameters):
                             None to use a FlatFOV.
     """
 
-    ISS.initialize()    # Define everything the first time through
+    ISS.initialize()    # Define everything the first time through; use defaults
+                        # unless initialize() is called explicitly.
 
     # Load the VICAR file
     vic = vicar.VicarImage.from_file(filespec)
@@ -136,7 +137,8 @@ def from_index(filespec, **parameters):
 ################################################################################
 
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
-               spk='reconstructed'):
+               spk='reconstructed', gapfill=True,
+               mst_pck=True, irregulars=True):
     """Initialize key information about the ISS instrument.
 
     Must be called first. After the first call, later calls to this function
@@ -152,10 +154,16 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                     determined by star positions.
         asof        Only use SPICE kernels that existed before this date; None
                     to ignore.
+        gapfill     True to include gapfill CKs. False otherwise.
+        mst_pck     True to include MST PCKs, which update the rotation models
+                    for some of the small moons.
+        irregulars  True to include the irregular satellites;
+                    False otherwise.
     """
 
-    ISS.initialize(ck=ck, spk=spk, asof=asof, planets=planets,
-                   offset_wac=offset_wac)
+    ISS.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
+                   spk=spk, gapfill=gapfill,
+                   mst_pck=mst_pck, irregulars=irregulars)
 
 ################################################################################
 
@@ -170,21 +178,21 @@ class ISS(object):
     #   Owen Jr., W.M., 2003. Cassini ISS Geometric Calibration of April 2003.
     #   JPL IOM 312.E-2003.
     # These polynomials convert from X,Y (radians) to U,V (pixels).
-    
+
     NAC_F = 2002.703    # mm
     NAC_E2 = 8.28e-6    # / mm2
     NAC_E5 = 5.45e-6    # / mm
     NAC_E6 = -19.67e-6  # / mm
     NAC_KX = 83.33333   # samples/mm
     NAC_KY = 83.3428    # lines/mm
-    
+
     NAC_COEFF = np.zeros((4,4,2))
     NAC_COEFF[1,0,0] = NAC_KX        * NAC_F
     NAC_COEFF[3,0,0] = NAC_KX*NAC_E2 * NAC_F**3
     NAC_COEFF[1,2,0] = NAC_KX*NAC_E2 * NAC_F**3
     NAC_COEFF[1,1,0] = NAC_KX*NAC_E5 * NAC_F**2
     NAC_COEFF[2,0,0] = NAC_KX*NAC_E6 * NAC_F**2
-    
+
     NAC_COEFF[0,1,1] = NAC_KY        * NAC_F
     NAC_COEFF[2,1,1] = NAC_KY*NAC_E2 * NAC_F**3
     NAC_COEFF[0,3,1] = NAC_KY*NAC_E2 * NAC_F**3
@@ -217,10 +225,10 @@ class ISS(object):
 #    WAC_COEFF[1,0,0] = 0.5
 #    WAC_COEFF[0,1,1] = 0.75
 #    WAC_COEFF[1,0,1] = 2.0
-    
+
     DISTORTION_COEFF_XY_TO_UV = {'NAC': NAC_COEFF,
                                  'WAC': WAC_COEFF}
-    
+
     # Create a master version of the inverse distortion model.
     # These coefficients were computed by numerically solving the above
     # polynomials.
@@ -237,7 +245,7 @@ class ISS(object):
     #   Y DIFF MIN MAX -3.92109405705e-07 3.98905653939e-07
     #   U DIFF MIN MAX -0.0535697887647 0.000916852346108
     #   V DIFF MIN MAX -0.0182888189072 0.0187174796013
-    
+
     NAC_INV_COEFF = np.zeros((4,4,2))
     NAC_INV_COEFF[:,:,0] = [[ -1.14799845e-10,  7.80494024e-14,  1.73312704e-15, -5.95242349e-19],
                             [  5.99190197e-06, -3.91823615e-13, -7.12054264e-15,  0.00000000e+00],
@@ -247,7 +255,7 @@ class ISS(object):
                             [  1.03832114e-13,  1.41728538e-12, -1.55778300e-18,  0.00000000e+00],
                             [  2.03725690e-16, -7.11687723e-15,  0.00000000e+00,  0.00000000e+00],
                             [  1.67086926e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-    
+
     WAC_INV_COEFF = np.zeros((4,4,2))
     WAC_INV_COEFF[:,:,0] = [[ -5.42748411e-08,  5.06916433e-12,  8.16888725e-13, -3.85258837e-17],
                             [  5.97679707e-05, -3.53472340e-12, -5.13400740e-13,  0.00000000e+00],
@@ -273,9 +281,12 @@ class ISS(object):
 
     ######################################################################
 
+
+
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, offset_wac=True,
-                                       asof=None, spk='reconstructed'):
+    def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
+                   spk='reconstructed', gapfill=True,
+                   mst_pck=True, irregulars=True):
         """Initialize key information about the ISS instrument; fill in key
         information about the WAC and NAC.
 
@@ -293,13 +304,22 @@ class ISS(object):
                         as determined by star positions.
             asof        Only use SPICE kernels that existed before this date;
                         None to ignore.
+            gapfill     True to include gapfill CKs. False otherwise.
+            mst_pck     True to include MST PCKs, which update the rotation
+                        models for some of the small moons.
+            irregulars  True to include the irregular satellites;
+                        False otherwise.
         """
+
+        print(11111, gapfill, mst_pck, irregulars)
 
         # Quick exit after first call
         if ISS.initialized: return
 
-        Cassini.initialize(ck=ck, spk=spk, asof=asof, planets=planets)
-        Cassini.load_instruments()
+        Cassini.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
+                           gapfill=gapfill,
+                           mst_pck=mst_pck, irregulars=irregulars)
+        Cassini.load_instruments(asof=asof)
 
         # Load the instrument kernel
         ISS.instrument_kernel = Cassini.spice_instrument_kernel("ISS")[0]

@@ -33,7 +33,9 @@ def from_file(filespec, data=True, enclose=False, **parameters):
                         of observations rather than a single observation.
     """
 
-    UVIS.initialize()   # Define everything the first time through
+    UVIS.initialize()   # Define everything the first time through; use defaults
+                        # unless initialize() is called explicitly.
+
 
     # Load the PDS label
     recs = pdsparser.PdsLabel.load_file(filespec)
@@ -398,23 +400,30 @@ def load_data(filespec, body, dtype):
 ################################################################################
 
 def initialize(ck='reconstructed', planets=None, asof=None,
-               spk='reconstructed'):
+               spk='reconstructed', gapfill=True,
+               mst_pck=True, irregulars=True):
     """Initialize key information about the VIMS instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
 
     Input:
-        ck,spk  'predicted', 'reconstructed', or 'none', depending on
-                which kernels are to be used. Defaults are 'reconstructed'.
-                Use 'none' if the kernels are to be managed manually.
-        planets A list of planets to pass to define_solar_system. None or
-                0 means all.
-        asof    Only use SPICE kernels that existed before this date;
-                None to ignore.
+        ck,spk      'predicted', 'reconstructed', or 'none', depending on
+                    which kernels are to be used. Defaults are 'reconstructed'.
+                    Use 'none' if the kernels are to be managed manually.
+        planets     A list of planets to pass to define_solar_system. None or
+                    0 means all.
+        asof        Only use SPICE kernels that existed before this date;
+                    None to ignore.
+        gapfill     True to include gapfill CKs. False otherwise.
+        mst_pck     True to include MST PCKs, which update the rotation models
+                    for some of the small moons.
+        irregulars  True to include the irregular satellites;
+                    False otherwise.
     """
 
-    UVIS.initialize(ck=ck, spk=spk, asof=asof, planets=planets)
+    UVIS.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
+                    gapfill=gapfill, mst_pck=mst_pck, irregulars=irregulars)
 
 ################################################################################
 
@@ -447,27 +456,36 @@ class UVIS(object):
 
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed'):
+                   spk='reconstructed', gapfill=True,
+                   mst_pck=True, irregulars=True):
         """Fill in key information about the UVIS channels.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
 
         Input:
-            ck,spk  'predicted', 'reconstructed', or 'none', depending on
-                    which kernels are to be used. Defaults are 'reconstructed'.
-                    Use 'none' if the kernels are to be managed manually.
-            planets A list of planets to pass to define_solar_system. None or
-                    0 means all.
-            asof    Only use SPICE kernels that existed before this date;
-                    None to ignore.
+            ck,spk      'predicted', 'reconstructed', or 'none', depending on
+                        which kernels are to be used. Defaults are
+                        'reconstructed'. Use 'none' if the kernels are to be
+                        managed manually.
+            planets     A list of planets to pass to define_solar_system. None
+                        or 0 means all.
+            asof        Only use SPICE kernels that existed before this date;
+                        None to ignore.
+            gapfill     True to include gapfill CKs. False otherwise.
+            mst_pck     True to include MST PCKs, which update the rotation
+                        models for some of the small moons.
+            irregulars  True to include the irregular satellites;
+                        False otherwise.
         """
 
         # Quick exit after first call
         if UVIS.initialized: return
 
-        Cassini.initialize(ck=ck, spk=spk, asof=asof, planets=planets)
-        Cassini.load_instruments()
+        Cassini.initialize(ck=ck, planets=planets, asof=asof,, spk=spk,
+                           gapfill=gapfill,
+                           mst_pck=mst_pck, irregulars=irregulars)
+        Cassini.load_instruments(asof=asof)
 
         # Load the instrument kernel
         UVIS.instrument_kernel = Cassini.spice_instrument_kernel("UVIS")[0]

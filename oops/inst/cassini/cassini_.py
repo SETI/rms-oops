@@ -70,27 +70,37 @@ class Cassini(object):
 
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed'):
+                   spk='reconstructed', gapfill=True,
+                   mst_pck=True, irregulars=True):
         """Intialize the Cassini mission internals.
 
         After the first call, later calls to this function are ignored.
 
         Input:
-            ck,spk  Used to specify which C and SPK kernels are used.:
-                    'reconstructed' for the reconstructed kernels (default);
-                    'predicted' for the predicted kernels;
-                    'none' to allow manual control of the C kernels.
-            planets A list of planets to pass to define_solar_system. None or
-                    0 means all.
-            asof    Only use SPICE kernels that existed before this date; None
-                    to ignore.
+            ck,spk      Used to specify which C and SPK kernels are used.:
+                        'reconstructed' for the reconstructed kernels (default);
+                        'predicted' for the predicted kernels;
+                        'none' to allow manual control of the C kernels.
+            planets     A list of planets to pass to define_solar_system. None
+                        or 0 means all.
+            asof        Only use SPICE kernels that existed before this date;
+                        None to ignore.
+            gapfill     True to include gapfill CKs. False otherwise.
+            mst_pck     True to include MST PCKs, which update the rotation
+                        models for some of the small moons.
+            irregulars  True to include the irregular satellites;
+                        False otherwise.
         """
 
         if Cassini.initialized: return
 
         # Define some important paths and frames
         oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME,
-                                 planets=planets, asof=asof)
+                                 asof=asof,
+                                 planets=planets,
+                                 mst_pck=mst_pck,
+                                 irregulars=irregulars)
+
         ignore = oops.path.SpicePath("CASSINI", "SATURN")
 
         spicedb.open_db()
@@ -102,7 +112,8 @@ class Cassini(object):
             Cassini.SPK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
         else:
             kernels = spicedb.select_spk(-82, name="CAS-SPK-" + spk,
-                                              time=(Cassini.START_TIME, Cassini.STOP_TIME),
+                                              time=(Cassini.START_TIME,
+                                                    Cassini.STOP_TIME),
                                               asof=asof)
             Cassini.initialize_kernels(kernels, Cassini.SPK_LIST)
 
@@ -113,9 +124,14 @@ class Cassini(object):
             Cassini.CK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
         else:
             kernels = spicedb.select_ck(-82, name="CAS-CK-" + ck,
-                                             time=(Cassini.START_TIME, Cassini.STOP_TIME),
+                                             time=(Cassini.START_TIME,
+                                                   Cassini.STOP_TIME),
                                              asof=asof)
             Cassini.initialize_kernels(kernels, Cassini.CK_LIST)
+
+        # Load extra kernels if necessary
+        if gapfill:
+            _ = spicedb.furnish_ck(-82, name="CAS-CK-GAPFILL", asof=asof)
 
         spicedb.close_db()
 
@@ -252,15 +268,9 @@ class Cassini(object):
             (day, sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
-        spicedb.open_db()
-
         # Furnish instruments and frames
+        spicedb.open_db()
         _ = spicedb.furnish_inst(-82, inst=instruments, asof=asof)
-
-        # Always load the "gapfill" CK and the Tiscareno moon kernels
-        _ = spicedb.furnish_ck(-82, name="CAS-CK-GAPFILL")
-        _ = spicedb.furnish_pck(name="SAT-PCK-MST")
-
         spicedb.close_db()
 
     ############################################################################
