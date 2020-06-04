@@ -10,6 +10,7 @@ from __future__ import division
 import os
 import datetime
 import unittest
+import numbers
 
 import julian
 import interval
@@ -43,8 +44,8 @@ FURNISHED_NAMES = {
     'PCK':  [],
     'SCLK': [],
     'SPK':  [],
-    'STARS': [],
-    'META':  [],
+    'STARS':[],
+    'META': [],
     'UNK':  [],
 }
 
@@ -57,8 +58,8 @@ FURNISHED_ABSPATHS = {
     'PCK':  [],
     'SCLK': [],
     'SPK':  [],
-    'STARS': [],
-    'META':  [],
+    'STARS':[],
+    'META': [],
     'UNK':  [],
 }
 
@@ -684,7 +685,7 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
     # Insert body or bodies
     bodies = 0
     if body is not None:
-        if type(body) == int:
+        if isinstance(body, numbers.Integral):
             query_list += ["AND SPICE_ID = ", str(body), "\n"]
             bodies = 1
         else:
@@ -877,7 +878,7 @@ def _query_by_filespec(filespecs, time=None):
 
         # If we have nothing, raise an exception
         if len(table) == 0:
-            if time is not None:        # Maybe it's jut out of time range
+            if time is not None:        # Maybe it's just out of time range
                 sql_string = _sql_query_by_filespec(filespec)
                 table2 = db.query(sql_string)
                 if len(table2) > 0: continue
@@ -1119,7 +1120,8 @@ def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
     """
 
     # Normalize the input
-    if type(bodies) == int: bodies = [bodies]
+    if isinstance(bodies, numbers.Integral):
+        bodies = [bodies]
 
     # Select the kernels
     spacecraft_only = True
@@ -1176,7 +1178,7 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
     """
 
     # Normalize inputs
-    if type(ids) == int: ids = [ids]
+    if isinstance(ids, numbers.Integral): ids = [ids]
     if type(inst) == str: inst = [inst]
 
     if types is None:
@@ -1247,7 +1249,8 @@ def select_ck(ids, name=None, time=None, asof=None, after=None, redo=True):
     """
 
     # Normalize inputs
-    if type(ids) == int: ids = [ids]
+    if isinstance(ids, numbers.Integral):
+        ids = [ids]
 
     # For each spacecraft...
     kernel_list = []
@@ -1934,7 +1937,7 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
         types = [types]
 
     # Normalize time
-    if isinstance(time, (str,float,int)):
+    if isinstance(time, (str,numbers.Real)):
         time = [time, time]
 
     time_tai = []
@@ -2069,7 +2072,7 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
 
     if planets is None or planets == 0:
         planets = (1,2,3,4,5,6,7,8,9)
-    if type(planets) == int:
+    if isinstance(planets, numbers.Integral):
         planets = (planets,)
 
     names = []

@@ -18,8 +18,6 @@ import oops
 import oops.body as body
 
 TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
-SATURN_BODIES  = [6, 699] + body.SATURN_REGULAR  + body.SATURN_IRREGULAR
-JUPITER_BODIES = [5, 599] + body.JUPITER_REGULAR + body.JUPITER_IRREGULAR
 
 ################################################################################
 # Routines for managing the loading of C and SP kernels
@@ -344,9 +342,9 @@ class Cassini(object):
         a selected range of times."""
 
         if time[0] >= TOUR:
-            bodies = SATURN_BODIES
+            bodies = [6, 699] + body.SATURN_MOONS_LOADED
         else:
-            bodies = JUPITER_BODIES
+            bodies = [5, 599] + body.JUPITER_MOONS_LOADED
 
         return spicedb.used_basenames(time=time, inst=inst, sc=-82,
                                       bodies=bodies)

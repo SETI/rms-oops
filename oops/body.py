@@ -63,15 +63,51 @@ JUPITER_ALIASES = [
 ]
 
 SATURN_ALIASES = [
-    # Saturn [code], [preferred name, old name]
-    [[65035], ['S2004_S_7' , 'S7_2004' ]],
-    [[65040], ['S2004_S_12', 'S12_2004']],
-    [[65041], ['S2004_S_13', 'S13_2004']],
-    [[65045], ['S2004_S_17', 'S17_2004']],
-    [[65048], ['S2006_S_1' , 'S01_2006']],
-    [[65055], ['S2007_S_2' , 'S02_2007']],
-    [[65050], ['S2006_S_3' , 'S03_2006']],
-    [[65056], ['S2007_S_3' , 'S03_2007']],
+    # Saturn [new code, old code], [formal name, provisional name, NAIF name]
+    [[     65035], [              'S2004_S_7' , 'S7_2004'  ]],
+    [[642, 65036], ['FORNJOT'   , 'S2004_S8'  , 'S8_2004'  ]],
+    [[640, 65037], ['FARBAUTI'  , 'S2004_S_9' , 'S9_2004'  ]],
+    [[636, 65038], ['AEGIR'     , 'S2004_S_10', 'S10_2004' ]],
+    [[637, 65039], ['BEBHIONN'  , 'S2004_S_11', 'S11_2004' ]],
+    [[     65040], [              'S2004_S_12', 'S12_2004' ]],
+    [[     65041], [              'S2004_S_13', 'S13_2004' ]],
+    [[643, 65042], ['HATI'      , 'S2004_S_14', 'S14_2004' ]],
+    [[638, 65043], ['BERGELMIR' , 'S2004_S_15', 'S15_2004' ]],
+    [[641, 65044], ['FENRIR'    , 'S2004_S_16', 'S16_2004' ]],
+    [[     65045], [              'S2004_S_17', 'S17_2004' ]],
+    [[639, 65046], ['BESTLA'    , 'S2004_S_18', 'S18_2004' ]],
+    [[644, 65047], ['HYRROKKIN' , 'S2004_S_19', 'S19_2004' ]],
+    [[     65048], [              'S2006_S_1' , 'S01_2006' ]],
+    [[645, 65049], ['KARI'      , 'S2006_S_2' , 'S02_2006' ]],
+    [[     65050], [              'S2006_S_3' , 'S03_2006' ]],
+    [[651, 65051], ['GREIP'     , 'S2006_S_4' , 'S04_2006' ]],
+    [[646, 65052], ['LOGE'      , 'S2006_S_5' , 'S05_2006' ]],
+    [[650, 65053], ['JARNSAXA'  , 'S2006_S_6' , 'S06_2006' ]],
+    [[648, 65054], ['SURTUR'    , 'S2006_S_7' , 'S07_2006' ]],
+    [[647       ], ['SKOLL'     , 'S2006_S_8' , 'S08_2006' ]],
+    [[652       ], ['TARQEQ'    , 'S2007_S_1' , 'S01_2007' ]],
+    [[     65055], [              'S2007_S_2' , 'S02_2007' ]],
+    [[     65056], [              'S2007_S_3' , 'S03_2007' ]],
+    [[653, 65060], ['AEGAEON'   , 'K07S4'                  ]],
+    [[     65066], [              'S2004_S_29', 'S2004_S29']],
+    [[     65067], [              'S2004_S_31', 'S2004_S31']],
+    [[     65068], [              'S2004_S_26', 'S2004_S26']],
+    [[     65069], [              'S2004_S_35', 'S2004_S35']],
+    [[     65070], [              'S2004_S_24', 'S2004_S24']],
+    [[     65071], [              'S2004_S_23', 'S2004_S23']],
+    [[     65072], [              'S2004_S_25', 'S2004_S25']],
+    [[     65073], [              'S2004_S_22', 'S2004_S22']],
+    [[     65074], [              'S2004_S_32', 'S2004_S32']],
+    [[     65075], [              'S2004_S_33', 'S2004_S33']],
+    [[     65076], [              'S2004_S_34', 'S2004_S34']],
+    [[     65077], [              'S2004_S_28', 'S2004_S28']],
+    [[     65078], [              'S2004_S_30', 'S2004_S30']],
+    [[     65079], [              'S2004_S_21', 'S2004_S21']],
+    [[     65080], [              'S2004_S_20', 'S2004_S20']],
+    [[     65081], [              'S2004_S_36', 'S2004_S36']],
+    [[     65082], [              'S2004_S_37', 'S2004_S37']],
+    [[     65083], [              'S2004_S_38', 'S2004_S38']],
+    [[     65084], [              'S2004_S_39', 'S2004_S39']],
 ]
 
 ALIASES = JUPITER_ALIASES + SATURN_ALIASES
@@ -662,12 +698,16 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
 ################################################################################
 
 MARS_ALL_MOONS = range(401,403)
+MARS_MOONS_LOADED = []
 
 def _define_mars(start_time, stop_time, asof=None):
     """Define components of the Mars system."""
 
-    _ = spicedb.furnish_spk(MARS_ALL_MOONS,
-                            time=(start_time, stop_time), asof=asof)
+    global MARS_MOONS_LOADED
+
+    MARS_MOONS_LOADED += MARS_ALL_MOONS
+    _ = spicedb.furnish_spk(MARS_MOONS_LOADED, time=(start_time, stop_time),
+                                               asof=asof)
 
     # Mars and the Mars barycenter orbit the Sun
     define_bodies([499], "SUN", "SUN", ["PLANET"])
@@ -691,9 +731,11 @@ def _define_mars(start_time, stop_time, asof=None):
 
 JUPITER_CLASSICAL = range(501,505)
 JUPITER_REGULAR   = [505] + range(514,517)
-JUPITER_IRREGULAR = range(506,514) + range(517,551) + [554] + \
+JUPITER_IRREGULAR = range(506,514) + range(517,559) + [554] + \
                     [55060, 55061, 55062, 55064, 55065, 55066, 55068, 55070,
                      55071, 55074]
+JUPITER_MOONS_LOADED = []
+
 # See definition of JUPITER_ALIASES at the top of the file for the list of
 # additional, ambiguous irregular moons
 
@@ -702,12 +744,15 @@ JUPITER_MAIN_RING_LIMIT = 128940.
 def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Jupiter system."""
 
-    # Load Jupiter system SPKs
-    bodies = (JUPITER_CLASSICAL + JUPITER_REGULAR)
-    if irregulars:
-        bodies += JUPITER_IRREGULAR
+    global JUPITER_MOONS_LOADED
 
-    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
+    # Load Jupiter system SPKs
+    JUPITER_MOONS_LOADED += JUPITER_CLASSICAL + JUPITER_REGULAR
+    if irregulars:
+        JUPITER_MOONS_LOADED += JUPITER_IRREGULAR
+
+    _ = spicedb.furnish_spk(JUPITER_MOONS_LOADED, time=(start_time, stop_time),
+                                                  asof=asof)
 
     # Jupiter and the Jupiter barycenter orbit the Sun
     define_bodies([599], "SUN", "SUN", ["PLANET"])
@@ -749,7 +794,8 @@ SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus orbit barycenter
 SATURN_CLASSICAL_IRREG = [609]              # Phoebe
 SATURN_REGULAR   = range(610,619) + range(632,636) + [649,653]
 SATURN_IRREGULAR = (range(619,632) + range(636,649) + range(650,653) +
-                    [65035, 65040, 65041, 65045, 65048, 65050, 65055, 65056])
+                    [65035, 65040, 65041, 65045, 65048, 65050, 65056])
+SATURN_MOONS_LOADED = []
 
 SATURN_MAIN_RINGS = ( 74658., 136780.)
 SATURN_D_RING =     ( 66900.,  74658.)
@@ -764,13 +810,16 @@ SATURN_AB_RINGS     = (SATURN_B_RING[0], SATURN_A_RING[1])
 def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Saturn system."""
 
-    # Load Saturn system SPKs
-    bodies = (SATURN_CLASSICAL_INNER + SATURN_CLASSICAL_OUTER +
-              SATURN_CLASSICAL_IRREG + SATURN_REGULAR)
-    if irregulars:
-        bodies += SATURN_IRREGULAR
+    global SATURN_MOONS_LOADED
 
-    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
+    # Load Saturn system SPKs
+    SATURN_MOONS_LOADED += (SATURN_CLASSICAL_INNER + SATURN_CLASSICAL_OUTER +
+                            SATURN_CLASSICAL_IRREG + SATURN_REGULAR)
+    if irregulars:
+        SATURN_MOONS_LOADED += SATURN_IRREGULAR
+
+    _ = spicedb.furnish_spk(SATURN_MOONS_LOADED, time=(start_time, stop_time), 
+                                                 asof=asof)
 
     # Saturn and the Saturn barycenter orbit the SSB
     define_bodies([699], "SUN", "SSB", ["PLANET"])
@@ -839,6 +888,7 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
 URANUS_CLASSICAL  = range(701,706)
 URANUS_INNER      = range(706,716) + [725,726,727]
 URANUS_IRREGULAR  = range(716,726)
+URANUS_MOONS_LOADED = []
 
 URANUS_EPSILON_LIMIT = 51604.
 URANUS_MU_LIMIT = [97700. - 17000./2, 97700. + 17700./2]
@@ -882,12 +932,15 @@ URANUS_EPSILON_ELEMENTS = _uranus_ring_elements(
 def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Uranus system."""
 
-    # Load Uranus system SPKs
-    bodies = (URANUS_INNER + URANUS_CLASSICAL)
-    if irregulars:
-        bodies += URANUS_IRREGULAR
+    global URANUS_MOONS_LOADED
 
-    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
+    # Load Uranus system SPKs
+    URANUS_MOONS_LOADED += URANUS_CLASSICAL + URANUS_INNER
+    if irregulars:
+        URANUS_MOONS_LOADED += URANUS_IRREGULAR
+
+    _ = spicedb.furnish_spk(URANUS_MOONS_LOADED, time=(start_time, stop_time),
+                                                 asof=asof)
 
     # Uranus and the Uranus barycenter orbit the SSB
     define_bodies([799], "SUN", "SSB", ["PLANET"])
@@ -964,6 +1017,7 @@ NEPTUNE_CLASSICAL_INNER = [801]             # Triton
 NEPTUNE_CLASSICAL_OUTER = [802]             # Nereid orbits barycenter
 NEPTUNE_REGULAR   = range(803,809)
 NEPTUNE_IRREGULAR = range(809,814)
+NEPTUNE_MOONS_LOADED = []
 
 NEPTUNE_ADAMS_LIMIT = 62940.
 
@@ -975,13 +1029,16 @@ NEPTUNE_INVARIABLE_DEC = 43.40481 * np.pi/180.
 def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
     """Define components of the Neptune system."""
 
-    # Load Neptune system SPKs
-    bodies = (NEPTUNE_CLASSICAL_INNER + NEPTUNE_CLASSICAL_OUTER +
-              NEPTUNE_REGULAR)
-    if irregulars:
-        bodies += NEPTUNE_IRREGULAR
+    global NEPTUNE_MOONS_LOADED
 
-    _ = spicedb.furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
+    # Load Neptune system SPKs
+    NEPTUNE_MOONS_LOADED += (NEPTUNE_CLASSICAL_INNER + NEPTUNE_CLASSICAL_OUTER +
+                             NEPTUNE_REGULAR)
+    if irregulars:
+        NEPTUNE_MOONS_LOADED += NEPTUNE_IRREGULAR
+
+    _ = spicedb.furnish_spk(NEPTUNE_MOONS_LOADED, time=(start_time, stop_time),
+                                                  asof=asof)
 
     # Neptune and the Neptune barycenter orbit the SSB
     define_bodies([899], "SUN", "SSB", ["PLANET"])
@@ -1027,6 +1084,7 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
 
 CHARON        = [901]
 PLUTO_REGULAR = range(902,906)
+PLUTO_MOONS_LOADED = []
 
 PLUTO_RADIUS = 19591.
 CHARON_RADIUS = 606.
@@ -1035,8 +1093,11 @@ PLUTO_CHARON_DISTANCE = 19591.
 def _define_pluto(start_time, stop_time, asof=None):
     """Define components of the Pluto system."""
 
-    _ = spicedb.furnish_spk(CHARON + PLUTO_REGULAR,
-                            time=(start_time, stop_time), asof=asof)
+    global PLUTO_MOONS_LOADED
+
+    PLUTO_MOONS_LOADED += CHARON + PLUTO_REGULAR
+    _ = spicedb.furnish_spk(PLUTO_MOONS_LOADED, time=(start_time, stop_time),
+                                                asof=asof)
 
     # Pluto and the Pluto barycenter orbit the SSB
     define_bodies([999], "SUN", "SSB", ["PLANET"])
