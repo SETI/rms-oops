@@ -14,7 +14,8 @@ from oops.inst.cassini.cassini_ import Cassini
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, fast_distortion=True, **parameters):
+def from_file(filespec, fast_distortion=True,
+              return_all_planets=False, **parameters):
     """A general, static method to return a Snapshot object based on a given
     Cassini ISS image file.
 
@@ -22,6 +23,9 @@ def from_file(filespec, fast_distortion=True, **parameters):
         fast_distortion     True to use a pre-inverted polynomial;
                             False to use a dynamically solved polynomial;
                             None to use a FlatFOV.
+
+        return_all_planets  Include kernels for all planets not just
+                            Jupiter or Saturn.
     """
 
     ISS.initialize()    # Define everything the first time through; use defaults
@@ -73,7 +77,8 @@ def from_file(filespec, fast_distortion=True, **parameters):
                                gain_mode = gain_mode)
 
     result.insert_subfield('spice_kernels',
-                           Cassini.used_kernels(result.time, 'iss'))
+                           Cassini.used_kernels(result.time, 'iss',
+                                                return_all_planets))
     result.insert_subfield('filespec', filespec)
     result.insert_subfield('basename', os.path.basename(filespec))
 
@@ -212,7 +217,7 @@ class ISS(object):
     WAC_COEFF[1,2,0] = WAC_KX*WAC_E2 * WAC_F**3
     WAC_COEFF[1,1,0] = WAC_KX*WAC_E5 * WAC_F**2
     WAC_COEFF[2,0,0] = WAC_KX*WAC_E6 * WAC_F**2
-    
+
     WAC_COEFF[0,1,1] = WAC_KY        * WAC_F
     WAC_COEFF[2,1,1] = WAC_KY*WAC_E2 * WAC_F**3
     WAC_COEFF[0,3,1] = WAC_KY*WAC_E2 * WAC_F**3
@@ -372,9 +377,9 @@ class ISS(object):
                                             id="CASSINI_ISS_NAC_FLIPPED")
         wac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
                                             id="CASSINI_ISS_WAC_FLIPPED")
-        nac_frame = oops.frame.Cmatrix(rot180, nac_flipped, 
+        nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
                                        id="CASSINI_ISS_NAC")
-        
+
         if offset_wac:
             # Apply offset for WAC relative to NAC
             info = ISS.instrument_kernel["INS"]["CASSINI_ISS_NAC"]
@@ -382,19 +387,19 @@ class ISS(object):
             yfov = info["FOV_CROSS_ANGLE"]
             lines = info["PIXEL_LINES"]
             samples = info["PIXEL_SAMPLES"]
-    
+
             xpixel = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
             ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
-    
+
             # This is Rob's determination of WAC - NAC in units of NAC pixels
             xshift = -7. * xpixel
             yshift = 4.4 * ypixel
-            wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped, 
+            wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
                                            id="CASSINI_ISS_WAC-NO_OFFSET")
             wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
-                                              id="CASSINI_ISS_WAC")         
+                                              id="CASSINI_ISS_WAC")
         else:
-            wac_frame = oops.frame.Cmatrix(rot180, wac_flipped, 
+            wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
                                            id="CASSINI_ISS_WAC")
 
         ISS.initialized = True
@@ -426,7 +431,7 @@ class Test_Cassini_ISS(unittest.TestCase):
         snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/index.lbl"))
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/W1575634136_1.IMG"))
         snapshot3940 = snapshots[3940]  #should be same as snapshot
-    
+
         self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
         self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
 

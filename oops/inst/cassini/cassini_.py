@@ -337,14 +337,22 @@ class Cassini(object):
     ############################################################################
 
     @staticmethod
-    def used_kernels(time, inst):
+    def used_kernels(time, inst, return_all_planets=False):
         """Return the list of kernels associated with a Cassini observation at
         a selected range of times."""
 
-        if time[0] >= TOUR:
-            bodies = [6, 699] + body.SATURN_MOONS_LOADED
+        if return_all_planets:
+            bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,
+                      7, 799, 8, 899]
+            if time[0] >= TOUR:
+                bodies += body.SATURN_MOONS_LOADED
+            else:
+                bodies += body.JUPITER_MOONS_LOADED
         else:
-            bodies = [5, 599] + body.JUPITER_MOONS_LOADED
+            if time[0] >= TOUR:
+                bodies = [6, 699] + body.SATURN_MOONS_LOADED
+            else:
+                bodies = [5, 599] + body.JUPITER_MOONS_LOADED
 
         return spicedb.used_basenames(time=time, inst=inst, sc=-82,
                                       bodies=bodies)
