@@ -266,10 +266,13 @@ def get_time_series(filespec, tstart, label, data):
     """Returns the observation object given that it is a TIME_SERIES."""
 
     # Determine the detector
-    detector = label["PRODUCT_ID"]
-    detector = detector[:detector.index("2")]   # Year always begins with 2
-
-    assert detector in ("HSP", "HDAC")
+    product_id = label["PRODUCT_ID"]
+    if product_id.startswith("HSP"):
+        detector = "HSP"
+    elif product_id.startswith("HDAC"):
+        detector = "HDAC"
+    else:
+        raise ValueError("Time series is neither HSP nor HDAC: " + filespec)
 
     # Define the instrument frame
     frame_id = UVIS.frame_ids[detector]
@@ -482,7 +485,7 @@ class UVIS(object):
         # Quick exit after first call
         if UVIS.initialized: return
 
-        Cassini.initialize(ck=ck, planets=planets, asof=asof,, spk=spk,
+        Cassini.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                            gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
         Cassini.load_instruments(asof=asof)
