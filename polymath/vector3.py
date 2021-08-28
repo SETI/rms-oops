@@ -6,6 +6,7 @@
 
 from __future__ import division
 import numpy as np
+import numbers
 
 from .qube   import Qube
 from .scalar import Scalar
@@ -96,7 +97,7 @@ class Vector3(Vector):
 
         result = Vector3.from_scalars(x, y, z, recursive)
 
-        if length is 1.:
+        if isinstance(length, numbers.Real) and length == 1.:
             return result
         else:
             return Scalar.as_scalar(length, recursive) * result

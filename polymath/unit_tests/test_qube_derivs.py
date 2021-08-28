@@ -102,6 +102,41 @@ class Test_Qube_derivs(unittest.TestCase):
 
     self.assertRaises(ValueError, a.insert_derivs, {'a': Scalar((7,8,9))})
 
+    # without_derivs
+    a = Scalar((1,2,3))
+    a.insert_derivs({'a': Scalar((7,8,9)),
+                     'b': Scalar((8,9,0)),
+                     'c': Scalar((4,5,6)),
+                     't': Scalar((5,6,7))})
+    self.assertEqual(a.without_derivs().derivs, {})
+    self.assertEqual(a.without_derivs(preserve='xxx').derivs, {})
+    self.assertEqual(a.without_derivs(preserve=['xxx','yyy']).derivs, {})
+
+    c = a.without_derivs(preserve=['t','xxx'])
+    self.assertNotIn('a', c.derivs)
+    self.assertNotIn('b', c.derivs)
+    self.assertNotIn('c', c.derivs)
+    self.assertIn('t', c.derivs)
+
+    self.assertFalse(hasattr(c, 'd_da'))
+    self.assertFalse(hasattr(c, 'd_db'))
+    self.assertFalse(hasattr(c, 'd_dc'))
+    self.assertTrue( hasattr(c, 'd_dt'))
+
+    self.assertFalse(a.readonly)
+    self.assertFalse(a.d_da.readonly)
+    self.assertFalse(a.d_dt.readonly)
+
+    a = a.as_readonly()
+
+    self.assertTrue(a.readonly)
+    self.assertTrue(a.d_da.readonly)
+    self.assertTrue(a.d_dt.readonly)
+
+    b = a.without_derivs()
+
+    self.assertTrue(b.readonly)
+
 ############################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

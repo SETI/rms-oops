@@ -129,7 +129,7 @@ class Cassini(object):
 
         # Load extra kernels if necessary
         if gapfill and ck not in ('PREDICTED', 'NONE'):
-            _ = spicedb.furnish_ck(-82, name="CAS-CK-GAPFILL", asof=asof)
+            _ = spicedb.furnish_ck(-82, name="CAS-CK-GAPFILL")
 
         spicedb.close_db()
 
