@@ -15,7 +15,7 @@ class Test_Indices(unittest.TestCase):
 
         def make_masked(orig, mask_list):
             ret = orig.copy()
-            ret[mask_list] = np.ma.masked
+            ret[np.array(mask_list)] = np.ma.masked
             return ret
 
         def extract(a, indices):

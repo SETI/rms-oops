@@ -532,7 +532,7 @@ class Path(object):
                         divergence of the solution in some cases.
         """
 
-        # Internal functions to return an entirely masked result
+        # Internal function to return an entirely masked result
         def fully_masked_results():
             vector3 = Vector3(np.ones(original_link.shape + (3,)), True)
             scalar = Scalar(vector3.values[...,0], True)
@@ -563,8 +563,7 @@ class Path(object):
 
         # Handle derivatives
         if not derivs:
-            link = link.without_derivs()    # preserves time-dependence; does
-                                            # not affect .wod property
+            link = link.wod     # preserves time-derivatives; removes others
 
         # If the path has a shape of its own, QuickPaths are disallowed
         if self.shape != (): quick = None
@@ -627,23 +626,22 @@ class Path(object):
         # Shrink the event
         link = link.shrink(antimask)
 
-        # Define the path and the link event relative to the SSB in J2000
-        link_wod = link.wod
-        link_wrt_ssb = link.wrt_ssb(derivs=True, quick=quick)
+        # Define quantities with respect to SSB in J2000
+        link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
+        path_wrt_ssb = self.wrt(Path.SSB, Frame.J2000)
 
-        link_time = link_wod.time
-        link_pos_ssb = link_wrt_ssb.pos
-        link_vel_ssb = link_wrt_ssb.vel
+        # Prepare for iteration, avoiding any derivatives for now
+        link_time = link.time.wod
+        link_pos_ssb = link_wrt_ssb.pos.wod
+        link_vel_ssb = link_wrt_ssb.vel.wod
         link_shape = link.shape
 
         # Make initial guesses at the path event time
-        path_wrt_ssb = self.wrt(Path.SSB, Frame.J2000)
-
         if guess is not None:
-            path_time = guess
+            path_time = Scalar.as_scalar(guess).wod.shrink(antimask)
             lt = path_time - link_time
         else:
-            lt = (path_wrt_ssb.event_at_time(link_time, quick=quick).pos -
+            lt = (path_wrt_ssb.event_at_time(link_time, quick=quick).pos.wod -
                   link_pos_ssb).norm() / signed_c
             path_time = link_time + lt
 
@@ -662,20 +660,24 @@ class Path(object):
         # Iterate a fixed number of times or until the threshold of error
         # tolerance is reached. Convergence takes just a few iterations.
         max_dlt = np.inf
+        prev_lt = None
         for iter in range(iters):
 
-            # Quicken the path and frame evaluations (but no more than once)
+            # Quicken the path and frame evaluations on first iteration
+            # Hereafter, we specify quick=False because it's already quick.
             path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=quick)
 
-            # Evaluate the position photon's curren SSB position based on time
+            # Evaluate the photon's current SSB position based on time
             path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=False)
-            delta_pos_ssb = path_event_ssb.pos - link_pos_ssb
-            delta_vel_ssb = path_event_ssb.vel - link_vel_ssb
+            delta_pos_ssb = path_event_ssb.pos.wod - link_pos_ssb
+            delta_vel_ssb = path_event_ssb.vel.wod - link_vel_ssb
 
             dlt = ((delta_pos_ssb.norm() - lt * signed_c) /
                    (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
-            new_lt = (lt - dlt).clip(lt_min, lt_max, False)
-            dlt = lt - new_lt 
+            new_lt = (lt - dlt).clip(lt_min, lt_max, remask=False)
+            dlt = lt - new_lt
+
+            prev_lt = lt
             lt = new_lt
 
             # Re-evaluate the path time
@@ -688,8 +690,9 @@ class Path(object):
             if LOGGING.surface_iterations:
                 print(LOGGING.prefix, 'Path._solve_photon', iter, max_dlt)
 
-            if max_dlt <= precision or max_dlt >= prev_max_dlt or \
-               max_dlt == Scalar.MASKED:
+            if (max_dlt <= precision
+                or max_dlt >= prev_max_dlt
+                or max_dlt == Scalar.MASKED):
                     break
 
         #### END OF LOOP
@@ -698,28 +701,37 @@ class Path(object):
         if max_dlt == Scalar.MASKED:
             return fully_masked_results()
 
+        # Restore derivatives to path_time if necessary
+        # This is a repeat of the final iteration, but with derivatives included
+        if derivs:
+            delta_pos_ssb = path_event_ssb.state - link_wrt_ssb.state
+            delta_vel_ssb = path_event_ssb.vel - link_wrt_ssb.vel
+
+            dlt = ((delta_pos_ssb.norm() - prev_lt * signed_c) /
+                   (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
+            new_lt = (prev_lt - dlt).clip(lt_min, lt_max, False)
+            path_time = link.time + new_lt
+
         # Construct the returned event
         path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=quick)
         link_event_ssb = link_wrt_ssb.copy()
 
-        # Put the derivatives back as needed (at least the time derivative)
-        path_pos_ssb = path_event_ssb.state
-        link_pos_ssb = link_event_ssb.state
-
         # Fill in the key subfields
         if sign > 0:
-            ray_vector_ssb = (path_pos_ssb - link_pos_ssb).as_readonly()
+            ray_vector_ssb = (path_event_ssb.state -
+                              link_event_ssb.state).as_readonly()
         else:
-            ray_vector_ssb = (link_pos_ssb - path_pos_ssb).as_readonly()
+            ray_vector_ssb = (link_event_ssb.state -
+                              path_event_ssb.state).as_readonly()
 
-        lt = ray_vector_ssb.norm(derivs) / signed_c
+        lt = ray_vector_ssb.norm(recursive=derivs) / signed_c
 
         path_event_ssb = path_event_ssb.replace(path_key, ray_vector_ssb,
                                                 path_key + '_lt', -lt)
 
         # Transform the path event into its origin and frame
         path_event = path_event_ssb.from_ssb(self, self.frame,
-                                             derivs=True, quick=quick)
+                                             derivs=derivs, quick=quick)
 
         # Transform the light ray into the link's frame
         new_link = link.replace(link_key + '_j2000', ray_vector_ssb,

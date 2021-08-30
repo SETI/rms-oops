@@ -210,10 +210,12 @@ class Event(object):
 
     @property
     def state(self):
+        """Position with velocity as time-derivative .d_dt."""
         return self.__state_
 
     @property
     def pos(self):
+        """Position without velocity as time-derivative."""
         return self.__pos_
 
     @property

@@ -3946,7 +3946,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
                                                 test * constants.DPR)
 
     test = bp.sub_solar_longitude('saturn', reference='sun', minimum=-180)
-    show_info('Saturn sub-observer longitude wrt Sun (deg)',
+    show_info('Saturn sub-solar longitude wrt Sun (deg)',
                                                 test * constants.DPR)
 
     test = bp.longitude('epimetheus')
@@ -4586,6 +4586,10 @@ class Test_Backplane(unittest.TestCase):
 class Test_Backplane_Exercises(unittest.TestCase):
 
     def runTest(self):
+
+        import oops.inst.cassini.iss as iss
+        iss.initialize(asof='2019-09-01', mst_pck=True)
+
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                 'cassini/ISS/W1573721822_1.IMG')
 
@@ -4615,9 +4619,11 @@ class Test_Backplane_Exercises(unittest.TestCase):
             undersample = 32
 
         if TEST_LEVEL > 0:
+
             bp = exercise_backplanes(filespec, printing, logging, saving,
                                      undersample,
                                      use_inventory=True, inventory_border=4)
+
         else:
             print('test skipped')
 

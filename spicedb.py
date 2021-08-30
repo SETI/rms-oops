@@ -1937,15 +1937,16 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
         types = [types]
 
     # Normalize time
-    if isinstance(time, (str,numbers.Real)):
-        time = [time, time]
+    if time is not None:
+        if isinstance(time, (str,numbers.Real)):
+            time = [time, time]
 
-    time_tai = []
-    for tval in time:
-        if type(tval) == str:
-            time_tai.append(julian.tai_from_iso(tval))
-        else:
-            time_tai.append(tval)
+        time_tai = []
+        for tval in time:
+            if type(tval) == str:
+                time_tai.append(julian.tai_from_iso(tval))
+            else:
+                time_tai.append(tval)
 
     # Handle spacecraft and instrument
     ck_needed = False

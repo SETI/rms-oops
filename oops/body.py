@@ -634,7 +634,7 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
     """
 
     # Interpret the keyword args
-    irregulars = args.get('irregulars',True)
+    irregulars = args.get('irregulars', True)
 
     planets = args.get('planets', None)
     if planets is None or planets == 0:

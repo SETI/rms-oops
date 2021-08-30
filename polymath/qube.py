@@ -1079,6 +1079,11 @@ class Qube(object):
 
         # If something is being preserved...
         if preserve:
+            if isinstance(preserve, str):
+                preserve = [preserve]
+
+            if not any([p for p in preserve if p in self.__derivs_]):
+                return self.clone(recursive=False)
 
             # Create a fast copy with derivatives
             obj = self.clone(recursive=True)
@@ -1193,8 +1198,6 @@ class Qube(object):
 
         Units.require_compatible(units, self.__units_)
         self.__units_ = units
-
-        self.__without_derivs = None
 
     def without_units(self, recursive=True):
         """Return a shallow copy of this object without derivatives.
