@@ -77,7 +77,7 @@ class SBC(ACS):
 
         return hst_file[0].header["FILTER1"]
 
-    def select_syn_files(self, hst_file):
+    def select_syn_files(self, hst_file, **parameters):
         """Returns the list of SYN files containing profiles that are to be
         multiplied together to obtain the throughput of the given instrument,
         detector and filter combination."""
