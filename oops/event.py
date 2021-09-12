@@ -295,7 +295,7 @@ class Event(object):
     def ssb(self):
         if self.__ssb_ is None:
             _ = self.wrt_ssb(derivs=True)
-    
+
         return self.__ssb_
 
     @property
@@ -318,6 +318,7 @@ class Event(object):
     def wod(self):
         if self.__wod_ is None:
             self.__wod_ = self.without_derivs()
+            self.__wod_.__wod_ = self.__wod_
 
         return self.__wod_
 
@@ -334,6 +335,17 @@ class Event(object):
             self.__ssb_.__mask_ = None
             self.__ssb_.__antimask_ = None
             self.__ssb_.__shape_ = None
+
+    def reinit(self):
+        """Remove all internal information; needed for Events that involve
+        Fittable objects."""
+
+        self.__ssb_ = None
+        self.__xform_to_j2000_ = None
+        self.__shape_ = None
+        self.__mask_ = None
+        self.__antimask_ = None
+        self.__wod_ = None
 
     ############################################################################
     # Special properties: Photon arrival vectors
@@ -842,7 +854,7 @@ class Event(object):
             result.__ssb_ = result
         else:
             result.__ssb_ = self.__ssb_._apply_this_func(func, *args)
-            result.__ssb_._ssb_ = result.__ssb_
+            result.__ssb_.__ssb_ = result.__ssb_
             result.__xform_to_j2000_ = self.xform_to_j2000
 
         # Handle subfields
@@ -1190,15 +1202,20 @@ class Event(object):
         """
 
         if self.__ssb_ is not None:
-            return self.__ssb_
+            if derivs:
+                return self.__ssb_
+            else:
+                return self.__ssb_.wod
 
         if (self.__origin_ == Event.PATH_CLASS.SSB) and \
            (self.__frame_ == Frame.J2000):
                 self.__ssb_ = self
                 self.__ssb_.__ssb_ = self
                 self.__xform_to_j2000_ = Transform.identity(Frame.J2000)
-
-                return self.__ssb_
+                if derivs:
+                    return self.__ssb_
+                else:
+                    return self.__ssb_.wod
 
         (self.__ssb_,
          self.__xform_to_j2000_) = self.wrt(Event.PATH_CLASS.SSB,
@@ -1237,7 +1254,7 @@ class Event(object):
 
         event = self.wrt(path, frame, derivs=True, quick=quick)
         event.__ssb_ = self
-        event.__ssb_._ssb_ = self
+        event.__ssb_.__ssb_ = self
 
         if derivs:
             return event
