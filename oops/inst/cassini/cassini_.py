@@ -197,7 +197,7 @@ class Cassini(object):
         m2 = min(m2, Cassini.MONTHS - 1)
 
         # Load any months not already loaded
-        for m in range(m1, m2):
+        for m in range(m1, m2+1):
           if not loaded[m]:
             for kernel in lists[m]:
                 filespec = kernel.filespec
@@ -231,7 +231,7 @@ class Cassini(object):
             m2 = min(m2, Cassini.MONTHS - 1)
 
             # Add this kernel to each month's list
-            for m in range(m1, m2):
+            for m in range(m1, m2+1):
                 lists[m] += [kernel]
 
     ############################################################################
