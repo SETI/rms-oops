@@ -1286,17 +1286,21 @@ class Event(object):
         """
 
         # Interpret inputs
-        if path is None: path = self.__origin_
-        if frame is None: frame = self.__frame_
+        if path is None:
+            path = self.__origin_
+        else:
+            path = Event.PATH_CLASS.as_path(path)
 
-        path = Event.PATH_CLASS.as_path(path)
-        frame = Frame.as_frame(frame)
+        if frame is None:
+            frame = self.__frame_
+        else:
+            frame = Frame.as_frame(frame)
 
         # Point to the working copy of this Event object
         event = self
 
         # If the path is shifting...
-        xform1 = Transform.identity(event.__frame_)
+        xform1 = None
         if event.__origin_.waypoint != path.waypoint:
 
             # ...and the current frame is rotating...
@@ -1322,12 +1326,21 @@ class Event(object):
                                          include_xform=True)
 
         # Now it is safe to shift to the new event
-        result = event.wrt_path(path, derivs=derivs, quick=quick)
+        event = event.wrt_path(path, derivs=derivs, quick=quick)
 
+        # Now fix the frame again if necessary
+        xform2 = None
+        if event.__frame_.wayframe != frame.wayframe:
+            (event, xform2) = event.wrt_frame(frame, derivs=derivs, quick=quick,
+                                              include_xform=True)
+
+        # Return results
         if include_xform:
-            return (result, xform.rotate_transform(xform1))
+            xform = xform.rotate_transform(xform1) if xform1 else xform
+            xform = xform2.rotate_transform(xform) if xform2 else xform
+            return (event, xform)
         else:
-            return result
+            return event
 
     def wrt_path(self, path, derivs=True, quick={}):
         """This event defined relative to a different origin path.
@@ -1346,9 +1359,11 @@ class Event(object):
                         default configuration is defined in config.py.
         """
 
-        if path is None: path = self.__origin_
+        if path is None:
+            path = self.__origin_
+        else:
+            path = Event.PATH_CLASS.as_path(path)
 
-        path = Event.PATH_CLASS.as_path(path)
         if self.__origin_.waypoint == path.waypoint:
             if derivs:
                 return self
@@ -1401,8 +1416,6 @@ class Event(object):
         else:
             frame = Frame.as_frame(frame)
 
-        new_frame = frame.wrt(self.__frame_)
-
         if self.__frame_.wayframe == frame.wayframe:
             if derivs:
                 result = self
@@ -1410,13 +1423,11 @@ class Event(object):
                 result = self.wod
 
             if include_xform:
-                return (result,
-                        new_frame.transform_at_time(self.__time_,
-                                                    quick=quick))
-                        # Transform from event frame to new_frame
+                return (result, Transform.identity(frame))
             else:
                 return result
 
+        new_frame = frame.wrt(self.__frame_)
         return self.rotate_by_frame(new_frame, derivs=derivs, quick=quick,
                                                include_xform=include_xform)
 
@@ -1480,7 +1491,7 @@ class Event(object):
         The origin is unchanged. Subfields are also urotated.
 
         Input:
-            frame       a Frame object to to inverse-transform the coordinates.
+            frame       a Frame object to inverse-transform the coordinates.
                         Its target frame must be the current frame of the event.
                         The returned event will use the reference frame instead.
             derivs      True to include the derivatives in the returned Event;

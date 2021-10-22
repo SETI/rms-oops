@@ -633,6 +633,8 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
     Return              an ordered list of SPICE kernel names
     """
 
+    names = []
+
     # Interpret the keyword args
     irregulars = args.get('irregulars', True)
 
@@ -647,19 +649,19 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
     # Load the necessary SPICE kernels
     spicedb.open_db()
 
-    _ = spicedb.furnish_lsk(asof=asof)
-    _ = spicedb.furnish_pck(name='NAIF-PCK', asof=asof)
+    names += spicedb.furnish_lsk(asof=asof)
+    names += spicedb.furnish_pck(name='NAIF-PCK', asof=asof)
 
     # Special handling for Saturn
     if 6 in planets:
-        _ = spicedb.furnish_pck(name='CAS-FK-ROCKS', asof=asof)
-        _ = spicedb.furnish_pck(name='CAS-PCK', asof=asof)
-        _ = spicedb.furnish_pck(name='CAS-PCK-ROCKS', asof=asof)
+        names += spicedb.furnish_pck(name='CAS-FK-ROCKS', asof=asof)
+        names += spicedb.furnish_pck(name='CAS-PCK', asof=asof)
+        names += spicedb.furnish_pck(name='CAS-PCK-ROCKS', asof=asof)
 
         if mst_pck:
-            _ = spicedb.furnish_pck(name='SAT-PCK-MST', asof=asof)
+            names += spicedb.furnish_pck(name='SAT-PCK-MST', asof=asof)
 
-    _ = spicedb.furnish_spk(planets, time=(start_time, stop_time), asof=asof)
+    names += spicedb.furnish_spk(planets, time=(start_time, stop_time), asof=asof)
 
     # Define B1950 in addition to J2000
     ignore = SpiceFrame("B1950", "J2000")
@@ -677,17 +679,17 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
 
     # Define planetary systems
     if 4 in planets:
-        _define_mars(start_time, stop_time, asof)
+        names += _define_mars(start_time, stop_time, asof)
     if 5 in planets:
-        _define_jupiter(start_time, stop_time, asof, irregulars)
+        names += _define_jupiter(start_time, stop_time, asof, irregulars)
     if 6 in planets:
-        _define_saturn(start_time, stop_time, asof, irregulars)
+        names += _define_saturn(start_time, stop_time, asof, irregulars)
     if 7 in planets:
-        _define_uranus(start_time, stop_time, asof, irregulars)
+        names += _define_uranus(start_time, stop_time, asof, irregulars)
     if 8 in planets:
-        _define_neptune(start_time, stop_time, asof, irregulars)
+        names += _define_neptune(start_time, stop_time, asof, irregulars)
     if 9 in planets:
-        _define_pluto(start_time, stop_time, asof)
+        names += _define_pluto(start_time, stop_time, asof)
 
     spicedb.close_db()
 
@@ -706,8 +708,9 @@ def _define_mars(start_time, stop_time, asof=None):
     global MARS_MOONS_LOADED
 
     MARS_MOONS_LOADED += MARS_ALL_MOONS
-    _ = spicedb.furnish_spk(MARS_MOONS_LOADED, time=(start_time, stop_time),
-                                               asof=asof)
+    names = spicedb.furnish_spk(MARS_MOONS_LOADED,
+                                time=(start_time, stop_time),
+                                asof=asof)
 
     # Mars and the Mars barycenter orbit the Sun
     define_bodies([499], "SUN", "SUN", ["PLANET"])
@@ -724,6 +727,8 @@ def _define_mars(start_time, stop_time, asof=None):
     ring.unbounded_surface = ring
 
     Body.BODY_REGISTRY['MARS'].ring_body = ring
+
+    return names
 
 ################################################################################
 # Jupiter System
@@ -751,8 +756,9 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
     if irregulars:
         JUPITER_MOONS_LOADED += JUPITER_IRREGULAR
 
-    _ = spicedb.furnish_spk(JUPITER_MOONS_LOADED, time=(start_time, stop_time),
-                                                  asof=asof)
+    names = spicedb.furnish_spk(JUPITER_MOONS_LOADED,
+                                time=(start_time, stop_time),
+                                asof=asof)
 
     # Jupiter and the Jupiter barycenter orbit the Sun
     define_bodies([599], "SUN", "SUN", ["PLANET"])
@@ -784,6 +790,8 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
     ring.backplane_id = 'JUPITER:RING'
     ring.backplane_limits = (0., JUPITER_MAIN_RING_LIMIT)
     ring.unbounded_surface = unbounded_ring
+
+    return names
 
 ################################################################################
 # Saturn System
@@ -818,8 +826,9 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     if irregulars:
         SATURN_MOONS_LOADED += SATURN_IRREGULAR
 
-    _ = spicedb.furnish_spk(SATURN_MOONS_LOADED, time=(start_time, stop_time), 
-                                                 asof=asof)
+    names = spicedb.furnish_spk(SATURN_MOONS_LOADED,
+                                time=(start_time, stop_time), 
+                                asof=asof)
 
     # Saturn and the Saturn barycenter orbit the SSB
     define_bodies([699], "SUN", "SSB", ["PLANET"])
@@ -881,6 +890,8 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     ring.backplane_limits = SATURN_AB_RINGS
     ring.unbounded_surface = unbounded_ring
 
+    return names
+
 ################################################################################
 # Uranus System
 ################################################################################
@@ -939,8 +950,9 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     if irregulars:
         URANUS_MOONS_LOADED += URANUS_IRREGULAR
 
-    _ = spicedb.furnish_spk(URANUS_MOONS_LOADED, time=(start_time, stop_time),
-                                                 asof=asof)
+    names = spicedb.furnish_spk(URANUS_MOONS_LOADED,
+                                time=(start_time, stop_time),
+                                asof=asof)
 
     # Uranus and the Uranus barycenter orbit the SSB
     define_bodies([799], "SUN", "SSB", ["PLANET"])
@@ -1009,6 +1021,8 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
     define_orbit("URANUS", "EPSILON_RING", URANUS_EPSILON_ELEMENTS,
                            URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
 
+    return names
+
 ################################################################################
 # Neptune System
 ################################################################################
@@ -1037,8 +1051,9 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
     if irregulars:
         NEPTUNE_MOONS_LOADED += NEPTUNE_IRREGULAR
 
-    _ = spicedb.furnish_spk(NEPTUNE_MOONS_LOADED, time=(start_time, stop_time),
-                                                  asof=asof)
+    names = spicedb.furnish_spk(NEPTUNE_MOONS_LOADED,
+                                time=(start_time, stop_time),
+                                asof=asof)
 
     # Neptune and the Neptune barycenter orbit the SSB
     define_bodies([899], "SUN", "SSB", ["PLANET"])
@@ -1078,6 +1093,8 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
     ring.backplane_limits = (0., NEPTUNE_ADAMS_LIMIT)
     ring.unbounded_surface = unbounded_ring
 
+    return names
+
 ################################################################################
 # Pluto System
 ################################################################################
@@ -1096,8 +1113,9 @@ def _define_pluto(start_time, stop_time, asof=None):
     global PLUTO_MOONS_LOADED
 
     PLUTO_MOONS_LOADED += CHARON + PLUTO_REGULAR
-    _ = spicedb.furnish_spk(PLUTO_MOONS_LOADED, time=(start_time, stop_time),
-                                                asof=asof)
+    names = spicedb.furnish_spk(PLUTO_MOONS_LOADED,
+                                time=(start_time, stop_time),
+                                asof=asof)
 
     # Pluto and the Pluto barycenter orbit the SSB
     define_bodies([999], "SUN", "SSB", ["PLANET"])
@@ -1123,6 +1141,8 @@ def _define_pluto(start_time, stop_time, asof=None):
 
     barycenter = Body.BODY_REGISTRY["PLUTO BARYCENTER"]
     barycenter.ring_frame = Body.BODY_REGISTRY["PLUTO"].ring_frame
+
+    return names
 
 ################################################################################
 # Define bodies and rings...
