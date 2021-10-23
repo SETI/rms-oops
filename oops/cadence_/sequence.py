@@ -7,7 +7,8 @@ from polymath import *
 from oops.cadence_.cadence import Cadence
 
 class Sequence(Cadence):
-    """Sequence is a Cadence subclass in which time steps are defined by a list."""
+    """Sequence is a Cadence subclass in which time steps are defined by a list.
+    """
 
     PACKRAT_ARGS = ['times', 'texp']
 

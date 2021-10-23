@@ -6,6 +6,7 @@
 
 from oops.cadence_.cadence   import Cadence
 from oops.cadence_.dual      import DualCadence
+from oops.cadence_.instant   import Instant
 from oops.cadence_.metronome import Metronome
 from oops.cadence_.reshaped  import ReshapedCadence
 from oops.cadence_.sequence  import Sequence

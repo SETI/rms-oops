@@ -6,6 +6,7 @@ import numpy as np
 from polymath import *
 
 from oops.event            import Event
+from oops.body             import Body
 from oops.path_.path       import Path
 from oops.frame_.frame     import Frame
 from oops.gravity_.gravity import Gravity
@@ -70,7 +71,8 @@ class Kepler(Path, Fittable):
                 phase0      initial phase of the first wobble term, radians.
                 dphase_dt   rate of change of the first wobble term, radians/s.
 
-                        Alternatively, None to leave the object un-initialized.
+                        Alternatively, a dictionary containing keys with these
+                        names, or None to leave the object un-initialized.
 
             observer    an optional Path object or ID defining the observation
                         point. Used for astrometry. If provided, the path is
@@ -114,27 +116,46 @@ class Kepler(Path, Fittable):
         self.param_name = "elements"
         self.cache = {}
 
-        self.planet = body
-        self.center = body.path
-        self.gravity = body.gravity
+        self.planet = Body.as_body(body)
+        self.center = self.planet.path
+        self.gravity = self.planet.gravity
 
         if observer is None:
             self.observer = None
             self.origin = self.planet.path
-            self.frame  = frame or body.ring_frame
+            self.frame  = frame or self.planet.ring_frame
             self.to_j2000 = Matrix3.IDENTITY
         else:
             self.observer = Path.as_path(observer)
             assert self.observer.shape == ()
             self.origin = self.observer
             self.frame = frame or Frame.J2000
-            frame = self.frame.wrt(body.ring_frame)
+            frame = self.frame.wrt(self.planet.ring_frame)
             self.to_j2000 = frame.transform_at_time(epoch).matrix
 
         self.epoch = epoch
 
         if elements is None:
             self.elements = None
+        elif isinstance(elements, dict):
+            items = [
+                elements['a'],
+                elements['mean0'],
+                elements['n'],
+                elements['e'],
+                elements['peri0'],
+                elements['dperi_dt'],
+                elements['i'],
+                elements['node0'],
+                elements['dnode_dt'],
+            ]
+            if 'amp' in elements:   # only one wobble term is supported here
+                items += [
+                    elements['amp'],
+                    elements['phase0'],
+                    elements['dphase_dt']
+                ]
+            self.set_params(items)
         else:
             self.set_params(elements)
 

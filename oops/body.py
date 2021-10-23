@@ -143,7 +143,8 @@ class Body(object):
         barycenter      the body defining the barycenter of motion and the
                         gravity field defining this body's motion. If a string
                         is given, the barycenter is found by looking it up in
-                        the BODY_REGISTRY dictionary.
+                        the BODY_REGISTRY dictionary. If None, this is the
+                        parent body.
 
         surface         the Surface object defining the body's surface. None if
                         the body is a point and has no surface.
@@ -171,7 +172,7 @@ class Body(object):
     BODY_REGISTRY = {}          # global dictionary of body objects
     STANDARD_BODIES = set()     # Bodies that always have the same definition
 
-    def __init__(self, name, path, frame, parent, barycenter,
+    def __init__(self, name, path, frame, parent, barycenter=None,
                  spice_name=None):
         """Constructor for a Body object."""
 
@@ -209,7 +210,7 @@ class Body(object):
         else:
             self.barycenter = barycenter
 
-        self.surface = None
+        self.surface = NullSurface(self.path, self.frame)   # placeholder
         self.radius = 0.
         self.inner_radius = 0.
 

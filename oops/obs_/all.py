@@ -5,6 +5,7 @@
 # Import the Observation class and all its subclasses into a common name space
 
 from oops.obs_.observation  import Observation
+from oops.obs_.insitu       import InSitu
 from oops.obs_.pixel        import Pixel
 from oops.obs_.pushbroom    import Pushbroom
 from oops.obs_.rasterscan   import RasterScan

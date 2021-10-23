@@ -8,11 +8,13 @@ import numpy as np
 import numbers
 from polymath import *
 
-from oops.config          import LOGGING, PATH_PHOTONS
-from oops.event           import Event
-from oops.frame_.frame    import Frame
-from oops.meshgrid        import Meshgrid
-from oops.body            import Body
+from oops.config            import LOGGING, PATH_PHOTONS
+from oops.event             import Event
+from oops.frame_.frame      import Frame
+from oops.meshgrid          import Meshgrid
+from oops.body              import Body
+from oops.cadence_.cadence  import Cadence
+from oops.cadence_.instant  import Instant
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
