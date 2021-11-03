@@ -66,7 +66,8 @@ class Scalar(Qube):
         """
 
         if type(arg) == Scalar:
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if isinstance(arg, Qube):
@@ -74,7 +75,8 @@ class Scalar(Qube):
                 return Qube.BOOLEAN_CLASS(arg).as_int()
 
             arg = Scalar(arg)
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if isinstance(arg, Units):
@@ -919,8 +921,10 @@ class Scalar(Qube):
         floats_found = False
         ints_found = False
         for scalar in scalars:
-            if scalar.is_float(): floats_found = True
-            if scalar.is_int(): ints_found = True
+            if scalar.is_float():
+                floats_found = True
+            if scalar.is_int():
+                ints_found = True
 
         if floats_found and ints_found:
             scalars = [s.as_float() for s in scalars]
@@ -958,8 +962,10 @@ class Scalar(Qube):
         floats_found = False
         ints_found = False
         for scalar in scalars:
-            if scalar.is_float(): floats_found = True
-            if scalar.is_int(): ints_found = True
+            if scalar.is_float():
+                floats_found = True
+            if scalar.is_int():
+                ints_found = True
 
         if floats_found and ints_found:
             scalars = [s.as_float() for s in scalars]
@@ -1324,11 +1330,13 @@ class Scalar(Qube):
         mask = self.mask | arg.mask
 
         if np.shape(compare) == ():
-            if mask: compare = False
+            if mask:
+                compare = False
             return bool(compare)
 
         if np.shape(mask) == ():
-            if mask: compare.fill(False)
+            if mask:
+                compare.fill(False)
         else:
             compare[mask] = False
 
@@ -1345,11 +1353,13 @@ class Scalar(Qube):
         mask = self.mask | arg.mask
 
         if np.shape(compare) == ():
-            if mask: compare = False
+            if mask:
+                compare = False
             return bool(compare)
 
         if np.shape(mask) == ():
-            if mask: compare.fill(False)
+            if mask:
+                compare.fill(False)
         else:
             compare[mask] = False
 
@@ -1367,13 +1377,17 @@ class Scalar(Qube):
         both_masked = self.mask & arg.mask
 
         if np.shape(compare) == ():
-            if both_masked: compare = True
-            if one_masked: compare = False
+            if both_masked:
+                compare = True
+            if one_masked:
+                compare = False
             return bool(compare)
 
         if np.shape(both_masked) == ():
-            if both_masked: compare.fill(True)
-            if one_masked: compare.fill(False)
+            if both_masked:
+                compare.fill(True)
+            if one_masked:
+                compare.fill(False)
         else:
             compare[both_masked] = True
             compare[one_masked] = False
@@ -1392,13 +1406,17 @@ class Scalar(Qube):
         both_masked = self.mask & arg.mask
 
         if np.shape(compare) == ():
-            if both_masked: compare = True
-            if one_masked: compare = False
+            if both_masked:
+                compare = True
+            if one_masked:
+                compare = False
             return bool(compare)
 
         if np.shape(both_masked) == ():
-            if both_masked: compare.fill(True)
-            if one_masked: compare.fill(False)
+            if both_masked:
+                compare.fill(True)
+            if one_masked:
+                compare.fill(False)
         else:
             compare[both_masked] = True
             compare[one_masked] = False

@@ -46,7 +46,8 @@ class Vector(Qube):
         """
 
         if type(arg) == Vector:
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if isinstance(arg, Qube):
@@ -80,7 +81,8 @@ class Vector(Qube):
                 return arg.split_items(1, Vector)
 
             arg = Vector(arg)
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         return Vector(arg)
@@ -225,14 +227,11 @@ class Vector(Qube):
 
         # Assemble the values into an array, merge the masks
         mask = False
-        array = np.empty(args[0].shape + denom + (len(args),), dtype=dtype)
+        array = np.empty(args[0].shape + (len(args),) + denom, dtype=dtype)
 
         for (i,arg) in enumerate(args):
             mask = mask | arg.mask
-            array[...,i] = arg.values
-
-        if len(denom):
-            array = np.rollaxis(array, -1, len(array.shape) - drank - 1)
+            array[(Ellipsis,i) + drank*(slice(None),)] = arg.values
 
         # Construct the result
         result = Qube(array, mask, units, nrank=1, drank=drank)
@@ -769,7 +768,8 @@ class Vector(Qube):
 
             scalars.append(scalar)
             newshape += list(scalar.shape)
-            if scalar.is_float(): dtype = 'float'
+            if scalar.is_float():
+                dtype = 'float'
 
         newshape = tuple(newshape)
         newrank = len(newshape)

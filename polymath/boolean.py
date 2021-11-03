@@ -32,7 +32,8 @@ class Boolean(Scalar):
     def as_boolean(arg, recursive=True):
         """Return the argument converted to Boolean if possible."""
 
-        if type(arg) == Boolean: return arg
+        if type(arg) == Boolean:
+            return arg
 
         return Boolean(arg, units=False, derivs={})
 
@@ -173,7 +174,8 @@ class Boolean(Scalar):
         return self.as_int() / arg
 
     def __rtruediv__(self, arg, recursive=True):
-        if not isinstance(arg, Qube): arg = Scalar(arg)
+        if not isinstance(arg, Qube):
+            arg = Scalar(arg)
         return arg / self.as_int()
 
     def __itruediv__(self, arg):
@@ -183,7 +185,8 @@ class Boolean(Scalar):
         return self.as_int() // arg
 
     def __rfloordiv__(self, arg):
-        if not isinstance(arg, Qube): arg = Scalar(arg)
+        if not isinstance(arg, Qube):
+            arg = Scalar(arg)
         return arg // self.as_int()
 
     def __ifloordiv__(self, arg):
@@ -193,7 +196,8 @@ class Boolean(Scalar):
         return self.as_int() % arg
 
     def __rmod__(self, arg):
-        if not isinstance(arg, Qube): arg = Scalar(arg)
+        if not isinstance(arg, Qube):
+            arg = Scalar(arg)
         return arg % self.as_int()
 
     def __imod__(self, arg):

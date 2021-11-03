@@ -161,8 +161,9 @@ class Test_Vector_scalars(unittest.TestCase):
     #### from_scalars(*args), with derivatives, denominators
 
     a = 1.
-    b = Scalar((2,3,4), mask=(True,False,False))
+    b = Scalar((2,3,4), mask=(True,False,False))    # shape=(3,), item=()
     c = Scalar(np.random.randn(4,3), mask=(np.random.rand(4,3) < 0.3))
+                                                    # shape=(4,3), item=()
 
     db_dt_mask = np.zeros((4,3), dtype='bool')
     db_dt_mask[:,1] = True
@@ -170,7 +171,7 @@ class Test_Vector_scalars(unittest.TestCase):
                                mask=db_dt_mask))
     c.insert_deriv('t', Scalar(np.random.randn(4,3,2,2), drank=2, mask=c.mask))
 
-    test = Vector.from_scalars(a, b, c, recursive=True)
+    test = Vector.from_scalars(a, b, c, recursive=True) # shape=(4,3), item=(3,)
 
     self.assertTrue(np.all(test.values[...,0] == 1))
     self.assertTrue(np.all(test.values[...,1] == (2,3,4)))

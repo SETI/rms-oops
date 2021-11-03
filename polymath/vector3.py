@@ -33,7 +33,8 @@ class Vector3(Vector):
     @staticmethod
     def as_vector3(arg, recursive=True):
         if type(arg) == Vector3:
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if isinstance(arg, Qube):
@@ -47,7 +48,8 @@ class Vector3(Vector):
                 arg = arg.split_items(1, Vector3)
 
             arg = Vector3(arg)
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         return Vector3(arg)
@@ -191,7 +193,8 @@ class Vector3(Vector):
             zaxis = pole / norm
         else:
             angle = Scalar.as_scalar(angle)
-            if not recursive: angle = angle.wod
+            if not recursive:
+                angle = angle.wod
 
             mask = (angle == 0.)
             if np.any(mask):
@@ -220,6 +223,8 @@ Vector3.ZERO_POS_VEL = Vector3((0.,0.,0.)).as_readonly()
 Vector3.ZERO_POS_VEL.insert_deriv('t', Vector3.ZERO).as_readonly()
 
 Vector3.IDENTITY = Vector3([(1,0,0),(0,1,0),(0,0,1)], drank=1).as_readonly()
+
+Vector3.AXES = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
 
 ################################################################################
 # Once defined, register with Qube class

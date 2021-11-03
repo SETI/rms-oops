@@ -74,13 +74,20 @@ class Qube(object):
         - max() returns the maximum among the unmasked values.
         - all() returns True if all the unmasked values are True.
     - A few methods support an alternative interpretation of masked values as
-      indeterminate rather than nonexistent. These follow the rules of "Three-
-      valued logic::
-        - tvl_and() returns False if one value is False but the other is masked.
-        - tvl_or() return True if one value is True but the other is masked.
-        - tvl_all() returns False if any masked values are present.
-        - tvl_eq() returns False if both values are masked.
-        - tvl_ne() returns Masked if both values are masked.
+      indeterminate rather than nonexistent. These follow the rules of "three-
+      valued logic:
+        - tvl_and() returns False if one value is False but the other is masked,
+                    because the result would be False regardless of the second
+                    value.
+        - tvl_or()  return True if one value is True but the other is masked,
+                    because the result would be True regardless of the second
+                    value.
+        - tvl_all() returns True only if all values are True; if any value is
+                    masked, it returns False.
+        - tvl_any() returns True if any value is True, irrespective of any
+                    masked values.
+        - tvl_eq()  returns False if both values are masked.
+        - tvl_ne()  returns Masked if both values are masked.
 
     The following internal attributes are used:
         __shape_    a tuple representing the leading axes, which are not
@@ -196,10 +203,10 @@ class Qube(object):
                     used, or else a reasonable value is constructed.
         """
 
-        if type(arg) in (list, tuple):
+        if isinstance(arg, (list, tuple)):
             arg = np.array(arg)
 
-        if type(mask) in (list, tuple):
+        if isinstance(mask, (list, tuple)):
             mask = np.array(mask)
 
         if self.NRANK is not None:
@@ -325,7 +332,7 @@ class Qube(object):
                 raise ValueError("unsupported data type: %s" % str(arg.dtype))
 
         else:
-            if isinstance(arg, bool) or type(arg) == np.bool_:
+            if isinstance(arg, (bool, np.bool_)):
                 if not self.BOOLS_OK:
                     if self.INTS_OK:
                         arg = int(arg)
@@ -534,7 +541,7 @@ class Qube(object):
         try:
             dtype = default.dtype
         except AttributeError:
-            if type(default) == int:
+            if isinstance(default, int):
                 dtype = 'int'
             else:
                 dtype = 'float'
@@ -593,7 +600,7 @@ class Qube(object):
         if antimask is None:
             assert np.shape(values) == np.shape(self.__values_), \
                 'shape mismatch'
-            if type(mask) == np.ndarray:
+            if isinstance(mask, np.ndarray):
                 assert np.shape(mask) == self.shape, 'mask shape mismatch'
         else:
             if np.shape(antimask):
@@ -645,7 +652,7 @@ class Qube(object):
         """
 
         # Confirm the shape
-        assert type(mask)==bool or mask.shape == self.shape, \
+        assert isinstance(mask, bool) or mask.shape == self.shape, \
             'mask shape mismatch'
 
         is_readonly = self.__readonly_
@@ -715,7 +722,7 @@ class Qube(object):
     @property
     def mask(self):
         # Annoyingly, type np.bool is not a subclass of bool
-        if np.shape(self.__mask_) == () and type(self.__mask_) != bool:
+        if np.shape(self.__mask_) == () and not isinstance(self.__mask_, bool):
             if self.__mask_:
                 self.__mask_ = True
                 self.__cache_['antimask'] = False
@@ -909,7 +916,8 @@ class Qube(object):
         """True if the value is a single boolean True"""
 
         if np.shape(value) == () and isinstance(value, (bool, np.bool_)):
-            if value: return True
+            if value:
+                return True
 
         return False
 
@@ -918,7 +926,8 @@ class Qube(object):
         """True if the value is a single boolean False"""
 
         if np.shape(value) == () and isinstance(value, (bool, np.bool_)):
-            if not value: return True
+            if not value:
+                return True
 
         return False
 
@@ -1027,7 +1036,8 @@ class Qube(object):
                         read-only object.
         """
 
-        if not override: self.require_writable()
+        if not override:
+            self.require_writable()
 
         if key in self.__derivs_.keys():
             del self.__derivs_[key]
@@ -1046,7 +1056,8 @@ class Qube(object):
                         derivatives to retain. All others are removed.
         """
 
-        if not override: self.require_writable()
+        if not override:
+            self.require_writable()
 
         # If something is being preserved...
         if preserve:
@@ -1075,7 +1086,8 @@ class Qube(object):
                         derivatives to retain. All others are removed.
         """
 
-        if self.__derivs_ == {}: return self
+        if self.__derivs_ == {}:
+            return self
 
         # If something is being preserved...
         if preserve:
@@ -1111,7 +1123,8 @@ class Qube(object):
             key         the key of the derivative to remove.
         """
 
-        if key not in self.__derivs_: return self
+        if key not in self.__derivs_:
+            return self
 
         result = self.clone(recursive=True)
         del result.__derivs_[key]
@@ -1159,7 +1172,8 @@ class Qube(object):
         # Make a list of all the derivative keys
         all_keys = set(self.derivs.keys())
         for obj in objects:
-            if not hasattr(obj, 'derivs'): continue
+            if not hasattr(obj, 'derivs'):
+                continue
             all_keys |= set(obj.derivs.keys())
 
         # Return the proposed key if it is unused
@@ -1192,7 +1206,8 @@ class Qube(object):
             raise TypeError("units are disallowed in class '%s'" %
                             type(self).__name__)
 
-        if not override: self.require_writable()
+        if not override:
+            self.require_writable()
 
         units = Units.as_units(units)
 
@@ -1206,7 +1221,8 @@ class Qube(object):
         are also stripped of their units.
         """
 
-        if self.__units_ is None and self.__derivs_ == {}: return self
+        if self.__units_ is None and self.__derivs_ == {}:
+            return self
 
         obj = self.clone(recursive)
         obj.__units_ = None
@@ -1230,8 +1246,10 @@ class Qube(object):
 
         # Handle easy cases first
         if recursive or not self.__derivs_:
-            if self.__units_ is None: return self
-            if self.__units_.into_units_factor == 1.: return self
+            if self.__units_ is None:
+                return self
+            if self.__units_.into_units_factor == 1.:
+                return self
 
         # Construct the new object
         obj = self.clone(recursive)
@@ -1256,8 +1274,10 @@ class Qube(object):
 
         # Handle easy cases first
         if recursive or not self.__derivs_:
-            if self.__units_ is None: return self
-            if self.__units_.from_units_factor == 1.: return self
+            if self.__units_ is None:
+                return self
+            if self.__units_.from_units_factor == 1.:
+                return self
 
         # Construct the new object
         obj = self.clone(recursive)
@@ -1292,7 +1312,8 @@ class Qube(object):
 
         False means that it is either a writable array or a scalar."""
 
-        if type(arg) != np.ndarray: return False
+        if not isinstance(arg, np.ndarray):
+            return False
 
         return (not arg.flags['WRITEABLE'])
 
@@ -1300,7 +1321,8 @@ class Qube(object):
     def _array_to_readonly(arg):
         """Make the given array read-only. Returns the array."""
 
-        if type(arg) != np.ndarray: return arg
+        if not isinstance(arg, np.ndarray):
+            return arg
 
         arg.flags['WRITEABLE'] = False
         return arg
@@ -1321,7 +1343,8 @@ class Qube(object):
         """
 
         # If it is already read-only, return
-        if self.__readonly_: return self
+        if self.__readonly_:
+            return self
 
         # Update the value if it is an array
         Qube._array_to_readonly(self.__values_)
@@ -1458,7 +1481,8 @@ class Qube(object):
 
         # If already floating, return as is
         if self.is_float():
-            if recursive: return self
+            if recursive:
+                return self
             return self.wod
 
         # Handle a Boolean
@@ -1503,7 +1527,8 @@ class Qube(object):
 
         # If already integers, return as is
         if self.is_int():
-            if recursive: return self
+            if recursive:
+                return self
             return self.wod
 
         # Handle a Boolean
@@ -1544,11 +1569,15 @@ class Qube(object):
         """This object as a Python built-in class (float, int, or bool) if the
         conversion can be done without loss of information."""
 
-        if self.shape != (): return self
-        if self.item  != (): return self
-        if self.mask:        return self
+        if self.shape != ():
+            return self
+        if self.item  != ():
+            return self
+        if self.mask:
+            return self
 
-        if self.units not in (None, Units.UNITLESS): return self
+        if self.units not in (None, Units.UNITLESS):
+            return self
 
         if self.is_float():
             return float(self.values)
@@ -1571,7 +1600,7 @@ class Qube(object):
     @staticmethod
     def is_real_number(arg):
         """Return True if arg is of a Python numeric or NumPy numeric type.""" 
-        return isinstance(arg, numbers.Real) or isinstance(arg, np.number) 
+        return isinstance(arg, (numbers.Real, np.number))
 
     def masked_single(self, recursive=True):
         """Return an object of this subclass containing one masked value."""
@@ -1607,7 +1636,8 @@ class Qube(object):
         """
 
         # If the classes already match, return the argument as is
-        if type(arg) == type(self): return arg
+        if type(arg) == type(self):
+            return arg
 
         # Construct the new object
         obj = Qube.__new__(type(self))
@@ -1688,11 +1718,14 @@ class Qube(object):
         for cls in classes:
 
             # If this is already the class of this object, return it as is
-            if cls is type(self): return self
+            if cls is type(self):
+                return self
 
             # Exclude the class if it is incompatible
-            if cls.NUMER is not None and cls.NUMER != self.__numer_: continue
-            if cls.NRANK is not None and cls.NRANK != self.__nrank_: continue
+            if cls.NUMER is not None and cls.NUMER != self.__numer_:
+                continue
+            if cls.NRANK is not None and cls.NRANK != self.__nrank_:
+                continue
 
             # Construct the new object
             obj = Qube.__new__(cls)
@@ -1731,7 +1764,8 @@ class Qube(object):
             mask = Qube.BOOLEAN_CLASS.as_boolean(mask).__values_
 
         # If the mask is empty, return the object as is
-        if not np.any(mask): return self
+        if not np.any(mask):
+            return self
 
         # Get the replacement value as this type
         if replace is not None:
@@ -2106,7 +2140,8 @@ class Qube(object):
     def without_mask(self, recursive=True):
         """Return a shallow copy of this object without its mask."""
 
-        if Qube.is_one_false(self.mask): return self
+        if Qube.is_one_false(self.mask):
+            return self
 
         obj = self.clone(recursive=False)
         obj._set_mask_(False)
@@ -2120,7 +2155,8 @@ class Qube(object):
     def as_all_masked(self, recursive=True):
         """Return a shallow copy of this object with everything masked."""
 
-        if Qube.is_one_true(self.mask): return self
+        if Qube.is_one_true(self.mask):
+            return self
 
         obj = self.clone(recursive=False)
         obj._set_mask_(True)
@@ -2326,7 +2362,8 @@ class Qube(object):
         """
 
         # If the antimask is shapeless...
-        if antimask is None or Qube.is_one_true(antimask): return self
+        if antimask is None or Qube.is_one_true(antimask):
+            return self
 
         if Qube.is_one_false(antimask):
             return self.masked_single()
@@ -2805,7 +2842,8 @@ class Qube(object):
                         the first suitable subclass in the list.
         """
 
-        if not self.__drank_: return self.wod
+        if not self.__drank_:
+            return self.wod
 
         obj = Qube(self.__values_, self.__mask_, derivs={},
                    nrank=(self.__nrank_ + self.__drank_), drank=0,
@@ -3777,7 +3815,8 @@ class Qube(object):
                 return False
 
         # Compare the values and masks
-        if self.item != arg.item: return False
+        if self.item != arg.item:
+            return False
 
         try:
             (self, arg) = Qube.broadcast(self, arg)
@@ -3797,14 +3836,18 @@ class Qube(object):
 
         # Return a Python bool if the shape is ()
         if np.shape(compare) == ():
-            if one_masked: return False
-            if both_masked: return True
+            if one_masked:
+                return False
+            if both_masked:
+                return True
             return bool(compare)
 
         # Apply the mask
         if np.shape(one_masked) == ():
-            if one_masked: compare.fill(False)
-            if both_masked: compare.fill(True)
+            if one_masked:
+                compare.fill(False)
+            if both_masked:
+                compare.fill(True)
         else:
             compare[one_masked] = False
             compare[both_masked] = True
@@ -3825,7 +3868,8 @@ class Qube(object):
                 return True
 
         # Compare the values and masks
-        if self.item != arg.item: return True
+        if self.item != arg.item:
+            return True
 
         try:
             (self, arg) = Qube.broadcast(self, arg)
@@ -3845,14 +3889,18 @@ class Qube(object):
 
         # Return a Python bool if the shape is ()
         if np.shape(compare) == ():
-            if one_masked: return True
-            if both_masked: return False
+            if one_masked:
+                return True
+            if both_masked:
+                return False
             return bool(compare)
 
         # Apply the mask
         if np.shape(one_masked) == ():
-            if one_masked: compare.fill(True)
-            if both_masked: compare.fill(False)
+            if one_masked:
+                compare.fill(True)
+            if both_masked:
+                compare.fill(False)
         else:
             compare[one_masked] = True
             compare[both_masked] = False
@@ -4613,7 +4661,7 @@ class Qube(object):
         if type(indx) not in (tuple,list):
 
             # However, type numpy.bool_ is not a subclass of bool
-            if np.shape(indx) == () and type(indx) == np.bool_:
+            if np.shape(indx) == () and isinstance(indx, np.bool_):
                 indx = bool(indx)
 
             return (indx, indx, None)
@@ -5198,7 +5246,8 @@ class Qube(object):
                 raise ValueError('mixed denominator shapes')
 
             deriv_dicts.append(scalar.__derivs_)
-            if len(scalar.__derivs_): nderivs += 1
+            if len(scalar.__derivs_):
+                nderivs += 1
 
         # Construct the values array
         new_drank = len(new_denom)
@@ -5285,7 +5334,8 @@ class Qube(object):
         """
 
         shape = tuple(shape)
-        if shape == self.__shape_: return self
+        if shape == self.__shape_:
+            return self
 
         if np.shape(self.__values_) == ():
             new_values = np.array([self.__values_]).reshape(shape)
@@ -5310,7 +5360,8 @@ class Qube(object):
     def flatten(self, recursive=True):
         """Return a shallow copy of the object flattened to one dimension."""
 
-        if len(self.__shape_) < 2: return self
+        if len(self.__shape_) < 2:
+            return self
 
         count = np.product(self.__shape_)
         return self.reshape((count,), recursive)
@@ -5349,7 +5400,8 @@ class Qube(object):
             raise ValueError('axis2 argument out of range (%d,%d): %d' %
                              (-len_shape, len_shape, axis2))
 
-        if a1 == a2: return self
+        if a1 == a2:
+            return self
 
         new_values = self.__values_.swapaxes(a1, a2)
 
@@ -5537,11 +5589,13 @@ class Qube(object):
         len_broadcast = 0
         # Loop through the arrays...
         for obj in objects:
-            if obj is None: continue
-            if Qube.is_real_number(obj): continue
+            if obj is None:
+                continue
+            if Qube.is_real_number(obj):
+                continue
 
             # Get the next shape
-            if type(obj) == tuple or type(obj) == list:
+            if isinstance(obj, (tuple,list)):
                 shape = list(obj)
             else:
                 shape = list(obj.shape)
@@ -5682,7 +5736,8 @@ class Qube(object):
         ints_found = False
         bools_found = False
         for (i,arg) in enumerate(args):
-            if arg is None: continue        # Used as placehold for derivs
+            if arg is None:                 # Used as placehold for derivs
+                continue
 
             arg = subclass_arg.as_this_type_unless_boolean(arg,
                                             recursive=recursive, drank=drank)
@@ -5764,7 +5819,8 @@ class Qube(object):
         if recursive:
             keys = []
             for arg in args:
-                if arg is None: continue
+                if arg is None:
+                    continue
                 keys += arg.derivs.keys()
 
             keys = set(keys)        # remove duplicates

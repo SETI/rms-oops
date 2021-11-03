@@ -98,9 +98,9 @@ class Units(object):
 
         if arg is None:
             return None
-        elif type(arg) == str:
+        elif isinstance(arg, str):
             return Units.NAME_TO_UNIT[arg]
-        elif type(arg) == Units:
+        elif isinstance(arg, Units):
             return arg
         else:
             raise ValueError("not a recognized unit: " + str(arg))
@@ -110,7 +110,8 @@ class Units(object):
         """Returns True if the units can match, meaning that either they have
         the same exponents or one or both are None."""
 
-        if first is None or second is None: return True
+        if first is None or second is None:
+            return True
         return first.exponents == second.exponents
 
     @staticmethod
@@ -125,8 +126,10 @@ class Units(object):
         """Returns True if the units match, meaning that they have the same
         exponents. Values of None are treated as equivalent to nnitless."""
 
-        if first  is None: first  = Units.UNITLESS
-        if second is None: second = Units.UNITLESS
+        if first is None:
+            first = Units.UNITLESS
+        if second is None:
+            second = Units.UNITLESS
 
         return first.exponents == second.exponents
 
@@ -141,7 +144,8 @@ class Units(object):
     def is_angle(arg):
         """Returns True if the argument could be used as an angle."""
 
-        if arg is None: return True
+        if arg is None:
+            return True
         return (arg.exponents in ((0,0,0), (0,0,1)))
 
     @staticmethod
@@ -155,7 +159,8 @@ class Units(object):
     def is_unitless(arg):
         """Returns True if the argument is unitless."""
 
-        if arg is None: return True
+        if arg is None:
+            return True
         return (arg.exponents == (0,0,0))
 
     @staticmethod
@@ -206,7 +211,8 @@ class Units(object):
         new units specified. Conversions are exact whenever possible.
         """
 
-        if units is None: units = Units.UNITLESS
+        if units is None:
+            units = Units.UNITLESS
 
         if self.exponents != units.exponents:
             raise ValueError("cannot convert units " + self.get_name() +
@@ -235,7 +241,8 @@ class Units(object):
                           self.triple[2] + arg.triple[2]),
                          Units.mul_names(self.name, arg.name))
 
-        if arg is None: return self
+        if arg is None:
+            return self
 
         if isinstance(arg, numbers.Real):
             return self * (Units((0,0,0), (arg,1,0)))
@@ -261,7 +268,8 @@ class Units(object):
                           self.triple[2] - arg.triple[2]),
                          Units.div_names(self.name, arg.name))
 
-        if arg is None: return self
+        if arg is None:
+            return self
 
         if isinstance(arg, numbers.Real):
             return self * (Units((0,0,0), (1,arg,0)))
@@ -269,7 +277,8 @@ class Units(object):
         return NotImplemented
 
     def __rtruediv__(self, arg):
-        if arg is None: arg = 1.
+        if arg is None:
+            arg = 1.
 
         if isinstance(arg, numbers.Real):
             return (self / arg)**(-1)
@@ -314,8 +323,10 @@ class Units(object):
 
         numer = np.sqrt(self.triple[0])
         denom = np.sqrt(self.triple[1])
-        if numer == int(numer): numer = int(numer)
-        if denom == int(denom): denom = int(denom)
+        if numer == int(numer):
+            numer = int(numer)
+        if denom == int(denom):
+            denom = int(denom)
 
         pi_expo = self.triple[2] // 2
         if self.triple[2] != 2*pi_expo:
@@ -368,7 +379,8 @@ class Units(object):
         """Returns a Units object constructed as the square root of the given
         units. The given units can be None."""
 
-        if units is None: return None
+        if units is None:
+            return None
         return units.sqrt(name)
 
     @staticmethod
@@ -376,7 +388,8 @@ class Units(object):
         """Returns a Units object constructed as the given units raised to a
         power. The given units can be None."""
 
-        if units is None: return None
+        if units is None:
+            return None
         result = units**power
         result.set_name(name)
 
@@ -387,11 +400,13 @@ class Units(object):
     ############################################################################
 
     def __eq__(self, arg):
-        if not isinstance(arg, Units): return False
+        if not isinstance(arg, Units):
+            return False
         return (self.exponents == arg.exponents and self.factor == arg.factor)
 
     def __ne__(self, arg):
-        if not isinstance(arg, Units): return True
+        if not isinstance(arg, Units):
+            return True
         return (self.exponents != arg.exponents or self.factor != arg.factor)
 
     ############################################################################
@@ -416,7 +431,8 @@ class Units(object):
 
     @staticmethod
     def mul_names(name1, name2):
-        if name1 is None or name2 is None: return None
+        if name1 is None or name2 is None:
+            return None
 
         name1 = Units.name_to_dict(name1)
         name2 = Units.name_to_dict(name2)
@@ -435,7 +451,8 @@ class Units(object):
 
     @staticmethod
     def div_names(name1, name2):
-        if name1 is None or name2 is None: return None
+        if name1 is None or name2 is None:
+            return None
 
         name1 = Units.name_to_dict(name1)
         name2 = Units.name_to_dict(name2)
@@ -455,15 +472,16 @@ class Units(object):
     @staticmethod
     def name_power(name, power):
 
-        if name is None: return None
+        if name is None:
+            return None
 
         name = Units.name_to_dict(name)
 
-        if type(power) == str:
+        if isinstance(power, str):
             old_power = power
             power = Units.name_to_dict(power)
 
-            if type(power) != int:
+            if not isinstance(power, int):
                 raise ValueError("non-integer power on unit '%s'", old_power)
 
         new_name = {}
@@ -486,12 +504,15 @@ class Units(object):
 
         BIGNUM = 99999
 
-        if type(name) == dict: return name
-        if type(name) != str:
+        if isinstance(name, dict):
+            return name
+
+        if not isinstance(name, str):
             raise ValueError("unit is not a string: '%s'" % str(name))
 
         name = name.strip()
-        if name == '': return {}
+        if name == '':
+            return {}
 
         # Return a named unit
         if name.isalpha():
@@ -508,9 +529,12 @@ class Units(object):
         if name[0] == '(':
             depth = 0
             for (i,c) in enumerate(name):
-                if c == '(': depth += 1
-                if c == ')': depth -= 1
-                if depth == 0: break
+                if c == '(':
+                    depth += 1
+                if c == ')':
+                    depth -= 1
+                if depth == 0:
+                    break
 
             left = name[1:i]
             right = name[i+1:].lstrip()
@@ -566,14 +590,16 @@ class Units(object):
             sorted = []
 
             # Coefficient first
-            if '' in namelist: sorted.append('')
+            if '' in namelist:
+                sorted.append('')
 
             # Distances first
             templist = []
             for key in namelist:
                 if key in Units.NAME_TO_UNIT:
                     expo = Units.NAME_TO_UNIT[key].exponents
-                    if expo[0]: templist.append(key)
+                    if expo[0]:
+                        templist.append(key)
             templist.sort()
             sorted += templist
 
@@ -582,7 +608,8 @@ class Units(object):
             for key in namelist:
                 if key in Units.NAME_TO_UNIT:
                     expo = Units.NAME_TO_UNIT[key].exponents
-                    if expo[2] and key not in sorted: templist.append(key)
+                    if expo[2] and key not in sorted:
+                        templist.append(key)
             templist.sort()
             sorted += templist
 
@@ -591,14 +618,16 @@ class Units(object):
             for key in namelist:
                 if key in Units.NAME_TO_UNIT:
                     expo = Units.NAME_TO_UNIT[key].exponents
-                    if expo[1] and key not in sorted: templist.append(key)
+                    if expo[1] and key not in sorted:
+                        templist.append(key)
             templist.sort()
             sorted += templist
 
             # Unrecognized units last
             templist = []
             for key in namelist:
-                if key not in sorted: templist.append(key)
+                if key not in sorted:
+                    templist.append(key)
             templist.sort()
             sorted += templist
 
@@ -615,7 +644,8 @@ class Units(object):
                         unitlist.append(str(expo))
                     continue
 
-                if negate: expo = -expo
+                if negate:
+                    expo = -expo
                 if expo == 1:
                     unitlist.append(key)
                 elif expo > 1:
@@ -626,7 +656,8 @@ class Units(object):
             return '*'.join(unitlist)
 
         # Return a string immediately
-        if type(namedict) == str: return namedict
+        if isinstance(namedict, str):
+            return namedict
 
         # Make list of numerator and denominator units
         numers = []
@@ -658,12 +689,14 @@ class Units(object):
         """Attempt to create a name dictionary if one is missing."""
 
         # Return the internal name, if defined
-        if self.name is not None: return self.name
+        if self.name is not None:
+            return self.name
 
         # Return the name from the dictionary, if found
         try:
             name = Units.TUPLES_TO_UNIT[(self.exponents, self.triple)].name
-            if name is not None: return name
+            if name is not None:
+                return name
         except KeyError:
             pass
 
@@ -724,7 +757,8 @@ class Units(object):
             lengths = [len(k) for k in successes]
             best = min(lengths)
             for (k,length) in enumerate(lengths):
-                if length == best: return successes[k]
+                if length == best:
+                    return successes[k]
 
         # Failing that, use standard units and define the coefficient too
         (numer, denom, pi_expo) = self.triple

@@ -36,7 +36,8 @@ class Quaternion(Vector):
         """Return this object converted to a Quaternion."""
 
         if type(arg) == Quaternion:
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if type(arg) == Matrix3:
@@ -48,7 +49,8 @@ class Quaternion(Vector):
                 return from_parts(0., arg, recursive)
 
             arg = Quaternion(arg, arg.mask, example=arg)
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         return Quaternion(arg)

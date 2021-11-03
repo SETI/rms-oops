@@ -38,7 +38,8 @@ class Matrix(Qube):
     def as_matrix(arg, recursive=True):
 
         if type(arg) == Matrix:
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if isinstance(arg, Qube):
@@ -48,7 +49,8 @@ class Matrix(Qube):
                 return arg.join_items([Matrix])
 
             arg = Matrix(arg.values, arg.mask, example=arg)
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         return Matrix(arg)
@@ -368,7 +370,8 @@ class Matrix(Qube):
                 sorted = np.sort(rms.values.ravel())
                 print(i, sorted[-4:])
 
-            if rms.max() <= Matrix.DELTA: break
+            if rms.max() <= Matrix.DELTA:
+                break
 
         new_mask = (rms.values > Matrix.DELTA)
         return Qube.MATRIX3_CLASS(next_m.values, self.mask | new_mask)

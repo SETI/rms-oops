@@ -41,7 +41,8 @@ class Matrix3(Matrix):
         """
 
         if type(arg) == Matrix3:
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if isinstance(arg, Qube):
@@ -49,42 +50,86 @@ class Matrix3(Matrix):
                 return arg.to_matrix3(recursive)
 
             arg = Matrix3(arg.values, arg.mask, example=arg)
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         return Matrix3(arg)
 
     @staticmethod
-    def twovec(vector1, axis1, vector2, axis2):
+    def twovec(vector1, axis1, vector2, axis2, recursive=True):
         """Return a rotation matrix defined by two vectors.
 
-        The returned matrix rotates to a coordinate frame having vector1
-        pointing along a specified axis (axis1=0 for X, 1 for Y, 2 for Z) and
-        vector2 pointing into the half-plane defined by (axis1,axis2).
-
-        This function does not support derivatives.
+        The returned matrix rotates to a right-handed coordinate frame having
+        vector1 pointing along a specified axis (axis1=0 for X, 1 for Y, 2 for
+        Z) and vector2 pointing into the half-plane defined by (axis1,axis2).
         """
 
         # Based on the SPICE source code for TWOVEC()
 
-        unit1 = Vector3.as_vector3(vector1).wod.unit()
-        vector2 = Vector3.as_vector3(vector2).wod
+        # Make shapes and types consistent
+        unit1 = Vector3.as_vector3(vector1).unit(recursive)
+        vector2 = Vector3.as_vector3(vector2, recursive)
         (unit1, vector2) = Qube.broadcast(unit1, vector2)
 
-        new_values = np.empty(unit1.values.shape + (3,))
-        new_values[..., axis1, :] = unit1.values
+        # Denominators are disallowed
+        assert unit1.denom   == (), 'denominator is disallowed'
+        assert vector2.denom == (), 'denominator is disallowed'
 
+        # Define the remaining two columns of the matrix
         axis3 = 3 - axis1 - axis2
-        if (3 + axis2 - axis1) % 3 == 1:      # if (0,1), (1,2) or (2,0)
-            unit3 = unit1.ucross(vector2)
-            new_values[..., axis3, :] = unit3.values
-            new_values[..., axis2, :] = unit3.ucross(unit1).values
+        if (3 + axis2 - axis1) % 3 == 1:        # if (0,1), (1,2) or (2,0)
+            unit3 = unit1.ucross(vector2, recursive)
+            unit2 = unit3.ucross(unit1, recursive)
         else:
-            unit3 = vector2.ucross(unit1)
-            new_values[..., axis3, :] = unit3.values
-            new_values[..., axis2, :] = unit1.ucross(unit3).values
+            unit3 = vector2.ucross(unit1, recursive)
+            unit2 = unit1.ucross(unit3, recursive)
 
-        return Matrix3(new_values, vector1.mask | vector2.mask)
+        # Assemble the values into an array
+        array = np.empty(unit1.shape + (3,3))
+        array[...,axis1,:] = unit1.values
+        array[...,axis2,:] = unit2.values
+        array[...,axis3,:] = unit3.values
+
+        # Construct the result
+        result = Matrix3(array, unit1.mask | vector2.mask)
+
+        # Fill in derivatives if necessary
+        if recursive and (unit1.derivs or vector2.derivs):
+
+            # Find all the derivatives and their denominator shapes
+            denoms = {}
+            for (key,deriv) in unit1.derivs.items():
+                denoms[key] = deriv.denom
+            for (key,deriv) in vector2.derivs.items():
+                if key in denoms:
+                    if deriv.denom != denoms[key]:
+                        raise ValueError('denominator shape mismatch: %s, %s' %
+                                         (denoms[key], deriv.denom))
+                else:
+                    denoms[key] = vector2.derivs[key].denom
+
+            derivs = {}
+            for (key,denom) in denoms.items():
+                drank = len(denom)
+                deriv = np.zeros(unit1.shape + (3,3) + denom)
+
+                suffix = (drank + 1) * (slice(None),)
+                if key in unit1.derivs:
+                    deriv[(Ellipsis,axis1) + suffix] = unit1.derivs[key].values
+                if key in unit2.derivs:
+                    deriv[(Ellipsis,axis2) + suffix] = unit2.derivs[key].values
+                if key in unit3.derivs:
+                    deriv[(Ellipsis,axis3) + suffix] = unit3.derivs[key].values
+
+                derivs[key] = Matrix3(deriv, mask=result.mask, drank=drank)
+
+            result.insert_derivs(derivs)
+
+        if unit1.readonly and vector2.readonly:
+            result = result.as_readonly()
+
+        return result
 
     # from https://en.wikipedia.org/wiki/Rotation_matrix
     # These are rotations of a vector counterclockwise about an axis
@@ -95,7 +140,7 @@ class Matrix3(Matrix):
         """Rotation matrix about X-axis.
 
         The returned matrix rotates a vector counterclockwise about the X-axis
-        bythe specified angle in radians. The same matrix rotates a coordinate
+        by the specified angle in radians. The same matrix rotates a coordinate
         system clockwise by the same angle.
         """
 
@@ -263,7 +308,8 @@ class Matrix3(Matrix):
             return Qube.dot(self, arg, -1, 0, type(arg), recursive)
 
         # Rotation of a scalar leaves it unchanged
-        else: return arg
+        else:
+            return arg
 
     def unrotate(self, arg, recursive=True):
         """Rotate by the inverse of this Matrix3, returning the same subclass.
@@ -278,7 +324,8 @@ class Matrix3(Matrix):
             return self.dot(self, arg, -2, 0, type(arg), recursive)
 
         # Rotation of a scalar leaves it unchanged
-        else: return arg
+        else:
+            return arg
 
     ############################################################################
     # Overrides of arithmetic operators
@@ -301,7 +348,8 @@ class Matrix3(Matrix):
 
         # Rotate a scalar, returning the scalar unchanged except for new derivs
         if arg.nrank == 0:
-            if not recursive: return arg.wod
+            if not recursive:
+                return arg.wod
             return arg
 
         # For every other purpose, use the default multiply

@@ -40,7 +40,8 @@ class Pair(Vector):
         """
 
         if type(arg) == Pair:
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         if isinstance(arg, Qube):
@@ -54,7 +55,8 @@ class Pair(Vector):
                 arg = arg.split_items(1, Pair)
 
             arg = Pair(arg.values, arg.mask, example=arg)
-            if recursive: return arg
+            if recursive:
+                return arg
             return arg.wod
 
         # Special case of a single number
