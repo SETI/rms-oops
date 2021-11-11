@@ -127,77 +127,256 @@ class Test_Qube_shrink(unittest.TestCase):
     self.assertTrue(np.all(a.mask ^ a.antimask))
     self.assertEqual(a[a.antimask], a[np.newaxis][:0])
 
-    # shrink and unshrink
-    values = np.arange(100*200).reshape(100,200)
-    a = Scalar(values, mask=(np.random.randn(100,200) < 0))
+    # Test unshrink with and without _IGNORE_UNSHRUNK_AS_CACHED
+    for ignore in (False, True):
 
-    b = a.shrink()
-    self.assertEqual(a, b)
+        Qube._IGNORE_UNSHRUNK_AS_CACHED = ignore
 
-    antimask = np.zeros((100,200), dtype='bool')
-    antimask[0] = True
-    b = a.shrink(antimask)
-    self.assertEqual(b.shape, (200,))
-    self.assertTrue(np.all(b.values == np.arange(200)))
+        # shrink and unshrink, unmasked
 
-    c = b.unshrink(antimask)
-    self.assertEqual(a.shape, c.shape)
-    self.assertEqual(a[0], c[0])
+        values = np.arange(100*200).reshape(100,200)
+        a = Scalar(values)
 
-    c = b.unshrink(antimask)
-    self.assertEqual(a.shape, c.shape)
-    self.assertEqual(a[0], c[0])
-    self.assertTrue(np.all(c.mask[1:]))
+        b = a.shrink(True)
+        self.assertEqual(a, b)
 
-    dist = Scalar(np.arange(-50,50)[:,np.newaxis]**2 +
-                  np.arange(-100,100)**2).sqrt()
-    mask = (dist > 40)
-    a = Scalar(dist, mask)
-    self.assertEqual(a.corners, ((10,60),(91,141)))
+        b = a.shrink(False)
+        self.assertEqual(b, Scalar.MASKED)
 
-    b = a.shrink(a.antimask)
-    c = b.unshrink(a.antimask)
-    self.assertEqual(a, c)
+        antimask = np.zeros((100,200), dtype='bool')
+        antimask[0] = True
+        b = a.shrink(antimask)
+        self.assertEqual(b.shape, (200,))
+        self.assertTrue(np.all(b.values == np.arange(200)))
 
-    antimask = a.antimask
-    v = Vector3(np.random.randn(100,200,3),
-                mask=np.random.randn(100,200) < 0.)
-    v2 = v.shrink(antimask)
-    v3 = v2.unshrink(antimask)
-    self.assertEqual(v[antimask], v3[antimask])
+        c = b.unshrink(antimask)
+        self.assertEqual(a.shape, c.shape)
+        self.assertEqual(a[0], c[0])
+        self.assertTrue(np.all(c.mask[1:]))
 
-    v = v.mask_where(~antimask)
-    v2 = v.shrink(antimask)
-    v3 = v2.unshrink(antimask)
-    self.assertEqual(v, v3)
+        # shrink and unshrink, masked
+        values = np.arange(100*200).reshape(100,200)
+        a = Scalar(values, mask=(np.random.randn(100,200) < 0))
 
-    v3 = v2.unshrink(antimask)
-    self.assertEqual(v, v3)
+        b = a.shrink(True)
+        self.assertEqual(a, b)
 
-    #### Shape control
+        b = a.shrink(False)
+        self.assertEqual(b, Scalar.MASKED)
 
-    a = Vector3(np.random.randn(100,3,3), drank=1, mask=True)
-    b = a.shrink(False)
-    aa = b.unshrink(False, shape=a.shape)
-    self.assertEqual(aa, a)
+        antimask = np.zeros((100,200), dtype='bool')
+        antimask[0] = True
+        b = a.shrink(antimask)
+        self.assertEqual(b.shape, (200,))
+        self.assertTrue(np.all(b.values == np.arange(200)))
 
-    aa = b.unshrink(False)
-    self.assertEqual(aa.shape, ())
+        c = b.unshrink(antimask)
+        self.assertEqual(a.shape, c.shape)
+        self.assertEqual(a[0], c[0])
+        self.assertTrue(np.all(c.mask[1:]))
 
-    #### Zero-sized objects
+        dist = Scalar(np.arange(-50,50)[:,np.newaxis]**2 +
+                      np.arange(-100,100)**2).sqrt()
+        mask = (dist > 40)
+        a = Scalar(dist, mask)
+        self.assertEqual(a.corners, ((10,60),(91,141)))
 
-    a = a[:0]
-    self.assertEqual(a.shape, (0,))
-    b = a.shrink(True)
-    self.assertEqual(b.shape, (0,))
-    aa = b.unshrink(True, (0,))
-    self.assertEqual(aa.shape, (0,))
+        b = a.shrink(a.antimask)
+        c = b.unshrink(a.antimask)
+        self.assertEqual(a, c)
 
-    aa = b.unshrink(True)
-    self.assertEqual(aa.shape, (0,))
+        antimask = a.antimask
+        v = Vector3(np.random.randn(100,200,3),
+                    mask=np.random.randn(100,200) < 0.)
+        v2 = v.shrink(antimask)
+        v3 = v2.unshrink(antimask)
+        self.assertEqual(v[antimask], v3[antimask])
 
-    aa = b.unshrink(False)
-    self.assertEqual(aa.shape, ())
+        v = v.mask_where(~antimask)
+        v2 = v.shrink(antimask)
+        v3 = v2.unshrink(antimask)
+        self.assertEqual(v, v3)
+
+        v3 = v2.unshrink(antimask)
+        self.assertEqual(v, v3)
+
+        #### Shape control
+
+        a = Scalar(np.arange(900).reshape(100,3,3), drank=1, mask=True)
+        b = a.shrink(False)
+        aa = b.unshrink(False, shape=a.shape)
+        self.assertEqual(aa, a)
+        aa = b.unshrink(False)
+        self.assertEqual(aa.shape, ())
+
+        a = Boolean(np.arange(900).reshape(100,3,3) % 2 == 0, drank=1, mask=True)
+        b = a.shrink(False)
+        aa = b.unshrink(False, shape=a.shape)
+        self.assertEqual(aa, a)
+        aa = b.unshrink(False)
+        self.assertEqual(aa.shape, ())
+
+        a = Vector3(np.random.randn(100,3,3), drank=1, mask=True)
+        b = a.shrink(False)
+        aa = b.unshrink(False, shape=a.shape)
+        self.assertEqual(aa, a)
+        aa = b.unshrink(False)
+        self.assertEqual(aa.shape, ())
+
+        #### Zero-sized objects
+
+        a = a[:0]
+        self.assertEqual(a.shape, (0,))
+        b = a.shrink(True)
+        self.assertEqual(b.shape, (0,))
+        aa = b.unshrink(True, (0,))
+        self.assertEqual(aa.shape, (0,))
+
+        aa = b.unshrink(True)
+        self.assertEqual(aa.shape, (0,))
+
+        aa = b.unshrink(False)
+        self.assertEqual(aa.shape, ())
+
+        #### Unshaped, unmasked objects
+
+        a = Scalar(8.)
+
+        antimask = (np.random.randn(7,5) < 0.)
+        b = a.shrink(antimask)
+        c = b.unshrink(antimask)
+        self.assertEqual(a, b)
+        self.assertEqual(a, c)
+#         self.assertTrue((a == b).all())
+#         self.assertEqual(len(b), np.sum(antimask))
+#         cc = c.copy()
+#         cc[c == Scalar.MASKED] = 0.
+#         self.assertEqual(8. * np.asfarray(antimask), cc)
+
+        antimask[...] = False
+        b = a.shrink(antimask)
+        self.assertEqual(b, Scalar.MASKED)
+        c = b.unshrink(antimask)
+        self.assertEqual(c, Scalar.MASKED)
+
+        antimask = True
+        b = a.shrink(antimask)
+        self.assertEqual(a, b)
+        c = b.unshrink(antimask)
+        self.assertEqual(a, c)
+
+        antimask = False
+        b = a.shrink(antimask)
+        self.assertEqual(b, Scalar.MASKED)
+        c = b.unshrink(antimask)
+        self.assertEqual(c, Scalar.MASKED)
+
+        #### Unshaped, masked objects
+
+        a = Scalar(0., mask=True)
+
+        antimask = (np.random.randn(7,5) < 0.)
+        b = a.shrink(antimask)
+        self.assertEqual(a, b)
+        c = b.unshrink(antimask)
+        self.assertEqual(a, c)
+
+        antimask[...] = False
+        b = a.shrink(antimask)
+        self.assertEqual(b, a)
+        c = b.unshrink(antimask)
+        self.assertEqual(c, a)
+
+        antimask = True
+        b = a.shrink(antimask)
+        self.assertEqual(a, b)
+        c = b.unshrink(antimask)
+        self.assertEqual(a, c)
+
+        antimask = False
+        b = a.shrink(antimask)
+        self.assertEqual(a, b)
+        c = b.unshrink(antimask)
+        self.assertEqual(a, c)
+
+        #### Shaped object, unshaped mask
+
+        a = Scalar(np.random.randn(7,5), mask=False)
+
+        antimask = True
+        b = a.shrink(antimask)
+        self.assertEqual(a, b)
+        c = b.unshrink(antimask)
+        self.assertEqual(a, c)
+
+        antimask = False
+        b = a.shrink(antimask)
+        self.assertEqual(b, Scalar.MASKED)
+        c = b.unshrink(antimask)
+        self.assertEqual(c, Scalar.MASKED)
+
+        #### Object becomes totally masked only upon shrinking
+
+        antimask = (np.random.randn(7,5) < 0.)
+        a = Scalar(np.random.randn(7,5), mask=antimask)
+        b = a.shrink(antimask)
+        self.assertEqual(b, Scalar.MASKED)
+        c = b.unshrink(antimask)
+        self.assertEqual(c, Scalar.MASKED)
+
+        #### Calculations
+
+        b = Vector3(np.random.randn(100,3), mask=np.random.randn(100) > 1.)
+        c = Scalar(np.random.randn(3,1,100), mask=np.random.randn(3,1,100) > 1.)
+        d = Vector3(np.random.randn(100,3), mask=np.random.randn(100) > 1.)
+
+        for value in [1., Scalar(np.random.randn(2,100))]:
+          for mask in [True, False,
+                       np.ones((2,100), dtype='bool'),
+                       np.zeros((2,100), dtype='bool'),
+                       np.random.randn(2,100) > 1.]:
+
+            if np.shape(value) == () and np.shape(mask) != ():
+                continue
+
+            a = Scalar(value, mask)
+
+            value1 = a * b + c * d
+
+            for antishape in (value1.shape, value1.shape[1:], value1.shape[2:]):
+              for antimask in [True, False,
+                               np.ones(antishape, dtype='bool'),
+                               np.zeros(antishape, dtype='bool'),
+                               np.random.randn(*antishape) > 1]:
+
+                aa = a.shrink(antimask)
+                bb = b.shrink(antimask)
+                cc = c.shrink(antimask)
+                dd = d.shrink(antimask)
+
+                value2 = aa * bb + cc * dd
+
+                test1 = value1.shrink(antimask) == value2
+                if isinstance(test1, bool):
+                    self.assertTrue(test1)
+                else:
+                    self.assertTrue(test1.all())
+
+                if np.shape(antimask) == ():
+                    test_mask = antimask
+                else:
+                    pad = len(value1.shape) - len(np.shape(antimask))
+                    test_mask = pad * (slice(None),) + (antimask,)
+
+                self.assertTrue((value1[test_mask] == value2).all())
+
+                value3 = value2.unshrink(antimask)
+                self.assertTrue(value3.shape in ((), value1.shape))
+
+                if value3.shape == ():
+                    self.assertTrue((value1[test_mask] == value3).all())
+                else:
+                    self.assertTrue((value1[test_mask] == value3[test_mask]).all())
 
 ################################################################################
 # Execute from command line...

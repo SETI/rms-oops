@@ -202,7 +202,7 @@ class Test_Matrix_inverse(unittest.TestCase):
     tscale = np.sqrt(np.mean(np.mean(db_dt.values**2, axis=-1), axis=-1))
     vscale = np.sqrt(np.mean(np.mean(db_dv.values**2, axis=-2), axis=-2))
 
-    DEL = 1.e-4
+    DEL = 2.e-4
     for i in range(N):
       for j in range(3):
         for k in range(3):

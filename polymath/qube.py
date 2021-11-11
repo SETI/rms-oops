@@ -223,7 +223,7 @@ class Qube(object):
             raise TypeError('units are disallowed for class ' +
                              '%s: %s' % (type(self).__name__, str(units)))
 
-        # Interpret the arg if it is a PolyMath object
+        # Interpret the arg if it is already a PolyMath object
         if isinstance(arg, Qube):
 
             if mask is None:
@@ -277,11 +277,11 @@ class Qube(object):
 
             arg = arg.data
 
-        # Fill in the denominator rank if undefined
+        # Fill in the denominator rank if it is still undefined
         if drank is None:
             drank = 0
 
-        # Fill in the numerator rank if undefined
+        # Fill in the numerator rank if it is still undefined
         if nrank is None:
             nrank = 0
 
@@ -368,15 +368,14 @@ class Qube(object):
 
         if mask_from_array is not None:
             for r in range(rank):
-                mask_from_array = np.any(mask_from_array)
+                mask_from_array = np.any(mask_from_array, axis=-1)
 
             mask = mask | mask_from_array
 
         # Broadcast the mask to the shape of the values if necessary
         if np.shape(mask) not in ((), shape):
             try:
-                dummy = np.empty(shape, dtype='bool')
-                new_mask = np.broadcast_arrays(mask, dummy)[0]
+                mask = np.broadcast_to(mask, shape)
             except:
                 raise ValueError(("object shape and mask shape are " +
                                   "incompatible: %s, %s") %
@@ -598,14 +597,21 @@ class Qube(object):
 
         # Confirm shapes
         if antimask is None:
-            assert np.shape(values) == np.shape(self.__values_), \
-                'shape mismatch'
+            if np.shape(values) != np.shape(self.__values_):
+                raise ValueError('value shape mismatch; old is ' +
+                                 str(np.shape(self.__values_)) + '; new is ' +
+                                 str(np.shape(values)))
             if isinstance(mask, np.ndarray):
-                assert np.shape(mask) == self.shape, 'mask shape mismatch'
+                if np.shape(mask) != self.shape:
+                    raise ValueError('mask shape mismatch; mask is ' +
+                                      str(np.shape(mask)) + '; object is ' +
+                                      str(self.shape))
         else:
             if np.shape(antimask):
-                assert np.shape(antimask) == self.shape, \
-                    'antimask shape mismatch'
+                if np.shape(antimask) != self.shape:
+                    raise ValueError('antimask shape mismatch; antimask is ' +
+                                     str(np.shape(antimask)) + '; object is ' +
+                                     str(self.shape))
 
         # Update values
         if antimask is None:
@@ -652,8 +658,10 @@ class Qube(object):
         """
 
         # Confirm the shape
-        assert isinstance(mask, bool) or mask.shape == self.shape, \
-            'mask shape mismatch'
+        if not isinstance(mask, bool) and mask.shape != self.shape:
+            raise ValueError('mask shape mismatch; mask is ' +
+                             str(mask.shape) + '; object is ' +
+                             str(self.shape))
 
         is_readonly = self.__readonly_
 
@@ -1773,10 +1781,14 @@ class Qube(object):
                                         nrank=self.nrank, drank=self.drank)
             if replace.shape != () and replace.shape != self.shape:
                 raise ValueError('shape of replacement is incompatible with ' +
-                                 'shape of object being masked')
+                                 'shape of object being masked: %s, %s' %
+                                 (replace.shape, self.shape))
 
         # Shapeless case
         if np.shape(self.__values_) == ():
+            if np.shape(mask) != ():
+                raise ValueError('object and mask have incompatible shapes: ' +
+                                 '%s, %s' % (self.shape, np.shape(mask)))
             if replace is None:
                 new_values = self.__values_
             else:
@@ -2351,123 +2363,191 @@ class Qube(object):
         else:
             return (self.__values_ == 0) | self.__mask_
 
-    def shrink(self, antimask=None):
+    # If this global is set to True, the shrink/unshrink methods are disabled.
+    # Calculations done with and without shrinking should always produce the
+    # same results, although they may be slower with shrinking disabled. Used
+    # for testing and debugging.
+    _DISABLE_SHRINKING = False
+
+    # If this global is set to True, the unshrunk method will ignore any cached
+    # value of its un-shrunken equivalent. Used for testing and debugging.
+    _IGNORE_UNSHRUNK_AS_CACHED = False
+
+    def shrink(self, antimask):
         """Return a 1-D version of this object, containing only the samples
         in the antimask provided.
 
-        The antimask is ignored if it is None. Otherwise, a value of True
-        indicates that a value should be included; False means that is should be
-        discarded. A scalar value of True or False applies to the entire object.
-        If this object has no shape, then it is returned unchanged.
+        The antimask array value of True indicates that an element should be
+        included; False means that is should be discarded. A scalar value of
+        True or False applies to the entire object.
+
+        The purpose is to speed up calculations by first eliminating all the
+        objects that are masked. Any calculation involving un-shrunken objects
+        should produce the same result if the same objects are all shrunken by
+        a common antimask first, the calculation is performed, and then the
+        result is un-shrunken afterward.
+
+        Shrunken objects are always converted to read-only.
         """
 
-        # If the antimask is shapeless...
-        if antimask is None or Qube.is_one_true(antimask):
+        #### For testing only...
+        if Qube._DISABLE_SHRINKING:
+            if self.shape == () or Qube.is_one_true(antimask):
+                return self
+            return self.mask_where(np.logical_not(antimask))
+
+        # A True antimask leaves an object unchanged
+        if Qube.is_one_true(antimask):
             return self
 
-        if Qube.is_one_false(antimask):
-            return self.masked_single()
+        # If the antimask is a single False value, or if this object is already
+        # entirely masked, return a single masked value
+        if (Qube.is_one_true(self.__mask_) or Qube.is_one_false(antimask) or
+            not np.any(antimask & self.antimask)):
+                obj = self.masked_single().as_readonly()
+                obj.__cache_['unshrunk'] = self
+                return obj
 
-        if self.__shape_ != antimask.shape:
-            self = self.broadcast_into_shape(antimask.shape)
+        # If this is a shapeless object, return it as is
+        if self.shape == ():
+            self.__cache_['unshrunk'] = self
+            return self
 
-        # Return the previous shrink if it is the same
-        try:
-            prev_antimask = self.__cache_['shrink_antimask']
-            if np.all(prev_antimask == antimask):
-                return self.__cache_['shrunk']
-        except KeyError:
-            pass
+        # Beyond this point, the size of the last axis in the returned object
+        # will have the same number of elements as the number of True elements
+        # in the antimask.
 
-        # Otherwise shrink anew and save
-        self = self.expand_mask()
+        # Ensure that this object and the antimask have compatible dimensions.
+        # If the antimask has extra dimensions, broadcast self to make it work
+        self_rank = len(self.shape)
+        antimask_rank = len(antimask.shape)
+        extras = self_rank - antimask_rank
+        if extras < 0:
+            self = self.broadcast_into_shape(antimask.shape, recursive=False)
+            self_rank = antimask_rank
+            extras = 0
 
+        # If self has extra dimensions, these will be retained and only the
+        # rightmost axes will be flattened.
+        before = self.shape[:extras]    # shape of self retained
+        after  = self.shape[extras:]    # shape of self to be masked
+
+        # Make the rightmost axes of self and the mask compatible
+        new_after = tuple([max(after[k],antimask.shape[k])
+                           for k in range(len(after))])
+        new_shape = before + new_after
+        if self.shape != new_shape:
+            self = self.broadcast_into_shape(new_shape, recursive=False)
+        if antimask.shape != new_after:
+            antimask = np.broadcast_to(antimask, new_after)
+
+        # Construct the new mask
+        if Qube.is_one_false(self.__mask_):
+            mask = np.zeros(antimask.shape, dtype='bool')[antimask]
+        else:
+            mask = self.__mask_[extras * (slice(None),) + (antimask,Ellipsis)]
+
+        if np.all(mask):
+            obj = self.masked_single().as_readonly()
+            obj.__cache_['unshrunk'] = self
+            return obj
+
+        if not np.any(mask):
+            mask = False
+
+        # Construct the new object
         obj = Qube.__new__(type(self))
-        obj.__init__(self.__values_[antimask], self.__mask_[antimask],
+        obj.__init__(self.__values_[extras * (slice(None),)
+                                    + (antimask,Ellipsis)],
+                     mask,
                      derivs={}, example=self)
+        obj.as_readonly()
 
         for (key, deriv) in self.__derivs_.items():
             obj.insert_deriv(key, deriv.shrink(antimask))
 
-        obj.match_readonly(self)
-
-        self.__cache_['shrunk'] = obj
-        self.__cache_['shrink_antimask'] = antimask
-
+        # Cache values to speed things up later
         obj.__cache_['unshrunk'] = self
         return obj
 
-    def unshrink(self, antimask, shape=None):
-        """Return the results of a shrink operation to its original dimensions.
+    def unshrink(self, antimask, shape=()):
+        """Convert an object to its un-shrunken shape, based on a given
+        antimask.
+
+        If this object was previously shrunken, the antimask must match the one
+        used to shrink it. Otherwise, the size of this object's last axis must
+        match the number of True values in the antimask.
 
         Input:
-            antimask    the antimask passed to shrink().
-            shape       in cases where the antimask is False, this defines the
-                        shape of the returned object. Otherwise a shapeless
-                        object is returned.
+            antimask    the antimask to apply.
+            shape       in cases where the antimask is a literal False, this
+                        defines the shape of the returned object. Normally, the
+                        rightmost axes of the returned object match those of
+                        the antimask.
+
+        The returned object will be read-only.
         """
 
-        # If the antimask is shapeless...
-        if np.shape(antimask) == ():
-            if antimask:
-                return self
-            elif shape is None or shape == ():
-                return self.masked_single()
+        #### For testing only...
+        if Qube._DISABLE_SHRINKING:
+            return self
 
-        # Return the previous unshrink if this object has not changed
-        try:
-            unshrunk = self.__cache_['unshrunk']
-            if not np.all(antimask == unshrunk.antimask):
-                unshrunk = unshrunk.mask_where(np.logical_not(antimask))
-                self.__cache_['unshrunk'] = unshrunk
-            return unshrunk
-        except KeyError:
-            pass
+        # Get the previous unshrunk version if available and delete from cache
+        unshrunk = self.__cache_.get('unshrunk', None)
+        if unshrunk is not None:
+            del self.__cache_['unshrunk']
 
-        # Interpret the default
-        default = self.__default_
-        if isinstance(default, Qube):
-            default = self.__default_.__values_
+            if Qube._IGNORE_UNSHRUNK_AS_CACHED:
+                unshrunk = None
 
-        # Create the new values
-        if np.shape(antimask) == ():
-            if self.__item_ == ():
-                new_values = self.__default_
-            else:
-                new_values = self.__default_.copy()
+        # If the antimask is True, return this as is
+        if Qube.is_one_true(antimask):
+            return self
+
+        # If the new object is entirely masked, return a shapeless masked object
+        if not np.any(antimask) or np.all(self.__mask_):
+            return self.masked_single()
+
+        # If this object is shapeless, return it as is
+        if self.shape == ():
+            return self
+
+        # If we found a cached value, return it
+        if unshrunk is not None:
+            return unshrunk.mask_where(np.logical_not(antimask))
+
+        # Create the new data array
+        new_shape = self.shape[:-1] + antimask.shape
+        indx = (len(self.shape)-1) * (slice(None),) + (antimask, Ellipsis)
+        if isinstance(self.__values_, np.ndarray):
+            default = self.__default_
+            if isinstance(default, Qube):
+                default = self.__default_.__values_
+
+            new_values = np.empty(new_shape + self.__item_,
+                                  self.__values_.dtype)
+            new_values[...] = default
+
+            new_values[indx] = self.__values_   # fill in non-default values
+
+        # ...where single values can be handled by broadcasting...
         else:
-            new_values = np.empty(antimask.shape + self.__item_,
-                                  dtype=self.__values_.dtype)
-            new_values[...] = self.__default_
-            new_values[antimask] = self.__values_
+            item = Scalar(self.__values_)
+            new_values = item.broadcast_into_shape(new_shape).__values_
 
-        # Create the new mask
-        if np.shape(antimask) == ():
-            new_mask = True
-        else:
-            new_mask = np.ones(antimask.shape, dtype='bool')
-            new_mask[antimask] = self.__mask_
+        # Create the new mask array
+        new_mask = np.ones(new_shape, dtype='bool')
+        new_mask[indx] = self.__mask_       # insert the shrunk mask values
 
         # Create the new object
         obj = Qube.__new__(type(self))
         obj.__init__(new_values, new_mask, derivs={}, example=self)
-
-        # Broadcast to the new shape if necessary
-        if shape is not None and shape != obj.shape:
-            obj = obj.broadcast_into_shape(shape)
+        obj = obj.as_readonly()
 
         # Unshrink the derivatives
         for (key, deriv) in self.__derivs_.items():
             obj.insert_deriv(key, deriv.unshrink(antimask, shape))
 
-        # Make it readonly if necessary
-        if self.__readonly_:
-            obj = obj.as_readonly()
-
-        self.__cache_['unshrunk'] = obj
-
-        obj.__cache_['shrunk'] = self
-        obj.__cache_['shrink_antimask'] = antimask
         return obj
 
     ############################################################################
@@ -3726,8 +3806,7 @@ class Qube(object):
         return obj
 
     def mod_by_scalar(self, arg, recursive=True):
-        """Internal modulus op when the arg is a Qube with nrank == 0 and the
-        arg has no denominator."""
+        """Internal modulus op when the arg is a Qube with rank == 0."""
 
         # Mask out zeros
         arg = arg.wod.mask_where_eq(0,1)
@@ -5584,21 +5663,24 @@ class Qube(object):
           raise TypeError(('broadcasted_shape() got an unexpected keyword ' +
                            'argument "%s"') % keywords.keys()[0])
 
+        # Create a list of all shapes
+        shapes = []
+        for obj in objects:
+            if obj is None or Qube.is_real_number(obj):
+                shape = ()
+            elif isinstance(obj, (tuple,list)):
+                shape = tuple(obj)
+            else:
+                shape = obj.shape
+
+            shapes.append(shape)
+
         # Initialize the shape
         new_shape = []
         len_broadcast = 0
         # Loop through the arrays...
-        for obj in objects:
-            if obj is None:
-                continue
-            if Qube.is_real_number(obj):
-                continue
-
-            # Get the next shape
-            if isinstance(obj, (tuple,list)):
-                shape = list(obj)
-            else:
-                shape = list(obj.shape)
+        for shape in shapes:
+            shape = list(shape)
 
             # Expand the shapes to the same rank
             len_shape = len(shape)
@@ -5618,7 +5700,8 @@ class Qube(object):
                 elif shape[i] == 1:
                     pass
                 elif shape[i] != new_shape[i]:
-                    raise ValueError('incompatible dimension on axis ' + str(i))
+                    raise ValueError('incompatible dimension on axis ' + str(i)
+                                     + ': ' + str(shapes))
 
         return tuple(new_shape) + tuple(item)
 
@@ -5636,9 +5719,9 @@ class Qube(object):
         Input:          zero or more objects to broadcast.
 
             recursive   True to broadcast the derivatives to the same shape;
-                        False to strip the derivatives from the returne objects.
-                        Note that this is handled as a keyword argument to
-                        distinguish it from the objects.
+                        False to strip the derivatives from the returned
+                        objects. Note that this is handled as a keyword argument
+                        to distinguish it from the objects.
 
         Return:         A tuple of copies of the objects, broadcasted to a
                         common shape. The returned objects must be treated as

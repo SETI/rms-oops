@@ -110,7 +110,7 @@ class Test_Matrix3_twovec(unittest.TestCase):
         dmat_dt = (mat1 - mat0) / EPS
 
         self.assertLess(np.max(np.abs(dmat_dt.vals - mat.d_dt.vals[...,i,j])),
-                        1.e-6)
+                        2.e-6)
 
 ################################################################################
 # Execute from command line...

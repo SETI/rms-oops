@@ -68,7 +68,7 @@ class Test_Scalar_mean(unittest.TestCase):
             meanval += x.values[i]
 
     meanval /= count
-    self.assertTrue(abs((meanval - x.mean()) / meanval) < 1.e-14)
+    self.assertTrue(abs((meanval - x.mean()) / meanval) < 3.e-14)
 
     masked = Scalar(x, mask=True)
     self.assertTrue(masked.mean().mask)

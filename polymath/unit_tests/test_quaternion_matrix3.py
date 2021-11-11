@@ -80,7 +80,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     b = Quaternion.from_matrix3(mat)
 
     aa = a.unit()
-    DEL = 2.e-14
+    DEL = 5.e-14
     for i in range(N):
         for j in range(4):
             self.assertAlmostEqual(a.values[i,j], b.values[i,j], delta=DEL)

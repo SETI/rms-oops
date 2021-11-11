@@ -334,7 +334,7 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(b.denom, ())
     self.assertEqual(type(b), Scalar)
 
-    self.assertTrue(abs(a.sum() - b.sum()) < 3.e-15)
+    self.assertTrue(abs(a.sum() - b.sum()) < 1.e-14)
 
     ############################################################################
     # roll_axis(self, axis, start, recursive=True, rank=None)
@@ -501,7 +501,7 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(b.denom, ())
     self.assertEqual(type(b), Scalar)
 
-    self.assertTrue(abs(a.sum() - b.sum()) < 3.e-15)
+    self.assertTrue(abs(a.sum() - b.sum()) < 5.e-15)
 
     ############################################################################
     # broadcast_into_shape(self, shape, recursive=True, sample_array=None)

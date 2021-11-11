@@ -6,7 +6,7 @@
 import numpy as np
 import unittest
 
-from polymath import Qube, Scalar, Boolean, Units
+from polymath import Qube, Scalar, Vector, Boolean, Units
 
 class Test_Scalar_ops(unittest.TestCase):
 
@@ -447,6 +447,35 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a, (3,6))
     self.assertEqual(a.d_dt, ((2,3),(5,6)))
 
+    # Make sure these operations work and mask shapes are always valid
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for bvals in (1., np.arange(8.).reshape(2,4,1,1)):
+          for bmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(bmask)) > len(np.shape(bvals)):
+                continue
+            b = Scalar(bvals, bmask)
+
+            test = a + b
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
+
+    for avals in ((1.,2.), np.arange(48.).reshape(4,3,2,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)) - 1:
+            continue
+        a = Scalar(avals, amask, drank=1)
+        for bvals in (1., np.arange(16.).reshape(2,4,1,1,2)):
+          for bmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(bmask)) > len(np.shape(bvals)) - 1:
+                continue
+            b = Scalar(bvals, bmask, drank=1)
+
+            test = a + b
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
+
     ############################################################################
     # Subtraction
     ############################################################################
@@ -645,6 +674,35 @@ class Test_Scalar_ops(unittest.TestCase):
     a -= b
     self.assertEqual(a, (0,0))
     self.assertEqual(a.d_dt, ((-2,-3),(-5,-6)))
+
+    # Make sure these operations work and mask shapes are always valid
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for bvals in (1., np.arange(8.).reshape(2,4,1,1)):
+          for bmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(bmask)) > len(np.shape(bvals)):
+                continue
+            b = Scalar(bvals, bmask)
+
+            test = a - b
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
+
+    for avals in ((1.,2.), np.arange(48.).reshape(4,3,2,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)) - 1:
+            continue
+        a = Scalar(avals, amask, drank=1)
+        for bvals in (1., np.arange(16.).reshape(2,4,1,1,2)):
+          for bmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(bmask)) > len(np.shape(bvals)) - 1:
+                continue
+            b = Scalar(bvals, bmask, drank=1)
+
+            test = a - b
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     ############################################################################
     # Multiplication
@@ -845,6 +903,35 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, ((5,12),(16,18)))
         # ((3*(1,2) + 2*(1,3), (4*(3,4) + 1*(4,2)
 
+    # Make sure these operations work and mask shapes are always valid
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for vvals in ([1.,1.,1.], np.arange(24.).reshape(2,4,1,1,3)):
+          for vmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(vmask)) > len(np.shape(vvals)) - 1:
+                continue
+            v = Vector(vvals, vmask)
+
+            test = a * v
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
+
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for vvals in ([1.,1.,1.], np.arange(24.).reshape(2,4,1,1,3)):
+          for vmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(vmask)) > len(np.shape(vvals)) - 1:
+                continue
+            v = Scalar(vvals, vmask, drank=1)
+
+            test = a * v
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
+
     ############################################################################
     # Division
     ############################################################################
@@ -997,6 +1084,35 @@ class Test_Scalar_ops(unittest.TestCase):
     a /= 0
     self.assertTrue(a.mask)
 
+    # Make sure these operations work and mask shapes are always valid
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for vvals in ([1.,1.,1.], np.arange(24.).reshape(2,4,1,1,3)):
+          for vmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(vmask)) > len(np.shape(vvals)) - 1:
+                continue
+            v = Vector(vvals, vmask)
+
+            test = v / a
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
+
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for vvals in ([1.,1.,1.], np.arange(24.).reshape(2,4,1,1,3)):
+          for vmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(vmask)) > len(np.shape(vvals)) - 1:
+                continue
+            v = Scalar(vvals, vmask, drank=1)
+
+            test = v / a
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
+
     ############################################################################
     # Floor division
     ############################################################################
@@ -1137,6 +1253,21 @@ class Test_Scalar_ops(unittest.TestCase):
 
     a //= 0
     self.assertTrue(a.mask)
+
+    # Make sure operations work and mask shapes are always valid
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for bvals in (1., np.arange(8.).reshape(2,4,1,1)):
+          for bmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(bmask)) > len(np.shape(bvals)):
+                continue
+            b = Scalar(bvals, bmask)
+
+            test = a // b
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     ############################################################################
     # Modulus
@@ -1280,6 +1411,21 @@ class Test_Scalar_ops(unittest.TestCase):
 
     a %= 0
     self.assertTrue(a.mask)
+
+    # Make sure operations work and mask shapes are always valid
+    for avals in (1., np.arange(24.).reshape(4,3,2)):
+      for amask in (True, False, np.random.randn(4,3,2) < 0.):
+        if len(np.shape(amask)) > len(np.shape(avals)):
+            continue
+        a = Scalar(avals, amask)
+        for bvals in (1., np.arange(8.).reshape(2,4,1,1)):
+          for bmask in (True, False, np.random.randn(2,4,1,1) < 0.):
+            if len(np.shape(bmask)) > len(np.shape(bvals)):
+                continue
+            b = Scalar(bvals, bmask)
+
+            test = a % b
+            self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     ############################################################################
     # Power
