@@ -18,7 +18,7 @@ class MultiPath(Path):
         """Constructor for a MultiPath Path.
 
         Input:
-            paths       a tuple, list or ndarray of paths or path IDs.
+            paths       a tuple, list or 1-D ndarray of paths or path IDs.
             origin      a path or path ID identifying the common origin of all
                         paths. None to use the SSB.
             frame       a frame or frame ID identifying the reference frame.
@@ -52,7 +52,8 @@ class MultiPath(Path):
 
     def __getitem__(self, i):
         slice = self.paths[i]
-        if np.shape(slice) == (): return slice
+        if np.shape(slice) == ():
+            return slice
         return MultiPath(slice, self.origin, self.frame, id=None)
 
     ########################################
@@ -92,6 +93,34 @@ class MultiPath(Path):
 
         return Event(Scalar(time.values, mask), (pos,vel),
                             self.origin, self.frame)
+
+    ########################################
+
+    def quick_path(self, time, quick={}):
+        """Override of the default quick_path method to return a MultiPath of
+        quick_paths.
+
+        A QuickPath operates by sampling the given path and then setting up an
+        interpolation grid to evaluate in its place. It can substantially speed
+        up performance when the same path must be evaluated many times, e.g.,
+        for every pixel of an image.
+
+        Input:
+            time        a Scalar defining the set of times at which the frame is
+                        to be evaluated. Alternatively, a tuple (minimum time,
+                        maximum time, number of times)
+            quick       if None or False, no QuickPath is created and self is
+                        returned; if another dictionary, then the values
+                        provided override the values in the default dictionary
+                        QUICK.dictionary, and the merged dictionary is used.
+        """
+
+        new_paths = []
+        for path in self.paths:
+            new_path = path.quick_path(time, quick=quick)
+            new_paths.append(new_path)
+
+        return MultiPath(new_paths, self.origin, self.frame)
 
 ################################################################################
 # UNIT TESTS

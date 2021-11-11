@@ -556,8 +556,10 @@ class Snapshot(Observation):
         v_scale = fov.uv_scale.vals[1]
         body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
         for i in range(nbodies):
-            if not flags[i]:
-                continue
+# This seems wrong so I commented it out. We should have an entry for every
+# moon; use 'inside' to check flag.  --MRS
+#             if not flags[i]:
+#                 continue
             body_data = {}
             body_data['name'] = body_names[i]
             body_data['inside'] = flags[i]

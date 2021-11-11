@@ -13,9 +13,9 @@ from oops.cadence_.instant  import Instant
 from oops.fov_.nullfov      import NullFOV
 
 class InSitu(Observation):
-    """An subclass of Observation that has timing and path information, but no
-    attributes related to pointing or incoming photon direction. It can be
-    useful for describing in situ measurements.
+    """InSitu is a subclass of Observation that has timing and path information,
+    but no attributes related to pointing or incoming photon direction. It can
+    be useful for describing in situ measurements.
 
     It can also be used to obtain information from gridless backplanes, which
     do not require directional information.

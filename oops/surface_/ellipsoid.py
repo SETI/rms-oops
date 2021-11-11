@@ -218,8 +218,7 @@ class Ellipsoid(Surface):
         t = -c / (b_div2 + bsign_sqrtd_div2)     # more accurate!
 
         pos = obs + t*los
-        pos = self._apply_exclusion(pos)
-
+#         pos = self._apply_exclusion(pos)  ### why was this here?? -MRS
         return (pos, t)
 
     def normal(self, pos, time=None, derivs=False):

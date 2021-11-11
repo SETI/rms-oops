@@ -15,13 +15,13 @@ class TwoVector(Frame):
     axis.
     """
 
-    PACKRAT_ARGS = ['reference', 'vector1', 'axis1', 'vector2', 'axis2', ]
+    PACKRAT_ARGS = ['reference', 'vector1', 'axis1', 'vector2', 'axis2',
+                    'frame_id']
 
     XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2}
 
-    def __init__(self, frame, vector1, axis1, vector2, axis2,
-                       id='+'):
-        """Constructor for a RingFrame Frame.
+    def __init__(self, frame, vector1, axis1, vector2, axis2, id='+'):
+        """Constructor for a TwoVector Frame.
 
         Input:
             frame       the frame relative to which this frame is defined.

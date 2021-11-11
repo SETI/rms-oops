@@ -22,7 +22,7 @@ class Navigation(Frame, Fittable):
         Input:
             angles      the angles of rotation in radians. The order of the
                         rotations is about the y, x and z axes.
-            reference   the frame or frame_id relative to which this rotation is
+            reference   the frame or frame ID relative to which this rotation is
                         defined.
             id          the ID to use; None to use a temporary ID.
             matrix      an optional parameter, used internally, to speed up the

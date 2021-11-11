@@ -8,6 +8,8 @@ from polymath import *
 from oops.obs_.observation import Observation
 from oops.path_.path       import Path
 from oops.frame_.frame     import Frame
+from oops.cadence_.cadence import Cadence
+from oops.cadence_.instant import Instant
 from oops.event            import Event
 
 class Pixel(Observation):
@@ -26,9 +28,10 @@ class Pixel(Observation):
             axes        a list or tuple of strings, with one value for each axis
                         in the associated data array. A value of 't' should
                         appear at the location of the array's time-axis.
-
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive measurement.
+                        each consecutive measurement. . As a special case, a
+                        Scalar value is converted to a Cadence of subclass
+                        Instant.
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
@@ -44,7 +47,11 @@ class Pixel(Observation):
                         Additional subfields may be included as needed.
         """
 
-        self.cadence = cadence
+        if isinstance(cadence, Cadence):
+            self.cadence = cadence
+        else:
+            self.cadence = Instant(cadence)
+
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)

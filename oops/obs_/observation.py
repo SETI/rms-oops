@@ -482,7 +482,8 @@ class Observation(object):
 
         Input:
             meshgrid    a Meshgrid object describing the sampling of the field
-                        of view; None for a directionless observation.
+                        of view; None for a directionless observation. Here, it
+                        is only used to define the times when time is None.
             time        a Scalar of times; None to use the midtime of each
                         pixel in the meshgrid.
             shapeless   True to return a shapeless event, referring to the mean
@@ -497,9 +498,7 @@ class Observation(object):
         if shapeless:
             time = time.mean()
 
-        event = Event(time, Vector3.ZERO, self.path, self.frame)
-
-        return event
+        return Event(time, Vector3.ZERO, self.path, self.frame)
 
     def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
                            apparent=True, time_frac=0.5):
@@ -651,9 +650,6 @@ class Observation(object):
 
         return self.fov.uv_from_los(obs_event.neg_arr_ap, derivs=derivs)
 
-    ### NOTE: This general version of uv_from_path() has not been tested!
-    ### This method will at least need an override for the Pixel class.
-
     def inventory(self, bodies, expand=0., return_type='list', fov=None,
                         quick={}, converge={}, time_frac=0.5):
         """Return the body names that appear unobscured inside the FOV.
@@ -667,14 +663,14 @@ class Observation(object):
                         in the inventory.
             expand      an optional angle in radians by which to extend the
                         limits of the field of view. This can be used to
-                        accommodate pointing uncertainties. XXX NOT IMPLEMENTED XXX
+                        accommodate pointing uncertainties.
             return_type 'list' returns the inventory as a list of names.
                         'flags' returns the inventory as an array of boolean
                                 flag values in the same order as bodies.
                         'full' returns the inventory as a dictionary of
                                 dictionaries. The main dictionary is indexed by
                                 body name. The subdictionaries contain
-                                attributes of the body in the FOV.
+                                attributes of the body in the FOV; see below.
             fov         use this fov; if None, use self.fov.
             quick       an optional dictionary to override the configured
                         default parameters for QuickPaths and QuickFrames; False

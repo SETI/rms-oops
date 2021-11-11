@@ -565,9 +565,6 @@ class Path(object):
         if not derivs:
             link = link.wod     # preserves time-derivatives; removes others
 
-        # If the path has a shape of its own, QuickPaths are disallowed
-        if self.shape != (): quick = None
-
         # Assemble convergence parameters
         if converge:
             defaults = PATH_PHOTONS.__dict__.copy()
@@ -860,10 +857,12 @@ class Path(object):
         SAVINGS = 0.2       # Require at least a 20% savings in evaluation time.
 
         # Make sure a QuickPath is requested
-        if type(quick) != dict: return self
+        if not isinstance(quick, dict):
+            return self
 
         # These subclasses do not need QuickPaths
-        if type(self) in (QuickPath, Waypoint, AliasPath): return self
+        if isinstance(self, (QuickPath, Waypoint, AliasPath)):
+            return self
 
         # Obtain the local QuickPath dictionary
         quickdict = QUICK.dictionary
@@ -871,7 +870,8 @@ class Path(object):
             quickdict = quickdict.copy()
             quickdict.update(quick)
 
-        if not quickdict['use_quickpaths']: return self
+        if not quickdict['use_quickpaths']:
+            return self
 
         # Determine the time interval
         if type(time) in (list,tuple):
@@ -903,7 +903,8 @@ class Path(object):
                 return quickpath
 
         # See if the overhead makes more work justified
-        if count < OVERHEAD: return self
+        if count < OVERHEAD:
+            return self
 
         # Get dictionary parameters
         dt = quickdict['path_time_step']

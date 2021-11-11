@@ -12,9 +12,14 @@ from oops.event        import Event
 
 class Tracker(Frame):
     """Tracker is a Frame subclass that ensures, via a small rotation, that a
-    designated target path will stay in a fixed direction over a reasonably
-    short time interval. ("Reasonably short" is defined by the requirement that
-    the light travel time to the target not change significantly.)
+    designated target path will remain in a fixed direction.
+
+    The primary use of this frame is for observing moving targets with HST.
+    Normally, HST images of the same target, obtained during the same visit and
+    orbit, will have a common pointing offset and can be navigated as a group.
+    This is not generally true when using the pointing information in the FITS
+    headers, because that pointing refers to the start time of each frame rather
+    than the midtime.
     """
 
     PACKRAT_ARGS = ['fixed_frame', 'target_path', 'observer_path', 'frame_id']
@@ -23,10 +28,10 @@ class Tracker(Frame):
         """Constructor for a Tracker Frame.
 
         Input:
-            frame       the frame that will be modified to enable tracking. Must
-                        be inertial.
-            target      the name of the target path.
-            observer    the name of the observer path.
+            frame       the frame that will be modified to enable tracking, or
+                        its frame ID. Must be inertial.
+            target      the target's path or path ID.
+            observer    the observer's path or path ID.
             epoch       the epoch for which the given frame is defined.
             id          the ID to use; None to use a temporary ID.
         """
@@ -50,10 +55,12 @@ class Tracker(Frame):
         # Update wayframe and frame_id; register if not temporary
         self.register()
 
+        # Determine the apparent direction to the target path at epoch
         obs_event = Event(epoch, Vector3.ZERO, self.observer_path, Frame.J2000)
         (path_event, obs_event) = self.target_path.photon_to_event(obs_event)
         self.trackpoint = obs_event.neg_arr_ap.unit()
 
+        # Determine the transform at epoch
         fixed_xform = self.fixed_frame.transform_at_time(self.epoch)
         self.reference_xform = Transform(fixed_xform.matrix, Vector3.ZERO,
                                          self.wayframe, self.reference,
@@ -73,11 +80,12 @@ class Tracker(Frame):
     def transform_at_time(self, time, quick=False):
         """The Transform into the this Frame at a Scalar of times."""
 
-        if time == self.cached_time: return self.cached_xform
+        if time == self.cached_time:
+            return self.cached_xform
 
         # Determine the needed rotation
         obs_event = Event(time, Vector3.ZERO, self.observer_path, Frame.J2000)
-        (path_event,obs_event) = self.target_path.photon_to_event(obs_event)
+        (path_event, obs_event) = self.target_path.photon_to_event(obs_event)
         newpoint = obs_event.neg_arr_ap.unit()
 
         rotation = self.trackpoint.cross(newpoint)
@@ -86,7 +94,7 @@ class Tracker(Frame):
         # Rotate the three axis vectors accordingly
         new_rows = self.reference_rows.spin(rotation)
         xform = Transform(Matrix3(new_rows.vals),
-                          Vector3.ZERO, # neglect the slow frame rotation
+                          Vector3.ZERO,     # neglect the slow frame rotation
                           self.wayframe, self.reference, self.origin)
 
         # Cache the most recently used transform

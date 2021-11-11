@@ -206,7 +206,6 @@ class Spheroid(Surface):
         t = -c / (b_div2 + bsign_sqrtd_div2)     # more accurate!
 
         pos = obs + t*los
-
         return (pos, t)
 
     def normal(self, pos, time=None, derivs=False):

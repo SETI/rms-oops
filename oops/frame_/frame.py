@@ -104,8 +104,9 @@ class Frame(object):
         Transform, where both objects skip over the times at which the transform
         could not be evaluated.
 
-        Default behavior is to call transform_at_time and raise the error
-        anyway. This behavior is overridden by SpiceFrame, where occasional
+        Default behavior is to assume that all times are valid. As a result,
+        this function calls transform_at_time, but also returns the given time
+        Scalar. This behavior is overridden by SpiceFrame, where occasional
         short gaps in a C-kernel can be tolerated as long as a QuickFrame
         interpolates across them.
 

@@ -17,7 +17,7 @@ class Surface(object):
     rotates in space. A surface employs an internal coordinate system, not
     necessarily rectangular, in which two primary coordinates define locations
     on the surface, and an optional third coordinate can define points above or
-    below that surface. The shape is always fixed.
+    below that surface.
 
     Required attributes:
         origin      the waypoint of the path defining the surface's center.
@@ -33,7 +33,14 @@ class Surface(object):
     intercept_normal_to_DERIVS_ARE_IMPLEMENTED = True
 
     # Default properties; override as needed
+
+    # A virtual path is one whose 3-D shape depends on the position of the
+    # observer. For example, the "ansa" surface is virtual, because it is
+    # defined as a locus of points where the line of sight to the observer are
+    # perpendicular to the direction to the ring's rotation pole.
     IS_VIRTUAL = False
+
+    # A time-dependent path is one whose 3-D shape varies with time.
     IS_TIME_DEPENDENT = False
 
     ########################################
@@ -483,13 +490,13 @@ class Surface(object):
         else:
             antimask &= link.antimask
 
-        # Shrink the event
-        unshrunk_link = link
-        link = link.shrink(antimask)
-
         # If the link is entirely masked...
+        unshrunk_link = link    # unshrunk_link is used by fully_masked_result()
         if not np.any(antimask):
             return fully_masked_results()
+
+        # Shrink the event
+        link = link.shrink(antimask)
 
         # Define quantities with respect to SSB in J2000
         link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
@@ -521,7 +528,9 @@ class Surface(object):
 
         # Iterate. Convergence is rapid because all speeds are non-relativistic
         max_dlt = np.inf
-        new_lt = False
+#         new_lt = False      # why?? --MRS
+        new_lt = lt
+
         for iter in range(iters):
 
             # Quicken the path and frame evaluations on first iteration
@@ -987,7 +996,7 @@ class Surface(object):
 
         return (surface_event, new_link)
 
-# Unneeded so far so never tested...
+# Unneeded so far so never tested; probably needs update...
 #
 #     ############################################################################
 #     # Photon Solver based on surface normal

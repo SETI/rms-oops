@@ -126,7 +126,7 @@ class Body(object):
         name            the name of this body.
         spice_id        the ID from the SPICE toolkit, if the body found in
                         SPICE; otherwise, None.
-        path            a Waypoint for the body's path
+        path            a Waypoint for the body's path.
         frame           a Wayframe for the body's frame.
 
         ring_frame      the Wayframe of a "despun" RingFrame relevant to a ring
@@ -172,14 +172,17 @@ class Body(object):
     BODY_REGISTRY = {}          # global dictionary of body objects
     STANDARD_BODIES = set()     # Bodies that always have the same definition
 
-    def __init__(self, name, path, frame, parent, barycenter=None,
+    def __init__(self, name, path, frame, parent=None, barycenter=None,
                  spice_name=None):
         """Constructor for a Body object."""
 
-        self.name = name
+        if not isinstance(name, str):
+            raise TypeError('Body name must be a string: ' + str(name))
+
+        self.name = name.upper()
 
         if spice_name is None:
-            spice_name = name
+            spice_name = self.name
 
         self.spice_name = spice_name
 
@@ -196,25 +199,27 @@ class Body(object):
         self.ring_is_retrograde = False
         self.ring_pole = None
         self.ring_body = None
+        self.is_ring = False
 
         self.invariable_pole = None
         self.invariable_frame = None
 
-        if type(parent) == str:
-            self.parent = Body.lookup(parent)
+        if parent is None:
+            self.parent = None
         else:
-            self.parent = parent
+            self.parent = Body.as_body(parent)
 
-        if type(barycenter) == str:
-            self.barycenter = Body.lookup(barycenter)
+        if barycenter is None:
+            self.barycenter = self.parent
         else:
-            self.barycenter = barycenter
+            self.barycenter = Body.as_body(barycenter)
 
         self.surface = NullSurface(self.path, self.frame)   # placeholder
         self.radius = 0.
         self.inner_radius = 0.
 
         self.gravity = None
+        self.lightsource = None
         self.keywords = [self.name]
 
         self.children = []
@@ -230,6 +235,12 @@ class Body(object):
 
         # Save it in the Solar System dictionary
         Body.BODY_REGISTRY[self.name] = self
+
+    def __str__(self):
+        return 'Body(' + self.name + ')'
+
+    def __repr__(self):
+        return self.__str__()
 
     ############################################################################
     # For serialization, standard bodies are uniquely identified by name
@@ -575,14 +586,18 @@ class Body(object):
         """Return a body object given the registered name or the object itself.
         """
 
-        if type(body) == Body: return body
+        if isinstance(body, Body):
+            return body
+
         return Body.lookup(body)
 
     @staticmethod
     def as_body_name(body):
         """Return a body name given the registered name or the object itself."""
 
-        if type(body) == Body: return body.name
+        if isinstance(body, Body):
+            return body.name
+
         return body
 
     @staticmethod
@@ -599,6 +614,11 @@ class Body(object):
 
         Path.reset_registry()
         Frame.reset_registry()
+
+    def as_path(self):
+        """Path object for this body."""
+
+        return Path.as_primary_path(self.path)
 
 ################################################################################
 # General function to load Solar System components
@@ -693,6 +713,13 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
         names += _define_pluto(start_time, stop_time, asof)
 
     spicedb.close_db()
+
+    # Also define the solar disk as a light source. The import of the
+    # LightSource class is local to this function because a file-level import
+    # would result in recursive imports.
+
+    from oops.lightsource import DiskSource
+    _ = DiskSource('SOLAR_DISK', SpicePath(10), 695990., 11)
 
     return names
 
@@ -1270,8 +1297,7 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
 
     # Create the ring body
     # Note that this will overwrite any registered ring of the same name
-    body = Body(ring_name, barycenter.path, parent.ring_frame,
-                parent, parent)
+    body = Body(ring_name, barycenter.path, parent.ring_frame, parent)
     body.apply_gravity(barycenter.gravity)
     body.apply_ring_frame(retrograde=retrograde, pole=pole)
 
@@ -1280,6 +1306,7 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     body.apply_surface(ring, rmax, 0.)
     ring.body = body
     body.ring_body = body
+    body.is_ring = True
 
     body.add_keywords([parent, "RING", ring_name])
     body.add_keywords(keywords)
@@ -1343,7 +1370,8 @@ def define_small_body(spice_id, name=None, spk=None, keywords=[],
     # Add the gravity object if it exists
     try:
         body.apply_gravity(Gravity.lookup(name))
-    except KeyError: pass
+    except KeyError:
+        pass
 
     # Add the surface object if shape information is available
     try:
