@@ -384,7 +384,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(a.d_dt.readonly)
     self.assertTrue(b.d_dt.readonly)        # because of broadcast
 
-    self.assertEqual(b.shape, b.d_dt.shape)     # d_dt must be broadcasted
+    self.assertEqual(b.shape, b.d_dt.shape) # d_dt must be broadcasted
 
     a = Scalar(1, derivs={'t':Scalar(2)}).as_readonly()
     b = (1,2,3) + a
@@ -1490,7 +1490,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(b, (0,1,2,3,4,5))
     self.assertEqual(type(b), Scalar)
     self.assertTrue(b.is_float())
-    self.assertFalse(b.mask)
+    self.assertTrue(np.all(b.mask == False))
 
     a = Scalar((-4,-1,0,1,4,9,16,25))
     b = a**0.5
@@ -1556,6 +1556,84 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse((b**0.5).readonly)
     self.assertFalse((b**(-0.5)).readonly)
     self.assertFalse((b**(-1)).readonly)
+
+    ############################################################################
+    # Power, multiple exponents, etc.
+    ############################################################################
+
+    a = Scalar(2)
+    b = a**(-0,1,2,3,4)
+    self.assertEqual(b, (1,2,4,8,16))
+    self.assertEqual(type(b), Scalar)
+    self.assertTrue(b.is_int())
+
+    a = Scalar([2,4]).reshape((2,1))
+    b = a**(-1,0,1,2,3,4)
+    self.assertEqual(b, [[0.5,1,2,4,8,16],[0.25,1,4,16,64,256]])
+    self.assertEqual(type(b), Scalar)
+    self.assertTrue(b.is_float())
+
+    a = Scalar(2, units=Units.KM)
+    b = a**2
+    self.assertEqual(b.units, Units.KM**2)
+    self.assertRaises(ValueError, a.__pow__, (2,3))
+
+    expo = Scalar([2,3,2,4,2], mask=[False,True,False,True,True])
+    b = a**expo
+    self.assertEqual(b[0], 4)
+    self.assertEqual(b[1], Scalar.MASKED)
+    self.assertEqual(b[2], 4)
+    self.assertEqual(b[3], Scalar.MASKED)
+    self.assertEqual(b[4], Scalar.MASKED)
+    self.assertEqual(b.units, Units.KM**2)
+
+    a = Scalar(0)
+    self.assertEqual(a**0, 1)
+    self.assertTrue((a**0).is_int())
+    a = Scalar(0.)
+    self.assertEqual(a**0, 1)
+    self.assertTrue((a**0).is_float())
+    a = Scalar(0)
+    self.assertEqual(a**0., 1)
+    self.assertTrue((a**0).is_int())
+    a = Scalar(0.)
+    self.assertEqual(a**0., 1)
+    self.assertTrue((a**0).is_float())
+
+    a = Scalar(0)
+    self.assertEqual(a**-1, Scalar.MASKED)
+    a = Scalar(0.)
+    self.assertEqual(a**-1, Scalar.MASKED)
+    a = Scalar(0)
+    self.assertEqual(a**-1., Scalar.MASKED)
+    a = Scalar(0.)
+    self.assertEqual(a**-1., Scalar.MASKED)
+
+    a = Scalar(-1)
+    self.assertEqual(a**0.5, Scalar.MASKED)
+    a = Scalar(-1.)
+    self.assertEqual(a**0.5, Scalar.MASKED)
+
+    a = Scalar([0,1])
+    self.assertEqual(a**-1, Scalar([1,1],[True,False]))
+    a = Scalar([0.,1.])
+    self.assertEqual(a**-1, Scalar([1,1],[True,False]))
+    a = Scalar([0,1])
+    self.assertEqual(a**-1., Scalar([1,1],[True,False]))
+    a = Scalar([0.,1.])
+    self.assertEqual(a**-1., Scalar([1,1],[True,False]))
+
+    a = Scalar([0,1,2]).reshape((3,1))
+    b = a**(0,1,2)
+    self.assertEqual(b.flatten(), (1,0,0,1,1,1,1,2,4))
+
+    da_dt = Scalar((1.,1.,1.))
+    a = Scalar([0,1,2], derivs={'t': Scalar(da_dt)}).reshape((3,1))
+    b = a**(0,1,2)
+    self.assertEqual(b.flatten(), (1,0,0,1,1,1,1,2,4))
+    self.assertEqual(b.d_dt[0], Scalar((1.,1.,0.), (True,False,False)))
+    self.assertEqual(b.d_dt[1], (0,1,2))
+    self.assertEqual(b.d_dt[2], (0,1,4))
 
     ############################################################################
     # Reciprocal

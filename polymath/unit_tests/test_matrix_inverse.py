@@ -12,7 +12,7 @@ class Test_Matrix_inverse(unittest.TestCase):
 
   def runTest(self):
 
-    DEL = 1.e-11
+    DEL = 2.e-11
 
     # Make sure 3x3 matrix inversion is successful
     a = Matrix(np.random.randn(3,3))

@@ -33,20 +33,12 @@ class Test_Qube_derivs(unittest.TestCase):
 
     b.insert_deriv('t', c)
     a.insert_deriv('t', b)
-
     self.assertEqual(hasattr(a, 'd_dt'), True)
     self.assertEqual(hasattr(b, 'd_dt'), True)
     self.assertEqual(hasattr(a.d_dt, 'd_dt'), False)
 
-    # derivative is broadcasted if necessary
-    a = Scalar((1,2,3), derivs={'t': Scalar(4)})
-
-    self.assertEqual(a.shape, (3,))
-    self.assertEqual(a.d_dt.shape, (3,))
-    self.assertEqual(a.d_dt, (4,4,4))
-
     # deleting one derivative
-    a = Scalar((1,2,3), derivs={'t': Scalar(4), 'x': Scalar((5,6,7))})
+    a = Scalar((1,2,3), derivs={'t': Scalar((4,5,6)), 'x': Scalar((5,6,7))})
     self.assertEqual(hasattr(a, 'd_dt'), True)
     self.assertEqual(hasattr(a, 'd_dx'), True)
     a.delete_deriv('t')
@@ -56,7 +48,7 @@ class Test_Qube_derivs(unittest.TestCase):
     self.assertNotIn('t', a.derivs)
 
     # deleting all derivatives
-    a = Scalar((1,2,3), derivs={'t': Scalar(4), 'x': Scalar((5,6,7))})
+    a = Scalar((1,2,3), derivs={'t': Scalar((4,5,6)), 'x': Scalar((5,6,7))})
     self.assertEqual(hasattr(a, 'd_dt'), True)
     self.assertEqual(hasattr(a, 'd_dx'), True)
     a.delete_derivs()
@@ -64,8 +56,7 @@ class Test_Qube_derivs(unittest.TestCase):
     self.assertEqual(hasattr(a, 'd_dx'), False)
 
     # changing derivatives, readonly
-    a = Scalar((1,2,3), derivs={'t': Scalar(4), 'x': Scalar((5,6,7))})
-    self.assertEqual(a.d_dt.readonly, True)        # because of broadcast
+    a = Scalar((1,2,3), derivs={'t': Scalar((4,5,6)), 'x': Scalar((5,6,7))})
     self.assertEqual(a.d_dx.readonly, False)
 
     a = a.as_readonly()

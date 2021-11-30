@@ -36,7 +36,7 @@ class Test_Vector_sep(unittest.TestCase):
     sep2[mask] = np.pi - sep2[mask]
 
     for i in range(N):
-        self.assertAlmostEqual(sep[i], sep2[i], delta=1.e-10)
+        self.assertAlmostEqual(sep[i], sep2[i], delta=2.e-10)
 
     # Test units
     N = 10

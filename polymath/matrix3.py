@@ -58,7 +58,7 @@ class Matrix3(Matrix):
 
     @staticmethod
     def twovec(vector1, axis1, vector2, axis2, recursive=True):
-        """Return a rotation matrix defined by two vectors.
+        """A rotation matrix defined by two vectors.
 
         The returned matrix rotates to a right-handed coordinate frame having
         vector1 pointing along a specified axis (axis1=0 for X, 1 for Y, 2 for
@@ -369,7 +369,7 @@ class Matrix3(Matrix):
         return Qube.__imul__(self, arg)
 
     def reciprocal(self, recursive=True, nozeros=False):
-        """Return an object equivalent to the reciprocal of this object.
+        """A object equivalent to the reciprocal of this object.
 
         Input:
             recursive   True to return the derivatives of the reciprocal too;
@@ -425,8 +425,7 @@ class Matrix3(Matrix):
 
     @staticmethod
     def from_euler(ai, aj, ak, axes='rzxz'):
-        """Return homogeneous rotation matrix from Euler angles and axis
-        sequence.
+        """A homogeneous rotation matrix from Euler angles and axis sequence.
 
         ai, aj, ak : Euler's roll, pitch and yaw angles
         axes : One of 24 axis sequences as string or encoded tuple
@@ -510,8 +509,8 @@ class Matrix3(Matrix):
         return Matrix3(matrix, ai.mask | aj.mask | ak.mask)
 
     def to_euler(self, axes='rzxz'):
-        """Return three Scalars of Euler angles from this Matrix3, given a
-        specified axis sequence.
+        """Three Scalars of Euler angles from this Matrix3, given a specified
+        axis sequence.
 
         axes : One of 24 axis sequences as string or encoded tuple
 

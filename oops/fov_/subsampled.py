@@ -53,9 +53,9 @@ class Subsampled(FOV):
         as keyword arguments.
         """
 
-        uv_pair = Pair.as_pair(uv_pair, derivs)
+        uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         return self.fov.xy_from_uv(self.rescale.element_mul(uv_pair),
-                                   derivs, **keywords)
+                                   derivs=derivs, **keywords)
 
     def uv_from_xy(self, xy_pair, derivs=False, **keywords):
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
@@ -67,8 +67,8 @@ class Subsampled(FOV):
         as keyword arguments.
         """
 
-        xy_pair = Pair.as_pair(xy_pair, derivs)
-        uv_pair = self.fov.uv_from_xy(xy_pair, derivs, **keywords)
+        xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
+        uv_pair = self.fov.uv_from_xy(xy_pair, derivs=derivs, **keywords)
         uv_new = uv_pair.element_div(self.rescale)
 
         return uv_new

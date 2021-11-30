@@ -83,7 +83,8 @@ class Test_Matrix3_twovec(unittest.TestCase):
     mat0 = Matrix3.twovec(a.wod - EPS/2 * da_dt, 1, b.wod - EPS/2 * db_dt, 0)
     dmat_dt = (mat1 - mat0) / EPS
 
-    self.assertLess(np.max(np.abs(dmat_dt.vals - mat.d_dt.vals)), 1.e-6)
+    diffs = (dmat_dt.vals - mat.d_dt.vals)[~mat.mask]
+    self.assertLess(np.max(np.abs(diffs)), 1.e-6)
 
     #### With derivatives, denoms
 

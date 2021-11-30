@@ -88,7 +88,7 @@ class Test_Scalar_tan(unittest.TestCase):
     dy_dt = x.tan().d_dt
     dy_dvec = x.tan().d_dvec
 
-    DEL = 3.e-5
+    DEL = 5.e-5
     for i in range(N):
         scale = dy_dt[i]
         self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i],

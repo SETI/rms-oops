@@ -284,6 +284,9 @@ class Test_Qube_setitem(unittest.TestCase):
     b[False] = a[False]
     self.assertEqual(b,bb)
 
+    b[False] = 42.
+    self.assertEqual(b,bb)
+
     b[True] = a[True]
     self.assertEqual(b,aa)
 
@@ -325,53 +328,84 @@ class Test_Qube_setitem(unittest.TestCase):
     ############################################################################
 
     a = Vector(np.random.randn(4,5,6,3), mask=False)
-    b = Vector(np.random.randn(3,6,3), mask=True)
 
-    tuple = [(0,1,3),(0,1,3)]
-    a[tuple] = b
-    self.assertTrue(np.all(a.values[0,0] == b.values[0]))
-    self.assertTrue(np.all(a.values[1,1] == b.values[1]))
-    self.assertTrue(np.all(a.values[3,3] == b.values[2]))
+    b = Vector(np.random.randn(3,6,3), mask=True)
+    tup = ((0,1,3),(0,1,3))
+    self.assertEqual(a[tup].shape, b.shape)
+    a[tup] = b
     self.assertTrue(np.all(a.mask[0,0] == True))
     self.assertTrue(np.all(a.mask[1,1] == True))
     self.assertTrue(np.all(a.mask[3,3] == True))
 
+    b = Vector(np.random.randn(3,6,3), mask=False)
+    tup = ((0,1,3),(0,1,3))
+    self.assertEqual(a[tup].shape, b.shape)
+    a[tup] = b
+    self.assertTrue(np.all(a.values[0,0] == b.values[0]))
+    self.assertTrue(np.all(a.values[1,1] == b.values[1]))
+    self.assertTrue(np.all(a.values[3,3] == b.values[2]))
+    self.assertTrue(np.all(a.mask[0,0] == False))
+    self.assertTrue(np.all(a.mask[1,1] == False))
+    self.assertTrue(np.all(a.mask[3,3] == False))
+
+    b = Vector(np.random.randn(3,6,3), mask=True)
+    pair = Pair([(0,0),(1,1),(3,3)])
+    a[pair] = b
+    self.assertTrue(np.all(a.mask[0,0] == True))
+    self.assertTrue(np.all(a.mask[1,1] == True))
+    self.assertTrue(np.all(a.mask[3,3] == True))
+    self.assertEqual(a[pair], a[tup])
+
+    b = Vector(np.random.randn(3,6,3), mask=False)
     pair = Pair([(0,0),(1,1),(3,3)])
     a[pair] = b
     self.assertTrue(np.all(a.values[0,0] == b.values[0]))
     self.assertTrue(np.all(a.values[1,1] == b.values[1]))
     self.assertTrue(np.all(a.values[3,3] == b.values[2]))
-    self.assertTrue(np.all(a.mask[0,0] == True))
-    self.assertTrue(np.all(a.mask[1,1] == True))
-    self.assertTrue(np.all(a.mask[3,3] == True))
-
-    self.assertEqual(a[pair], a[tuple])
+    self.assertTrue(np.all(a.mask[0,0] == False))
+    self.assertTrue(np.all(a.mask[1,1] == False))
+    self.assertTrue(np.all(a.mask[3,3] == False))
+    self.assertEqual(a[pair], a[tup])
 
     b = Vector(np.random.randn(3,3), mask=True)
-
-    tuple = [(0,1,3),(0,1,3),(0,0,0)]
-    a[tuple] = b
-    self.assertTrue(np.all(a.values[0,0,0] == b.values[0]))
-    self.assertTrue(np.all(a.values[1,1,0] == b.values[1]))
-    self.assertTrue(np.all(a.values[3,3,0] == b.values[2]))
+    tup = [(0,1,3),(0,1,3),(0,0,0)]
+    a[tup] = b
     self.assertTrue(np.all(a.mask[0,0,0] == True))
     self.assertTrue(np.all(a.mask[1,1,0] == True))
     self.assertTrue(np.all(a.mask[3,3,0] == True))
 
+    b = Vector(np.random.randn(3,3), mask=False)
+    tup = [(0,1,3),(0,1,3),(0,0,0)]
+    a[tup] = b
+    self.assertTrue(np.all(a.values[0,0,0] == b.values[0]))
+    self.assertTrue(np.all(a.values[1,1,0] == b.values[1]))
+    self.assertTrue(np.all(a.values[3,3,0] == b.values[2]))
+    self.assertTrue(np.all(a.mask[0,0,0] == False))
+    self.assertTrue(np.all(a.mask[1,1,0] == False))
+    self.assertTrue(np.all(a.mask[3,3,0] == False))
+
+    b = Vector(np.random.randn(3,3), mask=True)
+    vector = Vector([(0,0,0),(1,1,0),(3,3,0)])
+    a[vector] = b
+    self.assertTrue(np.all(a.mask[0,0,0] == True))
+    self.assertTrue(np.all(a.mask[1,1,0] == True))
+    self.assertTrue(np.all(a.mask[3,3,0] == True))
+
+    b = Vector(np.random.randn(3,3), mask=False)
     vector = Vector([(0,0,0),(1,1,0),(3,3,0)])
     a[vector] = b
     self.assertTrue(np.all(a.values[0,0,0] == b.values[0]))
     self.assertTrue(np.all(a.values[1,1,0] == b.values[1]))
     self.assertTrue(np.all(a.values[3,3,0] == b.values[2]))
-    self.assertTrue(np.all(a.mask[0,0,0] == True))
-    self.assertTrue(np.all(a.mask[1,1,0] == True))
-    self.assertTrue(np.all(a.mask[3,3,0] == True))
+    self.assertTrue(np.all(a.mask[0,0,0] == False))
+    self.assertTrue(np.all(a.mask[1,1,0] == False))
+    self.assertTrue(np.all(a.mask[3,3,0] == False))
 
-    self.assertEqual(a[vector], a[tuple])
+    self.assertEqual(a[vector], a[tup])
 
     ############################################################################
     ############################################################################
-    # All the same test as above objects with derivatives
+    # All the same tests as above for objects with derivatives
     ############################################################################
     ############################################################################
 
@@ -667,8 +701,8 @@ class Test_Qube_setitem(unittest.TestCase):
     b = Vector(np.random.randn(3,6,3), mask=True)
     b.insert_deriv('t', Vector(np.random.randn(3,6,3), mask=True))
 
-    tuple = [(0,1,3),(0,1,3)]
-    a[tuple] = b
+    tup = [(0,1,3),(0,1,3)]
+    a[tup] = b
     self.assertTrue(np.all(a.d_dt.values[0,0] == b.d_dt.values[0]))
     self.assertTrue(np.all(a.d_dt.values[1,1] == b.d_dt.values[1]))
     self.assertTrue(np.all(a.d_dt.values[3,3] == b.d_dt.values[2]))
@@ -685,13 +719,13 @@ class Test_Qube_setitem(unittest.TestCase):
     self.assertTrue(np.all(a.d_dt.mask[1,1] == True))
     self.assertTrue(np.all(a.d_dt.mask[3,3] == True))
 
-    self.assertEqual(a.d_dt[pair], a.d_dt[tuple])
+    self.assertEqual(a.d_dt[pair], a.d_dt[tup])
 
     b = Vector(np.random.randn(3,3), mask=True)
     b.insert_deriv('t', Vector(np.random.randn(3,3), mask=True))
 
-    tuple = [(0,1,3),(0,1,3),(0,0,0)]
-    a[tuple] = b
+    tup = [(0,1,3),(0,1,3),(0,0,0)]
+    a[tup] = b
     self.assertTrue(np.all(a.d_dt.values[0,0,0] == b.d_dt.values[0]))
     self.assertTrue(np.all(a.d_dt.values[1,1,0] == b.d_dt.values[1]))
     self.assertTrue(np.all(a.d_dt.values[3,3,0] == b.d_dt.values[2]))
@@ -708,7 +742,37 @@ class Test_Qube_setitem(unittest.TestCase):
     self.assertTrue(np.all(a.d_dt.mask[1,1,0] == True))
     self.assertTrue(np.all(a.d_dt.mask[3,3,0] == True))
 
-    self.assertEqual(a.d_dt[vector], a.d_dt[tuple])
+    self.assertEqual(a.d_dt[vector], a.d_dt[tup])
+
+    ############################################################################
+    # Non-consecutive array indices
+    ############################################################################
+
+    a = Scalar(np.random.randn(7,6,5,4))
+
+    aa = a.copy()
+    aa[:,np.array([2,0]),:,np.array([1,3])] = 99.
+    self.assertEqual(aa[:,2,:,1], 99.)
+    self.assertEqual(aa[:,0,:,3], 99.)
+    for i in range(6):
+      for j in range(4):
+        if (i,j) == (2,1): continue
+        if (i,j) == (0,3): continue
+        self.assertTrue(aa[:,i,:,j] != 99.)
+        self.assertTrue(aa[:,i,:,j] == a[:,i,:,j])
+
+    a = Scalar(np.random.randn(7,6,5,4), mask=(np.random.rand(7,6,5,4) < 0.2))
+
+    aa = a.copy()
+    aa[:,np.array([2,0]),:,np.array([1,3])] = 99.
+    self.assertEqual(aa[:,2,:,1], 99.)
+    self.assertEqual(aa[:,0,:,3], 99.)
+    for i in range(6):
+      for j in range(4):
+        if (i,j) == (2,1): continue
+        if (i,j) == (0,3): continue
+        self.assertTrue(aa[:,i,:,j] != 99.)
+        self.assertTrue(aa[:,i,:,j] == a[:,i,:,j])
 
 ############################################
 if __name__ == '__main__':

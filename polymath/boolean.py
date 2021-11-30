@@ -30,15 +30,18 @@ class Boolean(Scalar):
 
     @staticmethod
     def as_boolean(arg, recursive=True):
-        """Return the argument converted to Boolean if possible."""
+        """The argument converted to Boolean if possible."""
 
         if type(arg) == Boolean:
             return arg
 
+        if isinstance(arg, np.bool_):   # np.bool_ is not a subclass of bool
+            arg = bool(arg)
+
         return Boolean(arg, units=False, derivs={})
 
     def as_int(self):
-        """Return a Scalar equal to one where True, zero where False.
+        """A Scalar equal to one where True, zero where False.
 
         This method overrides the default behavior defined in the base class to
         return a Scalar of ints instead of a Boolean. True become one; False
@@ -53,7 +56,7 @@ class Boolean(Scalar):
         return result
 
     def as_float(self):
-        """Return a floating-point numeric version of this object.
+        """A floating-point numeric version of this object.
 
         This method overrides the default behavior defined in the base class to
         return a Scalar of floats instead of a Boolean. True become one; False
@@ -68,7 +71,7 @@ class Boolean(Scalar):
         return result
 
     def as_numeric(self):
-        """Return a numeric version of this object.
+        """A numeric version of this object.
 
         This method overrides the default behavior defined in the base class to
         return a Scalar of ints instead of a Boolean.
@@ -77,31 +80,12 @@ class Boolean(Scalar):
         return self.as_int()
 
     def as_index(self):
-        """Return an object suitable for indexing a NumPy ndarray."""
+        """An object suitable for indexing a NumPy ndarray."""
 
         return (self.values & self.antimask)
 
-    def as_index_and_mask(self):
-        """Objects suitable for indexing an N-dimensional array and its mask.
-
-        Return: (indx, mask_indx)
-            indx        the index to apply to an array.
-            mask_indx1  the index to apply to the mask before the array has
-                        already been indexed.
-            mask_indx2  the index to apply to the mask after the array has
-                        already been indexed.
-        """
-
-        mask = Qube.as_one_bool(self.mask)
-        if mask is True:
-            return (False, False)
-        elif mask is False:
-            return (self.values, None)
-        else:
-            return (self.values, self.mask[self.values])
-
     def is_numeric(self):
-        """Return True if this object is numeric; False otherwise.
+        """True if this object is numeric; False otherwise.
 
         This method overrides the default behavior in the base class to return
         return False. Every other subclass is numeric.
@@ -110,7 +94,7 @@ class Boolean(Scalar):
         return False
 
     def sum(self, axis=None, value=True):
-        """Return the number of items matching True or False.
+        """The number of items matching True or False.
 
         Input:
             axis        an integer axis or a tuple of axes. The sum is
@@ -129,6 +113,11 @@ class Boolean(Scalar):
         """An object of this subclass equivalent to the identity."""
 
         return Boolean(True).as_readonly()
+
+    def logical_not(self):
+        """The negation of this object."""
+
+        return Boolean(np.logical_not(self.values), self.mask)
 
     ############################################################################
     # Arithmetic operators
@@ -150,7 +139,7 @@ class Boolean(Scalar):
         return self.as_int() + arg
 
     def __iadd__(self, arg):
-        Qube.raise_unsupported_op('+=', self)
+        Qube._raise_unsupported_op('+=', self)
 
     def __sub__(self, arg, recursive=True):
         return self.as_int() - arg
@@ -159,7 +148,7 @@ class Boolean(Scalar):
         return -self.as_int() + arg
 
     def __isub__(self, arg):
-        Qube.raise_unsupported_op('-=', self)
+        Qube._raise_unsupported_op('-=', self)
 
     def __mul__(self, arg, recursive=True):
         return self.as_int() * arg
@@ -168,7 +157,7 @@ class Boolean(Scalar):
         return self.as_int() * arg
 
     def __imul__(self, arg):
-        Qube.raise_unsupported_op('*=', self)
+        Qube._raise_unsupported_op('*=', self)
 
     def __truediv__(self, arg, recursive=True):
         return self.as_int() / arg
@@ -179,7 +168,7 @@ class Boolean(Scalar):
         return arg / self.as_int()
 
     def __itruediv__(self, arg):
-        Qube.raise_unsupported_op('/=', self)
+        Qube._raise_unsupported_op('/=', self)
 
     def __floordiv__(self, arg):
         return self.as_int() // arg
@@ -190,7 +179,7 @@ class Boolean(Scalar):
         return arg // self.as_int()
 
     def __ifloordiv__(self, arg):
-        Qube.raise_unsupported_op('//=', self)
+        Qube._raise_unsupported_op('//=', self)
 
     def __mod__(self, arg):
         return self.as_int() % arg
@@ -201,7 +190,7 @@ class Boolean(Scalar):
         return arg % self.as_int()
 
     def __imod__(self, arg):
-        Qube.raise_unsupported_op('%=', self)
+        Qube._raise_unsupported_op('%=', self)
 
     def __pow__(self, arg):
         return self.as_int()**arg

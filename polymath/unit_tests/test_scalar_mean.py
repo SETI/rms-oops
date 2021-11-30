@@ -68,7 +68,7 @@ class Test_Scalar_mean(unittest.TestCase):
             meanval += x.values[i]
 
     meanval /= count
-    self.assertTrue(abs((meanval - x.mean()) / meanval) < 3.e-14)
+    self.assertTrue(abs((meanval - x.mean()) / meanval) < 5.e-14)
 
     masked = Scalar(x, mask=True)
     self.assertTrue(masked.mean().mask)
@@ -81,7 +81,10 @@ class Test_Scalar_mean(unittest.TestCase):
     m012 = x.mean(axis=(-1,1,0))
     self.assertTrue(m0.is_float())
     self.assertTrue(m01.is_float())
-    self.assertTrue(isinstance(m012, float))
+    if Qube.PREFER_BUILTIN_TYPES:
+        self.assertTrue(isinstance(m012, float))
+    else:
+        self.assertTrue(m012.is_float())
 
     self.assertEqual(m0.shape, (3,5))
     for j in range(3):
@@ -106,7 +109,10 @@ class Test_Scalar_mean(unittest.TestCase):
     m012 = x.mean(axis=(-1,1,0))
     self.assertTrue(m0.is_float())
     self.assertTrue(m01.is_float())
-    self.assertTrue(isinstance(m012, float))
+    if Qube.PREFER_BUILTIN_TYPES:
+        self.assertTrue(isinstance(m012, float))
+    else:
+        self.assertTrue(m012.is_float())
 
     self.assertEqual(m0.shape, (3,5))
     self.assertEqual(m0[0,0], x.values[1,0,0])
@@ -140,7 +146,7 @@ class Test_Scalar_mean(unittest.TestCase):
     j = 1
     for k in range(5):
         self.assertEqual(m0[j,k], Scalar.MASKED)
-        self.assertTrue(np.all(m0[j,k].values == np.mean(x.values[:,j,k])))
+        self.assertTrue(np.all(m0[j,k].values == m0.default))
 
 ################################################################################
 # Execute from command line...

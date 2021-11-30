@@ -108,9 +108,8 @@ class Test_Qube_shrink(unittest.TestCase):
 
     a = Scalar(values, True)
     self.assertTrue(np.all(a.mask ^ a.antimask))
-    self.assertEqual(a[a.antimask].shape, (0,100,200))
+    self.assertEqual(a[a.antimask].shape, (np.sum(a.antimask),200))
     self.assertEqual(a[np.newaxis][:0].shape, (0,100,200))
-    self.assertEqual(a[a.antimask], a[np.newaxis][:0])
 
     values = np.ones((100,200,3))
     mask = np.zeros((100,200), dtype='bool')
@@ -125,7 +124,7 @@ class Test_Qube_shrink(unittest.TestCase):
 
     a = Vector3(values, True)
     self.assertTrue(np.all(a.mask ^ a.antimask))
-    self.assertEqual(a[a.antimask], a[np.newaxis][:0])
+    self.assertEqual(a[a.antimask].shape, (np.sum(a.antimask),200))
 
     # Test unshrink with and without _IGNORE_UNSHRUNK_AS_CACHED
     for ignore in (False, True):

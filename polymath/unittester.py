@@ -29,6 +29,8 @@ if __name__ == '__main__':
     from unit_tests.test_pair_misc             import *
     from unit_tests.test_pair_swapxy           import *
 
+    from unit_tests.test_polynomial            import *
+
     from unit_tests.test_quaternion            import *
     from unit_tests.test_quaternion_euler      import *
     from unit_tests.test_quaternion_matrix3    import *
@@ -37,6 +39,7 @@ if __name__ == '__main__':
 
     from unit_tests.test_qube_all              import *
     from unit_tests.test_qube_any              import *
+    from unit_tests.test_qube_as_this_type     import *
     from unit_tests.test_qube_derivs           import *
     from unit_tests.test_qube_getitem          import *
     from unit_tests.test_qube_identity         import *
@@ -78,6 +81,8 @@ if __name__ == '__main__':
     from unit_tests.test_scalar_sqrt           import *
     from unit_tests.test_scalar_tan            import *
 
+    from unit_tests.test_units                 import *
+
     from unit_tests.test_vector_as_column      import *
     from unit_tests.test_vector_as_diagonal    import *
     from unit_tests.test_vector_as_index       import *
@@ -89,6 +94,7 @@ if __name__ == '__main__':
     from unit_tests.test_vector_element_div    import *
     from unit_tests.test_vector_element_mul    import *
     from unit_tests.test_vector_masking        import *
+    from unit_tests.test_vector_mean_sum       import *
     from unit_tests.test_vector_norm           import *
     from unit_tests.test_vector_norm_sq        import *
     from unit_tests.test_vector_ops            import *
@@ -102,8 +108,6 @@ if __name__ == '__main__':
 
     from unit_tests.test_vector3               import *
     from unit_tests.test_vector3_misc          import *
-
-    from unit_tests.test_units                 import *
 
     unittest.main(verbosity=2)
 

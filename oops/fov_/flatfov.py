@@ -69,7 +69,7 @@ class FlatFOV(FOV):
         the (x,y) returned.
         """
 
-        xy_pair = Pair.as_pair(xy_pair, derivs)
+        xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         return xy_pair.element_div(self.uv_scale) + self.uv_los
 
     def xy_from_uv(self, uv_pair, derivs=False):
@@ -79,7 +79,7 @@ class FlatFOV(FOV):
         the (u,v) returned.
         """
 
-        uv_pair = Pair.as_pair(uv_pair, derivs)
+        uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         return (uv_pair - self.uv_los).element_mul(self.uv_scale)
 
 ################################################################################

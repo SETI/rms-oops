@@ -33,7 +33,7 @@ class Quaternion(Vector):
 
     @staticmethod
     def as_quaternion(arg, recursive=True):
-        """Return this object converted to a Quaternion."""
+        """This object converted to a Quaternion."""
 
         if type(arg) == Quaternion:
             if recursive:
@@ -117,7 +117,7 @@ class Quaternion(Vector):
         return obj
 
     def to_parts(self, recursive=True):
-        """Return the Scalar and Vector components of a Quaternion."""
+        """The Scalar and Vector components of a Quaternion."""
 
         return (self.extract_numer(0, 0, Scalar, recursive),
                 self.slice_numer(0, 1, 4, Vector3, recursive))
@@ -142,7 +142,7 @@ class Quaternion(Vector):
         return Quaternion.from_parts(scalar, vector)
 
     def to_rotation(self, recursive=True):
-        """Return the rotation angle and unit vector defined by a Quaternion.
+        """The rotation angle and unit vector defined by a Quaternion.
         """
 
         (cos_half_angle, vector) = self.to_parts(recursive)
@@ -169,7 +169,7 @@ class Quaternion(Vector):
 
         if recursive and self.derivs:
             for (key, deriv) in self.derivs.items():
-                self.insert_deriv(key, deriv.conj(recursive=False))
+                obj.insert_deriv(key, deriv.conj(recursive=False))
 
         return obj
 
@@ -581,7 +581,7 @@ class Quaternion(Vector):
         return self.__mul__(arg.reciprocal(recursive), recursive)
 
     def reciprocal(self, recursive=True):
-        """Return an object equivalent to the reciprocal of this object.
+        """A object equivalent to the reciprocal of this object.
 
         Input:
             recursive   True to return the derivatives of the reciprocal too;

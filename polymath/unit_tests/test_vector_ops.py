@@ -165,8 +165,9 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(a.d_dt.readonly)
     self.assertFalse(b.d_dt.readonly)
 
-    self.assertRaises(ValueError, a.__isub__, 1)    # because it's read-only
-    self.assertRaises(ValueError, b.__isub__, 1)
+    self.assertRaises(ValueError, a.__isub__, 1)                # read-only
+    self.assertRaises(TypeError, b.__isub__, 1)                 # class is wrong
+    self.assertRaises(ValueError, a.__isub__, Vector([1,2]))    # read-only
 
     ############################################################################
     # abs()
@@ -273,7 +274,7 @@ class Test_Vector_ops(unittest.TestCase):
     ############################################################################
 
     a = Vector((1,2,3))
-    self.assertRaises(ValueError, a.__add__, 1)  # rank mismatch
+    self.assertRaises(TypeError, a.__add__, 1)      # rank mismatch
 
     expr = Vector((1,2,3)) + (1,2,3)
     self.assertEqual(expr, (2,4,6))
@@ -455,7 +456,7 @@ class Test_Vector_ops(unittest.TestCase):
     ############################################################################
 
     a = Vector((1,2,3))
-    self.assertRaises(ValueError, a.__add__, 1)  # rank mismatch
+    self.assertRaises(TypeError, a.__add__, 1)  # rank mismatch
 
     expr = Vector((1,2,3)) - (1,2,3)
     self.assertEqual(expr, (0,0,0))

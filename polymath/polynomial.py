@@ -60,7 +60,7 @@ class Polynomial(Vector):
 
     @staticmethod
     def as_polynomial(arg, recursive=True):
-        """Return the object converted to class Polynomial.
+        """The object converted to class Polynomial.
 
         Input:
             arg         object to convert to Polynomial.
@@ -80,7 +80,7 @@ class Polynomial(Vector):
             return Polynomial(vector.wod)
 
     def as_vector(self, recursive=True):
-        """Return this object converted to class Vector.
+        """This object converted to class Vector.
         """
 
         obj = Qube.__new__(Vector)
@@ -97,8 +97,8 @@ class Polynomial(Vector):
         return obj
 
     def at_least_order(self, order, recursive=True):
-        """Return a shallow copy of this object with at least this minimum
-        order. Extra leading polynomial coefficients are filled with zeros.
+        """A shallow copy of this object with at least this minimum order.
+        Extra leading polynomial coefficients are filled with zeros.
 
         Input:
             order       minimum order of the Polynomial. 

@@ -91,7 +91,7 @@ class Pixel(Observation):
         This method supports non-integer index values.
 
         Input:
-            indices     a Tuple of array indices.
+            indices     a 1-D Vector of array indices.
             fovmask     True to mask values outside the field of view.
 
         Return:         (uv, time)
@@ -110,7 +110,8 @@ class Pixel(Observation):
         if fovmask:
             is_inside = self.cadence.time_is_inside(time, inclusive=True)
             if not is_inside.all():
-                mask = indices.mask | np.logical_not(is_inside)
+                mask = (indices.mask | is_inside.logical_not().values
+                                     | is_inside.mask)
                 time = Scalar(time, mask)
 
                 uv_vals = np.empty(indices.shape + (2,))

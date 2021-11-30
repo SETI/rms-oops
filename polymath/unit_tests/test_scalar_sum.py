@@ -70,8 +70,10 @@ class Test_Scalar_sum(unittest.TestCase):
     self.assertTrue(type(masked.sum()), Scalar)
 
     # Denominators
-    a = Scalar([1.,2.], drank=1)
-    self.assertRaises(ValueError, a.sum)
+    a = Scalar(np.arange(24.).reshape(4,3,2), drank=1)
+    b = a.sum(axis=1)
+    self.assertEqual(b.shape, (4,))
+    self.assertEqual(b, Scalar([[6,9],[24,27],[42,45],[60,63]], drank=1))
 
     # Sums over axes
     x = Scalar(np.arange(30).reshape(2,3,5))
@@ -134,7 +136,7 @@ class Test_Scalar_sum(unittest.TestCase):
     j = 1
     for k in range(5):
         self.assertEqual(m0[j,k], Scalar.MASKED)
-        self.assertTrue(np.all(m0[j,k].values == np.sum(x.values[:,j,k])))
+        self.assertTrue(np.all(m0[j,k].values == m0.default))
 
 ################################################################################
 # Execute from command line...

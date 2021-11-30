@@ -60,7 +60,7 @@ class Scalar(Qube):
 
     @staticmethod
     def as_scalar(arg, recursive=True):
-        """Return the argument converted to Scalar if possible.
+        """The argument converted to Scalar if possible.
 
         If recursive is True, derivatives will also be converted.
         """
@@ -85,7 +85,7 @@ class Scalar(Qube):
         return Scalar(arg)
 
     def as_index(self, masked=None):
-        """Return an object suitable for indexing a NumPy ndarray.
+        """This object made suitable for indexing an N-dimensional NumPy array.
 
         Input:
             masked      the value to insert in the place of a masked item. If
@@ -93,29 +93,12 @@ class Scalar(Qube):
                         will be flattened and masked elements will be skipped.
         """
 
-        obj = self.as_int()
-
-        if not np.any(self.mask):
-            return obj.values
-
-        if np.shape(obj.mask) == ():
-            raise ValueError('object is entirely masked')
-
-        if masked is None:
-            obj = obj.flatten()
-            if np.shape(obj.values) == ():
-                if obj.mask:
-                    return None
-                else:
-                    return obj.values
-            return obj.values[obj.antimask]
-        else:
-            obj = obj.copy()
-            obj.values[obj.mask] = masked
-            return obj.values
+        (index, mask) = self.as_index_and_mask((masked is None), masked)
+        return index
 
     def as_index_and_mask(self, purge=False, masked=None):
-        """Objects suitable for indexing an N-dimensional array and its mask.
+        """This object made suitable for indexing and masking an N-dimensional
+        array.
 
         Input:
             purge           True to eliminate masked elements from the index;
@@ -128,40 +111,43 @@ class Scalar(Qube):
                             the index is applied.
         """
 
-        ints = self.as_int()
+        if self.is_float():
+            raise IndexError('floating-point indexing is not permitted')
+
+        if (self.drank > 0):
+            raise ValueError('an indexing object cannot have a denominator')
 
         # If nothing is masked, this is easy
         if not np.any(self.mask):
-            return (ints.values, None)
+            if np.shape(self.values):
+                return (self.values.astype(np.intp), False)
+            else:
+                return (int(self.values), False)
 
         # If purging...
         if purge:
-
             # If all masked...
-            if Qube.is_one_true(ints.mask):
-                return ((), None)
+            if Qube.is_one_true(self.mask):
+                return ((), False)
 
             # If partially masked...
-            return (ints.values[ints.antimask], None)
+            return (self.values[self.antimask].astype(np.intp), False)
 
         # Without a replacement...
         if masked is None:
-            new_values = ints.values
+            new_values = self.values.astype(np.intp)
 
         # If all masked...
-        elif Qube.is_one_true(ints.mask):
-            if type(ints.values) == np.ndarray:
-                new_values = np.empty(ints.shape, dtype='int').fill(masked)
-            else:
-                new_values = masked
+        elif Qube.is_one_true(self.mask):
+            new_values = np.empty(self.values.shape, dtype=np.intp)
+            new_values[...] = masked
 
         # If partially masked...
         else:
-            new_values = ints.values.copy()
-            new_values[ints.mask] = masked
+            new_values = self.values.copy().astype(np.intp)
+            new_values[self.mask] = masked
 
-        # Return results
-        return (new_values, ints.mask)
+        return (new_values, self.mask)
 
     def int(self):
         """Return an integer (floor) version of this Scalar.
@@ -978,63 +964,24 @@ class Scalar(Qube):
 
         return mins
 
-    def sum(self, axis=None):
+    def sum(self, axis=None, recursive=True):
         """Return the sum of the unmasked values.
 
         NOTE: This only occurs if Qube.PREFER_BUILTIN_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
-        rather than as a Scalar. Denominators are not supported.
+        rather than as a Scalar.
 
         Input:
-            axis        an integer axis or a tuple of axes. The sum is
+            axis        an integer axis or a tuple of axes. The mean is
                         determined across these axes, leaving any remaining axes
                         in the returned value. If None (the default), then the
-                        sum is performed across all axes if the object.
+                        mean is performed across all axes if the object.
+            recursive   True to include the sums of the derivatives inside the
+                        returned Scalar.
         """
 
-        if self.drank:
-            raise ValueError('denominators are not supported in sum()')
-
-        if self.size == 0:
-            result = Scalar.ZERO
-
-        elif self.shape == ():
-            result = self
-
-        elif not np.any(self.mask):
-            result = Scalar(np.sum(self.values, axis=axis), units=self.units)
-
-        elif axis is None:
-            if np.shape(self.mask) == ():
-                result = Scalar(np.sum(self.values), mask=self.mask,
-                                units=self.units)
-            elif np.all(self.mask):
-                result = Scalar(np.sum(self.values), mask=True,
-                                units=self.units)
-            else:
-                result = Scalar(np.sum(self.values[self.antimask]),
-                                mask=False, units=self.units)
-
-        else:
-            # Create new array and mask
-            new_values = self.values.copy()
-            new_values[self.mask] = 0
-            new_values = np.sum(new_values, axis=axis)
-
-            if np.shape(self.mask):
-                new_mask = np.all(self.mask, axis=axis)
-            else:
-                new_mask = self.mask
-
-            # Fill in masked items using unmasked sums
-            if np.any(new_mask):
-                if np.shape(new_values):
-                    new_values[new_mask] = np.sum(self.values,
-                                                  axis=axis)[new_mask]
-                else:
-                    new_values = np.sum(self.values, axis=axis)
-
-            result = Scalar(new_values, new_mask, units=self.units)
+        result = Qube._mean_or_sum(self, axis, recursive=recursive,
+                                   _combine_as_mean=False)
 
         # Convert result to a Python constant if necessary
         if Qube.PREFER_BUILTIN_TYPES:
@@ -1042,73 +989,27 @@ class Scalar(Qube):
 
         return result
 
-    def mean(self, axis=None):
+    def mean(self, axis=None, recursive=True):
         """Return the mean of the unmasked values.
 
         NOTE: This only occurs if Qube.PREFER_BUILTIN_TYPES is True:
         If the result is a single scalar, it is returned as a Python value
-        rather than as a Scalar. Denominators are not supported.
+        rather than as a Scalar.
 
         Input:
             axis        an integer axis or a tuple of axes. The mean is
                         determined across these axes, leaving any remaining axes
                         in the returned value. If None (the default), then the
                         mean is performed across all axes if the object.
+            recursive   True to include the means of the derivatives inside the
+                        returned Scalar.
         """
 
-        if self.drank:
-            raise ValueError('denominators are not supported in mean()')
-
-        if self.size == 0:
-            result = self.masked_single()
-
-        elif self.shape == ():
-            result = self.as_float()
-
-        elif not np.any(self.mask):
-            result = Scalar(np.mean(self.values, axis=axis), mask=False,
-                            units=self.units)
-
-        elif axis is None:
-            if np.shape(self.mask) == ():
-                result = Scalar(np.mean(self.values), mask=self.mask,
-                                units=self.units)
-            elif np.all(self.mask):
-                result = Scalar(np.mean(self.values), mask=True,
-                                units=self.units)
-            else:
-                result = Scalar(np.mean(self.values[self.antimask]),
-                                mask=False, units=self.units)
-
-        else:
-            # Create new array and mask
-            new_values = self.values.copy()
-            new_values[self.mask] = 0
-            new_values = np.sum(new_values, axis=axis).astype('float')
-
-            bool_mask = Qube.as_one_bool(self.mask)
-            if bool_mask is True:
-                count = 0.
-            elif bool_mask is False:
-                count = self.size / float(np.size(new_values))
-            else:
-                count = np.sum(self.mask == False, axis=axis).astype('float')
-
-            new_mask = (count == 0.)
-            new_values /= np.maximum(count, 1.)
-
-            # Fill in masked items using unmasked means
-            if np.any(new_mask):
-                if np.shape(new_values):
-                    new_values[new_mask] = np.mean(self.values,
-                                                   axis=axis)[new_mask]
-                else:
-                    new_values = np.mean(self.values, axis=axis)
-
-            result = Scalar(new_values, new_mask, units=self.units)
+        result = Qube._mean_or_sum(self, axis, recursive=recursive,
+                                   _combine_as_mean=True)
 
         # Convert result to a Python constant if necessary
-        if Qube.PREFER_BUILTIN_TYPES:
+        if Qube.PREFER_BUILTIN_TYPES :
             return result.as_builtin()
 
         return result
@@ -1293,7 +1194,7 @@ class Scalar(Qube):
         # Construct the object
         obj = Qube.__new__(type(self))
         obj.__init__(denom_inv_values, denom_inv_mask,
-                     Units.units_power(self.units, -1))
+                     units = Units.units_power(self.units, -1))
 
         # Fill in derivatives if necessary
         if recursive and self.derivs:

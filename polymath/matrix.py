@@ -56,7 +56,7 @@ class Matrix(Qube):
         return Matrix(arg)
 
     def row_vector(self, row, recursive=True, classes=(Vector3,Vector)):
-        """Return the selected row of a Matrix as a Vector.
+        """The selected row of a Matrix as a Vector.
 
         If the Matrix is M x N, then this will return a Vector of length N. By
         default, if N == 3, it will return a Vector3 object instead.
@@ -72,7 +72,7 @@ class Matrix(Qube):
         return self.extract_numer(0, row, classes, recursive)
 
     def row_vectors(self, recursive=True, classes=(Vector3,Vector)):
-        """Return a tuple of Vector objects, one for each row of this Matrix.
+        """A tuple of Vector objects, one for each row of this Matrix.
 
         If the Matrix is M x N, then this will return M Vectors of length N. By
         default, if N == 3, it will return Vector3 objects instead.
@@ -91,7 +91,7 @@ class Matrix(Qube):
         return tuple(list)
 
     def column_vector(self, column, recursive=True, classes=(Vector3,Vector)):
-        """Return the selected column of a Matrix as a Vector.
+        """The selected column of a Matrix as a Vector.
 
         If the Matrix is M x N, then this will return a Vector of length M. By
         default, if M == 3, it will return a Vector3 object instead.
@@ -107,7 +107,7 @@ class Matrix(Qube):
         return self.extract_numer(1, column, classes, recursive)
 
     def column_vectors(self, recursive=True, classes=(Vector3,Vector)):
-        """Return a tuple of Vector objects, one for each column of this Matrix.
+        """A tuple of Vector objects, one for each column of this Matrix.
 
         If the Matrix is M x N, then this will return N Vectors of length M. By
         default, if M == 3, it will return Vector3 objects instead.
@@ -126,7 +126,7 @@ class Matrix(Qube):
         return tuple(list)
 
     def to_vector(self, axis, indx, classes=[], recursive=True):
-        """Return one of the elements of a Matrix as a Scalar.
+        """One of the components of a Matrix as a Vector.
 
         Input:
             axis        axis index from which to extract vector.
@@ -140,7 +140,7 @@ class Matrix(Qube):
                                   recursive)
 
     def to_scalar(self, indx0, indx1, recursive=True):
-        """Return one of the elements of a Matrix as a Scalar.
+        """One of the elements of a Matrix as a Scalar.
 
         Input:
             indx0       index along the first matrix axis.
@@ -220,7 +220,7 @@ class Matrix(Qube):
                                             recursive=True)
 
     def is_diagonal(self, delta=0.):
-        """Return Boolean equal to True where the matrix is diagonal.
+        """A Boolean equal to True where the matrix is diagonal.
 
         Masked matrices return True.
 
@@ -282,7 +282,7 @@ class Matrix(Qube):
         return Boolean(compare)
 
     def transpose(self, recursive=True):
-        """Return the matrix transposed.
+        """Transpose of this matrix.
 
         Input:
             recursive   True to include the transposed derivatives; False to
@@ -298,7 +298,7 @@ class Matrix(Qube):
         return self.transpose_numer(0, 1, recursive=True)
 
     def inverse(self, recursive=True):
-        """Return the inverse of a matrix.
+        """Inverse of this matrix.
 
         The returned object will have the same subclass as this object.
 
@@ -345,7 +345,7 @@ class Matrix(Qube):
         return obj
 
     def unitary(self):
-        """Return a the nearest unitary matrix as a Matrix3."""
+        """The nearest unitary matrix as a Matrix3."""
 
         # Algorithm from
         #    wikipedia.org/wiki/Orthogonal_matrix#Nearest_orthogonal_matrix
@@ -459,28 +459,28 @@ class Matrix(Qube):
     ############################################################################
 
     def __abs__(self):
-        Qube.raise_unsupported_op('abs()', self)
+        Qube._raise_unsupported_op('abs()', self)
 
     def __floordiv__(self, arg):
-        Qube.raise_unsupported_op('//', self, arg)
+        Qube._raise_unsupported_op('//', self, arg)
 
     def __rfloordiv__(self, arg):
-        Qube.raise_unsupported_op('//', arg, self)
+        Qube._raise_unsupported_op('//', arg, self)
 
     def __ifloordiv__(self, arg):
-        Qube.raise_unsupported_op('//=', self, arg)
+        Qube._raise_unsupported_op('//=', self, arg)
 
     def __mod__(self, arg):
-        Qube.raise_unsupported_op('%', self, arg)
+        Qube._raise_unsupported_op('%', self, arg)
 
     def __rmod__(self, arg):
-        Qube.raise_unsupported_op('%', arg, self)
+        Qube._raise_unsupported_op('%', arg, self)
 
     def __imod__(self, arg):
-        Qube.raise_unsupported_op('%=', self, arg)
+        Qube._raise_unsupported_op('%=', self, arg)
 
     def identity(self):
-        """Return an identity matrix of the same size and subclass as this."""
+        """An identity matrix of the same size and subclass as this."""
 
         size = self.numer[0]
 
@@ -501,7 +501,7 @@ class Matrix(Qube):
     ############################################################################
 
     def reciprocal(self, recursive=True, nozeros=False):
-        """Return an object equivalent to the reciprocal of this object.
+        """An object equivalent to the reciprocal of this object.
 
         Input:
             recursive   True to return the derivatives of the reciprocal too;

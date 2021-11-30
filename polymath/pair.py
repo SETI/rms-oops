@@ -31,7 +31,7 @@ class Pair(Vector):
 
     @staticmethod
     def as_pair(arg, recursive=True):
-        """Return the argument converted to Pair if possible.
+        """The argument converted to Pair if possible.
 
         If recursive is True, derivatives will also be converted.
 
@@ -66,7 +66,7 @@ class Pair(Vector):
         return Pair(arg)
 
     @staticmethod
-    def from_scalars(x, y, recursive=True):
+    def from_scalars(x, y, recursive=True, readonly=False):
         """A Pair constructed by combining two scalars.
 
         Inputs:
@@ -79,9 +79,13 @@ class Pair(Vector):
             recursive   True to include all the derivatives. The returned object
                         will have derivatives representing the union of all the
                         derivatives found amongst the scalars. Default is True.
+
+            readonly    True to return a read-only object; False (the default)
+                        to return something potentially writable.
         """
 
-        return Vector.from_scalars(x, y, recursive=recursive, classes=[Pair])
+        return Qube.from_scalars(x, y, recursive=recursive, readonly=readonly,
+                                       classes=[Pair])
 
     def swapxy(self, recursive=True):
         """A pair object in which the first and second values are switched.
@@ -140,7 +144,7 @@ class Pair(Vector):
         return obj
 
     def clip2d(self, lower, upper, remask=False):
-        """Return a copy with values clipped to fall within 2D limits.
+        """A copy with values clipped to fall within 2D limits.
 
         Values get moved to the nearest location within a rectangle defined by
         the lower and upper limits.

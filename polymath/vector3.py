@@ -55,7 +55,7 @@ class Vector3(Vector):
         return Vector3(arg)
 
     @staticmethod
-    def from_scalars(x, y, z, recursive=True):
+    def from_scalars(x, y, z, recursive=True, readonly=False):
         """A Vector3 constructed by combining three scalars.
 
         Inputs:
@@ -68,10 +68,14 @@ class Vector3(Vector):
             recursive   True to include all the derivatives. The returned object
                         will have derivatives representing the union of all the
                         derivatives found among x, y and z. Default is True.
+
+            readonly    True to return a read-only object; False (the default)
+                        to return something potentially writable.
         """
 
-        return Vector.from_scalars(x, y, z, recursive=recursive,
-                                            classes=[Vector3])
+        return Qube.from_scalars(x, y, z, recursive=recursive,
+                                          readonly=readonly,
+                                          classes=[Vector3])
 
     @staticmethod
     def from_ra_dec_length(ra, dec, length=1., recursive=True):
@@ -177,9 +181,9 @@ class Vector3(Vector):
     #     def __abs__(self)
 
     def spin(self, pole, angle=None, recursive=True):
-        """Returns the result of rotating this Vector3 around the given pole
-        vector by the given angle. If angle is None, then the rotation angle
-        is pole.norm().arcsin().
+        """The result of rotating this Vector3 around the given pole vector by
+        the given angle. If angle is None, then the rotation angle is
+        pole.norm().arcsin().
         """
 
         pole = Vector3.as_vector3(pole)

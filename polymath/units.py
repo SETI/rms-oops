@@ -84,10 +84,12 @@ class Units(object):
         self.name = name
 
     @property
-    def from_units_factor(self): return self.factor
+    def from_units_factor(self):
+        return self.factor
 
     @property
-    def into_units_factor(self): return self.factor_inv
+    def into_units_factor(self):
+        return self.factor_inv
 
     @staticmethod
     def as_units(arg):
@@ -107,8 +109,8 @@ class Units(object):
 
     @staticmethod
     def can_match(first, second):
-        """Returns True if the units can match, meaning that either they have
-        the same exponents or one or both are None."""
+        """True if the units can match, meaning that either they have the same
+        exponents or one or both are None."""
 
         if first is None or second is None:
             return True
@@ -116,15 +118,15 @@ class Units(object):
 
     @staticmethod
     def require_compatible(first, second):
-        """Raises a ValueError if the arguments are not compatible units."""
+        """Raise a ValueError if the arguments are not compatible units."""
 
         if not Units.can_match(first, second):
             raise ValueError('units are not compatible')
 
     @staticmethod
     def do_match(first, second):
-        """Returns True if the units match, meaning that they have the same
-        exponents. Values of None are treated as equivalent to nnitless."""
+        """True if the units match, meaning that they have the same exponents.
+        Values of None are treated as equivalent to nnitless."""
 
         if first is None:
             first = Units.UNITLESS
@@ -135,14 +137,14 @@ class Units(object):
 
     @staticmethod
     def require_match(first, second):
-        """Raises a ValueError if the units are not the same."""
+        """Raise a ValueError if the units are not the same."""
 
         if not Units.do_match(first, second):
             raise ValueError('units are not compatible')
 
     @staticmethod
     def is_angle(arg):
-        """Returns True if the argument could be used as an angle."""
+        """True if the argument could be used as an angle."""
 
         if arg is None:
             return True
@@ -150,14 +152,14 @@ class Units(object):
 
     @staticmethod
     def require_angle(arg):
-        """Raises a ValueError if the argument could be used as an angle."""
+        """Raise a ValueError if the argument could be used as an angle."""
 
         if not Units.is_angle(arg):
             raise ValueError('units are incompatible with an angle')
 
     @staticmethod
     def is_unitless(arg):
-        """Returns True if the argument is unitless."""
+        """True if the argument is unitless."""
 
         if arg is None:
             return True
@@ -165,19 +167,19 @@ class Units(object):
 
     @staticmethod
     def require_unitless(arg):
-        """Raises a ValueError if the argument is not unitless."""
+        """Raise a ValueError if the argument is not unitless."""
 
         if not Units.is_unitless(arg):
             raise ValueError('units are not permitted')
 
     def from_this(self, value):
-        """Converts a scalar or numpy array in these units to one in standard
+        """Convert a scalar or numpy array in these units to one in standard
         units of km, seconds and radians."""
 
         return self.factor * value
 
     def into_this(self, value):
-        """Converts a scalar or numpy array given in standard units to one in
+        """Convert a scalar or numpy array given in standard units to one in
         these units.
         """
 
@@ -185,7 +187,7 @@ class Units(object):
 
     @staticmethod
     def from_units(units, value):
-        """Converts a scalar or numpy array in the given units to one in
+        """Convert a scalar or numpy array in the given units to one in
         standard units of km, seconds and radians."""
 
         if units is None:
@@ -195,7 +197,7 @@ class Units(object):
 
     @staticmethod
     def into_units(units, value):
-        """Converts a scalar or numpy array in standard units to one in the
+        """Convert a scalar or numpy array in standard units to one in the
         given units.
         """
 
@@ -286,12 +288,15 @@ class Units(object):
         return NotImplemented
 
     def __pow__(self, power):
-        if power != int(power):
+        ipower = int(power)
+        if power != ipower:
             if 2*power == int(2*power):
                 return self.sqrt()**(int(2*power))
             else:
                 raise ValueError("units can only be raised to integer or " +
                                  "half-integer powers: " + str(power))
+        else:
+            power = ipower
 
         if power > 0:
             return Units((power * self.exponents[0],
@@ -311,7 +316,7 @@ class Units(object):
                          Units.name_power(self.name, power))
 
     def sqrt(self, name=None):
-        """Return the square root of a unit if this is possible."""
+        """The square root of a unit if this is possible."""
 
         if (self.exponents[0] % 2 != 0 or
             self.exponents[1] % 2 != 0 or
@@ -376,8 +381,8 @@ class Units(object):
 
     @staticmethod
     def sqrt_units(units, name=None):
-        """Returns a Units object constructed as the square root of the given
-        units. The given units can be None."""
+        """A Units object constructed as the square root of the given units.
+        The given units can be None."""
 
         if units is None:
             return None
@@ -385,14 +390,14 @@ class Units(object):
 
     @staticmethod
     def units_power(units, power, name=None):
-        """Returns a Units object constructed as the given units raised to a
-        power. The given units can be None."""
+        """A Units object constructed as the given units raised to a power.
+        The given units can be None."""
 
         if units is None:
             return None
+
         result = units**power
         result.set_name(name)
-
         return result
 
     ############################################################################
@@ -582,7 +587,7 @@ class Units(object):
 
     @staticmethod
     def name_to_str(namedict):
-        """Returns a string representing the contents of a name dictionary."""
+        """A string representing the contents of a name dictionary."""
 
         def order_keys(namelist):
             """Internal method to order the units sensibly."""
@@ -775,7 +780,7 @@ class Units(object):
         return new_dict
 
     def get_name(self):
-        """Return the name of a Unit object."""
+        """The name of a Unit object."""
 
         name = self.name or self.create_name()
         return Units.name_to_str(name)

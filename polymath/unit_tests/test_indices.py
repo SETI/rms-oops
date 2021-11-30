@@ -157,6 +157,7 @@ class Test_Indices(unittest.TestCase):
         a = Scalar(b)
 
         self.assertEqual(a[Pair((1,1))], b[1,1])
+
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
         self.assertEqual(a[Pair(((1,1),(2,2),(3,3)))],
                          extract(b, ((1,1),(2,2),(3,3))))
@@ -317,18 +318,16 @@ class Test_Indices(unittest.TestCase):
         self.assertTrue(np.all(a[(0,Scalar(3,True))].mask == True))
 
         self.assertEqual(a[(Ellipsis, Scalar([0,1],False))], b[...,(0,1)])
-        self.assertTrue(np.all(a[(Ellipsis, Scalar([0,1],True))].values == b[...,(0,1)]))
         self.assertTrue(np.all(a[(Ellipsis, Scalar([0,1],True))].mask == True))
 
         indx = (Scalar([1,2]), Ellipsis, Scalar([0,1]))
         self.assertEqual(a[indx], b[(1,2),...,(0,1)])
 
         indx = (Scalar([1,2],True), Ellipsis, Scalar([0,1]))
-        self.assertTrue(np.all(a[indx].values == b[(1,2),...,(0,1)]))
         self.assertTrue(np.all(a[indx].mask == True))
 
         indx = (Scalar([1,2],True), Ellipsis, Scalar([0,1],True))
-        self.assertRaises(ValueError, a.__getitem__, indx)
+        self.assertTrue(np.all(a[indx].mask == True))
 
         #
         # An unmasked 2-D Matrix indexed by a Pair
@@ -341,7 +340,7 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a[Pair((1,1),True)], make_masked(b, [[1,1]])[1,1])
         self.assertEqual(a[...,1], b[...,1,:,:])
         self.assertEqual(a[...,Scalar(1)], b[...,1,:,:])
-        self.assertRaises(ValueError, a.__getitem__, [Scalar(1,True),Scalar(1,True)])
+        self.assertTrue(np.all(a[Scalar(1,True),Scalar(1,True)].mask == True))
 
         #
         # A partially masked 2-D Matrix indexed by a Pair
@@ -368,28 +367,44 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a, Scalar((0,0,1,1,0,0,0,0,0,0)))
 
         a[Scalar(4,True)] = 1
-        self.assertTrue(np.all(a.values == (0,0,1,1,1,0,0,0,0,0)))
-        self.assertTrue(np.all(a.mask   == (0,0,0,0,1,0,0,0,0,0)))
+        self.assertTrue(np.all(a.values == (0,0,1,1,0,0,0,0,0,0)))
+        self.assertTrue(not np.any(a.mask))
 
-        a[Scalar((5,6,7),(True,False,True))] = 1
-        self.assertTrue(np.all(a.values == (0,0,1,1,1,1,1,1,0,0)))
-        self.assertTrue(np.all(a.mask   == (0,0,0,0,1,1,0,1,0,0)))
+        a[Scalar((5,6,7),(True,False,True))] = 2
+        self.assertTrue(np.all(a.values == (0,0,1,1,0,0,2,0,0,0)))
+        self.assertTrue(not np.any(a.mask))
 
-        a[Scalar(1)] = Scalar(2,True)
-        self.assertTrue(np.all(a.values == (0,2,1,1,1,1,1,1,0,0)))
-        self.assertTrue(np.all(a.mask   == (0,1,0,0,1,1,0,1,0,0)))
+        a[Scalar(1)] = Scalar(3,True)
+        self.assertTrue(np.all(a.values == (0,3,1,1,0,0,2,0,0,0)))
+        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,0,0,0,0,0)))
 
-        a[Scalar(0,True)] = a[1] + 1
-        self.assertTrue(np.all(a.values == (3,2,1,1,1,1,1,1,0,0)))
-        self.assertTrue(np.all(a.mask   == (1,1,0,0,1,1,0,1,0,0)))
+        a[Scalar(0,True)] = a[2] + 3
+        self.assertTrue(np.all(a.values == (0,3,1,1,0,0,2,0,0,0)))
+        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,0,0,0,0,0)))
+
+        a[Scalar(0,False)] = a[2] + 3
+        self.assertTrue(np.all(a.values == (4,3,1,1,0,0,2,0,0,0)))
+        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,0,0,0,0,0)))
 
         a[Scalar((0,2,4))] = Scalar(4,True)
-        self.assertTrue(np.all(a.values == (4,2,4,1,4,1,1,1,0,0)))
-        self.assertTrue(np.all(a.mask   == (1,1,1,0,1,1,0,1,0,0)))
+        self.assertTrue(np.all(a.values == (4,3,4,1,4,0,2,0,0,0)))
+        self.assertTrue(np.all(a.mask   == (1,1,1,0,1,0,0,0,0,0)))
 
         a[Scalar((0,2,4))] = Scalar((5,6,7))
-        self.assertTrue(np.all(a.values == (5,2,6,1,7,1,1,1,0,0)))
-        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,1,0,1,0,0)))
+        self.assertTrue(np.all(a.values == (5,3,6,1,7,0,2,0,0,0)))
+        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,0,0,0,0,0)))
+
+        a[Scalar((-1,-2,-3))] = a[Scalar((0,1,2))]
+        self.assertTrue(np.all(a.values == (5,3,6,1,7,0,2,6,3,5)))
+        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,0,0,0,1,0)))
+
+        a[Scalar((5,6,5),(True,False,False))] = Scalar((5,6,7))
+        self.assertTrue(np.all(a.values == (5,3,6,1,7,7,6,6,3,5)))
+        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,0,0,0,1,0)))
+
+        a[Scalar((5,6,5),(False,False,True))] = Scalar((5,6,7))
+        self.assertTrue(np.all(a.values == (5,3,6,1,7,5,6,6,3,5)))
+        self.assertTrue(np.all(a.mask   == (0,1,0,0,0,0,0,0,1,0)))
 
         a[:] = 9
         self.assertEqual(a, Scalar([9]*10))
@@ -403,28 +418,45 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a, Scalar([[0,0,0],[0,0,1]]))
 
         a[Pair((1,2),True)] = 2
+        self.assertTrue(np.all(a.values == [[0,0,0],[0,0,1]]))
+        self.assertTrue(not np.any(a.mask))
+
+        a[Pair((1,2),False)] = 2
         self.assertTrue(np.all(a.values == [[0,0,0],[0,0,2]]))
-        self.assertTrue(np.all(a.mask   == [[0,0,0],[0,0,1]]))
+        self.assertTrue(not np.any(a.mask))
 
         a[Pair((1,2))] = Scalar(0,True)
         self.assertTrue(np.all(a.values == [[0,0,0],[0,0,0]]))
         self.assertTrue(np.all(a.mask   == [[0,0,0],[0,0,1]]))
 
         a[Scalar(1,True)] = Scalar(1,True)
+        self.assertTrue(np.all(a.values == [[0,0,0],[0,0,0]]))
+        self.assertTrue(np.all(a.mask   == [[0,0,0],[0,0,1]]))
+
+        a[Scalar(1,False)] = Scalar(1,False)
         self.assertTrue(np.all(a.values == [[0,0,0],[1,1,1]]))
-        self.assertTrue(np.all(a.mask   == [[0,0,0],[1,1,1]]))
+        self.assertTrue(not np.any(a.mask))
 
         a[Scalar(1)] = Scalar(1,True)
         self.assertTrue(np.all(a.values == [[0,0,0],[1,1,1]]))
         self.assertTrue(np.all(a.mask   == [[0,0,0],[1,1,1]]))
 
-        a[Scalar(1)] = Scalar(1)
-        self.assertTrue(np.all(a.values == [[0,0,0],[1,1,1]]))
-        self.assertTrue(np.all(a.mask   == [[0,0,0],[0,0,0]]))
+        a[Scalar(1)] = Scalar(2)
+        self.assertTrue(np.all(a.values == [[0,0,0],[2,2,2]]))
+        self.assertTrue(not np.any(a.mask))
 
-        a[Pair(((0,0),(0,1),(0,2)),(False,True,False))] = 2
-        self.assertTrue(np.all(a.values == [[2,2,2],[1,1,1]]))
-        self.assertTrue(np.all(a.mask   == [[0,1,0],[0,0,0]]))
+        a[Pair(((0,0),(0,1),(0,2)),True)] = 'abc'   # would raise an error if
+                                                    # not for the mask
+        self.assertTrue(np.all(a.values == [[0,0,0],[2,2,2]]))
+        self.assertTrue(not np.any(a.mask))
+
+        a[Pair(((0,0),(1,1)))] = 7
+        self.assertTrue(np.all(a.values == [[7,0,0],[2,7,2]]))
+        self.assertTrue(not np.any(a.mask))
+
+        a[Pair(((0,0),(-1,-1)))] = 8
+        self.assertTrue(np.all(a.values == [[8,0,0],[2,7,8]]))
+        self.assertTrue(not np.any(a.mask))
 
         #
         # Assignment to a 2-D Matrix indexed 2-D
@@ -446,43 +478,50 @@ class Test_Indices(unittest.TestCase):
 
         a[Pair((1,1),True)] = Matrix([[5,5],[5,5]])
         self.assertTrue(np.all(a.values == [[[[0,0],[0,0]], [[0,0],[0,0]]],
-                                            [[[0,0],[0,0]], [[5,5],[5,5]]]]))
+                                            [[[0,0],[0,0]], [[4,5],[6,7]]]]))
         self.assertTrue(np.all(a.mask   == [[0,0],[0,1]]))
+
+        a[Pair((1,1),False)] = Matrix([[5,5],[5,5]])
+        self.assertTrue(np.all(a.values == [[[[0,0],[0,0]], [[0,0],[0,0]]],
+                                            [[[0,0],[0,0]], [[5,5],[5,5]]]]))
+        self.assertTrue(not np.any(a.mask))
 
         a[...,1] = Matrix([[5,6],[7,8]])
         self.assertEqual(a, Matrix([[[[0,0],[0,0]], [[5,6],[7,8]]],
                                     [[[0,0],[0,0]], [[5,6],[7,8]]]]))
-        self.assertTrue(np.all(a.mask   == [[0,0],[0,0]]))
+        self.assertTrue(not np.any(a.mask))
 
         a[...,Scalar(1)] = Matrix([[1,2],[3,4]])
         self.assertEqual(a, Matrix([[[[0,0],[0,0]], [[1,2],[3,4]]],
                                     [[[0,0],[0,0]], [[1,2],[3,4]]]]))
-        self.assertTrue(np.all(a.mask   == [[0,0],[0,0]]))
+        self.assertTrue(not np.any(a.mask))
 
         a[...,Scalar(1,True)] = Matrix([[8,8],[8,8]])
+        self.assertEqual(a, Matrix([[[[0,0],[0,0]], [[1,2],[3,4]]],
+                                    [[[0,0],[0,0]], [[1,2],[3,4]]]]))
+        self.assertTrue(not np.any(a.mask))
+
+        a[...,1] = Matrix([[8,8],[8,8]])
         self.assertTrue(np.all(a.values == [[[[0,0],[0,0]], [[8,8],[8,8]]],
                                             [[[0,0],[0,0]], [[8,8],[8,8]]]]))
-        self.assertTrue(np.all(a.mask   == [[0,1],[0,1]]))
+        self.assertTrue(not np.any(a.mask))
 
-        a[Pair((0,1))] = Matrix([[9,9],[9,9]],False)
-        self.assertTrue(np.all(a.values == [[[[0,0],[0,0]], [[9,9],[9,9]]],
-                                            [[[0,0],[0,0]], [[8,8],[8,8]]]]))
-        self.assertTrue(np.all(a.mask   == [[0,0],[0,1]]))
+        a[...,0] = Matrix([[9,9],[9,9]],True)
+        self.assertTrue(np.all(a.values[:,1] == [[[8,8],[8,8]],
+                                                  [[8,8],[8,8]]]))
+        self.assertTrue(not np.any(a.mask[:,1]))
+        self.assertTrue(np.all(a.mask[:,0]))
 
-        a[Pair((0,1))] = Matrix([[7,7],[7,7]],True)
-        self.assertTrue(np.all(a.values == [[[[0,0],[0,0]], [[7,7],[7,7]]],
-                                            [[[0,0],[0,0]], [[8,8],[8,8]]]]))
-        self.assertTrue(np.all(a.mask   == [[0,1],[0,1]]))
+        a[Pair((0,0))] = Matrix([[5,5],[5,5]],False)
+        a[Pair((-1,0))] = Matrix([[6,6],[6,6]],False)
+        self.assertTrue(np.all(a.values == [[[[5,5],[5,5]], [[8,8],[8,8]]],
+                                            [[[6,6],[6,6]], [[8,8],[8,8]]]]))
+        self.assertTrue(not np.any(a.mask))
 
-        a[Pair((0,1),True)] = Matrix([[7,7],[7,7]],True)
-        self.assertTrue(np.all(a.values == [[[[0,0],[0,0]], [[7,7],[7,7]]],
-                                            [[[0,0],[0,0]], [[8,8],[8,8]]]]))
-        self.assertTrue(np.all(a.mask   == [[0,1],[0,1]]))
-
-        a[Pair((0,1),False)] = Matrix([[7,7],[7,7]],False)
-        self.assertTrue(np.all(a.values == [[[[0,0],[0,0]], [[7,7],[7,7]]],
-                                            [[[0,0],[0,0]], [[8,8],[8,8]]]]))
-        self.assertTrue(np.all(a.mask   == [[0,0],[0,1]]))
+        a[Pair((1,0))] = Matrix([[7,7],[7,7]],True)
+        self.assertTrue(np.all(a.values == [[[[5,5],[5,5]], [[8,8],[8,8]]],
+                                            [[[7,7],[7,7]], [[8,8],[8,8]]]]))
+        self.assertTrue(np.all(a.mask   == [[0,0],[1,0]]))
 
 ################################################################################
 # Execute from command line...

@@ -115,15 +115,14 @@ class Test_Scalar_quadratic(unittest.TestCase):
     a = Scalar(np.random.randn(8))
     b = Scalar(np.random.randn(3,8))
     c = Scalar(np.random.randn(4,1,1))
-
-    c.insert_deriv('t', Scalar(np.random.randn(8)))
+    c.insert_deriv('t', Scalar(np.random.randn(4,1,1)))
 
     x = Scalar.solve_quadratic(a, b, c)
     self.assertTrue(abs(x[0].eval_quadratic(a,b,c)).median() < 1.e-15)
     self.assertTrue(abs(x[0].eval_quadratic(a,b,c)).max()    < 3.e-13)
 
     self.assertTrue(abs(x[1].eval_quadratic(a,b,c)).median() < 1.e-15)
-    self.assertTrue(abs(x[1].eval_quadratic(a,b,c)).max()    < 1.e-13)
+    self.assertTrue(abs(x[1].eval_quadratic(a,b,c)).max()    < 3.e-13)
     self.assertTrue('t' in x[0].derivs)
     self.assertTrue('t' in x[1].derivs)
 

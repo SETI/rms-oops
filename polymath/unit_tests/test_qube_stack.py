@@ -20,7 +20,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(a.is_int())
     self.assertTrue(b.is_int())
     self.assertTrue(ab.is_int())
-    self.assertTrue(Qube.stack(a,b).mask is False)
+    self.assertTrue(np.all(Qube.stack(a,b).mask == False))
 
     # Cast int to float
     b = Scalar(np.arange(10,20.))
@@ -28,7 +28,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertEqual(Qube.stack(a,b), ab)
     self.assertTrue(b.is_float())
     self.assertTrue(ab.is_float())
-    self.assertTrue(Qube.stack(a,b).mask is False)
+    self.assertTrue(np.all(Qube.stack(a,b).mask == False))
 
     # Cast bools, None to float
     c = Boolean(5*[True] + 5*[False])
@@ -37,7 +37,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertEqual(abcd[:2], ab)
     self.assertEqual(abcd[2], 5*[1.] + 5*[0.])
     self.assertEqual(abcd[3], 10*[0.])
-    self.assertTrue(abcd.mask is False)
+    self.assertTrue(np.all(abcd.mask == False))
     self.assertTrue(c.is_bool())
     self.assertTrue(abcd.is_float())
 
@@ -47,14 +47,14 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertEqual(abcd[:2], ab)
     self.assertEqual(abcd[2], 5*[1] + 5*[0])
     self.assertEqual(abcd[3], 10*[0])
-    self.assertTrue(abcd.mask is False)
+    self.assertTrue(np.all(abcd.mask == False))
     self.assertTrue(abcd.is_int())
 
     # Cast bools, None to bool
     cd = Qube.stack(c,d)
     self.assertEqual(cd[0], 5*[True] + 5*[False])
     self.assertEqual(cd[1], 10*[False])
-    self.assertTrue(cd.mask is False)
+    self.assertTrue(np.all(cd.mask == False))
     self.assertTrue(cd.is_bool())
 
     # Derivs
@@ -117,7 +117,7 @@ class Test_Qube_stack(unittest.TestCase):
     b = Scalar(np.arange(10.,20.), mask=False)
     c = Boolean(5*[True] + 5*[False], mask=False)
     d = None
-    self.assertTrue(Qube.stack(a,b,c,d).mask is False)
+    self.assertTrue(np.all(Qube.stack(a,b,c,d).mask == False))
 
     a = Scalar(np.arange(10), mask=False)
     b = Scalar(np.arange(10.,20.), mask=True)
@@ -187,22 +187,22 @@ class Test_Qube_stack(unittest.TestCase):
     d = np.arange(10)
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_int())
-    self.assertEqual(type(cd), Scalar)
+    self.assertEqual(type(cd), Qube)
 
     d = np.arange(10.)
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_float())
-    self.assertEqual(type(cd), Scalar)
+    self.assertEqual(type(cd), Qube)
 
     d = 1
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_int())
-    self.assertEqual(type(cd), Scalar)
+    self.assertEqual(type(cd), Qube)
 
     d = 1.
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_float())
-    self.assertEqual(type(cd), Scalar)
+    self.assertEqual(type(cd), Qube)
 
     d = True
     cd = Qube.stack(c,d)

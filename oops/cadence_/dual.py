@@ -173,8 +173,8 @@ class Test_DualCadence(unittest.TestCase):
         newaxes.reverse()
 
         for i in range(len(scalars)):
-            scalars[i] = scalars[i].reshape(list(scalars[i].shape) +
-                                            newaxes[i] * [1])
+            scalars[i] = scalars[i].reshape(scalars[i].shape +
+                                            newaxes[i] * (1,))
 
         reshaped = Qube.broadcast(*scalars)
 

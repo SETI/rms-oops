@@ -139,10 +139,10 @@ class Test_Vector_scalars(unittest.TestCase):
     #### from_scalars(*args), with derivatives
 
     a = 1.
-    b = Scalar((2,3,4), mask=(True,False,False))
+    b = Scalar([2,3,4], mask=(True,False,False))
     c = np.random.randn(4,3)
 
-    b.insert_deriv('t', Scalar((3,4,5), mask=(False,True,False)))
+    b.insert_deriv('t', Scalar([3,4,5], mask=(False,True,False)))
 
     test = Vector.from_scalars(a,b,c, recursive=True)
 
@@ -161,32 +161,36 @@ class Test_Vector_scalars(unittest.TestCase):
     #### from_scalars(*args), with derivatives, denominators
 
     a = 1.
+
     b = Scalar((2,3,4), mask=(True,False,False))    # shape=(3,), item=()
+    db_dt = Scalar(np.arange(100,112).reshape(3,2,2), drank=2,
+                   mask=[False,True,False])
+    b.insert_deriv('t', db_dt)
+
     c = Scalar(np.random.randn(4,3), mask=(np.random.rand(4,3) < 0.3))
                                                     # shape=(4,3), item=()
+    # c.mask is random 4x3
+    dc_dt = Scalar(np.random.randn(4,3,2,2), drank=2, mask=c.mask)
+    c.insert_deriv('t', dc_dt)
 
-    db_dt_mask = np.zeros((4,3), dtype='bool')
-    db_dt_mask[:,1] = True
-    b.insert_deriv('t', Scalar(np.arange(48).reshape(4,3,2,2), drank=2,
-                               mask=db_dt_mask))
-    c.insert_deriv('t', Scalar(np.random.randn(4,3,2,2), drank=2, mask=c.mask))
+    abc = Vector.from_scalars(a, b, c, recursive=True) # shape=(4,3), item=(3,)
 
-    test = Vector.from_scalars(a, b, c, recursive=True) # shape=(4,3), item=(3,)
+    # abc inherits c.mask, or'ed with  b.mask
+    self.assertTrue(np.all(abc.values[...,0] == 1))
+    self.assertTrue(np.all(abc.values[...,1] == (2,3,4)))
+    self.assertTrue(np.all(abc.values[...,2] == c.values))
+    self.assertTrue(np.all(abc.mask == (c.mask | [True,False,False])))
 
-    self.assertTrue(np.all(test.values[...,0] == 1))
-    self.assertTrue(np.all(test.values[...,1] == (2,3,4)))
-    self.assertTrue(np.all(test.values[...,2] == c.values))
-    self.assertTrue(np.all(test.mask == (c.mask | [True,False,False])))
+    self.assertEqual(abc.readonly, False)
 
-    self.assertEqual(test.readonly, False)
+    self.assertEqual(abc.d_dt.values.shape, (4,3,3,2,2))
 
-    self.assertEqual(test.d_dt.values.shape, (4,3,3,2,2))
-    
-    self.assertTrue(np.all(test.d_dt.values[...,0,:,:] == 0))
-    self.assertTrue(np.all(test.d_dt.values[...,1,:,:].ravel() == range(48)))
-    self.assertTrue(np.all(test.d_dt.values[...,2,:,:] == c.d_dt.values))
+    self.assertTrue(np.all(abc.d_dt.values[...,0,:,:] == 0))
+    self.assertTrue(np.all(abc.d_dt.values[...,1,:,:].flatten() ==
+                           4*list(range(100,112))))
+    self.assertTrue(np.all(abc.d_dt.values[...,2,:,:] == c.d_dt.values))
 
-    self.assertTrue(np.all(test.d_dt.mask == (c.mask | [False,True,False])))
+    self.assertTrue(np.all(abc.d_dt.mask == (db_dt.mask | dc_dt.mask)))
 
 ################################################################################
 # Execute from command line...
