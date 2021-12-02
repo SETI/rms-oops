@@ -202,7 +202,7 @@ class Qube(object):
     PREFER_BUILTIN_TYPES = False
 
     # Global attribute to be used for testing
-    DISABLE_CACHE = True
+    DISABLE_CACHE = False
 
     # Default class constants, to be overridden as needed by subclasses...
     NRANK = None        # the number of numerator axes; None to leave this
