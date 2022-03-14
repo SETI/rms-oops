@@ -1,0 +1,405 @@
+################################################################################
+# oops/inst/juno/junocam.py
+################################################################################
+
+from IPython import embed
+
+import os
+import numpy as np
+import julian
+from PIL import Image
+import pdstable
+import pdsparser
+import json
+import cspyce
+import oops
+
+from oops.inst.juno.juno_ import Juno
+from oops import TWOPI
+
+################################################################################
+# Standard class methods
+################################################################################
+
+#=============================================================================
+# from_file
+#=============================================================================
+def from_file(filespec, fast=False, return_all_planets=False):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A general, static method to return an Observation object based on a given
+    Juno JUNOCAM image file.
+
+    Inputs:
+        filespec        The full path to a JUNOCAM png image file.
+
+        return_all_planets  Include kernels for all planets not just
+                            Jupiter or Saturn.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    JUNOCAM.initialize()   # Define everything the first time through; use defaults
+                           # unless initialize() is called explicitly.
+
+    #-----------------------------------------------------------
+    # Load the json label 
+    #-----------------------------------------------------------
+    lbl_filespec = filespec.replace("-raw.png", ".json")
+    f = open(lbl_filespec)
+    label = json.load(f)
+    f.close
+
+    #-----------------------------------------------------------
+    # Get image info 
+    #-----------------------------------------------------------
+    info = Info(label)
+
+    #-----------------------------------------------------------
+    # Load any needed SPICE kernels 
+    #-----------------------------------------------------------
+    Juno.load_cks(info.tstart, info.tstart + 3600.)
+    Juno.load_spks(info.tstart, info.tstart + 3600.)
+
+    #---------------------------------------------------
+    # Load the data array and separate in to RGB arrays
+    #---------------------------------------------------
+    (data_red, data_grn, data_blu) = _load_data(filespec, info)
+
+    #-----------------------------------
+    # Define the FOV
+    #-----------------------------------
+    fov_width = 58. * TWOPI/180.
+    uv_scale = fov_width/info.nsamples
+#    uv_shape = oops.Pair((info.nsamples, info.frlines))
+#    uv_shape = oops.Pair((info.nsamples, info.nlines))
+    uv_shape = oops.Pair((info.nsamples, info.nframes))  # seems like it should be nlines
+    fov = oops.fov.FlatFOV(uv_scale, uv_shape)
+
+    #-----------------------------------
+    # Define the cadence
+    #-----------------------------------
+    cadence_red = oops.cadence.Metronome(info.tstart, info.tstride, info.texp, info.nframes)
+    cadence_grn = oops.cadence.Metronome(info.tstart, info.tstride, info.texp, info.nframes)
+    cadence_blu = oops.cadence.Metronome(info.tstart, info.tstride, info.texp, info.nframes)
+
+    #-----------------------------------
+    # Construct the Observation objects
+    #-----------------------------------
+#    Pushbroom is not really the right way to do this?
+#    obs_red = oops.obs.Pushbroom(("u","vt"), (1.,1.),
+#                                 cadence_red, fov,
+#                                 "JUNO", "JUNO_JUNOCAM", 
+#                                 data=data_red,
+#                                 filespec=filespec,
+#                                 basename=os.path.basename(filespec))
+#    obs_grn = oops.obs.Pushbroom(("u","vt"), (1.,1.),
+#                                 cadence_grn, fov,
+#                                 "JUNO", "JUNO_JUNOCAM", 
+#                                 data=data_grn,
+#                                 filespec=filespec,
+#                                 basename=os.path.basename(filespec))
+#    obs_blu = oops.obs.Pushbroom(("u","vt"), (1.,1.),
+#                                 cadence_blu, fov,
+#                                 "JUNO", "JUNO_JUNOCAM", 
+#                                 data=data_blu,
+#                                 filespec=filespec,
+#                                 basename=os.path.basename(filespec))
+
+    (obs_red, obs_grn, obs_blu) = ([], [], [])
+    for i in range(info.nframes):
+        obs_red.append(oops.obs.Snapshot(("v","u"), 
+                                 info.tstart, info.texp, fov,
+                                 "JUNO", "JUNO_JUNOCAM", 
+                                 instrument = "JUNOCAM",
+                                 data = data_red[:,:,i]))
+        obs_grn.append(oops.obs.Snapshot(("v","u"), 
+                                 info.tstart, info.texp, fov,
+                                 "JUNO", "JUNO_JUNOCAM", 
+                                 instrument = "JUNOCAM",
+                                 data = data_grn[:,:,i]))
+        obs_blu.append(oops.obs.Snapshot(("v","u"), 
+                                 info.tstart, info.texp, fov,
+                                 "JUNO", "JUNO_JUNOCAM", 
+                                 instrument = "JUNOCAM",
+                                 data = data_blu[:,:,i]))
+
+    #-----------------------------------
+    # Insert used kernels
+    #-----------------------------------
+#    obs_red.insert_subfield('spice_kernels', \
+#		    Juno.used_kernels(obs.time, 'junocam', return_all_planets))
+
+    return (obs_red, obs_grn, obs_blu)
+#=============================================================================
+
+
+
+#=============================================================================
+# _combine_frames
+#=============================================================================
+def _combine_frames(info, frames):
+    """Combines snapshot frames into a 2D image
+
+    Input:
+        info            Image info object.
+	frames          Frames in (line,sample,frame #)
+
+    Return:             image
+        image           Resulting image in (line, sample).
+    """
+    
+    image = np.empty([info.frlines*info.nframes,info.nsamples])
+
+    for i in range(info.nframes):
+       image[info.frlines*i: info.frlines*(i+1),:] = frames[:,:,i]
+
+    return image
+#=============================================================================
+
+
+
+#=============================================================================
+# _load_data
+#=============================================================================
+def _load_data(filespec, info):
+    """Loads the data array from the file and splits into individual frames. 
+
+    Input:
+        filespec        Full path to the data file.
+        info            Image info object.
+
+    Return:             frames
+        frames          A Numpy array containing the individual frames in axis 
+                        order (line, sample, frame #).
+    """
+    
+    #--------------------------------------------------------
+    # Read data 
+    #--------------------------------------------------------
+    img = Image.open(filespec)  
+    data = np.asarray(img)
+
+    #--------------------------------------------------------
+    # Split data array into filters
+    #--------------------------------------------------------
+    frames = np.empty([info.frlines,info.nsamples,info.nframes])
+
+    for i in range(info.nframes):
+	frames[:,:,i] = data[info.frlines*i:info.frlines*(i+1),:]
+	
+    return frames
+#=============================================================================
+
+
+
+#=============================================================================
+# __load_data
+#=============================================================================
+def _load_data(filespec, info):
+    """Loads the data array from the file and splits into individual frames. 
+
+    Input:
+        filespec        Full path to the data file.
+        info            Image info object.
+
+    Return:             (data, times)
+        data_red        A Numpy array containing the red-filter frames in axis 
+                        order (line, sample, frame #).
+        data_grn        A Numpy array containing the green-filter frames in axis 
+                        order (line, sample, frame #).
+        data_blu        A Numpy array containing the blue-filter frames in axis 
+                        order (line, sample, frame #).
+    """
+    
+    #--------------------------------------------------------
+    # Read data 
+    #--------------------------------------------------------
+    img = Image.open(filespec)  
+    data = np.asarray(img)
+
+    #--------------------------------------------------------
+    # Split data array into filters
+    #--------------------------------------------------------
+    frames_red = np.empty([info.frlines,info.nsamples,info.nframes])
+    frames_grn = np.empty([info.frlines,info.nsamples,info.nframes])
+    frames_blu = np.empty([info.frlines,info.nsamples,info.nframes])
+    rr = 0; gg = 1; bb = 2    
+
+    for i in range(info.nframes):
+	frames_red[:,:,i] = data[info.frlines*(3*i+rr):info.frlines*(3*i+rr+1),:]
+	frames_grn[:,:,i] = data[info.frlines*(3*i+gg):info.frlines*(3*i+gg+1),:]
+	frames_blu[:,:,i] = data[info.frlines*(3*i+bb):info.frlines*(3*i+bb+1),:]
+	
+    return (frames_red, frames_grn, frames_blu)
+
+    #--------------------------------------------------------
+    # combine frames for each filter
+    #--------------------------------------------------------
+    data_red = _combine_frames(info, frames_red) 
+    data_grn = _combine_frames(info, frames_grn) 
+    data_blu = _combine_frames(info, frames_blu) 
+
+
+    return (data_red, data_grn, data_blu)
+#=============================================================================
+
+
+
+#*****************************************************************************
+# Info object
+#*****************************************************************************
+class Info(object):
+
+    #=====================================================================
+    # __init__
+    #=====================================================================
+    def __init__(self, label):
+        """Uses the label to assemble the image info.
+
+        Input:
+            label           The label dictionary.
+
+        Attributes:         
+            nlines          A Numpy array containing the data in axis order
+                            (line, sample, band).
+            nsamples        The time sampling array in (line, sample) axis order, or
+                            None if no time backplane is found in the file.
+            nframes         
+
+        """
+    
+        self.nlines = label["LINES"]
+        self.nsamples = label["LINE_SAMPLES"]
+        self.frlines = 128
+        self.nframes = self.nlines/self.frlines
+
+        self.delay = label["INTERFRAME_DELAY"]
+
+        # Exposure starts 60 ms after header start time
+        self.tstart = 60e-3 + \
+	        julian.tdb_from_tai(julian.tai_from_iso(label["START_TIME"]))
+
+        self.tstride = 30.  ####
+#        self.texp = label["EXPOSURE_DURATION"]/1000.
+        self.texp = 3.2e-3
+
+#*****************************************************************************
+
+
+
+#*****************************************************************************
+# Info object
+#*****************************************************************************
+class __Info(object):
+
+    #=====================================================================
+    # __init__
+    #=====================================================================
+    def __init__(self, label):
+        """Uses the label to assemble the image info.
+
+        Input:
+            label           The label dictionary.
+
+        Attributes:         
+            nlines          A Numpy array containing the data in axis order
+                            (line, sample, band).
+            nsamples        The time sampling array in (line, sample) axis order, or
+                            None if no time backplane is found in the file.
+            nframes         
+
+        """
+    
+        self.nlines = label["LINES"]
+        self.nsamples = label["LINE_SAMPLES"]
+        self.frlines = 128
+        self.nframes = self.nlines/self.frlines/3
+
+        self.delay = label["INTERFRAME_DELAY"]
+
+        # Exposure starts 60 ms after header start time
+        self.tstart = 60e-3 + \
+	        julian.tdb_from_tai(julian.tai_from_iso(label["START_TIME"]))
+
+        self.tstride = 30.  ####
+#        self.texp = label["EXPOSURE_DURATION"]/1000.
+        self.texp = 3.2e-3
+
+#*****************************************************************************
+
+
+
+#*****************************************************************************
+# JUNOCAM object
+#*****************************************************************************
+class JUNOCAM(object):
+    """An instance-free class to hold Juno JUNOCAM instrument parameters."""
+
+    initialized = False
+    instrument_kernel = None
+
+    #=======================================================================
+    # initialize
+    #=======================================================================
+    @staticmethod
+    def initialize(ck='reconstructed', planets=None, asof=None,
+                   spk='reconstructed', gapfill=True,
+                   mst_pck=True, irregulars=True):
+        """Fills in key information about the VIS and IR channels.
+
+        Must be called first. After the first call, later calls to this function
+        are ignored.
+
+        Input:
+            ck,spk      'predicted', 'reconstructed', or 'none', depending on
+                        which kernels are to be used. Defaults are
+                        'reconstructed'. Use 'none' if the kernels are to be
+                        managed manually.
+            planets     A list of planets to pass to define_solar_system. None
+                        or 0 means all.
+            asof        Only use SPICE kernels that existed before this date;
+                        None to ignore.
+            gapfill     True to include gapfill CKs. False otherwise.
+            mst_pck     True to include MST PCKs, which update the rotation
+                        models for some of the small moons.
+            irregulars  True to include the irregular satellites;
+                        False otherwise.
+        """
+
+        # Quick exit after first call
+        if JUNOCAM.initialized: return
+
+        Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
+                        gapfill=gapfill,
+                        mst_pck=mst_pck, irregulars=irregulars)
+        Juno.load_instruments(asof=asof)
+
+        # Load the instrument kernel
+        JUNOCAM.instrument_kernel = Juno.spice_instrument_kernel("JUNOCAM")[0]
+
+        # Construct a SpiceFrame for each detector
+        ignore = oops.frame.SpiceFrame("JUNO_JUNOCAM")
+
+        JUNOCAM.initialized = True
+    #=======================================================================
+
+
+
+    #=======================================================================
+    # reset
+    #=======================================================================
+    @staticmethod
+    def reset():
+        """Resets the internal JUNOCAM parameters. Can be useful for
+        debugging."""
+
+        JUNOCAM.instrument_kernel = None
+        JUNOCAM.fovs = {}
+        JUNOCAM.initialized = False
+
+        Juno.reset()
+    #=======================================================================
+
+#*****************************************************************************
+
+
