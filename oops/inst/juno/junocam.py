@@ -13,6 +13,7 @@ import cspyce
 import oops
 from polymath import *
 import os.path
+import pdsparser
 
 from oops.inst.juno.juno_ import Juno
 from oops import TWOPI
@@ -42,9 +43,13 @@ def from_file(filespec, fast_distortion=True,
                             # unless initialize() is called explicitly.
 
     #-----------------------------------------------------------
-    # Load the json label 
+    # Load the PDS label 
     #-----------------------------------------------------------
-    lbl_filespec = filespec.replace("-raw.png", ".json")
+    lbl_filespec = filespec.replace(".img", ".LBL")
+    recs = pdsparser.PdsLabel.load_file(lbl_filespec)
+    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+
+    
 ## official pds volumes of juno in viewmaster
 
 #/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0003/DATA/RDR/JUPITER/ORBIT_03/JNCR_2016347_03C00192_V01.IMG
@@ -57,10 +62,6 @@ def from_file(filespec, fast_distortion=True,
 #/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0017/DATA/EDR/JUPITER/ORBIT_31/JNCE_2020366_31C00065_V01.LBL
 #/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0017/DATA/RDR/JUPITER/ORBIT_31/JNCR_2020366_31C00065_V01.IMG
 #/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0017/DATA/RDR/JUPITER/ORBIT_31/JNCR_2020366_31C00065_V01.LBL
-
-    f = open(lbl_filespec)
-    label = json.load(f)
-    f.close
 
     #-----------------------------------------------------------
     # Get composite image metadata 
@@ -158,8 +159,8 @@ def _load_data(filespec, label, meta):
     #--------------------------------------------------------
     # Read data 
     #--------------------------------------------------------
-    img = Image.open(filespec)  
-    data = np.asarray(img)
+    data = np.fromfile(filespec, \
+                      dtype='>u2').reshape(meta.nlines,meta.nsamples)
 
     #--------------------------------------------------------
     # Split into framelets:
@@ -169,7 +170,7 @@ def _load_data(filespec, label, meta):
     nf = len(meta.filter)
     framelets = np.empty([meta.frlines,meta.nsamples,meta.nframelets])
     framelet_labels = []
-    
+
     for i in range(meta.nframelets):
         framelets[:,:,i] = data[meta.frlines*i:meta.frlines*(i+1),:]
 
@@ -190,31 +191,6 @@ def _load_data(filespec, label, meta):
 	
 	
     return (framelets, framelet_labels)
-#=============================================================================
-
-
-
-#=============================================================================
-# parse_units
-#=============================================================================
-def parse_units(string):
-    """Parses a JUNOCAM label string into value and units. 
-
-    Input:
-        string          String value from the label.
-
-    Return:             (value, units)
-        value           Numeric value.
-        units           Units string.
-    """
-    
-    left = string.find("<")
-    right = string.find(">")
-    
-    value = float(string[0:left-1])
-    units  = string[left+1:right]
-    
-    return (value, units)
 #=============================================================================
 
 
@@ -245,15 +221,15 @@ class Metadata(object):
         #-----------------------------------
         # image dimensions
         #-----------------------------------
-        self.nlines = label['LINES']
-        self.nsamples = label['LINE_SAMPLES']
+        self.nlines = label['IMAGE']['LINES']
+        self.nsamples = label['IMAGE']['LINE_SAMPLES']
         self.frlines = 128
         self.nframelets = self.nlines/self.frlines
 
         #-----------------------------------
         # Exposure time
         #-----------------------------------
-        (exposure_ms, _) = parse_units(label['EXPOSURE_DURATION'])
+        exposure_ms = label['EXPOSURE_DURATION']
         self.exposure = exposure_ms/1000.
 
         #-----------------------------------
@@ -264,13 +240,12 @@ class Metadata(object):
         #--------------------------------------------
         # Default timing for unprocessed frame
         #--------------------------------------------
-        (self.tinter, _) = parse_units(label['INTERFRAME_DELAY'])
+        self.tinter = label['INTERFRAME_DELAY']
         self.tinter0 = self.tinter
 	
         self.tstart = julian.tdb_from_tai(
 	                julian.tai_from_iso(label['START_TIME']))
-        self.tstart0 = self.tstart
-	
+        self.tstart0 = self.tstart	
 	
         self.stime = label['STOP_TIME']
         self.tstop = julian.tdb_from_tai(
