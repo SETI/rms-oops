@@ -603,7 +603,7 @@ class Body(object):
     @staticmethod
     def reset_registry():
         """Initialize the registry.
-    
+
         It is not generally necessary to call this function, but it can be used
         to reset the registry for purposes of debugging.
         """
@@ -762,9 +762,9 @@ def _define_mars(start_time, stop_time, asof=None):
 # Jupiter System
 ################################################################################
 
-JUPITER_CLASSICAL = range(501,505)
-JUPITER_REGULAR   = [505] + range(514,517)
-JUPITER_IRREGULAR = range(506,514) + range(517,559) + [554] + \
+JUPITER_CLASSICAL = list(range(501,505))
+JUPITER_REGULAR   = [505] + list(range(514,517))
+JUPITER_IRREGULAR = list(range(506,514)) + list(range(517,559)) + [554] + \
                     [55060, 55061, 55062, 55064, 55065, 55066, 55068, 55070,
                      55071, 55074]
 JUPITER_MOONS_LOADED = []
@@ -825,11 +825,11 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
 # Saturn System
 ################################################################################
 
-SATURN_CLASSICAL_INNER = range(601,607)     # Mimas through Titan orbit Saturn
-SATURN_CLASSICAL_OUTER = range(607,609)     # Hyperion, Iapetus orbit barycenter
-SATURN_CLASSICAL_IRREG = [609]              # Phoebe
-SATURN_REGULAR   = range(610,619) + range(632,636) + [649,653]
-SATURN_IRREGULAR = (range(619,632) + range(636,649) + range(650,653) +
+SATURN_CLASSICAL_INNER = list(range(601,607))     # Mimas through Titan orbit Saturn
+SATURN_CLASSICAL_OUTER = list(range(607,609))     # Hyperion, Iapetus orbit barycenter
+SATURN_CLASSICAL_IRREG = [609]                    # Phoebe
+SATURN_REGULAR   = list(range(610,619)) + list(range(632,636)) + [649,653]
+SATURN_IRREGULAR = (list(range(619,632)) + list(range(636,649)) + list(range(650,653)) +
                     [65035, 65040, 65041, 65045, 65048, 65050, 65056])
 SATURN_MOONS_LOADED = []
 
@@ -855,7 +855,7 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
         SATURN_MOONS_LOADED += SATURN_IRREGULAR
 
     names = spicedb.furnish_spk(SATURN_MOONS_LOADED,
-                                time=(start_time, stop_time), 
+                                time=(start_time, stop_time),
                                 asof=asof)
 
     # Saturn and the Saturn barycenter orbit the SSB
@@ -924,9 +924,9 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
 # Uranus System
 ################################################################################
 
-URANUS_CLASSICAL  = range(701,706)
-URANUS_INNER      = range(706,716) + [725,726,727]
-URANUS_IRREGULAR  = range(716,726)
+URANUS_CLASSICAL  = list(range(701,706))
+URANUS_INNER      = list(range(706,716)) + [725,726,727]
+URANUS_IRREGULAR  = list(range(716,726))
 URANUS_MOONS_LOADED = []
 
 URANUS_EPSILON_LIMIT = 51604.
@@ -1057,8 +1057,8 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
 
 NEPTUNE_CLASSICAL_INNER = [801]             # Triton
 NEPTUNE_CLASSICAL_OUTER = [802]             # Nereid orbits barycenter
-NEPTUNE_REGULAR   = range(803,809)
-NEPTUNE_IRREGULAR = range(809,814)
+NEPTUNE_REGULAR   = list(range(803,809))
+NEPTUNE_IRREGULAR = list(range(809,814))
 NEPTUNE_MOONS_LOADED = []
 
 NEPTUNE_ADAMS_LIMIT = 62940.
@@ -1128,7 +1128,7 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
 ################################################################################
 
 CHARON        = [901]
-PLUTO_REGULAR = range(902,906)
+PLUTO_REGULAR = list(range(902,906))
 PLUTO_MOONS_LOADED = []
 
 PLUTO_RADIUS = 19591.
@@ -1238,8 +1238,8 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
         Path.STANDARD_PATHS.add(body.path.path_id)
         Frame.STANDARD_FRAMES.add(body.frame.frame_id)
 
-    keys = Body.BODY_REGISTRY.keys()
-    keys.sort()
+    # keys = Body.BODY_REGISTRY.keys()
+    # keys.sort()
 
 def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                 barycenter_name=None, pole=None):
@@ -1258,7 +1258,7 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                         attribute of the body will be set to this value; if
                         None, then the radius attribute of the body will be set
                         to zero.
-        keywords        the list of keywords under which this surface is to be 
+        keywords        the list of keywords under which this surface is to be
                         registered. Every ring is also registered under its own
                         name and under the keyword "RING".
         retrograde      True if the ring is retrograde relative to the central

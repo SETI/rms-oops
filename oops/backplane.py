@@ -181,8 +181,8 @@ class Backplane(object):
         if type(event_key) == str:
             event_key = (event_key.upper(),)
 
-        elif isinstance(event_key, basestring):
-            event_key = (str(event_key).upper(),)
+        # elif isinstance(event_key, basestring):
+        #     event_key = (str(event_key).upper(),)
 
         elif type(event_key) == tuple:
             items = []
@@ -4038,10 +4038,10 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 # Used for testing other images
 #     test = bp.longitude('enceladus')
 #     show_info('Enceladus longitude (deg)', test * constants.DPR)
-# 
+#
 #     test = bp.sub_observer_longitude('enceladus')
 #     show_info('Enceladus sub-observer longitude (deg)', test * constants.DPR)
-# 
+#
 #     test = bp.sub_solar_longitude('enceladus')
 #     show_info('Enceladus sub-solar longitude (deg)', test * constants.DPR)
 
