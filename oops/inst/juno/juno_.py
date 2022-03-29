@@ -193,16 +193,15 @@ class Juno(object):
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
 
-        cspyce.furnsh("/home/spitale/projects/oops_demo/test_data/juno/kernels/juno_mobib_rec_201228_210103_v01.bc")
-        cspyce.furnsh("/home/spitale/projects/oops_demo/test_data/juno/kernels/juno_rec_201205_210127_210210.bsp")
-        cspyce.furnsh("/home/spitale/projects/oops_demo/test_data/juno/kernels/juno_v12.tf")
-        cspyce.furnsh("/home/spitale/projects/oops_demo/test_data/juno/kernels/juno_junocam_v03.ti")
-        cspyce.furnsh("/home/spitale/Dropbox-SETI/OOPS-Resources/test_data/SPICE/de421.bsp")
+#        kdir = "/home/spitale/ominas_data/trs/juno/kernels/"
+        kdir = "./kernels/"   ## for suspected frame issue demo
 
-	cspyce.furnsh("/home/spitale//ominas_data/trs/juno/kernels/ck/juno_sa_nom_110801_171101_v01.bc")
-	cspyce.furnsh("/home/spitale//ominas_data/trs/juno/kernels/ck/juno_sc_nom_110807_171016_v01.bc")
-	cspyce.furnsh("/home/spitale//ominas_data/trs/juno/kernels/ck/juno_sc_rec_161211_161217_v01.bc")
-	cspyce.furnsh("/home/spitale//ominas_data/trs/juno/kernels/spk/spk_rec_161115_170106_170113.bsp")
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_201227_210102_v01.bc")
+        cspyce.furnsh(kdir + "spk/juno_rec_201205_210127_210210.bsp")
+        cspyce.furnsh(kdir + "fk/juno_v12.tf")
+        cspyce.furnsh(kdir + "ik/juno_junocam_v03.ti")
+        cspyce.furnsh(kdir + "spk/de421.bsp")
+
         return
 
 

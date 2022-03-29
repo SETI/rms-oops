@@ -50,19 +50,6 @@ def from_file(filespec, fast_distortion=True,
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     
-## official pds volumes of juno in viewmaster
-
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0003/DATA/RDR/JUPITER/ORBIT_03/JNCR_2016347_03C00192_V01.IMG
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0003/DATA/RDR/JUPITER/ORBIT_03/JNCR_2016347_03C00192_V01.LBL
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0003/EXTRAS/BROWSE/RDR/JUPITER/ORBIT_03/JNCR_2016347_03C00192_V01.PNG
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0003/EXTRAS/FULL/RDR/JUPITER/ORBIT_03/JNCR_2016347_03C00192_V01.PNG
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0003/EXTRAS/THUMBNAIL/RDR/JUPITER/ORBIT_03/JNCR_2016347_03C00192_V01.PNG
-
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0017/DATA/EDR/JUPITER/ORBIT_31/JNCE_2020366_31C00065_V01.IMG
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0017/DATA/EDR/JUPITER/ORBIT_31/JNCE_2020366_31C00065_V01.LBL
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0017/DATA/RDR/JUPITER/ORBIT_31/JNCR_2020366_31C00065_V01.IMG
-#/Volumes/pdsdata-mark/holdings/volumes/JNOJNC_0xxx/JNOJNC_0017/DATA/RDR/JUPITER/ORBIT_31/JNCR_2020366_31C00065_V01.LBL
-
     #-----------------------------------------------------------
     # Get composite image metadata 
     #-----------------------------------------------------------
@@ -313,25 +300,30 @@ class Metadata(object):
             fo = cspyce.gdpool(fo_var)[0]
             px = cspyce.gdpool(px_var)[0]
 
-            distortion_coeff = [1,0,k1,0,k2]
             scale = px/fo
+            distortion_coeff = [1,0,k1,0,k2]
 	    
 	    
 	    # manual offsets from OMINAS translator
-#	    if self.filter == 'RED': (cx, cy) = [814.2, -20]
-#	    if self.filter == 'GREEN': (cx, cy) = [822.2, 130]
-#	    if self.filter == 'BLUE': (cx, cy) = [819, 284]
-#	    if self.filter == 'METHANE': (cx, cy) = [825, -150]
-#	    (cx, cy) = [819, 1000]
-	    
-            self.fov = oops.fov.FlatFOV((scale,scale), 
-                                        (self.nsamples, self.nlines),
+#            if self.filter == 'RED': (cx, cy) = [814.2, -20]
+#            if self.filter == 'GREEN': (cx, cy) = [822.2, 130]
+#            if self.filter == 'BLUE': (cx, cy) = [819, 284]
+#            if self.filter == 'METHANE': (cx, cy) = [825, -150]
+
+            #############################################
+            # to demonstrate suspected frame issue...
+            (cx, cy) = [819, 200]
+            scale = scale*30
+            #############################################
+
+            self.fov = oops.fov.FlatFOV(scale, 
+                                        (self.nsamples, self.frlines),
                                         (cx, cy))
-	    # is there a radial distortion model?
-#            self.fov_corr = oops.fov.RadialPolynomial(
-#                                               (scale,scale), 
-#                                               (self.nsamples, self.nlines),
-#                                               (cx, cy))
+#            self.fov_corr = oops.fov.Radial(
+#                                           (self.nsamples, self.frlines),
+#                                           (scale,scale), 
+#                                           uv_from_xy_coefft=distortion_coeff, 
+#                                           uv_los=(cx, cy))
 
         return
     #=====================================================================

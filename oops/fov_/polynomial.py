@@ -260,7 +260,7 @@ class Test_Polynomial(unittest.TestCase):
 
     def runTest(self):
 
-        Polynomial.DEBUG = False
+        Polynomial.DEBUG = True
 
         ############################
         order = 2
