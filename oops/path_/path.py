@@ -927,7 +927,7 @@ class Path(object):
             steps = int(duration//dt) - quickpath.times.size
 
             effort_extending_quickpath = OVERHEAD + steps + count/SPEEDUP
-            if count >= effort_extending_quickpath: 
+            if count >= effort_extending_quickpath:
                 if LOGGING.quickpath_creation:
                     print(LOGGING.prefix, 'Extending QuickPath: ' + str(self),
                                           '(%.3f, %.3f)' % (tmin, tmax))
@@ -938,7 +938,7 @@ class Path(object):
         # Evaluate the effort using a QuickPath compared to the effort without
         steps = int((tmax - tmin)//dt) + 2*extras
         effort_using_quickpath = OVERHEAD + steps + count/SPEEDUP
-        if count < (1. + SAVINGS) * effort_using_quickpath: 
+        if count < (1. + SAVINGS) * effort_using_quickpath:
             return self
 
         if LOGGING.quickpath_creation:
@@ -1331,7 +1331,7 @@ class QuickPath(Path):
             vel_x = self.vel_x(tflat2.vals)
             vel_y = self.vel_y(tflat2.vals)
             vel_z = self.vel_z(tflat2.vals)
-        
+
             if time_diff == 0.:
                 pos[...,0] = pos_x[0]
                 pos[...,1] = pos_y[0]
@@ -1353,12 +1353,12 @@ class QuickPath(Path):
                 vel[...,2] = ((vel_z[1]-vel_z[0])/time_diff * tflat_diff +
                               vel_z[0])
 
-        else:            
+        else:
             # Evaluate the positions and velocities
             pos[...,0] = self.pos_x(tflat.vals)
             pos[...,1] = self.pos_y(tflat.vals)
             pos[...,2] = self.pos_z(tflat.vals)
-    
+
             vel[...,0] = self.vel_x(tflat.vals)
             vel[...,1] = self.vel_y(tflat.vals)
             vel[...,2] = self.vel_z(tflat.vals)
@@ -1467,7 +1467,7 @@ class Test_Path(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        self.assertEquals(Path.WAYPOINT_REGISTRY["SSB"], Path.SSB)
+        self.assertEqual(Path.WAYPOINT_REGISTRY["SSB"], Path.SSB)
 
         # LinkedPath tests
         sun = SpicePath("SUN", "SSB")

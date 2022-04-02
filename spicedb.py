@@ -6,7 +6,6 @@
 # kernels into their proper load order.
 ################################################################################
 
-from __future__ import division
 import os
 import datetime
 import unittest
@@ -30,6 +29,10 @@ TRANSLATOR = None   # Optional user-specified function to alter the absolute
                     # paths of SPICE kernels. This can be used to override the
                     # default kernels to be loaded. See set_translator().
 TRANSLATOR_ID = None
+
+# Sometimes you really just want a list
+def lrange(*args):
+    return list(range(*args))
 
 ################################################################################
 # Global variables to track loaded kernels
@@ -111,18 +114,26 @@ KERNEL_TYPE_FROM_EXT = {
     '.bdb': 'STARS',
     '.txt': 'META',
 }
-class KernelInfo(object):
 
-    def __init__(self, list):
-        self.kernel_name    = list[KERNEL_NAME_INDEX]
-        self.kernel_version = list[KERNEL_VERSION_INDEX]
-        self.kernel_type    = list[KERNEL_TYPE_INDEX]
-        self.filespec       = list[FILESPEC_INDEX]
-        self.start_time     = list[START_TIME_INDEX]
-        self.stop_time      = list[STOP_TIME_INDEX]
-        self.release_date   = list[RELEASE_DATE_INDEX]
-        self.spice_id       = list[SPICE_ID_INDEX]
-        self.load_priority  = list[LOAD_PRIORITY_INDEX]
+class KernelInfo(object):
+    """Class to manage information about individual SPICE kernels as described
+    by a row of the SPICEDB table. It has the property that objects sort into
+    an appropriate order for furnishing."""
+
+    def __init__(self, info):
+        """Info is a list or tuple containing the contents of one row of the
+        SPICEDB table. The order of items is defined by the COLUMN_NAMES list
+        above, which corresponds to the order of the columns in the table."""
+
+        self.kernel_name    = info[KERNEL_NAME_INDEX]
+        self.kernel_version = info[KERNEL_VERSION_INDEX]
+        self.kernel_type    = info[KERNEL_TYPE_INDEX]
+        self.filespec       = info[FILESPEC_INDEX]
+        self.start_time     = info[START_TIME_INDEX]
+        self.stop_time      = info[STOP_TIME_INDEX]
+        self.release_date   = info[RELEASE_DATE_INDEX]
+        self.spice_id       = info[SPICE_ID_INDEX]
+        self.load_priority  = info[LOAD_PRIORITY_INDEX]
         self.basename       = os.path.basename(self.filespec)
 
         if self.start_time:
@@ -136,8 +147,8 @@ class KernelInfo(object):
             self.start_tdb  = -1.e99
             self.stop_tdb   =  1.e99
 
-        if len(list) > FILE_NO_INDEX:
-            self.file_no = list[FILE_NO_INDEX]
+        if len(info) > FILE_NO_INDEX:
+            self.file_no = info[FILE_NO_INDEX]
         else:
             self.file_no = None
 
@@ -166,35 +177,41 @@ class KernelInfo(object):
         if self.load_priority > other.load_priority: return +1
 
         # Compare release dates
-        if self.release_date < other.release_date: return -1
-        if self.release_date > other.release_date: return +1
+        if self.release_date is not None and other.release_date is not None:
+            if self.release_date < other.release_date: return -1
+            if self.release_date > other.release_date: return +1
 
         # Group names alphabetically
         if self.kernel_name < other.kernel_name: return -1
         if self.kernel_name > other.kernel_name: return +1
 
         # Earlier versions go first
-        if self.kernel_version < other.kernel_version: return -1
-        if self.kernel_version > other.kernel_version: return +1
+        if self.kernel_version is not None and other.kernel_version is not None:
+            if self.kernel_version < other.kernel_version: return -1
+            if self.kernel_version > other.kernel_version: return +1
 
         # Earlier file numbers go first
-        if self.file_no < other.file_no: return -1
-        if self.file_no > other.file_no: return +1
+        if self.file_no is not None and other.file_no is not None:
+            if self.file_no < other.file_no: return -1
+            if self.file_no > other.file_no: return +1
 
         # Earlier end dates, later starts go first for better chance of override
-        if self.stop_time < other.stop_time: return -1
-        if self.stop_time > other.stop_time: return +1
+        if self.stop_time is not None and other.stop_time is not None:
+            if self.stop_time < other.stop_time: return -1
+            if self.stop_time > other.stop_time: return +1
 
-        if self.start_time > other.start_time: return -1
-        if self.start_time < other.start_time: return +1
+        if self.start_time is not None and other.start_time is not None:
+            if self.start_time > other.start_time: return -1
+            if self.start_time < other.start_time: return +1
 
         # Organize by file name if appropriate
         if self.filespec < other.filespec: return -1
         if self.filespec > other.filespec: return +1
 
         # Finally, organize by file name and SPICE ID
-        if self.spice_id < other.spice_id: return -1
-        if self.spice_id > other.spice_id: return +1
+        if self.spice_id is not None and other.spice_id is not None:
+            if self.spice_id < other.spice_id: return -1
+            if self.spice_id > other.spice_id: return +1
 
         # If all else fails, they're the same
         return 0
@@ -1401,9 +1418,10 @@ def furnish_kernels(kernel_list, fast=True):
             # Save the info for each furnished file
             basename = os.path.basename(abspath)
             if basename in FURNISHED_INFO:
-                FURNISHED_INFO[basename].add(kernel)
+                if kernel not in FURNISHED_INFO[basename]:
+                    FURNISHED_INFO[basename].append(kernel)
             else:
-                FURNISHED_INFO[basename] = set([kernel])
+                FURNISHED_INFO[basename] = [kernel]
 
     # Furnish the kernel files...
     if DEBUG:
@@ -1438,7 +1456,7 @@ def furnish_kernels(kernel_list, fast=True):
             furnished_names.append(name)
 
     # Append file number ranges into the names in the list returned
-    for (name,filenos) in fileno_dict.iteritems():
+    for (name,filenos) in fileno_dict.items():
         k = name_list.index(name)
         name_list[k] = name + _fileno_str(filenos)
 
@@ -2031,7 +2049,7 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
     names += furnish_inst(-82, instrument, asof=asof)
 
     # Planetary Constants
-    bodies = [699] + range(601,654) + [65035, 65040, 65041] # plus a few more
+    bodies = [699] + lrange(601,654) + [65035, 65040, 65041] # plus a few more
     names += furnish_pck(bodies, asof=asof)
 
     # Ephemerides (SP Kernels)
@@ -2622,10 +2640,11 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        kernels = furnish_pck(bodies=range(1,11) + range(199,1000,100) + [301] +
-                                     range(401,403) + range(501,517) +
-                                     range(601,654) + range(701,716) +
-                                     range(801,808) + range(901,906) +
+        kernels = furnish_pck(bodies=lrange(1,11) +
+                                     lrange(199,1000,100) + [301] +
+                                     lrange(401,403) + lrange(501,517) +
+                                     lrange(601,654) + lrange(701,716) +
+                                     lrange(801,808) + lrange(901,906) +
                                      [814,65035,65040,65041,65045,65048,65050],
                               asof='2014-03-10')
 
@@ -2815,8 +2834,8 @@ class test_spicedb(unittest.TestCase):
 
         ########
         ABSPATH_LIST = []
-        sl9 = range(1000181,1000189) + [1000190,1000191] + \
-              range(1000193,1000204)
+        sl9 = lrange(1000181,1000189) + [1000190,1000191] + \
+              lrange(1000193,1000204)
         kernels = furnish_spk(sl9, asof='2014-08-01')
         self.assertEqual(kernels, ['SL9-SPK-DE403'])
         self.assertEqual(len(ABSPATH_LIST), len(sl9) + 1)
@@ -3096,7 +3115,7 @@ class test_spicedb(unittest.TestCase):
 #         unload_by_type()
 #         kernels = furnish_cassini_kernels('2010-01-01', '2010-04-01',
 #                                           instrument='ISS', asof='2014-03-10')
-# 
+#
 #         self.assertIn('NAIF-LSK-0010', kernels[0:1])
 #         self.assertIn('CAS-SCLK-00171', kernels[1:2])
 #         self.assertIn('CAS-FK-V04', kernels[2:4])
@@ -3112,18 +3131,18 @@ class test_spicedb(unittest.TestCase):
 #         self.assertIn('CAS-SPK-RECONSTRUCTED-V01[90-94]', kernels[12:13])
 #         self.assertIn('DE430', kernels[13:14])
 #         self.assertIn('CAS-CK-RECONSTRUCTED-V01[438-456]', kernels[-1:])
-# 
+#
 #         self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
 #         self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00171'])
 #         self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
 #         self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10'])
-# 
+#
 #         self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
 #         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
 #         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
 #         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
 #         self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
-# 
+#
 #         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
 #         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
 #         self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
@@ -3133,7 +3152,7 @@ class test_spicedb(unittest.TestCase):
 #         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
 #                          range(90,95))
 #         self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 5 + 5)
-# 
+#
 #         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
 #                                                  'CAS-CK-RECONSTRUCTED-V01'])
 #         self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
@@ -3141,11 +3160,11 @@ class test_spicedb(unittest.TestCase):
 #         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
 #                          range(438,457))
 #         self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 457 - 438 + 62 - 59)
-# 
+#
 #         ########
 #         kernels1 = furnish_cassini_kernels('2010-03-01', '2010-06-01',
 #                                           instrument='VIMS', asof='2014-03-10')
-# 
+#
 #         self.assertIn('NAIF-LSK-0010', kernels1[0:1])
 #         self.assertIn('CAS-SCLK-00171', kernels1[1:2])
 #         self.assertIn('CAS-FK-V04', kernels1[2:4])
@@ -3161,19 +3180,19 @@ class test_spicedb(unittest.TestCase):
 #         self.assertIn('CAS-SPK-RECONSTRUCTED-V01[93-97]', kernels1[12:13])
 #         self.assertIn('DE430', kernels1[13:14])
 #         self.assertIn('CAS-CK-RECONSTRUCTED-V01[450-468]', kernels1[-1:])
-# 
+#
 #         self.assertEqual(FURNISHED_NAMES['LSK'], ['NAIF-LSK-0010'])
 #         self.assertEqual(FURNISHED_NAMES['SCLK'], ['CAS-SCLK-00171'])
 #         self.assertEqual(FURNISHED_NAMES['FK'], ['CAS-FK-V04'])
 #         self.assertEqual(FURNISHED_NAMES['IK'], ['CAS-IK-ISS-V10',
 #                                                  'CAS-IK-VIMS-V06'])
-# 
+#
 #         self.assertIn('CAS-FK-ROCKS-V18', FURNISHED_NAMES['PCK'])
 #         self.assertIn('CAS-PCK-ROCKS-2011-01-21', FURNISHED_NAMES['PCK'])
 #         self.assertIn('CAS-PCK-2014-02-19', FURNISHED_NAMES['PCK'])
 #         self.assertIn('NAIF-PCK-00010-EDIT-V01', FURNISHED_NAMES['PCK'])
 #         self.assertEqual(len(FURNISHED_ABSPATHS['PCK']), 4)
-# 
+#
 #         self.assertIn('SAT357', FURNISHED_NAMES['SPK'][:4])
 #         self.assertIn('SAT360', FURNISHED_NAMES['SPK'][:4])
 #         self.assertIn('SAT362', FURNISHED_NAMES['SPK'][:4])
@@ -3183,7 +3202,7 @@ class test_spicedb(unittest.TestCase):
 #         self.assertEqual(FURNISHED_FILENOS['CAS-SPK-RECONSTRUCTED-V01'],
 #                          range(90,98))
 #         self.assertEqual(len(FURNISHED_ABSPATHS['SPK']), 8 + 5)
-# 
+#
 #         self.assertEqual(FURNISHED_NAMES['CK'], ['CAS-CK-PREDICTED-V01',
 #                                                  'CAS-CK-RECONSTRUCTED-V01'])
 #         self.assertEqual(FURNISHED_FILENOS['CAS-CK-PREDICTED-V01'],
@@ -3192,45 +3211,45 @@ class test_spicedb(unittest.TestCase):
 #                          range(438,469))
 #         self.assertEqual(len(FURNISHED_ABSPATHS['CK']), 469 - 438 + 64 - 59)
 #         # SPK and CK file_no lists get merged
-# 
+#
 #         ########
 #         self.assertEqual(furnished_names('CK'),
 #                          ['CAS-CK-PREDICTED-V01[59-63]',
 #                           'CAS-CK-RECONSTRUCTED-V01[438-468]'])
-# 
+#
 #         unload_by_name('CAS-CK-RECONSTRUCTED-V01[440]')
-# 
+#
 #         self.assertEqual(furnished_names('CK'),
 #                          ['CAS-CK-PREDICTED-V01[59-63]',
 #                           'CAS-CK-RECONSTRUCTED-V01[438,439,441-468]'])
 #         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
 #                          [438,439] + range(441,469))
-# 
+#
 #         unload_by_name('CAS-CK-RECONSTRUCTED-V01[1-438]')
-# 
+#
 #         self.assertEqual(furnished_names('CK'),
 #                          ['CAS-CK-PREDICTED-V01[59-63]',
 #                           'CAS-CK-RECONSTRUCTED-V01[439,441-468]'])
 #         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
 #                          [439] + range(441,469))
-# 
+#
 #         unload_by_name('CAS-CK-RECONSTRUCTED-V01[439,442-465]')
-# 
+#
 #         self.assertEqual(furnished_names('CK'),
 #                          ['CAS-CK-PREDICTED-V01[59-63]',
 #                           'CAS-CK-RECONSTRUCTED-V01[441,466-468]'])
 #         self.assertEqual(FURNISHED_FILENOS['CAS-CK-RECONSTRUCTED-V01'],
 #                          [441] + range(466,469))
-# 
+#
 #         unload_by_name('CAS-CK-RECONSTRUCTED-V01[441-468]')
-# 
+#
 #         self.assertEqual(furnished_names('CK'), ['CAS-CK-PREDICTED-V01[59-63]'])
 #         self.assertNotIn('CAS-CK-RECONSTRUCTED-V01', FURNISHED_FILENOS)
-# 
+#
 #         self.assertEqual(furnished_names('SPK'),
 #                          ['SAT357', 'SAT360', 'SAT362', 'SAT363',
 #                           'CAS-SPK-RECONSTRUCTED-V01[90-97]', 'DE430'])
-# 
+#
 #         self.assertEqual(furnished_names(['IK','FK','LSK','SCLK']),
 #                          ['CAS-IK-ISS-V10', 'CAS-IK-VIMS-V06',
 #                           'CAS-FK-V04', 'NAIF-LSK-0010', 'CAS-SCLK-00171'])
@@ -3337,4 +3356,3 @@ class test_spicedb(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
-
