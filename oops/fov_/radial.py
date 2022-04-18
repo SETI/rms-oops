@@ -4,7 +4,7 @@
 
 from __future__ import print_function
 
-from IPython import embed
+from IPython import embed  ## TODO: remove
 
 import numpy as np
 import oops
@@ -22,11 +22,11 @@ class Radial(FOV):
     center.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
     DEBUG = False       # True to print(convergence steps on xy_from_uv())
 
     PACKRAT_ARGS = ['uv_scale', 'uv_shape', 'coefft_xy_from_uv', 'coefft_uv_from_xy',
                     'uv_los', 'uv_area', 'iters']
+
 
     #=========================================================================
     # __init__
@@ -53,7 +53,7 @@ class Radial(FOV):
 
             coefft_xy_from_uv
                         the coefficient array of the polynomial to convert 
-                        U,V to X,Y. The array has shape [order+1], where 
+                        U,V to X,Y. The array has shape [order+2], where 
                         coefft[i] is the coefficient on r**i, where 
                         r = sqrt((u-ulos)**2 + (v-vlos)**2), yielding x(u,v) 
 			and y(u,v). All coefficients are 0 for i > order. If 
@@ -67,8 +67,6 @@ class Radial(FOV):
 			and y(u,v). All coefficients are 0 for i > order. If 
 			None, then the polynomial for xy_from_uv is inverted.
 
-###note this include the camera scale unlike in OMINAS
-
             uv_los      a single value, tuple or Pair defining the (u,v)
                         coordinates of the nominal line of sight. By default,
                         this is the midpoint of the rectangle, i.e, uv_shape/2.
@@ -80,7 +78,6 @@ class Radial(FOV):
                         inverting the distortion polynomial.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
         self.coefft_xy_from_uv = None
         self.coefft_uv_from_xy = None
         
@@ -121,18 +118,31 @@ class Radial(FOV):
     def xy_from_uv(self, uv, derivs=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
+        
+        Input:
+            uv       Pairs of arbitrary shape to be transformed from FOV
+                     coordinates.
+            derivs   If True, any derivatives in (u,v) get propagated into
+                     the returned (x,y).
+	    
+        Return:      xy
+            xy       Pairs of same shape as uv giving the transformed
+                     FOV coordinates.
 
-        If derivs is True, then any derivatives in (u,v) get propagated into
-        the (x,y) returned.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         
+        #-----------------------------------------------------
+        # Transform based on which types of coeffs are given
+        #-----------------------------------------------------
         if self.coefft_xy_from_uv is not None:
-            xy = self._forward_polynomial(uv, 
-                       self.coefft_xy_from_uv, self.flat_fov.xy_from_uv, derivs)
+            xy = self._apply_polynomial(uv, 
+                             self.coefft_xy_from_uv, 
+                                  self.flat_fov.xy_from_uv, derivs, from_='uv')
         else:
-            xy = self._inverse_polynomial(uv, 
-                       self.coefft_uv_from_xy, self.flat_fov.xy_from_uv, derivs)
+            xy = self._solve_polynomial(uv, 
+                             self.coefft_uv_from_xy, 
+                                  self.flat_fov.xy_from_uv, derivs, from_='uv')
 
         return xy
     #=========================================================================
@@ -145,20 +155,31 @@ class Radial(FOV):
     def uv_from_xy(self, xy, derivs=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
-
-        If derivs is True, then any derivatives in (x,y) get propagated into
-        the (u,v) returned.
+        
+        Input:
+            xy       Pairs of arbitrary shape to be transformed to FOV
+                     coordinates.
+            derivs   If True, any derivatives in (x,y) get propagated into
+                     the returned (u,v).
+	    
+        Return:      uv
+            uv       Pairs of same shape as xy giving the computed
+                     FOV coordinates.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
         xy = Pair.as_pair(xy, derivs)
 
+        #-----------------------------------------------------
+        # Transform based on which types of coeffs are given
+        #-----------------------------------------------------
         if self.coefft_uv_from_xy is not None:
-            uv = self._forward_polynomial(xy, 
-                       self.coefft_uv_from_xy, self.flat_fov.uv_from_xy, derivs)
+            uv = self._apply_polynomial(xy, 
+                            self.coefft_uv_from_xy, 
+                                  self.flat_fov.uv_from_xy, derivs, from_='xy')
         else:
-            uv = self._inverse_polynomial(xy, 
-                       self.coefft_xy_from_uv, self.flat_fov.uv_from_xy, derivs)
+            uv = self._solve_polynomial(xy, 
+                            self.coefft_xy_from_uv, 
+                                  self.flat_fov.uv_from_xy, derivs, from_='xy')
         
         return uv
     #=========================================================================
@@ -168,20 +189,32 @@ class Radial(FOV):
     #=========================================================================
     # _compute_polynomial
     #=========================================================================
-    def _compute_polynomial(self, r, coefft, derivs=False):
+    def _compute_polynomial(self, r, coefft, derivs):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Compute a polynomial in one variable 
-           (this should be a library function)..
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Compute the 1-D polynomial.
+        
+        Input:
+            r        Scalar of arbitrary shape specifying the points at which 
+                     to evaluate the polynomial.
+            coefft   The coefficient array defining the polynomial.
+            derivs   If True, derivatives are computed and included in the 
+                     result.
 
+        Return:      (f, deriv)
+            f        Scalar of the same shape as r giving the values of 
+                     the polynomial at each input point.
+            df_dr    Scalar of the same shape as r giving the derivative
+                     at each input point.
+                """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         order = coefft.shape[0]-1
         
+# TODO: r is not actually a Scalar
         #------------------------------------
 	# Construct the powers of radius
         #------------------------------------
         r_powers = [1.]
-        for k in range(1, order + 1):
+        for k in range(1, order+1):
 	    r_powers.append(r_powers[-1] * r)
 
         #-----------------------------------------------------------------
@@ -191,129 +224,146 @@ class Radial(FOV):
         # improves accuracy. Stop at one because there are no zero-order 
         # terms.
         #-----------------------------------------------------------------
-        result = 0.
+        f_vals = 0.
         for i in range(order, -1, -1):
-            result += coefft[i] * r_powers[i]
+            f_vals += coefft[i] * r_powers[i]
+        f = Scalar.as_scalar(f_vals)
 
         #---------------------------------------------------
-        # Calculate and return derivatives if necessary
+        # Calculate derivatives if necessary
         #---------------------------------------------------
-        deriv = None
         if derivs:
-            deriv = 0.
-            for i in range(order, -1, -1):
-                deriv += i*coefft[i]*r_powers[i-1]
-		
-
-        return (result, deriv)
+            df_dr_vals = 0.
+            for i in range(order, 0, -1):
+                df_dr_vals += i*coefft[i]*r_powers[i-1]
+            df_dr = Scalar.as_scalar(df_dr_vals)
+            f.insert_deriv('r', df_dr)
+	
+	
+        return f
     #=========================================================================
 
 
 
     #=========================================================================
-    # _forward_polynomial
+    # _apply_polynomial
     #=========================================================================
-    def _forward_polynomial(self, ab, coefft, flat, derivs):
+    def _apply_polynomial(self, pq, coefft, flat, derivs, from_=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Apply the polynomial to a pair (a,b) to return (p,q).
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Apply the polynomial to pair (p,q) to return (a,b).
         
+        Input:
+            pq       Pairs of arbitrary shape specifying the points at which 
+                     to evaluate the polynomial.
+            coefft   The coefficient array defining the polynomial.
+            derivs   If True, derivatives are computed and included in the 
+                     result.
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
+                     or 'xy'.
+
+        Return:      ab
+            ab       Pairs of the same shape as pq giving the values of 
+                     the polynomial at each input point.
+                """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        assert from_ in ('uv', 'xy')
+        dkey = from_
+       
         #------------------------------------
 	# Compute radii
         #------------------------------------
-        a = ab.vals[...,0]
-        b = ab.vals[...,1]
-        r = ab.norm_sq().vals
-	r[np.where(r==0)] = 1  ########################
+        p = pq.vals[...,0]
+        q = pq.vals[...,1]
+        r = pq.norm_sq().vals  ## TODO: change to Scalar w derivs
+	r[np.where(r==0)] = 1  ## TODO: revisit
+        embed()
+	
+	
+#	dr_dpq_vals = np.zeros(pq.shape + (2,))
+#	dr_dpq_vals[...,0] = p/r
+#	r.insert_deriv('pq', pq.vals/r.vals)
 
-        #------------------------------------
-	# Compute the polynomial correction
-        #------------------------------------
-        (cor, dcor) = self._compute_polynomial(r, coefft, derivs=derivs)
-        pq = flat(ab, derivs=derivs)*cor
+
+
+
+        #-----------------------------------------------
+	# Compute and apply the polynomial correction
+        #-----------------------------------------------
+        c = self._compute_polynomial(r, coefft, derivs=derivs)
+        fab = flat(pq, derivs=derivs)
+        ab = fab*c
+        embed()
+# fab.d_dxy.chain(pq.d_dt) - fab.d_dt
+# fab.derivs[dkey].chain(pq.d_dt) - fab.d_dt
 
         #---------------------------------------------------
-        # Calculate and return derivatives if necessary
+        # Calculate and insert derivatives if necessary
         #---------------------------------------------------
-        if ab.derivs:
-            dpq_dab_vals = np.zeros(ab.shape + (2,2))
+        if derivs:
 
-            dp_da = cor + dcor * a**2/r
-            dq_db = cor + dcor * b**2/r
-            dq_da = dcor * a/r
-            dp_db = dcor * b/r
 
-            dpq_dab_vals[...,0,0] = np.squeeze(dp_da)
-            dpq_dab_vals[...,1,1] = np.squeeze(dq_db)
-            dpq_dab_vals[...,0,1] = np.squeeze(dp_db)
-            dpq_dab_vals[...,1,0] = np.squeeze(dq_da)
 
-            dpq_dab = Pair(dpq_dab_vals, ab.mask, drank=1)
+#uv_from_xy
+# pq=xy
+# ab=uv
+#            dab_dpq = c*fab.derivs[dkey] + fab.vals*pq.vals/r*dc_dr
+
+#            dab_dpq_vals = np.zeros(pq.shape + (2,2))
+
+#            dc_dr = c.d_dr.vals
+#            dfab = fab.derivs[dkey]
+#            da_dp = c.vals*dfab.vals[...,0,0] + fab.vals[...,0]*p/r*dc_dr
+#            db_dq = c.vals*dfab.vals[...,1,1] + fab.vals[...,1]*q/r*dc_dr
+#            db_dp = c.vals*dfab.vals[...,1,0] + fab.vals[...,1]*p/r*dc_dr
+#            da_dq = c.vals*dfab.vals[...,0,1] + fab.vals[...,0]*q/r*dc_dr
+
+#	    dab_dpq_vals[...,0,0] = da_dp
+#	    dab_dpq_vals[...,1,1] = db_dq
+#	    dab_dpq_vals[...,1,0] = db_dp
+#	    dab_dpq_vals[...,0,1] = da_dq
+
+#            embed()
+
+#            dab_dpq = Pair(dab_dpq_vals, pq.mask, drank=1)
+# ab.derivs[dkey] - dab_dpq
+#            new_derivs = {dkey:dab_dpq}
+
+
 
             new_derivs = {}
-            for (key, pq_deriv) in ab.derivs.items():
-                new_derivs[key] = dpq_dab.chain(pq_deriv)
 
-            pq.insert_derivs(new_derivs)
+            if pq.derivs:
+                for (key, pq_deriv) in pq.derivs.items():
+                    new_derivs[key] = ab.derivs[dkey].chain(pq_deriv)
+            ab.insert_derivs(new_derivs)
 
-        return pq
+        return ab
     #=========================================================================
 
 
 
     #=========================================================================
-    # _inverse_polynomial
+    # _solve_polynomial
     #=========================================================================
-    def __inverse_polynomial(self, ab, coefft, flat, derivs):
+    def _solve_polynomial(self, ab, coefft, flat, derivs, from_=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Invert the polynomial for a pair (a,b) to return (p,q).
+        """Solve the polynomial for an (a,b) pair to return (p,q).
+        
+        Input:
+            ab       Pairs of arbitrary shape specifying the points at which
+                     to invert the polynomial.
+            coefft   The coefficient array defining the polynomial to invert.
+            derivs   If True, derivatives are included in the output.
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
+                     or 'xy'.
+	    
+        Return:      pq
+            pq       Pairs of of the same shape as ab giving the values of 
+                     the inverted polynomial at each input point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-        #------------------------------------------
-        # Initial guess
-        #------------------------------------------
-        pq = flat(ab, derivs=derivs)
-
-        #------------------------------------------
-        # Iterate until convergence
-        #------------------------------------------
-        epsilon = 1.e-14
-        for iter in range(self.iters):
-            r = pq.norm_sq().vals
-            (cor,_) = self._compute_polynomial(r, coefft, derivs=derivs)
-            pq = flat(ab, derivs=derivs)/cor
-            if np.max(np.abs(1-cor)) <= epsilon: break
-
-
-        #------------------------------------------
-        # Fill in derivatives if necessary
-        #------------------------------------------
-#        if ab.derivs:
-#            new_derivs = {}
-#            for (key, ab_deriv) in ab.derivs.items():
-#                new_derivs[key] = dpq_dab.chain(ab_deriv)
-
-#            pq.insert_derivs(new_derivs)
-
-## deal w derivatives
-
-        return pq
-    #=========================================================================
-
-
-
-    #=========================================================================
-    # _inverse_polynomial
-    #=========================================================================
-    def _inverse_polynomial(self, ab, coefft, flat, derivs):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Solve the polynomial for a pair (a,b) pair to return (p,q).
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-        order = coefft.shape[0]-1
+        assert from_ in ('uv', 'xy')
+        dkey = from_
 
         ab = Pair.as_pair(ab, derivs)
         ab_wod = ab.wod
@@ -321,26 +371,26 @@ class Radial(FOV):
         #------------------------------------------
         # Make a rough initial guess
         #------------------------------------------
-        pq = flat(ab, derivs=derivs)
-        pq.insert_deriv('pq', Pair.IDENTITY)
-###        pq.insert_deriv('uv', Pair.IDENTITY)
+        pq = flat(ab_wod)
+        pq.insert_deriv(dkey, Pair.IDENTITY)
 
         #------------------------------------------
         # Iterate until convergence...
         #------------------------------------------
-        prev_dpq_max = 1.e99
+        epsilon = 1.e-15
         for iter in range(self.iters):
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Evaluate the transform and its partial derivatives
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            ab = self._forward_polynomial(pq, coefft, flat, derivs=True)
-            dab_dpq = ab.d_dpq
+            ab0 = self._apply_polynomial(pq, coefft, 
+                                                flat, derivs=True, from_=from_)
+            dab_dpq = ab0.derivs[dkey]
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Apply one step of Newton's method in 2-D
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            dab = ab_wod - ab.wod
+            dab = ab_wod - ab0.wod
 
             dpq_dab = dab_dpq.reciprocal()
             dpq = dpq_dab.chain(dab)
@@ -349,23 +399,22 @@ class Radial(FOV):
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Test for convergence
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            dpq_max = abs(dpq).max()
+            error_max = abs(dpq).max() / abs(pq).max()
             if Radial.DEBUG:
-                print(iter, dpq_max)
+                print(iter, error_max)
 
-            if dpq_max >= prev_dpq_max: break
-
-            prev_dpq_max = dpq_max
+            if error_max <= epsilon: break
 
         pq = pq.wod
 
         #------------------------------------------
         # Fill in derivatives if necessary
         #------------------------------------------
-        if ab.derivs:
-            new_derivs = {}
-            for (key, ab_deriv) in ab.derivs.items():
-                new_derivs[key] = dpq_dab.chain(ab_deriv)
+        if derivs:
+            new_derivs = {dkey:dpq_dab}
+            if ab.derivs:
+                for (key, ab_deriv) in ab.derivs.items():
+                    new_derivs[key] = dpq_dab.chain(ab_deriv)
 
             pq.insert_derivs(new_derivs)
 
@@ -389,33 +438,203 @@ class Test_Radial(unittest.TestCase):
 
         Radial.DEBUG = True
 
-        ############################
-        order = 2
-        uv_from_xy_coefft = np.array([1.000, 
-                                     0, 
-                                    -5.9624209455667325e-08, 
-                                     0, 
-                                     2.7381910042256151e-14])
+        #====================================================================
+        # Forward transform with uv_from_xy coefficients
+        # Validate uv derivative propagation against central differences 
+        # / chain rule
+        #====================================================================
+        xy_coefft = np.array([1.000, 
+                              0, 
+                             -5.9624209455667325e-08, 
+                              0, 
+                              2.7381910042256151e-14])
 
-        uv = Pair.combos(np.arange(100), np.arange(8)) * 16
 	scale = 0.00067540618
-	
-        fov = Radial(scale, uv.shape, coefft_uv_from_xy=uv_from_xy_coefft, uv_los=(800,64), uv_area=1.)
+        shape = (1648,128)
 
-        xy = fov.xy_from_uv(uv)
-        uv_test = fov.uv_from_xy(xy)
-#        print(abs(uv - uv_test))
-#        print(abs(uv - uv_test).max())
+        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
+        fov = Radial(scale, shape, coefft_uv_from_xy=xy_coefft, uv_los=(800,64), uv_area=1.)
+
+        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
+        xy = flat_fov.xy_from_uv(uv0)
+	xy.insert_deriv('t', Pair(np.random.randn(100,8,2)))
+	xy.insert_deriv('ab', Pair(np.random.randn(100,8,2,2), drank=1))
+
+        uv = fov.uv_from_xy(xy, derivs=True)
+	
+        EPS = 1.e-5
+        uv0 = fov.uv_from_xy(xy + (-EPS,0), False)
+        uv1 = fov.uv_from_xy(xy + ( EPS,0), False)
+        duv_dx = (uv1 - uv0) / (2. * EPS)
+
+        uv0 = fov.uv_from_xy(xy + (0,-EPS), False)
+        uv1 = fov.uv_from_xy(xy + (0, EPS), False)
+        duv_dy = (uv1 - uv0) / (2. * EPS)
+
+        duv_dt = duv_dx * xy.d_dt.vals[...,0] + duv_dy * xy.d_dt.vals[...,1]
+        duv_da = duv_dx * xy.d_dab.vals[...,0,0] + duv_dy * xy.d_dab.vals[...,1,0]
+        duv_db = duv_dx * xy.d_dab.vals[...,0,1] + duv_dy * xy.d_dab.vals[...,1,1]
         embed()
 
-        self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
+        DEL = 1.e-6
+        self.assertTrue(abs(uv.d_dt.vals - duv_dt.vals).max() <= DEL)
+        self.assertTrue(abs(uv.d_dab.vals[...,0] - duv_da.vals).max() <= DEL)
+        self.assertTrue(abs(uv.d_dab.vals[...,1] - duv_db.vals).max() <= DEL)
+
+        self.assertTrue(abs(uv.d_dxy.vals[...,0,0] - duv_dx.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(uv.d_dxy.vals[...,0,1] - duv_dy.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(uv.d_dxy.vals[...,1,0] - duv_dx.vals[...,1]).max() <= DEL)
+        self.assertTrue(abs(uv.d_dxy.vals[...,1,1] - duv_dy.vals[...,1]).max() <= DEL)
+
+
+
+
+
+
+
+
+#        xy_from_uv_coefft = np.array([18318040., 
+#                                     -36472916., 
+#                                    -2432044., 
+#                                     41065716., 
+#                                     -20478757.])
+
+#        uv = Pair.combos(np.arange(100), np.arange(8)) * 16
+#	scale = 0.00067540618
+	
+#        fov = Radial(scale, uv.shape, coefft_xy_from_uv=xy_from_uv_coefft, uv_los=(800,64), uv_area=1.)
+
+#        xy = fov.xy_from_uv(uv)
+#        uv_test = fov.uv_from_xy(xy)
+	
+##        print(abs(uv - uv_test))
+##        print(abs(uv - uv_test).max())
+#        embed()
+
+#        self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
+
+
+
+
+
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with uv_from_xy coefficients,
+        # no derivatives
+        #====================================================================
+        xy_coefft = np.array([1.000, 
+                              0, 
+                             -5.9624209455667325e-08, 
+                              0, 
+                              2.7381910042256151e-14])
+
+	scale = 0.00067540618
+        shape = (1648,128)
+
+        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
+        fov = Radial(scale, shape, coefft_uv_from_xy=xy_coefft, uv_los=(800,64), uv_area=1.)
+
+        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
+        xy = flat_fov.xy_from_uv(uv0)
+
+        uv = fov.uv_from_xy(xy)
+        xy_test = fov.xy_from_uv(uv)
+
+#        self.assertTrue(abs(xy - xy_test).max() < 1.e-14)
+
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with uv_from_xy coefficients,
+        # test derivative propagation
+        #====================================================================
+        xy_coefft = np.array([1.000, 
+                              0, 
+                             -5.9624209455667325e-08, 
+                              0, 
+                              2.7381910042256151e-14])
+
+	scale = 0.00067540618
+        shape = (1648,128)
+
+        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
+        fov = Radial(scale, shape, coefft_uv_from_xy=xy_coefft, uv_los=(800,64), uv_area=1.)
+
+        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
+        xy = flat_fov.xy_from_uv(uv0)
+        xy.insert_deriv('t', Pair((1,1)))
+
+        uv = fov.uv_from_xy(xy, derivs=True)
+        xy_test = fov.xy_from_uv(uv, derivs=True)
+
+        #-------------------------------
+        # check derivative propagation
+        #-------------------------------
+        self.assertTrue('xy' in uv.derivs.keys())
+        self.assertTrue('uv' in xy_test.derivs.keys())
+
+        #------------------------------------
+        # test self-derivatives in uv_test
+        #------------------------------------
+        dxy_dxy = xy_test.d_dxy.values
+        dx_dx = dxy_dxy[...,0,0]
+        dx_dy = dxy_dxy[...,0,1]
+        dy_dy = dxy_dxy[...,1,1]
+        dy_dx = dxy_dxy[...,1,0]
+
+        EPS = 1.e-15
+#        self.assertTrue(abs(dx_dx.max()-1) <= EPS)
+#        self.assertTrue(abs(dx_dx.min()-1) <= EPS)
+
+#        self.assertTrue(abs(dy_dy.max()-1) <= EPS)
+#        self.assertTrue(abs(dy_dy.min()-1) <= EPS)
+
+#        self.assertTrue(abs(dx_dy.max()) <= EPS)
+#        self.assertTrue(abs(dy_dx.max()) <= EPS)
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with uv_from_xy coefficients
+        # Verify that derivatives are not propagated for derivs=False
+        #====================================================================
+        xy_coefft = np.array([1.000, 
+                              0, 
+                             -5.9624209455667325e-08, 
+                              0, 
+                              2.7381910042256151e-14])
+
+	scale = 0.00067540618
+        shape = (1648,128)
+
+        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
+        fov = Radial(scale, shape, coefft_uv_from_xy=xy_coefft, uv_los=(800,64), uv_area=1.)
+
+        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
+        xy = flat_fov.xy_from_uv(uv0)
+        xy.insert_deriv('t', Pair((1,1)))
+
+        uv = fov.uv_from_xy(xy, derivs=False)
+        self.assertEqual(uv.derivs, {})
+
+        uv.insert_deriv('t', Pair((1,1)))
+        xy_test = fov.xy_from_uv(uv, derivs=False)
+        self.assertEqual(xy_test.derivs, {})
+
+
+
+        return
+
+
 
 
 
 
 
         ############################
-        order = 2
         uv_coefft = np.zeros((3,3,2))
         uv_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
                                      [ 1.020, -0.001,  0.000],
@@ -438,7 +657,6 @@ class Test_Radial(unittest.TestCase):
 
 
         ############################
-        order = 2
         uv_coefft = np.zeros((3,3,2))
         uv_coefft[...,0] = np.array([[ 5.00, -0.10, -0.01],
                                      [ 1.20, -0.01,  0.00],
@@ -462,7 +680,6 @@ class Test_Radial(unittest.TestCase):
         self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
 
         ############################
-        order = 2
         uv_coefft = np.zeros((3,3,2))
         uv_coefft[...,0] = np.array([[ 5.00, -0.10, -0.01],
                                      [ 1.20, -0.01,  0.00],
@@ -498,7 +715,6 @@ class Test_Radial(unittest.TestCase):
         self.assertTrue(abs(xy.d_dab.vals[...,1] - dxy_db.vals).max() <= DEL)
 
         ############################
-        order = 2
         uv_coefft = np.zeros((3,3,2))
         uv_coefft[...,0] = np.array([[ 5.00, -0.10, -0.01],
                                      [ 1.20, -0.01,  0.00],

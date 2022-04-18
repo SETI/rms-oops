@@ -4,27 +4,39 @@
 
 from __future__ import print_function
 
+from IPython import embed  ## TODO: remove
+
 import numpy as np
+import oops
 from polymath import *
 
 from oops.fov_.fov import FOV
 
+#******************************************************************************
+# Polynomial FOV class
+#******************************************************************************
 class Polynomial(FOV):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """The Polynomial subclass of FOV describes a field of view in which the
     distortion is described by a 2-D polynomial. This is the approached used by
     Space Telescope Science Institute to describe the Hubble instrument fields
     of view. A Polynomial FOV has no dependence on the optional extra indices
     that can be associated with time, wavelength band, etc.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     DEBUG = False       # True to print(convergence steps on xy_from_uv())
 
     PACKRAT_ARGS = ['uv_shape', 'coefft_xy_from_uv', 'coefft_uv_from_xy',
                     'uv_los', 'uv_area', 'iters']
 
+
+    #=========================================================================
+    # __init__
+    #=========================================================================
     def __init__(self, uv_shape, coefft_xy_from_uv=None,
                  coefft_uv_from_xy=None, uv_los=None, uv_area=None,
                  iters=8):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Constructor for a PolynomialFOV.
 
         Inputs:
@@ -59,9 +71,9 @@ class Polynomial(FOV):
                         pixel in steradians after distortion has been removed.
 
             iters       the number of iterations of Newton's method to use when
-                        evaluating uv_from_xy().
+                        inverting the polynomial.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.coefft_xy_from_uv = None
         self.coefft_uv_from_xy = None
         
@@ -83,7 +95,9 @@ class Polynomial(FOV):
 
         self.iters = iters
 
+        #------------------------------------------
         # Required attribute
+        #------------------------------------------
         if self.coefft_uv_from_xy is not None:
             self.uv_scale = Pair.as_pair((1./self.coefft_uv_from_xy[1,0,0],
                                           1./self.coefft_uv_from_xy[0,1,1]))
@@ -96,159 +110,281 @@ class Polynomial(FOV):
         else:
             self.uv_area = uv_area
 
-    ########################################
+    #=========================================================================
 
-    def xy_from_uv(self, uv_pair, derivs=False):
+
+
+    #=========================================================================
+    # xy_from_uv
+    #=========================================================================
+    def xy_from_uv(self, uv, derivs=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
-
-        If derivs is True, then any derivatives in (u,v) get propagated into
-        the (x,y) returned.
-        """
-
-        # Subtract off the center of the field of view
-        uv_pair = Pair.as_pair(uv_pair, derivs) - self.uv_los
         
+        Input:
+            uv       Pairs of arbitrary shape to be transformed from FOV
+                     coordinates.
+            derivs   If True, any derivatives in (u,v) get propagated into
+                     the returned (x,y).
+	    
+        Return:      xy
+            xy       Pairs of same shape as uv giving the transformed
+                     FOV coordinates.
+
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        #-----------------------------------------------------
+        # Subtract off the center of the field of view
+        #-----------------------------------------------------
+        uv = Pair.as_pair(uv, derivs) - self.uv_los
+        
+        #-----------------------------------------------------
+        # Transform based on which types of coeffs are given
+        #-----------------------------------------------------
         if self.coefft_xy_from_uv is not None:
-            xy = self._apply_polynomial(uv_pair, self.coefft_xy_from_uv, derivs)
+            xy = self._apply_polynomial(uv, 
+                                   self.coefft_xy_from_uv, derivs, from_='uv')
         else:
-            xy = self._solve_polynomial(uv_pair, self.coefft_uv_from_xy, derivs,
-                                        True)
+            xy = self._solve_polynomial(uv,
+                                   self.coefft_uv_from_xy, derivs, from_='uv')
 
         return xy
-        
-    def uv_from_xy(self, xy_pair, derivs=False):
+    #=========================================================================
+
+
+
+    #=========================================================================
+    # uv_from_xy
+    #=========================================================================
+    def uv_from_xy(self, xy, derivs=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
-
-        If derivs is True, then any derivatives in (x,y) get propagated into
-        the (u,v) returned.
-        """
-
-        xy_pair = Pair.as_pair(xy_pair, derivs)
         
+        Input:
+            xy       Pairs of arbitrary shape to be transformed to FOV
+                     coordinates.
+            derivs   If True, any derivatives in (x,y) get propagated into
+                     the returned (u,v).
+	    
+        Return:      uv
+            uv       Pairs of same shape as xy giving the computed
+                     FOV coordinates.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        xy = Pair.as_pair(xy, derivs)
+        
+        #-----------------------------------------------------
+        # Transform based on which types of coeffs are given
+        #-----------------------------------------------------
         if self.coefft_uv_from_xy is not None:
-            uv = self._apply_polynomial(xy_pair, self.coefft_uv_from_xy, derivs)
+            uv = self._apply_polynomial(xy,
+                                   self.coefft_uv_from_xy, derivs, from_='xy')
         else:
-            uv = self._solve_polynomial(xy_pair, self.coefft_xy_from_uv, derivs,
-                                        False)
+            uv = self._solve_polynomial(xy, 
+                                   self.coefft_xy_from_uv, derivs, from_='xy')
 
+        #-----------------------------------------------------
+        # Add back the center of the field of view
+        #-----------------------------------------------------
         uv = uv + self.uv_los
         
         return uv
+    #=========================================================================
 
-    def _apply_polynomial(self, uv_pair, coefft, derivs):
-        """Apply the polynomial to a (u,v) pair to return (x,y).
+
+
+    #=========================================================================
+    # _apply_polynomial
+    #=========================================================================
+    def _apply_polynomial(self, pq, coefft, derivs, from_=None):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Apply the polynomial to pair (p,q) to return (a,b).
         
-        The terminology in this function assumes that the polynomial takes
-        (u,v) and yields (x,y). However, there is no assumption as to what
-        (u,v) and (x,y) actually represent, so this routine can be called
-        with (u,v) and (x,y) swapped from the point of view of the FOV.
-        """
-        
+        Input:
+            pq       Pairs of arbitrary shape specifying the points at which 
+                     to evaluate the polynomial.
+            coefft   The coefficient array defining the polynomial.
+            derivs   If True, derivatives are computed and included in the 
+                     result.
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
+                     or 'xy'.
+
+        Return:      ab
+            ab       Pairs of the same shape as pq giving the values of 
+                     the polynomial at each input point.
+                """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        assert from_ in ('uv', 'xy')
+        dkey = from_
+
         order = coefft.shape[0]-1
         
-        (du,dv) = uv_pair.to_scalars()
-        du = du.vals[..., np.newaxis]
-        dv = dv.vals[..., np.newaxis]
+        (p,q) = pq.to_scalars()
+        p = p.vals[..., np.newaxis]
+        q = q.vals[..., np.newaxis]
 
+        #------------------------------------------
         # Construct the powers of line and sample
-        du_powers = [1.]
-        dv_powers = [1.]
+        #------------------------------------------
+        p_powers = [1.]
+        q_powers = [1.]
         for k in range(1, order + 1):
-            du_powers.append(du_powers[-1] * du)
-            dv_powers.append(dv_powers[-1] * dv)
+            p_powers.append(p_powers[-1] * p)
+            q_powers.append(q_powers[-1] * q)
 
+        #------------------------------------------
         # Initialize the output
-        xy_pair_vals = np.zeros(uv_pair.shape + (2,))
+        #------------------------------------------
+        ab_vals = np.zeros(pq.shape + (2,))
 
+        #----------------------------------------------------------------------
         # Evaluate the polynomials
         #
         # Start with the high-order terms and work downward, because this
         # improves accuracy. Stop at one because there are no zero-order terms.
+        #----------------------------------------------------------------------
         for k in range(order, -1, -1):
           for i in range(k+1):
             j = k - i
-            xy_pair_vals += coefft[i,j,:] * du_powers[i] * dv_powers[j]
+            ab_vals += coefft[i,j,:] * p_powers[i] * q_powers[j]
 
-        xy = Pair(xy_pair_vals, uv_pair.mask)
+        ab = Pair(ab_vals, pq.mask)
 
-        # Calculate and return derivatives if necessary
-        if uv_pair.derivs:
-            dxy_duv_vals = np.zeros(uv_pair.shape + (2,2))
+        #------------------------------------------------
+        # Calculate derivatives if necessary
+        #------------------------------------------------
+        if derivs:
+            dab_dpq_vals = np.zeros(pq.shape + (2,2))
 
             for k in range(order, 0, -1):
               for i in range(k+1):
-                j = k - i
-                dxy_duv_vals[...,:,0] += (coefft[i,j,:] *
-                                          i*du_powers[i-1] * dv_powers[j])
-                dxy_duv_vals[...,:,1] += (coefft[i,j,:] *
-                                          du_powers[i] * j*dv_powers[j-1])
+            	j = k - i
+            	dab_dpq_vals[...,:,0] += (coefft[i,j,:] *
+            				  i*p_powers[i-1] * q_powers[j])
+            	dab_dpq_vals[...,:,1] += (coefft[i,j,:] *
+            				  p_powers[i] * j*q_powers[j-1])
 
-            dxy_duv = Pair(dxy_duv_vals, uv_pair.mask, drank=1)
+            dab_dpq = Pair(dab_dpq_vals, pq.mask, drank=1)
+            new_derivs = {dkey:dab_dpq}
+	    
+            if pq.derivs:
+                for (key, pq_deriv) in pq.derivs.items():
+                    new_derivs[key] = dab_dpq.chain(pq_deriv)
 
-            new_derivs = {}
-            for (key, uv_deriv) in uv_pair.derivs.items():
-                new_derivs[key] = dxy_duv.chain(uv_deriv)
+            ab.insert_derivs(new_derivs)
 
-            xy.insert_derivs(new_derivs)
+        return ab
+    #=========================================================================
 
-        return xy
 
-    def _solve_polynomial(self, xy_pair, coefft, derivs, uv_from_xy):
-        """Solve the polynomial for an (x,y) pair to return (u,v).
+
+    #=========================================================================
+    # _guess
+    #=========================================================================
+    def _guess(self, ab, coefft, from_=None):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Computes initial guess for polynomial inversion.
         
-        The terminology in this function assumes that the polynomial takes
-        (u,v) and yields (x,y). However, there is no assumption as to what
-        (u,v) and (x,y) actually represent, so this routine can be called
-        with (u,v) and (x,y) swapped from the point of view of the FOV.
+        Input:
+            ab       Pairs of arbitrary shape specifying the points at which
+                     to compute the guess.
+            coefft   The coefficient array defining the polynomial.
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
+                     or 'xy'.
+	    
+        Return:      pq
+            pq       Pairs of of the same shape as ab giving the values of 
+                     the inverted polynomial at each input point.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        if from_ == 'uv': return (ab - coefft[0,0]).element_div(self.uv_scale)
+        if from_ == 'xy': return (ab - coefft[0,0]).element_mul(self.uv_scale)
+    #=========================================================================
 
-        order = coefft.shape[0]-1
 
-        xy_pair = Pair.as_pair(xy_pair, derivs)
-        xy_wod = xy_pair.wod
 
+    #=========================================================================
+    # _solve_polynomial
+    #=========================================================================
+    def _solve_polynomial(self, ab, coefft, derivs, from_=None):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Solve the polynomial for pair (a,b) to return (p,q).
+        
+        Input:
+            ab       Pairs of arbitrary shape specifying the points at which
+                     to invert the polynomial.
+            coefft   The coefficient array defining the polynomial to invert.
+            derivs   If True, derivatives are included in the output.
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
+                     or 'xy'.
+	    
+        Return:      pq
+            pq       Pairs of of the same shape as ab giving the values of 
+                     the inverted polynomial at each input point.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        assert from_ in ('uv', 'xy')
+        dkey = from_
+
+        ab = Pair.as_pair(ab, derivs)
+        ab_wod = ab.wod
+
+        #------------------------------------------
         # Make a rough initial guess
-        if uv_from_xy:
-            uv = (xy_wod - coefft[0,0]).element_mul(self.uv_scale)
-        else:
-            uv = (xy_wod - coefft[0,0]).element_div(self.uv_scale)
-        uv.insert_deriv('uv', Pair.IDENTITY)
+        #------------------------------------------
+        pq = self._guess(ab_wod, coefft, from_=from_)
+        pq.insert_deriv(dkey, Pair.IDENTITY)
 
+        #------------------------------------------
         # Iterate until convergence...
-        prev_duv_max = 1.e99
+        #------------------------------------------
+        epsilon = 1.e-15
         for iter in range(self.iters):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Evaluate the transform and its partial derivatives
-            xy = self._apply_polynomial(uv, coefft, derivs=True)
-            dxy_duv = xy.d_duv
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            ab0 = self._apply_polynomial(pq, coefft, derivs=True, from_=from_)
+            dab_dpq = ab0.derivs[dkey]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Apply one step of Newton's method in 2-D
-            dxy = xy_wod - xy.wod
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            dab = ab_wod - ab0.wod
 
-            duv_dxy = dxy_duv.reciprocal()
-            duv = duv_dxy.chain(dxy)
-            uv += duv
+            dpq_dab = dab_dpq.reciprocal()
+            dpq = dpq_dab.chain(dab)
+            pq += dpq
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Test for convergence
-            duv_max = abs(duv).max()
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            error_max = abs(dpq).max() / abs(pq).max()
             if Polynomial.DEBUG:
-                print(iter, duv_max)
+                print(iter, error_max)
 
-            if duv_max >= prev_duv_max: break
+            if error_max <= epsilon: break
 
-            prev_duv_max = duv_max
+        pq = pq.wod
 
-        uv = uv.wod
-
+        #------------------------------------------
         # Fill in derivatives if necessary
-        if xy_pair.derivs:
-            new_derivs = {}
-            for (key, xy_deriv) in xy_pair.derivs.items():
-                new_derivs[key] = duv_dxy.chain(xy_deriv)
+        #------------------------------------------
+        if derivs:
+            new_derivs = {dkey:dpq_dab}
+            if ab.derivs:
+                for (key, ab_deriv) in ab.derivs.items():
+                    new_derivs[key] = dpq_dab.chain(ab_deriv)
 
-            uv.insert_derivs(new_derivs)
+            pq.insert_derivs(new_derivs)
 
-        return uv
+        return pq
+    #=========================================================================
+
+#******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -260,53 +396,13 @@ class Test_Polynomial(unittest.TestCase):
 
     def runTest(self):
 
-        Polynomial.DEBUG = True
+        Polynomial.DEBUG = False
 
-        ############################
-        order = 2
-        uv_coefft = np.zeros((3,3,2))
-        uv_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
-                                     [ 1.020, -0.001,  0.000],
-                                     [-0.002,  0.000,  0.000]])
-        uv_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
-                                     [-0.020, -0.003,  0.000],
-                                     [-0.002,  0.000,  0.000]])
-
-        uv = Pair.combos(np.arange(20), np.arange(15))
-
-        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
-
-        xy = fov.xy_from_uv(uv)
-        uv_test = fov.uv_from_xy(xy)
-
-        self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
-
-        ############################
-        order = 2
-        uv_coefft = np.zeros((3,3,2))
-        uv_coefft[...,0] = np.array([[ 5.00, -0.10, -0.01],
-                                     [ 1.20, -0.01,  0.00],
-                                     [-0.02,  0.00,  0.00]])
-        uv_coefft[...,1] = np.array([[ 0.00, -1.10,  0.01],
-                                     [-0.20, -0.03,  0.00],
-                                     [-0.02,  0.00,  0.00]])
-
-        uv = Pair.combos(np.arange(20), np.arange(15))
-        uv.insert_deriv('t', Pair((1,1)))
-
-        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
-
-        xy = fov.xy_from_uv(uv, derivs=False)
-        self.assertEqual(xy.derivs, {})
-
-        xy.insert_deriv('t', Pair((1,1)))
-        uv_test = fov.uv_from_xy(xy, derivs=False)
-        self.assertEqual(uv_test.derivs, {})
-
-        self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
-
-        ############################
-        order = 2
+        #====================================================================
+        # Forward transform with xy_from_uv coefficients
+        # Validate uv derivative propagation against central differences 
+        # / chain rule
+        #====================================================================
         uv_coefft = np.zeros((3,3,2))
         uv_coefft[...,0] = np.array([[ 5.00, -0.10, -0.01],
                                      [ 1.20, -0.01,  0.00],
@@ -341,8 +437,64 @@ class Test_Polynomial(unittest.TestCase):
         self.assertTrue(abs(xy.d_dab.vals[...,0] - dxy_da.vals).max() <= DEL)
         self.assertTrue(abs(xy.d_dab.vals[...,1] - dxy_db.vals).max() <= DEL)
 
-        ############################
-        order = 2
+        self.assertTrue(abs(xy.d_duv.vals[...,0,0] - dxy_du.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(xy.d_duv.vals[...,0,1] - dxy_dv.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(xy.d_duv.vals[...,1,0] - dxy_du.vals[...,1]).max() <= DEL)
+        self.assertTrue(abs(xy.d_duv.vals[...,1,1] - dxy_dv.vals[...,1]).max() <= DEL)
+
+
+
+        #====================================================================
+        # Forward transform with uv_from_xy coefficients
+        # Validate uv derivative propagation against central differences 
+        # / chain rule
+        #====================================================================
+        xy_coefft = np.zeros((3,3,2))
+        xy_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
+                                     [ 1.020, -0.001,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+        xy_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
+                                     [-0.020, -0.003,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+        uv.insert_deriv('t', Pair(np.random.randn(20,15,2)))
+        uv.insert_deriv('ab', Pair(np.random.randn(20,15,2,2), drank=1))
+
+        fov = Polynomial(uv.shape, coefft_uv_from_xy=xy_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv, derivs=True)
+
+        EPS = 1.e-5
+        xy0 = fov.xy_from_uv(uv + (-EPS,0), False)
+        xy1 = fov.xy_from_uv(uv + ( EPS,0), False)
+        dxy_du = (xy1 - xy0) / (2. * EPS)
+
+        xy0 = fov.xy_from_uv(uv + (0,-EPS), False)
+        xy1 = fov.xy_from_uv(uv + (0, EPS), False)
+        dxy_dv = (xy1 - xy0) / (2. * EPS)
+
+        dxy_dt = dxy_du * uv.d_dt.vals[...,0] + dxy_dv * uv.d_dt.vals[...,1]
+        dxy_da = dxy_du * uv.d_dab.vals[...,0,0] + dxy_dv * uv.d_dab.vals[...,1,0]
+        dxy_db = dxy_du * uv.d_dab.vals[...,0,1] + dxy_dv * uv.d_dab.vals[...,1,1]
+
+        DEL = 1.e-6
+        self.assertTrue(abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL)
+        self.assertTrue(abs(xy.d_dab.vals[...,0] - dxy_da.vals).max() <= DEL)
+        self.assertTrue(abs(xy.d_dab.vals[...,1] - dxy_db.vals).max() <= DEL)
+
+        self.assertTrue(abs(xy.d_duv.vals[...,0,0] - dxy_du.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(xy.d_duv.vals[...,0,1] - dxy_dv.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(xy.d_duv.vals[...,1,0] - dxy_du.vals[...,1]).max() <= DEL)
+        self.assertTrue(abs(xy.d_duv.vals[...,1,1] - dxy_dv.vals[...,1]).max() <= DEL)
+
+
+
+        #====================================================================
+        # Forward transform with xy_from_uv coefficients
+        # Validate xy derivative propagation against central differences 
+        # / chain rule
+        #====================================================================
         uv_coefft = np.zeros((3,3,2))
         uv_coefft[...,0] = np.array([[ 5.00, -0.10, -0.01],
                                      [ 1.20, -0.01,  0.00],
@@ -377,6 +529,242 @@ class Test_Polynomial(unittest.TestCase):
         self.assertTrue(abs(uv.d_dt.vals - duv_dt.vals).max() <= DEL)
         self.assertTrue(abs(uv.d_dab.vals[...,0] - duv_da.vals).max() <= DEL)
         self.assertTrue(abs(uv.d_dab.vals[...,1] - duv_db.vals).max() <= DEL)
+
+
+
+        #====================================================================
+        # Forward transform with uv_from_xy coefficients
+        # Validate xy derivative propagation against central differences 
+        # / chain rule
+        #====================================================================
+        xy_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
+                                     [ 1.020, -0.001,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+        xy_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
+                                     [-0.020, -0.003,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+        fov = Polynomial(uv.shape, coefft_uv_from_xy=xy_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv, derivs=False)
+        xy.insert_deriv('t', Pair(np.random.randn(20,15,2)))
+        xy.insert_deriv('ab', Pair(np.random.randn(20,15,2,2), drank=1))
+
+        uv = fov.uv_from_xy(xy, derivs=True)
+
+        EPS = 1.e-5
+        uv0 = fov.uv_from_xy(xy + (-EPS,0), False)
+        uv1 = fov.uv_from_xy(xy + ( EPS,0), False)
+        duv_dx = (uv1 - uv0) / (2. * EPS)
+
+        uv0 = fov.uv_from_xy(xy + (0,-EPS), False)
+        uv1 = fov.uv_from_xy(xy + (0, EPS), False)
+        duv_dy = (uv1 - uv0) / (2. * EPS)
+
+        duv_dt = duv_dx * xy.d_dt.vals[...,0] + duv_dy * xy.d_dt.vals[...,1]
+        duv_da = duv_dx * xy.d_dab.vals[...,0,0] + duv_dy * xy.d_dab.vals[...,1,0]
+        duv_db = duv_dx * xy.d_dab.vals[...,0,1] + duv_dy * xy.d_dab.vals[...,1,1]
+
+        DEL = 1.e-6
+        self.assertTrue(abs(uv.d_dt.vals - duv_dt.vals).max() <= DEL)
+        self.assertTrue(abs(uv.d_dab.vals[...,0] - duv_da.vals).max() <= DEL)
+        self.assertTrue(abs(uv.d_dab.vals[...,1] - duv_db.vals).max() <= DEL)
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with xy_from_uv coefficients,
+        # no derivatives
+        #====================================================================
+        uv_coefft = np.zeros((3,3,2))
+        uv_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
+                                     [ 1.020, -0.001,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+        uv_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
+                                     [-0.020, -0.003,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+
+        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv)
+        uv_test = fov.uv_from_xy(xy)
+
+        self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with uv_from_xy coefficients,
+        # no derivatives
+        #====================================================================
+        xy_coefft = np.zeros((3,3,2))
+        xy_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
+                                     [ 1.020, -0.001,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+        xy_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
+                                     [-0.020, -0.003,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+
+        fov = Polynomial(uv.shape, coefft_uv_from_xy=xy_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv)
+        uv_test = fov.uv_from_xy(xy)
+
+        self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with xy_from_uv coefficients,
+        # test derivative propagation
+        #====================================================================
+        uv_coefft = np.zeros((3,3,2))
+        uv_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
+                                     [ 1.020, -0.001,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+        uv_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
+                                     [-0.020, -0.003,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+        uv.insert_deriv('t', Pair((1,1)))
+
+        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv, derivs=True)
+        uv_test = fov.uv_from_xy(xy, derivs=True)
+
+        #-------------------------------
+        # check derivative propagation
+        #-------------------------------
+        self.assertTrue('uv' in xy.derivs.keys())
+        self.assertTrue('xy' in uv_test.derivs.keys())
+
+        #------------------------------------
+        # test self-derivatives in uv_test
+        #------------------------------------
+        duv_duv = uv_test.d_duv.values
+        du_du = duv_duv[...,0,0]
+        du_dv = duv_duv[...,0,1]
+        dv_dv = duv_duv[...,1,1]
+        dv_du = duv_duv[...,1,0]
+
+        EPS = 1.e-15
+        self.assertTrue(abs(du_du.max()-1) <= EPS)
+        self.assertTrue(abs(du_du.min()-1) <= EPS)
+
+        self.assertTrue(abs(dv_dv.max()-1) <= EPS)
+        self.assertTrue(abs(dv_dv.min()-1) <= EPS)
+
+        self.assertTrue(abs(du_dv.max()) <= EPS)
+        self.assertTrue(abs(dv_du.max()) <= EPS)
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with uv_from_xy coefficients,
+        # test derivative propagation
+        #====================================================================
+        xy_coefft = np.zeros((3,3,2))
+        xy_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
+                                     [ 1.020, -0.001,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+        xy_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
+                                     [-0.020, -0.003,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+        uv.insert_deriv('t', Pair((1,1)))
+
+        fov = Polynomial(uv.shape, coefft_uv_from_xy=xy_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv, derivs=True)
+        uv_test = fov.uv_from_xy(xy, derivs=True)
+
+        #-------------------------------
+        # check derivative propagation
+        #-------------------------------
+        self.assertTrue('uv' in xy.derivs.keys())
+        self.assertTrue('xy' in uv_test.derivs.keys())
+
+        #------------------------------------
+        # test self-derivatives in uv_test
+        #------------------------------------
+        duv_duv = uv_test.d_duv.values
+        du_du = duv_duv[...,0,0]
+        du_dv = duv_duv[...,0,1]
+        dv_dv = duv_duv[...,1,1]
+        dv_du = duv_duv[...,1,0]
+
+        EPS = 1.e-15
+        self.assertTrue(abs(du_du.max()-1) <= EPS)
+        self.assertTrue(abs(du_du.min()-1) <= EPS)
+
+        self.assertTrue(abs(dv_dv.max()-1) <= EPS)
+        self.assertTrue(abs(dv_dv.min()-1) <= EPS)
+
+        self.assertTrue(abs(du_dv.max()) <= EPS)
+        self.assertTrue(abs(dv_du.max()) <= EPS)
+
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with xy_from_uv coefficients
+        # Verify that derivatives are not propagated for derivs=False
+        #====================================================================
+        uv_coefft = np.zeros((3,3,2))
+        uv_coefft[...,0] = np.array([[ 5.00, -0.10, -0.01],
+                                     [ 1.20, -0.01,  0.00],
+                                     [-0.02,  0.00,  0.00]])
+        uv_coefft[...,1] = np.array([[ 0.00, -1.10,  0.01],
+                                     [-0.20, -0.03,  0.00],
+                                     [-0.02,  0.00,  0.00]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+        uv.insert_deriv('t', Pair((1,1)))
+
+        fov = Polynomial(uv.shape, coefft_xy_from_uv=uv_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv, derivs=False)
+        self.assertEqual(xy.derivs, {})
+
+        xy.insert_deriv('t', Pair((1,1)))
+        uv_test = fov.uv_from_xy(xy, derivs=False)
+        self.assertEqual(uv_test.derivs, {})
+
+
+
+        #====================================================================
+        # Forward vs. inverse transform with uv_from_xy coefficients
+        # Verify that derivatives are not propagated for derivs=False
+        #====================================================================
+        xy_coefft = np.zeros((3,3,2))
+        xy_coefft[...,0] = np.array([[ 5.000, -0.100, -0.001],
+                                     [ 1.020, -0.001,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+        xy_coefft[...,1] = np.array([[ 0.000, -1.010,  0.001],
+                                     [-0.020, -0.003,  0.000],
+                                     [-0.002,  0.000,  0.000]])
+
+        uv = Pair.combos(np.arange(20), np.arange(15))
+        uv.insert_deriv('t', Pair((1,1)))
+
+        fov = Polynomial(uv.shape, coefft_uv_from_xy=xy_coefft, uv_los=(7,7), uv_area=1.)
+
+        xy = fov.xy_from_uv(uv, derivs=False)
+        self.assertEqual(xy.derivs, {})
+
+        xy.insert_deriv('t', Pair((1,1)))
+        uv_test = fov.uv_from_xy(xy, derivs=False)
+        self.assertEqual(uv_test.derivs, {})
+
+
 
 ########################################
 if __name__ == '__main__':

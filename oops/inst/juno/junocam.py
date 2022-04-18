@@ -16,7 +16,7 @@ import os.path
 import pdsparser
 
 from oops.inst.juno.juno_ import Juno
-from oops import TWOPI
+from oops import TWOPI, HALFPI, PI
 
 ################################################################################
 # Standard class methods
@@ -27,6 +27,7 @@ from oops import TWOPI
 #=============================================================================
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, **parameters):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """A general, static method to return a Snapshot object based on a given
     JUNOCAM image file.
 
@@ -38,7 +39,7 @@ def from_file(filespec, fast_distortion=True,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     JUNOCAM.initialize()    # Define everything the first time through; use defaults
                             # unless initialize() is called explicitly.
 
@@ -49,7 +50,6 @@ def from_file(filespec, fast_distortion=True,
     recs = pdsparser.PdsLabel.load_file(lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
-    
     #-----------------------------------------------------------
     # Get composite image metadata 
     #-----------------------------------------------------------
@@ -96,6 +96,7 @@ def from_file(filespec, fast_distortion=True,
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """Initialize key information about the JUNOCAM instrument.
 
     Must be called first. After the first call, later calls to this function
@@ -117,7 +118,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     JUNOCAM.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
@@ -130,6 +131,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
 # _load_data
 #=============================================================================
 def _load_data(filespec, label, meta):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """Loads the data array from the file and splits into individual framelets. 
 
     Input:
@@ -142,6 +144,7 @@ def _load_data(filespec, label, meta):
                         axis order (line, sample, framelet #).
         framelet_labels List of labels for each framelet.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
     #--------------------------------------------------------
     # Read data 
@@ -191,6 +194,7 @@ class Metadata(object):
     # __init__
     #=====================================================================
     def __init__(self, label):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Uses the label to assemble the image metadata.
 
         Input:
@@ -204,7 +208,8 @@ class Metadata(object):
             nframelets         
 
         """
-	 
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         #-----------------------------------
         # image dimensions
         #-----------------------------------
@@ -229,18 +234,18 @@ class Metadata(object):
         #--------------------------------------------
         self.tinter = label['INTERFRAME_DELAY']
         self.tinter0 = self.tinter
-	
+
         self.tstart = julian.tdb_from_tai(
-	                julian.tai_from_iso(label['START_TIME']))
+                        julian.tai_from_iso(label['START_TIME']))
         self.tstart0 = self.tstart	
-	
+
         self.stime = label['STOP_TIME']
         self.tstop = julian.tdb_from_tai(
-	                julian.tai_from_iso(self.stime))
+                       julian.tai_from_iso(self.stime))
 
         self.dt = -0.5*self.exposure
         self.time = julian.tdb_from_tai(
-	                julian.tai_from_iso(self.stime)) + self.dt
+                        julian.tai_from_iso(self.stime)) + self.dt
 
         #-----------------------------------
         # target
@@ -302,28 +307,14 @@ class Metadata(object):
 
             scale = px/fo
             distortion_coeff = [1,0,k1,0,k2]
-	    
-	    
-	    # manual offsets from OMINAS translator
-#            if self.filter == 'RED': (cx, cy) = [814.2, -20]
-#            if self.filter == 'GREEN': (cx, cy) = [822.2, 130]
-#            if self.filter == 'BLUE': (cx, cy) = [819, 284]
-#            if self.filter == 'METHANE': (cx, cy) = [825, -150]
 
-            #############################################
-            # to demonstrate suspected frame issue...
-            (cx, cy) = [819, 200]
-            scale = scale*30
-            #############################################
-
-            self.fov = oops.fov.FlatFOV(scale, 
-                                        (self.nsamples, self.frlines),
-                                        (cx, cy))
-#            self.fov_corr = oops.fov.Radial(
-#                                           (self.nsamples, self.frlines),
-#                                           (scale,scale), 
-#                                           uv_from_xy_coefft=distortion_coeff, 
-#                                           uv_los=(cx, cy))
+#            self.fov = oops.fov.FlatFOV(scale, 
+#                                        (self.nsamples, self.frlines),
+#                                        (cx, cy))
+	    self.fov = oops.fov.Radial(scale, 
+					    (self.nsamples, self.frlines),
+					    coefft_uv_from_xy=distortion_coeff, 
+					    uv_los=(cx, cy))
 
         return
     #=====================================================================
@@ -338,16 +329,22 @@ class Metadata(object):
 # JUNOCAM class
 #*****************************************************************************
 class JUNOCAM(object):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """A instance-free class to hold JUNOCAM instrument parameters."""
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     instrument_kernel = None
     fovs = {}
     initialized = False
 
     @staticmethod
+    #=====================================================================
+    # initialize
+    #=====================================================================
     def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Initialize key information about the JUNOCAM instrument; fill in key
         information about the WAC and NAC.
 
@@ -369,7 +366,7 @@ class JUNOCAM(object):
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         # Quick exit after first call
         if JUNOCAM.initialized: return
 
@@ -383,17 +380,26 @@ class JUNOCAM(object):
         ignore = oops.frame.SpiceFrame("JUNO_JUNOCAM")
 
         JUNOCAM.initialized = True
+    #=====================================================================
 
+
+
+    #=====================================================================
+    # reset
+    #=====================================================================
     @staticmethod
     def reset():
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Resets the internal JUNOCAM parameters. Can be useful for
         debugging."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         JUNOCAM.instrument_kernel = None
         JUNOCAM.fovs = {}
         JUNOCAM.initialized = False
 
         Juno.reset()
+    #=====================================================================
+
 #*****************************************************************************
 
 

@@ -2,19 +2,29 @@
 # oops/fov_/flatfov.py: Flat subclass of class FOV
 ################################################################################
 
+from IPython import embed  ## TODO: remove
+
 import numpy as np
 from polymath import *
 
 from oops.fov_.fov import FOV
 
+#******************************************************************************
+# FlatFOV FOV class
+#******************************************************************************
 class FlatFOV(FOV):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """Flat is a subclass of FOV that describes a field of view that is free of
     distortion, implementing an exact pinhole camera model.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['uv_scale', 'uv_shape', 'uv_los', 'uv_area']
 
+    #=========================================================================
+    # __init__
+    #=========================================================================
     def __init__(self, uv_scale, uv_shape, uv_los=None, uv_area=None):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Constructor for a FlatFOV.
 
         The U-axis is assumed to align with X and the V-axis aligns with Y.
@@ -41,7 +51,7 @@ class FlatFOV(FOV):
                         of a pixel. If not provided, the area is calculated
                         based on the area of the central pixel.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.uv_scale = Pair.as_pair(uv_scale).as_float().as_readonly()
         self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
 
@@ -61,26 +71,103 @@ class FlatFOV(FOV):
                              [0.,   scale.vals[1]]], drank=1).as_readonly()
         self.duv_dxy = Pair([[1/scale.vals[0], 0.],
                              [0., 1/scale.vals[1]]], drank=1).as_readonly()
+    #=========================================================================
 
+
+
+    #=========================================================================
+    # xy_from_uv
+    #=========================================================================
     def uv_from_xy(self, xy_pair, derivs=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
+        
+        Input:
+            uv       Pairs of arbitrary shape to be transformed from FOV
+                     coordinates.
+            derivs   If True, any derivatives in (u,v) get propagated into
+                     the returned (x,y).
+	    
+        Return:      xy
+            xy       Pairs of same shape as uv giving the transformed
+                     FOV coordinates.
 
-        If derivs is True, then any derivatives in (u,v) get propagated into
-        the (x,y) returned.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-        return xy_pair.element_div(self.uv_scale) + self.uv_los
+	
+        #-----------------------------------------------------
+        # Transform coordinates
+        #-----------------------------------------------------
+        uv_pair = xy_pair.element_div(self.uv_scale) + self.uv_los
+	
+        #-----------------------------------------------------
+        # Compute derivatives
+        #-----------------------------------------------------
+        if derivs: 
+            duv_dxy_vals = np.zeros(uv_pair.shape + (2,2))
+	    duv_dxy_vals[...,:] = 1/self.uv_scale.vals
+	    
+            duv_dxy = Pair(duv_dxy_vals, xy_pair.mask, drank=1)
+            new_derivs = {'xy': duv_dxy}
+	    
+            if xy_pair.derivs:
+                for (key, xy_deriv) in xy_pair.derivs.items():
+                    new_derivs[key] = duv_dxy.chain(xy_deriv)
 
+            uv_pair.insert_derivs(new_derivs)
+
+        return uv_pair
+    #=========================================================================
+
+
+
+    #=========================================================================
+    # xy_from_uv
+    #=========================================================================
     def xy_from_uv(self, uv_pair, derivs=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
-
-        If derivs is True, then any derivatives in (x,y) get propagated into
-        the (u,v) returned.
+        
+        Input:
+            xy       Pairs of arbitrary shape to be transformed to FOV
+                     coordinates.
+            derivs   If True, any derivatives in (x,y) get propagated into
+                     the returned (u,v).
+	    
+        Return:      uv
+            uv       Pairs of same shape as xy giving the computed
+                     FOV coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
-        return (uv_pair - self.uv_los).element_mul(self.uv_scale)
+	
+        #-----------------------------------------------------
+        # Transform coordinates
+        #-----------------------------------------------------
+        xy_pair = (uv_pair - self.uv_los).element_mul(self.uv_scale)
+		
+        #-----------------------------------------------------
+        # Compute derivatives
+        #-----------------------------------------------------
+        if derivs: 
+            dxy_duv_vals = np.zeros(xy_pair.shape + (2,2))
+	    dxy_duv_vals[...,:] = self.uv_scale.vals
+	    
+            dxy_duv = Pair(dxy_duv_vals, uv_pair.mask, drank=1)
+            new_derivs = {'uv': dxy_duv}
+	    
+            if uv_pair.derivs:
+                for (key, uv_deriv) in uv_pair.derivs.items():
+                    new_derivs[key] = dxy_duv.chain(uv_deriv)
+
+            uv_pair.insert_derivs(new_derivs)
+
+        return  xy_pair
+    #=========================================================================
+
+
+#******************************************************************************
 
 ################################################################################
 # UNIT TESTS

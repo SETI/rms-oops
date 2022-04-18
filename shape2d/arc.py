@@ -14,7 +14,8 @@ TWOPI = 2. * np.pi
 class Arc(Ellipse):
     """A sector of an Ellipse."""
 
-    def __init__(pt0, rpt, ratio=1., tmin=0., tmax=TWPI):
+#    def __init__(pt0, rpt, ratio=1., tmin=0., tmax=TWPI):    #JNS
+    def __init__(pt0, rpt, ratio=1., tmin=0., tmax=TWOPI):
         """Constructor for a Arc object.
 
         Input:
