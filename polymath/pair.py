@@ -13,9 +13,14 @@ from .scalar import Scalar
 from .vector import Vector
 from .units  import Units
 
+#******************************************************************************
+# Pair class
+#******************************************************************************
 class Pair(Vector):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """A PolyMath subclass containing coordinate pairs or 2-vectors.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     NRANK = 1           # the number of numerator axes.
     NUMER = (2,)        # shape of the numerator.
@@ -29,8 +34,12 @@ class Pair(Vector):
 
     DEFAULT_VALUE = np.array([1,1])
 
+    #=========================================================================
+    # as_pair
+    #=========================================================================
     @staticmethod
     def as_pair(arg, recursive=True):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """The argument converted to Pair if possible.
 
         If recursive is True, derivatives will also be converted.
@@ -38,7 +47,7 @@ class Pair(Vector):
         As a special case as_pair() of a single value returns a Pair with the
         value repeated.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(arg) == Pair:
             if recursive:
                 return arg
@@ -46,11 +55,15 @@ class Pair(Vector):
 
         if isinstance(arg, Qube):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Collapse a 1x2 or 2x1 Matrix down to a Pair
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if arg.numer in ((1,2), (2,1)):
                 return arg.flatten_numer(Pair, recursive)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # For any suitable Qube, move numerator items to the denominator
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if arg.rank > 1 and arg.numer[0] == 2:
                 arg = arg.split_items(1, Pair)
 
@@ -59,14 +72,23 @@ class Pair(Vector):
                 return arg
             return arg.wod
 
+        #------------------------------------------------------
         # Special case of a single number
+        #------------------------------------------------------
         if isinstance(arg, numbers.Number):
             return Pair((arg,arg))
 
         return Pair(arg)
+    #=========================================================================
 
+
+
+    #=========================================================================
+    # from_scalars
+    #=========================================================================
     @staticmethod
     def from_scalars(x, y, recursive=True, readonly=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """A Pair constructed by combining two scalars.
 
         Inputs:
@@ -83,67 +105,109 @@ class Pair(Vector):
             readonly    True to return a read-only object; False (the default)
                         to return something potentially writable.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Qube.from_scalars(x, y, recursive=recursive, readonly=readonly,
                                        classes=[Pair])
+    #=========================================================================
 
+
+
+    #=========================================================================
+    # swapxy
+    #=========================================================================
     def swapxy(self, recursive=True):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """A pair object in which the first and second values are switched.
 
         If recursive is True, derivatives will also be swapped.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if not recursive:
             self = self.wod
 
+        #------------------------------------------------------
         # Roll the array axis to the end
+        #------------------------------------------------------
         lshape = len(self.values.shape)
         new_values = np.rollaxis(self.values, lshape - self.drank - 1, lshape)
 
+        #------------------------------------------------------
         # Swap the axes
+        #------------------------------------------------------
         new_values = new_values[..., ::-1]
 
+        #------------------------------------------------------
         # Roll the axis back
+        #------------------------------------------------------
         new_values = np.rollaxis(new_values, -1, lshape - self.drank - 1)
 
+        #------------------------------------------------------
         # Construct the object
+        #------------------------------------------------------
         obj = Pair(new_values, self.mask, example=self)
 
+        #------------------------------------------------------
         # Fill in the derivatives if necessary
+        #------------------------------------------------------
         if recursive:
             for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv.swapxy(False))
 
         return obj
+    #=========================================================================
 
+
+
+    #=========================================================================
+    # rot90
+    #=========================================================================
     def rot90(self, recursive=True):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """A pair object rotated 90 degrees from the origin, (x,y) -> (y,-x).
 
         If recursive is True, derivatives will also be rotated.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #------------------------------------------------------
         # Roll the array axis to the end
+        #------------------------------------------------------
         lshape = len(self.values.shape)
         new_values = np.rollaxis(self.values, lshape - self.drank - 1, lshape)
 
+        #------------------------------------------------------
         # Swap the axes and negate the new y
+        #------------------------------------------------------
         new_values = new_values[..., ::-1]
 
+        #------------------------------------------------------
         # Roll the axis back
+        #------------------------------------------------------
         new_values = np.rollaxis(new_values, -1, lshape - self.drank - 1)
 
+        #------------------------------------------------------
         # Construct the object
+        #------------------------------------------------------
         new_values[...,1] = -new_values[...,1]      # negate the new y-axis
         obj = Pair(new_values, self.mask, example=self)
 
+        #------------------------------------------------------
         # Fill in the derivatives if necessary
+        #------------------------------------------------------
         if recursive:
             for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv.rot90(False))
 
         return obj
+    #=========================================================================
 
+
+
+    #=========================================================================
+    # clip2d
+    #=========================================================================
     def clip2d(self, lower, upper, remask=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """A copy with values clipped to fall within 2D limits.
 
         Values get moved to the nearest location within a rectangle defined by
@@ -159,8 +223,11 @@ class Pair(Vector):
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------------------------
         # Make sure the lower limit is either None or an unmasked Pair
+        #---------------------------------------------------------------
         if lower is not None:
             lower = Pair.as_pair(lower)
             assert lower.shape == (), \
@@ -168,7 +235,9 @@ class Pair(Vector):
             if lower.mask:
                 lower = None
 
+        #---------------------------------------------------------------
         # Make sure the upper limit is either None or an unmasked Pair
+        #---------------------------------------------------------------
         if upper is not None:
             upper = Pair.as_pair(upper)
             assert upper.shape == (), \
@@ -176,7 +245,9 @@ class Pair(Vector):
             if upper.mask:
                 upper = None
 
+        #---------------------------------------------------------------
         # Define the clipping limits
+        #---------------------------------------------------------------
         if lower is None:
             lower0 = None
             lower1 = None
@@ -189,14 +260,21 @@ class Pair(Vector):
         else:
             (upper0, upper1) = upper.to_scalars()
 
+        #---------------------------------------------------------------
         # Clip...
+        #---------------------------------------------------------------
         result = self
         result = result.clip_component(0, lower0, upper0, remask)
         result = result.clip_component(1, lower1, upper1, remask)
         return result
+    #=========================================================================
 
+
+#******************************************************************************
+
+#=========================================
 # A useful class constant
-
+#=========================================
 Pair.ZERO   = Pair((0.,0.)).as_readonly()
 Pair.ZEROS  = Pair((0.,0.)).as_readonly()
 Pair.ONES   = Pair((1.,1.)).as_readonly()

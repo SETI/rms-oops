@@ -357,12 +357,26 @@ class Polynomial(FOV):
             dpq = dpq_dab.chain(dab)
             pq += dpq
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Test for convergence
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            # Test for convergence by requring the relative correction 
+            # to fall below epsilon. 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             error_max = abs(dpq).max() / abs(pq).max()
             if Polynomial.DEBUG:
                 print(iter, error_max)
+
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            # The old convergence test below was looking for the correction
+            # to overshoot.  This may in principle be a more robust way to 
+            # ensure machine precision is achieved, but it requires some
+	    # additonal iterations conmpared to the simpler test above.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#            duv_max = abs(duv).max()
+#            if Polynomial.DEBUG:
+#                print(iter, duv_max)
+#            if duv_max >= prev_duv_max: break
+#            prev_duv_max = duv_max
+
 
             if error_max <= epsilon: break
 
