@@ -125,7 +125,7 @@ class Radial(FOV):
             derivs   If True, any derivatives in (u,v) get propagated into
                      the returned (x,y).
 	    
-        Return:      xy
+        Output:      xy
             xy       Pairs of same shape as uv giving the transformed
                      FOV coordinates.
 
@@ -162,7 +162,7 @@ class Radial(FOV):
             derivs   If True, any derivatives in (x,y) get propagated into
                      the returned (u,v).
 	    
-        Return:      uv
+        Output:      uv
             uv       Pairs of same shape as xy giving the computed
                      FOV coordinates.
         """
@@ -200,16 +200,13 @@ class Radial(FOV):
             derivs   If True, derivatives are computed and included in the 
                      result.
 
-        Return:      (f, deriv)
+        Output:      (f, deriv)
             f        Scalar of the same shape as r giving the values of 
                      the polynomial at each input point.
-            df_dr    Scalar of the same shape as r giving the derivative
-                     at each input point.
                 """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         order = coefft.shape[0]-1
         
-# TODO: r is not actually a Scalar
         #------------------------------------
 	# Construct the powers of radius
         #------------------------------------
@@ -224,21 +221,18 @@ class Radial(FOV):
         # improves accuracy. Stop at one because there are no zero-order 
         # terms.
         #-----------------------------------------------------------------
-        f_vals = 0.
+        f = 0.
         for i in range(order, -1, -1):
-            f_vals += coefft[i] * r_powers[i]
-        f = Scalar.as_scalar(f_vals)
+            f += coefft[i] * r_powers[i]
 
         #---------------------------------------------------
         # Calculate derivatives if necessary
         #---------------------------------------------------
         if derivs:
-            df_dr_vals = 0.
+            df_dr = 0.
             for i in range(order, 0, -1):
-                df_dr_vals += i*coefft[i]*r_powers[i-1]
-            df_dr = Scalar.as_scalar(df_dr_vals)
+                df_dr += i*coefft[i]*r_powers[i-1]
             f.insert_deriv('r', df_dr)
-	
 	
         return f
     #=========================================================================
@@ -261,7 +255,7 @@ class Radial(FOV):
             from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
 
-        Return:      ab
+        Output:      ab
             ab       Pairs of the same shape as pq giving the values of 
                      the polynomial at each input point.
                 """
@@ -272,19 +266,8 @@ class Radial(FOV):
         #------------------------------------
 	# Compute radii
         #------------------------------------
-        p = pq.vals[...,0]
-        q = pq.vals[...,1]
-        r = pq.norm_sq().vals  ## TODO: change to Scalar w derivs
-	r[np.where(r==0)] = 1  ## TODO: revisit
-        embed()
-	
-	
-#	dr_dpq_vals = np.zeros(pq.shape + (2,))
-#	dr_dpq_vals[...,0] = p/r
-#	r.insert_deriv('pq', pq.vals/r.vals)
-
-
-
+        pq.insert_deriv(dkey, Pair.IDENTITY)
+        r = pq.norm()
 
         #-----------------------------------------------
 	# Compute and apply the polynomial correction
@@ -292,50 +275,11 @@ class Radial(FOV):
         c = self._compute_polynomial(r, coefft, derivs=derivs)
         fab = flat(pq, derivs=derivs)
         ab = fab*c
-        embed()
-# fab.d_dxy.chain(pq.d_dt) - fab.d_dt
-# fab.derivs[dkey].chain(pq.d_dt) - fab.d_dt
 
-        #---------------------------------------------------
-        # Calculate and insert derivatives if necessary
-        #---------------------------------------------------
-        if derivs:
-
-
-
-#uv_from_xy
-# pq=xy
-# ab=uv
-#            dab_dpq = c*fab.derivs[dkey] + fab.vals*pq.vals/r*dc_dr
-
-#            dab_dpq_vals = np.zeros(pq.shape + (2,2))
-
-#            dc_dr = c.d_dr.vals
-#            dfab = fab.derivs[dkey]
-#            da_dp = c.vals*dfab.vals[...,0,0] + fab.vals[...,0]*p/r*dc_dr
-#            db_dq = c.vals*dfab.vals[...,1,1] + fab.vals[...,1]*q/r*dc_dr
-#            db_dp = c.vals*dfab.vals[...,1,0] + fab.vals[...,1]*p/r*dc_dr
-#            da_dq = c.vals*dfab.vals[...,0,1] + fab.vals[...,0]*q/r*dc_dr
-
-#	    dab_dpq_vals[...,0,0] = da_dp
-#	    dab_dpq_vals[...,1,1] = db_dq
-#	    dab_dpq_vals[...,1,0] = db_dp
-#	    dab_dpq_vals[...,0,1] = da_dq
-
-#            embed()
-
-#            dab_dpq = Pair(dab_dpq_vals, pq.mask, drank=1)
-# ab.derivs[dkey] - dab_dpq
-#            new_derivs = {dkey:dab_dpq}
-
-
-
-            new_derivs = {}
-
-            if pq.derivs:
-                for (key, pq_deriv) in pq.derivs.items():
-                    new_derivs[key] = ab.derivs[dkey].chain(pq_deriv)
-            ab.insert_derivs(new_derivs)
+        #------------------------------------------------
+        # Propagate derivatives if necessary
+        #------------------------------------------------
+        ab.propagate_deriv(pq, dkey, dpq_dab, derivs)
 
         return ab
     #=========================================================================
@@ -357,7 +301,7 @@ class Radial(FOV):
             from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
 	    
-        Return:      pq
+        Output:      pq
             pq       Pairs of of the same shape as ab giving the values of 
                      the inverted polynomial at each input point.
         """
@@ -410,13 +354,7 @@ class Radial(FOV):
         #------------------------------------------
         # Fill in derivatives if necessary
         #------------------------------------------
-        if derivs:
-            new_derivs = {dkey:dpq_dab}
-            if ab.derivs:
-                for (key, ab_deriv) in ab.derivs.items():
-                    new_derivs[key] = dpq_dab.chain(ab_deriv)
-
-            pq.insert_derivs(new_derivs)
+        pq.propagate_deriv(ab, dkey, dpq_dab, derivs)
 
         return pq
     #=========================================================================
@@ -461,6 +399,7 @@ class Test_Radial(unittest.TestCase):
 	xy.insert_deriv('ab', Pair(np.random.randn(100,8,2,2), drank=1))
 
         uv = fov.uv_from_xy(xy, derivs=True)
+        embed()
 	
         EPS = 1.e-5
         uv0 = fov.uv_from_xy(xy + (-EPS,0), False)
@@ -474,7 +413,6 @@ class Test_Radial(unittest.TestCase):
         duv_dt = duv_dx * xy.d_dt.vals[...,0] + duv_dy * xy.d_dt.vals[...,1]
         duv_da = duv_dx * xy.d_dab.vals[...,0,0] + duv_dy * xy.d_dab.vals[...,1,0]
         duv_db = duv_dx * xy.d_dab.vals[...,0,1] + duv_dy * xy.d_dab.vals[...,1,1]
-        embed()
 
         DEL = 1.e-6
         self.assertTrue(abs(uv.d_dt.vals - duv_dt.vals).max() <= DEL)

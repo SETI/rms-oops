@@ -5,6 +5,8 @@
 ################################################################################
 
 from __future__ import division
+from IPython import embed  ## TODO: remove
+
 import sys
 import numbers
 import warnings
@@ -191,11 +193,15 @@ class Qube(object):
     from changing the corresponding array element on the left-hand side.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    #--------------------------------------------------------------------------
     # This prevents binary operations of the form:
     #   <np.ndarray> <op> <Qube>
     # from executing the ndarray operation instead of the polymath operation
+    #--------------------------------------------------------------------------
     __array_priority__ = 1
 
+    #--------------------------------------------------------------------------
     # Set this global attribute to True to restore a behavior removed on
     # 3/13/18. It allowed certain functions to return a Python value (float,
     # int, or bool) if the result had shape (), was unmasked, and had no units.
@@ -203,12 +209,17 @@ class Qube(object):
     #
     # As an alternative to this global solution, you can use method as_builtin()
     # to convert an object to a built-in type if this is possible.
+    #--------------------------------------------------------------------------
     PREFER_BUILTIN_TYPES = False
 
+    #--------------------------------------------------------------------------
     # Global attribute to be used for testing
+    #--------------------------------------------------------------------------
     DISABLE_CACHE = False
 
+    #--------------------------------------------------------------------------
     # Default class constants, to be overridden as needed by subclasses...
+    #--------------------------------------------------------------------------
     NRANK = None        # the number of numerator axes; None to leave this
                         # unconstrained.
     NUMER = None        # shape of the numerator; None to leave unconstrained.
@@ -1424,16 +1435,57 @@ class Qube(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------------------
         # Check every insert before proceeding with any
+        #-----------------------------------------------
         if self.readonly and not override:
             for key in derivs:
                 if key in self.__derivs_:
                     raise ValueError('derivative d_d' + key + ' cannot be ' +
                                      'replaced in a read-only object')
 
+        #-----------------------------------------------
         # Insert derivatives
+        #-----------------------------------------------
         for (key, deriv) in derivs.items():
             self.insert_deriv(key, deriv, override)
+    #=========================================================================
+
+
+
+    #=========================================================================
+    # propagate_deriv
+    #=========================================================================
+    def propagate_deriv(self, obj, 
+                             key=None, deriv=None, test=True, override=True):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Propagate derivatives from an object.  
+        
+        Input:
+            obj      Qube subclass of arbitrary shape containing derivatives to
+                     propagate.
+            key      Name of the derivative.
+            deriv    Derivative to add to self, if key is given.
+            test     If False, no action is taken.
+            override True to allow the value of a pre-existing derivative to
+                     be replaced.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        if test == False: return
+
+        #-----------------------------------------------
+        # Construct new derivatives
+        #-----------------------------------------------
+        new_derivs = {}
+        if key is not None: new_derivs[key] = deriv
+        if obj.derivs:
+            for (_key, _deriv) in obj.derivs.items():
+        	new_derivs[_key] = deriv.chain(_deriv)
+
+        #-----------------------------------------------
+        # Insert derivatives
+        #-----------------------------------------------
+        self.insert_derivs(new_derivs, override=override)
     #=========================================================================
 
 

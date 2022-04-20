@@ -127,7 +127,7 @@ class Polynomial(FOV):
             derivs   If True, any derivatives in (u,v) get propagated into
                      the returned (x,y).
 	    
-        Return:      xy
+        Output:      xy
             xy       Pairs of same shape as uv giving the transformed
                      FOV coordinates.
 
@@ -167,7 +167,7 @@ class Polynomial(FOV):
             derivs   If True, any derivatives in (x,y) get propagated into
                      the returned (u,v).
 	    
-        Return:      uv
+        Output:      uv
             uv       Pairs of same shape as xy giving the computed
                      FOV coordinates.
         """
@@ -210,7 +210,7 @@ class Polynomial(FOV):
             from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
 
-        Return:      ab
+        Output:      ab
             ab       Pairs of the same shape as pq giving the values of 
                      the polynomial at each input point.
                 """
@@ -255,6 +255,9 @@ class Polynomial(FOV):
         # Calculate derivatives if necessary
         #------------------------------------------------
         if derivs:
+            #- - - - - - - - - - - - - - - - - - - - - -
+            # Compute derivatives
+            #- - - - - - - - - - - - - - - - - - - - - -
             dab_dpq_vals = np.zeros(pq.shape + (2,2))
 
             for k in range(order, 0, -1):
@@ -266,13 +269,12 @@ class Polynomial(FOV):
             				  p_powers[i] * j*q_powers[j-1])
 
             dab_dpq = Pair(dab_dpq_vals, pq.mask, drank=1)
-            new_derivs = {dkey:dab_dpq}
 	    
-            if pq.derivs:
-                for (key, pq_deriv) in pq.derivs.items():
-                    new_derivs[key] = dab_dpq.chain(pq_deriv)
+            #- - - - - - - - - - - - - - -
+            # Propagate derivatives
+            #- - - - - - - - - - - - - - -
+            ab.propagate_deriv(pq, dkey, dab_dpq, derivs)
 
-            ab.insert_derivs(new_derivs)
 
         return ab
     #=========================================================================
@@ -293,13 +295,13 @@ class Polynomial(FOV):
             from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
 	    
-        Return:      pq
+        Output:      pq
             pq       Pairs of of the same shape as ab giving the values of 
                      the inverted polynomial at each input point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if from_ == 'uv': return (ab - coefft[0,0]).element_div(self.uv_scale)
-        if from_ == 'xy': return (ab - coefft[0,0]).element_mul(self.uv_scale)
+        if from_ == 'xy': return (ab - coefft[0,0]).element_div(self.uv_scale)
+        if from_ == 'uv': return (ab - coefft[0,0]).element_mul(self.uv_scale)
     #=========================================================================
 
 
@@ -319,7 +321,7 @@ class Polynomial(FOV):
             from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
 	    
-        Return:      pq
+        Output:      pq
             pq       Pairs of of the same shape as ab giving the values of 
                      the inverted polynomial at each input point.
         """
@@ -361,9 +363,10 @@ class Polynomial(FOV):
             # Test for convergence by requring the relative correction 
             # to fall below epsilon. 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            error_max = abs(dpq).max() / abs(pq).max()
-            if Polynomial.DEBUG:
-                print(iter, error_max)
+	    error_max = abs(dpq).max() / abs(pq).max()
+	    if Polynomial.DEBUG:
+		print(iter, error_max)
+	    if error_max <= epsilon: break
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # The old convergence test below was looking for the correction
@@ -371,27 +374,20 @@ class Polynomial(FOV):
             # ensure machine precision is achieved, but it requires some
 	    # additonal iterations conmpared to the simpler test above.
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#            duv_max = abs(duv).max()
-#            if Polynomial.DEBUG:
-#                print(iter, duv_max)
-#            if duv_max >= prev_duv_max: break
-#            prev_duv_max = duv_max
-
-
-            if error_max <= epsilon: break
+            #-try: prev_dpq_max
+            #-except: prev_dpq_max = 1.e99
+            #-dpq_max = abs(dpq).max()
+            #-if Polynomial.DEBUG:
+            #-    print(iter, dpq_max)
+            #-if dpq_max >= prev_dpq_max: break
+            #-prev_dpq_max = dpq_max
 
         pq = pq.wod
 
-        #------------------------------------------
-        # Fill in derivatives if necessary
-        #------------------------------------------
-        if derivs:
-            new_derivs = {dkey:dpq_dab}
-            if ab.derivs:
-                for (key, ab_deriv) in ab.derivs.items():
-                    new_derivs[key] = dpq_dab.chain(ab_deriv)
-
-            pq.insert_derivs(new_derivs)
+        #------------------------------------------------
+        # Propagate derivatives if necessary
+        #------------------------------------------------
+        pq.propagate_deriv(ab, dkey, dpq_dab, derivs)
 
         return pq
     #=========================================================================

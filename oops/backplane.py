@@ -5707,8 +5707,7 @@ class Test_Backplane(unittest.TestCase):
         ev.neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec)
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-        embed()
-#FAIL        self.assertTrue(diff.norm().max() < 1.e-9)
+        self.assertTrue(diff.norm().max() < 1.e-9)
 
         #### Apparent (ra,dec)  # test doesn't work for ABERRATION=old
         if not ABERRATION.old:
@@ -5720,7 +5719,7 @@ class Test_Backplane(unittest.TestCase):
             uv = snap.fov.uv_from_los(ev.neg_arr_ap)
 
             diff = uv - uv0
-#FAIL        self.assertTrue(diff.norm().max() < 1.e-9)
+        self.assertTrue(diff.norm().max() < 1.e-9)
 
         # RingPlane (rad, lon)
         rad = bp.ring_radius('saturn:ring')
@@ -5732,7 +5731,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-#FAIL        self.assertTrue(diff.norm().max() < 1.e-8)
+        self.assertTrue(diff.norm().max() < 1.e-8)
 
         # Ansa (rad, alt)
         rad = bp.ansa_radius('saturn:ansa', radius_type='right')
@@ -5745,7 +5744,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-#FAIL        self.assertTrue(diff.norm().max() < 1.e-8)
+        self.assertTrue(diff.norm().max() < 1.e-8)
 
         # Spheroid (lon,lat)
         lat = bp.latitude('saturn', lat_type='squashed')
@@ -5758,7 +5757,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-#FAIL        self.assertTrue(diff.norm().max() < 1.e-8)
+        self.assertTrue(diff.norm().max() < 1.e-8)
 
         # CentricSpheroid (lon,lat)
         lat = bp.latitude('saturn', lat_type='centric')
@@ -5772,7 +5771,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-#FAIL        self.assertTrue(diff.norm().max() < 1.e-8)
+        self.assertTrue(diff.norm().max() < 1.e-8)
 
         # GraphicSpheroid (lon,lat)
         lat = bp.latitude('saturn', lat_type='graphic')
@@ -5786,7 +5785,7 @@ class Test_Backplane(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-#FAIL        self.assertTrue(diff.norm().max() < 1.e-8)
+        self.assertTrue(diff.norm().max() < 1.e-8)
 
         ######## Rhea tests, with Rhea modified
         body = Body.as_body('RHEA')
@@ -5809,7 +5808,7 @@ class Test_Backplane(unittest.TestCase):
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
         #print(diff.norm().min(), diff.norm().max())
-#FAIL        self.assertTrue(diff.norm().max() < 2.e-7)
+        self.assertTrue(diff.norm().max() < 2.e-7)
 
         # CentricEllipsoid (lon,lat)
         lat = bp.latitude('rhea', lat_type='centric')
@@ -5824,7 +5823,7 @@ class Test_Backplane(unittest.TestCase):
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
         #print(diff.norm().min(), diff.norm().max())
-#FAIL        self.assertTrue(diff.norm().max() < 2.e-7)
+        self.assertTrue(diff.norm().max() < 2.e-7)
 
         # GraphicEllipsoid (lon,lat)
         lat = bp.latitude('rhea', lat_type='graphic')
@@ -5839,7 +5838,7 @@ class Test_Backplane(unittest.TestCase):
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
         #print(diff.norm().min(), diff.norm().max())
-#FAIL        self.assertTrue(diff.norm().max() < 2.e-7)
+        self.assertTrue(diff.norm().max() < 2.e-7)
     #=========================================================================
 
 

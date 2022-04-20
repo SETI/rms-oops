@@ -155,7 +155,7 @@ class FOV(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return the unit line-of-sight vector for camera coordinates (x,y).
 
-        Note that this is vector points in the direction _opposite_ to the path
+        Note that this vector points in the direction _opposite_ to the path
         of arriving photons.
 
         If derivs is True, then derivatives in (x,y) get propagated forward
@@ -215,8 +215,9 @@ class FOV(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return the line of sight vector given FOV coordinates (u,v).
 
-        The los points  the direction specified by coordinate Pair (u,v). Note
-        that this is the direction _opposite_ to that of the arriving photon.
+        The los points in the direction specified by coordinate Pair (u,v). 
+        Note that this is the direction _opposite_ to that of the arriving 
+        photon.
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
@@ -238,8 +239,9 @@ class FOV(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return FOV coordinates (u,v) given a line of sight vector.
 
-        The los points  the direction specified by coordinate Pair (u,v). Note
-        that this is the direction _opposite_ to that of the arriving photon.
+        The los points in the direction specified by coordinate Pair (u,v). 
+        Note that this is the direction _opposite_ to that of the arriving 
+        photon.
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
