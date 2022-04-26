@@ -104,7 +104,7 @@ class Juno(object):
         if Juno.initialized: return
 
         
-	(ck, spk) = ('NONE', 'NONE')
+        (ck, spk) = ('NONE', 'NONE')
 
         # Define some important paths and frames
         oops.define_solar_system(Juno.START_TIME, Juno.STOP_TIME,
@@ -114,7 +114,7 @@ class Juno(object):
                                  irregulars=irregulars)
 
         ignore = oops.path.SpicePath("JUNO", "JUPITER")
-	
+        
         spicedb.open_db()
 
         spk = spk.upper()
