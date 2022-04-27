@@ -433,13 +433,21 @@ class RadialFOV(FOV):
             dpq = dpq_dab.chain(dab)
             pq += dpq
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Test for convergence by requiring the relative correction 
-            # to fall below epsilon. 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - -# 
+            # Convergence tests...  #
+            #- - - - - - - - - - - -# 
             error_max = abs(dpq).max() / abs(pq).max()
             if RadialFOV.DEBUG:
                 print(iter, error_max)
+
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            # Root found?
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if abs(dab).max() <= epsilon: break
+
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            # Relative correction below epsilon? 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if error_max <= epsilon: break
 
         pq = pq.wod
@@ -476,7 +484,7 @@ class Test_RadialFOV(unittest.TestCase):
         RadialFOV.DEBUG = False
 
         #=================================================================
-        # Forward transform with xy_from_uv coefficients
+        # xy_from_uv transform using xy_from_uv coefficients
         # Validate uv derivative propagation against central differences 
         # / chain rule
         #=================================================================
@@ -486,13 +494,13 @@ class Test_RadialFOV(unittest.TestCase):
                                       0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
+        shape = (1648,128)
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
+                                                    uv_los=(800,64), uv_area=1.)
 
         uv = Pair.combos(np.arange(100), np.arange(8)) * 16
         uv.insert_deriv('t', Pair(np.random.randn(100,8,2)))
         uv.insert_deriv('rs', Pair(np.random.randn(100,8,2,2), drank=1))
-
-        fov = RadialFOV(scale, uv.shape, coefft_xy_from_uv=coefft_xy_from_uv, 
-                                                    uv_los=(800,64), uv_area=1.)
 
         xy = fov.xy_from_uv(uv, derivs=True)
 
@@ -519,72 +527,24 @@ class Test_RadialFOV(unittest.TestCase):
         self.assertTrue(abs(xy.d_duv.vals[...,1,0] - dxy_du.vals[...,1]).max() <= DEL)
         self.assertTrue(abs(xy.d_duv.vals[...,1,1] - dxy_dv.vals[...,1]).max() <= DEL)
 
-        #=================================================================
-        # Forward transform with uv_from_xy coefficients
-        # Validate xy derivative propagation against central differences 
+        #====================================================================
+        # uv_from_xy transform using uv_from_xy coefficients
+        # Validate derivative propagation against central differences 
         # / chain rule
-        #=================================================================
+        #====================================================================
         coefft_uv_from_xy = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
                                       0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
-
-        xy = Pair.combos(np.arange(100), np.arange(8)) * 16
-        xy.insert_deriv('t', Pair(np.random.randn(100,8,2)))
-        xy.insert_deriv('rs', Pair(np.random.randn(100,8,2,2), drank=1))
-
-        fov = RadialFOV(scale, xy.shape, coefft_uv_from_xy=coefft_uv_from_xy, 
-                                                    uv_los=(800,64), uv_area=1.)
-
-        uv = fov.uv_from_xy(xy, derivs=True)
-
-        EPS = 1.e-5
-        uv0 = fov.uv_from_xy(xy + (-EPS,0), False)
-        uv1 = fov.uv_from_xy(xy + ( EPS,0), False)
-        duv_dx = (uv1 - uv0) / (2. * EPS)
-
-        uv0 = fov.uv_from_xy(xy + (0,-EPS), False)
-        uv1 = fov.uv_from_xy(xy + (0, EPS), False)
-        duv_dy = (uv1 - uv0) / (2. * EPS)
-
-        duv_dt = duv_dx * xy.d_dt.vals[...,0] + duv_dy * xy.d_dt.vals[...,1]
-        duv_da = duv_dx * xy.d_drs.vals[...,0,0] + duv_dy * xy.d_drs.vals[...,1,0]
-        duv_db = duv_dx * xy.d_drs.vals[...,0,1] + duv_dy * xy.d_drs.vals[...,1,1]
-
-        DEL = 1.e-6
-#FAIL    self.assertTrue(abs(uv.d_dt.vals - duv_dt.vals).max() <= DEL)
-#FAIL    self.assertTrue(abs(uv.d_drs.vals[...,0] - duv_da.vals).max() <= DEL)
-#FAIL    self.assertTrue(abs(uv.d_drs.vals[...,1] - duv_db.vals).max() <= DEL)
-
-#FAIL    self.assertTrue(abs(uv.d_dxy.vals[...,0,0] - duv_dx.vals[...,0]).max() <= DEL)
-#FAIL    self.assertTrue(abs(uv.d_dxy.vals[...,0,1] - duv_dy.vals[...,0]).max() <= DEL)
-#FAIL    self.assertTrue(abs(uv.d_dxy.vals[...,1,0] - duv_dx.vals[...,1]).max() <= DEL)
-#FAIL    self.assertTrue(abs(uv.d_dxy.vals[...,1,1] - duv_dy.vals[...,1]).max() <= DEL)
-
-
-
-
-        #=================================================================
-        # Inverse transform with uv_from_xy coefficients
-        # Validate derivative propagation against central differences 
-        # / chain rule
-        #=================================================================
-        coefft_xy_from_uv = np.array([1.000, 
-                                      0, 
-                                     -5.9624209455667325e-08, 
-                                      0, 
-                                      2.7381910042256151e-14])
-        scale = 0.00067540618
         shape = (1648,128)
-
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_xy_from_uv, 
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
+        flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
-        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        xy = flat_fov.xy_from_uv(uv0)
+        uv = Pair.combos(np.arange(100), np.arange(8))
+        xy = flatfov.xy_from_uv(uv, derivs=False)   # generate uncorrected xy
         xy.insert_deriv('t', Pair(np.random.randn(100,8,2)))
         xy.insert_deriv('rs', Pair(np.random.randn(100,8,2,2), drank=1))
 
@@ -613,11 +573,14 @@ class Test_RadialFOV(unittest.TestCase):
         self.assertTrue(abs(uv.d_dxy.vals[...,1,0] - duv_dx.vals[...,1]).max() <= DEL)
         self.assertTrue(abs(uv.d_dxy.vals[...,1,1] - duv_dy.vals[...,1]).max() <= DEL)
 
-        #=================================================================
-        # Inverse transform with uv_from_xy coefficients
+
+
+
+        #====================================================================
+        # uv_from_xy transform using xy_from_uv coefficients
         # Validate derivative propagation against central differences 
         # / chain rule
-        #=================================================================
+        #====================================================================
         coefft_xy_from_uv = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
@@ -625,15 +588,61 @@ class Test_RadialFOV(unittest.TestCase):
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
+                                                    uv_los=(800,64), uv_area=1.)
+        flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_xy_from_uv, 
+        uv = Pair.combos(np.arange(100), np.arange(8))
+        xy = flatfov.xy_from_uv(uv, derivs=False)   # generate uncorrected xy
+        xy.insert_deriv('t', Pair(np.random.randn(100,8,2)))
+        xy.insert_deriv('rs', Pair(np.random.randn(100,8,2,2), drank=1))
+
+        uv = fov.uv_from_xy(xy, derivs=True)
+
+        EPS = 1.e-5
+        uv0 = fov.uv_from_xy(xy + (-EPS,0), False)
+        uv1 = fov.uv_from_xy(xy + ( EPS,0), False)
+        duv_dx = (uv1 - uv0) / (2. * EPS)
+
+        uv0 = fov.uv_from_xy(xy + (0,-EPS), False)
+        uv1 = fov.uv_from_xy(xy + (0, EPS), False)
+        duv_dy = (uv1 - uv0) / (2. * EPS)
+
+        duv_dt = duv_dx * xy.d_dt.vals[...,0] + duv_dy * xy.d_dt.vals[...,1]
+        duv_da = duv_dx * xy.d_drs.vals[...,0,0] + duv_dy * xy.d_drs.vals[...,1,0]
+        duv_db = duv_dx * xy.d_drs.vals[...,0,1] + duv_dy * xy.d_drs.vals[...,1,1]
+
+        DEL = 1.e-6
+        self.assertTrue(abs(uv.d_dt.vals - duv_dt.vals).max() <= DEL)
+        self.assertTrue(abs(uv.d_drs.vals[...,0] - duv_da.vals).max() <= DEL)
+        self.assertTrue(abs(uv.d_drs.vals[...,1] - duv_db.vals).max() <= DEL)
+
+        self.assertTrue(abs(uv.d_dxy.vals[...,0,0] - duv_dx.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(uv.d_dxy.vals[...,0,1] - duv_dy.vals[...,0]).max() <= DEL)
+        self.assertTrue(abs(uv.d_dxy.vals[...,1,0] - duv_dx.vals[...,1]).max() <= DEL)
+        self.assertTrue(abs(uv.d_dxy.vals[...,1,1] - duv_dy.vals[...,1]).max() <= DEL)
+
+        #====================================================================
+        # xy_from_uv transform with uv_from_xy coefficients
+        # Validate derivative propagation against central differences 
+        # / chain rule
+        #====================================================================
+        coefft_uv_from_xy = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
+                                      2.7381910042256151e-14])
+        scale = 0.00067540618
+        shape = (1648,128)
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
-        xy0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        uv = flat_fov.uv_from_xy(xy0)
+        uv = Pair.combos(np.arange(100), np.arange(8))
         uv.insert_deriv('t', Pair(np.random.randn(100,8,2)))
         uv.insert_deriv('rs', Pair(np.random.randn(100,8,2,2), drank=1))
+
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
+                                                    uv_los=(800,64), uv_area=1.)
 
         xy = fov.xy_from_uv(uv, derivs=True)
 
@@ -663,10 +672,10 @@ class Test_RadialFOV(unittest.TestCase):
 
 
 
-        #=================================================================
-        # Forward vs. inverse transform with uv_from_xy coefficients,
+        #====================================================================
+        # xy_from_uv vs. uv_from_xy transform with xy_from_uv coefficients,
         # no derivatives
-        #=================================================================
+        #====================================================================
         coefft_xy_from_uv = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
@@ -674,37 +683,31 @@ class Test_RadialFOV(unittest.TestCase):
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_xy_from_uv, 
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
 
-        xy0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        uv = flat_fov.uv_from_xy(xy0)
-
+        uv = Pair.combos(np.arange(100), np.arange(8))
         xy = fov.xy_from_uv(uv)
         uv_test = fov.uv_from_xy(xy)
 
-#FAIL    self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
+#FAIL   self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
+        self.assertTrue(abs(uv - uv_test).max() < 1.e-12)
 
-        #=================================================================
-        # Forward vs. inverse transform with uv_from_xy coefficients,
+        #====================================================================
+        # uv_from_xy vs. xy_from_uv transform with uv_from_xy coefficients,
         # no derivatives
-        #=================================================================
-        coefft_xy_from_uv = np.array([1.000, 
+        #====================================================================
+        coefft_uv_from_xy = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
                                       0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_xy_from_uv, 
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
-        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        xy = flat_fov.xy_from_uv(uv0)
+        uv = Pair.combos(np.arange(100), np.arange(8))
 
         uv = fov.uv_from_xy(xy)
         xy_test = fov.xy_from_uv(uv)
@@ -714,10 +717,10 @@ class Test_RadialFOV(unittest.TestCase):
 
 
 
-        #=================================================================
-        # Forward vs. inverse transform with xy_from_uv coefficients,
+        #====================================================================
+        # uv_from_xy vs. xy_from_uv transform with xy_from_uv coefficients,
         # test derivative propagation
-        #=================================================================
+        #====================================================================
         coefft_xy_from_uv = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
@@ -725,13 +728,12 @@ class Test_RadialFOV(unittest.TestCase):
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_xy_from_uv, 
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
+        flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
-        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        xy = flat_fov.xy_from_uv(uv0)
+        uv = Pair.combos(np.arange(100), np.arange(8))
+        xy = flatfov.xy_from_uv(uv, derivs=False)   # generate uncorrected xy
         xy.insert_deriv('t', Pair((1,1)))
 
         uv = fov.uv_from_xy(xy, derivs=True)
@@ -744,7 +746,7 @@ class Test_RadialFOV(unittest.TestCase):
         self.assertTrue('uv' in xy_test.derivs.keys())
 
         #------------------------------------
-        # test self-derivatives in uv_test
+        # test self-derivatives in xy_test
         #------------------------------------
         dxy_dxy = xy_test.d_dxy.values
         dx_dx = dxy_dxy[...,0,0]
@@ -762,10 +764,10 @@ class Test_RadialFOV(unittest.TestCase):
         self.assertTrue(abs(dx_dy.max()) <= EPS)
         self.assertTrue(abs(dy_dx.max()) <= EPS)
 
-        #=================================================================
-        # Forward vs. inverse transform with uv_from_xy coefficients,
+        #====================================================================
+        # xy_from_uv vs. uv_from_xy transform with uv_from_xy coefficients,
         # test derivative propagation
-        #=================================================================
+        #====================================================================
         coefft_uv_from_xy = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
@@ -773,13 +775,10 @@ class Test_RadialFOV(unittest.TestCase):
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_uv_from_xy, 
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
-        xy0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        uv = flat_fov.uv_from_xy(xy0)
+        uv = Pair.combos(np.arange(100), np.arange(8))
         uv.insert_deriv('t', Pair((1,1)))
 
         xy = fov.xy_from_uv(uv, derivs=True)
@@ -792,7 +791,7 @@ class Test_RadialFOV(unittest.TestCase):
         self.assertTrue('xy' in uv_test.derivs.keys())
 
         #------------------------------------
-        # test self-derivatives in xy_test
+        # test self-derivatives in uv_test
         #------------------------------------
         duv_duv = uv_test.d_duv.values
         du_du = duv_duv[...,0,0]
@@ -802,10 +801,10 @@ class Test_RadialFOV(unittest.TestCase):
 
         EPS = 1.e-15
         self.assertTrue(abs(du_du.max()-1) <= EPS)
-#FAIL    self.assertTrue(abs(du_du.min()-1) <= EPS)
+        self.assertTrue(abs(du_du.min()-1) <= EPS)
 
         self.assertTrue(abs(dv_dv.max()-1) <= EPS)
-#FAIL    self.assertTrue(abs(dv_dv.min()-1) <= EPS)
+        self.assertTrue(abs(dv_dv.min()-1) <= EPS)
 
         self.assertTrue(abs(du_dv.max()) <= EPS)
         self.assertTrue(abs(dv_du.max()) <= EPS)
@@ -813,10 +812,10 @@ class Test_RadialFOV(unittest.TestCase):
 
 
 
-        #================================================================
-        # Forward vs. inverse transform with xy_from_uv coefficients
+        #====================================================================
+        # uv_from_xy transform with xy_from_uv coefficients
         # Verify that derivatives are not propagated for derivs=False
-        #================================================================
+        #====================================================================
         coefft_xy_from_uv = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
@@ -824,26 +823,25 @@ class Test_RadialFOV(unittest.TestCase):
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_xy_from_uv, 
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
+        flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
-        uv0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        xy = flat_fov.xy_from_uv(uv0)
+        uv = Pair.combos(np.arange(100), np.arange(8))
+        xy = flatfov.xy_from_uv(uv, derivs=False)   # generate uncorrected xy
         xy.insert_deriv('t', Pair((1,1)))
 
         uv = fov.uv_from_xy(xy, derivs=False)
         self.assertEqual(uv.derivs, {})
-        
+
         uv.insert_deriv('t', Pair((1,1)))
         xy_test = fov.xy_from_uv(uv, derivs=False)
         self.assertEqual(xy_test.derivs, {})
 
-        #================================================================
-        # Forward vs. inverse transform with uv_from_xy coefficients
+        #====================================================================
+        # xy_from_uv transform with uv_from_xy coefficients
         # Verify that derivatives are not propagated for derivs=False
-        #================================================================
+        #====================================================================
         coefft_uv_from_xy = np.array([1.000, 
                                       0, 
                                      -5.9624209455667325e-08, 
@@ -851,18 +849,15 @@ class Test_RadialFOV(unittest.TestCase):
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-
-        flat_fov = oops.fov.FlatFOV(scale, shape,  uv_los=(800,64), uv_area=1.)
-        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_uv_from_xy, 
+        fov = RadialFOV(scale, xy.shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
-        xy0 = Pair.combos(np.arange(100), np.arange(8)) * 16
-        uv = flat_fov.uv_from_xy(xy0)
+        uv = Pair.combos(np.arange(100), np.arange(8))
         uv.insert_deriv('t', Pair((1,1)))
 
         xy = fov.xy_from_uv(uv, derivs=False)
         self.assertEqual(xy.derivs, {})
-        
+
         xy.insert_deriv('t', Pair((1,1)))
         uv_test = fov.uv_from_xy(xy, derivs=False)
         self.assertEqual(uv_test.derivs, {})

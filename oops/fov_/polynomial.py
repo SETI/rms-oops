@@ -373,14 +373,12 @@ class Polynomial(FOV):
             dpq = dpq_dab.chain(dab)
             pq += dpq
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Test for convergence by requiring the relative correction 
-            # to fall below epsilon. 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - -# 
+            # Convergence tests...  #
+            #- - - - - - - - - - - -# 
             error_max = abs(dpq).max() / abs(pq).max()
             if Polynomial.DEBUG:
                 print(iter, error_max)
-            if error_max <= epsilon: break
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # The old convergence test below was looking for the correction
@@ -395,6 +393,16 @@ class Polynomial(FOV):
             #-    print(iter, dpq_max)
             #-if dpq_max >= prev_dpq_max: break
             #-prev_dpq_max = dpq_max
+
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            # Root found?
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if abs(dab).max() <= epsilon: break
+
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            # Relative correction below epsilon. 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if error_max <= epsilon: break
 
         pq = pq.wod
 
@@ -429,7 +437,7 @@ class Test_Polynomial(unittest.TestCase):
         Polynomial.DEBUG = False
 
         #====================================================================
-        # Forward transform with xy_from_uv coefficients
+        # xy_from_uv transform using xy_from_uv coefficients
         # Validate derivative propagation against central differences 
         # / chain rule
         #====================================================================
@@ -474,7 +482,7 @@ class Test_Polynomial(unittest.TestCase):
         self.assertTrue(abs(xy.d_duv.vals[...,1,1] - dxy_dv.vals[...,1]).max() <= DEL)
 
         #====================================================================
-        # Forward transform with uv_from_xy coefficients
+        # uv_from_xy transform using uv_from_xy coefficients
         # Validate derivative propagation against central differences 
         # / chain rule
         #====================================================================
@@ -518,14 +526,12 @@ class Test_Polynomial(unittest.TestCase):
         self.assertTrue(abs(uv.d_dxy.vals[...,0,1] - duv_dy.vals[...,0]).max() <= DEL)
         self.assertTrue(abs(uv.d_dxy.vals[...,1,0] - duv_dx.vals[...,1]).max() <= DEL)
         self.assertTrue(abs(uv.d_dxy.vals[...,1,1] - duv_dy.vals[...,1]).max() <= DEL)
-
-
-
-
-
-
+        
+        
+        
+        
         #====================================================================
-        # Inverse transform with xy_from_uv coefficients
+        # uv_from_xy transform using xy_from_uv coefficients
         # Validate derivative propagation against central differences 
         # / chain rule
         #====================================================================
@@ -571,7 +577,7 @@ class Test_Polynomial(unittest.TestCase):
         self.assertTrue(abs(uv.d_dxy.vals[...,1,1] - duv_dy.vals[...,1]).max() <= DEL)
 
         #====================================================================
-        # Inverse transform with uv_from_xy coefficients
+        # xy_from_uv transform with uv_from_xy coefficients
         # Validate derivative propagation against central differences 
         # / chain rule
         #====================================================================
@@ -618,9 +624,8 @@ class Test_Polynomial(unittest.TestCase):
 
 
 
-
         #====================================================================
-        # Forward vs. inverse transform with xy_from_uv coefficients,
+        # xy_from_uv vs. uv_from_xy transform with xy_from_uv coefficients,
         # no derivatives
         #====================================================================
         coefft_xy_from_uv = np.zeros((3,3,2))
@@ -642,7 +647,7 @@ class Test_Polynomial(unittest.TestCase):
         self.assertTrue(abs(uv - uv_test).max() < 1.e-14)
 
         #====================================================================
-        # Forward vs. inverse transform with uv_from_xy coefficients,
+        # uv_from_xy vs. xy_from_uv transform with uv_from_xy coefficients,
         # no derivatives
         #====================================================================
         coefft_uv_from_xy = np.zeros((3,3,2))
@@ -666,11 +671,8 @@ class Test_Polynomial(unittest.TestCase):
 
 
 
-
-
-
         #====================================================================
-        # Forward vs. inverse transform with xy_from_uv coefficients,
+        # uv_from_xy vs. xy_from_uv transform with xy_from_uv coefficients,
         # test derivative propagation
         #====================================================================
         coefft_xy_from_uv = np.zeros((3,3,2))
@@ -716,7 +718,7 @@ class Test_Polynomial(unittest.TestCase):
         self.assertTrue(abs(dy_dx.max()) <= EPS)
 
         #====================================================================
-        # Forward vs. inverse transform with uv_from_xy coefficients,
+        # xy_from_uv vs. uv_from_xy transform with uv_from_xy coefficients,
         # test derivative propagation
         #====================================================================
         coefft_uv_from_xy = np.zeros((3,3,2))
@@ -764,11 +766,8 @@ class Test_Polynomial(unittest.TestCase):
 
 
 
-
-
-
         #====================================================================
-        # Forward transform with xy_from_uv coefficients
+        # uv_from_xy transform with xy_from_uv coefficients
         # Verify that derivatives are not propagated for derivs=False
         #====================================================================
         coefft_xy_from_uv = np.zeros((3,3,2))
@@ -793,7 +792,7 @@ class Test_Polynomial(unittest.TestCase):
         self.assertEqual(xy_test.derivs, {})
 
         #====================================================================
-        # Forward transform with uv_from_xy coefficients
+        # xy_from_uv transform with uv_from_xy coefficients
         # Verify that derivatives are not propagated for derivs=False
         #====================================================================
         coefft_uv_from_xy = np.zeros((3,3,2))
