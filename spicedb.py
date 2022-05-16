@@ -19,7 +19,9 @@ import cspyce
 
 import sqlite_db as db
 
+#------------------------------
 # For testing and debugging
+#------------------------------
 DEBUG = False   # If true, no files are furnished.
 ABSPATH_LIST = []   # If DEBUG, lists the files that would have been furnished.
 
@@ -35,7 +37,9 @@ TRANSLATOR_ID = None
 # Global variables to track loaded kernels
 ################################################################################
 
+#-------------------------------------------------------
 # Furnished kernel names by type, listed in load order
+#-------------------------------------------------------
 FURNISHED_NAMES = {
     'CK':   [],
     'FK':   [],
@@ -49,7 +53,9 @@ FURNISHED_NAMES = {
     'UNK':  [],
 }
 
+#---------------------------------------------------------------------
 # Furnished kernel file paths and names by type, listed in load order
+#---------------------------------------------------------------------
 FURNISHED_ABSPATHS = {
     'CK':   [],
     'FK':   [],
@@ -63,10 +69,14 @@ FURNISHED_ABSPATHS = {
     'UNK':  [],
 }
 
+#------------------------------------
 # Furnished file numbers by name.
+#------------------------------------
 FURNISHED_FILENOS = {}
 
+#-------------------------------------------------------------------
 # Furnished sets of kernel file info objects, keyed by basename
+#-------------------------------------------------------------------
 FURNISHED_INFO = {}
 
 SPICE_PATH = None
@@ -80,7 +90,9 @@ COLUMN_NAMES = ["KERNEL_NAME", "KERNEL_VERSION", "KERNEL_TYPE",
                 "FILESPEC", "START_TIME", "STOP_TIME", "RELEASE_DATE",
                 "SPICE_ID", "LOAD_PRIORITY", "FILE_NO"]
 
+#-----------------------
 # Derived constants
+#-----------------------
 COLUMN_STRING = ", ".join(COLUMN_NAMES)
 
 KERNEL_NAME_INDEX    = COLUMN_NAMES.index("KERNEL_NAME")
@@ -111,8 +123,15 @@ KERNEL_TYPE_FROM_EXT = {
     '.bdb': 'STARS',
     '.txt': 'META',
 }
+
+#*******************************************************************************
+# KernelInfo
+#*******************************************************************************
 class KernelInfo(object):
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, list):
         self.kernel_name    = list[KERNEL_NAME_INDEX]
         self.kernel_version = list[KERNEL_VERSION_INDEX]
@@ -140,87 +159,170 @@ class KernelInfo(object):
             self.file_no = list[FILE_NO_INDEX]
         else:
             self.file_no = None
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # compare
+    #===========================================================================
     def compare(self, other):
-        """Identify which of two kernels has a higher load priority.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Identify which of two kernels has a higher load priority.
 
         The compare() operator compares two KernelInfo objects and returns
         -1 if the former should be earlier in load order, 0 if they are equal,
         or +1 if the former should be later in loader order.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------------------------
         # Compare types
+        #----------------------------------------------------------------------
         self_type = KERNEL_TYPE_SORT_DICT[self.kernel_type]
         other_type = KERNEL_TYPE_SORT_DICT[other.kernel_type]
 
         if self_type < other_type: return -1
         if self_type > other_type: return +1
 
+        #----------------------------------------------------------------------
         # Other kernel types are organized alphabetically for no particular
         # reason except to keep kernels of the same type together
+        #----------------------------------------------------------------------
         if self.kernel_type < other.kernel_type: return -1
         if self.kernel_type > other.kernel_type: return +1
 
+        #----------------------------------------------------------------------
         # Compare load priorities
+        #----------------------------------------------------------------------
         if self.load_priority < other.load_priority: return -1
         if self.load_priority > other.load_priority: return +1
 
+        #----------------------------------------------------------------------
         # Compare release dates
+        #----------------------------------------------------------------------
         if self.release_date < other.release_date: return -1
         if self.release_date > other.release_date: return +1
 
+        #----------------------------------------------------------------------
         # Group names alphabetically
+        #----------------------------------------------------------------------
         if self.kernel_name < other.kernel_name: return -1
         if self.kernel_name > other.kernel_name: return +1
 
+        #----------------------------------------------------------------------
         # Earlier versions go first
+        #----------------------------------------------------------------------
         if self.kernel_version < other.kernel_version: return -1
         if self.kernel_version > other.kernel_version: return +1
 
+        #----------------------------------------------------------------------
         # Earlier file numbers go first
+        #----------------------------------------------------------------------
         if self.file_no < other.file_no: return -1
         if self.file_no > other.file_no: return +1
 
+        #----------------------------------------------------------------------
         # Earlier end dates, later starts go first for better chance of override
+        #----------------------------------------------------------------------
         if self.stop_time < other.stop_time: return -1
         if self.stop_time > other.stop_time: return +1
 
         if self.start_time > other.start_time: return -1
         if self.start_time < other.start_time: return +1
 
+        #----------------------------------------------------------------------
         # Organize by file name if appropriate
+        #----------------------------------------------------------------------
         if self.filespec < other.filespec: return -1
         if self.filespec > other.filespec: return +1
 
+        #----------------------------------------------------------------------
         # Finally, organize by file name and SPICE ID
+        #----------------------------------------------------------------------
         if self.spice_id < other.spice_id: return -1
         if self.spice_id > other.spice_id: return +1
 
+        #----------------------------------------------------------------------
         # If all else fails, they're the same
+        #----------------------------------------------------------------------
         return 0
+    #===========================================================================
 
+
+
+    #############################################################################
     # Comparison operators, needed for sorting, etc. Note __cmp__ is deprecated.
+    #############################################################################
+
+
+    #===========================================================================
+    # __eq__
+    #===========================================================================
     def __eq__(self, other):
         if type(self) != type(other): return False
         return self.compare(other) == 0
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __ne__
+    #===========================================================================
     def __ne__(self, other):
         return not self.__eq__(other)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __le__
+    #===========================================================================
     def __le__(self, other):
         return self.compare(other) <= 0
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __lt__
+    #===========================================================================
     def __lt__(self, other):
         return self.compare(other) < 0
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __ge__
+    #===========================================================================
     def __ge__(self, other):
         return self.compare(other) >= 0
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __gt__
+    #===========================================================================
     def __gt__(self, other):
         return self.compare(other) > 0
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __str__
+    #===========================================================================
     def __str__(self): return self.__repr__()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __repr__
+    #===========================================================================
     def __repr__(self):
 
         if self.spice_id is None:
@@ -241,10 +343,18 @@ class KernelInfo(object):
             result = result + "[" + str(self.file_no) + "]"
 
         return result
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # full_name
+    #===========================================================================
     @property
     def full_name(self):
+        #----------------------------------------------------------------------
         # Append version if present
+        #----------------------------------------------------------------------
         if self.kernel_version:
 
             # Separate name and version by a dash unless version starts with '+'
@@ -253,19 +363,42 @@ class KernelInfo(object):
             else:
                 return self.kernel_name + '-' + self.kernel_version
 
+        #----------------------------------------------------------------------
         # Otherwise it's just the name
+        #----------------------------------------------------------------------
         else:
             return self.kernel_name
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # timeless
+    #===========================================================================
     @property
     def timeless(self):
         return (self.start_time is None and self.stop_time is None)
+    #===========================================================================
 
+
+#*******************************************************************************
+
+
+
+#===============================================================================
+# kernels_from_filespec
+#===============================================================================
 def kernels_from_filespec(filespec, name=None, version=None, release=None,
                                     priority=100):
-    """Fill in kernel info as well as possible from a file path."""
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Fill in kernel info as well as possible from a file path.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search in the database first
+    #----------------------------------------------------------------------
     basename = os.path.basename(filespec)
     try:
         if db_is_open():
@@ -298,7 +431,9 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
 
     kernels = []
 
+    #----------------------------------------------------------------------
     # Get info about a CK
+    #----------------------------------------------------------------------
     try:
         spice_ids = cspyce.ckobj(filespec)
         for spice_id in spice_ids:
@@ -325,7 +460,9 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
     except RuntimeError:
         pass
 
+    #----------------------------------------------------------------------
     # Get info about an SPK
+    #----------------------------------------------------------------------
     try:
         spice_ids = cspyce.spkobj(filespec)
         for spice_id in spice_ids:
@@ -350,13 +487,21 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
 
     return [KernelInfo([name, version, ktype, filespec, None, None, release,
                         None, priority, full_name, 1])]
+    #===========================================================================
+
+
 
 ################################################################################
 # Kernel List Manipulations
 ################################################################################
 
+#===============================================================================
+# _sort_kernels
+#===============================================================================
 def _sort_kernels(kernel_list):
-    """Sort a list of KernelInfo objects immediately prior to loading.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Sort a list of KernelInfo objects immediately prior to loading.
 
     Input:
         kernel_list a list of KernelInfo objects.
@@ -364,22 +509,31 @@ def _sort_kernels(kernel_list):
     Return:         a new list in which duplicates are removed and the rest are
                     sorted into their proper load order.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Sort kernels into load order
+    #----------------------------------------------------------------------
     kernel_list.sort()
 
+    #----------------------------------------------------------------------
     # Delete kernels that are no longer needed
+    #----------------------------------------------------------------------
     namekeys = []           # ordered list of kernel (name,version)
     bodies_by_name = {}     # dict of bodies vs. kernel (name,version)
     timeless_by_name = {}   # dict of timeless state vs. (name,version)
 
+    #----------------------------------------------------------------------
     # For each kernel...
+    #----------------------------------------------------------------------
     for kernel in kernel_list:
         spice_id = kernel.spice_id
         namekey = (kernel.kernel_name, kernel.kernel_version)
         timeless_by_name[namekey] = kernel.timeless
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Accumulate kernel names in load order and bodies per kernel name
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         if namekey in namekeys:
             i = namekeys.index(namekey)
             del namekeys[i]
@@ -389,7 +543,9 @@ def _sort_kernels(kernel_list):
             namekeys.append(namekey)
             bodies_by_name[namekey] = {spice_id}
 
+    #----------------------------------------------------------------------
     # Delete SPICE IDs that appear in later versions of timeless kernels
+    #----------------------------------------------------------------------
     for j in range(len(namekeys)):
         namekey = namekeys[j]
         if not timeless_by_name[namekey]: continue
@@ -399,12 +555,16 @@ def _sort_kernels(kernel_list):
             if namekey[0] == namekeys[k][0]:
                 bodies_by_name[namekey] -= bodies_by_name[namekeys[k]]
 
+    #----------------------------------------------------------------------
     # Delete kernels that are no longer needed
+    #----------------------------------------------------------------------
     for j in range(len(namekeys)-1, -1, -1):
         if len(bodies_by_name[namekey]) == 0:
             del namekeys[j]
 
+    #----------------------------------------------------------------------
     # Remove kernels that are still used but identical except for the SPICE_ID
+    #----------------------------------------------------------------------
     filtered_list = []
     for kernel in kernel_list:
         namekey = (kernel.kernel_name, kernel.kernel_version)
@@ -420,9 +580,17 @@ def _sort_kernels(kernel_list):
         filtered_list.append(kernel)
 
     return filtered_list
+    #===========================================================================
 
+
+
+#===============================================================================
+# _remove_overlaps
+#===============================================================================
 def _remove_overlaps(kernel_list, start_time, stop_time):
-    """Filter out kernels completely overridden by higher-priority kernels.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Filter out kernels completely overridden by higher-priority kernels.
 
     For kernels that have time limits such as CKs and SPKs, this method
     determines which kernels overlap higher-priority kernels, and removes
@@ -446,8 +614,11 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
                     have been removed. An unnecessary kernel is one whose entire
                     time range is covered by higher-priority kernels.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Construct a dictionary of kernel lists, one list for each body
+    #----------------------------------------------------------------------
     body_dict = {}
     for kernel in kernel_list:
         if kernel.spice_id not in body_dict:
@@ -455,11 +626,15 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
 
         body_dict[kernel.spice_id].append(kernel)
 
+    #----------------------------------------------------------------------
     # Sort the kernels in each list
+    #----------------------------------------------------------------------
     for kernels in body_dict.values():
         kernels.sort()
 
+    #----------------------------------------------------------------------
     # If time limits are not specified, select the last kernel in each list
+    #----------------------------------------------------------------------
     if start_time is None or stop_time is None:
         filtered_kernels = []
         for kernels in body_dict.values():
@@ -468,7 +643,9 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
 
         return _sort_kernels(filtered_kernels)
 
+    #----------------------------------------------------------------------
     # Define the time interval of interest
+    #----------------------------------------------------------------------
     if type(start_time) == str:
         interval_start_tai = julian.tai_from_iso(start_time)
     else:
@@ -479,36 +656,60 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
     else:
         interval_stop_tai = start_time
 
+    #----------------------------------------------------------------------
     # Remove overlaps for each body individually
+    #----------------------------------------------------------------------
     filtered_kernels = []
     for id in body_dict:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Create an empty interval
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         inter = interval.Interval(interval_start_tai, interval_stop_tai)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Insert the kernels for this body, beginning with the lowest priority
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         for kernel in body_dict[id]:
             kernel_start_tai = julian.tai_from_iso(kernel.start_time)
             kernel_stop_tai  = julian.tai_from_iso(kernel.stop_time)
 
             inter[(kernel_start_tai,kernel_stop_tai)] = kernel
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Retrieve the needed kernels in the proper order
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         interval_kernels = inter[(interval_start_tai, interval_stop_tai)]
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # A leading value of None means there is a gap in time coverage
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if interval_kernels[0] is None:
             interval_kernels = interval_kernels[1:]
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Add this set to the list
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         filtered_kernels += interval_kernels
 
     return _sort_kernels(filtered_kernels)
+#===============================================================================
 
+
+
+#===============================================================================
+# _fileno_str
+#===============================================================================
 def _fileno_str(filenos):
-    """Construct a string listing filenos and their ranges inside brackets."""
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Construct a string listing filenos and their ranges inside brackets.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Copy and sort the list
+    #----------------------------------------------------------------------
     filenos = list(filenos)
     filenos.sort()
 
@@ -518,20 +719,28 @@ def _fileno_str(filenos):
 
     for k in filenos[1:]:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Don't write anything till we reach the end of a sequence
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if k == k_prev + 1:
             k_prev = k
             continue
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Separate single values by commas
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if k_prev == k_written:
             strlist += [',']
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Use a comma on a list of just two
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         elif k_prev == k_written + 1:
             strlist += [',', str(k_prev), ',']
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Otherwise, use a dash
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         else:
             strlist += ['-', str(k_prev), ',']
 
@@ -547,20 +756,36 @@ def _fileno_str(filenos):
         strlist += ['-', str(k_prev)]
 
     return ''.join(strlist + [']'])
+#===============================================================================
 
+
+
+#===============================================================================
+# _fileno_values
+#===============================================================================
 def _fileno_values(name):
-    """Return a kernel name and list of fileno values from a name string."""
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a kernel name and list of fileno values from a name string.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # If there are no file_nos in the name, just return it with an empty list
+    #----------------------------------------------------------------------
     if name[-1] != ']':
         return (name, [])
 
+    #----------------------------------------------------------------------
     # Isolate the name and indices
+    #----------------------------------------------------------------------
     ibracket = name.index('[')
     indices = name[ibracket+1:-1]
     name = name[:ibracket]
 
+    #----------------------------------------------------------------------
     # Interpret the indices
+    #----------------------------------------------------------------------
     filenos = []
     split_by_commas = index.split(',')
     for item in split_by_commas:
@@ -574,14 +799,22 @@ def _fileno_values(name):
             filenos.append(str(item))
 
     return (name, filenos)
+#===============================================================================
+
+
 
 ################################################################################
 # Database Query Support
 ################################################################################
 
+#===============================================================================
+# _query_kernels
+#===============================================================================
 def _query_kernels(kernel_type, name=None, body=None, time=None, asof=None,
                                 after=None, path=None, limit=True, redo=False):
-    """Return a list of KernelInfo objects based on the given constraints.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of KernelInfo objects based on the given constraints.
 
     Input:
         kernel_type "SPK", "CK, "IK", "LSK", etc.
@@ -615,20 +848,27 @@ def _query_kernels(kernel_type, name=None, body=None, time=None, asof=None,
     Return:         A list of KernelInfo objects describing the files that match
                     the requirements.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Query the database
+    #----------------------------------------------------------------------
     sql_string = _sql_query(kernel_type, name, body, time, asof, after, path,
                                          limit)
     table = db.query(sql_string)
 
+    #----------------------------------------------------------------------
     # If nothing was returned, relax the "asof" and "after" constraints and try
     # again
+    #----------------------------------------------------------------------
     if redo and len(table) == 0 and (asof is not None or after is not None):
         sql_string = _sql_query(kernel_type, name, body, time, None, None,
                                 path, limit)
         table = db.query(sql_string)
 
+    #----------------------------------------------------------------------
     # If we still have nothing, raise an exception
+    #----------------------------------------------------------------------
     if len(table) == 0:
         raise ValueError("no results found matching query")
 
@@ -637,10 +877,18 @@ def _query_kernels(kernel_type, name=None, body=None, time=None, asof=None,
         kernel_info.append(KernelInfo(row))
 
     return kernel_info
+#===============================================================================
 
+
+
+#===============================================================================
+# _sql_query
+#===============================================================================
 def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
                             after=None, path=None, limit=True):
-    """Generate a query string based on the constraints.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Generate a query string based on the constraints.
 
     Input:
         kernel_type "SPK", "CK, "IK", "LSK", etc.
@@ -673,16 +921,23 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
 
     Return:         A complete SQL query string.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Begin query
+    #----------------------------------------------------------------------
     query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
     query_list += ["WHERE KERNEL_TYPE = '", kernel_type, "'\n"]
 
+    #----------------------------------------------------------------------
     # Insert kernel name constraint
+    #----------------------------------------------------------------------
     if name is not None:
         query_list += ["AND KERNEL_NAME LIKE '", name, "'\n"]
 
+    #----------------------------------------------------------------------
     # Insert body or bodies
+    #----------------------------------------------------------------------
     bodies = 0
     if body is not None:
         if isinstance(body, numbers.Integral):
@@ -699,7 +954,9 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
                 query_list += ["AND SPICE_ID in (", str(list(body))[1:-1],
                                ")\n"]
 
+    #----------------------------------------------------------------------
     # Insert start and stop times
+    #----------------------------------------------------------------------
     if time is None: time = (None, None)
 
     (time0, time1) = time
@@ -716,35 +973,51 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
 
         query_list += ["AND START_TIME <= '", time1, "'\n"]
 
+    #----------------------------------------------------------------------
     # Insert path constraint
+    #----------------------------------------------------------------------
     if path is not None:
         path = path.replace('\\', '/')  # Must change Windows file separator
         query_list += ["AND FILESPEC LIKE '%", path, "%'\n"]
 
+    #----------------------------------------------------------------------
     # Insert 'after' constraint except on second pass
+    #----------------------------------------------------------------------
     if after is not None:
         if type(after) != str:
             after = julian.ymdhms_format_from_tai(after, sep="T", digits=0,
                                                          suffix="")
         query_list += ["AND RELEASE_DATE >= '", after, "'\n"]
 
+    #----------------------------------------------------------------------
     # Insert 'as of' constraint
+    #----------------------------------------------------------------------
     if asof is not None:
         if type(asof) != str:
             asof = julian.ymdhms_format_from_tai(asof, sep="T", digits=0,
                                                        suffix="")
         query_list += ["AND RELEASE_DATE <= '", asof, "'\n"]
 
+    #----------------------------------------------------------------------
     # Return limited or unlimited results
+    #----------------------------------------------------------------------
     if limit:
         query_list += ["ORDER BY RELEASE_DATE DESC\n", "LIMIT 1\n"]
     else:
         query_list += ["ORDER BY RELEASE_DATE ASC\n"]
 
     return "".join(query_list)
+#===============================================================================
 
+
+
+#===============================================================================
+# _query_by_name
+#===============================================================================
 def _query_by_name(names, time=None):
-    """Return a list of KernelInfo objects based on a name (including version).
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of KernelInfo objects based on a name (including version).
 
     Input:
         names       one or more full kernel names, including versions,
@@ -759,11 +1032,16 @@ def _query_by_name(names, time=None):
     Return:         A list of KernelInfo objects describing the files that match
                     the requirements.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Normalize the input
+    #----------------------------------------------------------------------
     if type(names) == str: names = [names]
 
+    #----------------------------------------------------------------------
     # Loop through names...
+    #----------------------------------------------------------------------
     kernel_info = []
 
     for name in names:
@@ -780,9 +1058,17 @@ def _query_by_name(names, time=None):
             kernel_info.append(KernelInfo(row))
 
     return kernel_info
+#===============================================================================
 
+
+
+#===============================================================================
+# _sql_query_by_name
+#===============================================================================
 def _sql_query_by_name(name, time=None):
-    """Generate a query string based on a kernel name.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Generate a query string based on a kernel name.
 
     Input:
         name        a full kernel name including version, optionally indexed by
@@ -797,11 +1083,16 @@ def _sql_query_by_name(name, time=None):
     Return:         A list of KernelInfo objects describing the files that match
                     the requirements.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Begin query
+    #----------------------------------------------------------------------
     query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
 
+    #----------------------------------------------------------------------
     # Extract file_no ranges if necessary
+    #----------------------------------------------------------------------
     if name[-1] == ']':
         ibracket = name.index('[')
         index = name[ibracket+1:-1]
@@ -826,7 +1117,9 @@ def _sql_query_by_name(name, time=None):
     else:
         query_list += ["WHERE FULL_NAME = '", name, "'\n"]
 
+    #----------------------------------------------------------------------
     # Insert start and stop times
+    #----------------------------------------------------------------------
     if time is None: time = (None, None)
 
     (time0, time1) = time
@@ -846,9 +1139,17 @@ def _sql_query_by_name(name, time=None):
     query_list += ["ORDER BY LOAD_PRIORITY ASC, RELEASE_DATE ASC\n"]
 
     return "".join(query_list)
+#===============================================================================
 
+
+
+#===============================================================================
+# _query_by_filespec
+#===============================================================================
 def _query_by_filespec(filespecs, time=None):
-    """Return a list of KernelInfo objects based on a filename or pattern.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of KernelInfo objects based on a filename or pattern.
 
     Input:
         filespec    one file path or match pattern.
@@ -862,21 +1163,30 @@ def _query_by_filespec(filespecs, time=None):
     Return:         A list of KernelInfo objects describing the files that match
                     the pattern.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Normalize the input
+    #----------------------------------------------------------------------
     if type(filespecs) == str: filespecs = [filespecs]
 
+    #----------------------------------------------------------------------
     # Loop through names...
+    #----------------------------------------------------------------------
     kernel_info = []
 
     for filespec in filespecs:
 
+        #- - - - - - - - - - - -- - - - - - - - - -
         # Query the database
+        #- - - - - - - - - - - -- - - - - - - - - -
         sql_string = _sql_query_by_filespec(filespec, time)
 
         table = db.query(sql_string)
 
+        #- - - - - - - - - - - -- - - - - - - - - -
         # If we have nothing, raise an exception
+        #- - - - - - - - - - - -- - - - - - - - - -
         if len(table) == 0:
             if time is not None:        # Maybe it's just out of time range
                 sql_string = _sql_query_by_filespec(filespec)
@@ -889,9 +1199,17 @@ def _query_by_filespec(filespecs, time=None):
             kernel_info.append(KernelInfo(row))
 
     return kernel_info
+#===============================================================================
 
+
+
+#===============================================================================
+# _sql_query_by_filespec
+#===============================================================================
 def _sql_query_by_filespec(filespec, time=None):
-    """Generate a query string based on a kernel name.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Generate a query string based on a kernel name.
 
     Input:
         filespec    one file path or match pattern.
@@ -905,12 +1223,17 @@ def _sql_query_by_filespec(filespec, time=None):
     Return:         A list of KernelInfo objects describing the files that match
                     the requirements.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Begin query
+    #----------------------------------------------------------------------
     query_list  = ["SELECT ", COLUMN_STRING, " FROM SPICEDB\n"]
     query_list += ["WHERE FILESPEC like '%", filespec, "'\n"]
 
+    #----------------------------------------------------------------------
     # Insert start and stop times
+    #----------------------------------------------------------------------
     if time is None: time = (None, None)
 
     (time0, time1) = time
@@ -930,6 +1253,9 @@ def _sql_query_by_filespec(filespec, time=None):
     query_list += ["ORDER BY LOAD_PRIORITY ASC, RELEASE_DATE ASC\n"]
 
     return "".join(query_list)
+#===============================================================================
+
+
 
 ################################################################################
 ################################################################################
@@ -937,36 +1263,59 @@ def _sql_query_by_filespec(filespec, time=None):
 ################################################################################
 ################################################################################
 
+#===============================================================================
+# set_spice_path
+#===============================================================================
 def set_spice_path(spice_path=""):
-    """Define the directory path to the root of the SPICE file directory tree.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define the directory path to the root of the SPICE file directory tree.
 
-    Call with no argument to reset the path to its default value."""
+    Call with no argument to reset the path to its default value.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     global SPICE_PATH
 
     SPICE_PATH = spice_path
+#===============================================================================
 
+
+
+#===============================================================================
+# get_spice_path
+#===============================================================================
 def get_spice_path():
-    """Return the current path to the root of the SPICE file directory tree.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return the current path to the root of the SPICE file directory tree.
 
     If the path is undefined, it uses the value of environment variable
     SPICE_PATH.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global SPICE_PATH
 
     if SPICE_PATH is None:
         SPICE_PATH = os.environ["SPICE_PATH"]
 
     return SPICE_PATH
+#===============================================================================
 
+
+
+#===============================================================================
+# open_db
+#===============================================================================
 def open_db(name=None):
-    """Open the SPICE database given its name or file path.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Open the SPICE database given its name or file path.
 
     If no name is given, the value of the environment variable
     SPICE_SQLITE_DB_NAME is used.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global IS_OPEN, DB_PATH
 
     if IS_OPEN: return
@@ -980,33 +1329,62 @@ def open_db(name=None):
     db.open(name)
     DB_PATH = name
     IS_OPEN = True
+#===============================================================================
 
+
+
+#===============================================================================
+# close_db
+#===============================================================================
 def close_db():
-    """Close the SPICE database."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Close the SPICE database.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global IS_OPEN
 
     if IS_OPEN:
         db.close()
         IS_OPEN = False
+#===============================================================================
 
+
+
+#===============================================================================
+# db_is_open
+#===============================================================================
 def db_is_open():
-    """Return True if SPICE database is currently open."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return True if SPICE database is currently open.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global IS_OPEN
 
     return IS_OPEN
+#===============================================================================
+
+
 
 ################################################################################
 # Filename translator control
 ################################################################################
 
+#===============================================================================
+# set_translator
+#===============================================================================
 def set_translator(func):
-    """Define the translator function."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define the translator function.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global TRANSLATOR, TRANSLATOR_ID
 
+    #----------------------------------------------------------------------
     # Don't worry about a re-definition using the same func
+    #----------------------------------------------------------------------
     if TRANSLATOR_ID == id(func): return
 
     if TRANSLATOR and not DEBUG:
@@ -1018,13 +1396,21 @@ def set_translator(func):
 
     TRANSLATOR = func
     TRANSLATOR_ID = id(func)
+#===============================================================================
+
+
 
 ################################################################################
 # Public API for selecting kernels, returning lists of KernelInfo objects
 ################################################################################
 
+#===============================================================================
+# select_lsk
+#===============================================================================
 def select_lsk(asof=None, after=None, redo=True):
-    """Return a sorted list of leapseconds kernels.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a sorted list of leapseconds kernels.
 
     Input:
         asof        an optional earlier date for which values should be
@@ -1043,16 +1429,29 @@ def select_lsk(asof=None, after=None, redo=True):
 
     Return:         A sorted list of KernelInfo objects.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search the database
+    #----------------------------------------------------------------------
     kernel_list = _query_kernels("LSK", asof=asof, after=after, redo=redo,
                                         limit=True)
 
+    #----------------------------------------------------------------------
     # Load the kernels and return the names
+    #----------------------------------------------------------------------
     return _sort_kernels(kernel_list)
+#===============================================================================
 
+
+
+#===============================================================================
+# select_pck
+#===============================================================================
 def select_pck(bodies=None, name=None, asof=None, after=None, redo=True):
-    """Return a sorted list of PCKs for one or more bodies.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a sorted list of PCKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
@@ -1077,17 +1476,30 @@ def select_pck(bodies=None, name=None, asof=None, after=None, redo=True):
 
     Return:         A sorted list of KernelInfo objects.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = _query_kernels("PCK", name=name, body=bodies,
                                         asof=asof, after=after, redo=redo,
                                         limit=False)
 
+    #----------------------------------------------------------------------
     # Sort the kernels and return
+    #----------------------------------------------------------------------
     return _sort_kernels(kernel_list)
+#===============================================================================
 
+
+
+#===============================================================================
+# select_spk
+#===============================================================================
 def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
-    """Return a sorted list of SPKs for one or more bodies.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a sorted list of SPKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
@@ -1118,12 +1530,17 @@ def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
 
     Return:         A sorted list of KernelInfo objects.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Normalize the input
+    #----------------------------------------------------------------------
     if isinstance(bodies, numbers.Integral):
         bodies = [bodies]
 
+    #----------------------------------------------------------------------
     # Select the kernels
+    #----------------------------------------------------------------------
     spacecraft_only = True
     kernel_list = []
     for body in bodies:
@@ -1132,11 +1549,15 @@ def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
                                              asof=asof, after=after, redo=redo,
                                              limit=False)
 
+    #----------------------------------------------------------------------
     # Remove kernels with overlapping time limits
+    #----------------------------------------------------------------------
     if time is None: time = (None, None)
     kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
 
+    #----------------------------------------------------------------------
     # One DE kernel is always required unless only spacecrafts were selected
+    #----------------------------------------------------------------------
     if (not spacecraft_only) and (name is None) and \
        (kernel_list[-1].load_priority < 200): # kludge
         kernel_list += _query_kernels("SPK", name="DE%", time=time,
@@ -1145,11 +1566,21 @@ def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
 
         kernel_list = _remove_overlaps(kernel_list, time[0], time[1])
 
+    #----------------------------------------------------------------------
     # Return the sorted list
+    #----------------------------------------------------------------------
     return kernel_list
+#===============================================================================
 
+
+
+#===============================================================================
+# select_inst
+#===============================================================================
 def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
-    """Return a sorted list of IKs, FKs and SCLKs for spacecrafts/instruments.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a sorted list of IKs, FKs and SCLKs for spacecrafts/instruments.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
@@ -1176,8 +1607,11 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
 
     Return:         A sorted list of KernelInfo objects.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Normalize inputs
+    #----------------------------------------------------------------------
     if isinstance(ids, numbers.Integral): ids = [ids]
     if type(inst) == str: inst = [inst]
 
@@ -1186,23 +1620,31 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
     elif type(types) == str:
         types = [types]
 
+    #----------------------------------------------------------------------
     # For each spacecraft...
+    #----------------------------------------------------------------------
     kernel_list = []
     for id in ids:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Select the spacecraft clock kernels
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if "SCLK" in types:
             kernel_list += _query_kernels("SCLK", body=id,
                                           asof=asof, after=after, redo=redo,
                                           limit=True)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Select the frames kernels
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if "FK" in types:
             kernel_list += _query_kernels("FK", body=id,
                                           asof=asof, after=after, redo=redo,
                                           limit=False)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Select the instrument kernels
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if "IK" in types:
             if inst is None:
                 kernel_list += _query_kernels("IK", body=id,
@@ -1214,11 +1656,21 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
                                               asof=asof, after=after, redo=redo,
                                               limit=False)
 
+    #----------------------------------------------------------------------
     # Sort the kernels and return
+    #----------------------------------------------------------------------
     return _sort_kernels(kernel_list)
+#===============================================================================
 
+
+
+#===============================================================================
+# select_ck
+#===============================================================================
 def select_ck(ids, name=None, time=None, asof=None, after=None, redo=True):
-    """Return a sorted list of CKs for one or more spacecrafts.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a sorted list of CKs for one or more spacecrafts.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
@@ -1247,26 +1699,43 @@ def select_ck(ids, name=None, time=None, asof=None, after=None, redo=True):
 
     Return:         A sorted list of KernelInfo objects.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Normalize inputs
+    #----------------------------------------------------------------------
     if isinstance(ids, numbers.Integral):
         ids = [ids]
 
+    #----------------------------------------------------------------------
     # For each spacecraft...
+    #----------------------------------------------------------------------
     kernel_list = []
     for id in ids:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Select the C kernels
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         kernel_list += _query_kernels("CK", name=name, time=time,
                                             body=id, asof=asof, after=after,
                                             limit=False)
 
+    #----------------------------------------------------------------------
     # Remove overlapping kernels and sort
+    #----------------------------------------------------------------------
     if time is None: time = ('0001-01-01', '3000-01-01')
     return _remove_overlaps(kernel_list, time[0], time[1])
+#===============================================================================
 
+
+
+#===============================================================================
+# select_by_name
+#===============================================================================
 def select_by_name(names, time=None):
-    """Return a list of kernel objects associated with a list of names.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of kernel objects associated with a list of names.
 
     Input:
         names       a list of kernel names, including version numbers, and
@@ -1277,15 +1746,28 @@ def select_by_name(names, time=None):
                     or as a number of seconds TAI elapsed since January 1, 2000.
                     Use None to load all the matching kernels.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = _query_by_name(names, time)
 
+    #----------------------------------------------------------------------
     # Sort the kernels
+    #----------------------------------------------------------------------
     return _sort_kernels(kernel_list)
+#===============================================================================
 
+
+
+#===============================================================================
+# select_by_filespec
+#===============================================================================
 def select_by_filespec(filespecs, time=None):
-    """Return a list of kernel objects associated with a list of names.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of kernel objects associated with a list of names.
 
     Input:
         names       A list of file specifications or match patterns. The file
@@ -1296,43 +1778,66 @@ def select_by_filespec(filespecs, time=None):
                     or as a number of seconds TAI elapsed since January 1, 2000.
                     Use None to load all the matching kernels.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database, DO NOT sort!
+    #----------------------------------------------------------------------
     return _query_by_filespec(filespecs, time)
+#===============================================================================
+
+
 
 ################################################################################
 # Public API for returning text kernels as dictionaries
 ################################################################################
 
+#===============================================================================
+# as_dict
+#===============================================================================
 def as_dict(kernel_list):
-    """Return a dictionary containing the information in  text kernels.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a dictionary containing the information in  text kernels.
 
     Binary kernels are ignored.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     spice_path = get_spice_path()
 
     clear_dict = True       # clear dictionary on the first pass
     for kernel in kernel_list:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Check for a text kernel
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         ext = os.path.splitext(kernel.filespec)[1].lower()
         if ext[0:2] != ".t": continue
 
         filespec = os.path.join(spice_path, kernel.filespec)
         result = textkernel.from_file(filespec, clear=clear_dict)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # On later passes, don't clear the dictionary
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         clear_dict = False
 
     return result
+#===============================================================================
+
+
 
 ################################################################################
 # Public API for furnishing kernels
 ################################################################################
 
+#===============================================================================
+# furnish_kernels
+#===============================================================================
 def furnish_kernels(kernel_list, fast=True):
-    """Furnish a pre-sorted list of kernels for use by the cspyce module.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish a pre-sorted list of kernels for use by the cspyce module.
 
     Input:
         kernel_list a pre-sorted list of one or more KernelInfo objects
@@ -1345,7 +1850,7 @@ def furnish_kernels(kernel_list, fast=True):
                     kernels loaded. This can be used to re-load the exact same
                     selection of kernels again at a later date.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global DEBUG, ABSPATH_LIST
     global FURNISHED_NAMES, FURNISHED_ABSPATHS, FURNISHED_INFO
     global FURNISHED_FILENOS
@@ -1359,16 +1864,22 @@ def furnish_kernels(kernel_list, fast=True):
 
     spice_path = get_spice_path()
 
+    #----------------------------------------------------------------------
     # For each kernel...
+    #----------------------------------------------------------------------
     for kernel in kernel_list:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Add the full name to the end of the name list
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         name = kernel.full_name
         if name not in name_list:
             name_list.append(name)
             name_types[name] = kernel.kernel_type
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Keep track of file_nos required
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if kernel.file_no is not None:
             if name not in fileno_dict:
                 fileno_dict[name] = []
@@ -1376,7 +1887,9 @@ def furnish_kernels(kernel_list, fast=True):
             if kernel.file_no not in fileno_dict[name]:
                 fileno_dict[name].append(kernel.file_no)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Update the list of files to furnish
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         filepaths = kernel.filespec.split(',')
         abspaths = [os.path.join(spice_path, f) for f in filepaths]
         if TRANSLATOR:
@@ -1390,22 +1903,30 @@ def furnish_kernels(kernel_list, fast=True):
 
         for abspath in abspaths:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Remove the name from earlier in the list if necessary
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if abspath in abspath_list:
                 abspath_list.remove(abspath)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Always add it at the end
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             abspath_list.append(abspath)
             abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Save the info for each furnished file
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             basename = os.path.basename(abspath)
             if basename in FURNISHED_INFO:
                 FURNISHED_INFO[basename].add(kernel)
             else:
                 FURNISHED_INFO[basename] = set([kernel])
 
+    #----------------------------------------------------------------------
     # Furnish the kernel files...
+    #----------------------------------------------------------------------
     if DEBUG:
         ABSPATH_LIST += abspath_list
 
@@ -1413,21 +1934,29 @@ def furnish_kernels(kernel_list, fast=True):
         for abspath in abspath_list:
             furnished_list = FURNISHED_ABSPATHS[abspath_types[abspath]]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # In fast mode, avoid re-furnishing kernels
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             already_furnished = (abspath in furnished_list)
             if fast and already_furnished:
                 continue
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Otherwise, unload the kernel if it was already furnished
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if already_furnished:
                 furnished_list.remove(abspath)
                 cspyce.unload(abspath)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Load the kernel
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             cspyce.furnsh(abspath)
             furnished_list.append(abspath)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Track the kernel names loaded
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         for name in name_list:
             furnished_names = FURNISHED_NAMES[name_types[name]]
 
@@ -1437,12 +1966,16 @@ def furnish_kernels(kernel_list, fast=True):
 
             furnished_names.append(name)
 
+    #----------------------------------------------------------------------
     # Append file number ranges into the names in the list returned
+    #----------------------------------------------------------------------
     for (name,filenos) in fileno_dict.iteritems():
         k = name_list.index(name)
         name_list[k] = name + _fileno_str(filenos)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Track kernels loaded by file_no
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if not DEBUG:
             if name not in FURNISHED_FILENOS:
                 FURNISHED_FILENOS[name] = []
@@ -1456,9 +1989,17 @@ def furnish_kernels(kernel_list, fast=True):
                 fileno_list.append(fileno)
 
     return name_list
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_lsk
+#===============================================================================
 def furnish_lsk(asof=None, after=None, redo=True, fast=True):
-    """Furnish selected leapseconds kernels and return a list of names.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+Furnish selected leapseconds kernels and return a list of names.
 
     Input:
         asof        an optional earlier date for which values should be
@@ -1481,16 +2022,29 @@ def furnish_lsk(asof=None, after=None, redo=True, fast=True):
 
     Return:         A list of kernel names in load order.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search the database
+    #----------------------------------------------------------------------
     kernel_list = select_lsk(asof=asof, after=after, redo=redo)
 
+    #----------------------------------------------------------------------
     # Load the kernels and return the names
+    #----------------------------------------------------------------------
     return furnish_kernels(kernel_list, fast=fast)
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_pck
+#===============================================================================
 def furnish_pck(bodies=None, name=None, asof=None, after=None, redo=True,
                 fast=True):
-    """Furnish selected PCKs for one or more bodies.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish selected PCKs for one or more bodies.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
@@ -1519,17 +2073,30 @@ def furnish_pck(bodies=None, name=None, asof=None, after=None, redo=True,
 
     Return:         A list of kernel names in load order.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = select_pck(bodies=bodies, name=name,
                              asof=asof, after=after, redo=redo)
 
+    #----------------------------------------------------------------------
     # Load the kernels and return the names
+    #----------------------------------------------------------------------
     return furnish_kernels(kernel_list, fast=fast)
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_spk
+#===============================================================================
 def furnish_spk(bodies, name=None, time=None, asof=None, after=None, redo=True,
                 fast=True):
-    """Furnish SPKs for one or more bodies and spacecrafts.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish SPKs for one or more bodies and spacecrafts.
 
     Input:
         bodies      one or more SPICE body IDs; None to load kernels for all
@@ -1564,17 +2131,30 @@ def furnish_spk(bodies, name=None, time=None, asof=None, after=None, redo=True,
 
     Return:         A list of kernel names in load order.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = select_spk(bodies, name=name, time=time, asof=asof,
                              after=after, redo=redo)
 
+    #----------------------------------------------------------------------
     # Furnish the kernels and return the names
+    #----------------------------------------------------------------------
     return furnish_kernels(kernel_list, fast=fast)
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_inst
+#===============================================================================
 def furnish_inst(ids, inst=None, types=None, asof=None, after=None, redo=True,
                       fast=True):
-    """Furnish IKs, FKs and SCLKs for one or more spacecrafts and instruments.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish IKs, FKs and SCLKs for one or more spacecrafts and instruments.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
@@ -1601,16 +2181,29 @@ def furnish_inst(ids, inst=None, types=None, asof=None, after=None, redo=True,
 
     Return:         A list of kernel names in load order.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = select_inst(ids, inst, types, asof, after, redo)
 
+    #----------------------------------------------------------------------
     # Furnish the kernels and return the names
+    #----------------------------------------------------------------------
     return furnish_kernels(kernel_list, fast=fast)
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_ck
+#===============================================================================
 def furnish_ck(ids, name=None, time=None, asof=None, after=None, redo=True,
                     fast=True):
-    """Furnish CKs for one or more spacecrafts.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish CKs for one or more spacecrafts.
 
     Input:
         ids         one or more negative SPICE body IDs for spacecrafts.
@@ -1643,16 +2236,29 @@ def furnish_ck(ids, name=None, time=None, asof=None, after=None, redo=True,
 
     Return:         A list of kernel names in load order.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = select_ck(ids, name=name, time=time,
                             asof=asof, after=after, redo=redo)
 
+    #----------------------------------------------------------------------
     # Furnish the kernels and return the names
+    #----------------------------------------------------------------------
     return furnish_kernels(kernel_list, fast=fast)
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_by_name
+#===============================================================================
 def furnish_by_name(names, time=None, fast=True):
-    """Furnish kernels identified by a list of names.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish kernels identified by a list of names.
 
     Input:
         names       a list of kernel names, including version numbers, and
@@ -1671,15 +2277,28 @@ def furnish_by_name(names, time=None, fast=True):
                     match the input names unless different time limits are
                     applied.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = select_by_name(names, time)
 
+    #----------------------------------------------------------------------
     # Furnish the kernels and return the names
+    #----------------------------------------------------------------------
     return furnish_kernels(kernel_list, fast=fast)
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_by_metafile
+#===============================================================================
 def furnish_by_metafile(metafile, time=None, asof=None):
-    """Furnish kernels identified by the path to a metakernel.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish kernels identified by the path to a metakernel.
 
     Input:
         metafile    a file path to a metafile, or the name of a metafile in
@@ -1700,8 +2319,11 @@ def furnish_by_metafile(metafile, time=None, asof=None):
 
     Return:         A list of kernel names in load order.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_names = []
     if not os.path.exists(metafile):
         spice_path = get_spice_path()
@@ -1718,38 +2340,66 @@ def furnish_by_metafile(metafile, time=None, asof=None):
 
     kernel_list = select_by_filespec(filespecs, time=time)
 
+    #----------------------------------------------------------------------
     # Furnish the kernels and return the names
+    #----------------------------------------------------------------------
     return furnish_kernels(kernel_list, fast=False) + kernel_names
+#===============================================================================
 
+
+
+#===============================================================================
+# furnish_by_filepath
+#===============================================================================
 def furnish_by_filepath(filepath):
-    """Furnish a file by its full file path. This file need not be in the
-    database."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Furnish a file by its full file path. This file need not be in the
+    database.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     kernels = kernels_from_filespec(filepath)
     furnish_kernels(kernels, fast=False)
+#===============================================================================
+
+
 
 ################################################################################
 # Public API for unloading kernels
 ################################################################################
 
+#===============================================================================
+# unload_by_name
+#===============================================================================
 def unload_by_name(names):
-    """Unload kernels based on a list of kernel names."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Unload kernels based on a list of kernel names.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global FURNISHED_ABSPATHS, FURNISHED_NAMES, FURNISHED_INFO
     global FURNISHED_FILENOS
 
+    #----------------------------------------------------------------------
     # Search database
+    #----------------------------------------------------------------------
     kernel_list = _query_by_name(names)
 
+    #----------------------------------------------------------------------
     # Sort the kernels
+    #----------------------------------------------------------------------
     kernel_list = _sort_kernels(kernel_list)
 
+    #----------------------------------------------------------------------
     # For each kernel...
+    #----------------------------------------------------------------------
     spice_path = get_spice_path()
     for kernel in kernel_list:
         key = kernel.kernel_type
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Remove the kernel files from the dictionary and unload from SPICE
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         filespecs = kernel.filespec.split(',')
         abspaths = [os.path.join(spice_path, f) for f in filespecs]
         for abspath in abspaths:
@@ -1758,7 +2408,9 @@ def unload_by_name(names):
                 del FURNISHED_INFO[os.path.basename(abspath)]
                 cspyce.unload(abspath)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Delete the file_no from the list
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         name = kernel.full_name
         if name in FURNISHED_FILENOS:
             fileno_list = FURNISHED_FILENOS[name]
@@ -1767,22 +2419,35 @@ def unload_by_name(names):
 
                 if len(fileno_list) == 0:
                     del FURNISHED_FILENOS[name]
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         # Delete the kernel name from the dictionaries if there a no other files
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if name not in FURNISHED_FILENOS:
             furnished_list = FURNISHED_NAMES[key]
             if name in furnished_list:
                 furnished_list.remove(name)
 
     return
+#===============================================================================
 
+
+
+#===============================================================================
+# unload_by_type
+#===============================================================================
 def unload_by_type(types=None):
-    """Unload all the kernels of one or more specified types."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Unload all the kernels of one or more specified types.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global FURNISHED_ABSPATHS, FURNISHED_NAMES, FURNISHED_INFO
     global FURNISHED_FILENOS, KERNEL_TYPE_SORT_ORDER
 
+    #----------------------------------------------------------------------
     # Normalize input
+    #----------------------------------------------------------------------
     if types is None or types == []:
         types = KERNEL_TYPE_SORT_ORDER
     elif type(types) == str:
@@ -1790,19 +2455,27 @@ def unload_by_type(types=None):
 
     spice_path = get_spice_path()
 
+    #----------------------------------------------------------------------
     # For each selected type...
+    #----------------------------------------------------------------------
     for key in types:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Unload each file from SPICE
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         abspath_list = FURNISHED_ABSPATHS[key]
         for file in abspath_list:
             cspyce.unload(os.path.join(spice_path, file))
             del FURNISHED_INFO[os.path.basename(file)]
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Delete the file list from the dictionary
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         FURNISHED_ABSPATHS[key] = []
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Delete the file_no list if necessary
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         name_list = FURNISHED_NAMES[key]
         for name in name_list:
             if name in FURNISHED_FILENOS:
@@ -1812,11 +2485,20 @@ def unload_by_type(types=None):
         FURNISHED_NAMES[key] = []
 
     return
+#===============================================================================
 
+
+
+#===============================================================================
+# unload_by_filepath
+#===============================================================================
 def unload_by_filepath(filepath):
-    """Unload a file by its full file path. This file need not be in the
-    database."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Unload a file by its full file path. This file need not be in the
+    database.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     kernels = kernels_from_filespec(filepath)
     name = kernels[0].full_name
     ktype = kernels[0].kernel_type
@@ -1832,28 +2514,43 @@ def unload_by_filepath(filepath):
 
     if name in FURNISHED_FILENOS:
         del FURNISHED_FILENOS[name]
+#===============================================================================
+
+
 
 ################################################################################
 # Public API for names of kernels
 ################################################################################
 
+#===============================================================================
+# as_names
+#===============================================================================
 def as_names(kernels):
-    """Return a list of names identifying a list of KernelInfo objects."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of names identifying a list of KernelInfo objects.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     name_list = []
     fileno_dict = {}
 
+    #----------------------------------------------------------------------
     # For each selected type...
+    #----------------------------------------------------------------------
     for kernel in kernels:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Add the name to the end of the list, avoiding duplicates
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         name = kernel.full_name
         if name in name_list:
             name_list.remove(name)
 
         name_list.append(name)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # If the kernel has a file_no, accumulate a list
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         if kernel.file_no is None: continue
 
         if name not in fileno_dict:
@@ -1862,22 +2559,36 @@ def as_names(kernels):
         if kernel.file_no not in fileno_dict[name]:
             fileno_dict[name].append(kernel.file_no)
 
+    #----------------------------------------------------------------------
     # Attach the file_no ranges to the associated kernel names
+    #----------------------------------------------------------------------
     for name in fileno_dict:
         k = name_list.index(name)
         name_list[k] = name + _fileno_str(fileno_dict[name])
 
+    #----------------------------------------------------------------------
     # Return the names
+    #----------------------------------------------------------------------
     return name_list
+#===============================================================================
 
+
+
+#===============================================================================
+# furnished_names
+#===============================================================================
 def furnished_names(types=None):
-    """Return a list of strings containing the names of the furnished kernels.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-
+    Return a list of strings containing the names of the furnished kernels.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global FURNISHED_NAMES, FURNISHED_FILENOS
     global KERNEL_TYPE_SORT_ORDER
 
+    #----------------------------------------------------------------------
     # Normalize input
+    #----------------------------------------------------------------------
     if types is None or types == []:
         types = KERNEL_TYPE_SORT_ORDER
     elif type(types) == str:
@@ -1885,10 +2596,14 @@ def furnished_names(types=None):
 
     name_list = []
 
+    #----------------------------------------------------------------------
     # For each selected type...
+    #----------------------------------------------------------------------
     for key in types:
 
+        #- - - - - - - - - -
         # Walk down list
+        #- - - - - - - - - -
         for name in FURNISHED_NAMES[key]:
             if name in FURNISHED_FILENOS:
                 name_list.append(name + _fileno_str(FURNISHED_FILENOS[name]))
@@ -1896,15 +2611,26 @@ def furnished_names(types=None):
                 name_list.append(name)
 
     return name_list
+#===============================================================================
 
+
+
+#===============================================================================
+# furnished_basenames
+#===============================================================================
 def furnished_basenames(types=None):
-    """Return a list of strings containing the basenames of the furnished
-    kernels."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of strings containing the basenames of the furnished
+    kernels.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global FURNISHED_NAMES, FURNISHED_FILENOS
     global KERNEL_TYPE_SORT_ORDER
 
+    #----------------------------------------------------------------------
     # Normalize input
+    #----------------------------------------------------------------------
     if types is None or types == []:
         types = KERNEL_TYPE_SORT_ORDER
     elif type(types) == str:
@@ -1912,31 +2638,48 @@ def furnished_basenames(types=None):
 
     name_list = []
 
+    #----------------------------------------------------------------------
     # For each selected type...
+    #----------------------------------------------------------------------
     for key in types:
 
+        #- - - - - - - - - -
         # Walk down list
+        #- - - - - - - - - -
         for filespec in FURNISHED_ABSPATHS[key]:
             basename = os.path.basename(filespec)
             name_list.append(basename)
 
     return name_list
+#===============================================================================
 
+
+
+#===============================================================================
+# used_basenames
+#===============================================================================
 def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
                              slop=6*60*60):
-    """Return a list of SPICE file basenames needed for a particular list of
-    bodies and frames at a particular time."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of SPICE file basenames needed for a particular list of
+    bodies and frames at a particular time.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global FURNISHED_NAMES, FURNISHED_FILENOS
     global KERNEL_TYPE_SORT_ORDER
 
+    #----------------------------------------------------------------------
     # Normalize input
+    #----------------------------------------------------------------------
     if types is None or types == []:
         types = KERNEL_TYPE_SORT_ORDER
     elif type(types) == str:
         types = [types]
 
+    #----------------------------------------------------------------------
     # Normalize time
+    #----------------------------------------------------------------------
     if time is not None:
         if isinstance(time, (str,numbers.Real)):
             time = [time, time]
@@ -1948,7 +2691,9 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
             else:
                 time_tai.append(tval)
 
+    #----------------------------------------------------------------------
     # Handle spacecraft and instrument
+    #----------------------------------------------------------------------
     ck_needed = False
     if sc:
         bodies.append(sc)
@@ -1960,12 +2705,16 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
 
     basename_list = []
 
+    #----------------------------------------------------------------------
     # For each selected type...
+    #----------------------------------------------------------------------
     for key in types:
       if key == 'CK' and not ck_needed: continue
       if key == 'IK' and not inst: continue
 
+      #- - - - - - - - - - -
       # Walk down list
+      #- - - - - - - - - - -
       temp_list = []
       for filespec in FURNISHED_ABSPATHS[key]:
         basename = os.path.basename(filespec)
@@ -1992,14 +2741,22 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
       basename_list += temp_list
 
     return basename_list
+#===============================================================================
+
+
 
 ################################################################################
 # DEPRECATED: Special kernel loader for Cassini
 # Deleted 2/22/2020
 ################################################################################
 
+#===============================================================================
+# furnish_cassini_kernels
+#===============================================================================
 def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
-    """A routine designed to load all needed SPICE kernels for a SPICE
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A routine designed to load all needed SPICE kernels for a SPICE
     calculation involving the Cassini spacecraft.
 
     Input:
@@ -2021,34 +2778,52 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
 
     Return:             a list of the names of all the kernels loaded.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     names = []
 
+    #----------------------------------------------------------------------
     # Leapseconds Kernel (LSK)
+    #----------------------------------------------------------------------
     names += furnish_lsk(asof=asof)
 
+    #----------------------------------------------------------------------
     # Instruments and frames
+    #----------------------------------------------------------------------
     names += furnish_inst(-82, instrument, asof=asof)
 
+    #----------------------------------------------------------------------
     # Planetary Constants
+    #----------------------------------------------------------------------
     bodies = [699] + range(601,654) + [65035, 65040, 65041] # plus a few more
     names += furnish_pck(bodies, asof=asof)
 
+    #----------------------------------------------------------------------
     # Ephemerides (SP Kernels)
+    #----------------------------------------------------------------------
     names += furnish_spk(bodies + [-82], time=(start_time,stop_time), asof=asof)
 
+    #----------------------------------------------------------------------
     # C (pointing) Kernels
+    #----------------------------------------------------------------------
     names += furnish_ck(-82, time=(start_time, stop_time), asof=asof)
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Special kernel loader for every planet and moon
 ################################################################################
 
+#===============================================================================
+# furnish_solar_system
+#===============================================================================
 def furnish_solar_system(start_time=None, stop_time=None, asof=None,
                          planets=(1,2,3,4,5,6,7,8,9)):
-    """A routine designed to load all the SPK, FK and planetary constants files
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A routine designed to load all the SPK, FK and planetary constants files
     needed for the planets and moons of the Solar System.
 
     Input:
@@ -2070,7 +2845,7 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
 
     Return:             a list of the names of all the kernels loaded.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     if planets is None or planets == 0:
         planets = (1,2,3,4,5,6,7,8,9)
     if isinstance(planets, numbers.Integral):
@@ -2078,18 +2853,23 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
 
     names = []
 
+    #----------------------------------------------------------------------
     # Leapseconds Kernel (LSK)
+    #----------------------------------------------------------------------
     names += furnish_lsk(asof=asof)
 
+    #----------------------------------------------------------------------
     # Planetary Constants
+    #----------------------------------------------------------------------
 #     bodies = range(1,11) + range(599, 1000, 100) + [399, 301, 401, 402]
 #     bodies += range(501,550) + [55062, 55063]
 #     bodies += range(601,654) + [65035, 65040, 65041]    # plus a few more...
 #     bodies += range(701,728) + range(801,815) + range(901,906)
 
+    #----------------------------------------------------------------------
     # We speed this up by taking advantage of the fact that certain sets of
     # bodies are always grouped together in the kernels
-
+    #----------------------------------------------------------------------
     bodies = [3, 301, 399]
 
     if 4 in planets:
@@ -2112,10 +2892,15 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
 
     names += furnish_pck(bodies, asof=asof)
 
+    #----------------------------------------------------------------------
     # Ephemerides (SP Kernels)
+    #----------------------------------------------------------------------
     names += furnish_spk(bodies, time=(start_time, stop_time), asof=asof)
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 ################################################################################
@@ -2123,12 +2908,18 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
 ################################################################################
 ################################################################################
 
+#*******************************************************************************
+# test_KernelInfo
+#*******************************************************************************
 class test_KernelInfo(unittest.TestCase):
 
   # For reference...
   # ['KERNEL_NAME','KERNEL_VERSION', 'KERNEL_TYPE', 'FILESPEC',
   #  'START_TIME', 'STOP_TIME', 'RELEASE_DATE', 'SPICE_ID', 'LOAD_PRIORITY']
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
     # Sort based on kernel type
@@ -2168,7 +2959,9 @@ class test_KernelInfo(unittest.TestCase):
     kernels.sort()
     self.assertEqual(kernels, [lsk, lsk2, sclk, fk, ik, spk, ck])
 
+    #----------------------------------------------------------------------
     # Sort based on load priority
+    #----------------------------------------------------------------------
     spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 1])
     spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 2])
     spk3 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 3])
@@ -2180,7 +2973,9 @@ class test_KernelInfo(unittest.TestCase):
     kernels.sort()
     self.assertEqual(kernels, [spk1, spk2, spk3, spk4, spk5, spk6])
 
+    #----------------------------------------------------------------------
     # Sort including release dates
+    #----------------------------------------------------------------------
     lsk1 = KernelInfo(['LSK', '1', 'LSK', 'file', T0, T1, T9, 0, 9])
     spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T0, 0, 9])
     spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T2, 0, 2])
@@ -2188,12 +2983,16 @@ class test_KernelInfo(unittest.TestCase):
     spk4 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T4, 0, 4])
     spk5 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T1, T5, 0, 5])
 
+    #----------------------------------------------------------------------
     # note--spk0 has the highest load priority
+    #----------------------------------------------------------------------
     kernels = [spk0, spk5, spk4, spk3, spk2, lsk1]
     kernels.sort()
     self.assertEqual(kernels, [lsk1, spk2, spk3, spk4, spk5, spk0])
 
+    #----------------------------------------------------------------------
     # Sort by name and version
+    #----------------------------------------------------------------------
     spk0 = KernelInfo(['AA', '1', 'SPK', 'file', T0, T1, T9, 0, 1])
     spk1 = KernelInfo(['AA', '2', 'SPK', 'file', T0, T1, T9, 0, 1])
     spk2 = KernelInfo(['AA', '3', 'SPK', 'file', T0, T1, T9, 0, 1])
@@ -2205,7 +3004,9 @@ class test_KernelInfo(unittest.TestCase):
     kernels.sort()
     self.assertEqual(kernels, [spk0, spk1, spk2, spk3, spk4, spk5])
 
+    #----------------------------------------------------------------------
     # Sort by time ranges
+    #----------------------------------------------------------------------
     spk0 = KernelInfo(['SPK', '1', 'SPK', 'file', T4, T7, T9, 0, 1])
     spk1 = KernelInfo(['SPK', '1', 'SPK', 'file', T6, T7, T9, 0, 1])
     spk2 = KernelInfo(['SPK', '1', 'SPK', 'file', T0, T4, T9, 0, 1])
@@ -2217,7 +3018,9 @@ class test_KernelInfo(unittest.TestCase):
     kernels.sort()
     self.assertEqual(kernels, [spk5, spk4, spk3, spk2, spk1, spk0])
 
+    #----------------------------------------------------------------------
     # Sort by file name
+    #----------------------------------------------------------------------
     spk0 = KernelInfo(['SPK', '1', 'SPK', 'file0', T0, T9, T9, 0, 1])
     spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 0, 1])
     spk2 = KernelInfo(['SPK', '1', 'SPK', 'file2', T0, T9, T9, 0, 1])
@@ -2229,7 +3032,9 @@ class test_KernelInfo(unittest.TestCase):
     kernels.sort()
     self.assertEqual(kernels, [spk3, spk0, spk1, spk2, spk4, spk5])
 
+    #----------------------------------------------------------------------
     # Sort by body ID
+    #----------------------------------------------------------------------
     spk0 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 0, 1])
     spk1 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 1, 1])
     spk2 = KernelInfo(['SPK', '1', 'SPK', 'file1', T0, T9, T9, 2, 1])
@@ -2241,7 +3046,9 @@ class test_KernelInfo(unittest.TestCase):
     kernels.sort()
     self.assertEqual(kernels, [spk3, spk4, spk5, spk0, spk1, spk2])
 
+    #----------------------------------------------------------------------
     # Test full names
+    #----------------------------------------------------------------------
     spk = KernelInfo(['VG1-JUP', '+230', 'SPK', 'file', T0, T1, T2, 0, 1])
     self.assertEqual(spk.full_name, 'VG1-JUP230')
 
@@ -2250,13 +3057,23 @@ class test_KernelInfo(unittest.TestCase):
 
     spk = KernelInfo(['VG1-JUP230', None, 'SPK', 'file', T0, T1, T2, 0, 1])
     self.assertEqual(spk.full_name, 'VG1-JUP230')
+#===============================================================================
+
+
+#*******************************************************************************
 
 ################################################################################
 # UNIT TESTS for queries
 ################################################################################
 
+#*******************************************************************************
+# test_spicedb
+#*******************************************************************************
 class test_spicedb(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
     global DEBUG, ABSPATH_LIST
@@ -2265,24 +3082,32 @@ class test_spicedb(unittest.TestCase):
     # _sort_kernels()
     ############################################################################
 
+    #----------------------------------------------------------------------
     # Leapseconds should always come first
+    #----------------------------------------------------------------------
     lsk0 = KernelInfo(['LEAPSECONDS', '1', 'LSK', 'File0.tls',
                        '2000-01-01', '2000-01-02', '2000-01-03', None, 100])
 
+    #----------------------------------------------------------------------
     # Spacecraft clock should always come second
     # These kernels are ordered alphabetically
+    #----------------------------------------------------------------------
     sclk0 = KernelInfo(['SCLK82', '1', 'SCLK', 'sclk-82.tsc',
                         '2000-01-01', '2000-01-02', '2003-01-03', -82, 100])
 
     sclk1 = KernelInfo(['SCLK99', '1', 'SCLK', 'sclk-99.tsc',
                         '2000-01-01', '2000-01-02', '2003-01-03', -99, 100])
 
+    #----------------------------------------------------------------------
     # CKs come next alphabetically
     # Lowest load priority comes first, even with later release date
+    #----------------------------------------------------------------------
     ck0 = KernelInfo(['CK-PREDICTED', '1', 'CK', 'File2.ck',
                       '2001-01-01', '2099-01-01', '2005-01-01', -82, 50])
 
+    #----------------------------------------------------------------------
     # Others are loaded in order of increasing end date
+    #----------------------------------------------------------------------
     ck1 = KernelInfo(['CK-RECONSTRUCTED', '1', 'CK', 'File3.ck',
                       '2001-01-01', '2002-01-01', '2003-01-01', -82, 100])
 
@@ -2294,15 +3119,20 @@ class test_spicedb(unittest.TestCase):
     sorted = [lsk0, sclk0, sclk1, ck0, ck1, ck2]
     self.assertEqual(_sort_kernels(random), sorted)
 
+    #----------------------------------------------------------------------
     # Frame and PC kernels
     # Ordered by priority, release date, version; with duplicates removed
+    #----------------------------------------------------------------------
     fk1 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5a.fk',
                       None, None, '2004-01-01', 1, 100])
     fk2 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5b.fk',
                       None, None, '2004-01-01', 2, 100])
     fk3 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5c.fk',
                       None, None, '2004-01-01', 3, 100])
+
+    #----------------------------------------------------------------------
     # later release date, but only body 1
+    #----------------------------------------------------------------------
     fk4 = KernelInfo(['FRAMES', 'BBBB', 'FK', 'File6a.fk',
                       None, None, '2005-01-01', 1, 100])
 
@@ -2310,7 +3140,9 @@ class test_spicedb(unittest.TestCase):
     sorted = [fk2, fk3, fk4]
     self.assertEqual(_sort_kernels(random), sorted)
 
+    #----------------------------------------------------------------------
     # three bodies in one file
+    #----------------------------------------------------------------------
     fk1 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
                       None, None, '2004-01-01', 1, 100])
     fk2 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
@@ -2318,7 +3150,9 @@ class test_spicedb(unittest.TestCase):
     fk3 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
                       None, None, '2004-01-01', 3, 100])
 
+    #----------------------------------------------------------------------
     # later release date, but only body 1
+    #----------------------------------------------------------------------
     fk4 = KernelInfo(['FRAMES', 'BBBB', 'FK', 'File6a.fk',
                      None, None, '2005-01-01', 1, 100])
 
@@ -2326,14 +3160,19 @@ class test_spicedb(unittest.TestCase):
     sorted = [fk3, fk4]
     self.assertEqual(_sort_kernels(random), sorted)
 
+    #----------------------------------------------------------------------
     # higher load priority
+    #----------------------------------------------------------------------
     fk1 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
                       None, None, '2004-01-01', 1, 150])
     fk2 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
                       None, None, '2004-01-01', 2, 150])
     fk3 = KernelInfo(['FRAMES', 'CCCC', 'FK', 'File5.fk',
                       None, None, '2004-01-01', 3, 150])
+
+    #----------------------------------------------------------------------
     # later release date, but only body 1
+    #----------------------------------------------------------------------
     fk4 = KernelInfo(['FRAMES', 'BBBB', 'FK', 'File6a.fk',
                       None, None, '2005-01-01', 1, 100])
 
@@ -2341,12 +3180,16 @@ class test_spicedb(unittest.TestCase):
     sorted = [fk3]
     self.assertEqual(_sort_kernels(random), sorted)
 
+    #----------------------------------------------------------------------
     # SP Kernels
     # A low-priority predict kernel comes first
+    #----------------------------------------------------------------------
     spk1 = KernelInfo(['SPK_PREDICTED', '1', 'SPK', 'predict.spk',
                  '2000-01-02', '2020-12-31', '2003-01-03', -82, 50])
 
+    #----------------------------------------------------------------------
     # These are duplicates and all but the last will be skipped
+    #----------------------------------------------------------------------
     spk2 = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
                  '2002-01-01', '2005-01-01', '2003-01-03', -82, 100])
 
@@ -2365,7 +3208,9 @@ class test_spicedb(unittest.TestCase):
     spk2e = KernelInfo(['SPK-RECONSTRUCTED', '1', 'SPK', 'recon.spk',
                   '2002-01-01', '2005-01-01', '2003-01-03', 699, 100])
 
+    #----------------------------------------------------------------------
     # Another SPK, duplicated for three moons, alphabetically earlier
+    #----------------------------------------------------------------------
     spk3 = KernelInfo(['SAT123','1',  'SPK', 'sat123.spk',
                  '1950-01-01', '2050-01-02', '2003-01-03', 619, 100])
 
@@ -2379,7 +3224,9 @@ class test_spicedb(unittest.TestCase):
     sorted = [spk1, spk3b, spk2e]
     self.assertEqual(_sort_kernels(random), sorted)
 
+    #----------------------------------------------------------------------
     # Put them all together in a random order
+    #----------------------------------------------------------------------
     random = [spk3, ck2, fk3, spk2d, ck0, spk2a, spk2b, fk1, fk2, spk2c, ck1,
               lsk0, spk2e, sclk1, sclk0, spk1, fk4, spk2, spk3b, spk3a]
     sorted = [lsk0, sclk0, sclk1, fk3, spk1, spk3b, spk2e, ck0, ck1, ck2]
@@ -2514,7 +3361,9 @@ class test_spicedb(unittest.TestCase):
         kernels = _query_kernels('PCK', body=(1,2,3), asof='2014')
         self.assertEqual(kernels[0].full_name, 'NAIF-PCK-00010')
 
+        #----------------------------------------------------------------------
         # Cassini CK tests
+        #----------------------------------------------------------------------
         kernels = _query_kernels('CK', body=-82, asof='2014',
                                         time=('2008-01-01','2008-02-01'),
                                         limit=False)
@@ -2528,7 +3377,9 @@ class test_spicedb(unittest.TestCase):
         self.assertTrue(kernels[ 0].filespec.endswith('07362_08002ra.bc'))
         self.assertTrue(kernels[-1].filespec.endswith('08022_08047pg_live.bc'))
 
+        #----------------------------------------------------------------------
         # Cassini SPK tests
+        #----------------------------------------------------------------------
         kernels = _query_kernels('SPK', body=-82, asof='2014',
                                         time=('2008-01-01','2009-01-01'),
                                         limit=False)
@@ -3243,15 +4094,19 @@ class test_spicedb(unittest.TestCase):
 
         DEBUG = True
 
+        #----------------------------------------------------------------------
         # Function to translate Cassini SPKs, adding "_testing" before suffix
         # and replacing the leading directory path with 'my_testing/'
+        #----------------------------------------------------------------------
         def translator(filepath):
           if filepath.endswith('.bsp') and 'RECONSTRUCTED' in filepath.upper():
             lpref = len(get_spice_path())
             return 'my_testing/' + filepath[lpref:-4] + '_testing.bsp'
           return filepath
 
+        #----------------------------------------------------------------------
         # Translator will not affect solar system kernels
+        #----------------------------------------------------------------------
         ABSPATH_LIST = []
         kernels1 = furnish_solar_system('2000-01-01', '2020-01-01',
                                         asof='2014-03-10')
@@ -3268,7 +4123,9 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(kernels1, kernels2)
         self.assertEqual(abspaths1, abspaths2)
 
+        #----------------------------------------------------------------------
         # Translator will change Cassini SPKs
+        #----------------------------------------------------------------------
         set_translator(None)
         ABSPATH_LIST = []
         kernels1 = furnish_cassini_kernels('2010-01-01', '2010-04-01',
@@ -3301,13 +4158,17 @@ class test_spicedb(unittest.TestCase):
 
         self.assertTrue(len(translated) == len(originals))
 
+        #----------------------------------------------------------------------
         # Function to replace all files "*.bc" with a blank string
+        #----------------------------------------------------------------------
         def translator2(filepath):
             if filepath.endswith('.bc') :
                 return ''
             return filepath
 
+        #----------------------------------------------------------------------
         # Translator will eliminate all C kernels from list
+        #----------------------------------------------------------------------
         set_translator(translator2)
         ABSPATH_LIST = []
         kernels2 = furnish_cassini_kernels('2010-01-01', '2010-04-01',
@@ -3330,6 +4191,11 @@ class test_spicedb(unittest.TestCase):
 
         DEBUG = False
         close_db()
+  #=============================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # Execute from command line...

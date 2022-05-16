@@ -15,6 +15,9 @@ from .matrix  import Matrix
 from .matrix3 import Matrix3
 from .units   import Units
 
+#*******************************************************************************
+# Quaternion class
+#*******************************************************************************
 class Quaternion(Vector):
     """A PolyMath subclass containing quaternions and supporting conversions
     between quaternion, rotation matrices and sets of Euler angles."""
@@ -719,6 +722,9 @@ class Quaternion(Vector):
 
         m = Matrix3.from_euler(ai, aj, ak, axes)
         return Quaternion.from_matrixs(m)
+#*******************************************************************************
+
+
 
 # Useful class constants
 

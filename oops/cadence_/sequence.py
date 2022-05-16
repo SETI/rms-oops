@@ -6,14 +6,24 @@ import numpy as np
 from polymath import *
 from oops.cadence_.cadence import Cadence
 
+#*******************************************************************************
+# Sequence
+#*******************************************************************************
 class Sequence(Cadence):
-    """Sequence is a Cadence subclass in which time steps are defined by a list.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-
+    Sequence is a Cadence subclass in which time steps are defined by a list.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['times', 'texp']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, times, texp):
-        """Constructor for a Sequence.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Constructor for a Sequence.
 
         Input:
             times       a list or 1-D array of times in seconds TDB.
@@ -31,12 +41,14 @@ class Sequence(Cadence):
                               time step; the number of time steps is
                               len(times)-1 rather than len(times).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.tlist = Scalar(times)
         assert len(self.tlist.shape) == 1
         texp = Scalar(texp)
 
+	#-------------------------------------------------------------
         # Used for the inverse conversion; filled in only if needed
+	#-------------------------------------------------------------
         self.padded_indices = None
         self.padded_tlist = None
 
@@ -61,9 +73,17 @@ class Sequence(Cadence):
         self.shape = (self.steps,)
 
         return
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_at_tstep
+    #===========================================================================
     def time_at_tstep(self, tstep, mask=True):
-        """Return the time(s) associated with the given time step(s).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Return the time(s) associated with the given time step(s).
         
         This method supports non-integer step values.
 
@@ -73,7 +93,7 @@ class Sequence(Cadence):
 
         Return:         a Scalar of times in seconds TDB.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         tstep = Scalar.as_scalar(tstep)
         tstep_int = tstep.int().clip(0,self.steps-1,False)
 
@@ -84,9 +104,17 @@ class Sequence(Cadence):
             time = time.mask_where((tstep < 0) | (tstep > self.steps))
 
         return time
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_range_at_tstep
+    #===========================================================================
     def time_range_at_tstep(self, tstep, mask=True):
-        """Return the range of time(s) for the given integer time step(s).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Return the range of time(s) for the given integer time step(s).
 
         Input:
             indices     a Scalar time step index or a Pair of indices.
@@ -97,7 +125,7 @@ class Sequence(Cadence):
                         index. It is given in seconds TDB.
             time_max    a Scalar defining the maximum time value.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         tstep = Scalar.as_int(tstep)
         tstep_clipped = tstep.clip(0,self.steps-1,False)
         time_min = Scalar(self.tlist[tstep_clipped]) # , tstep.mask) XXX
@@ -109,9 +137,17 @@ class Sequence(Cadence):
             time_max = time_max.mask_where(is_outside)
 
         return (time_min, time_max)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # tstep_at_time
+    #===========================================================================
     def tstep_at_time(self, time, mask=True):
-        """Return the time step(s) for given time(s).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Return the time step(s) for given time(s).
 
         This method supports non-integer time values.
 
@@ -121,8 +157,11 @@ class Sequence(Cadence):
 
         Return:         a Scalar or Pair of time step indices.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+	#-------------------------------------------------
         # Fill in the internals if they are still empty
+	#-------------------------------------------------
         if self.padded_indices is None:
             self.padded_indices = np.arange(self.steps+1)
         if self.padded_tlist is None:
@@ -146,9 +185,17 @@ class Sequence(Cadence):
             tstep = tstep.mask_where((time < self.time[0]) | (time > self.time[1]))
 
         return tstep
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_is_inside
+    #===========================================================================
     def time_is_inside(self, time, inclusive=True):
-        """Return which time(s) fall inside the cadence.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
@@ -159,8 +206,11 @@ class Sequence(Cadence):
                         sampled by the cadence. A masked time results in a
                         value of False, not a masked Boolean.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+	#--------------------------------------------------
         # Fill in the internals if they are still empty
+	#--------------------------------------------------
         if self.padded_indices is None:
             self.padded_indices = np.arange(self.steps+1)
         if self.padded_tlist is None:
@@ -179,28 +229,44 @@ class Sequence(Cadence):
         else:
             return ((time_frac >= 0) &
                     (time_frac <  self.texp[tstep_int]))
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_shift
+    #===========================================================================
     def time_shift(self, secs):
-        """Return a duplicate with all times shifted by given amount."
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Return a duplicate with all times shifted by given amount."
 
         Input:
             secs        the number of seconds to shift the time later.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         result = Sequence(self.tlist + secs, self.texp)
 
         result.padded_indices = self.padded_indices
         result.padded_tlist = None
 
         return result
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_continuous
+    #===========================================================================
     def as_continuous(self):
-        """Return a shallow copy forced to be continuous.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Return a shallow copy forced to be continuous.
         
         For Sequence this is accomplished by forcing the exposure times to
         be equal to the stride for each step.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.is_continuous: return self
 
         texp = np.empty(self.tlist.shape)
@@ -210,6 +276,11 @@ class Sequence(Cadence):
         result = Sequence(self.tlist, texp)
         result.is_continuous = True
         return result
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
@@ -217,14 +288,22 @@ class Sequence(Cadence):
 
 import unittest
 
+#*******************************************************************************
+# Test_Sequence
+#*******************************************************************************
 class Test_Sequence(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         import numpy.random as random
         
+	#-------------------------------------------------------------------
         # These are the tests for subclass Metronome. We define the Sequence so
         # that behavior should be identical, except in the out-of-bound cases
+	#-------------------------------------------------------------------
 
         ####################################
         # Continuous case
@@ -235,7 +314,9 @@ class Test_Sequence(unittest.TestCase):
         cadence = Sequence([100.,110.,120.,130.,140.], 0.)
         self.assertTrue(cadence.is_continuous)
 
+	#-------------------
         # time_at_tstep()
+	#-------------------
         self.assertEqual(cadence.time_at_tstep(0), 100.)
         self.assertEqual(cadence.time_at_tstep(0, mask=False), 100.)
         self.assertEqual(cadence.time_at_tstep(1), 110.)
@@ -266,7 +347,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(Boolean(test.mask) ==
                         [[True,False],[False,False],[True,True]])
 
+	#----------------------
         # time_is_inside()
+	#----------------------
         time  = ([99,100],[120,140],[145,150])
         self.assertTrue(Boolean(cadence.time_is_inside(time)) ==
                         [[False,True],[True,True],[False,False]])
@@ -276,7 +359,9 @@ class Test_Sequence(unittest.TestCase):
                                                        [False,True,False])),
                          [True,False,True])
 
+	#-------------------
         # tstep_at_time()
+	#-------------------
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
         self.assertEqual(cadence.tstep_at_time(100., mask=False), 0.)
         self.assertEqual(cadence.tstep_at_time(105.), 0.5)
@@ -291,7 +376,9 @@ class Test_Sequence(unittest.TestCase):
                                             [False,True,False])).mask),
                          [False,True,False])
 
+	#----------------------------------------------
         # Conversion and back (and tstride_at_tstep)
+	#----------------------------------------------
         random.seed(0)
         tstep = Scalar(4*random.rand(100,100))
         time = cadence.time_at_tstep(tstep, mask=False)
@@ -328,7 +415,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(Boolean(test.mask) == mask2)
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
         
+	#--------------------------
         # time_range_at_tstep()
+	#--------------------------
         self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
                                             [False,True,False]))[0].mask),
                          [False,True,False])
@@ -357,7 +446,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
         
+	#-------------------
         # time_shift()
+	#-------------------
         shifted = cadence.time_shift(1.)
         time_shifted = shifted.time_at_tstep(tstep, mask=False)
 
@@ -374,7 +465,9 @@ class Test_Sequence(unittest.TestCase):
         cadence = Sequence([100.,110.,120.,130.], texp)
         self.assertFalse(cadence.is_continuous)
 
+	#---------------------
         # time_at_tstep()
+	#---------------------
         self.assertEqual(cadence.time_at_tstep(0), 100.)
         self.assertEqual(cadence.time_at_tstep(0, mask=False), 100.)
         self.assertEqual(cadence.time_at_tstep(1), 110.)
@@ -387,9 +480,12 @@ class Test_Sequence(unittest.TestCase):
         self.assertEqual(cadence.time_at_tstep(0.5, mask=False), 104.)
         self.assertEqual(cadence.time_at_tstep(3.5), 134.)
         self.assertEqual(cadence.time_at_tstep(3.5, mask=False), 134.)
+
+    	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # These cases are different than Metronome because we don't have a
         # regular stride to rely on - the last entry is texp long instead
         # of tstride
+    	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.assertEqual(cadence.time_at_tstep(-0.5, mask=False), 96.) # out of range
         self.assertEqual(cadence.time_at_tstep(4.5, mask=False), 142.) # out of range
         self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
@@ -408,7 +504,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(Boolean(test.mask) ==
                         [[True,False],[False,False],[True,True]])
 
+	#--------------------
         # time_is_inside()
+	#--------------------
         time  = ([99,100],[120,138],[145,150])
         self.assertTrue(Boolean(cadence.time_is_inside(time)) ==
                         [[False,True],[True,True],[False,False]])
@@ -418,7 +516,9 @@ class Test_Sequence(unittest.TestCase):
                                                        [False,True,False])),
                          [True,False,True])
 
+	#--------------------
         # tstep_at_time()
+	#--------------------
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
         self.assertEqual(cadence.tstep_at_time(100., mask=False), 0.)
         self.assertEqual(cadence.tstep_at_time(105.), 0.625)
@@ -435,7 +535,9 @@ class Test_Sequence(unittest.TestCase):
                                             [False,True,False])).mask),
                          [False,True,False])
 
+	#-----------------------------------------------
         # Conversion and back (and tstride_at_tstep)
+	#-----------------------------------------------
         random.seed(0)
         tstep = Scalar(4*random.rand(100,100))
         time = cadence.time_at_tstep(tstep, mask=False)
@@ -460,8 +562,10 @@ class Test_Sequence(unittest.TestCase):
                              10.).mvals < 1.e-13).all())
         self.assertTrue(Boolean(cadence.tstride_at_tstep(tstep).mask) == mask1)
         
+	#-------------------------------------------------------------------
         # We can't recompute "time" for the discontinuous case because not
         # all times are valid
+	#-------------------------------------------------------------------
         tstep = cadence.tstep_at_time(time, mask=False)
         test = cadence.time_at_tstep(tstep, mask=False)
         self.assertTrue((abs(time - test) < 1.e-14).all())
@@ -474,7 +578,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(Boolean(test.mask) == mask2)
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
 
+	#---------------------------
         # time_range_at_tstep()
+	#---------------------------
         self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
                                             [False,True,False]))[0].mask),
                          [False,True,False])
@@ -503,7 +609,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
         
+	#-----------------
         # time_shift()
+	#-----------------
         shifted = cadence.time_shift(1.)
         time_shifted = shifted.time_at_tstep(tstep, mask=False)
 
@@ -517,7 +625,9 @@ class Test_Sequence(unittest.TestCase):
         cadence = cadence.as_continuous()
         self.assertTrue(cadence.is_continuous)
 
+	#---------------------
         # time_at_tstep()
+	#---------------------
         self.assertEqual(cadence.time_at_tstep(0), 100.)
         self.assertEqual(cadence.time_at_tstep(1), 110.)
         self.assertEqual(cadence.time_at_tstep(4), 138.)
@@ -550,6 +660,11 @@ class Test_Sequence(unittest.TestCase):
         self.assertEqual(cadence.time_at_tstep(0.5), 105.)
         self.assertEqual(cadence.time_at_tstep(4./3.), 115.)
         self.assertEqual(cadence.time_at_tstep(2.4), 127.)
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

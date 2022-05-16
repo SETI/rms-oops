@@ -8,10 +8,16 @@ import oops.inst.cassini.vims as cassini_vims
 PRINT = True
 DISPLAY = True
 
+#===============================================================================
+# show_info
+#===============================================================================
 def show_info(title, array):
-    """Internal method to print(summary information and display images as)
-        desired."""
-    
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Internal method to print(summary information and display images as)
+    desired.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global PRINT, DISPLAY
     if not PRINT: return
     
@@ -43,10 +49,14 @@ def show_info(title, array):
     
     elif isinstance(array, oops.Array):
         if np.any(array.mask):
-            print("    ", (np.min(array.vals), end='')
-                           np.max(array.vals)), "(unmasked min, max)"
-            print("    ", (array.min(), end='')
-                           array.max()), "(masked min, max)"
+            print("    ", np.min(array.vals), end='')
+            print(        np.max(array.vals), "(unmasked min, max)")
+            print("    ", array.min(), end='')
+            print(        array.max(), "(masked min, max)")
+#            print("    ", (np.min(array.vals), end='')
+#                           np.max(array.vals)), "(unmasked min, max)"
+#            print("    ", (array.min(), end='')
+#                           array.max()), "(masked min, max)"
             masked = np.sum(array.mask)
             total = np.size(array.mask)
             percent = int(masked / float(total) * 100. + 0.5)
@@ -77,9 +87,17 @@ def show_info(title, array):
     
     else:
         print("    ", array)
+#===============================================================================
 
+
+
+#===============================================================================
+# vims_test_suite
+#===============================================================================
 def vims_test_suite(filespec, derivs, info, display):
-    """Master test suite for a Cassini VIMS image.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Master test suite for a Cassini VIMS image.
         
         Input:
         filespec    file path and name to a Cassini VIMS image file.
@@ -89,42 +107,56 @@ def vims_test_suite(filespec, derivs, info, display):
         info        True to print(out geometry information as it progresses.)
         display     True to display each backplane using Pylab, and pause until
         the user hits RETURN.
-        """
-    
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global PRINT, DISPLAY
     PRINT = info
     DISPLAY = display
     
+    #---------------------------------------
     # Define the bodies we care about
+    #---------------------------------------
     ring_body = oops.registry.body_lookup("SATURN_MAIN_RINGS")
     saturn_body = oops.registry.body_lookup("SATURN")
     sun_body = oops.registry.body_lookup("SUN")
     
+    #-----------------------------------
     # Create the pushbroom objects
+    #-----------------------------------
     pushbrooms = cassini_vims.from_file(filespec)
     
+    #------------------------------------------------------
     # Create the pusbroom event for the visual image
     # ... with a grid point at the middle of each pixel
+    #------------------------------------------------------
     fov_shape = pushbrooms[0].fov.uv_shape
     
     uv_pair = oops.Pair.cross_scalars(np.arange(fov_shape.vals[0]) + 0.5,
                                       np.arange(fov_shape.vals[1]) + 0.5)
     
-    los = pushbrooms[0].fov.los_from_uv(uv_pair, derivs=derivs)
+    #--------------------------------------------------------------------------
     # los.d_duv is now the [3,2] MatrixN of derivatives dlos/d(u,v), where los
-    # is in the frame of the Cassini camera.
+    # is in the frame of the Cassini camera....
+    #--------------------------------------------------------------------------
+    los = pushbrooms[0].fov.los_from_uv(uv_pair, derivs=derivs)
     
+    #--------------------------------------------------------------------------
     # This line swaps the image for proper display using pylab.imshow().
     # Also change sign for incoming photons, and for subfield "d_duv".
+    #--------------------------------------------------------------------------
     arrivals = -los.swapaxes(0,1)
     
+    #--------------------------------------------------------------------------
     # Define the event as a 1024x1024 array of simultaneous photon arrivals
     # coming from slightly different directions
+    #--------------------------------------------------------------------------
     pushbroom_event = oops.Event(pushbrooms[0].midtime, (0.,0.,0.), (0.,0.,0.),
                                  pushbrooms[0].path_id, pushbrooms[0].frame_id,
                                  arr=arrivals)
     
+    #----------------------------------------------------
     # For single-point calculations about the geometry
+    #----------------------------------------------------
     point_event = oops.Event(pushbrooms[0].midtime, (0.,0.,0.), (0.,0.,0.),
                              pushbrooms[0].path_id, pushbrooms[0].frame_id)
     
@@ -143,11 +175,15 @@ def vims_test_suite(filespec, derivs, info, display):
     # Sub-observer ring geometry
     ############################################
     
+    #--------------------------------------------------------------------------
     # Define the apparent location of the observer relative to Saturn ring frame
+    #--------------------------------------------------------------------------
     ring_center_event = ring_body.path.photon_to_event(point_event)
     ring_center_event = ring_center_event.wrt_frame(ring_body.frame_id)
     
+    #-------------------------------------------------
     # Event separation in ring surface coordinates
+    #-------------------------------------------------
     obs_wrt_ring_center = oops.Edelta.sub_events(point_event,
                                                  ring_center_event)
     
@@ -173,11 +209,15 @@ def vims_test_suite(filespec, derivs, info, display):
     # Sub-solar ring geometry
     ############################################
     
+    #----------------------------------------------------------------------
     # Define the apparent location of the Sun relative to the ring frame
+    #----------------------------------------------------------------------
     sun_center_event = sun_body.path.photon_to_event(ring_center_event)
     sun_center_event = sun_center_event.wrt_frame(ring_body.frame_id)
     
+    #-------------------------------------------------
     # Event separation in ring surface coordinates
+    #-------------------------------------------------
     sun_wrt_ring_center = oops.Edelta.sub_events(sun_center_event,
                                                  ring_center_event)
     
@@ -202,11 +242,15 @@ def vims_test_suite(filespec, derivs, info, display):
     # Sub-observer Saturn geometry
     ############################################
     
+    #--------------------------------------------------------------------------
     # Define the apparent location of the observer relative to Saturn frame
+    #--------------------------------------------------------------------------
     saturn_center_event = saturn_body.path.photon_to_event(point_event)
     saturn_center_event = saturn_center_event.wrt_frame(saturn_body.frame_id)
     
+    #----------------------------------------------------
     # Event separation in Saturn surface coordinates
+    #----------------------------------------------------
     obs_wrt_saturn_center = oops.Edelta.sub_events(point_event,
                                                    saturn_center_event)
     
@@ -237,11 +281,15 @@ def vims_test_suite(filespec, derivs, info, display):
     # Sub-solar Saturn geometry
     ############################################
     
+    #--------------------------------------------------------------------------
     # Define the apparent location of the Sun relative to the Saturn frame
+    #--------------------------------------------------------------------------
     sun_center_event = sun_body.path.photon_to_event(saturn_center_event)
     sun_center_event = sun_center_event.wrt_frame(saturn_body.frame_id)
     
+    #---------------------------------------------------
     # Event separation in Saturn surface coordinates
+    #---------------------------------------------------
     sun_wrt_saturn_center = oops.Edelta.sub_events(sun_center_event,
                                                    saturn_center_event)
     
@@ -270,7 +318,9 @@ def vims_test_suite(filespec, derivs, info, display):
     # Ring intercept points in pushbroom
     ############################################
     
+    #------------------------------------
     # Find the ring intercept events
+    #------------------------------------
     ring_event_w_derivs = ring_body.surface.photon_to_event(pushbroom_event,
                                                             derivs=derivs)
     #ring_event = ring_event_w_derivs.copy()
@@ -278,14 +328,20 @@ def vims_test_suite(filespec, derivs, info, display):
     ring_event = ring_event_w_derivs.plain()
     print("ring_event.pos: ", ring_event.pos)
     
+    #------------------------------------------------------
     # This mask is True inside the rings, False outside
+    #------------------------------------------------------
     ring_mask = np.logical_not(ring_event.mask)
     
+    #------------------
     # Get the range
+    #------------------
     ring_range = ring_event.dep.norm()
     
+    #-------------------------------------------------------------------
     # Get the radius and inertial longitude; track radial derivatives
-    (ring_radius,
+    #-------------------------------------------------------------------
+   (ring_radius,
      ring_longitude) = ring_body.surface.event_as_coords(ring_event,
                                                          axes=2, derivs=derivs)
     
@@ -303,7 +359,9 @@ def vims_test_suite(filespec, derivs, info, display):
     pushbrooms[0].insert_subfield("ring_longitude", ring_longitude)
     pushbrooms[0].insert_subfield("ring_emission", ring_emission)
     
+    #--------------------------------
     # Get the ring plane resolution
+    #--------------------------------
     if derivs:
         dpos_duv = ring_event_w_derivs.pos.d_dlos * los.d_duv
         
@@ -326,20 +384,28 @@ def vims_test_suite(filespec, derivs, info, display):
     # Saturn intercept points in pushbroom
     ############################################
     
+    #----------------------------------
     # Find the ring intercept events
+    #----------------------------------
     saturn_event_w_derivs = saturn_body.surface.photon_to_event(pushbroom_event,
                                                                 derivs=derivs)
     #saturn_event = saturn_event_w_derivs.copy()
     #saturn_event.delete_sub_subfields()
     saturn_event = saturn_event_w_derivs.plain()
     
+    #---------------------------------------------------------
     # This mask is True on the planet, False off the planet
+    #---------------------------------------------------------
     saturn_mask = np.logical_not(saturn_event.mask)
     
+    #-----------------
     # Get the range
+    #-----------------
     saturn_range = saturn_event.dep.norm()
     
+    #-------------------------------------------------
     # Get the longitude and three kinds of latitude
+    #-------------------------------------------------
     (saturn_longitude,
      saturn_squashed_lat) = saturn_body.surface.event_as_coords(saturn_event,
                                                                 axes=2)
@@ -364,7 +430,9 @@ def vims_test_suite(filespec, derivs, info, display):
     pushbrooms[0].insert_subfield("saturn_graphic_lat", saturn_graphic_lat)
     pushbrooms[0].insert_subfield("saturn_emission", saturn_emission)
     
+    #-------------------------------------------------------
     # Get the Saturn surface resolution and foreshortening
+    #-------------------------------------------------------
     if derivs:
         dpos_duv = saturn_event_w_derivs.pos.d_dlos * los.d_duv
         
@@ -410,7 +478,9 @@ def vims_test_suite(filespec, derivs, info, display):
     # Ring lighting geometry
     ############################################
     
+    #----------------------------------------------
     # Find the Sun departure events to the ring
+    #----------------------------------------------
     sun_to_ring_event = sun_body.path.photon_to_event(ring_event)
     
     sun_ring_range = ring_event.arr.norm()
@@ -429,7 +499,9 @@ def vims_test_suite(filespec, derivs, info, display):
     # Saturn lighting geometry
     ############################################
     
+    #---------------------------------------------
     # Find the Sun departure events to Saturn
+    #---------------------------------------------
     sun_to_saturn_event = sun_body.path.photon_to_event(saturn_event)
     
     sun_saturn_range = saturn_event.arr.norm()
@@ -451,10 +523,14 @@ def vims_test_suite(filespec, derivs, info, display):
     # Shadow of Saturn on the rings
     ############################################
     
+    #--------------------------------------------------------------------------
     # Trace the ring arrival events from the Sun backward into Saturn's surface
+    #--------------------------------------------------------------------------
     ring_in_shadow_event = saturn_body.surface.photon_to_event(ring_event)
     
+    #---------------------------------------------------------------
     # False (unmasked) in the shadow, True (masked) where sunlit
+    #---------------------------------------------------------------
     ring_unshadowed_mask = ring_in_shadow_event.mask
     
     show_info("Rings unshadowed mask", ring_unshadowed_mask)
@@ -464,10 +540,14 @@ def vims_test_suite(filespec, derivs, info, display):
     # Shadow of the rings on Saturn
     ############################################
     
+    #--------------------------------------------------------------------------
     # Trace the ring arrival events from Saturn backward into the ring surface
+    #--------------------------------------------------------------------------
     saturn_in_shadow_event = ring_body.surface.photon_to_event(saturn_event)
     
+    #-------------------------------------------------------------
     # False (unmasked) in the shadow, True (masked) where sunlit
+    #-------------------------------------------------------------
     saturn_unshadowed_mask = saturn_in_shadow_event.mask
     
     show_info("Saturn unshadowed mask", saturn_unshadowed_mask)
@@ -493,6 +573,9 @@ def vims_test_suite(filespec, derivs, info, display):
                              saturn_visible_and_lit_mask)
     
     return pushbrooms
+#===============================================================================
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -505,8 +588,14 @@ UNITTEST_PRINTING = True
 UNITTEST_LOGGING = True
 UNITTEST_DERIVS = True
 
+#*******************************************************************************
+# Test_Cassini_VIMS_Suite
+#*******************************************************************************
 class Test_Cassini_VIMS_Suite(unittest.TestCase):
     
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
         
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
@@ -519,6 +608,11 @@ class Test_Cassini_VIMS_Suite(unittest.TestCase):
                                      UNITTEST_PRINTING, DISPLAY)
         
         oops.config.LOGGING.off()
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ############################################
 if __name__ == '__main__':

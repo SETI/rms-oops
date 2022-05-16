@@ -8,6 +8,7 @@ from oops.obs_.observation  import Observation
 from oops.obs_.insitu       import InSitu
 from oops.obs_.pixel        import Pixel
 from oops.obs_.pushbroom    import Pushbroom
+from oops.obs_.pushframe    import Pushframe
 from oops.obs_.rasterscan   import RasterScan
 from oops.obs_.rasterslit   import RasterSlit
 from oops.obs_.rasterslit1d import RasterSlit1D

@@ -2,17 +2,28 @@
 # oops/calib_/calibration.py: Abstract class Calibration
 ################################################################################
 
+#*******************************************************************************
+# Calibration
+#*******************************************************************************
 class Calibration(object):
-    """Calibration is an abstract class that defines a relationship between the
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Calibration is an abstract class that defines a relationship between the
     numeric values in in image array and physical quantities.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-########################################################
-# Methods to be defined for each Calibration subclass
-########################################################
+    ########################################################
+    # Methods to be defined for each Calibration subclass
+    ########################################################
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self):
-        """A constructor.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A constructor.
 
         At minimum, every Calibration object has these attributes:
 
@@ -22,11 +33,19 @@ class Calibration(object):
                         center of the field of view, to convert from array DN
                         values to the calibrated quantity.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # value_from_dn
+    #===========================================================================
     def value_from_dn(self, dn, uv_pair=None):
-        """Returns calibrated values based an uncalibrated image value ("DN")
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns calibrated values based an uncalibrated image value ("DN")
         and image coordinates.
 
         Input:
@@ -37,11 +56,19 @@ class Calibration(object):
         Return:         an object of the same class and shape as dn, but
                         containing the calibrated values.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dn_from_value
+    #===========================================================================
     def dn_from_value(self, value, uv_pair=None):
-        """Returns uncalibrated image values ("dn") based on calibrated values
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns uncalibrated image values ("dn") based on calibrated values
         and image coordinates.
 
         Input:
@@ -52,8 +79,13 @@ class Calibration(object):
         Return:         an object of the same class and shape as value, but
                         containing the uncalibrated DN values.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
@@ -63,11 +95,17 @@ import unittest
 
 class Test_Calibration(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # No tests here - this is just an abstract superclass
 
         pass
+    #===========================================================================
+
+
 
 ########################################
 if __name__ == '__main__':

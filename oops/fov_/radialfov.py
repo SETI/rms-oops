@@ -4,8 +4,6 @@
 
 from __future__ import print_function
 
-from IPython import embed  ## TODO: remove
-
 import numpy as np
 import oops
 
@@ -241,33 +239,6 @@ class RadialFOV(FOV):
 
 
     #===========================================================================
-    # _apply_correction
-    #===========================================================================
-    def _apply_correction(self, fab, c, from_=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Apply the radial correction.
-        
-        Input:
-            fab      Pairs of uncorrected coordinates.
-                   
-            c        Correction to apply to fab.
-                   
-            from_    Source system, for labeling the derivatives, e.g., 'uv' 
-                     or 'xy'.
-
-        Output:      ab
-            ab       Pairs of the same shape as fab giving the corrected 
-                     coordinates at each input point.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if from_ == 'xy': return fab*c
-        if from_ == 'uv': return fab/c
-    #===========================================================================
-
-
-
-    #===========================================================================
     # _apply_polynomial
     #===========================================================================
     def _apply_polynomial(self, pq, coefft, derivs, from_=None):
@@ -291,48 +262,22 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert from_ in ('uv', 'xy')
         dkey = from_
-       
+
         #------------------------------------
-        # Compute radii
+        # Correct polyniomial
         #------------------------------------
         if derivs: pq.insert_deriv(dkey, Pair.IDENTITY)
-        r = pq.norm(recursive=derivs)
 
-        #- - - - - - - - - - - - - - -
-        # check (for from_=='xy'):
-        #- - - - - - - - - - - - - - -
-        # r.d_dxy.vals[...,0] - pq.vals[...,0]/r.vals        # dr/dp == p/r
-        # r.d_dxy.vals[...,1] - pq.vals[...,1]/r.vals        # dr/dq == q/r
-
-        #-----------------------------------------------
-        # Compute and apply the polynomial correction
-        #-----------------------------------------------
+        if from_ == 'xy': ab0 = pq.element_div(self.uv_scale, recursive=derivs)
+        if from_ == 'uv': 
+            pq = pq - self.uv_los
+            ab0 = pq.element_mul(self.uv_scale, recursive=derivs)
+            
+        r = ab0.norm(recursive=derivs)
         c = self._compute_polynomial(r, coefft, derivs=derivs)
 
-        #- - - - - - - - - - - - - - -
-        # check (for from_=='xy'):
-        #- - - - - - - - - - - - - - -
-        # c.d_dxy.vals[...,0] - c.d_dr*r.d_dxy.vals[...,0]     # dc/dp == dc/dr*dr/dp
-        # c.d_dxy.vals[...,1] - c.d_dr*r.d_dxy.vals[...,1]     # dc/dq == dc/dr*dr/dq
-
-        fab = self._guess(pq, coefft, from_=from_, derivs=derivs)
-        ab = self._apply_correction(fab, c, from_=from_)
-
-        #- - - - - - - - - - - - - - -
-        # check (for from_=='xy'):
-        #- - - - - - - - - - - - - - -
-        # ab.d_dxy.vals[...,0,0] - c*fab.d_dxy.vals[...,0,0]   # da/dp == da/dfa*dfa/dp
-        # ab.d_dxy.vals[...,0,1] - c*fab.d_dxy.vals[...,0,1]   # da/dq == da/dfa*dfa/dq
-        # ab.d_dxy.vals[...,1,0] - c*fab.d_dxy.vals[...,1,0]   # db/dp == db/dfb*dfb/dp
-        # ab.d_dxy.vals[...,1,1] - c*fab.d_dxy.vals[...,1,1]   # db/dq == db/dfb*dfb/dq
-
-        #- - - - - - - - - - - - - - -
-        # check (for from_=='uv'):
-        #- - - - - - - - - - - - - - -
-        # ab.d_duv.vals[...,0,0] - fab.d_duv.vals[...,0,0]/c   # da/dp == da/dfa*dfa/dp
-        # ab.d_duv.vals[...,0,1] - fab.d_duv.vals[...,0,1]/c   # da/dq == da/dfa*dfa/dq
-        # ab.d_duv.vals[...,1,0] - fab.d_duv.vals[...,1,0]/c   # db/dp == db/dfb*dfb/dp
-        # ab.d_duv.vals[...,1,1] - fab.d_duv.vals[...,1,1]/c   # db/dq == db/dfb*dfb/dq
+        ab = ab0*c          
+        if from_ == 'xy': ab = ab + self.uv_los
 
         #------------------------------------------------
         # Propagate derivatives if necessary

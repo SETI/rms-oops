@@ -2,8 +2,6 @@
 # oops/fov_/flatfov.py: Flat subclass of class FOV
 ################################################################################
 
-from IPython import embed  ## TODO: remove
-
 import numpy as np
 from polymath import *
 
@@ -95,33 +93,6 @@ class FlatFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
 	return xy_pair.element_div(self.uv_scale) + self.uv_los
-
-
-
-        xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-	
-        #-----------------------------------------------------
-        # Transform coordinates
-        #-----------------------------------------------------
-        uv_pair = xy_pair.element_div(self.uv_scale) + self.uv_los
-	
-        #-----------------------------------------------------
-        # Compute derivatives
-        #-----------------------------------------------------
-        if derivs: 
-            duv_dxy_vals = np.zeros(uv_pair.shape + (2,2))
-	    duv_dxy_vals[...,:] = 1/self.uv_scale.vals
-	    
-            duv_dxy = Pair(duv_dxy_vals, xy_pair.mask, drank=1)
-            new_derivs = {'xy': duv_dxy}
-	    
-            if xy_pair.derivs:
-                for (key, xy_deriv) in xy_pair.derivs.items():
-                    new_derivs[key] = duv_dxy.chain(xy_deriv)
-
-            uv_pair.insert_derivs(new_derivs)
-
-        return uv_pair
     #===========================================================================
 
 
@@ -146,33 +117,6 @@ class FlatFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
 	return (uv_pair - self.uv_los).element_mul(self.uv_scale)
-
-
-
-        uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
-	
-        #-----------------------------------------------------
-        # Transform coordinates
-        #-----------------------------------------------------
-        xy_pair = (uv_pair - self.uv_los).element_mul(self.uv_scale)
-		
-        #-----------------------------------------------------
-        # Compute derivatives
-        #-----------------------------------------------------
-        if derivs: 
-            dxy_duv_vals = np.zeros(xy_pair.shape + (2,2))
-	    dxy_duv_vals[...,:] = self.uv_scale.vals
-	    
-            dxy_duv = Pair(dxy_duv_vals, uv_pair.mask, drank=1)
-            new_derivs = {'uv': dxy_duv}
-	    
-            if uv_pair.derivs:
-                for (key, uv_deriv) in uv_pair.derivs.items():
-                    new_derivs[key] = dxy_duv.chain(uv_deriv)
-
-            uv_pair.insert_derivs(new_derivs)
-
-        return  xy_pair
     #===========================================================================
 
 

@@ -5,7 +5,7 @@
 # sets.
 ################################################################################
 
-from IPython import embed
+from IPython import embed  ## TODO: remove
 
 import numpy as np
 import unittest
@@ -40,13 +40,15 @@ oops.spice.load_leap_seconds()
 
 ################################################################################
 
-#*****************************************************************************
-# Juno class
-#*****************************************************************************
+#*******************************************************************************
+# Juno 
+#*******************************************************************************
 class Juno(object):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """A instance-free class to hold Juno-specific parameters."""
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A instance-free class to hold Juno-specific parameters.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     START_TIME = "2011-08-01"
     STOP_TIME  = "2025-08-01"
     MONTHS = 168        # 14 years * 12 months/year
@@ -68,19 +70,20 @@ class Juno(object):
     loaded_instruments = []
 
     initialized = False
-    #=========================================================================
+    #===========================================================================
 
     ############################################################################
 
-    #=========================================================================
+    #===========================================================================
     # initialize
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Intialize the Juno mission internals.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Intialize the Juno mission internals.
 
         After the first call, later calls to this function are ignored.
 
@@ -99,14 +102,16 @@ class Juno(object):
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         if Juno.initialized: return
 
         
         (ck, spk) = ('NONE', 'NONE')
 
+        #-----------------------------------------
         # Define some important paths and frames
+        #-----------------------------------------
         oops.define_solar_system(Juno.START_TIME, Juno.STOP_TIME,
                                  asof=asof,
                                  planets=planets,
@@ -119,7 +124,9 @@ class Juno(object):
 
         spk = spk.upper()
         if spk == 'NONE':
+	    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # This means no SPK will ever be loaded; handling is manual
+	    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             Juno.initialize_kernels([], Juno.SPK_LIST)
             Juno.SPK_LOADED = np.ones(Juno.MONTHS, dtype="bool")
         else:
@@ -131,7 +138,9 @@ class Juno(object):
 
         ck = ck.upper()
         if ck == 'NONE':
+	    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # This means no CK will ever be loaded; handling is manual
+	    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             Juno.initialize_kernels([], Juno.CK_LIST)
             Juno.CK_LOADED = np.ones(Juno.MONTHS, dtype="bool")
         else:
@@ -141,25 +150,29 @@ class Juno(object):
                                              asof=asof)
             Juno.initialize_kernels(kernels, Juno.CK_LIST)
 
+        #-----------------------------------------
         # Load extra kernels if necessary
+        #-----------------------------------------
         if gapfill and ck not in ('PREDICTED', 'NONE'):
             _ = spicedb.furnish_ck(-61, name="JUNO_-CK-GAPFILL")
 
         spicedb.close_db()
 
         initialized = True
-    #=========================================================================
+    #===========================================================================
 
 
 
-    #=========================================================================
+    #===========================================================================
     # reset
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def reset():
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Resets the internal parameters. Can be useful for debugging."""
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Resets the internal parameters. Can be useful for debugging.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Juno.loaded_instruments = []
 
         Juno.CK_LOADED = np.zeros(Juno.MONTHS, dtype="bool")
@@ -171,79 +184,85 @@ class Juno(object):
         Juno.SPK_DICT = {}
 
         Juno.initialized = False
-    #=========================================================================
+    #===========================================================================
 
     ############################################################################
 
-    #=========================================================================
+    #===========================================================================
     # load_ck
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def load_ck(t):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Ensure that the C kernels applicable at or near the given time have
-        been furnished. The time can be tai or tdb."""
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that the C kernels applicable at or near the given time have
+        been furnished. The time can be tai or tdb.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Juno.load_kernels(t, t, Juno.CK_LOADED, Juno.CK_LIST,
                                    Juno.CK_DICT)
-    #=========================================================================
+    #===========================================================================
 
 
 
-    #=========================================================================
+    #===========================================================================
     # load_cks
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def load_cks(t0, t1):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Ensure that all the C kernels applicable near or within the time
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that all the C kernels applicable near or within the time
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Juno.load_kernels(t0, t1, Juno.CK_LOADED, Juno.CK_LIST,
                                      Juno.CK_DICT)
-    #=========================================================================
+    #===========================================================================
 
 
 
-    #=========================================================================
+    #===========================================================================
     # load_spk
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def load_spk(t):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Ensure that the SPK kernels applicable at or near the given time have
-        been furnished. The time can be tai or tdb."""
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that the SPK kernels applicable at or near the given time have
+        been furnished. The time can be tai or tdb.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Juno.load_kernels(t, t, Juno.SPK_LOADED, Juno.SPK_LIST,
                                    Juno.SPK_DICT)
-    #=========================================================================
+    #===========================================================================
 
 
 
-    #=========================================================================
+    #===========================================================================
     # load_spks
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def load_spks(t0, t1):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Ensure that all the SPK kernels applicable near or within the time
-        interval tdb0 to tdb1 have been furnished. The time can be tai or tdb."""
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that all the SPK kernels applicable near or within the time
+        interval tdb0 to tdb1 have been furnished. The time can be tai or tdb.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Juno.load_kernels(t0, t1, Juno.SPK_LOADED, Juno.SPK_LIST,
                                      Juno.SPK_DICT)
-    #=========================================================================
+    #===========================================================================
 
 
 
-    #=========================================================================
+    #===========================================================================
     # load_kernels
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
 
         kdir = "/home/spitale/ominas_data/trs/juno/kernels/"
-#        kdir = "./kernels/"   ## for suspected frame issue demo
 
         cspyce.furnsh(kdir + "ck/juno_sc_rec_161211_161217_v01.bc") 
         cspyce.furnsh(kdir + "spk/juno_rec_161115_170106_170113.bsp")
@@ -273,25 +292,32 @@ class Juno(object):
         cspyce.furnsh(kdir + "spk/juno_rec_210127_210321_210329.bsp")
         cspyce.furnsh(kdir + "ck/juno_sc_rec_210221_210227_v01.bc") 
         cspyce.furnsh(kdir + "spk/juno_rec_210127_210321_210329.bsp")
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_190528_190529_v01.bc") 
+        cspyce.furnsh(kdir + "spk/juno_rec_190504_190626_190627.bsp")
 
         cspyce.furnsh(kdir + "lsk/naif0012.tls")
-        cspyce.furnsh(kdir + "sclk/JNO_SCLKSCET.00096.tsc")
+        cspyce.furnsh(kdir + "sclk/jno_sclkscet_00128.tsc")
         cspyce.furnsh(kdir + "fk/juno_v12.tf")
         cspyce.furnsh(kdir + "ik/juno_junocam_v03.ti")
         cspyce.furnsh(kdir + "spk/de421.bsp")
+        cspyce.furnsh(kdir + "spk/de432s.bsp")
 
         return
 
 
-
+## TODO: 
+        #-----------------------------------------
         # Find the range of months needed
+        #-----------------------------------------
         m1 = int((t0 - Juno.TDB0) // Juno.DTDB)
         m2 = int((t1 - Juno.TDB0) // Juno.DTDB) + 1
 
         m1 = max(m1, 0)         # ignore time limits outside mission duration
         m2 = min(m2, Juno.MONTHS - 1)
 
+        #-----------------------------------------
         # Load any months not already loaded
+        #-----------------------------------------
         for m in range(m1, m2+1):
           if not loaded[m]:
             for kernel in lists[m]:
@@ -300,28 +326,32 @@ class Juno(object):
                     spicedb.furnish_kernels([kernel])
                     kernel_dict[filespec] = kernel
                 loaded[m] = True
-    #=========================================================================
+    #===========================================================================
 
     ########################################
     # Initialize the kernel lists
     ########################################
 
-    #=========================================================================
+    #===========================================================================
     # initialize_kernels
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def initialize_kernels(kernels, lists):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """After initialization, lists[m] is a the KernelInfo objects needed
-        within the specified month."""
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        After initialization, lists[m] is a the KernelInfo objects needed
+        within the specified month.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         for i in range(Juno.MONTHS):
             lists[i] = []
 
         for kernel in kernels:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Find the range of months applicable, extended by 12 hours
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             t0 = cspyce.str2et(kernel.start_time) - Juno.SLOP
             t1 = cspyce.str2et(kernel.stop_time)  + Juno.SLOP
 
@@ -331,24 +361,26 @@ class Juno(object):
             m1 = max(m1, 0)     # ignore time limits outside mission duration
             m2 = min(m2, Juno.MONTHS - 1)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Add this kernel to each month's list
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
-    #=========================================================================
+    #===========================================================================
 
     ############################################################################
     # Routines for managing the loading other kernels
     ############################################################################
 
-    #=========================================================================
+    #===========================================================================
     # load_instruments
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def load_instruments(instruments=[], asof=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Loads the SPICE kernels and defines the basic paths and frames for
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Loads the SPICE kernels and defines the basic paths and frames for
         the Juno mission. It is generally only be called once.
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         Input:
             instruments an optional list of instrument names for which to load
@@ -359,36 +391,46 @@ class Juno(object):
                         are used. Otherwise, the most recent versions are always
                         loaded.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------------------
         # Load the default instruments on the first pass
+        #---------------------------------------------------------
         if Juno.loaded_instruments == []:
             instruments += ["JUNOCAM"]
 
+        #---------------------------------------------------------
         # On later calls, return quickly if there's nothing to do
+        #---------------------------------------------------------
         if instruments == []: return
 
+        #-------------------------------------------
         # Check the formatting of the "as of" date
+        #-------------------------------------------
         if asof is not None:
             (day, sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
+        #-----------------------------------------
         # Furnish instruments and frames
+        #-----------------------------------------
         spicedb.open_db()
         _ = spicedb.furnish_inst(-61, inst=instruments, asof=asof)
         spicedb.close_db()
-    #=========================================================================
+    #===========================================================================
 
     ############################################################################
     # Routines for managing text kernel information
     ############################################################################
 
-    #=========================================================================
+    #===========================================================================
     # spice_instrument_kernel
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def spice_instrument_kernel(inst, asof=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Return a dictionary containing the Instrument Kernel information.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a dictionary containing the Instrument Kernel information.
 
         Also furnishes it for use by the SPICE tools.
 
@@ -403,7 +445,7 @@ class Juno(object):
                             the dictionary generated by textkernel.from_file()
                             the name of the kernel.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
@@ -414,17 +456,18 @@ class Juno(object):
         spicedb.close_db()
 
         return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
-    #=========================================================================
+    #===========================================================================
 
     ############################################################################
 
-    #=========================================================================
+    #===========================================================================
     # spice_frames_kernel
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def spice_frames_kernel(asof=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Return a dictionary containing the Juno Frames Kernel information.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a dictionary containing the Juno Frames Kernel information.
 
         Also furnishes the kernels for use by the SPICE tools.
 
@@ -438,7 +481,7 @@ class Juno(object):
                             the dictionary generated by textkernel.from_file()
                             an ordered list of the names of the kernels
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
@@ -449,19 +492,21 @@ class Juno(object):
         spicedb.close_db()
 
         return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))
-    #=========================================================================
+    #===========================================================================
 
     ############################################################################
 
-    #=========================================================================
+    #===========================================================================
     # used_kernels
-    #=========================================================================
+    #===========================================================================
     @staticmethod
     def used_kernels(time, inst, return_all_planets=False):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Return the list of kernels associated with a Juno observation at
-        a selected range of times."""
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the list of kernels associated with a Juno observation at
+        a selected range of times.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if return_all_planets:
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,
                       7, 799, 8, 899]
@@ -477,7 +522,7 @@ class Juno(object):
 
         return spicedb.used_basenames(time=time, inst=inst, sc=-61,
                                       bodies=bodies)
-    #=========================================================================
+    #===========================================================================
 
-#*****************************************************************************
+#*******************************************************************************
 

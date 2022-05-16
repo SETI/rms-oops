@@ -70,9 +70,9 @@ class Vector(Qube):
 
         if isinstance(arg, Qube):
 
-            #------------------------------------------------------
+            #--------------------------------
             # Convert any 1-D object
-            #------------------------------------------------------
+            #--------------------------------
             if arg.nrank == 1:
                 return arg.flatten_numer(Vector, recursive)
 
@@ -82,9 +82,9 @@ class Vector(Qube):
             if arg.nrank == 2 and (arg.numer[0] == 1 or arg.numer[1] == 1):
                 return arg.flatten_numer(Vector, recursive)
 
-            #------------------------------------------------------
+            #----------------------------------
             # Convert Scalar to shape (1,)
-            #------------------------------------------------------
+            #----------------------------------
             if arg.nrank == 0:
                 if np.shape(arg.values) == ():
                     new_values = np.array([arg.values])
@@ -100,9 +100,9 @@ class Vector(Qube):
                         result.insert_deriv(key, Vector.as_vector(value, False))
                 return result
 
-            #------------------------------------------------------
+            #-------------------------------------------------------------
             # For any other Qube, move numerator items to the denominator
-            #------------------------------------------------------
+            #-------------------------------------------------------------
             if arg.rank > 1:
                 return arg.split_items(1, Vector)
 
@@ -266,16 +266,16 @@ class Vector(Qube):
         if (self.drank > 0):
             raise ValueError('an indexing object cannot have a denominator')
 
-        #------------------------------------------------------
+        #--------------------------------------
         # If nothing is masked, this is easy
-        #------------------------------------------------------
+        #--------------------------------------
         if not np.any(self.mask):
             return (tuple(np.rollaxis(self.values.astype(np.intp), -1, 0)),
                     False)
 
-        #------------------------------------------------------
+        #------------------
         # If purging...
-        #------------------------------------------------------
+        #------------------
         if purge:
             # If all masked...
             if Qube.is_one_true(self.mask):
@@ -286,22 +286,22 @@ class Vector(Qube):
             return (tuple(np.rollaxis(new_values.astype(np.intp), -1, 0)),
                     False)
 
-        #------------------------------------------------------
+        #-----------------------------
         # Without a replacement...
-        #------------------------------------------------------
+        #-----------------------------
         if masked is None:
             new_values = self.values.astype(np.intp)
 
-        #------------------------------------------------------
+        #-----------------------
         # If all masked...
-        #------------------------------------------------------
+        #-----------------------
         elif Qube.is_one_true(self.mask):
             new_values = np.empty(self.values.shape, dtype=np.intp)
             new_values[...] = masked
 
-        #------------------------------------------------------
+        #---------------------------
         # If partially masked...
-        #------------------------------------------------------
+        #---------------------------
         else:
             new_values = self.values.copy().astype(np.intp)
             new_values[self.mask] = masked
@@ -581,16 +581,16 @@ class Vector(Qube):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
+        #----------------------------------
         # Convert arg to a unit vector
-        #------------------------------------------------------
+        #----------------------------------
         arg = self.as_this_type(arg, recursive, coerce=False).unit()
         if not recursive:
             self = self.wod
 
-        #------------------------------------------------------
+        #----------------------------------------------------------------
         # Return the component of this vector perpendicular to the arg
-        #------------------------------------------------------
+        #----------------------------------------------------------------
         return self - arg * self.dot(arg, recursive)
     #===========================================================================
 
@@ -611,14 +611,14 @@ class Vector(Qube):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
+        #----------------------------------
         # Convert arg to a unit vector
-        #------------------------------------------------------
+        #----------------------------------
         arg = self.as_this_type(arg, recursive, coerce=False).unit()
 
-        #------------------------------------------------------
+        #-------------------------------------------------------------
         # Return the component of this vector projected into the arg
-        #------------------------------------------------------
+        #-------------------------------------------------------------
         return arg * self.dot(arg, recursive)
     #===========================================================================
 
@@ -691,9 +691,9 @@ class Vector(Qube):
             old_values = np.rollaxis(self.values, -self.drank-1,
                                      len(self.values.shape))
 
-        #------------------------------------------------------
+        #-----------------------------------
         # Fill in the matrix elements
-        #------------------------------------------------------
+        #-----------------------------------
         new_values = np.zeros(self.shape + self.denom + (3,3),
                               dtype = self.values.dtype)
         new_values[...,0,1] = -old_values[...,2]
@@ -703,9 +703,9 @@ class Vector(Qube):
         new_values[...,2,0] = -old_values[...,1]
         new_values[...,2,1] =  old_values[...,0]
 
-        #------------------------------------------------------
+        #-----------------------------------------------
         # Roll the denominator axes back to the end
-        #------------------------------------------------------
+        #-----------------------------------------------
         for i in range(self.drank):
             new_values = np.rollaxis(new_values, -3, len(new_values.shape))
 
@@ -735,21 +735,21 @@ class Vector(Qube):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
+        #----------------------------------------
         # Convert to this class if necessary
-        #------------------------------------------------------
+        #----------------------------------------
         original_arg = arg
         arg = self.as_this_type(arg, recursive, coerce=False)
 
-        #------------------------------------------------------
+        #--------------------------------------------------------------
         # If it had no units originally, it should not have units now
-        #------------------------------------------------------
+        #--------------------------------------------------------------
         if not isinstance(original_arg, Qube):
             arg = arg.without_units()
 
-        #------------------------------------------------------
+        #-------------
         # Validate
-        #------------------------------------------------------
+        #-------------
         if arg.numer != self.numer:
             raise ValueError(("incompatible numerator shapes: " +
                               "%s, %s") % (str(self.numer), str(arg.numer)))
@@ -758,9 +758,9 @@ class Vector(Qube):
             raise ValueError(("dual operand denominators for element_mul(): " +
                               "%s, %s") % (str(self.denom), str(arg.denom)))
 
-        #------------------------------------------------------
+        #------------------------------------
         # Reshape value arrays as needed
-        #------------------------------------------------------
+        #------------------------------------
         if arg.drank:
             self_values = self.values.reshape(self.values.shape +
                                               arg.drank * (1,))
@@ -773,9 +773,9 @@ class Vector(Qube):
         else:
             arg_values = arg.values
 
-        #------------------------------------------------------
+        #---------------------------
         # Construct the object
-        #------------------------------------------------------
+        #---------------------------
         obj = Qube.__new__(type(self))
         obj.__init__(self_values * arg_values,
                      self.mask | arg.mask,
@@ -784,9 +784,9 @@ class Vector(Qube):
                      drank = self.drank + arg.drank,
                      example=self)
 
-        #------------------------------------------------------
+        #--------------------------------------
         # Insert derivatives if necessary
-        #------------------------------------------------------
+        #--------------------------------------
         if recursive:
             new_derivs = {}
             for (key, self_deriv) in self.derivs.items():
@@ -821,16 +821,16 @@ class Vector(Qube):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
+        #---------------------------------------
         # Convert to this class if necessary
-        #------------------------------------------------------
+        #---------------------------------------
         if not isinstance(arg, Qube):
             arg = self.as_this_type(arg, recursive, coerce=False)
             arg = arg.without_units()
 
-        #------------------------------------------------------
+        #-------------
         # Validate
-        #------------------------------------------------------
+        #-------------
         if arg.numer != self.numer:
             raise ValueError(("incompatible numerator shapes: " +
                               "%s, %s") % (str(self.numer), str(arg.numer)))
@@ -839,9 +839,9 @@ class Vector(Qube):
             raise ValueError(("right operand denominator for element_div(): " +
                               "%s") % str(arg.denom))
 
-        #------------------------------------------------------
+        #-------------------------------
         # Mask out zeros in divisor
-        #------------------------------------------------------
+        #-------------------------------
         zero_mask = (arg.values == 0.)
 
         if np.any(zero_mask):
@@ -853,31 +853,31 @@ class Vector(Qube):
         else:
             divisor = arg.values
 
-        #------------------------------------------------------
+        #-----------------------------
         # Update the divisor mask
-        #------------------------------------------------------
+        #-----------------------------
         for r in range(self.rank):  # if any element is zero, mask the vector
             zero_mask = np.any(zero_mask, axis=-1)
 
         divisor_mask = arg.mask | zero_mask
 
-        #------------------------------------------------------
+        #---------------------------------------------------------------------
         # Re-shape the divisor array if necessary to match the dividend shape
-        #------------------------------------------------------
+        #---------------------------------------------------------------------
         if self.drank:
             divisor = divisor.reshape(divisor.shape + self.drank * (1,))
 
-        #------------------------------------------------------
+        #--------------------------------
         # Construct the ratio object
-        #------------------------------------------------------
+        #--------------------------------
         obj = Qube.__new__(type(self))
         obj.__init__(self.values / divisor,
                      self.mask | divisor_mask,
                      units = Units.div_units(self.units, arg.units))
 
-        #------------------------------------------------------
+        #----------------------------------------
         # Insert the derivatives if necessary
-        #------------------------------------------------------
+        #----------------------------------------
         if recursive:
             new_derivs = {}
 

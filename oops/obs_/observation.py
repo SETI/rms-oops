@@ -16,8 +16,13 @@ from oops.body              import Body
 from oops.cadence_.cadence  import Cadence
 from oops.cadence_.instant  import Instant
 
+#*******************************************************************************
+# Observation
+#*******************************************************************************
 class Observation(object):
-    """An Observation is an abstract class that defines the timing and pointing
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    An Observation is an abstract class that defines the timing and pointing
     of the samples that comprise a data array.
 
     The axes of an observation are related to up to two spatial axes and one
@@ -70,20 +75,33 @@ class Observation(object):
             data        a reserved subfield to contain the NumPy array of
                         numbers associated with the observation.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     INVENTORY_IMPLEMENTED = False
 
     ####################################################
     # Methods to be defined for each subclass
     ####################################################
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self):
-        """A constructor."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A constructor."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uvt
+    #===========================================================================
     def uvt(self, indices, fovmask=False):
-        """Return coordinates (u,v) and time t for indices into the data array.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return coordinates (u,v) and time t for indices into the data array.
 
         This method supports non-integer index values.
 
@@ -97,11 +115,19 @@ class Observation(object):
             time        a Scalar defining the time in seconds TDB associated
                         with the array indices.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("uvt() is not implemented")
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uvt_range
+    #===========================================================================
     def uvt_range(self, indices, fovmask=False):
-        """Return ranges of coordinates and time for integer array indices.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return ranges of coordinates and time for integer array indices.
 
         Input:
             indices     a Tuple of integer array indices.
@@ -115,11 +141,19 @@ class Observation(object):
                         pixel. It is given in seconds TDB.
             time_max    a Scalar defining the maximum time value.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("uvt_range() is not implemented")
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uvt_ranges
+    #===========================================================================
     def uvt_ranges(self):
-        """Return a list of tuples defining the ranges of FOV coordinates and
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a list of tuples defining the ranges of FOV coordinates and
         time limits at which they are applicable.
 
         Return:         a list of tuples (uv_min, uv_max, time_min, time_max)
@@ -132,11 +166,19 @@ class Observation(object):
             time_max    a Scalar defining the maximum time associated with this
                         tile. It is given in seconds TDB.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("uvt_ranges() is not implemented")
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # indices_at_uvt
+    #===========================================================================
     def indices_at_uvt(self, uv_pair, time, fovmask=False):
-        """Return a vector of indices for given FOV coordinates (u,v) and time.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a vector of indices for given FOV coordinates (u,v) and time.
 
         This method supports non-integer positions and time steps, and returns
         fractional indices.
@@ -153,11 +195,19 @@ class Observation(object):
                         Note that returned indices can fall outside the nominal
                         limits of the data object.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("indices_at_uvt() is not implemented")
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # times_at_uv
+    #===========================================================================
     def times_at_uv(self, uv_pair, fovmask=False):
-        """Return start and stop times of the specified spatial pixel (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return start and stop times of the specified spatial pixel (u,v).
 
         Input:
             uv_pair     a Pair of spatial (u,v) coordinates in and observation's
@@ -168,11 +218,19 @@ class Observation(object):
         Return:         a tuple containing Scalars of the start time and stop
                         time of each (u,v) pair, as seconds TDB.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("times_at_uv() is not implemented")
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_at_time
+    #===========================================================================
     def uv_at_time(self, time, fovmask=False):
-        """The (u,v) range of spatial pixels observed at the specified time.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The (u,v) range of spatial pixels observed at the specified time.
 
         Input:
             time        a Scalar of time values in seconds TDB.
@@ -184,11 +242,19 @@ class Observation(object):
             uv_max      the upper (u,v) corner of the area observed at the
                         specified time.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("uv_at_time() is not implemented")
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # sweep_duv_dt
+    #===========================================================================
     def sweep_duv_dt(self, uv_pair):
-        """Return the mean local sweep speed of the instrument along (u,v) axes.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the mean local sweep speed of the instrument along (u,v) axes.
 
         Input:
             uv_pair     a Pair of spatial indices (u,v).
@@ -196,11 +262,19 @@ class Observation(object):
         Return:         a Pair containing the local sweep speed in units of
                         pixels per second in the (u,v) directions.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("sweep_duv_dt() is not implemented")
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_shift
+    #===========================================================================
     def time_shift(self, dtime):
-        """Return a copy of the observation object with a time-shift.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a copy of the observation object with a time-shift.
 
         Input:
             dtime       the time offset to apply to the observation, in units of
@@ -208,39 +282,74 @@ class Observation(object):
 
         Return:         a (shallow) copy of the object with a new time.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedException("time_shift() is not implemented")
+    #===========================================================================
+
+
 
     ####################################################
     # Subfield support methods
     ####################################################
 
+    #===========================================================================
+    # insert_subfield
+    #===========================================================================
     def insert_subfield(self, key, value):
-        """Adds a given subfield to the Event."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Adds a given subfield to the Event.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.subfields[key] = value
         self.__dict__[key] = value      # This makes it an attribute as well
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # delete_subfield
+    #===========================================================================
     def delete_subfield(self, key):
-        """Deletes a subfield, but not arr or dep."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Deletes a subfield, but not arr or dep.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if key in self.subfields:
             del self.subfields[key]
             del self.__dict__[key]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # delete_subfields
+    #===========================================================================
     def delete_subfields(self):
-        """Deletes all subfields."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Deletes all subfields.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         for key in self.subfields:
             del self.subfields[key]
             del self.__dict__[key]
+    #===========================================================================
+
+
 
     ####################################################
     # Methods probably not requiring overrides
     ####################################################
 
+    #===========================================================================
+    # uv_is_outside
+    #===========================================================================
     def uv_is_outside(self, uv_pair, inclusive=True):
-        """Return a boolean mask identifying coordinates outside the FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
@@ -251,22 +360,38 @@ class Observation(object):
         Return:         a boolean NumPy array indicating True where the point is
                         outside the FOV.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.fov.uv_is_outside(uv_pair, inclusive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # midtime_at_uv
+    #===========================================================================
     def midtime_at_uv(self, uv):
-        """Return the mid-time for the selected spatial pixel (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the mid-time for the selected spatial pixel (u,v).
 
         Input:
             uv          a Pair of (u,v) coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (time0, time1) = self.times_at_uv(uv)
         return 0.5 * (time0 + time1)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # meshgrid
+    #===========================================================================
     def meshgrid(self, origin=0.5, undersample=1, oversample=1, limit=None,
                        fov_keywords={}):
-        """Return a Meshgrid shaped to broadcast to the observation's shape.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are
         assigned their correct locations in the axis ordering of the
@@ -294,8 +419,11 @@ class Observation(object):
                         FOV methods, containing parameters that might affect
                         the properties of the FOV.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------
         # Convert inputs to NumPy 2-element arrays
+        #---------------------------------------------
         if limit is None:
             limit = self.fov.uv_shape
         if isinstance(limit, numbers.Number):
@@ -314,7 +442,9 @@ class Observation(object):
             oversample = (oversample, oversample)
         oversample = Pair.as_pair(oversample).values.astype('float')
 
+        #-----------------------------------
         # Construct the 1-D index arrays
+        #-----------------------------------
         step = undersample/oversample
         limit = limit + step * 1.e-10   # Allow a little slop at the upper end
 
@@ -324,7 +454,9 @@ class Observation(object):
         usize = urange.size
         vsize = vrange.size
 
+        #------------------------------------------
         # Construct the empty array of values
+        #------------------------------------------
         shape_list = len(self.shape) * [1]
         if self.u_axis >= 0:
             shape_list[self.u_axis] = usize
@@ -333,7 +465,9 @@ class Observation(object):
 
         values = np.empty(tuple(shape_list + [2]))
 
+        #-----------------------
         # Populate the array
+        #-----------------------
         if self.u_axis >= 0:
             shape_list = len(self.shape) * [1]
             shape_list[self.u_axis] = usize
@@ -350,12 +484,22 @@ class Observation(object):
         else:
             values[...,1] = 0.5
 
+        #-------------------------
         # Return the Meshgrid
+        #-------------------------
         grid = Pair(values)
         return Meshgrid(self.fov, grid, fov_keywords)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # timegrid
+    #===========================================================================
     def timegrid(self, meshgrid, oversample=1, tfrac=(0,1)):
-        """Return a Scalar of times broadcastable with the shape of the given
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a Scalar of times broadcastable with the shape of the given
         meshgrid.
 
         Input:
@@ -380,51 +524,73 @@ class Observation(object):
                           only one axis coupled to a spatial axis is not
                           supported.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if isinstance(tfrac, numbers.Number):
             tfrac = (tfrac, tfrac)
 
+        #-------------------------------------------
         # Handle a time-independent observation
+        #-------------------------------------------
         if self.t_axis == -1:
 
             time0 = self.time[0] + tfrac[0] * (self.time[1] - self.time[0])
             time1 = self.time[0] + tfrac[1] * (self.time[1] - self.time[0])
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # One step implies midtime, which can be returned as a scalar
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if oversample == 1:
                 return Scalar(0.5 * (time0 + time1))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             # Otherwise, uniform time steps between endpoints
+            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             fracs = np.arange(oversample) / (oversample - 1.)
             times = time0 + fracs * (time1 - time0)
 
+            #- - - - - - - - - - - - - - - 
             # Time is on a leading axis
+            #- - - - - - - - - - - - - - - 
             tshape = times.shape + len(self.shape) * (1,)
             return Scalar.as_scalar(times.reshape(tshape))
 
+        #----------------------------------------
         # Get times at each pixel in meshgrid
+        #----------------------------------------
         (tstarts, tstops) = self.times_at_uv(meshgrid.uv)
 
+        #-------------------------
         # Scale based on tfrac
+        #-------------------------
         time0 = tstarts + tfrac[0] * (tstops - tstarts)
         time1 = tstarts + tfrac[1] * (tstops - tstarts)
 
+        #-----------------------
         # Handle 1-D case
+        #-----------------------
         if isinstance(self.t_axis, numbers.Number):
 
+            #- - - - - - - - - - - - - - - - - - - 
             # Time aligns with u-axis or v-axis
+            #- - - - - - - - - - - - - - - - - - - 
             if self.t_axis in (self.u_axis, self.v_axis):
 
+                #- - - - - - - - - - - - - - - - - 
                 # One time step implies midtime
+                #- - - - - - - - - - - - - - - - - 
                 if oversample == 1:
                     return Scalar.as_scalar(0.5 * (time0 + time1))
 
+                #- - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Otherwise, uniform time steps on a leading axis
+                #- - - - - - - - - - - - - - - - - - - - - - - - - -
                 fracs = np.arange(oversample) / (oversample - 1.)
                 fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
                 return Scalar(time0 + fracs * (time1 - time0))
 
+            #- - - - - - - - - - - - - - - - - - - - - 
             # Otherwise time is along a unique axis
+            #- - - - - - - - - - - - - - - - - - - - - 
             tstep0 = tfrac[0] * self.cadence.shape[0]
             tstep1 = tfrac[1] * self.cadence.shape[0]
             tsteps = np.arange(tstep0, tstep1 + 1.e-10, 1./oversample)
@@ -435,7 +601,9 @@ class Observation(object):
             times = Scalar.as_scalar(times).reshape(tuple(shape_list))
             return times
 
+        #------------------------------
         # Handle a 2-D observation
+        #------------------------------
         if (self.t_axis[0] not in (self.u_axis, self.v_axis) or
             self.t_axis[1] not in (self.u_axis, self.v_axis)):
                 raise NotImplementedError('timegrid not implemented for ' +
@@ -445,17 +613,29 @@ class Observation(object):
 
         # Time aligns with u-axis AND v-axis
 
+        #---------------------------------
         # One time step implies midtime
+        #---------------------------------
         if oversample == 1:
             return Scalar.as_scalar(0.5 * (time0 + time1))
 
+        #---------------------------------------------------
         # Otherwise, uniform time steps on a leading axis
+        #---------------------------------------------------
         fracs = np.arange(oversample) / (oversample - 1.)
         fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
         return Scalar(time0 + fracs * (time1 - time0))
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # event_at_grid
+    #===========================================================================
     def event_at_grid(self, meshgrid=None, time=None):
-        """Return a photon arrival event from directions defined by a meshgrid.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a photon arrival event from directions defined by a meshgrid.
 
         Input:
             meshgrid    a Meshgrid object describing the sampling of the field
@@ -465,20 +645,30 @@ class Observation(object):
 
         Return:         the corresponding event.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if time is None:
             time = self.midtime_at_uv(meshgrid.uv)
 
         time = Scalar.as_scalar(time)
         event = Event(time, Vector3.ZERO, self.path, self.frame)
 
+        #--------------------------------------
         # Insert the arrival directions
+        #--------------------------------------
         event.neg_arr_ap = meshgrid.los
 
         return event
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # gridless_event
+    #===========================================================================
     def gridless_event(self, meshgrid=None, time=None, shapeless=False):
-        """Return a photon arrival event irrespective of the direction.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a photon arrival event irrespective of the direction.
 
         Input:
             meshgrid    a Meshgrid object describing the sampling of the field
@@ -491,7 +681,7 @@ class Observation(object):
 
         Return:         the corresponding event.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if time is None:
             time = self.midtime_at_uv(meshgrid.uv)
 
@@ -499,10 +689,18 @@ class Observation(object):
             time = time.mean()
 
         return Event(time, Vector3.ZERO, self.path, self.frame)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_from_ra_and_dec
+    #===========================================================================
     def uv_from_ra_and_dec(self, ra, dec, derivs=False, iters=2, quick={},
                            apparent=True, time_frac=0.5):
-        """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
 
         Input:
             ra          a Scalar of J2000 right ascensions.
@@ -529,20 +727,29 @@ class Observation(object):
         velocity WRT the SSB could vary during the observation. I doubt this
         would ever be significant.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------------
         # Convert to line of sight in SSB/J2000 frame
+        #---------------------------------------------------
         neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec, recursive=derivs)
 
+        #--------------------------------------------------------------
         # Require extra at least two iterations if time_frac != 0.5
+        #--------------------------------------------------------------
         if time_frac != 0.5:
             iters = max(2, iters)
 
+        #----------------------------------------
         # Iterate until (u,v) has converged
+        #---------------------------------------
         obs_time = self.midtime     # starting guess
         uv = None
         for iter in range(iters):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Define the photon arrival event
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
 
             if apparent:
@@ -550,22 +757,36 @@ class Observation(object):
             else:
                 obs_event.neg_arr_j2000 = neg_arr_j2000
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Convert to FOV coordinates
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             prev_uv = uv
             uv = self.fov.uv_from_los(obs_event.neg_arr_ap)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the time
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             (t0,t1) = self.times_at_uv(uv)
             obs_time = t0 + time_frac * (t1 - t0)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Stop at convergence
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if uv == prev_uv: break
 
         return uv
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_from_path
+    #===========================================================================
     def uv_from_path(self, path, derivs=False, quick={}, converge={},
                            time_frac=0.5):
-        """Return the (u,v) indices of an object in the FOV, given its path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the (u,v) indices of an object in the FOV, given its path.
 
         Note: This procedure assumes that movement along a path is very limited
         during the exposure time of an individual pixel. It could fail to
@@ -594,8 +815,11 @@ class Observation(object):
                         found. The path is evaluated at the mid-time of this
                         pixel.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------------------------
         # Assemble convergence parameters
+        #-------------------------------------
         if converge:
             defaults = PATH_PHOTONS.__dict__.copy()
             defaults.update(converge)
@@ -607,18 +831,24 @@ class Observation(object):
         precision = converge['dlt_precision']
         limit = converge['dlt_limit']
 
+        #------------------------------------------------------------------
         # Require extra at least two iterations if time_frac != 0.5
+        #------------------------------------------------------------------
         if time_frac != 0.5:
             iters = max(2, iters)
 
+        #-----------------------------
         # Iterate to solution...
+        #-----------------------------
         guess = None
         max_dt = np.inf
         obs_time = self.midtime     # starting guess
 
         for iter in range(iters):
 
+            #- - - - - - - - - - - - - - - - - - - - -
             # Locate the object in the field of view
+            #- - - - - - - - - - - - - - - - - - - - -
             obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
             (path_event, obs_event) = path.photon_to_event(obs_event,
                                         derivs=False, guess=guess,
@@ -626,11 +856,15 @@ class Observation(object):
             guess = path_event.time
             (uv_min, uv_max) = self.uv_at_time(obs_event.time)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the observation times based on pixel midtimes
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             (t0, t1) = self.times_at_uv(uv_min)
             new_obs_time = t0 + time_frac * (t1 - t0)
 
+            #- - - - - - - - - - - - - 
             # Test for convergence
+            #- - - - - - - - - - - - - 
             prev_max_dt = max_dt
             max_dt = abs(new_obs_time - obs_time).max()
             obs_time = new_obs_time
@@ -641,7 +875,9 @@ class Observation(object):
             if max_dt <= PATH_PHOTONS.dlt_precision or max_dt >= prev_max_dt:
                 break
 
+        #------------------------------------------
         # Return the results at the best mid-time
+        #-------------------------------------------
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
 
         (path_event, obs_event) = path.photon_to_event(obs_event,
@@ -649,10 +885,18 @@ class Observation(object):
                                         quick=quick, converge=converge)
 
         return self.fov.uv_from_los(obs_event.neg_arr_ap, derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # inventory
+    #===========================================================================
     def inventory(self, bodies, expand=0., return_type='list', fov=None,
                         quick={}, converge={}, time_frac=0.5):
-        """Return the body names that appear unobscured inside the FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the body names that appear unobscured inside the FOV.
 
         Restrictions: All inventory calculations are performed at a single
         observation time specified by time_frac. All bodies are assumed to be
@@ -723,10 +967,16 @@ class Observation(object):
                 body_data['v_pixel_size']  covered by the diameter of the body 
                                            in each direction.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError(
                 'Observation subclass "%s" ' % type(self).__name__ +
                 'does not implement method inventory()')
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -734,14 +984,24 @@ class Observation(object):
 
 import unittest
 
+#*******************************************************************************
+# Test_Observation
+#*******************************************************************************
 class Test_Observation(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # TBD
         # Note in particular that uv_from_path() is incomplete and untested!
 
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
 
 ########################################
 if __name__ == '__main__':

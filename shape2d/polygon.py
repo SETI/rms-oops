@@ -10,11 +10,23 @@ from line     import Line, HalfLine, Segment
 from circle   import Circle
 from triangle import Triangle
 
+#*******************************************************************************
+# Polygon
+#*******************************************************************************
 class Polygon(Shape2D):
-    """A triangle."""
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A triangle.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(*pts):
-        """Constructor for an abitrary polygon object, defined by three or more
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for an abitrary polygon object, defined by three or more
         corners.
 
         Input:
@@ -26,7 +38,7 @@ class Polygon(Shape2D):
         The object's array shape is the result of broadcasting together the
         array shapes of the inputs.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pt_list = [Pair.as_pair(pts[0]), Pair.as_pair(pts[1])]
         self.segs = [Segment(pt_list[0], pt_list[1])]
 
@@ -37,7 +49,9 @@ class Polygon(Shape2D):
             self.segs.append(Segment(pt_list[-2], pt_list[-1]))
             self.triangles = Triangle(pt_list[0], pt_list[1], pt)
 
+        #----------------------
         # Close loop
+        #----------------------
         pt_list.append(self.pts[0])
         self.pts = Qube.stack(*self.pts)
         self.ptsn = self.pts[:-1]
@@ -46,7 +60,9 @@ class Polygon(Shape2D):
         self.n = len(self.pts)
         self.nfloat = float(self.n)
 
+        #-----------------------
         # Other properties
+        #-----------------------
         dims = []
         signs = []
         for triangle in self.triangles:
@@ -62,41 +78,78 @@ class Polygon(Shape2D):
         self.is_convex = (self.max_signs > 0) & (self.min_signs < 0)
         self.sign = signs.sum(axis=0).sign()
 
+        #--------------------------------------------------
         # Concave polygons are not currently supported
+        #--------------------------------------------------
         if not self.is_convex.all():
             raise ValueError('concave polygons are not supported')
+    #===========================================================================
+
+
 
     ############################################################################
     # Standard methods
     ############################################################################
 
+    #===========================================================================
+    # dimensions
+    #===========================================================================
     def dimensions(self):
-        """The Scalar dimension of this object: 0 for a point; 1 for a line; 2
-        for a shape object that has nonzero area."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The Scalar dimension of this object: 0 for a point; 1 for a line; 2
+        for a shape object that has nonzero area.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.dims
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_convex
+    #===========================================================================
     def is_convex(self):
-        """True if the shape is convex."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        True if the shape is convex.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.is_convex
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # point_at
+    #===========================================================================
     def point_at(t):
-        """Parameterization of the shape."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Parameterization of the shape.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         t = Scalar.as_scalar(t) % self.nfloat
         k = t.as_int()
         t = t - k
 
         return Point(self.pts[k] + t * self.dpt[k])
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # param_at
+    #===========================================================================
     def param_at(pt):
-        """Parameter at a point, which is assumed to fall on the edge of this
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Parameter at a point, which is assumed to fall on the edge of this
         object.
 
         What happens when the point does not fall on the shape is undetermined.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         edge_pts = []
         for seg in self.segs:
             edge_pts.append(seg.closest(pt)[0])
@@ -112,13 +165,31 @@ class Polygon(Shape2D):
         params = Qube.stack(*params)
 
         return params[indx]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # param_limits
+    #===========================================================================
     def param_limits(self):
-        """Parameter limits to define the shape."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Parameter limits to define the shape.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (0., self.nfloat)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # closest
+    #===========================================================================
     def closest(self, arg):
-        """Tuple containing the pairs of closest points between the edges of
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Tuple containing the pairs of closest points between the edges of
         this object and the given Shape2D object.
 
         Input:
@@ -136,7 +207,7 @@ class Polygon(Shape2D):
         are guaranteed to be unmasked as long as the shape are initially
         unmasked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self_pts = []
         arg_pts = []
         for seg in self.segs:
@@ -148,9 +219,17 @@ class Polygon(Shape2D):
         arg_pts  = Qube.stack(*arg_pts)
 
         return Shape2D._closest_of_pairings(self_pts, arg_pts)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intersections
+    #===========================================================================
     def intersections(self, arg):
-        """Points defining intersections between the edges of this shape and the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Points defining intersections between the edges of this shape and the
         given Shape2D object.
 
         Input:
@@ -165,39 +244,60 @@ class Polygon(Shape2D):
                         will be masked where the shape edges do not intersect or
                         are duplicated.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------------
         # Find intersections on all segments
+        #-----------------------------------------
         xsects = []
         for seg in self.segs:
             xsects.append(seg.intersect(arg))
 
+        #-------------------------------------------------------------
         # Stack and reshape so all intersections fall along axis 0
+        #-------------------------------------------------------------
         xsects = Qube.stack(*xsects)
         axis0 = xsects.shape[0] * xsects.shape[1]
         new_shape = (axis0,) + xsects.shape[2:]
 
+        #--------------------------------------------------
         # Create a new mask to hide duplicated values
+        #--------------------------------------------------
         new_mask = xsects.mask.copy()
         x = xsects.values[...,0]
         y = xsects.values[...,1]
         unmasked = xsects.antimask
 
+        #------------------------
         # Work from right...
+        #------------------------
         for k in range(axis0-1,-1,0):
 
+          #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           # Compare each value to all values to its left on axis 0
+          #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           for j in range(k-1,-1,-1):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If the left value (j) is equal to the right value (k) and the
             # left value is unmasked, mask the right value
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask[k] |= ((x[j] - x[k]).abs() <= Shape2D.PREC &
                             (y[j] - y[k]).abs() <= Shape2D.PREC &
                             unmasked[j])
 
         return xsects.mask_where(new_mask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # tangents_from
+    #===========================================================================
     def tangents_from(self, pt):
-        """The two points where this Shape2D object is tangent to a line from
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The two points where this Shape2D object is tangent to a line from
         the given Point.
 
         Note: If the two points are degenerate, the second one is masked.
@@ -213,19 +313,26 @@ class Polygon(Shape2D):
                         this shape. Tangent points are be masked if they do not
                         exist or are duplicated.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------------------
         # Define relative points at all the corners
+        #-----------------------------------------------
         corners = []
         for corner_pt in self.ptsn:
             corners.append(corner_pt - pt).unit()
 
         corners = Qube.stack(*corners)
 
+        #------------------------------
         # Construct the average
+        #------------------------------
         center = corners.mean(axis=0)
 
+        #---------------------------------------------------------------------
         # The two most widely separated vectors will have the extreme cross
         # products
+        #---------------------------------------------------------------------
         crosses = corners.cross(center)
         argmin = crosses.argmin(axis=0)
         argmax = crosses.argmax(axis-0)
@@ -233,9 +340,17 @@ class Polygon(Shape2D):
         max_indx = Shape2D._meshgrid_for_arg(argmax)
         min_indx = Shape2D._meshgrid_for_arg(argmin)
         return (self.pts[min_indx], self.pts[max_indx])
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # tangent_at
+    #===========================================================================
     def tangent_at(self, t):
-        """The Line object tangent to this Shape2D object at the given parameter
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The Line object tangent to this Shape2D object at the given parameter
         value.
 
         Input:
@@ -247,7 +362,7 @@ class Polygon(Shape2D):
                         result is a Line object with this shape. Tangent lines
                         will be masked if the tangent value is undefined.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pts = self.point_at(t)
         side = (t % self.n).as_int()
         pt0 = self.pts[side]
@@ -257,9 +372,17 @@ class Polygon(Shape2D):
                                             # corner points have no tangent
 
         return Line(pt0, pt1)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal_at
+    #===========================================================================
     def normal_at(self, t):
-        """The outward HalfLine object normal to this Shape2D object at the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The outward HalfLine object normal to this Shape2D object at the
         given parameter value.
 
         Note: for Line subclasses, the "outward" normal is defined to be the
@@ -276,21 +399,31 @@ class Polygon(Shape2D):
                         The HalfLines will be masked if the outward normal is
                         undefined.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pt0 = self.point_at(t)
         side = (t % self.n).as_int()
         dpt = -self.dpt[side] * self.sign
-           # rotate90 will rotate counterclockwise and so point inward for any
-           # polygon defined in a counterclockwise direction. This ensures that
-           # all lines will point outward after rotate90.
 
         pt0 = pt0.mask_where((side - t).abs() < Shape2D.PREC)
                                             # corner points have no normal
 
+        #---------------------------------------------------------------------
+        # rotate90 will rotate counterclockwise and so point inward for any
+        # polygon defined in a counterclockwise direction. This ensures that
+        # all lines will point outward after rotate90.
+        #---------------------------------------------------------------------
         return HalfLine(pt0, pt0 + dpt).rotate90()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_subset_of
+    #===========================================================================
     def is_subset_of(self, arg):
-        """True if this object is as subset of (i.e., is entirely contained by)
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        True if this object is as subset of (i.e., is entirely contained by)
         the given Shape2D object.
 
         Input:
@@ -300,8 +433,11 @@ class Polygon(Shape2D):
         Return:         Boolean True if this shape is a subset of the given
                         shape.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------
         # Convex shapes are easy
+        #----------------------------
         if type(arg) == Pair:
             pt = Point(arg)
 
@@ -312,11 +448,21 @@ class Polygon(Shape2D):
             is_subset = Qube.stack(*is_subset)
             return is_subset.all()
 
+        #---------------------------------------------------------------
         # For other cases, use the method of the other object's class
+        #---------------------------------------------------------------
         return arg.is_superset_of(self)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_superset_of
+    #===========================================================================
     def is_superset_of(self, arg):
-        """True if this object is as superset of (i.e., entirely contains) the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        True if this object is as superset of (i.e., entirely contains) the
         given Shape2D object.
 
         Input:
@@ -326,15 +472,20 @@ class Polygon(Shape2D):
         Return:         Boolean True if this shape is a superset of the given
                         shape.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------
         # Is superset of, Polygon to Point
+        #---------------------------------------
         if type(arg) in (Point, Pair):
             pt = Point(arg)
 
             crosses = self.dpts.cross(pt - self.pts3)
             return (crosses * self.signs >= 0).all(axis=0)
 
+        #-------------------------------------
         # Is superset of, Polygon to Line
+        #-------------------------------------
         if type(arg) in (Line, HalfLine):
             return Boolean.FALSE
 
@@ -342,15 +493,19 @@ class Polygon(Shape2D):
             line = arg
             return self.is_superset_of(line.pt0) & self.is_superset_of(line.pt1)
 
+        #---------------------------------------
         # Is superset of, Polygon to Circle
+        #---------------------------------------
         if type(arg) == Circle:
             circle = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # A polygon is a superset of a circle if...
             # 1. The circle's center is inside the polygon
             # 2. Every point is outside the circle.
             # 3. None of the sides intersects the circle (although they can
             #    touch)
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             circle_center_is_inside = self.is_superset_of(circle.pt0)
 
@@ -370,7 +525,9 @@ class Polygon(Shape2D):
             return (circle_center_is_inside & vertices_are_outside &
                     sides_dont_intersect)
 
+        #---------------------------------------
         # Is superset of, Polygon to Triangle
+        #---------------------------------------
         if type(arg) == Triangle:
             triangle = arg
 
@@ -378,7 +535,9 @@ class Polygon(Shape2D):
                     self.is_superset_of(triangle.pt1) &
                     self.is_superset_of(triangle.pt2))
 
+        #----------------------------------------
         # Is superset of, Polygon to Polygon
+        #----------------------------------------
         if type(arg) == Polygon:
             polygon = arg
 
@@ -388,11 +547,21 @@ class Polygon(Shape2D):
             vertex_is_inside = Qube.stack(*vertex_is_inside)
             return vertex_is_inside.all(axis=0)
 
+        #-----------------------------------------------------------------
         # For other cases, use the method of the other object's class
+        #-----------------------------------------------------------------
         return arg.is_superset_of(self)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_disjoint_from
+    #===========================================================================
     def is_disjoint_from(self, arg):
-        """True if the this object and the given Shape2D object are disjoint
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        True if the this object and the given Shape2D object are disjoint
         (i.e., do not touch or overlap).
 
         Input:
@@ -402,18 +571,24 @@ class Polygon(Shape2D):
         Return:         Boolean True if this shape is disjoing from the given
                         shape.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         
+        #----------------------------------------------
         # Is disjoint from, Triangle to Polygon
+        #----------------------------------------------
         if type(arg) in (Point, Pair):
             return ~self.is_superset_of(arg)
 
+        #----------------------------------------------
         # Is disjoint from, Polygon to Line
+        #----------------------------------------------
         if type(arg) == Line:
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # A polygon is disjoint from an infinite line if all points
             # fall on the same side of the line.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             diffs = self.ptsn - line.pt0
             sides = diffs.dot(line.perp)
@@ -422,17 +597,29 @@ class Polygon(Shape2D):
         if type(arg) in (HalfLine, Segment):
             line == arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # A polygon is disjoint from a half-line or segment if the full
             # line would be disjoint or if one endpoint is outside the polygon
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
             return (self.is_disjoint_from(Line.as_line(line)) |
                     self.is_disjoin_from(line.pt0))
 
+        #--------------------------------------
         # Otherwise use the general method
+        #--------------------------------------
         return super(Shape2D, self).is_disjoint_from(arg)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # touches
+    #===========================================================================
     def touches(self, arg):
-        """True if the this object and the given Shape2D touch but do not share
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        True if the this object and the given Shape2D touch but do not share
         any common interior points.
 
         Input:
@@ -442,8 +629,11 @@ class Polygon(Shape2D):
         Return:         Boolean True if the shapes touch but share no common
                         interior points.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #--------------------------------
         # Touches, Polygon to Point
+        #--------------------------------
         if type(arg) in (Point, Pair):
             pt = Point(arg)
 
@@ -453,17 +643,23 @@ class Polygon(Shape2D):
             point_touches = Qube.stack(*point_touches)
             return point_touches.any(axis=0)
 
+        #--------------------------------
         # Touches, Polygon to Line
+        #--------------------------------
         if isinstance(type(arg), Line):
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # True if exactly one line endpoint touches the triangle or if the
             # line touches one corner
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             touchings = []
             for pt in self.pts:
                 touchings.append(line.touches(pt))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Count matches on the side but not the corners
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             for seg in self.segs:
                 (side_pt, line_pt) = seg.closest(line)
                 touches_side = (side_pt - line_pt).norm_sq() <= Shape2D.PREC_SQ
@@ -475,7 +671,15 @@ class Polygon(Shape2D):
             touchings = Qube.stack(*touchings)
             return (touchings.sum(axis=0) == 1)
 
+        #-------------------------------------
         # Otherwise use the general method
+        #-------------------------------------
         return super(Shape2D, self).touches(arg)
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################

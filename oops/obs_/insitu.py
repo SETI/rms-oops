@@ -12,19 +12,29 @@ from oops.cadence_.cadence  import Cadence
 from oops.cadence_.instant  import Instant
 from oops.fov_.nullfov      import NullFOV
 
+#*******************************************************************************
+# InSitu
+#*******************************************************************************
 class InSitu(Observation):
-    """InSitu is a subclass of Observation that has timing and path information,
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    InSitu is a subclass of Observation that has timing and path information,
     but no attributes related to pointing or incoming photon direction. It can
     be useful for describing in situ measurements.
 
     It can also be used to obtain information from gridless backplanes, which
     do not require directional information.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['cadence', 'path']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, cadence, path):
-        """Constructor for an InSitu observation.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for an InSitu observation.
 
         Input:
             cadence     a Cadence object defining the time and duration of
@@ -32,7 +42,7 @@ class InSitu(Observation):
                         is converted to a Cadence of subclass Instant.
             path        the path waypoint co-located with the observer.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if isinstance(cadence, Cadence):
             self.cadence = cadence
         else:
@@ -56,6 +66,10 @@ class InSitu(Observation):
         self.subfields = {}
 
         return
+    #===========================================================================
+
+
+#*******************************************************************************
 
 ################################################################################
 # UNIT TESTS
@@ -63,13 +77,23 @@ class InSitu(Observation):
 
 import unittest
 
+#*******************************************************************************
+# Test_InSitu
+#*******************************************************************************
 class Test_InSitu(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # No tests here - this is just an abstract superclass
 
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
 
 ########################################
 if __name__ == '__main__':
