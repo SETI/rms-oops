@@ -12,8 +12,13 @@ from oops.surface_.surface   import Surface
 from oops.config             import SURFACE_PHOTONS, LOGGING
 from oops.constants          import *
 
+#*******************************************************************************
+# Limb
+#*******************************************************************************
 class Limb(Surface):
-    """The Limb surface is defined as the locus of points where a surface normal
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+        The Limb surface is defined as the locus of points where a surface normal
     from a spheroid or ellipsoid is perpendicular to the line of sight. This
     provides a convenient coordinate system for describing cloud features on the
     limb of a body.
@@ -29,15 +34,20 @@ class Limb(Surface):
                 normal to the ring plane. Note that this definition differs from
                 that used by the spheroid and ellipsoid surface.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "limb"
     IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
 
     PACKRAT_ARGS = ['ground', 'limits']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, ground, limits=None):
-        """Constructor for a Limb surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Limb surface.
 
         Input:
             ground      the Surface object relative to which limb points are to
@@ -47,7 +57,7 @@ class Limb(Surface):
                         numerical limit(s) placed on the limb; values outside
                         this range are masked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert ground.COORDINATE_TYPE == "spherical"
         self.ground = ground
         self.origin = ground.origin
@@ -57,10 +67,18 @@ class Limb(Surface):
             self.limits = None
         else:
             self.limits = (limits[0], limits[1])
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False, guess=None, groundtrack=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -90,7 +108,7 @@ class Limb(Surface):
                         if groundtrack is True, a Vector3 of ground points is
                         appended to the returned tuple.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos = Vector3.as_vector3(pos, derivs)
 
         if guess is None:
@@ -125,10 +143,18 @@ class Limb(Surface):
             results += (track,)
 
         return results
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
                                   groundtrack=False):
-        """Returns the position where a point with the given surface coordinates
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the position where a point with the given surface coordinates
         would fall in the surface frame, given the location of the observer.
 
         Input:
@@ -146,7 +172,7 @@ class Limb(Surface):
         Return:         a Vector3 of intercept points defined by the
                         coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         track = self.ground.vector3_from_coords(coords[:2], derivs=derivs)
 
         if len(coords) == 2:
@@ -164,10 +190,18 @@ class Limb(Surface):
             return results
         else:
             return results[0]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None,
                         groundtrack=False):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -188,11 +222,15 @@ class Limb(Surface):
             t           a Scalar such that:
                             intercept = obs + t * los
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------------------------------------------
         # Convert to standard units
+        #-----------------------------------------------------------------------
         obs = Vector3.as_vector3(obs, derivs)
         los = Vector3.as_vector3(los, derivs)
 
+        #----------------------------------------------------------------------
         # Solve for the intercept distance where the line of sight is normal to
         # the surface.
         #
@@ -210,7 +248,7 @@ class Limb(Surface):
         # (obs + t * los) dot los = 0
         #
         # t = -(obs dot los) / (los dot los)
-
+        #----------------------------------------------------------------------
         if guess not in (None, False):
             t = guess.copy()
         else:
@@ -251,9 +289,17 @@ class Limb(Surface):
             return (pos, t, track)
         else:
             return (pos, t)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -264,18 +310,26 @@ class Limb(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.normal(pos, derivs=derivs)
+    #===========================================================================
+
+
 
 ################################################################################
 # (z,clock) conversions
 ################################################################################
 
+    #===========================================================================
+    # clock_from_groundtrack
+    #===========================================================================
     def clock_from_groundtrack(self, track, obs, derivs=False):
-        """The angle measured clockwise from the projected pole to the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The angle measured clockwise from the projected pole to the
         groundtrack.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         track = Vector3.as_vector3(track, derivs)
         obs = Vector3.as_vector3(obs, derivs)
 
@@ -287,10 +341,19 @@ class Limb(Surface):
 
         clock = y.arctan2(x) % TWOPI
         return clock
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # groundtrack_from_clock
+    #===========================================================================
     def groundtrack_from_clock(self, clock, obs, derivs=False):
-        """Return the ground point defined by the clock angle."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the ground point defined by the clock angle.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if derivs:
             raise NotImplementedError("Limb.groundtrack_from_clock() " +
                                       "does not implement derivatives")
@@ -301,15 +364,20 @@ class Limb(Surface):
         x_axis = Vector3.ZAXIS.perp(obs).unit()
         y_axis = Vector3.ZAXIS.ucross(obs).unit()
 
+        #---------------------------------------------------------------
         # Groundtrack must fall on the plane defined by these two axes
+        #---------------------------------------------------------------
         a1 = clock.cos() * x_axis + clock.sin() * y_axis
         a2 = obs.unit()
 
+        #--------------------------------------------
         # Let location of limb be u * a1 + v * a2
         # Unsquash axes...
+        #--------------------------------------------
         b1 = a1.element_mul(self.ground.unsquash)
         b2 = b1.element_mul(self.ground.unsquash)
 
+        #-----------------------------------------------------------------------
         # The values of (u,v) must satisfy:
         #   u^2 [b1 dot b1] + u [2v(b1 dot b2)] + [v^2(b2 dot b2) - r_eq^2] = 0
         #
@@ -328,7 +396,7 @@ class Limb(Surface):
         # aa = [(b1 dot b2)^2 - b1^2 b2^2]/b1^4
         # bb = r_eq^2/b1^2
         # cc = (b1 dot b2)/b1^2
-
+        #-----------------------------------------------------------------------
         b1_sq = b1.norm_sq()
         b2_sq = b2.norm_sq()
         b12   = b1.dot(b2)
@@ -337,6 +405,7 @@ class Limb(Surface):
         bb = Scalar(self.ground.req_sq) / b1_sq
         cc = b12 / b1_sq
 
+        #-------------------------------------------------------
         # Solve for v via Newton's Method:
         #   u = sqrt(aa v^2 + bb) - cc v
         #   track = u * a1 + v * a2
@@ -345,7 +414,7 @@ class Limb(Surface):
         #
         # Define f(v) = normal(track(v)) dot (track(v) - obs)
         # Initial guess is v = 0.
-
+        #-------------------------------------------------------
         v = Scalar(np.zeros(clock.shape))
         dv_dv = Scalar(np.ones(clock.shape))
 
@@ -378,11 +447,20 @@ class Limb(Surface):
 
         track = u.wod * a1 + v.wod * a2
         return track
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # z_clock_from_intercept
+    #===========================================================================
     def z_clock_from_intercept(self, cept, obs, derivs=False, guess=None,
                                      groundtrack=False):
-        """Return z and clock values at an intercept point. """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return z and clock values at an intercept point. 
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if derivs:
             raise NotImplementedError("Limb.z_clock_from_intercept() " +
                                       "does not implement derivatives")
@@ -414,11 +492,20 @@ class Limb(Surface):
             results += (track,)
 
         return results
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept_from_z_clock
+    #===========================================================================
     def intercept_from_z_clock(self, z, clock, obs, derivs=False,
                                      groundtrack=False):
-        """Return the intercept point defined by z and clock."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the intercept point defined by z and clock.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if derivs:
             raise NotImplementedError("Limb.intercept_from_z_clock() " +
                                       "does not implement derivatives")
@@ -431,15 +518,20 @@ class Limb(Surface):
         x_axis = Vector3.ZAXIS.perp(obs).unit()
         y_axis = Vector3.ZAXIS.ucross(obs).unit()
 
+        #----------------------------------------------------------------
         # Groundtrack must fall on the plane defined by these two axes
+        #----------------------------------------------------------------
         a1 = clock.cos() * x_axis + clock.sin() * y_axis
         a2 = obs.unit()
 
+        #----------------------------------------------------
         # Let location of ground point be u * a1 + v * a2
         # Unsquash axes...
+        #----------------------------------------------------
         b1 = a1.element_mul(self.ground.unsquash)
         b2 = b1.element_mul(self.ground.unsquash)
 
+        #-----------------------------------------------------------------------
         # The values of (u,v) at the ground point must satisfy:
         #   u^2 [b1 dot b1] + u [2v(b1 dot b2)] + [v^2(b2 dot b2) - r_eq^2] = 0
         #
@@ -459,6 +551,7 @@ class Limb(Surface):
         # aa = [(b1 dot b2)^2 - b1^2 b2^2]/b1^4
         # bb = r_eq^2/b1^2
         # cc = (b1 dot b2)/b1^2
+        #-----------------------------------------------------------------------
 
         b1_sq = b1.norm_sq()
         b2_sq = b2.norm_sq()
@@ -468,6 +561,7 @@ class Limb(Surface):
         bb = Scalar(self.ground.req_sq) / b1_sq
         cc = b12 / b1_sq
 
+        #------------------------------------------------------
         # Solve for v via Newton's Method:
         #   u = sqrt(aa v^2 + bb) - cc v
         #   track = u * a1 + v * a2
@@ -478,7 +572,7 @@ class Limb(Surface):
         #
         # Define f(v) = normal(track(v)) dot (cept(v) - obs)
         # Initial guess is v = 0.
-
+        #------------------------------------------------------
         v = Scalar(np.zeros(clock.shape))
         dv_dv = Scalar(np.ones(clock.shape))
 
@@ -517,58 +611,133 @@ class Limb(Surface):
             return (cept, track)
         else:
             return cept
+    #===========================================================================
+
+
 
     ############################################################################
     # Longitude conversions
     ############################################################################
 
+    #===========================================================================
+    # lon_to_centric
+    #===========================================================================
     def lon_to_centric(self, lon, derivs=False):
-        """Convert longitude in internal coordinates to planetocentric."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert longitude in internal coordinates to planetocentric.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lon_to_centric(lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lon_from_centric
+    #===========================================================================
     def lon_from_centric(self, lon, derivs=False):
-        """Convert planetocentric longitude to internal coordinates."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetocentric longitude to internal coordinates.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lon_from_centric(lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lon_to_graphic
+    #===========================================================================
     def lon_to_graphic(self, lon, derivs=False):
-        """Convert longitude in internal coordinates to planetographic."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert longitude in internal coordinates to planetographic.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lon_to_graphic(lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lon_from_graphic
+    #===========================================================================
     def lon_from_graphic(self, lon, derivs=False):
-        """Convert planetographic longitude to internal coordinates."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetographic longitude to internal coordinates.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lon_from_graphic(lon, derivs)
+    #===========================================================================
+
+
 
     ############################################################################
     # Latitude conversions
     ############################################################################
 
+    #===========================================================================
+    # lat_to_centric
+    #===========================================================================
     def lat_to_centric(self, lat, lon, derivs=False):
-        """Convert latitude in internal ellipsoid coordinates to planetocentric.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Convert latitude in internal ellipsoid coordinates to planetocentric.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lat_to_centric(lat, lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lat_from_centric
+    #===========================================================================
     def lat_from_centric(self, lat, lon, derivs=False):
-        """Convert planetocentric latitude to internal ellipsoid latitude.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Convert planetocentric latitude to internal ellipsoid latitude.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lat_from_centric(lat, lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lat_to_graphic
+    #===========================================================================
     def lat_to_graphic(self, lat, lon, derivs=False):
-        """Convert latitude in internal ellipsoid coordinates to planetographic.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Convert latitude in internal ellipsoid coordinates to planetographic.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lat_to_graphic(lat, lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lat_from_graphic
+    #===========================================================================
     def lat_from_graphic(self, lat, lon, derivs=False):
-        """Convert planetographic latitude to internal ellipsoid latitude.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Convert planetographic latitude to internal ellipsoid latitude.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.lat_from_graphic(lat, lon, derivs)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -576,8 +745,14 @@ class Limb(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_Limb
+#*******************************************************************************
 class Test_Limb(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.frame_.frame import Frame
@@ -609,7 +784,9 @@ class Test_Limb(unittest.TestCase):
 
         (cept, t, track) = limb.intercept(obs, los, groundtrack=True)
 
+        #--------------------------------
         # Check (z,clock) conversions
+        #--------------------------------
         (z, clock, track2) = limb.z_clock_from_intercept(cept, obs, groundtrack=True)
 
         self.assertTrue((track2 - track).norm().median() < 1.e-10)
@@ -634,7 +811,9 @@ class Test_Limb(unittest.TestCase):
         cept2 = limb.intercept_from_z_clock(z, clock, obs)
         (z2, clock2) = limb.z_clock_from_intercept(cept2, obs)
 
+        #---------------------
         # Validate solution
+        #---------------------
         (cept, t, track) = limb.intercept(obs, los, groundtrack=True)
         normal = limb.normal(track).unit()
         self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
@@ -643,7 +822,9 @@ class Test_Limb(unittest.TestCase):
         sep = (normal2.sep(normal) + HALFPI) % PI - HALFPI
         self.assertTrue(abs(sep).max() < 1.e-10)
 
+        #-----------------------------------
         # Validate (lon,lat) conversions
+        #-----------------------------------
         lon = np.random.random(NPTS) * TWOPI
         lat = np.arcsin(np.random.random(NPTS) * 2. - 1.)
         z = np.random.random(NPTS) * 10000.
@@ -660,7 +841,9 @@ class Test_Limb(unittest.TestCase):
                                    REQ * np.random.random(NPTS),
                                    REQ * np.random.random(NPTS))
 
+        #--------------------------
         # Validate clock angles
+        #--------------------------
         track = limb.groundtrack_from_clock(clock, obs)
         clock2 = limb.clock_from_groundtrack(track, obs)
         track2 = limb.groundtrack_from_clock(clock2, obs)
@@ -686,7 +869,9 @@ class Test_Limb(unittest.TestCase):
         (cept,t, track) = limb.intercept(obs, los, groundtrack=True)
         normal = limb.normal(track)
 
+        #--------------------------------
         # Check (z,clock) conversions
+        #--------------------------------
         (z, clock, track2) = limb.z_clock_from_intercept(cept, obs, groundtrack=True)
 
         self.assertTrue((track2 - track).norm().median() < 1.e-10)
@@ -711,14 +896,18 @@ class Test_Limb(unittest.TestCase):
         cept2 = limb.intercept_from_z_clock(z, clock, obs)
         (z2, clock2) = limb.z_clock_from_intercept(cept2, obs)
 
+        #----------------------
         # Validate solution
+        #----------------------
         self.assertTrue(abs(normal.sep(los) - HALFPI).max() < 1.e-12)
 
         normal2 = cept - track
         sep = (normal2.sep(normal) + HALFPI) % PI - HALFPI
         self.assertTrue(abs(sep).max() < 1.e-10)
 
+        #-----------------------------------
         # Validate (lon,lat) conversions
+        #-----------------------------------
         lon = np.random.random(NPTS) * TWOPI
         lat = np.arcsin(np.random.random(NPTS) * 2. - 1.)
         z = np.random.random(NPTS) * 10000.
@@ -735,7 +924,9 @@ class Test_Limb(unittest.TestCase):
                                    REQ * np.random.random(NPTS),
                                    REQ * np.random.random(NPTS))
 
+        #--------------------------
         # Validate clock angles
+        #--------------------------
         track = limb.groundtrack_from_clock(clock, obs)
         clock2 = limb.clock_from_groundtrack(track, obs)
         track2 = limb.groundtrack_from_clock(clock2, obs)
@@ -871,6 +1062,13 @@ class Test_Limb(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

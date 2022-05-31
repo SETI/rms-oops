@@ -17,15 +17,26 @@ from oops.transform       import Transform
 from oops.constants       import *
 import oops.spice_support as spice
 
+#*******************************************************************************
+# SpiceFrame
+#*******************************************************************************
 class SpiceFrame(Frame):
-    """A SpiceFrame is a Frame object defined within the SPICE toolkit."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A SpiceFrame is a Frame object defined within the SPICE toolkit.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['spice_frame', 'spice_reference', 'frame_id',
                     'omega_type', 'omega_dt']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, spice_frame, spice_reference='J2000', id=None,
                        omega_type='tabulated', omega_dt=1.):
-        """Constructor for a SpiceFrame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a SpiceFrame.
 
         Input:
             spice_frame     the name or integer ID of the destination frame
@@ -45,30 +56,41 @@ class SpiceFrame(Frame):
             omega_dt        default time step in seconds to use for spline-based
                             numerical derivatives of omega.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------------
         # Preserve the inputs
+        #-------------------------
         self.spice_frame = spice_frame
         self.spice_reference = spice_reference
         self.omega_type = omega_type
         self.omega_dt = omega_dt
 
+        #------------------------------------------------
         # Interpret the SPICE frame and reference IDs
+        #------------------------------------------------
         (self.spice_frame_id,
          self.spice_frame_name) = spice.frame_id_and_name(spice_frame)
 
         (self.spice_reference_id,
          self.spice_reference_name) = spice.frame_id_and_name(spice_reference)
 
+        #-------------------------------------------------------------------
         # Fill in the Frame ID and save it in the SPICE global dictionary
+        #-------------------------------------------------------------------
         self.frame_id = id or self.spice_frame_name
         spice.FRAME_TRANSLATION[self.spice_frame_id]   = self.frame_id
         spice.FRAME_TRANSLATION[self.spice_frame_name] = self.frame_id
 
+        #-----------------------------------
         # Fill in the reference wayframe
+        #-----------------------------------
         reference_id = spice.FRAME_TRANSLATION[self.spice_reference_id]
         self.reference = Frame.as_wayframe(reference_id)
 
+        #---------------------------------
         # Fill in the origin waypoint
+        #---------------------------------
         self.spice_origin_id   = cspyce.frinfo(self.spice_frame_id)[0]
         self.spice_origin_name = cspyce.bodc2n(self.spice_origin_id)
         origin_id = spice.PATH_TRANSLATION[self.spice_origin_id]
@@ -80,24 +102,36 @@ class SpiceFrame(Frame):
             origin_path = SpicePath(origin_id)
             self.origin = origin_path.waypoint
 
+        #----------------------
         # No shape, no keys
+        #----------------------
         self.shape = ()
         self.keys = set()
 
+        #-------------------------------
         # Save interpolation method
+        #-------------------------------
         assert omega_type in ('tabulated', 'numerical', 'zero')
         self.omega_tabulated = (omega_type == 'tabulated')
         self.omega_numerical = (omega_type == 'numerical')
         self.omega_zero = (omega_type == 'zero')
 
+        #-----------------------------------
         # Always register a SpiceFrame
         # This also fills in the waypoint
+        #-----------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
-        """A Transform that rotates from the reference frame into this frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A Transform that rotates from the reference frame into this frame.
 
         Input:
             time            a Scalar time.
@@ -109,13 +143,15 @@ class SpiceFrame(Frame):
         Return:             the corresponding Tranform applicable at the
                             specified time(s).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time).as_float()
 
         ######## Handle a single time
         if time.shape == ():
 
+            #- - - - - - - - - - - - - - - - - 
             # Case 1: omega_type = tabulated
+            #- - - - - - - - - - - - - - - - - 
             if self.omega_tabulated:
                 matrix6 = cspyce.sxform(self.spice_reference_name,
                                         self.spice_frame_name,
@@ -124,7 +160,9 @@ class SpiceFrame(Frame):
 
                 return Transform(matrix, omega, self, self.reference)
 
+            #- - - - - - - - - - - - - - -
             # Case 2: omega_type = zero
+            #- - - - - - - - - - - - - - -
             elif self.omega_zero:
                 matrix = cspyce.pxform(self.spice_reference_name,
                                        self.spice_frame_name,
@@ -132,7 +170,9 @@ class SpiceFrame(Frame):
 
                 return Transform(matrix, Vector3.ZERO, self, self.reference)
 
+            #- - - - - - - - - - - - - - - - - -
             # Case 3: omega_type = numerical
+            #- - - - - - - - - - - - - - - - - -
             else:
                 et = time.values
                 times = np.array((et - self.omega_dt, et, et + self.omega_dt))
@@ -143,10 +183,14 @@ class SpiceFrame(Frame):
                                             self.spice_frame_name,
                                             times[j])
 
+                #- - - - - - - - - - - - - - - - - - - - -
                 # Convert three matrices to quaternions
+                #- - - - - - - - - - - - - - - - - - - - -
                 quats = Quaternion.as_quaternion(Matrix3(mats))
 
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Use a Univariate spline to get components of the derivative
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 qdot = np.empty(4)
                 for j in range(4):
                     spline = UnivariateSpline(times, quats.values[:,j], k=2,
@@ -172,7 +216,9 @@ class SpiceFrame(Frame):
 
         ######## Handle multiple times
 
+        #-------------------------------------
         # Case 1: omega_type = tabulated
+        #-------------------------------------
         if self.omega_tabulated:
             matrix = np.empty(time.shape + (3,3))
             omega  = np.empty(time.shape + (3,))
@@ -183,7 +229,9 @@ class SpiceFrame(Frame):
                                         t)
                 (matrix[i], omega[i]) = cspyce.xf2rav(matrix6)
 
+        #--------------------------------
         # Case 2: omega_type = zero
+        #--------------------------------
         elif self.omega_zero:
             matrix = np.empty(time.shape + (3,3))
             omega  = np.zeros(time.shape + (3,))
@@ -193,30 +241,40 @@ class SpiceFrame(Frame):
                                           self.spice_frame_name,
                                           t)
 
+        #----------------------------------------------------------------------
         # Case 3: omega_type = numerical
         # This procedure calculates each omega using its own UnivariateSpline;
         # it could be very slow. A QuickFrame is recommended as it would
         # accomplish the same goals much faster.
+        #----------------------------------------------------------------------
         else:
             matrix = np.empty(time.shape + (3,3))
             omega  = np.empty(time.shape + (3,))
 
             for i,t in np.ndenumerate(time.values):
 
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Define a set of three times centered on given time
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 times = np.array((t - self.omega_dt, t, t + self.omega_dt))
 
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Generate the rotation matrix at each time
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 mats = np.empty((3,3,3))
                 for j in range(len(times)):
                     mats[j] = cspyce.pxform(self.spice_reference_name,
                                             self.spice_frame_name,
                                             times[j])
 
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Convert these three matrices to quaternions
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 quats = Quaternion.as_quaternion(Matrix3(mats))
 
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Use a Univariate spline to get components of the derivative
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 qdot = np.empty(4)
                 for j in range(4):
                     spline = UnivariateSpline(times, quats.values[:,j], k=2,
@@ -227,11 +285,17 @@ class SpiceFrame(Frame):
                 matrix[i] = mats[1]
 
         return Transform(matrix, omega, self, self.reference)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # transform_at_time_if_possible
+    #===========================================================================
     def transform_at_time_if_possible(self, time, quick={}):
-        """A Transform that rotates from the reference frame into this frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A Transform that rotates from the reference frame into this frame.
 
         Unlike method transform_at_time(), this variant tolerates times that
         raise cspyce errors. It returns a new time Scalar along with the new
@@ -252,10 +316,12 @@ class SpiceFrame(Frame):
             transform       the corresponding Tranform applicable at the new
                             time(s).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time).as_float()
 
+        #---------------------------------------------------------------
         # A single input time can be handled via the previous method
+        #---------------------------------------------------------------
         if time.shape == ():
             return (time, self.transform_at_time(time, quick))
 
@@ -275,14 +341,18 @@ class SpiceFrame(Frame):
 
         ######## Handle multiple times
 
+        #---------------------------------
         # Lists used in case of error
+        #---------------------------------
         new_time = []
         matrix_list = []
         omega_list = []
 
         error_found = False
 
+        #------------------------------------
         # Case 1: omega_type = tabulated
+        #------------------------------------
         if self.omega_tabulated:
             matrix = np.empty(time.shape + (3,3))
             omega  = np.empty(time.shape + (3,))
@@ -302,7 +372,9 @@ class SpiceFrame(Frame):
                     if len(time.shape) > 1: raise e
                     error_found = True
 
+        #-------------------------------
         # Case 2: omega_type = zero
+        #-------------------------------
         elif self.omega_zero:
             matrix = np.empty(time.shape + (3,3))
             omega  = np.zeros(time.shape + (3,))
@@ -321,10 +393,12 @@ class SpiceFrame(Frame):
                     if len(time.shape) > 1: raise e
                     error_found = True
 
+        #-----------------------------------------------------------------------
         # Case 3: omega_type = numerical
         # This procedure calculates each omega using its own UnivariateSpline;
         # it could be very slow. A QuickFrame is recommended as it would
         # accomplish the same goals much faster.
+        #----------------------------------------------------------------------
         else:
             matrix = np.empty(time.shape + (3,3))
             omega  = np.empty(time.shape + (3,))
@@ -339,10 +413,14 @@ class SpiceFrame(Frame):
                                             self.spice_frame_name,
                                             times[j])
 
+		#- - - - - - - - - - - - - - - - - - - - - - -
                 # Convert three matrices to quaternions
+		#- - - - - - - - - - - - - - - - - - - - - - -
                 quats = Quaternion.as_quaternion(Matrix3(mats))
 
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Use a Univariate spline to get components of the derivative
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 qdot = np.empty(4)
                 for j in range(4):
                     spline = UnivariateSpline(times, quats.values[:,j], k=2,
@@ -371,6 +449,13 @@ class SpiceFrame(Frame):
             omega = Vector3(omega)
 
         return (time, Transform(matrix, omega, self, self.reference))
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -381,11 +466,19 @@ class SpiceFrame(Frame):
 
 import unittest
 
+#*******************************************************************************
+# Test_SpiceFrame
+#*******************************************************************************
 class Test_SpiceFrame(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
+        #-----------------------------------------
         # Imports are here to avoid conflicts
+        #-----------------------------------------
         import os.path
         from oops.path_.path import Path
         from oops.path_.spicepath import SpicePath
@@ -422,7 +515,9 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dpos) < 1.e-15))
             self.assertTrue(np.all(np.abs(dvel) < 1.e-15))
 
+        #------------------------------
         # Tests of combined frames
+        #------------------------------
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -494,7 +589,9 @@ class Test_SpiceFrame(unittest.TestCase):
         # Test for a Cassini C kernel
         ########################################
 
+        #---------------------------------------------------------------
         # Load all the required kernels for Cassini ISS on 2007-312
+        #---------------------------------------------------------------
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', 'naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
@@ -530,7 +627,9 @@ class Test_SpiceFrame(unittest.TestCase):
         ignore = SpiceFrame('CASSINI_ISS_NAC')
         ignore = SpiceFrame('CASSINI_ISS_WAC')
 
+        #-----------------------------------------------------------------------
         # Look up N1573186009_1.IMG from COISS_2039/data/1573186009_1573197826/
+        #-----------------------------------------------------------------------
         timestring = '2007-312T03:34:16.391'
         TDB = cspyce.str2et(timestring)
 
@@ -555,7 +654,9 @@ class Test_SpiceFrame(unittest.TestCase):
         wac2 = SpiceFrame('CASSINI_ISS_WAC', omega_type='numerical', id='wac2')
         wac3 = SpiceFrame('CASSINI_ISS_WAC', omega_type='zero',      id='wac3')
 
+        #--------------------------
         # Test a single time
+        #--------------------------
         xform1 = wac1.transform_at_time(TDB, quick=None)
         xform2 = wac2.transform_at_time(TDB, quick=None)
         xform3 = wac3.transform_at_time(TDB, quick=None)
@@ -576,7 +677,9 @@ class Test_SpiceFrame(unittest.TestCase):
             ratio = (angle/(2.*DT) / xform2.omega.norm()).vals
             self.assertAlmostEqual(ratio, 1., places=9)
 
+        #-----------------------------
         # Test an array of times
+        #-----------------------------
         times = Scalar((TDB-5., TDB+2., TDB-9.5, TDB+7.7))
 
         xform1 = wac1.transform_at_time(times, quick=None)
@@ -600,7 +703,9 @@ class Test_SpiceFrame(unittest.TestCase):
             mask = (angle.vals != 0.)
             self.assertTrue(abs(ratio[mask]).max() - 1. < 1.e-9)
 
+        #----------------------------------------------------------
         # Test a single value using transform_at_time_if_possible
+        #----------------------------------------------------------
         xform1 = wac1.transform_at_time_if_possible(TDB, quick=None)[1]
         xform2 = wac2.transform_at_time_if_possible(TDB, quick=None)[1]
         self.assertEqual(xform1.matrix, xform2.matrix)
@@ -618,7 +723,9 @@ class Test_SpiceFrame(unittest.TestCase):
             ratio = (angle/(2.*DT) / xform2.omega.norm()).vals
             self.assertAlmostEqual(ratio, 1., places=9)
 
+        #---------------------------------------------------------------
         # Test an array of times using transform_at_time_if_possible
+        #---------------------------------------------------------------
         times = Scalar((TDB-5., TDB+2., TDB-9.5, TDB+7.7))
 
         xform1 = wac1.transform_at_time_if_possible(times, quick=None)[1]
@@ -642,8 +749,10 @@ class Test_SpiceFrame(unittest.TestCase):
             mask = (angle.vals != 0.)
             self.assertTrue(abs(ratio[mask]).max() - 1. < 1.e-9)
 
+        #---------------------------------------------------------------
         # Test an array of times using transform_at_time_if_possible
         # In this run, several times will fail.
+        #---------------------------------------------------------------
         times = Scalar((TDB-5., TDB-1.e20, TDB+2., TDB-9.5, TDB+7.7, TDB+1.e10))
 
         xform1 = wac1.transform_at_time_if_possible(times, quick=None)[1]
@@ -670,10 +779,9 @@ class Test_SpiceFrame(unittest.TestCase):
             mask = (angle.vals != 0.)
             self.assertTrue(abs(ratio[mask]).max() - 1. < 1.e-9)
 
-        ########################################
+        #--------------------------------------
         # Tests of QuickFrame interpolation
-        ########################################
-
+        #--------------------------------------
         wac1 = SpiceFrame('CASSINI_ISS_WAC', omega_type='tabulated',)
         wac2 = SpiceFrame('CASSINI_ISS_WAC', omega_type='numerical',
                                              omega_dt=0.1)
@@ -689,7 +797,9 @@ class Test_SpiceFrame(unittest.TestCase):
 
         wac3a = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
 
+        #--------------------------
         # Test a single time
+        #--------------------------
         time = TDB - 44.
         xform1 = wac1a.transform_at_time(time, quick=None)
         xform2 = wac1b.transform_at_time(time, quick=None)
@@ -711,7 +821,9 @@ class Test_SpiceFrame(unittest.TestCase):
         diff = (xform3.omega - xform2.omega).norm() / xform2.omega.norm()
         self.assertTrue(diff.vals < 1.e-3)
 
+        #---------------------------------------------------------------
         # Test the linear interpolation limit where delta-time < 1 sec
+        #---------------------------------------------------------------
         time = Scalar((TDB - 41.0123, TDB - 41.1357, TDB - 41.6543))
         xform2 = wac1b.transform_at_time(time, quick=None)
         xform3 = wac2.transform_at_time(time, quick=None)
@@ -727,7 +839,9 @@ class Test_SpiceFrame(unittest.TestCase):
         diff = (xform3.omega - xform2.omega).norm()
         self.assertTrue(diff.max() < 1.e-7)
 
+        #---------------------------------------------------------------
         # Test the linear interpolation limit where delta-time > 1 sec
+        #---------------------------------------------------------------
         time = Scalar((TDB - 40.0123, TDB + 41.1357, TDB - 1.6543))
         xform2 = wac1b.transform_at_time(time, quick=None)
         xform3 = wac2.transform_at_time(time, quick=None)
@@ -748,6 +862,12 @@ class Test_SpiceFrame(unittest.TestCase):
 
         Path.USE_QUICKPATHS = True
         Frame.USE_QUICKFRAMES = True
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

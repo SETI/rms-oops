@@ -4,6 +4,8 @@
 
 from __future__ import print_function
 
+from IPython import embed   ## TODO: remove
+
 import numpy as np
 import oops
 from polymath import *
@@ -117,7 +119,7 @@ class Polynomial(FOV):
     #===========================================================================
     # xy_from_uv
     #===========================================================================
-    def xy_from_uv(self, uv, derivs=False):
+    def xy_from_uv(self, uv, derivs=False, fast=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return (x,y) camera frame coordinates given FOV coordinates (u,v).
@@ -147,7 +149,7 @@ class Polynomial(FOV):
                                    self.coefft_xy_from_uv, derivs, from_='uv')
         else:
             xy = self._solve_polynomial(uv,
-                                   self.coefft_uv_from_xy, derivs, from_='uv')
+                          self.coefft_uv_from_xy, derivs, from_='uv', fast=fast)
 
         return xy
     #===========================================================================
@@ -157,7 +159,7 @@ class Polynomial(FOV):
     #===========================================================================
     # uv_from_xy
     #===========================================================================
-    def uv_from_xy(self, xy, derivs=False):
+    def uv_from_xy(self, xy, derivs=False, fast=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
@@ -183,7 +185,7 @@ class Polynomial(FOV):
                                    self.coefft_uv_from_xy, derivs, from_='xy')
         else:
             uv = self._solve_polynomial(xy, 
-                                   self.coefft_xy_from_uv, derivs, from_='xy')
+                          self.coefft_xy_from_uv, derivs, from_='xy', fast=fast)
 
         #-----------------------------------------------------
         # Add back the center of the field of view
@@ -198,7 +200,7 @@ class Polynomial(FOV):
     #===========================================================================
     # _apply_polynomial
     #===========================================================================
-    def _apply_polynomial(self, pq, coefft, derivs, from_=None):
+    def _apply_polynomial(self, pq, coefft, derivs, from_):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Apply the polynomial to pair (p,q) to return (a,b).
@@ -235,22 +237,17 @@ class Polynomial(FOV):
             p_powers.append(p_powers[-1] * p)
             q_powers.append(q_powers[-1] * q)
 
-        #------------------------------------------
-        # Initialize the output
-        #------------------------------------------
-        ab_vals = np.zeros(pq.shape + (2,))
-
         #----------------------------------------------------------------------
         # Evaluate the polynomials
         #
         # Start with the high-order terms and work downward, because this
         # improves accuracy. Stop at one because there are no zero-order terms.
         #----------------------------------------------------------------------
+        ab_vals = np.zeros(pq.shape + (2,))
         for k in range(order, -1, -1):
           for i in range(k+1):
             j = k - i
             ab_vals += coefft[i,j,:] * p_powers[i] * q_powers[j]
-
         ab = Pair(ab_vals, pq.mask)
 
         #------------------------------------------------
@@ -290,7 +287,7 @@ class Polynomial(FOV):
     #===========================================================================
     # _guess
     #===========================================================================
-    def _guess(self, ab, coefft, from_=None, derivs=False):
+    def _guess(self, ab, coefft, from_):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Computes initial guess for polynomial inversion.
@@ -308,9 +305,9 @@ class Polynomial(FOV):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if from_ == 'xy': 
-          return (ab - coefft[0,0]).element_div(self.uv_scale, recursive=derivs)
+          return (ab - coefft[0,0]).element_div(self.uv_scale, recursive=False)
         if from_ == 'uv': 
-          return (ab - coefft[0,0]).element_mul(self.uv_scale, recursive=derivs)
+          return (ab - coefft[0,0]).element_mul(self.uv_scale, recursive=False)
     #===========================================================================
 
 
@@ -318,7 +315,7 @@ class Polynomial(FOV):
     #===========================================================================
     # _solve_polynomial
     #===========================================================================
-    def _solve_polynomial(self, ab, coefft, derivs, from_=None):
+    def _solve_polynomial(self, ab, coefft, derivs, from_, fast=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Solve the polynomial for pair (a,b) to return (p,q).
@@ -330,6 +327,13 @@ class Polynomial(FOV):
             derivs   If True, derivatives are included in the output.
             from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
+            fast     If True, a faster, but possibly less robust, convergence
+                     criterion is used.  The unittests with SpeedTest = True
+                     produced the folowing results:
+                     
+                     Slow Newton's method: convergence: 6.68551206589 ms
+                     Fast Newton's method: convergence: 5.97627162933 ms
+                     Slow/Fast =  1.11867607106
             
         Output:      pq
             pq       Pairs of of the same shape as ab giving the values of 
@@ -338,7 +342,7 @@ class Polynomial(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         src = {'uv','xy'}
         assert from_ in src
-        to_ = list(src^{from_})[0]
+        to_ = (src^{from_}).pop()
         dkey = from_
 
         ab = Pair.as_pair(ab, derivs)
@@ -347,7 +351,7 @@ class Polynomial(FOV):
         #------------------------------------------
         # Make a rough initial guess
         #------------------------------------------
-        pq = self._guess(ab_wod, coefft, from_=from_, derivs=derivs)
+        pq = self._guess(ab_wod, coefft, from_)
         pq.insert_deriv(dkey, Pair.IDENTITY)
 
         #------------------------------------------
@@ -374,34 +378,52 @@ class Polynomial(FOV):
             #- - - - - - - - - - - -# 
             # Convergence tests...  #
             #- - - - - - - - - - - -# 
-            error_max = abs(dpq).max() / abs(pq).max()
-            if Polynomial.DEBUG:
-                print(iter, error_max)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # The old convergence test below was looking for the correction
-            # to overshoot.  This may in principle be a more robust way to 
-            # ensure machine precision is achieved, but it requires some
-            # additonal iterations conmpared to the simpler test above.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            #-try: prev_dpq_max
-            #-except: prev_dpq_max = 1.e99
-            #-dpq_max = abs(dpq).max()
-            #-if Polynomial.DEBUG:
-            #-    print(iter, dpq_max)
-            #-if dpq_max >= prev_dpq_max: break
-            #-prev_dpq_max = dpq_max
+            #- - - - - - - - - - - - - - - - - -
+            # simpler, but faster convergence
+            #- - - - - - - - - - - - - - - - - -
+            if fast == True:
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                # Compare the max step size with the max coordinate value
+                # This removes any positional dependence of the relative 
+                # error.  The denominator can only be zero if the entire
+                # grid is (0,0).
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                error_max = abs(dpq.vals).max() / abs(pq.vals).max()
+                if Polynomial.DEBUG:
+                   print(iter, error_max)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Root found?
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if abs(dab).max() <= epsilon: break
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                # Test for root
+                #  This eliminates cases where the iteration bounces
+                #  around within epsilon of a solution.
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                if abs(dab).max() <= epsilon: break
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Relative correction below epsilon. 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if error_max <= epsilon: break
+                #- - - - - - - - - - - - - - - - - - -
+                # Relative correction below epsilon. 
+                #- - - - - - - - - - - - - - - - - - -
+                if error_max <= epsilon: break
 
+            #- - - - - - - - - - - - - - - - - - -
+            # slower convergence, but more robust
+            #- - - - - - - - - - - - - - - - - - -
+            else:
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                # The old convergence test below was looking for the correction
+                # to overshoot.  This may in principle be a more robust way to 
+                # ensure machine precision is achieved, but it requires some
+                # additonal iterations conmpared to the simpler test above.
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                try: prev_dpq_max
+                except: prev_dpq_max = 1.e99
+                dpq_max = abs(dpq).max()
+                if Polynomial.DEBUG:
+                    print(iter, dpq_max)
+                if dpq_max >= prev_dpq_max: break
+                prev_dpq_max = dpq_max
+
+        if Polynomial.DEBUG: print(iter+1, "iterations")
         pq = pq.wod
 
         #------------------------------------------------
@@ -427,12 +449,62 @@ class Polynomial(FOV):
 ################################################################################
 
 import unittest
+import time
 
 class Test_Polynomial(unittest.TestCase):
 
     def runTest(self):
 
         Polynomial.DEBUG = False
+        SpeedTest = False
+
+        #====================================================================
+        # uv_from_xy transform using xy_from_uv coefficients
+        # Test timing for _solve_polynomial fast vs slow convergence criteria
+        #====================================================================
+        if SpeedTest:
+            coefft_xy_from_uv = np.zeros((3,3,2))
+            coefft_xy_from_uv[...,0] = np.array([[ 5.00, -0.10, -0.01],
+                                                 [ 1.20, -0.01,  0.00],
+                                                 [-0.02,  0.00,  0.00]])
+            coefft_xy_from_uv[...,1] = np.array([[ 0.00, -1.10,  0.01],
+                                                 [-0.20, -0.03,  0.00],
+                                                 [-0.02,  0.00,  0.00]])
+
+            uv = Pair.combos(np.arange(20), np.arange(15))
+            fov = Polynomial(uv.shape, coefft_xy_from_uv=coefft_xy_from_uv, 
+                                                       uv_los=(7,7), uv_area=1.)
+
+            xy = fov.xy_from_uv(uv, derivs=False)
+            xy.insert_deriv('t', Pair(np.random.randn(20,15,2)))
+            xy.insert_deriv('rs', Pair(np.random.randn(20,15,2,2), drank=1))
+
+            ### TODO: change to timeit in python 3
+            niter = 100
+        
+            t_fast = 0
+            t_slow = 0
+            for i in range(niter): 
+                t0 = time.time()
+                uv = fov.uv_from_xy(xy, derivs=True, fast=False)
+                t1 = time.time()
+                t_slow += t1-t0
+                
+                t0 = time.time()
+                uv = fov.uv_from_xy(xy, derivs=True, fast=True)
+                t1 = time.time()
+                t_fast += t1-t0
+                
+            print()
+            print()
+            print("Slow Newton's method: convergence:", t_slow/niter*1000, 'ms')
+            print("Fast Newton's method: convergence:", t_fast/niter*1000, 'ms')
+            print("Slow/Fast = ", t_slow/t_fast)
+
+            return
+
+            
+            
 
         #====================================================================
         # xy_from_uv transform using xy_from_uv coefficients

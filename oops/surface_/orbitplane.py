@@ -15,8 +15,13 @@ from oops.frame_.inclinedframe import InclinedFrame
 from oops.frame_.spinframe     import SpinFrame
 from oops.constants            import *
 
+#*******************************************************************************
+# OrbitPlane
+#*******************************************************************************
 class OrbitPlane(Surface):
-    """OrbitPlane is a subclass of the Surface class describing a flat surface
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    OrbitPlane is a subclass of the Surface class describing a flat surface
     sharing its geometric center and tilt with a body on an eccentric and/or
     inclined orbit. The orbit is described as circle offset from the center of
     the planet by a distance ae; this approximation is only accurate to first
@@ -29,14 +34,19 @@ class OrbitPlane(Surface):
     The system is masked outside the semimajor axis, but unmasked inside.
     However, coordinates and intercepts are calculated at all locations.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = False
 
     PACKRAT_ARGS = ['elements', 'epoch', 'origin', 'frame', 'id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, elements, epoch, origin, frame, id=None):
-        """Constructor for an OrbitPlane surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for an OrbitPlane surface.
 
             elements    a tuple containing three, six or nine orbital elements:
                 a           mean radius of orbit, km.
@@ -68,6 +78,7 @@ class OrbitPlane(Surface):
         Note that the origin and frame used by the returned OrbitPlane object
         will differ from those used to define it here.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         # Save the initial center path and frame. The frame should be inertial.
         self.defined_origin = Path.as_waypoint(origin)
@@ -171,10 +182,18 @@ class OrbitPlane(Surface):
         # The primary origin and frame for the orbit
         self.origin = self.internal_origin.waypoint
         self.frame = self.internal_frame.wayframe
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -189,12 +208,20 @@ class OrbitPlane(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.coords_from_vector3(pos, obs, axes=axes,
                                                        derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the
@@ -211,11 +238,19 @@ class OrbitPlane(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.vector3_from_coords(coords, obs, derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -230,11 +265,19 @@ class OrbitPlane(Surface):
             t           a Scalar such that:
                             position = obs + t * los
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.intercept(obs, los, derivs=derivs, guess=guess)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -245,11 +288,19 @@ class OrbitPlane(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.normal(pos, derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # velocity
+    #===========================================================================
     def velocity(self, pos, time=None):
-        """The local velocity vector at a point within the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The local velocity vector at a point within the surface.
 
         This can be used to describe the orbital motion of ring particles or
         local wind speeds on a planet.
@@ -260,7 +311,7 @@ class OrbitPlane(Surface):
 
         Return:         a Vector3 of velocities, in units of km/s.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.has_eccentricity:
             # For purposes of a first-order velocity calculation, we can assume
             # that the difference between mean longitude and true longitude, in
@@ -302,31 +353,48 @@ class OrbitPlane(Surface):
 
         else:
             return self.n * Vector3.ZAXIS.cross(pos)
+    #===========================================================================
+
+
 
     ############################################################################
     # Longitude-anomaly conversions
     ############################################################################
 
+    #===========================================================================
+    # from_mean_anomaly
+    #===========================================================================
     def from_mean_anomaly(self, anom):
-        """The longitude in this frame based on the mean anomaly.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The longitude in this frame based on the mean anomaly.
 
-        Accurate to first order in eccentricity."""
-
+        Accurate to first order in eccentricity.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         anom = Scalar.as_scalar(anom)
 
         if not self.has_eccentricity:
             return anom
         else:
             return anom + (2*self.ae) * anom.sin()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # to_mean_anomaly
+    #===========================================================================
     def to_mean_anomaly(self, lon):
-        """The mean anomaly given an orbital longitude.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The mean anomaly given an orbital longitude.
 
         Accurate to first order in eccentricity. Iteration is performed using
         Newton's method to ensure that this function is an exact inverse of
         from_mean_anomaly().
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lon = Scalar.as_scalar(lon)
         if not self.has_eccentricity: return lon
 
@@ -354,6 +422,13 @@ class OrbitPlane(Surface):
             max_abs_dx = abs(dx).max()
 
         return x
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -361,8 +436,14 @@ class OrbitPlane(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_OrbitPlane
+#*******************************************************************************
 class Test_OrbitPlane(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # elements = (a, lon, n)
@@ -606,6 +687,12 @@ class Test_OrbitPlane(unittest.TestCase):
 
         lons = orbit.from_mean_anomaly(anoms)
         self.assertTrue(abs(lons - l).max() < 1.e-15)
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

@@ -9,17 +9,28 @@ from oops.surface_.surface import Surface
 from oops.path_.path       import Path
 from oops.frame_.frame     import Frame
 
+#*******************************************************************************
+# NullSurface
+#*******************************************************************************
 class NullSurface(Surface):
-    """NullSurface is a subclass of Surface of describing an infinitesimal
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    NullSurface is a subclass of Surface of describing an infinitesimal
     surface centered on the specified path, and using the specified coordinate
-    frame."""
-
+    frame.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "rectangular"
 
     PACKRAT_ARGS = ['origin', 'frame']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, origin, frame):
-        """Constructor for a NullSurface surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a NullSurface surface.
 
         Input:
             origin      a Path object or ID defining the motion of the center
@@ -27,14 +38,22 @@ class NullSurface(Surface):
 
             frame       a Frame object or ID in which the surface's "normal" is
                         defind by the z-axis.
-            """
-
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.origin = Path.as_waypoint(origin)
         self.frame  = Frame.as_wayframe(frame)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -49,13 +68,24 @@ class NullSurface(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #------------------------------------
         # Simple rectangular coordinates
+        #------------------------------------
         pos = Vector3.as_vector3(pos, derivs)
         return pos.to_scalars(derivs)[:axes]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the
@@ -71,8 +101,11 @@ class NullSurface(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------
         # Convert to Scalars and strip units, if any
+        #---------------------------------------------
         x = Scalar.as_scalar(coords[0], derivs)
         y = Scalar.as_scalar(coords[1], derivs)
 
@@ -81,11 +114,21 @@ class NullSurface(Surface):
         else:
             z = Scalar.as_scalar(coords[2], derivs)
 
+        #-------------------------------------
         # Convert to a Vector3 and return
+        #-------------------------------------
         return Vector3.from_scalars(x, y, z)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -100,6 +143,7 @@ class NullSurface(Surface):
             t           a Scalar such that:
                             intercept = obs + t * los
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         obs = Vector3.as_vector(obs, derivs)
         los = Vector3.as_vector(los, derivs)
@@ -110,8 +154,15 @@ class NullSurface(Surface):
         pos = obs.all_masked(derivs)
 
         return (pos, t)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """The normal vector at a position at or near a surface.
 
         Input:
@@ -123,12 +174,23 @@ class NullSurface(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------
         # Always the Z-axis
+        #-------------------
         return Vector3.ZAXIS
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # velocity
+    #===========================================================================
     def velocity(self, pos, time=None):
-        """The local velocity vector at a point within the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The local velocity vector at a point within the surface.
 
         This can be used to describe the orbital motion of ring particles or
         local wind speeds on a planet.
@@ -139,9 +201,19 @@ class NullSurface(Surface):
 
         Return:         a Vector3 of velocities, in units of km/s.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------
         # Always zero
+        #---------------
         return Vector3.ZERO
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -149,9 +221,16 @@ class NullSurface(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_NullSurface
+#*******************************************************************************
 class Test_NullSurface(unittest.TestCase):
 
     pass        # TBD
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

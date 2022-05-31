@@ -9,13 +9,24 @@ from oops.event        import Event
 from oops.path_.path   import Path
 from oops.frame_.frame import Frame
 
+#*******************************************************************************
+# LinearPath
+#*******************************************************************************
 class LinearPath(Path):
-    """A path defining linear motion relative to another path and frame."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A path defining linear motion relative to another path and frame.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['pos', 'epoch', 'origin', 'frame', 'path_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, pos, epoch, origin, frame=None, id=None):
-        """Constructor for a LinearPath.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a LinearPath.
 
         Input:
             pos         a Vector3 of position vectors. The velocity should be
@@ -30,8 +41,11 @@ class LinearPath(Path):
             id          the name under which to register the new path; None to
                         leave the path unregistered.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------
         # Interpret the position
+        #---------------------------
         if type(pos) in (tuple,list) and len(pos) == 2:
             self.pos = Vector3.as_vector3(pos[0]).wod.as_readonly()
             self.vel = Vector3.as_vector3(pos[1]).wod.as_readonly()
@@ -47,7 +61,9 @@ class LinearPath(Path):
 
         self.epoch = Scalar.as_scalar(epoch)
 
+        #-------------------------
         # Required attributes
+        #-------------------------
         self.path_id = id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
@@ -57,13 +73,21 @@ class LinearPath(Path):
                                               self.origin.shape,
                                               self.frame.shape)
 
+        #----------------------------------------------------------
         # Update waypoint and path_id; register only if necessary
+        #----------------------------------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # event_at_time
+    #===========================================================================
     def event_at_time(self, time, quick=None):
-        """Return an Event corresponding to a specified time on this path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return an Event corresponding to a specified time on this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
@@ -71,9 +95,15 @@ class LinearPath(Path):
         Return:         an Event object containing (at least) the time, position
                         and velocity on the path.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Event(time, (self.pos + (time-self.epoch) * self.vel, self.vel),
                            self.origin, self.frame)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
@@ -81,12 +111,23 @@ class LinearPath(Path):
 
 import unittest
 
+#*******************************************************************************
+# Test_LinearPath
+#*******************************************************************************
 class Test_LinearPath(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # TBD
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

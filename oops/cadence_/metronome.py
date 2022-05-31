@@ -59,7 +59,7 @@ class Metronome(Cadence):
     def time_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Return the time(s) associated with the given time step(s).
+        Return the min time(s) associated with the given time step(s).
 
         
         This method supports non-integer step values.

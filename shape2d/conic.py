@@ -12,16 +12,28 @@ from affine import Affine
 
 TWOPI = 2. * np.pi
 
+#*******************************************************************************
+# Conic
+#*******************************************************************************
 class Conic(object):
-    """An abstract class with six Scalar attributes a,b,c,d,e,f, which represent
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    An abstract class with six Scalar attributes a,b,c,d,e,f, which represent
     an equation:
         a ^2 + b xy + c y^2 + d e + e y + f = 0.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, a, b, c, d, e, f):
-        """Constructor for a Conic to use in those situations where it is not
-        used as attributes of another object."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Constructor for a Conic to use in those situations where it is not
+        used as attributes of another object.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.a = a
         self.b = b
         self.c = c
@@ -30,12 +42,21 @@ class Conic(object):
         self.f = f
 
         self.fill_conic_attributes()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # fill_conic_attributes
+    #===========================================================================
     def fill_conic_attributes(self):
-        """Fill in additional attributes to support quick calculations of conic
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Fill in additional attributes to support quick calculations of conic
         sections. The six Scalar attributes a,b,c,d,e,f must already be filled
-        in."""
-
+        in.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.a = Scalar.as_scalar(self.a)
         self.b = Scalar.as_scalar(self.b)
         self.c = Scalar.as_scalar(self.c)
@@ -47,20 +68,39 @@ class Conic(object):
         self.scalars_wod = (self.a.wod, self.b.wod, self.c.wod,
                             self.d.wod, self.e.wod, self.f.wod)
 
+        #---------------------------------------------------------
         # Conic coefficients indexed by recursive = True/False
+        #---------------------------------------------------------
         self.abcdef[self.abcdef_wod, self.abcdef]
+    #===========================================================================
+
+
 
     ############################################################################
     # Transformations of Conics
     ############################################################################
 
+    #===========================================================================
+    # swapxy
+    #===========================================================================
     def swapxy(self):
-        """A shallow clone of this Conic with the x and y axes reversed."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	A shallow clone of this Conic with the x and y axes reversed.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Conic(self.c, self.b, self.a, self.e, self.d, self.f)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # apply_affine
+    #===========================================================================
     def apply_affine(self, affine, recursive=True, shapeclass=None):
-        """Apply the given affine transformation to all the points comprising
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Apply the given affine transformation to all the points comprising
         this conic.
 
         Input:
@@ -69,12 +109,14 @@ class Conic(object):
             shapeclass  Shape2D subclass to return. If None (the default), then
                         a Conic object is returned.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------
         # a x^2 + b xy + c y^2 + d x + e y + f = 0
         #
         # x' = A x + B y + C
         # y' = D x + E y + F
-
+        #----------------------------------------------
         (a,b,c,d,e,f) = self.abcdef[recursive]
         (A,B,C,D,E,F) = affine.abcdef[recursive]
 
@@ -88,22 +130,40 @@ class Conic(object):
         if shapeclass is None:
             return Conic(a1, b1, c1, d1, e1, f1, g1)
 
+        #------------------------------------------------------------
         # Call the from_conics static method of the selected class
+        #------------------------------------------------------------
         return shapeclass.__dict__['from_conics'].__call__(a1,b1,c1,d1,e1,f1)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # undo_affine
+    #===========================================================================
     def undo_affine(affine, recursive=True, shapeclass=None):
-        """Apply the inverse of the given affine transformation to all the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Apply the inverse of the given affine transformation to all the
         points comprising this conic.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.apply_affine(affine.inverse(), recursive, shapeclass)
+    #===========================================================================
+
+
 
     ############################################################################
     # Methods
     ############################################################################
 
+    #===========================================================================
+    # eval_conic
+    #===========================================================================
     def eval_conic(self, pt, recursive=True):
-        """Evaluate the conic at Pair(x,y).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Evaluate the conic at Pair(x,y).
 
         Inputs:
             pt          Pair at which to evaluate the Conic. The value will be
@@ -113,14 +173,22 @@ class Conic(object):
         Return:         A Scalar of values. Note that the shapes of self and the
                         (x,y) pair are broadcasted together.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (x,y) = Pair.as_pair(pt, recursive).to_scalars()
         (a,b,c,d,e,f) = self.abcdef[recursive]
 
         return a*x**2 + b*x*y + c*y**2 + d*x + e*y + f
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # perp2d
+    #===========================================================================
     def perp2d(self, pt, recursive=True):
-        """Two scalars (dx,dy) that point in the direction of the outward local
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Two scalars (dx,dy) that point in the direction of the outward local
         normal to the curve.
 
         Inputs:
@@ -130,10 +198,11 @@ class Conic(object):
         Return:         A Scalar of values. Note that the shapes of self and the
                         (x,y) pair are broadcasted together.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (x,y) = Pair.as_pair(pt, recursive).to_scalars()
         (a,b,c,d,e,f) = self.abcdef[recursive]
 
+        #----------------------------------------------------------
         # a x^2 + b xy + c y^2 + d x + e y + f = 0
         # 2a x dx + b x dy + b y dx + 2c y dy + d dx + e dy = 0
         #
@@ -145,15 +214,23 @@ class Conic(object):
         #
         # Tangent direction is (dx,dy)
         # Normal direction is (-dy,dx)
-
+        #----------------------------------------------------------
         neg_dy = 2.*a*x + b*y + d
         pos_dx = 2.*c*y + b*x + e
 
         sign = (x * pos_dx + y * neg_dy).sign()
         return (pos_dx*sign, neg_dy*sign)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # slope2d
+    #===========================================================================
     def slope2d(self, pt, recursive=True):
-        """Two scalars (dy,dx) that represent the slope of the local tangent.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Two scalars (dy,dx) that represent the slope of the local tangent.
 
         Inputs:
             pt          Pair at which to evaluate the slope.
@@ -162,12 +239,20 @@ class Conic(object):
         Return:         A Scalar of values. Note that the shapes of self and the
                         (x,y) pair are broadcasted together.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (pos_dx, neg_dy) = self.perp2d(pt, recursive)
         return (-neg_dy, pos_dx)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # slope
+    #===========================================================================
     def slope(self, pt, recursive=True):
-        """Slope of the local tangent.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Slope of the local tangent.
 
         Inputs:
             pt          Pair at which to evaluate the slope.
@@ -176,12 +261,20 @@ class Conic(object):
         Return:         A Scalar of values. Note that the shapes of self and the
                         (x,y) pair are broadcasted together.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (dy,dx) = self.slope2d(pt, recursive)
         return dy/dx
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # perp
+    #===========================================================================
     def perp(self, pt, recursive=True):
-        """Slope of the local perpendicular.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Slope of the local perpendicular.
 
         Inputs:
             pt          Pair at which to evaluate the perpendicular.
@@ -190,12 +283,20 @@ class Conic(object):
         Return:         A Scalar of values. Note that the shapes of self and the
                         (x,y) pair are broadcasted together.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (dy,dx) = self.perp2d(pt, recursive)
         return dy/dx
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _unit_circle_intersection_angles
+    #===========================================================================
     def _unit_circle_intersection_angles(self, recursive=True):
-        """Tuple of the four parameters on a unit circle centered on the origin
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Tuple of the four parameters on a unit circle centered on the origin
         that intersect this Conic.
 
         Inputs:
@@ -207,9 +308,10 @@ class Conic(object):
                         Points that either do not exist or are duplicates are
                         masked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (a0,c0,b0,d0,e0,f0) = self.abcdef[recursive]
 
+        #------------------------------------------------------------------
         # a x2 + b xy + c y2 + d x + e y + f = 0
         #   x2        +   y2             - 1 = 0
         #
@@ -233,11 +335,13 @@ class Conic(object):
         # (c' y2 + e y + f')2 + (b y + d)2 (y2 - 1) = 0
         #
         # This is a quartic polynomial.
-
+        #------------------------------------------------------------------
         c1 = c0 - a0
         f1 = f0 + a0
 
+        #--------------------------------------------------------
         # Determine coefficients of the quartic to solve for y
+        #--------------------------------------------------------
         b0_sq = b0 * b0
         d0_sq = d0 * d0
         b0_d0 = b0 * d0
@@ -248,13 +352,16 @@ class Conic(object):
         p1 = 2*(e0*f1 - b0_d0)
         p0 = f1**2 - d0_sq
 
+        #--------------------
         # Solve the quartic
+        #--------------------
         poly = Vector.from_scalars(p4, p3, p2, p1, p0, classes=(Polynomial,))
         roots = poly.roots(recursive)
 
+        #------------------------------------------------
         # Plug y-roots back into the expression for x
         #   x = -(c' y2 + e y + f') / (b y + d)
-
+        #------------------------------------------------
         angles = []
         for k in range(4):
             y = roots[k]
@@ -264,5 +371,9 @@ class Conic(object):
 
         angles = Qube.stack(*angles).sort()
         return (angles[0], angles[1], angles[2], angles[3])
+    #===========================================================================
+
+
+#*******************************************************************************
 
 ################################################################################

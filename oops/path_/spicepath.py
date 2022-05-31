@@ -12,10 +12,17 @@ from oops.event        import Event
 from oops.frame_.frame import Frame
 import oops.spice_support as spice
 
+#*******************************************************************************
+# SpicePath
+#*******************************************************************************
 class SpicePath(Path):
-    """Subclass SpicePath of class Path returns a path based on an SP kernel in
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Subclass SpicePath of class Path returns a path based on an SP kernel in
     the SPICE toolkit. It represents the geometric position of a single target
-    body with respect to a single origin."""
+    body with respect to a single origin.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # Set False to confirm that SpicePaths return the same results without
     # shortcuts and with shortcuts
@@ -24,9 +31,14 @@ class SpicePath(Path):
     PACKRAT_ARGS = ['spice_id', 'spice_origin', 'spice_frame', 'path_id',
                     'shortcut']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
                        id=None, shortcut=None):
-        """Constructor for a SpicePath object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a SpicePath object.
 
         Input:
             spice_id        the name or integer ID of the target body as used
@@ -46,14 +58,19 @@ class SpicePath(Path):
                             as a shortcut definition; the other registered path
                             definitions are unchanged.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------------
         # Preserve the inputs
+        #-------------------------
         self.spice_id = spice_id
         self.spice_origin = spice_origin
         self.spice_frame = spice_frame
         self.shortcut = shortcut
 
+        #----------------------------
         # Interpret the SPICE IDs
+        #----------------------------
         (self.spice_target_id,
          self.spice_target_name) = spice.body_id_and_name(spice_id)
 
@@ -62,7 +79,9 @@ class SpicePath(Path):
 
         self.spice_frame_name = spice.frame_id_and_name(spice_frame)[1]
 
+        #-------------------------------------------------------------
         # Fill in the Path ID and save it in the global dictionary
+        #-------------------------------------------------------------
         if id is None:
             if type(spice_id) == str:
                 self.path_id = spice_id
@@ -75,26 +94,40 @@ class SpicePath(Path):
             spice.PATH_TRANSLATION[self.spice_target_id]   = self.path_id
             spice.PATH_TRANSLATION[self.spice_target_name] = self.path_id
 
+        #-----------------------------------------------------------------------
         # Fill in the origin waypoint, which should already be in the dictionary
+        #-----------------------------------------------------------------------
         origin_id = spice.PATH_TRANSLATION[self.spice_origin_id]
         self.origin = Path.as_waypoint(origin_id)
 
+        #-----------------------------------------------------------------------
         # Fill in the frame wayframe, which should already be in the dictionary
+        #-----------------------------------------------------------------------
         frame_id = spice.FRAME_TRANSLATION[self.spice_frame_name]
         self.frame = Frame.as_wayframe(frame_id)
 
+        #-----------------------
         # No shape, no keys
+        #-----------------------
         self.shape = ()
         self.keys = set()
         self.shortcut = shortcut
 
+        #-------------------------------------------------
         # Register the SpicePath; fill in the waypoint
+        #-------------------------------------------------
         self.register(shortcut)
+    #===========================================================================
 
-    ############################################################################
 
+
+    #===========================================================================
+    # event_at_time
+    #===========================================================================
     def event_at_time(self, time, quick={}):
-        """An Event corresponding to a specified Scalar time on this path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        An Event corresponding to a specified Scalar time on this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
@@ -102,14 +135,18 @@ class SpicePath(Path):
         Return:         an Event object containing (at least) the time, position
                         and velocity of the path.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time).as_float()
 
+        #-----------------------------------------------
         # A fully-masked time can be handled quickly
+        #-----------------------------------------------
         if time.mask is True:
             return Event(time, Vector3.ZERO, self.origin, self.frame)
 
+        #---------------------------------------------------
         # A single unmasked time can be handled quickly
+        #---------------------------------------------------
         if time.shape == ():
             (state,
              lighttime) = cspyce.spkez(self.spice_target_id,
@@ -120,11 +157,15 @@ class SpicePath(Path):
 
             return Event(time, (state[0:3],state[3:6]), self.origin, self.frame)
 
+        #------------------------------------------------------------------
         # Use a QuickPath if warranted, possibly making a recursive call
+        #------------------------------------------------------------------
         if type(quick) == dict:
             return self.quick_path(time, quick).event_at_time(time, False)
 
+        #----------------------------------------------------------
         # Fill in the states and light travel times using cspyce
+        #----------------------------------------------------------
         if np.any(time.mask):
             state = cspyce.spkez_vector(self.spice_target_id,
                                         time.vals[time.antimask],
@@ -146,13 +187,21 @@ class SpicePath(Path):
             pos = state[:,0:3].reshape(time.shape + (3,))
             vel = state[:,3:6].reshape(time.shape + (3,))
 
+        #------------------------------------
         # Convert to an Event and return
+        #------------------------------------
         return Event(time, (pos,vel), self.origin, self.frame)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # wrt
+    #===========================================================================
     def wrt(self, origin, frame=None):
-        """Construct a path pointing from an origin to this target in any frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Construct a path pointing from an origin to this target in any frame.
 
         SpicePath overrides the default method to create quicker "shortcuts"
         between SpicePaths.
@@ -162,24 +211,33 @@ class SpicePath(Path):
             frame       a frame object or its registered ID. Default is to use
                         the frame of the origin's path.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------
         # Use the slow method if necessary, for debugging
+        #----------------------------------------------------
         if not SpicePath.USE_SPICEPATH_SHORTCUTS:
             return Path.wrt(self, origin, frame)
 
+        #--------------------------------
         # Interpret the origin path
+        #--------------------------------
         origin = Path.as_primary_path(origin)
         if origin in (Path.SSB, None):
             spice_origin_id = 0
         elif isinstance(origin, SpicePath):
             spice_origin_id = origin.spice_target_id
         else:
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If the origin is not a SpicePath, seek from the other direction
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             return ReversedPath(origin.wrt(self, frame))
 
         origin_id = spice.PATH_TRANSLATION[spice_origin_id]
 
+        #-------------------------
         # Interpret the frame
+        #-------------------------
         frame = Frame.as_primary_frame(frame)
         if frame in (Frame.J2000, None):
             spice_frame_name = 'J2000'
@@ -203,7 +261,9 @@ class SpicePath(Path):
         result = SpicePath(self.spice_target_id, spice_origin_id,
                            spice_frame_name, self.path_id, shortcut)
 
+        #--------------------------------------------------------------
         # If the path uses a non-spice frame, add a rotated version
+        #--------------------------------------------------------------
         if not uses_spiceframe:
             shortcut = ('SHORTCUT_' + str(self.path_id) + '_' +
                                       str(origin_id)    + '_' +
@@ -212,6 +272,12 @@ class SpicePath(Path):
             result.register(shortcut)
 
         return result
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -222,11 +288,19 @@ class SpicePath(Path):
 
 import unittest
 
+#*******************************************************************************
+# Test_SpicePath
+#*******************************************************************************
 class Test_SpicePath(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
+      #----------------------------------------
       # Imports are here to avoid conflicts
+      #----------------------------------------
       from oops.frame_.frame import Frame
       from oops.frame_.spiceframe import SpiceFrame
       import oops.constants as constants
@@ -239,7 +313,9 @@ class Test_SpicePath(unittest.TestCase):
       cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
       cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
 
+      #-----------------------------------------------------
       # Repeat the tests without and then with shortcuts
+      #-----------------------------------------------------
       for SpicePath.USE_SPICEPATH_SHORTCUTS in (False, True):
 
         Path.reset_registry()
@@ -249,7 +325,9 @@ class Test_SpicePath(unittest.TestCase):
         earth = SpicePath("EARTH", "SSB")
         moon  = SpicePath("MOON", "EARTH")
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Validate state vectors using event_at_time()
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
         moon_event = moon.event_at_time(times)
         for i in range(len(times)):
@@ -257,7 +335,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertEqual(moon_event.pos[i], state[0:3])
             self.assertEqual(moon_event.vel[i], state[3:6])
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Check light travel time corrections to/from SSB
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         saturn = SpicePath(6, "SSB", id="SATURN")
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
         ssb_event = Path.as_primary_path("SSB").event_at_time(times)
@@ -284,9 +364,13 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((ssb_event.dep[i] - state[0:3]).norm() < 1.e-8)
             self.assertTrue((Vector3(state[0:3]) - ssb_event.dep[i]).norm() < 1.e-8)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check instantaneous geometry using linked paths
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
 
+        #- - - - - - - - - - 
         # Moon wrt Earth
+        #- - - - - - - - - - 
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
         moon_event = moon.event_at_time(times).wrt_path("EARTH")
         for i in range(len(times)):
@@ -296,7 +380,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6] -
                                           moon_event.vel.vals[i]) < 1.e-8))
 
+        #- - - - - - - - 
         # Moon to SSB
+        #- - - - - - - - 
         moon_event = moon.event_at_time(times).wrt_path("SSB")
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(301,times[i],"J2000","NONE",0)
@@ -305,7 +391,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6] -
                                           moon_event.vel.vals[i]) < 1.e-6))
 
+        #- - - - - - - - - - 
         # Moon to Saturn
+        #- - - - - - - - - - 
         moon_event = moon.event_at_time(times).wrt_path("SATURN")
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(301,times[i],"J2000","NONE",6)
@@ -314,9 +402,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6] -
                                           moon_event.vel.vals[i]) < 1.e-6))
 
-        ####################################
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         # Tests of combined paths but no frame rotation
-
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -343,7 +431,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-14))
 
+        #- - - - - - - - - - - - - - - - -
         # Tests using different frames
+        #- - - - - - - - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -449,7 +539,9 @@ class Test_SpicePath(unittest.TestCase):
 
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check light travel time corrections, Saturn to Earth wrt SSB
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         earth_event = earth.event_at_time(times)
         (saturn_event, earth_event) = saturn.photon_to_event(earth_event)
 
@@ -472,7 +564,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(saturn_rel.pos[i]  - state[0:3]) < 1.e-6)
             self.assertTrue(abs(saturn_rel.vel[i]  - state[3:6]) < 1.e-3)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check light travel time corrections, Saturn from Earth wrt SSB
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         earth_event = earth.event_at_time(times)
         (saturn_event,earth_event) = saturn.photon_from_event(earth_event)
         saturn_rel = saturn_event.sub(earth_event)
@@ -489,7 +583,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6]
                                           - saturn_rel.vel[i].vals) < 1.e-3))
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Check light travel time corrections, Saturn wrt Earth, Earth-centered
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         earth_event = Path.as_path("EARTH").event_at_time(times)
         self.assertEqual(earth_event.pos, (0.,0.,0.))
         self.assertEqual(earth_event.vel, (0.,0.,0.))
@@ -519,7 +615,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6]
                                         - saturn_rel.vel[i].vals) < 1.e-3))
 
+        #- - - - - - - - - -
         # Apparent case
+        #- - - - - - - - - -
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(6,times[i],"J2000","CN+S",399)
             self.assertTrue(np.abs(lt + saturn_rel.time.vals[i] < 1.e-7))
@@ -530,9 +628,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[0:3] / length +
                                    earth_event.arr_ap[i].unit().vals) < 1.e-8))
 
-        ####################################
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Fixed and then rotating frames, forward calculation
-
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         times = np.arange(0., 86401., 8640.)
 
         for frame in ["J2000", "IAU_EARTH"]:
@@ -592,9 +690,9 @@ class Test_SpicePath(unittest.TestCase):
                 self.assertTrue(np.all(np.abs(state[0:3] / length +
                                     earth_event.arr_ap[i].unit().vals) < 1.e-8))
 
-        ####################################
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Fixed and then rotating frames, reverse calculation
-
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         times = np.arange(0., 86401., 8640.)
 
         for frame in ["J2000", "IAU_EARTH"]:
@@ -647,9 +745,9 @@ class Test_SpicePath(unittest.TestCase):
                 self.assertTrue(np.all(np.abs(state[0:3] / length +
                                     earth_event.dep_ap[i].unit().vals) < 1.e-8))
 
-        ####################################
+        #- - - - - - - - - - - - - -
         # More linked frames...
-
+        #- - - - - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -675,9 +773,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((mars_rel.pos[i] - state[0:3]).norm() < 1.e-5)
             self.assertTrue((mars_rel.vel[i] - state[3:6]).norm() < 1.e-3)
 
-        ####################################
+        #- - - - - - - - - - - - - - - - - - - - - - -
         # The IAU_EARTH frame works fine on Earth
-
+        #- - - - - - - - - - - - - - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -701,9 +799,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((pluto_rel.pos[i] - state[0:3]).norm() < 1.e-5)
             self.assertTrue((pluto_rel.vel[i] - state[3:6]).norm() < 1.e-3)
 
-        ####################################
+        #- - - - - - - - - - -
         # IAU_MARS on Mars
-
+        #- - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -728,9 +826,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((pluto_rel.pos[i] - state[0:3]).norm() < 1.e-5)
             self.assertTrue((pluto_rel.vel[i] - state[3:6]).norm() < 1.e-3)
 
-        ####################################
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check stellar aberration calculation in J2000
-
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -758,7 +856,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
+        #- - - - - - - - - -
         # Time-reversed
+        #- - - - - - - - - -
         pluto = AliasPath("PLUTO","J2000")
         earth_event = AliasPath("EARTH","J2000").event_at_time(times)
         (pluto_event,earth_event) = pluto.photon_from_event(earth_event)
@@ -778,9 +878,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
-        ####################################
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check stellar aberration calculation in a rotating frame
-
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -795,7 +895,9 @@ class Test_SpicePath(unittest.TestCase):
         (pluto_event,earth_event) = pluto.photon_to_event(earth_event)
         pluto_rel = pluto_event.sub(earth_event)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Note: These "RA,dec" values are in the IAU_EARTH frame, not J2000!
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         (ra,dec) = earth_event.ra_and_dec(apparent=False, frame=None)
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(9, times[i], "IAU_EARTH", "CN", 399)
@@ -816,6 +918,12 @@ class Test_SpicePath(unittest.TestCase):
       spice.initialize()
       Path.USE_QUICKPATHS = True
       Frame.USE_QUICKFRAMES = True
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

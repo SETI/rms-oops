@@ -71,27 +71,50 @@ def from_file(filespec, fast_distortion=True,
     # Construct a Pushframe for each framelet
     #-----------------------------------------
 
+    snap = False
+
+
     obs = []
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
 
-#        item = (oops.obs.Snapshot(("v","u"), 
-##                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
-#                                 fmeta.tstart, 0.0032, fmeta.fov,
+        if snap:
+            item = (oops.obs.Snapshot(("v","u"), 
+#                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
+                                 fmeta.tstart, fmeta.tdi_texp, fmeta.fov,
+                                 "JUNO", "JUNO_JUNOCAM", 
+                                 instrument = "JUNOCAM",
+                                 filter = fmeta.filter, 
+                                 data = framelets[:,:,i]))
+
+
+
+
+        if not snap:
+            nstages = \
+                np.clip(np.arange(fmeta.frlines-1,-1,-1)+1, 0, fmeta.tdi_stages) 
+            texp = nstages * fmeta.tdi_texp
+            tstart = \
+                    (fmeta.tdi_stages - nstages) * fmeta.tdi_texp + fmeta.tstart
+            cadence = oops.cadence.Sequence(tstart, texp)
+##            cadence = oops.cadence.Echelon(fmeta.tstart, fmeta.tdi_texp, 
+##                                              fmeta.tdi_stages, fmeta.frlines)
+#            cadence = oops.cadence.Metronome(fmeta.tstart,
+#                            fmeta.tdi_texp, fmeta.tdi_texp, fmeta.tdi_stages)
+            item = (oops.obs.Pushframe(("vt","u"), 
+                                 cadence, fmeta.fov,
+                                 "JUNO", "JUNO_JUNOCAM", 
+                                 instrument = "JUNOCAM",
+                                 filter = fmeta.filter, 
+                                 data = framelets[:,:,i]))
+
+#            item = (oops.obs.Pushbroom(("vt","u"), Pair.ONES, 
+#                                 cadence, fmeta.fov,
 #                                 "JUNO", "JUNO_JUNOCAM", 
 #                                 instrument = "JUNOCAM",
 #                                 filter = fmeta.filter, 
 #                                 data = framelets[:,:,i]))
 
-
-        cadence = oops.cadence.Metronome(fmeta.tstart,
-                                fmeta.tdi_texp, fmeta.tdi_texp, fmeta.tdi_stages)
-        item = (oops.obs.Pushframe(("v","u"), 
-                                 fmeta.tstart, cadence, fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM", 
-                                 instrument = "JUNOCAM",
-                                 filter = fmeta.filter, 
-                                 data = framelets[:,:,i]))
 
 
 

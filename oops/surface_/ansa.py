@@ -11,8 +11,13 @@ from oops.path_.path         import Path
 from oops.frame_.frame       import Frame
 from oops.constants import *
 
+#*******************************************************************************
+# Ansa
+#*******************************************************************************
 class Ansa(Surface):
-    """The Ansa surface is defined as the locus of points where a radius vector
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    The Ansa surface is defined as the locus of points where a radius vector
     from the pole of the Z-axis is perpendicular to the line of sight. This 
     provides a convenient coordinate system for describing rings when viewed
     nearly edge-on. The coordinates are (r,z,theta) where
@@ -22,14 +27,19 @@ class Ansa(Surface):
         theta   angular distance from the ansa, with positive values further
                 away from the observer and negative values closer.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "cylindrical"
     IS_VIRTUAL = True
 
     PACKRAT_ARGS = ['origin', 'frame', 'gravity', 'ringplane']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, origin, frame, gravity=None, ringplane=None):
-        """Constructor for an Ansa Surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for an Ansa Surface.
 
         Input:
             origin      a Path object or ID defining the motion of the center
@@ -45,7 +55,7 @@ class Ansa(Surface):
             ringplane   used by static method for_ringplane(); otherwise it
                         should be ignored.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame)
         self.gravity = gravity
@@ -55,21 +65,37 @@ class Ansa(Surface):
                                        gravity=self.gravity)
         else:
             self.ringplane = ringplane
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # for_ringplane
+    #===========================================================================
     @staticmethod
     def for_ringplane(ringplane):
-        """Construct an Ansa Surface associated with a given RingPlane.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Construct an Ansa Surface associated with a given RingPlane.
 
         Input:
             ringplane   a ringplane surface relative to which this ansa surface
                         is to be defined.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Ansa(ringplane.origin, ringplane.frame, ringplane.gravity,
                     ringplane)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs, time=None, axes=2, derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -84,7 +110,7 @@ class Ansa(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos = Vector3.as_vector3(pos, derivs)
         obs = Vector3.as_vector3(obs, derivs)
         (pos_x, pos_y, pos_z) = pos.to_scalars()
@@ -93,27 +119,42 @@ class Ansa(Surface):
         rabs   = (pos_x**2 + pos_y**2).sqrt()
         obs_xy = (obs_x**2 + obs_y**2).sqrt()
 
+        #----------------------------------------------
         # Find the longitude of pos relative to obs
+        #----------------------------------------------
         lon = pos_y.arctan2(pos_x) - obs_y.arctan2(obs_x)
 
+        #-----------------------------------
         # Put it in the range -pi to pi
+        #-----------------------------------
         lon = ((lon + PI) % TWOPI) - PI
         sign = lon.sign()
         r = rabs * sign
 
+        #----------------------------------------------
         # Fill in the third coordinate if necessary
+        #----------------------------------------------
         if axes > 2:
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # As discussed in the math found below with vector3_from_coords(),
             # the ansa longitude relative to the observer is:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             phi = (rabs / obs_xy).arccos()
             theta = sign*lon - phi
             return (r, pos_z, theta)
 
         return (r, pos_z)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs, time=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the
@@ -130,7 +171,9 @@ class Ansa(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------------------------------------------
         # Given (r,z, theta) and the observer position, solve for position.
         #   pos = (|r| cos(a), |r| sin(a), z)
         # where angle a is defined by the location of the observer.
@@ -164,7 +207,7 @@ class Ansa(Surface):
         #
         # Theta is an angular offset from phi, with smaller values closer to the
         # observer and larger angles further away.
-
+        #-----------------------------------------------------------------------
         assert len(coords) in {2,3}
 
         r = Scalar.as_scalar(coords[0], derivs)
@@ -188,9 +231,17 @@ class Ansa(Surface):
         pos = Vector3.from_scalars(rabs * pos_lon.cos(),
                                    rabs * pos_lon.sin(), z)
         return pos
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -205,14 +256,15 @@ class Ansa(Surface):
             t           a Scalar such that:
                             intercept = obs + t * los
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         obs = Vector3.as_vector3(obs, derivs)
         los = Vector3.as_vector3(los, derivs)
 
+        #----------------------------------------------------
         # (obs_xy + t los_xy) dot los_xy = 0
         # t = -(obs_xy dot los_xy) / (los_xy dot los_xy)
         # pos = obs + t * los
-
+        #----------------------------------------------------
         obs_x = obs.to_scalar(0)
         obs_y = obs.to_scalar(1)
         los_x = los.to_scalar(0)
@@ -226,9 +278,17 @@ class Ansa(Surface):
         pos = obs + t * los
 
         return (pos, t)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -243,11 +303,20 @@ class Ansa(Surface):
         the Ansa surface, so that incidence and emission angles work out as the
         user would expect.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos = Vector3.as_vector3(pos, derivs)
 
+        #-----------------------
         # Always the Z-axis
+        #-----------------------
         return pos.all_constant((0.,0.,1.))
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -255,13 +324,21 @@ class Ansa(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_Ansa
+#*******************************************************************************
 class Test_Ansa(unittest.TestCase):
     
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         surface = Ansa("SSB", "J2000")
 
+        #------------------
         # intercept()
+        #------------------
         obs = Vector3( np.random.rand(10,3) * 1.e5)
         los = Vector3(-np.random.rand(10,3))
 
@@ -272,7 +349,9 @@ class Test_Ansa(unittest.TestCase):
         self.assertTrue(abs(pos_xy.sep(los_xy) - HALFPI).max() < 1.e-8)
         self.assertTrue(abs(obs + t * los - pos).max() < 1.e-8)
 
+        #--------------------------
         # coords_from_vector3()
+        #--------------------------
         obs = Vector3(np.random.rand(100,3) * 1.e6)
         pos = Vector3(np.random.rand(100,3) * 1.e5)
 
@@ -326,7 +405,9 @@ class Test_Ansa(unittest.TestCase):
         pos1_xy = pos1.element_mul(Vector3((1,1,0)))
         self.assertTrue(abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5)
 
+        #---------------------------------------------------
         # vector3_from_coords() & coords_from_vector3()
+        #---------------------------------------------------
         obs = Vector3((1.e6,0,0))
         r = Scalar(1.e4 + np.random.rand(100) * 9.e4)
         r *= np.sign(2 * np.random.rand(100) - 1)
@@ -345,7 +426,9 @@ class Test_Ansa(unittest.TestCase):
         test_pos = surface.vector3_from_coords(coords, obs)
         self.assertTrue(abs(test_pos - pos).max() < 1.e-5)
 
+        #------------------------------
         # intercept() derivatives
+        #------------------------------
         obs = Vector3(np.random.rand(10,3))
         obs.insert_deriv('obs', Vector3.IDENTITY)
         los = Vector3(-np.random.rand(10,3))
@@ -392,6 +475,13 @@ class Test_Ansa(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

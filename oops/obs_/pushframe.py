@@ -23,7 +23,7 @@ class Pushframe(Observation):
     """
     A Pushframe is an Observation consisting of a 2-D image made up of lines
     of pixels, each exposed and shifted progressively to track a scene moving
-    at a constant rate.
+    through the FOV at a constant rate.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -35,19 +35,18 @@ class Pushframe(Observation):
     #===========================================================================
     # __init__
     #===========================================================================
-    def __init__(self, axes, tstart, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, cadence, fov, path, frame, **subfields):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for a Pushframe.
 
         Input:
             axes        a list or tuple of strings, with one value for each axis
-                        in the associated data array. A value of 'u' should
-                        appear at the location of the array's u-axis; 'v' should
-                        appear at the location of the array's v-axis. For
-                        example, ('v','u'), is correct for a 2-D array read from
-                        an image file in FITS or VICAR format.
-            tstart      the start time of the observation in seconds TDB.
+                        in the associated data array. A value of 'u' or 'ut'
+                        should appear at the location of the array's u-axis;
+                        'vt' or 'v' should appear at the location of the array's
+                        v-axis. The 't' suffix is used for the one of these axes
+                        that is swept by the time-delayed integration.
             cadence     a Cadence object defining the start time and duration of
                         each consecutive line of the pushframe.
             fov         a FOV (field-of-view) object, which describes the field
@@ -70,35 +69,42 @@ class Pushframe(Observation):
         self.frame = Frame.as_wayframe(frame)
 
         self.axes = list(axes)
-        self.u_axis = self.axes.index('u')
-        self.v_axis = self.axes.index('v')
-        self.uv_shape = list(self.fov.uv_shape.vals)
+        assert (('u' in self.axes and 'vt' in self.axes) or
+                ('v' in self.axes and 'ut' in self.axes))
+
+        if 'ut' in self.axes:
+            self.u_axis = self.axes.index('ut')
+            self.v_axis = self.axes.index('v')
+            self.t_axis = self.u_axis
+            self.cross_scan_uv_index = 0
+            self.along_scan_uv_index = 1
+        else:
+            self.u_axis = self.axes.index('u')
+            self.v_axis = self.axes.index('vt')
+            self.t_axis = self.v_axis
+            self.cross_scan_uv_index = 1
+            self.along_scan_uv_index = 0
 
         self.swap_uv = (self.u_axis > self.v_axis)
 
-        self.tstart = tstart
-        self.t_axis = -1
+        self.time = self.cadence.time
+        self.midtime = self.cadence.midtime
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - -    
-	# The Pushframe acts to maintain the geometry of 
-	# the initial scene, so the timing of the first stage 
-	# corresponds to the scene geometry.  
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - -    
-#        self.time = self.cadence.time
-        self.time = self.cadence.time_range_at_tstep(0)
+        assert len(self.cadence.shape) == 1
+        assert (self.fov.uv_shape.vals[self.cross_scan_uv_index] ==
+                self.cadence.shape[0])
 
-#        self.midtime = self.cadence.midtime
-        self.midtime = 0.5*(self.time[0] + self.time[1])
-        embed()
+        self.uv_shape = tuple(self.fov.uv_shape.values)
+        self.along_scan_shape = self.uv_shape[self.along_scan_uv_index]
+        self.cross_scan_shape = self.uv_shape[self.cross_scan_uv_index]
 
+        self.uv_size = Pair.ONES
 
-################### INCOMPLETE BEYOND THIS POINT ###################
+        duv_dt_basis_vals = np.zeros(2)
+        duv_dt_basis_vals[self.cross_scan_uv_index] = 1.
+        self.duv_dt_basis = Pair(duv_dt_basis_vals)
 
-
-        self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
-        self.scalar_midtime = Scalar(self.midtime)
-
-        self.shape = len(axes) * [0]
+        self.shape = len(axes) * [1]
         self.shape[self.u_axis] = self.uv_shape[0]
         self.shape[self.v_axis] = self.uv_shape[1]
 
@@ -131,20 +137,22 @@ class Pushframe(Observation):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         indices = Vector.as_vector(indices)
-
         uv = indices.to_pair((self.u_axis,self.v_axis))
-        time = self.scalar_midtime
+        
+        #---------------------------
+        # Create the time Scalar
+        #---------------------------
+        tstep = indices.to_scalar(self.t_axis)
+        time = self.cadence.time_at_tstep(tstep, mask=fovmask)
 
+        #------------------------------
+        # Apply mask if necessary
+        #------------------------------
         if fovmask:
             is_outside = self.uv_is_outside(uv, inclusive=True)
             if np.any(is_outside):
-                mask = uv.mask | is_outside
-                if np.any(mask != uv.mask):
-                    uv = uv.remask(mask)
-
-                    time_values = np.empty(uv.shape)
-                    time_values[...] = self.midtime
-                    time = Scalar(time_values, mask)
+                uv = uv.mask_where(is_outside)
+                time = time.mask_where(is_outside)
 
         return (uv, time)
     #===========================================================================
@@ -152,7 +160,7 @@ class Pushframe(Observation):
 
 
     #===========================================================================
-    # uvt_range
+    # uvt_range 
     #===========================================================================
     def uvt_range(self, indices, fovmask=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -175,27 +183,20 @@ class Pushframe(Observation):
         indices = Vector.as_vector(indices).as_int()
 
         uv_min = indices.to_pair((self.u_axis,self.v_axis))
-        uv_max = uv_min + Pair.ONES
+        uv_max = uv_min + self.uv_size
 
-        time_min = self.scalar_time[0]
-        time_max = self.scalar_time[1]
+        tstep = indices.to_scalar(self.t_axis)
+        (time_min,
+         time_max) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
         if fovmask:
             is_outside = self.uv_is_outside(uv_min, inclusive=False)
             if np.any(is_outside):
-                mask = uv_min.mask | is_outside
-                if np.any(mask != uv_min.mask):
-                    uv_min = uv_min.remask(mask)
-                    uv_max = uv_max.remask(mask)
-
-                    time_min_vals = np.empty(uv_min.shape)
-                    time_max_vals = np.empty(uv_min.shape)
-
-                    time_min_vals[...] = self.time[0]
-                    time_max_vals[...] = self.time[1]
-
-                    time_min = Scalar(time_min_vals, mask)
-                    time_max = Scalar(time_max_vals, mask)
+                mask = indices.mask | time_min.mask | is_outside
+                uv_min = uv_min.mask_where(mask)
+                uv_max = uv_max.mask_where(mask)
+                time_min = time_min.mask_where(mask)
+                time_max = time_max.mask_where(mask)
 
         return (uv_min, uv_max, time_min, time_max)
     #===========================================================================
@@ -221,54 +222,7 @@ class Pushframe(Observation):
                         active at this time step (exclusive).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return (Pair.ZEROS, self.fov.uv_shape)
-    #===========================================================================
-
-
-
-    #===========================================================================
-    # indices_at_uvt
-    #===========================================================================
-# Untested...
-#     def indices_at_uvt(self, uv_pair, time, fovmask=False):
-#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         """
-#         Returns a Tuple of indices corresponding to a given spatial location
-#         and time. This method supports non-integer positions and time steps, and
-#         returns fractional indices.
-#
-#         Input:
-#             uv_pair     a Pair of spatial (u,v) coordinates in or near the field
-#                         of view.
-#             time        a Scalar of times in seconds TDB.
-#             fovmask     True to mask values outside the field of view.
-#
-#         Return:
-#             indices     a Tuple of array indices. Any array indices not
-#                         constrained by (u,v) or time are returned with value 0.
-#                         Note that returned indices can fall outside the nominal
-#                         limits of the data object.
-#         """
-#        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         uv_pair = Pair.as_pair(uv_pair)
-#         time = Scalar.as_scalar(time)
-#         (uv_pair, time) = Array_.broadcast_arrays(uv_pair, time)
-#
-#         (u,v) = uv_pair.to_scalars()
-#
-#         index_vals = np.zeros(uv_pair.shape + [len(self.axes)])
-#         index_vals[..., self.u_axis] = u.vals
-#         index_vals[..., self.v_axis] = v.vals
-#
-#         if fovmask:
-#             is_inside = ((self.uv_is_inside(uv_pair, inclusive=True) &
-#                          (time >= self.time[0]) & (time <= self.time[1]))
-#             if not np.all(is_inside):
-#                 mask = uv_pair.mask | np.logical_not(is_inside)
-#             else:
-#                 mask = uv_pair.mask
-#
-#         return Vector(index_vals, mask)
+        return (Pair(0,0), Pair.as_pair(self.shape) - (1,1))
     #===========================================================================
 
 
@@ -291,65 +245,44 @@ class Pushframe(Observation):
                         time of each (u,v) pair, as seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        
+        # This is a fudge.  The start and stop times depend on the line, but
+        # that would give a mid time that does not correspond to the pointing when 
+        # the pixel was acquired.  Maybe need a cadence that models the line shift
+        # Problem is pointing varies during full pixel integration time
+        # backplane() doesn't care about this because it ultimately just
+        # uses the midtime for each pixel and doesn't ever look at the exposure
+        # duration
+        #
+        # think of pushframe as sum of searate shifted images
+        #  most accurate way is to compute separate backplane for each
+        #  tdi stage then shift and average results
+        #
+        # or need backplane to compute states of bodies at true mid time,
+        # but use pointing from fist tdi stage
+        # can this be done using light travel time?  prob not, since I think
+        # that's handled in spice
+        #
+        # what about adding an additional delay parameter for computing ephem?
+        #
+        # or try using time-dependent frame
+        
+        time0 = self.cadence.time_at_tstep(0)
+        time1 = time0 + self.cadence.texp[self.cadence.steps-1]
+
+#        uv_pair = uv_pair.as_int()
+#        tstep = uv_pair.to_scalar(self.cross_scan_uv_index)
+#        (time0, time1) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
+
         if fovmask:
             is_outside = self.uv_is_outside(uv_pair, inclusive=True)
             if np.any(is_outside):
-                time_min_vals = np.empty(uv_pair.shape)
-                time_max_vals = np.empty(uv_pair.shape)
+                time0 = time0.mask_where(is_outside)
+                time1 = time1.mask_where(is_outside)
 
-                time_min_vals[...] = self.time[0]
-                time_max_vals[...] = self.time[1]
-
-                time_min = Scalar(time_min_vals, is_outside)
-                time_max = Scalar(time_max_vals, is_outside)
-
-                return (time_min, time_max)
-
-        return self.scalar_time
+        return (time0, time1)
     #===========================================================================
-
-
-
-    #===========================================================================
-    # uv_at_time
-    #===========================================================================
-# Untested but not needed as of 7/7/12...
-#     def uv_at_time(self, time, fovmask=False):
-#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         """Returns the (u,v) ranges of spatial pixel observed at the specified
-#         time.
-#
-#         Input:
-#             uv_pair     a Scalar of time values in seconds TDB.
-#             fovmask     True to mask values outside the time limits and/or the
-#                         field of view.
-#
-#         Return:         (uv_min, uv_max)
-#             uv_min      the lower (u,v) corner of the area observed at the
-#                         specified time.
-#             uv_max      the upper (u,v) corner of the area observed at the
-#                         specified time.
-#         """
-#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         uv_min = Scalar((0,0))
-#         uv_max = Scalar(self.uv_shape)
-#
-#         if fovmask or np.any(time.mask):
-#             is_inside = (time >= self.time[0]) & (time <= self.time[1])
-#             if not np.all(is_inside):
-#                 uv_min_vals = np.zeros(time.shape + (2,))
-#
-#                 uv_max_vals = np.empty(time.shape + (2,))
-#                 uv_max_vals[...,0] = self.uv_shape[0]
-#                 uv_max_vals[...,1] = self.uv_shape[1]
-#
-#                 uv_min = Pair(uv_min_vals, time.mask |
-#                                            np.logical_not(is_inside))
-#                 uv_max = Pair(uv_max_vals, mask)
-#
-#         return (uv_min, uv_max)
-    #===========================================================================
-
+    
 
 
     #===========================================================================
@@ -367,7 +300,10 @@ class Pushframe(Observation):
                         pixels per second in the (u,v) directions.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Pair.ZEROS
+        uv_pair = Pair.as_pair(uv_pair)
+        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
+
+        return self.duv_dt_basis / self.cadence.tstride_at_tstep(tstep)
     #===========================================================================
 
 
@@ -387,64 +323,13 @@ class Pushframe(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        obs = Pushframe(self.axes, self.time[0] + dtime, self.cadence,
-                       self.fov, self.path, self.frame)
+        obs = Pushframe(self.axes, self.cadence.time_shift(dtime),
+                        self.fov, self.path, self.frame)
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
 
         return obs
-    #===========================================================================
-
-
-
-################################################################################
-# Overrides of Observation methods
-################################################################################
-
-    #===========================================================================
-    # uv_from_coords
-    #===========================================================================
-    def uv_from_coords(self, surface, coords, underside=False, derivs=False,
-                             quick={}, converge={}):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The (u,v) indices of a surface point, given its coordinates.
-
-        Input:
-            surface     a Surface object.
-            coords      a tuple containing two or three Scalars of surface
-                        coordinates. The Scalars need not be the same shape,
-                        but must broadcast to the same shape.
-            underside   True for the underside of the surface (emission > 90
-                        degrees) to be unmasked.
-            derivs      True to propagate derivatives of the link time and
-                        position into the returned event.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-            converge    an optional dictionary of parameters to override the
-                        configured default convergence parameters. The default
-                        configuration is defined in config.py.
-
-        Return:         the (u,v) indices of the pixel in which the point was
-                        found. The path is evaluated at the mid-time of this
-                        pixel.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        obs_event = Event(self.midtime, Vector3.ZERO, self.path, self.frame)
-        (surface_event,
-         obs_event) = surface.photon_to_event_by_coords(obs_event, coords,
-                                derivs=derivs, quick=quick, converge=converge)
-
-        neg_arr_ap = obs_event.neg_arr_ap
-        if not underside:
-            normal = surface.normal(surface_event.pos)
-            mask = (normal.dot(surface_event.dep_ap, recursive=False) < 0.)
-            neg_arr_ap = neg_arr_ap.mask_where(mask)
-
-        return self.fov.uv_from_los(neg_arr_ap, derivs=derivs)
     #===========================================================================
 
 
@@ -554,9 +439,9 @@ class Pushframe(Observation):
         inner_radii = Scalar([body.inner_radius for body in bodies])
         inner_angles = (inner_radii / ranges).arcsin()
 
-        #----------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         # This array equals True for each body falling somewhere inside the FOV
-        #----------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         falls_inside = np.empty(nbodies, dtype='bool')
         for i in range(nbodies):
             falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i])
@@ -580,34 +465,30 @@ class Pushframe(Observation):
 
         flags = falls_inside & ~is_hidden
 
-        #------------------
+        #------------------------
         # Return as flags
-        #------------------
+        #------------------------
         if return_type == 'flags':
             return flags
 
-        #------------------
+        #---------------------
         # Return as list
-        #------------------
+        #---------------------
         if return_type == 'list':
             ret_list = []
             for i in range(nbodies):
                 if flags[i]: ret_list.append(body_names[i])
             return ret_list
 
-        #----------------------
+        #-----------------------
         # Return full info
-        #----------------------
+        #-----------------------
         returned_dict = {}
 
         u_scale = fov.uv_scale.vals[0]
         v_scale = fov.uv_scale.vals[1]
         body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
         for i in range(nbodies):
-# This seems wrong so I commented it out. We should have an entry for every
-# moon; use 'inside' to check flag.  --MRS
-#             if not flags[i]:
-#                 continue
             body_data = {}
             body_data['name'] = body_names[i]
             body_data['inside'] = flags[i]
@@ -666,137 +547,262 @@ class Test_Pushframe(unittest.TestCase):
     # runTest
     #===========================================================================
     def runTest(self):
-
+        return
+        
+        from oops.cadence_.metronome import Metronome
         from oops.fov_.flatfov import FlatFOV
-#
-#        fov = FlatFOV((0.001,0.001), (10,20))
-#        obs = Pushframe(axes=('u','v'), tstart=98., texp=2.,
-#                       fov=fov, path='SSB', frame='J2000')
-#
-#        indices = Vector([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
-#
-#        #------------------------------
-#        # uvt() with fovmask == False
-#        #------------------------------
-#        (uv,time) = obs.uvt(indices)
-#
-#        self.assertFalse(uv.mask)
-#        self.assertFalse(time.mask)
-#        self.assertEqual(time, 99.)
-#        self.assertEqual(uv, Pair.as_pair(indices))
-#
-#        #-----------------------------
-#        # uvt() with fovmask == True
-#        #-----------------------------
-#        (uv,time) = obs.uvt(indices, fovmask=True)
-#
-#        self.assertTrue(np.all(uv.mask == np.array(4*[False] + [True])))
-#        self.assertTrue(np.all(time.mask == uv.mask))
-#        self.assertEqual(time[:4], 99.)
-#        self.assertEqual(uv[:4], Pair.as_pair(indices)[:4])
-#
-#        #------------------------------------
-#        # uvt_range() with fovmask == False
-#        #------------------------------------
-#        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
-#
-#        self.assertFalse(uv_min.mask)
-#        self.assertFalse(uv_max.mask)
-#        self.assertFalse(time_min.mask)
-#        self.assertFalse(time_max.mask)
-#
-#        self.assertEqual(uv_min, Pair.as_pair(indices))
-#        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
-#        self.assertEqual(time_min,  98.)
-#        self.assertEqual(time_max, 100.)
-#
-#        #------------------------------------------------
-#        # uvt_range() with fovmask == False, new indices
-#        #------------------------------------------------
-#        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9))
-#
-#        self.assertFalse(uv_min.mask)
-#        self.assertFalse(uv_max.mask)
-#        self.assertFalse(time_min.mask)
-#        self.assertFalse(time_max.mask)
-#
-#        self.assertEqual(uv_min, Pair.as_pair(indices))
-#        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
-#        self.assertEqual(time_min,  98.)
-#        self.assertEqual(time_max, 100.)
-#
-#        #------------------------------------------------
-#        # uvt_range() with fovmask == True, new indices
-#        #------------------------------------------------
-#        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9),
-#                                                             fovmask=True)
-#        self.assertTrue(np.all(uv_min.mask == [False] + 4*[True]))
-#        self.assertTrue(np.all(uv_min.mask == uv_max.mask))
-#        self.assertTrue(np.all(uv_min.mask == time_min.mask))
-#        self.assertTrue(np.all(uv_min.mask == time_max.mask))
-#
-#        self.assertEqual(uv_min[0], Pair.as_pair(indices)[0])
-#        self.assertEqual(uv_max[0], (Pair.as_pair(indices) + (1,1))[0])
-#        self.assertEqual(time_min[0],  98.)
-#        self.assertEqual(time_max[0], 100.)
-#
-#        #--------------------------------------
-#        # times_at_uv() with fovmask == False
-#        #--------------------------------------
-#        uv_pair = Pair([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
-#
-#        (time0, time1) = obs.times_at_uv(uv_pair)
-#
-#        self.assertEqual(time0,  98.)
-#        self.assertEqual(time1, 100.)
-#
-#        #-------------------------------------
-#        # times_at_uv() with fovmask == True
-#        #-------------------------------------
-#        (time0, time1) = obs.times_at_uv(uv_pair, fovmask=True)
-#
-#        self.assertTrue(np.all(time0.mask == 4*[False] + [True]))
-#        self.assertTrue(np.all(time1.mask == 4*[False] + [True]))
-#        self.assertEqual(time0[:4],  98.)
-#        self.assertEqual(time1[:4], 100.)
-#
-#        #----------------------------------
-#        # Alternative axis order ('v','u')
-#        #----------------------------------
-#        obs = Pushframe(axes=('v','u'), tstart=98., texp=2.,
-#                       fov=fov, path='SSB', frame='J2000')
-#        indices = Pair([(0,0),(0,10),(20,0),(20,10),(20,11)])
-#
-#        (uv,time) = obs.uvt(indices)
-#
-#        self.assertEqual(uv, indices.to_pair((1,0)))
-#
-#        (uv,time) = obs.uvt(indices, fovmask=True)
-#
-#        self.assertEqual(uv[:4], indices.to_pair((1,0))[:4])
-#        self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
-#
-#        #----------------------------------------
-#        # Alternative axis order ('v', 'a', 'u')
-#        #----------------------------------------
-#        obs = Pushframe(axes=('v','a','u'), tstart=98., texp=2.,
-#                       fov=fov, path='SSB', frame='J2000')
-#        indices = Vector([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
-#        (uv,time) = obs.uvt(indices)
-#
-#        self.assertEqual(uv, indices.to_pair((2,0)))
-#
-#        (uv,time) = obs.uvt(indices, fovmask=True)
-#
-#        self.assertEqual(uv[:4], indices.to_pair((2,0))[:4])
-#        self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
+
+        flatfov = FlatFOV((0.001,0.001), (10,20))
+        cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
+        obs = Pushframe(axes=('u','vt'),
+                        cadence=cadence, fov=flatfov, path='SSB', frame='J2000')
+
+        indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+
+        #-------------------------------
+        # uvt() with fovmask == False
+        #-------------------------------
+        (uv,time) = obs.uvt(indices)
+        
+        
+        
+        
+        
+        
+
+        self.assertFalse(np.any(uv.mask))
+        self.assertFalse(np.any(time.mask))
+        self.assertTrue(time.max() <= cadence.midtime)
+        self.assertEqual(uv, Pair.as_pair(indices))
+
+        #-------------------------------
+        # uvt() with fovmask == True
+        #-------------------------------
+        (uv,time) = obs.uvt(indices, fovmask=True)
+        
+        embed()
+        return      #####################################
+
+        self.assertTrue(np.all(uv.mask == np.array(6*[False] + [True])))
+        self.assertTrue(np.all(time.mask == uv.mask))
+        self.assertEqual(time[:6], cadence.tstride * indices.to_scalar(1)[:6])
+        self.assertEqual(uv[:6], Pair.as_pair(indices)[:6])
+
+        #--------------------------------------
+        # uvt_range() with fovmask == False
+        #--------------------------------------
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
+
+        self.assertFalse(np.any(uv_min.mask))
+        self.assertFalse(np.any(uv_max.mask))
+        self.assertFalse(np.any(time_min.mask))
+        self.assertFalse(np.any(time_max.mask))
+
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
+        self.assertEqual(time_max, time_min + cadence.texp)
+
+        #----------------------------------------------------
+        # uvt_range() with fovmask == False, new indices
+        #----------------------------------------------------
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9))
+
+        self.assertFalse(np.any(uv_min.mask))
+        self.assertFalse(np.any(uv_max.mask))
+        self.assertFalse(np.any(time_min.mask))
+        self.assertFalse(np.any(time_max.mask))
+
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(1))
+        self.assertEqual(time_max, time_min + cadence.texp)
+
+        #--------------------------------------------------
+        # uvt_range() with fovmask == True, new indices
+        #--------------------------------------------------
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices+(0.2,0.9),
+                                                             fovmask=True)
+
+        self.assertTrue(np.all(uv_min.mask == np.array(2*[False] + 5*[True])))
+        self.assertTrue(np.all(uv_max.mask == uv_min.mask))
+        self.assertTrue(np.all(time_min.mask == uv_min.mask))
+        self.assertTrue(np.all(time_max.mask == uv_min.mask))
+
+        self.assertEqual(uv_min[:2], Pair.as_pair(indices)[:2])
+        self.assertEqual(uv_max[:2], Pair.as_pair(indices)[:2] + (1,1))
+        self.assertEqual(time_min[:2], cadence.tstride *
+                                       indices.to_scalar(1)[:2])
+        self.assertEqual(time_max[:2], time_min[:2] + cadence.texp)
+
+        #------------------------------------------
+        # times_at_uv() with fovmask == False
+        #------------------------------------------
+        uv = Pair([(0,0),(0,20),(10,0),(10,20),(10,21)])
+
+        (time0, time1) = obs.times_at_uv(uv)
+
+        self.assertEqual(time0, cadence.tstride * uv.to_scalar(1))
+        self.assertEqual(time1, time0 + cadence.texp)
+
+        #-----------------------------------------
+        # times_at_uv() with fovmask == True
+        #-----------------------------------------
+        (time0, time1) = obs.times_at_uv(uv, fovmask=True)
+
+        self.assertTrue(np.all(time0.mask == 4*[False] + [True]))
+        self.assertTrue(np.all(time1.mask == 4*[False] + [True]))
+        self.assertEqual(time0[:4], cadence.tstride * uv.to_scalar(1)[:4])
+        self.assertEqual(time1[:4], time0[:4] + cadence.texp)
+
+        #----------------------------------------
+        # Alternative axis order ('ut','v')
+        #----------------------------------------
+        cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
+        obs = Pushframe(axes=('ut','v'),
+                        cadence=cadence, fov=flatfov, path='SSB', frame='J2000')
+
+        indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
+
+        (uv,time) = obs.uvt(indices)
+
+        self.assertEqual(uv, Pair.as_pair(indices))
+        self.assertEqual(time, cadence.tstride * indices.to_scalar(0))
+
+        (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
+
+        self.assertEqual(uv_min, Pair.as_pair(indices))
+        self.assertEqual(uv_max, Pair.as_pair(indices) + (1,1))
+        self.assertEqual(time_min, cadence.tstride * indices.to_scalar(0))
+        self.assertEqual(time_max, time_min + cadence.texp)
+
+        (time0,time1) = obs.times_at_uv(indices)
+
+        self.assertEqual(time0, cadence.tstride * uv.to_scalar(0))
+        self.assertEqual(time1, time0 + cadence.texp)
+
+        #-----------------------------------------------------------
+        # Alternative uv_size and texp for discontinuous indices
+        #-----------------------------------------------------------
+        cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
+        obs = Pushframe(axes=('ut','v'),
+                        cadence=cadence, fov=flatfov, path='SSB', frame='J2000')
+
+        self.assertEqual(obs.time[1], 98.)
+
+        self.assertEqual(obs.uvt((0,0))[1],  0.)
+        self.assertEqual(obs.uvt((5,0))[1], 50.)
+        self.assertEqual(obs.uvt((5,5))[1], 50.)
+
+        eps = 1.e-14
+        delta = 1.e-13
+        self.assertTrue(abs(obs.uvt((6      ,0))[1] - 60.) < delta)
+        self.assertTrue(abs(obs.uvt((6.25   ,0))[1] - 62.) < delta)
+        self.assertTrue(abs(obs.uvt((6.5    ,0))[1] - 64.) < delta)
+        self.assertTrue(abs(obs.uvt((6.75   ,0))[1] - 66.) < delta)
+        self.assertTrue(abs(obs.uvt((7 - eps,0))[1] - 68.) < delta)
+        self.assertTrue(abs(obs.uvt((7.     ,0))[1] - 70.) < delta)
+
+        self.assertEqual(obs.uvt((0,0))[0], (0.,0.))
+        self.assertEqual(obs.uvt((5,0))[0], (5.,0.))
+        self.assertEqual(obs.uvt((5,5))[0], (5.,5.))
+
+        self.assertTrue(abs(obs.uvt((6      ,0))[0] - (6.0,0.)) < delta)
+        self.assertTrue(abs(obs.uvt((6.2    ,1))[0] - (6.1,1.)) < delta)
+        self.assertTrue(abs(obs.uvt((6.4    ,2))[0] - (6.2,2.)) < delta)
+        self.assertTrue(abs(obs.uvt((6.6    ,3))[0] - (6.3,3.)) < delta)
+        self.assertTrue(abs(obs.uvt((6.8    ,4))[0] - (6.4,4.)) < delta)
+        self.assertTrue(abs(obs.uvt((7 - eps,5))[0] - (6.5,5.)) < delta)
+        self.assertTrue(abs(obs.uvt((7.     ,6))[0] - (7.0,6.)) < delta)
+
+        self.assertTrue(abs(obs.uvt((1, 0      ))[0] - (1.,0.0)) < delta)
+        self.assertTrue(abs(obs.uvt((2, 1.25   ))[0] - (2.,1.2)) < delta)
+        self.assertTrue(abs(obs.uvt((3, 2.5    ))[0] - (3.,2.4)) < delta)
+        self.assertTrue(abs(obs.uvt((4, 3.75   ))[0] - (4.,3.6)) < delta)
+        self.assertTrue(abs(obs.uvt((5, 5 - eps))[0] - (5.,4.8)) < delta)
+        self.assertTrue(abs(obs.uvt((5, 5.     ))[0] - (5.,5.0)) < delta)
+
+        #--------------------------
+        # Test the upper edge
+        #--------------------------
+        pair = (10-eps,20-eps)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        pair = (10,20-eps)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        pair = (10-eps,20)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        pair = (10,20)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertFalse(obs.uvt(pair, True)[0].mask)
+
+        self.assertTrue(obs.uvt((10+eps,20), True)[0].mask)
+        self.assertTrue(obs.uvt((10,20+eps), True)[0].mask)
+
+        #----------------------
+        # Try all at once
+        #----------------------
+        indices = Pair([(10-eps,20-eps), (10,20-eps), (10-eps,20), (10,20),
+                        (10+eps,20), (10,20+eps)])
+
+        (uv,t) = obs.uvt(indices, fovmask=True)
+        self.assertTrue(np.all(t.mask == np.array(4*[False] + 2*[True])))
+
+        #-------------------------------------------------
+        # Alternative with uv_size and texp and axes
+        #-------------------------------------------------
+        obs = Pushframe(axes=('a','v','b','ut','c'),
+                        cadence=cadence, fov=flatfov, path='SSB', frame='J2000')
+
+        self.assertEqual(obs.time[1], 98.)
+
+        self.assertEqual(obs.uvt((1,0,3,0,4))[1],  0.)
+        self.assertEqual(obs.uvt((1,0,3,5,4))[1], 50.)
+        self.assertEqual(obs.uvt((1,0,3,5,4))[1], 50.)
+
+        eps = 1.e-14
+        delta = 1.e-13
+        self.assertTrue(abs(obs.uvt((1,0,0,6      ,0))[1] - 60.) < delta)
+        self.assertTrue(abs(obs.uvt((1,0,0,6.25   ,0))[1] - 62.) < delta)
+        self.assertTrue(abs(obs.uvt((1,0,0,6.5    ,0))[1] - 64.) < delta)
+        self.assertTrue(abs(obs.uvt((1,0,0,6.75   ,0))[1] - 66.) < delta)
+        self.assertTrue(abs(obs.uvt((1,0,0,7 - eps,0))[1] - 68.) < delta)
+        self.assertTrue(abs(obs.uvt((1,0,0,7.     ,0))[1] - 70.) < delta)
+
+        self.assertEqual(obs.uvt((0,0,0,0,0))[0], (0.,0.))
+        self.assertEqual(obs.uvt((0,0,0,5,0))[0], (5.,0.))
+        self.assertEqual(obs.uvt((0,5,0,5,0))[0], (5.,5.))
+
+        self.assertTrue(abs(obs.uvt((1,0,4,6      ,7))[0] - (6.0,0.)) < delta)
+        self.assertTrue(abs(obs.uvt((1,1,4,6.2    ,7))[0] - (6.1,1.)) < delta)
+        self.assertTrue(abs(obs.uvt((1,2,4,6.4    ,7))[0] - (6.2,2.)) < delta)
+        self.assertTrue(abs(obs.uvt((1,3,4,6.6    ,7))[0] - (6.3,3.)) < delta)
+        self.assertTrue(abs(obs.uvt((1,4,4,6.8    ,7))[0] - (6.4,4.)) < delta)
+        self.assertTrue(abs(obs.uvt((1,5,4,7 - eps,7))[0] - (6.5,5.)) < delta)
+        self.assertTrue(abs(obs.uvt((1,6,4,7.     ,7))[0] - (7.0,6.)) < delta)
+
+        self.assertTrue(abs(obs.uvt((1, 0      ,4,1,7))[0] - (1.,0.0)) < delta)
+        self.assertTrue(abs(obs.uvt((1, 1.25   ,4,2,7))[0] - (2.,1.2)) < delta)
+        self.assertTrue(abs(obs.uvt((1, 2.5    ,4,3,7))[0] - (3.,2.4)) < delta)
+        self.assertTrue(abs(obs.uvt((1, 3.75   ,4,4,7))[0] - (4.,3.6)) < delta)
+        self.assertTrue(abs(obs.uvt((1, 5 - eps,4,5,7))[0] - (5.,4.8)) < delta)
+        self.assertTrue(abs(obs.uvt((1, 5.     ,4,5,7))[0] - (5.,5.0)) < delta)
     #===========================================================================
 
 
 #*******************************************************************************
 
 
-################################################################################
+########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

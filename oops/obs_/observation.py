@@ -4,6 +4,8 @@
 
 from __future__ import print_function
 
+from IPython import embed   ## TODO: remove
+
 import numpy as np
 import numbers
 from polymath import *
@@ -116,7 +118,7 @@ class Observation(object):
                         with the array indices.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("uvt() is not implemented")
+        raise NotImplementedError("uvt() is not implemented")
     #===========================================================================
 
 
@@ -142,7 +144,7 @@ class Observation(object):
             time_max    a Scalar defining the maximum time value.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("uvt_range() is not implemented")
+        raise NotImplementedError("uvt_range() is not implemented")
     #===========================================================================
 
 
@@ -167,7 +169,7 @@ class Observation(object):
                         tile. It is given in seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("uvt_ranges() is not implemented")
+        raise NotImplementedError("uvt_ranges() is not implemented")
     #===========================================================================
 
 
@@ -196,7 +198,7 @@ class Observation(object):
                         limits of the data object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("indices_at_uvt() is not implemented")
+        raise NotImplementedError("indices_at_uvt() is not implemented")
     #===========================================================================
 
 
@@ -219,7 +221,7 @@ class Observation(object):
                         time of each (u,v) pair, as seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("times_at_uv() is not implemented")
+        raise NotImplementedError("times_at_uv() is not implemented")
     #===========================================================================
 
 
@@ -243,7 +245,7 @@ class Observation(object):
                         specified time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("uv_at_time() is not implemented")
+        raise NotImplementedError("uv_at_time() is not implemented")
     #===========================================================================
 
 
@@ -263,7 +265,7 @@ class Observation(object):
                         pixels per second in the (u,v) directions.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("sweep_duv_dt() is not implemented")
+        raise NotImplementedError("sweep_duv_dt() is not implemented")
     #===========================================================================
 
 
@@ -283,7 +285,7 @@ class Observation(object):
         Return:         a (shallow) copy of the object with a new time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("time_shift() is not implemented")
+        raise NotImplementedError("time_shift() is not implemented")
     #===========================================================================
 
 

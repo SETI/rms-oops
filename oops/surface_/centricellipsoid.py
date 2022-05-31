@@ -9,18 +9,28 @@ from oops.surface_.surface   import Surface
 from oops.surface_.ellipsoid import Ellipsoid
 from oops.constants import *
 
+#*******************************************************************************
+# CentricEllipsoid
+#*******************************************************************************
 class CentricEllipsoid(Surface):
-    """CentricEllipsoid is a variant of Ellipsoid in which latitudes are
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    CentricEllipsoid is a variant of Ellipsoid in which latitudes are
     planetocentric.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "spherical"
     IS_VIRTUAL = False
 
     PACKRAT_ARGS = ['origin', 'frame', 'radii', 'exclusion']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, origin, frame, radii, exclusion=0.95):
-        """Constructor for a CentricEllipsoid object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a CentricEllipsoid object.
 
         Input:
             origin      the Path object or ID defining the center of the
@@ -36,7 +46,7 @@ class CentricEllipsoid(Surface):
                         Values of less than 0.9 are not recommended because
                         the problem becomes numerically unstable.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.ellipsoid = Ellipsoid(origin, frame, radii, exclusion)
         self.origin = self.ellipsoid.origin
         self.frame  = self.ellipsoid.frame
@@ -50,10 +60,18 @@ class CentricEllipsoid(Surface):
         self.unsquash_y_sq = self.ellipsoid.unsquash_y**2
 
         self.radii = self.ellipsoid.radii
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -68,16 +86,24 @@ class CentricEllipsoid(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         coords = self.ellipsoid.coords_from_vector3(pos, obs=obs, axes=axes,
                                                     derivs=derivs)
         centric_lon = self.ellipsoid.lon_to_centric(coords[0], derivs=derivs)
         centric_lat = self.ellipsoid.lat_to_centric(coords[1], coords[0],
                                                     derivs=derivs)
         return (centric_lon, centric_lat,) + coords[2:]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the
@@ -94,7 +120,7 @@ class CentricEllipsoid(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         squashed_lon = self.ellipsoid.lon_from_centric(coords[0], derivs=derivs)
         squashed_lat = self.ellipsoid.lat_from_centric(coords[1], squashed_lon,
                                                        derivs=derivs)
@@ -102,9 +128,17 @@ class CentricEllipsoid(Surface):
 
         return self.ellipsoid.vector3_from_coords(new_coords, obs=obs,
                                                   derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -120,11 +154,19 @@ class CentricEllipsoid(Surface):
             t           a Scalar such that:
                             intercept = obs + t * los
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ellipsoid.intercept(obs, los, derivs=derivs, guess=guess)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -135,12 +177,19 @@ class CentricEllipsoid(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ellipsoid.normal(pos, derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept_with_normal
+    #===========================================================================
     def intercept_with_normal(self, normal, time=None, derivs=False,
                                     guess=None):
-        """Intercept point where the normal vector parallels the given vector.
+        """
+        Intercept point where the normal vector parallels the given vector.
 
         Input:
             normal      a Vector3 of normal vectors.
@@ -163,9 +212,17 @@ class CentricEllipsoid(Surface):
 
         return self.ellipsoid.intercept_with_normal(normal, derivs=derivs,
                                                     guess=guess)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept_normal_to
+    #===========================================================================
     def intercept_normal_to(self, pos, time=None, derivs=False, guess=None):
-        """Intercept point whose normal vector passes through a given position.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Intercept point whose normal vector passes through a given position.
 
         Input:
             pos         a Vector3 of positions near the surface.
@@ -185,16 +242,24 @@ class CentricEllipsoid(Surface):
                         that 
                             intercept = pos + p * normal(intercept).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ellipsoid.intercept_normal_to(pos, derivs=derivs,
                                                   guess=guess)
+    #===========================================================================
+
+
 
     ############################################################################
     # Longitude conversions
     ############################################################################
 
+    #===========================================================================
+    # lon_to_centric
+    #===========================================================================
     def lon_to_centric(self, lon, derivs=False):
-        """Convert longitude in internal coordinates to planetocentric.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert longitude in internal coordinates to planetocentric.
 
         Input:
             lon         planetocentric longitude in radians.
@@ -202,11 +267,19 @@ class CentricEllipsoid(Surface):
 
         Return          planetocentric longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lon_from_centric
+    #===========================================================================
     def lon_from_centric(self, lon, derivs=False):
-        """Convert planetocentric longitude to internal coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetocentric longitude to internal coordinates.
 
         Input:
             lon         planetocentric longitude in radians.
@@ -214,11 +287,19 @@ class CentricEllipsoid(Surface):
 
         Return          planetocentric longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lon, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lon_to_graphic
+    #===========================================================================
     def lon_to_graphic(self, lon, derivs=False):
-        """Convert longitude in internal coordinates to planetographic.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert longitude in internal coordinates to planetographic.
 
         Input:
             lon         planetocentric longitude in radians.
@@ -226,12 +307,20 @@ class CentricEllipsoid(Surface):
 
         Return          planetographic longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.unsquash_y_sq).arctan2(lon.cos())
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lon_from_graphic
+    #===========================================================================
     def lon_from_graphic(self, lon, derivs=False):
-        """Convert planetographic longitude to internal coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetographic longitude to internal coordinates.
 
         Input:
             lon         planetographic longitude in radians.
@@ -239,16 +328,24 @@ class CentricEllipsoid(Surface):
 
         Return          planetocentric longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lon = Scalar.as_scalar(lon, derivs)
         return (lon.sin() * self.squash_y_sq).arctan2(lon.cos())
+    #===========================================================================
+
+
 
     ############################################################################
     # Latitude conversions
     ############################################################################
 
+    #===========================================================================
+    # lat_to_centric
+    #===========================================================================
     def lat_to_centric(self, lat, lon, derivs=False):
-        """Convert latitude in internal coordinates to planetocentric.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert latitude in internal coordinates to planetocentric.
 
         Input:
             lat         squashed latitide, radians.
@@ -257,11 +354,19 @@ class CentricEllipsoid(Surface):
 
         Return          planetocentric latitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lat, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lat_from_centric
+    #===========================================================================
     def lat_from_centric(self, lat, lon, derivs=False):
-        """Convert planetocentric latitude to internal coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetocentric latitude to internal coordinates.
 
         Input:
             lat         planetocentric latitide, radians.
@@ -270,11 +375,19 @@ class CentricEllipsoid(Surface):
 
         Return          planetocentric latitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lat, derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lat_to_graphic
+    #===========================================================================
     def lat_to_graphic(self, lat, lon, derivs=False):
-        """Convert latitude in internal coordinates to planetographic.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert latitude in internal coordinates to planetographic.
 
         Input:
             lat         squashed latitide, radians.
@@ -283,17 +396,28 @@ class CentricEllipsoid(Surface):
 
         Return          planetographic latitude.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #------------------------------------------------
         # This could be done more efficiently I'm sure
+        #------------------------------------------------
         squashed_lon = self.ellipsoid.lon_from_centric(lon, derivs=derivs)
         squashed_lat = self.ellipsoid.lat_from_centric(lat, squashed_lon,
                                                        derivs=derivs)
 
         return self.ellipsoid.lat_to_graphic(squashed_lat, squashed_lon,
                                              derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # lat_from_graphic
+    #===========================================================================
     def lat_from_graphic(self, lat, lon, derivs=False):
-        """Convert a planetographic latitude to internal coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert a planetographic latitude to internal coordinates.
 
         Input:
             lat         planetographic latitide, radians.
@@ -302,13 +426,20 @@ class CentricEllipsoid(Surface):
 
         Return          planetocentric latitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         squashed_lon = self.ellipsoid.lon_from_centric(lon, derivs=derivs)
         squashed_lat = self.ellipsoid.lat_from_graphic(lat, squashed_lon,
                                                        derivs=derivs)
 
         return self.ellipsoid.lat_to_centric(squashed_lat, squashed_lon,
                                              derivs=derivs)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -316,8 +447,14 @@ class CentricEllipsoid(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_CentricEllipsoid
+#*******************************************************************************
 class Test_CentricEllipsoid(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.frame_.frame import Frame
@@ -328,7 +465,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
         RPOL = 50000.
         planet = CentricEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
 
+        #-------------------------------------\
         # Coordinate/vector conversions
+        #------------------------------------
         NPTS = 10000
         NPTS = 10
         pos = (2 * np.random.rand(NPTS,3) - 1.) * REQ   # range is -REQ to REQ
@@ -337,7 +476,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
         test = planet.vector3_from_coords((lon,lat,elev))
         self.assertTrue(abs(test - pos).max() < 1.e-8)
 
+        #---------------------------------------------------------
         # Make sure longitudes convert to planetocentric and back
+        #---------------------------------------------------------
         test_lon = np.arctan2(pos[...,1], pos[...,0])
         centric_lon = planet.lon_to_centric(lon)
         diffs = (centric_lon - test_lon + HALFPI) % PI - HALFPI
@@ -347,7 +488,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
         diffs = (test_lon2 - lon + HALFPI) % PI - HALFPI
         self.assertTrue(abs(diffs).max() < 1.e-8)
 
+        #---------------------------------------------------------
         # Make sure latitudes convert to planetocentric and back
+        #---------------------------------------------------------
         test_lat = np.arcsin(pos[...,2] / np.sqrt(np.sum(pos**2, axis=-1)))
         centric_lat = planet.lat_to_centric(lat,lon)
         self.assertTrue(abs(centric_lat - test_lat).max() < 1.e-8)
@@ -355,7 +498,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
         test_lat2 = planet.lat_from_centric(centric_lat, lon)
         self.assertTrue(abs(test_lat2 - lat).max() < 1.e-8)
 
+        #---------------------------------------------------------
         # Make sure longitudes convert to planetographic and back
+        #---------------------------------------------------------
         normals = planet.normal(pos)
         test_lon = np.arctan2(normals.vals[...,1], normals.vals[...,0])
         graphic_lon = planet.lon_to_graphic(lon)
@@ -366,7 +511,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
         diffs = (test_lon2 - lon + HALFPI) % PI - HALFPI
         self.assertTrue(abs(diffs).max() < 1.e-8)
 
+        #---------------------------------------------------------
         # Make sure latitudes convert to planetographic and back
+        #---------------------------------------------------------
         test_lat = np.arcsin(normals.vals[...,2] / normals.norm().vals)
         graphic_lat = planet.lat_to_graphic(lat,lon)
         self.assertTrue(abs(graphic_lat - test_lat).max() < 1.e-8)
@@ -374,7 +521,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
         test_lat2 = planet.lat_from_graphic(graphic_lat, lon)
         self.assertTrue(abs(test_lat2 - lat).max() < 1.e-8)
 
+        #----------------------------------
         # Ellipsoid intercepts & normals
+        #----------------------------------
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
         los = -np.random.rand(NPTS,3)                   # range is -1 to 0
 
@@ -395,13 +544,16 @@ class Test_CentricEllipsoid(unittest.TestCase):
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()).max() < 1.e-14)
 
+        #--------------------------
         # Intercept derivatives
+        #--------------------------
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Lines of sight with grazing incidence can have large numerical errors,
         # but this is not to be considered an error in the analytic calculation.
         # As a unit test, we ignore the largest 3% of the errors, but require
         # that the rest of the errors be very small.
-
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
         los = -np.random.rand(NPTS,3)                   # range is -1 to 0
 
@@ -459,7 +611,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 2.e-5)
 
+        #-------------------
         # Test normal()
+        #-------------------
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
         perp = planet.normal(cept)
         test1 = cept.element_mul(planet.ellipsoid.unsquash).unit()
@@ -480,13 +634,17 @@ class Test_CentricEllipsoid(unittest.TestCase):
 
         self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 3.e-8)
 
+        #--------------------------------
         # Test intercept_with_normal()
+        #--------------------------------
         vector = Vector3(np.random.random((100,3)))
         cept = planet.intercept_with_normal(vector)
         sep = vector.sep(planet.normal(cept))
         self.assertTrue(sep.max() < 1.e-14)
 
+        #-------------------------------
         # Test intercept_normal_to()
+        #-------------------------------
         pos = Vector3(np.random.random((100,3)) * 4.*REQ + REQ)
         cept = planet.intercept_normal_to(pos)
         sep = (pos - cept).sep(planet.normal(cept))
@@ -494,7 +652,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
         self.assertTrue(abs(cept.element_mul(planet.ellipsoid.unsquash).norm() -
                         planet.ellipsoid.req).max() < 1.e-6)
 
+        #------------------------------
         # Test normal() derivative
+        #------------------------------
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
         cept.insert_deriv('pos', Vector3.IDENTITY, override=True)
         perp = planet.normal(cept, derivs=True)
@@ -507,7 +667,9 @@ class Test_CentricEllipsoid(unittest.TestCase):
             ref = Vector3(perp.d_dpos.vals[...,i,:], perp.d_dpos.mask)
             self.assertTrue(abs(dperp_dpos - ref).max() < 1.e-4)
 
+        #------------------------------------------
         # Test intercept_normal_to() derivative
+        #------------------------------------------
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
         (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=False)
@@ -534,6 +696,12 @@ class Test_CentricEllipsoid(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

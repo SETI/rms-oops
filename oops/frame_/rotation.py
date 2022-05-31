@@ -9,15 +9,26 @@ from oops.frame_.frame import Frame
 from oops.fittable     import Fittable
 from oops.transform    import Transform
 
+#*******************************************************************************
+# Rotation
+#*******************************************************************************
 class Rotation(Frame, Fittable):
-    """Rotation is a Frame subclass describing a fixed rotation about one axis
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Rotation is a Frame subclass describing a fixed rotation about one axis
     of another frame.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     PACKRAT_ARGS = ['angle', 'axis2', 'reference', 'frame_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, angle, axis, reference, id=None):
-        """Constructor for a Rotation Frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Rotation Frame.
 
         Input:
             angle       the angle of rotation in radians. Can be a Scalar
@@ -26,7 +37,7 @@ class Rotation(Frame, Fittable):
             reference   the frame relative to which this rotation is defined.
             id          the ID to use; None to leave the frame unregistered.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.angle = Scalar.as_scalar(angle)
         self.shape = self.angle.shape
 
@@ -46,26 +57,42 @@ class Rotation(Frame, Fittable):
         self.origin    = self.reference.origin
         self.keys      = set()
 
+        #-----------------------------------------------------------
         # Update wayframe and frame_id; register if not temporary
+        #-----------------------------------------------------------
         self.register()
 
+        #---------------------------------------------------------
         # We need a wayframe before we can create the transform
+        #---------------------------------------------------------
         self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
                                    self.wayframe, self.reference, self.origin)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick=False):
         """The Transform into the this Frame at a Scalar of times."""
 
         return self.transform
+    #===========================================================================
+
+
 
     ########################################
     # Fittable interface
     ########################################
 
+    #===========================================================================
+    # set_params
+    #===========================================================================
     def set_params(params):
-        """Redefine the Fittable object, using this set of parameters.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Redefine the Fittable object, using this set of parameters.
         
         In this case, params is the set of angles of rotation.
 
@@ -74,7 +101,7 @@ class Rotation(Frame, Fittable):
                         numbers, defining the parameters to be used in the
                         object returned.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         params = Scalar.as_scalar(params)
         assert params.shape == self.shape
 
@@ -89,22 +116,46 @@ class Rotation(Frame, Fittable):
 
         self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
                                    self.reference, self.origin)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # get_params
+    #===========================================================================
     def get_params(self):
-        """Return the current set of parameters defining this fittable object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the current set of parameters defining this fittable object.
 
         Return:         a Numpy 1-D array of floating-point numbers containing
                         the parameter values defining this object.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.angle.vals
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # copy
+    #===========================================================================
     def copy(self):
-        """Return a deep copy of the given object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a deep copy of the given object.
 
-        The copy can be safely modified without affecting the original."""
-
+        The copy can be safely modified without affecting the original.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Rotation(self.angle.copy(), self.axis, self.reference_id)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -112,13 +163,25 @@ class Rotation(Frame, Fittable):
 
 import unittest
 
+#*******************************************************************************
+# Test_Rotation
+#*******************************************************************************
 class Test_Rotation(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # Note: Unit testing is performed in surface/orbitplane.py
 
         pass
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
 
 #########################################
 if __name__ == '__main__':

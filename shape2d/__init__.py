@@ -5,8 +5,15 @@
 import numpy as np
 from polymath import *
 
+#*******************************************************************************
+# Shape2D
+#*******************************************************************************
 class Shape2D(object):
-    """Abstract class for 2D shapes."""
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Abstract class for 2D shapes.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     PREC   = 1.e-15         # precision required in tests for equality
     PRECx2 = PREC * 2.
@@ -15,38 +22,87 @@ class Shape2D(object):
 # Method prototypes
 ################################################################################
 
+    #===========================================================================
+    # dimensions
+    #===========================================================================
     def dimensions(self):
-        """The Scalar dimension of this object: 0 for a point; 1 for a line; 2
-        for a shape object that has nonzero area."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	The Scalar dimension of this object: 0 for a point; 1 for a line; 2
+        for a shape object that has nonzero area.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method dimensions() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_convex
+    #===========================================================================
     def is_convex(self):
-        """Boolean True if the shape is convex."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Boolean True if the shape is convex.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method is_convex() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # point_at
+    #===========================================================================
     def point_at(t):
-        """Parameterization of the shape."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Parameterization of the shape.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method point_at() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # param_at
+    #===========================================================================
     def param_at(pt):
-        """Parameter at a point, which is assumed to fall on the edge of this
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Parameter at a point, which is assumed to fall on the edge of this
         object.
 
         What happens when the point does not fall on the shape is undetermined.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method param_at() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # param_limits
+    #===========================================================================
     def param_limits(self):
-        """Parameter limits to define the shape."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Parameter limits to define the shape.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method param_limits() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # closest
+    #===========================================================================
     def closest(self, arg):
-        """Tuple containing the pairs of closest points between the edges of
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Tuple containing the pairs of closest points between the edges of
         this object and the given Shape2D object.
 
         Input:
@@ -64,11 +120,19 @@ class Shape2D(object):
         are guaranteed to be unmasked as long as the shape are initially
         unmasked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method closest() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intersections
+    #===========================================================================
     def intersections(self, arg):
-        """Points defining intersections between the edges of this shape and the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Points defining intersections between the edges of this shape and the
         given Shape2D object.
 
         Input:
@@ -83,11 +147,19 @@ class Shape2D(object):
                         will be masked where the shape edges do not intersect or
                         are duplicated.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method intersections() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # tangents_from
+    #===========================================================================
     def tangents_from(self, pt):
-        """The two Points where this Shape2D object is tangent to a line from
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	The two Points where this Shape2D object is tangent to a line from
         the given Point.
 
         Note: If the two points are degenerate, the second one is masked.
@@ -103,11 +175,19 @@ class Shape2D(object):
                         this shape. Tangent points are be masked if they do not
                         exist or are duplicated.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method tangents_from() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # tangent_at
+    #===========================================================================
     def tangent_at(self, t):
-        """The Line object tangent to this Shape2D object at the given parameter
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	The Line object tangent to this Shape2D object at the given parameter
         value.
 
         Input:
@@ -119,11 +199,19 @@ class Shape2D(object):
                         result is a Line object with this shape. Tangent lines
                         will be masked if the tangent value is undefined.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method tangent_at() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal_at
+    #===========================================================================
     def normal_at(self, t):
-        """The outward HalfLine object normal to this Shape2D object at the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	The outward HalfLine object normal to this Shape2D object at the
         given parameter value.
 
         Note: for Line subclasses, the "outward" normal is defined to be the
@@ -140,11 +228,19 @@ class Shape2D(object):
                         The HalfLines will be masked if the outward normal is
                         undefined.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method normal_at() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_subset_of
+    #===========================================================================
     def is_subset_of(self, arg):
-        """True if this object is as subset of (i.e., is entirely contained by)
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	True if this object is as subset of (i.e., is entirely contained by)
         the given Shape2D object.
 
         Input:
@@ -154,11 +250,19 @@ class Shape2D(object):
         Return:         Boolean True if this shape is a subset of the given
                         shape.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method is_subset_of() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_superset_of
+    #===========================================================================
     def is_superset_of(self, arg):
-        """True if this object is as superset of (i.e., entirely contains) the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	True if this object is as superset of (i.e., entirely contains) the
         given Shape2D object.
 
         Input:
@@ -168,11 +272,19 @@ class Shape2D(object):
         Return:         Boolean True if this shape is a superset of the given
                         shape.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method is_superset_of() is not implemented')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_disjoint_from
+    #===========================================================================
     def is_disjoint_from(self, arg):
-        """True if the this object and the given Shape2D object are disjoint
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	True if the this object and the given Shape2D object are disjoint
         (i.e., do not touch or overlap).
 
         Input:
@@ -182,22 +294,32 @@ class Shape2D(object):
         Return:         Boolean True if this shape is disjoing from the given
                         shape.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #------------------------------------------------------
         # This is a general method although it may be slow
-
+        #
         # Two object are disjoint if...
         # 1. The second object is not a subset of the first
         # 1. The second object is not a superset of the first
         # 2. The objects do not intersect
-
+        #------------------------------------------------------
         arg_is_superset = self.is_superset_of(arg)
         arg_is_subset = self.is_subset_of(arg)
         arg_intersects = self.intersections(arg).any(axis=0)
 
         return ~(arg_is_superset | arg_is_subset | arg_intersects)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # touches
+    #===========================================================================
     def touches(self, arg):
-        """True if the this object and the given Shape2D touch but do not share
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	True if the this object and the given Shape2D touch but do not share
         any common interior points.
 
         Input:
@@ -207,15 +329,17 @@ class Shape2D(object):
         Return:         Boolean True if the shapes touch but share no common
                         interior points.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------------------------
         # This is a general method although it may be slow
         # NOTE: It only applies to 2D objects
-
+        #
         # Two objects touch if...
         # 1. The second object is not a subset of the first
         # 1. The second object is not a superset of the first
         # 2. The objects intersect exactly once
-
+        #-----------------------------------------------------
         if (self.dimensions != 2).any() or (arg.dimensions != 2).any():
             raise ValueError('general touches() method is only implemented ' +
                              'for 2-D shapes')
@@ -225,26 +349,46 @@ class Shape2D(object):
         arg_doesnt_intersect_once = self.intersections(arg).sum(axis=0) != 1
 
         return ~(arg_is_superset | arg_is_subset | arg_doesnt_intersect_once)
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Support methods
 ################################################################################
 
+    #===========================================================================
+    # _meshgrid_for_arg
+    #===========================================================================
     @staticmethod
     def _meshgrid_for_arg(arg):
-        """Meshgrid to convert the results of argmin(axis=0) in an index."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Meshgrid to convert the results of argmin(axis=0) in an index.
+	"""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         axes = [arg.values]
         for k in arg.shape[::-1]:
             axes.append(range(k))
 
         return np.meshgrid(axes)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _closest_of_pairings
+    #===========================================================================
     @staticmethod
     def _closest_of_pairings(shape1_pts, shape2_pts)
-        """Select the pairings of points on shape1 and shape2 that are closest.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+	Select the pairings of points on shape1 and shape2 that are closest.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(shape1_pts) == list:
             shape1_pts = Qube.stack(*shape1_pts)
 
@@ -256,5 +400,7 @@ class Shape2D(object):
         indx = Shape2D._meshgrid_for_arg(argmin)
 
         return (shape1_pts[indx], shape2_pts[indx])
+    #===========================================================================
+
 
 ################################################################################

@@ -83,7 +83,7 @@ class Sequence(Cadence):
     def time_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the time(s) associated with the given time step(s).
+	Return the min time(s) associated with the given time step(s).
         
         This method supports non-integer step values.
 
@@ -126,7 +126,8 @@ class Sequence(Cadence):
             time_max    a Scalar defining the maximum time value.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstep = Scalar.as_int(tstep)
+        tstep = Scalar.as_scalar(tstep).int()
+#        tstep = Scalar.as_int(tstep)
         tstep_clipped = tstep.clip(0,self.steps-1,False)
         time_min = Scalar(self.tlist[tstep_clipped]) # , tstep.mask) XXX
         time_max = time_min + self.texp[tstep_clipped]

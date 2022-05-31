@@ -13,6 +13,8 @@
 
 from __future__ import print_function
 
+from IPython import embed   ## TODO: remove
+
 import numpy as np
 import os.path
 
@@ -83,6 +85,9 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.obs = obs
 
+        #-----------------------------------------
+        # Establish spaital and temporal grids
+        #-----------------------------------------
         if meshgrid is None:
             self.meshgrid = obs.meshgrid()
         else:
@@ -93,16 +98,16 @@ class Backplane(object):
         else:
             self.time = Scalar.as_scalar(time)
 
-        #--------------------------------------------------------------------
+        #------------------------------------------------------------------
         # For some cases, times are all equal. If so, collapse the times.
-        #--------------------------------------------------------------------
+        #------------------------------------------------------------------
         dt = self.time - obs.midtime
         if abs(dt).max() < 1.e-3:   # simplifies cases with jitter in time tags
             self.time = Scalar(obs.midtime)
 
-        #--------------------------------------------------------------------
+        #----------------------------
         # Intialize the inventory
-        #--------------------------------------------------------------------
+        #----------------------------
         if type(inventory) == dict:
             self.inventory = inventory
         elif inventory:
@@ -112,15 +117,15 @@ class Backplane(object):
 
         self.inventory_border = inventory_border
 
-        #--------------------------------------------------------------------
+        #------------------
         # Define events
-        #--------------------------------------------------------------------
+        #------------------
         self.obs_event = obs.event_at_grid(self.meshgrid, self.time)
         self.obs_gridless_event = obs.gridless_event(self.meshgrid, self.time)
 
         self.shape = self.obs_event.shape
 
-        #--------------------------------------------------------------------
+        #----------------------------------------------------------------------
         # The surface_events dictionary comes in two versions, one with
         # derivatives and one without. Each dictionary is keyed by a tuple of
         # strings, where each string is the name of a body from which photons
@@ -134,16 +139,16 @@ class Backplane(object):
         # the photons arriving at Saturn's rings from the Sun.
         #
         # Note that body names in event keys are case-insensitive.
-        #--------------------------------------------------------------------
+        #----------------------------------------------------------------------
         self.surface_events_w_derivs = {(): self.obs_event}
         self.surface_events = {(): self.obs_event.wod}
 
-        #--------------------------------------------------------------------
+        #---------------------------------------------------------------------
         # The path_events dictionary holds photon departure events from paths.
         # All photons originate from the Sun so this name is implied. For
         # example, ('SATURN',) is the key for the event of a photon departing
         # the Sun such that it later arrives at the Saturn surface.
-        #--------------------------------------------------------------------
+        #---------------------------------------------------------------------
         self.path_events = {}
 
         #--------------------------------------------------------------------
@@ -157,7 +162,7 @@ class Backplane(object):
         self.gridless_events   = {(): self.obs_gridless_event}
         self.gridless_arrivals = {}
 
-        #--------------------------------------------------------------------
+        #----------------------------------------------------------------------
         # The backplanes dictionary holds every backplane that has been
         # calculated. This includes boolean backplanes, aka masks. A backplane
         # is keyed by (name of backplane, event_key, optional additional
@@ -171,12 +176,12 @@ class Backplane(object):
         # order that they appear in the calling function. For example,
         # ('latitude', ('saturn',), 'graphic') is the key for the backplane of
         # planetographic latitudes at Saturn.
-        #--------------------------------------------------------------------
+        #----------------------------------------------------------------------
         self.backplanes = {}
 
-        #--------------------------------------------------------------------
+        #----------------------------------------
         # Antimasks of surfaces, by body name
-        #--------------------------------------------------------------------
+        #----------------------------------------
         self.antimasks = {}
 
         #--------------------------------------------------------------------
@@ -349,15 +354,15 @@ class Backplane(object):
         """Prepare an antimask for a particular surface event."""
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------------------
+        #-------------------------------------
         # The basic meshgrid is unmasked
-        #------------------------------------------------------------------
+        #-------------------------------------
         if len(event_key) == 0:
             return True
 
-        #------------------------------------------------------------------
+        #------------------------------------------------
         # Return from the antimask cache if present
-        #------------------------------------------------------------------
+        #------------------------------------------------
         try:
             return self.antimasks[event_key]
         except KeyError:
@@ -370,9 +375,9 @@ class Backplane(object):
 
         body_name = event_key[-1]
 
-        #------------------------------------------------------------------
+        #-----------------------------------------
         # For a name with a colon, we're done
-        #------------------------------------------------------------------
+        #-----------------------------------------
         if ':' in body_name:
             return True
 
@@ -414,9 +419,9 @@ class Backplane(object):
             antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
             antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - -
             # Swap axes if necessary
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - -
             for c in self.obs.axes:
                 if c[0] == 'v':
                     new_mask = antimask.swapaxes(0,1)
@@ -441,26 +446,27 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         event_key = self.standardize_event_key(event_key)
 
-        #------------------------------------------------------------------
+        #-------------------------------------------
         # If the event already exists, return it
-        #------------------------------------------------------------------
+        #-------------------------------------------
         if event_key in self.surface_events:
             return self.surface_events[event_key]
 
-        #------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         # The Sun is treated as a path, not a surface, unless it is listed last
-        #------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         if event_key[0] == 'SUN' and len(event_key) > 1:
             return self.get_path_event(event_key)
 
-        #------------------------------------------------------------------
+        #--------------------------------------------
         # Look up the photon's departure surface
-        #------------------------------------------------------------------
+        #--------------------------------------------
         surface = self.get_surface(event_key)
 
-        #------------------------------------------------------------------
-        # Calculate derivatives for the first step from the observer, if allowed
-        #------------------------------------------------------------------
+        #--------------------------------------------------------------
+        # Calculate derivatives for the first step from the observer, 
+        # if allowed
+        #--------------------------------------------------------------
         if len(event_key) == 1 and surface.intercept_DERIVS_ARE_IMPLEMENTED:
             try:
                 event = self.get_surface_event_w_derivs(event_key)
@@ -468,36 +474,36 @@ class Backplane(object):
             except NotImplementedError:
                 pass
 
-        #------------------------------------------------------------------
+        #-------------------------------------
         # Look up the photon's destination
-        #------------------------------------------------------------------
+        #-------------------------------------
         dest = self.get_surface_event_with_arr(event_key[1:])
 
-        #------------------------------------------------------------------
+        #-------------------------
         # Define the antimask
-        #------------------------------------------------------------------
+        #-------------------------
         antimask = self.get_antimask(event_key)
 
-        #------------------------------------------------------------------
+        #---------------------------------------------------
         # Create the event and save it in the dictionary
-        #------------------------------------------------------------------
+        #---------------------------------------------------
         event = surface.photon_to_event(dest, antimask=antimask)[0]
         self.surface_events[event_key] = event
         if event_key not in self.antimasks:
             self.antimasks[event_key] = event.antimask
 
-        #------------------------------------------------------------------
+        #------------------------------------------------
         # Save extra information in the event object
-        #------------------------------------------------------------------
+        #------------------------------------------------
         event.insert_subfield('event_key', event_key)
         event.insert_subfield('surface', surface)
 
         body = Backplane.get_body_and_modifier(event_key)[0]
         event.insert_subfield('body', body)
 
-        #------------------------------------------------------------------
+        #-----------------------
         # Save the antimask
-        #------------------------------------------------------------------
+        #-----------------------
         if len(event_key) == 1 and event_key[0] not in self.antimasks:
             self.antimasks[event_key] = event.antimask
 
@@ -516,38 +522,38 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         event_key = self.standardize_event_key(event_key)
 
-        #------------------------------------------------------------------
+        #-------------------------------------------
         # If the event already exists, return it
-        #------------------------------------------------------------------
+        #-------------------------------------------
         if event_key in self.surface_events_w_derivs:
             return self.surface_events_w_derivs[event_key]
 
-        #------------------------------------------------------------------
+        #--------------------------------------------
         # Look up the photon's departure surface
-        #------------------------------------------------------------------
+        #--------------------------------------------
         surface = self.get_surface(event_key)
 
-        #------------------------------------------------------------------
+        #-----------------------------------------------------------
         # Look up the photons destination and prepare derivatives
-        #------------------------------------------------------------------
+        #-----------------------------------------------------------
         dest = self.get_surface_event_w_derivs(event_key[1:])
         dest = dest.with_time_derivs().with_los_derivs()
 
-        #------------------------------------------------------------------
+        #--------------------------
         # Define the antimask
-        #------------------------------------------------------------------
+        #--------------------------
         antimask = self.get_antimask(event_key)
 
-        #------------------------------------------------------------------
+        #----------------------------------------------------
         # Create the event and save it in the dictionary
-        #------------------------------------------------------------------
+        #----------------------------------------------------
         event = surface.photon_to_event(dest, derivs=True, antimask=antimask)[0]
         if event_key not in self.antimasks:
             self.antimasks[event_key] = event.antimask
 
-        #------------------------------------------------------------------
+        #-----------------------------------------------
         # Save extra information in the event object
-        #------------------------------------------------------------------
+        #-----------------------------------------------
         event.insert_subfield('event_key', event_key)
         event.insert_subfield('surface', surface)
 
@@ -556,25 +562,27 @@ class Backplane(object):
 
         self.surface_events_w_derivs[event_key] = event
 
-        #------------------------------------------------------------------
+        #--------------------------------
         # Make a copy without derivs
-        #------------------------------------------------------------------
+        #--------------------------------
         event_wo_derivs = event.wod
         event_wo_derivs.insert_subfield('event_key', event_key)
         event_wo_derivs.insert_subfield('surface', surface)
         event_wo_derivs.insert_subfield('body', body)
         self.surface_events[event_key] = event_wo_derivs
 
-        #------------------------------------------------------------------
+        #-------------------------------------------------------------------
         # Also save into the dictionary keyed by the string name alone
         # Saves the bother of typing parentheses and a comma when it's not
         # really necessary
-        #------------------------------------------------------------------
+        #-------------------------------------------------------------------
         if len(event_key) == 1:
             self.surface_events_w_derivs[event_key[0]] = event
             self.surface_events[event_key[0]] = event_wo_derivs
 
+            #- - - - - - - - - - - - -
             # Also save the antimask
+            #- - - - - - - - - - - - -
             self.antimasks[event_key[0]] = event.antimask
 
         return event
@@ -591,15 +599,15 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         event_key = self.standardize_event_key(event_key)
 
-        #--------------------------------------------------------------
+        #------------------------------------------
         # If the event already exists, return it
-        #--------------------------------------------------------------
+        #------------------------------------------
         if event_key in self.path_events:
             return self.path_events[event_key]
 
-        #--------------------------------------------------------------
+        #----------------------
         # Create the event
-        #--------------------------------------------------------------
+        #----------------------
         dest = self.get_surface_event(event_key[1:])
         path = Backplane.get_path(event_key[0])
 
@@ -652,15 +660,15 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         event_key = self.standardize_event_key(event_key)
 
-        #------------------------------------------------------
+        #-------------------------------------------
         # If the event already exists, return it
-        #------------------------------------------------------
+        #-------------------------------------------
         if event_key in self.gridless_events:
             return self.gridless_events[event_key]
 
-        #------------------------------------------------------
+        #--------------------------------------------------
         # Create the event and save it in the dictionary
-        #------------------------------------------------------
+        #--------------------------------------------------
         dest = self.get_gridless_event(event_key[1:])
         surface = self.get_surface(event_key)
 
@@ -668,9 +676,9 @@ class Backplane(object):
         event = event.wrt_frame(surface.frame)
         arrival = arrival.wrt_frame(self.obs.frame)
 
-        #------------------------------------------------------
+        #-----------------------------------------------
         # Save extra information in the event object
-        #------------------------------------------------------
+        #-----------------------------------------------
         body = Backplane.get_body_and_modifier(event_key)[0]
 
         event.insert_subfield('event_key', event_key)
@@ -755,17 +763,17 @@ class Backplane(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
+        #-------------------------------------------
         # Undefined values are treated as False
-        #------------------------------------------------------
+        #-------------------------------------------
         if isinstance(mask, Qube):
             mask = mask.as_mask_where_nonzero()
 
         if isinstance(mask, np.ndarray): return Boolean(mask)
 
-        #------------------------------------------------------
+        #-------------------------------------------
         # Convert a single value to a full array
-        #------------------------------------------------------
+        #-------------------------------------------
         if mask:
             return Boolean(np.ones(self.shape, dtype='bool'))
         else:
@@ -790,9 +798,9 @@ class Backplane(object):
         elif isinstance(backplane, np.ndarray):
             backplane = Scalar(backplane)
 
-        #-----------------------------------------------------------------------
+        #----------------------------------------------------------------
         # Under some circumstances a derived backplane can be a scalar
-        #-----------------------------------------------------------------------
+        #----------------------------------------------------------------
         if expand and backplane.shape == () and self.shape != ():
             if type(backplane) == Boolean:
                 vals = np.empty(self.shape, dtype='bool')
@@ -803,9 +811,10 @@ class Backplane(object):
                 vals[...] = backplane.vals
                 backplane = Scalar(vals, backplane.mask)
 
-        #-----------------------------------------------------------------------
-        # For reference, we add the key as an attribute of each backplane object
-        #-----------------------------------------------------------------------
+        #------------------------------------------------------------------
+        # For reference, we add the key as an attribute of each backplane 
+        # object
+        #------------------------------------------------------------------
         backplane = backplane.wod
         backplane.key = key
 
@@ -1003,12 +1012,12 @@ class Backplane(object):
         ra = self.right_ascension(event_key)
         dec = self.declination(event_key)
 
-        #------------------------------------------------------
+        #-----------------------------------
         # Derivatives of...
         #   los[0] = cos(dec) * cos(ra)
         #   los[1] = cos(dec) * sin(ra)
         #   los[2] = sin(dec)
-        #------------------------------------------------------
+        #-----------------------------------
         cos_dec = np.cos(dec.vals)
         sin_dec = np.sin(dec.vals)
 
@@ -1024,17 +1033,17 @@ class Backplane(object):
 
         dlos_dradec_j2000 = Vector3(dlos_dradec_vals, ra.mask, drank=1)
 
-        #------------------------------------------------------
+        #-----------------------------------------------------------------
         # Rotate dlos from the J2000 frame to the image coordinate frame
-        #------------------------------------------------------
+        #-----------------------------------------------------------------
         frame = self.obs.frame.wrt(Frame.J2000)
         xform = frame.transform_at_time(self.obs_event.time)
 
         dlos_dradec = xform.rotate(dlos_dradec_j2000)
 
-        #------------------------------------------------------
+        #---------------------------------------
         # Convert to a column matrix and save
-        #------------------------------------------------------
+        #---------------------------------------
         dlos_dra  = Vector3(dlos_dradec.vals[...,0], ra.mask)
         dlos_ddec = Vector3(dlos_dradec.vals[...,1], ra.mask)
 
@@ -1425,9 +1434,9 @@ class Backplane(object):
                 flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
                 self.register_backplane(('ring_flip', event_key), flip)
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - 
                 # Now flip incidence angles where necessary
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - 
                 incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
 
             self.register_backplane(key, incidence)
@@ -1459,15 +1468,15 @@ class Backplane(object):
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if event.surface.COORDINATE_TYPE == 'polar':
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - -
                 # Get the flip flag
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - -
                 ignore = self.incidence_angle(event_key)
                 flip = self.backplanes[('ring_flip', event_key)]
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - -
                 # Flip emission angles where necessary
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - -
                 emission = Scalar.PI * flip + (1. - 2.*flip) * emission
 
             self.register_backplane(key, emission)
@@ -1638,9 +1647,9 @@ class Backplane(object):
                         event.arr_ap.norm()).arcsin()
             incidence = Scalar.HALFPI - latitude
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Ring incidence angles are always 0-90 degrees
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             if event.surface.COORDINATE_TYPE == 'polar':
 
                 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1690,9 +1699,9 @@ class Backplane(object):
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if event.surface.COORDINATE_TYPE == 'polar':
 
-                #- - - - - - - - - - - - - - - - - - - - - 
+                #- - - - - - - - - - -  
                 # Get the flip flag
-                #- - - - - - - - - - - - - - - - - - - - - 
+                #- - - - - - - - - - -  
                 ignore = self.center_incidence_angle(event_key)
                 flip = self.backplanes[('ring_center_flip', event_key)]
 
@@ -1795,25 +1804,26 @@ class Backplane(object):
         assert minimum in (0, -180)
         assert lon_type in ('centric', 'graphic', 'squashed')
 
-        #----------------------------------------------------------------------
+        #----------------------------------------
         # Look up under the desired reference
-        #----------------------------------------------------------------------
+        #----------------------------------------
         key0 = ('longitude', event_key)
         key = key0 + (reference, direction, minimum, lon_type)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------------
+        #------------------------------------------------------------------
         # If it is not found with default keys, fill in those backplanes
-        # Note that longitudes default to eastward for right-handed coordinates
-        #----------------------------------------------------------------------
+        # Note that longitudes default to eastward for right-handed 
+        # coordinates
+        #------------------------------------------------------------------
         key_default = key0 + ('iau', 'east', 0, 'squashed')
         if key_default not in self.backplanes:
             self._fill_surface_intercepts(event_key)
 
-        #----------------------------------------------------------------------
+        #-----------------------------------------------------
         # Fill in the required longitude type if necessary
-        #----------------------------------------------------------------------
+        #-----------------------------------------------------
         key_typed = key0 + ('iau', 'east', 0, lon_type)
         if key_typed in self.backplanes:
             lon = self.backplanes[key_typed]
@@ -1828,9 +1838,9 @@ class Backplane(object):
                 lon = surface.lon_to_graphic(lon_squashed)
                 self.register_backplane(key_typed, lon)
 
-        #----------------------------------------------------------------------
+        #--------------------------------------------------------
         # Define the longitude relative to the reference value
-        #----------------------------------------------------------------------
+        #--------------------------------------------------------
         if reference != 'iau':
             if reference in ('sun', 'sha'):
                 ref_lon = self._sub_solar_longitude(event_key)
@@ -1842,14 +1852,14 @@ class Backplane(object):
 
             lon = lon - ref_lon
 
-        #----------------------------------------------------------------------
+        #-------------------------
         # Reverse if necessary
-        #----------------------------------------------------------------------
+        #-------------------------
         if direction == 'west': lon = -lon
 
-        #----------------------------------------------------------------------
+        #-------------------------
         # Re-define the minimum
-        #----------------------------------------------------------------------
+        #-------------------------
         if minimum == 0:
             lon = lon % constants.TWOPI
         else:
@@ -1888,25 +1898,25 @@ class Backplane(object):
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------------
+        #------------------------------------------------------------------
         # If it is not found with default keys, fill in those backplanes
-        #----------------------------------------------------------------------
+        #------------------------------------------------------------------
         key_default = key0 + ('squashed',)
         if key_default not in self.backplanes:
             self._fill_surface_intercepts(event_key)
 
-        #----------------------------------------------------------------------
+        #------------------------------------
         # Fill in the values for this key
-        #----------------------------------------------------------------------
+        #------------------------------------
         lat = self.backplanes[key_default]
         if lat_type == 'squashed':
             return lat
 
         surface = self.get_surface(event_key)
 
-        #----------------------------------------------------------------------
+        #-----------------------------------------------
         # Fill in the requested lon_type if necessary
-        #----------------------------------------------------------------------
+        #-----------------------------------------------
         lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
         lon = self.backplanes[lon_key]
 
@@ -2173,14 +2183,14 @@ class Backplane(object):
 
             lon = lon - ref_lon
 
-        #------------------------------------------------------
+        #-------------------------
         # Reverse if necessary
-        #------------------------------------------------------
+        #-------------------------
         if direction == 'west': lon = -lon
 
-        #------------------------------------------------------
+        #--------------------------
         # Re-define the minimum
-        #------------------------------------------------------
+        #--------------------------
         if minimum == 0:
             lon = lon % Scalar.TWOPI
         else:
@@ -2276,16 +2286,16 @@ class Backplane(object):
         if key not in self.backplanes:
             event = self.get_gridless_event(event_key)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Get the body frame's Z-axis in J2000 coordinates
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             frame = Frame.J2000.wrt(event.frame)
             xform = frame.transform_at_time(event.time)
             pole_j2000 = xform.rotate(Vector3.ZAXIS)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Define the vector to the observer in the J2000 frame
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             dep_j2000 = event.wrt_ssb().apparent_dep()
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2297,9 +2307,9 @@ class Backplane(object):
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             rotmat = Matrix3.twovec(-dep_j2000, 2, Vector3.ZAXIS, 0)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             # Rotate the body frame's Z-axis to this frame.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             pole = rotmat * pole_j2000
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2475,25 +2485,25 @@ class Backplane(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #----------------------------------------------------------------
+        #-------------------------------------------------------------
         # Don't allow remask if the backplane was already generated
-        #----------------------------------------------------------------
+        #-------------------------------------------------------------
         if limit is None: remask = False
 
         if remask and event_key in self.surface_events:
             raise ValueError('remask disallowed for pre-existing ' +
                              'limb event key ' + str(event_key))
 
-        #----------------------------------------------------------------
+        #---------------------------------------
         # Get the limb intercept coordinates
-        #----------------------------------------------------------------
+        #---------------------------------------
         event = self.get_surface_event(event_key)
         if event.surface.COORDINATE_TYPE != 'limb':
             raise ValueError('limb intercepts require a "limb" surface type')
 
-        #----------------------------------------------------------------
+        #----------------------------------
         # Limit the event if necessary
-        #----------------------------------------------------------------
+        #----------------------------------
         if remask:
 
             #- - - - - - - - - - - - - - - - - - - - - 
@@ -2503,9 +2513,9 @@ class Backplane(object):
             self.apply_mask_to_event(event_key, altitude > limit)
             event = self.get_surface_event(event_key)
 
-        #----------------------------------------------------------------
+        #------------------------------------
         # Register the default backplanes
-        #----------------------------------------------------------------
+        #------------------------------------
         self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
                                  'squashed'), event.coord1)
         self.register_backplane(('latitude', event_key, 'squashed'),
@@ -2513,9 +2523,9 @@ class Backplane(object):
         self.register_backplane(('limb_altitude', event_key, None),
                                 event.coord3)
 
-        #----------------------------------------------------------------
+        #----------------------------------------------------
         # Apply a mask just to this backplane if necessary
-        #----------------------------------------------------------------
+        #----------------------------------------------------
         if limit is not None:
             altitude = event.coord3.mask_where_gt(limit)
             self.register_backplane(('limb_altitude', event_key, limit),
@@ -2615,23 +2625,23 @@ class Backplane(object):
         event_key = self.standardize_event_key(event_key)
         assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
-        #----------------------------------------------------------------
+        #---------------------------------------
         # Look up under the desired reference
-        #----------------------------------------------------------------
+        #---------------------------------------
         key = ('ring_longitude', event_key, reference, rmin, rmax)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #--------------------------------------------------------------------
         # If it is not found with reference='node', fill in those backplanes
-        #----------------------------------------------------------------
+        #--------------------------------------------------------------------
         default_key = key[:2] + ('node', None, None)
         if default_key not in self.backplanes:
             self._fill_ring_intercepts(event_key, rmin, rmax, remask)
 
-        #----------------------------------------------------------------
+        #-------------------------------------
         # Now apply the reference longitude
-        #----------------------------------------------------------------
+        #-------------------------------------
         reflon_key = key[:3] + (None, None)
         if reference == 'node':
             lon = self.backplanes[default_key]
@@ -2651,9 +2661,9 @@ class Backplane(object):
 
             self.register_backplane(reflon_key, lon)
 
-        #----------------------------------------------------------------
+        #--------------------------------------
         # Apply the radial mask if necessary
-        #----------------------------------------------------------------
+        #--------------------------------------
         if rmin is None and rmax is None:
             return self.backplanes[key]
 
@@ -2703,14 +2713,14 @@ class Backplane(object):
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #---------------------------------
         # Get the backplane with modes
-        #----------------------------------------------------------------
+        #---------------------------------
         rad = self.evaluate(backplane_key)
 
-        #----------------------------------------------------------------
+        #----------------------------------------------------
         # Get longitude and ring event time, without modes
-        #----------------------------------------------------------------
+        #----------------------------------------------------
         ring_radius_key = backplane_key
         while ring_radius_key[0] == 'radial_mode':
             ring_radius_key = ring_radius_key[1]
@@ -2723,18 +2733,18 @@ class Backplane(object):
         lon = self.ring_longitude(event_key, reference)
         time = self.event_time(event_key)
 
-        #----------------------------------------------------------------
+        #---------------------
         # Add the new mode
-        #----------------------------------------------------------------
+        #---------------------
         peri = peri0 + dperi_da * (a - a0) + speed * (time - epoch)
         if cycles == 0:
             mode = rad + amp * peri.cos()
         else:
             mode = rad + amp * (cycles * (lon - peri)).cos()
 
-        #----------------------------------------------------------------
+        #-----------------------------------
         # Replace the mask if necessary
-        #----------------------------------------------------------------
+        #-----------------------------------
         if rmin is None:
             if rmax is None:
                 mask = False
@@ -2805,29 +2815,29 @@ class Backplane(object):
         event_key = self.standardize_event_key(event_key)
         assert reference in ('obs', 'sun')
 
-        #----------------------------------------------------------------
+        #----------------------------------------
         # Look up under the desired reference
-        #----------------------------------------------------------------
+        #----------------------------------------
         key = ('ring_azimuth', event_key, reference)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #-------------------------------------------------------
         # If not found, fill in the ring events if necessary
-        #----------------------------------------------------------------
+        #-------------------------------------------------------
         if ('ring_radius', event_key, None, None) not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
-        #----------------------------------------------------------------
+        #---------------------
         # reference = 'obs'
-        #----------------------------------------------------------------
+        #---------------------
         if reference == 'obs':
             event = self.get_surface_event(event_key)
             ref = event.apparent_dep()
 
-        #----------------------------------------------------------------
+        #----------------------
         # reference = 'sun'
-        #----------------------------------------------------------------
+        #----------------------
         else:
             event = self.get_surface_event_with_arr(event_key)
             ref = -event.apparent_arr()
@@ -2868,9 +2878,9 @@ class Backplane(object):
         event_key = self.standardize_event_key(event_key)
         assert reference in ('obs', 'sun')
 
-        #----------------------------------------------------------------
+        #-----------------------------------------
         # Look up under the desired reference
-        #----------------------------------------------------------------
+        #-----------------------------------------
         key = ('ring_elevation', event_key, reference, signed)
         if key in self.backplanes:
             return self.backplanes[key]
@@ -2879,22 +2889,22 @@ class Backplane(object):
         if key0 in self.backplanes:
             return self.backplanes[key0].abs()
 
-        #----------------------------------------------------------------
+        #-------------------------------------------------------
         # If not found, fill in the ring events if necessary
-        #----------------------------------------------------------------
+        #-------------------------------------------------------
         if ('ring_radius', event_key, None, None) not in self.backplanes:
             self._fill_ring_intercepts(event_key)
 
-        #----------------------------------------------------------------
+        #-----------------------
         # reference = 'obs'
-        #----------------------------------------------------------------
+        #-----------------------
         if reference == 'obs':
             event = self.get_surface_event(event_key)
             dir = event.apparent_dep()
 
-        #----------------------------------------------------------------
+        #---------------------
         # reference = 'sun'
-        #----------------------------------------------------------------
+        #---------------------
         else:
             event = self.get_surface_event_with_arr(event_key)
             dir = -event.apparent_arr()
@@ -2934,33 +2944,33 @@ class Backplane(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #----------------------------------------------------------------
+        #-------------------------------------------------------------
         # Don't allow remask if the backplane was already generated
-        #----------------------------------------------------------------
+        #-------------------------------------------------------------
         if rmin is None and rmax is None: remask = False
 
         if remask and event_key in self.surface_events:
             raise ValueError('remask disallowed for pre-existing ' +
                              'ring event key ' + str(event_key))
 
-        #----------------------------------------------------------------
+        #---------------------------------------
         # Get the ring intercept coordinates
-        #----------------------------------------------------------------
+        #---------------------------------------
         event = self.get_surface_event(event_key)
         if event.surface.COORDINATE_TYPE != 'polar':
             raise ValueError('ring geometry requires a polar coordinate system')
 
-        #----------------------------------------------------------------
+        #------------------------------------------
         # Apply the minimum radius if available
-        #----------------------------------------------------------------
+        #------------------------------------------
         planet_radius = self.min_ring_radius.get(event_key, None)
         if planet_radius:
             radius = event.coord1
             self.apply_mask_to_event(event_key, radius < planet_radius)
 
-        #----------------------------------------------------------------
+        #---------------------------------------------------
         # Apply the limits to the backplane if necessary
-        #----------------------------------------------------------------
+        #---------------------------------------------------
         if remask:
 
             radius = event.coord1
@@ -2981,9 +2991,9 @@ class Backplane(object):
         self.register_backplane(('ring_longitude', event_key, 'node',
                                  None, None), event.coord2)
 
-        #----------------------------------------------------------------
+        #-------------------------------------------------------
         # Apply a mask just to these backplanes if necessary
-        #----------------------------------------------------------------
+        #-------------------------------------------------------
         if rmin is not None or rmax is not None:
 
             radius = event.coord1
@@ -3028,30 +3038,30 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert pole in {'sunward', 'north', 'prograde'}
 
-        #----------------------------------------------------------------
+        #-------------------------------------------------------------------
         # The sunward pole uses the standard definition of incidence angle
-        #----------------------------------------------------------------
+        #-------------------------------------------------------------------
         if pole == 'sunward':
             return self.incidence_angle(event_key)
 
         event_key = self.standardize_event_key(event_key)
 
-        #----------------------------------------------------------------
+        #----------------------------------------
         # Return the cached copy if it exists
-        #----------------------------------------------------------------
+        #----------------------------------------
         key = ('ring_incidence_angle', event_key, pole)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #-----------------------------------------------------
         # Derive the prograde incidence angle if necessary
-        #----------------------------------------------------------------
+        #-----------------------------------------------------
         key_prograde = key[:-1] + ('prograde',)
         if key_prograde not in self.backplanes:
 
-            #- - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - -
             # Un-flip incidence angles where necessary
-            #- - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - -
             incidence = self.incidence_angle(event_key)
             flip = self.backplanes[('ring_flip', event_key)]
             incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
@@ -3071,9 +3081,9 @@ class Backplane(object):
         if not body.ring_is_retrograde:
             return self.backplanes[key_prograde]
 
-        #----------------------------------------------------------------
+        #-----------------------------------------------------------------
         # Otherwise, flip the incidence angles and return a new backplane
-        #----------------------------------------------------------------
+        #-----------------------------------------------------------------
         incidence = Scalar.PI - self.backplanes[key_prograde]
         self.register_backplane(key, incidence)
         return self.backplanes[key]
@@ -3104,30 +3114,30 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert pole in {'sunward', 'north', 'prograde'}
 
-        #----------------------------------------------------------------
+        #-----------------------------------------------------------------
         # The sunward pole uses the standard definition of emission angle
-        #----------------------------------------------------------------
+        #-----------------------------------------------------------------
         if pole == 'sunward':
             return self.emission_angle(event_key)
 
         event_key = self.standardize_event_key(event_key)
 
-        #----------------------------------------------------------------
+        #--------------------------------------
         # Return the cached copy if it exists
-        #----------------------------------------------------------------
+        #--------------------------------------
         key = ('ring_emission_angle', event_key, pole)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #--------------------------------------------------
         # Derive the prograde emission angle if necessary
-        #----------------------------------------------------------------
+        #--------------------------------------------------
         key_prograde = key[:-1] + ('prograde',)
         if key_prograde not in self.backplanes:
 
-            #- - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - -
             # Un-flip incidence angles where necessary
-            #- - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - -
             emission = self.emission_angle(event_key)
             flip = self.backplanes[('ring_flip', event_key)]
             emission = Scalar.PI * flip + (1. - 2.*flip) * emission
@@ -3187,25 +3197,25 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
-        #----------------------------------------------------------------
+        #----------------------------------------
         # Look up under the desired reference
-        #----------------------------------------------------------------
+        #----------------------------------------
         key0 = ('ring_sub_observer_longitude', event_key)
         key = key0 + (reference,)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #-------------------------------
         # Generate longitude values
-        #----------------------------------------------------------------
+        #-------------------------------
         default_key = key0 + ('node',)
         if default_key not in self.backplanes:
             lon = self._sub_observer_longitude(event_key)
             self.register_gridless_backplane(default_key, lon)
 
-        #----------------------------------------------------------------
+        #--------------------------------------
         # Now apply the reference longitude
-        #----------------------------------------------------------------
+        #--------------------------------------
         if reference != 'node':
             if reference == 'aries':
                 ref_lon = self._aries_ring_longitude(event_key)
@@ -3248,25 +3258,25 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
-        #----------------------------------------------------------------
+        #----------------------------------------
         # Look up under the desired reference
-        #----------------------------------------------------------------
+        #----------------------------------------
         key0 = ('ring_sub_solar_longitude', event_key)
         key = key0 + (reference,)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #--------------------------------------------------------------------
         # If it is not found with reference='node', fill in those backplanes
-        #----------------------------------------------------------------
+        #--------------------------------------------------------------------
         default_key = key0 + ('node',)
         if default_key not in self.backplanes:
             lon = self._sub_solar_longitude(event_key)
             self.register_gridless_backplane(default_key, lon)
 
-        #----------------------------------------------------------------
+        #-------------------------------------
         # Now apply the reference longitude
-        #----------------------------------------------------------------
+        #-------------------------------------
         if reference != 'node':
             if reference == 'aries':
                 ref_lon = self._aries_ring_longitude(event_key)
@@ -3309,25 +3319,25 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert pole in {'sunward', 'north', 'prograde'}
 
-        #----------------------------------------------------------------
+        #------------------------------------------------------------------
         # The sunward pole uses the standard definition of incidence angle
-        #----------------------------------------------------------------
+        #------------------------------------------------------------------
         if pole == 'sunward':
             return self.center_incidence_angle(event_key)
 
         event_key = self.standardize_event_key(event_key)
 
-        #----------------------------------------------------------------
+        #----------------------------------------
         # Return the cached copy if it exists
-        #----------------------------------------------------------------
+        #----------------------------------------
         key0 = ('ring_center_incidence_angle', event_key)
         key = key0 + (pole,)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #-----------------------------------------------------
         # Derive the prograde incidence angle if necessary
-        #----------------------------------------------------------------
+        #-----------------------------------------------------
         key_prograde = key0 + ('prograde',)
         if key_prograde in self.backplanes:
             incidence = self.backplanes[key_prograde]
@@ -3389,25 +3399,25 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert pole in {'sunward', 'north', 'prograde'}
 
-        #----------------------------------------------------------------
+        #------------------------------------------------------------------
         # The sunward pole uses the standard definition of emission angle
-        #----------------------------------------------------------------
+        #------------------------------------------------------------------
         if pole == 'sunward':
             return self.center_emission_angle(event_key)
 
         event_key = self.standardize_event_key(event_key)
 
-        #----------------------------------------------------------------
+        #-----------------------------------------
         # Return the cached copy if it exists
-        #----------------------------------------------------------------
+        #-----------------------------------------
         key0 = ('ring_center_emission_angle', event_key)
         key = key0 + (pole,)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------
+        #---------------------------------------------------
         # Derive the prograde emission angle if necessary
-        #----------------------------------------------------------------
+        #---------------------------------------------------
         key_prograde = key0 + ('prograde',)
         if key_prograde in self.backplanes:
             emission = self.backplanes[key_prograde]
@@ -3622,18 +3632,18 @@ class Backplane(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------------
+        #-----------------------------------------
         # Look up under the desired radius type
-        #------------------------------------------------------------
+        #-----------------------------------------
         event_key = self.standardize_event_key(event_key)
         key0 = ('ansa_radius', event_key)
         key = key0 + (radius_type, rmax)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #------------------------------------------------------------
+        #--------------------------------------------
         # If not found, look up the default 'right'
-        #------------------------------------------------------------
+        #--------------------------------------------
         assert radius_type in ('right', 'left', 'positive')
 
         key_default = key0 + ('right', None)
@@ -3696,24 +3706,24 @@ class Backplane(object):
         event_key = self.standardize_event_key(event_key)
         assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
-        #------------------------------------------------------------
+        #----------------------------------------
         # Look up under the desired reference
-        #------------------------------------------------------------
+        #----------------------------------------
         key0 = ('ansa_longitude', event_key)
         key = key0 + (reference,)
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #------------------------------------------------------------
+        #-------------------------------------------------------------------
         # If it is not found with reference J2000, fill in those backplanes
-        #------------------------------------------------------------
+        #-------------------------------------------------------------------
         key_node = key0 + ('node',)
         if key_node not in self.backplanes:
             self._fill_ansa_longitudes(event_key)
 
-        #------------------------------------------------------------
+        #--------------------------------------
         # Now apply the reference longitude
-        #------------------------------------------------------------
+        #--------------------------------------
         if reference == 'node':
             return self.backplanes[key]
 
@@ -3763,17 +3773,17 @@ class Backplane(object):
             raise ValueError('remask disallowed for pre-existing ' +
                              'ansa event key ' + str(event_key))
 
-        #------------------------------------------------------
+        #---------------------------------------
         # Get the ansa intercept coordinates
-        #------------------------------------------------------
+        #---------------------------------------
         event = self.get_surface_event(event_key)
         if event.surface.COORDINATE_TYPE != 'cylindrical':
             raise ValueError('ansa intercepts require a "cylindrical" ' +
                              'surface type')
 
-        #------------------------------------------------------
+        #--------------------------------
         # Limit the event if necessary
-        #------------------------------------------------------
+        #--------------------------------
         if remask:
 
             # Apply the upper limit to the event
@@ -3781,9 +3791,9 @@ class Backplane(object):
             self.apply_mask_to_event(event_key, radius > rmax)
             event = self.get_surface_event(event_key)
 
-        #------------------------------------------------------
+        #------------------------------------
         # Register the default backplanes
-        #------------------------------------------------------
+        #------------------------------------
         self.register_backplane(('ansa_radius', event_key, 'right', None),
                                 event.coord1)
         self.register_backplane(('ansa_altitude', event_key),
@@ -3811,16 +3821,16 @@ class Backplane(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
+        #--------------------------------
         # Get the ansa intercept event
-        #------------------------------------------------------
+        #--------------------------------
         event_key = self.standardize_event_key(event_key)
         event = self.get_surface_event(event_key)
         assert event.surface.COORDINATE_TYPE == 'cylindrical'
 
-        #------------------------------------------------------
+        #--------------------------------------------------
         # Get the longitude in the associated ring plane
-        #------------------------------------------------------
+        #--------------------------------------------------
         lon = event.surface.ringplane.coords_from_vector3(event.pos, axes=2)[1]
         self.register_backplane(('ansa_longitude', event_key, 'node'),
                                 lon)
@@ -3875,10 +3885,10 @@ class Backplane(object):
         if key in self.backplanes:
             return self.backplanes[key]
 
-        #----------------------------------------------------------------------
-        # At each intercept time, determine the incoming direction from the Sun
-        # to the center of the planet
-        #----------------------------------------------------------------------
+        #--------------------------------------------------------------------
+        # At each intercept time, determine the incoming direction from the 
+        # Sun to the center of the planet
+        #--------------------------------------------------------------------
         event = self.get_surface_event(event_key)
         center_event = Event(event.time, Vector3.ZERO,
                                          event.origin, event.frame)
@@ -3988,25 +3998,25 @@ class Backplane(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
 
-        #--------------------------------------------------------------
+        #----------------------------------
         # Determine/validate the planet
-        #--------------------------------------------------------------
+        #----------------------------------
         event_key = self.standardize_event_key(event_key)
         if planet is None:
             (body,_) = self.get_body_and_modifier(event_key)
             planet = body.parent.name
 
-        #--------------------------------------------------------------
+        #------------------
         # Get the event
-        #--------------------------------------------------------------
+        #------------------
         if reference in {'sun', 'sha'}:
             orbit_event = self.get_gridless_event_with_arr(event_key)
         else:
             orbit_event = self.get_gridless_event(event_key)
 
-        #--------------------------------------------------------------
+        #-------------------------------
         # Look up under the reference
-        #--------------------------------------------------------------
+        #-------------------------------
         key0 = ('orbit_longitude', event_key)
         key = key0 + (reference, planet)
         if key in self.backplanes:
@@ -4017,9 +4027,9 @@ class Backplane(object):
         planet_event = planet_event.wrt_frame(Frame.J2000)
         orbit_event = orbit_event.wrt(planet_body.path, Frame.J2000)
 
-        #--------------------------------------------------------------
+        #----------------------------------------------
         # Locate reference vector in the J2000 frame
-        #--------------------------------------------------------------
+        #----------------------------------------------
         if reference == 'obs':
             reference_dir = orbit_event.dep_ap.wod
         elif reference == 'oha':
@@ -4040,9 +4050,9 @@ class Backplane(object):
         #----------------------------------------------------------------------
         matrix = Matrix3.twovec(orbit_event.pos, 0, orbit_event.vel, 1)
 
-        #--------------------------------------------------------------
+        #------------------------------------------------
         # Locate the reference direction in this frame
-        #--------------------------------------------------------------
+        #------------------------------------------------
         reference_wrt_orbit = matrix.rotate(reference_dir)
         x = reference_wrt_orbit.to_scalar(0)
         y = reference_wrt_orbit.to_scalar(1)
@@ -4453,9 +4463,9 @@ class Backplane(object):
         if key not in self.backplanes:
             backplane = self.evaluate(backplane_key)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - 
             # Reverse the backplane if value is False
-            #- - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - 
             if not value:
                 backplane = ~backplane
 
@@ -4651,15 +4661,15 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
         if printing: print(title)
 
-        #------------------------------------------------------
+        #-------------------
         # Scalar summary
-        #------------------------------------------------------
+        #-------------------
         if isinstance(array, numbers.Number):
             print('  ', array)
 
-        #------------------------------------------------------
+        #-----------------
         # Mask summary
-        #------------------------------------------------------
+        #-----------------
         elif type(array.vals) == bool or \
                 (isinstance(array.vals, np.ndarray) and \
                  array.vals.dtype == np.dtype('bool')):
@@ -4671,9 +4681,9 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
             minval = 0.
             maxval = 1.
 
-        #------------------------------------------------------
+        #-------------------------------
         # Unmasked backplane summary
-        #------------------------------------------------------
+        #-------------------------------
         elif array.mask is False:
             minval = np.min(array.vals)
             maxval = np.max(array.vals)
@@ -4682,9 +4692,9 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
             else:
                 print('  ', (minval, maxval), '(min, max)')
 
-        #------------------------------------------------------
+        #-----------------------------
         # Masked backplane summary
-        #------------------------------------------------------
+        #-----------------------------
         else:
             print('  ', (array.min().as_builtin(),
                          array.max().as_builtin()), '(masked min, max)')
@@ -4723,7 +4733,6 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
             filename = filename.replace('__','_')
             filename = filename.replace('_.','.')
             save_image(image, filename)
-    #===========================================================================
 
     if printing and logging: config.LOGGING.on('        ')
 
@@ -5606,8 +5615,6 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
     config.LOGGING.off()
 
     return bp
-
-
 #===============================================================================
 
 
@@ -5641,7 +5648,9 @@ class Test_Backplane(unittest.TestCase):
         oops.body.Body.reset_registry()
         oops.body.define_solar_system('2000-01-01', '2020-01-01')
 
+        #---------------------------------------------------
         # Distort Rhea's shape for better Ellipsoid testing
+        #---------------------------------------------------
         rhea = Body.as_body('RHEA')
         OLD_RHEA_SURFACE = rhea.surface
         old_rhea_radii = OLD_RHEA_SURFACE.radii
@@ -5667,7 +5676,9 @@ class Test_Backplane(unittest.TestCase):
         config.EVENT_CONFIG.collapse_threshold = 3.
         config.SURFACE_PHOTONS.collapse_threshold = 3.
 
+        #-------------------------
         # Restore Rhea's shape
+        #-------------------------
         Body.as_body('RHEA').surface = OLD_RHEA_SURFACE
 
         ABERRATION.old = False
@@ -5697,7 +5708,9 @@ class Test_Backplane(unittest.TestCase):
         uv0 = meshgrid.uv
         bp = Backplane(snap, meshgrid)
 
-        #### Actual (ra,dec)
+        #--------------------
+        # Actual (ra,dec)
+        #--------------------
         ra = bp.right_ascension(apparent=False)
         dec = bp.declination(apparent=False)
 
@@ -5707,7 +5720,9 @@ class Test_Backplane(unittest.TestCase):
         diff = uv - uv0
         self.assertTrue(diff.norm().max() < 1.e-9)
 
-        #### Apparent (ra,dec)  # test doesn't work for ABERRATION=old
+        #--------------------------------------------------------------
+        # Apparent (ra,dec)  # test doesn't work for ABERRATION=old
+        #--------------------------------------------------------------
         if not ABERRATION.old:
             ra = bp.right_ascension(apparent=True)
             dec = bp.declination(apparent=True)
@@ -5719,7 +5734,9 @@ class Test_Backplane(unittest.TestCase):
             diff = uv - uv0
         self.assertTrue(diff.norm().max() < 1.e-9)
 
+        #---------------------------
         # RingPlane (rad, lon)
+        #---------------------------
         rad = bp.ring_radius('saturn:ring')
         lon = bp.ring_longitude('saturn:ring', reference='node')
 
@@ -5731,7 +5748,9 @@ class Test_Backplane(unittest.TestCase):
         diff = uv - uv0
         self.assertTrue(diff.norm().max() < 1.e-8)
 
+        #---------------------
         # Ansa (rad, alt)
+        #---------------------
         rad = bp.ansa_radius('saturn:ansa', radius_type='right')
         alt = bp.ansa_altitude('saturn:ansa')
 
@@ -5744,7 +5763,9 @@ class Test_Backplane(unittest.TestCase):
         diff = uv - uv0
         self.assertTrue(diff.norm().max() < 1.e-8)
 
+        #-----------------------
         # Spheroid (lon,lat)
+        #-----------------------
         lat = bp.latitude('saturn', lat_type='squashed')
         lon = bp.longitude('saturn', reference='iau', direction='east',
                                      lon_type='centric')
@@ -5757,7 +5778,9 @@ class Test_Backplane(unittest.TestCase):
         diff = uv - uv0
         self.assertTrue(diff.norm().max() < 1.e-8)
 
+        #-----------------------------
         # CentricSpheroid (lon,lat)
+        #-----------------------------
         lat = bp.latitude('saturn', lat_type='centric')
         lon = bp.longitude('saturn', reference='iau', direction='east',
                                      lon_type='centric')
@@ -5771,7 +5794,9 @@ class Test_Backplane(unittest.TestCase):
         diff = uv - uv0
         self.assertTrue(diff.norm().max() < 1.e-8)
 
+        #------------------------------
         # GraphicSpheroid (lon,lat)
+        #------------------------------
         lat = bp.latitude('saturn', lat_type='graphic')
         lon = bp.longitude('saturn', reference='iau', direction='east',
                                      lon_type='centric')
@@ -5785,7 +5810,9 @@ class Test_Backplane(unittest.TestCase):
         diff = uv - uv0
         self.assertTrue(diff.norm().max() < 1.e-8)
 
-        ######## Rhea tests, with Rhea modified
+        #------------------------------------
+        # Rhea tests, with Rhea modified
+        #------------------------------------
         body = Body.as_body('RHEA')
         snap = iss.from_file(UNITTEST_RHEA_FILESPEC, fast_distortion=False)
         meshgrid = Meshgrid.for_fov(snap.fov, undersample=UNITTEST_UNDERSAMPLE,
@@ -5794,7 +5821,9 @@ class Test_Backplane(unittest.TestCase):
         uv0 = meshgrid.uv
         bp = Backplane(snap, meshgrid)
 
+        #------------------------
         # Ellipsoid (lon,lat)
+        #------------------------
         lat = bp.latitude('rhea', lat_type='squashed')
         lon = bp.longitude('rhea', reference='iau', direction='east',
                                      lon_type='squashed')
@@ -5808,7 +5837,9 @@ class Test_Backplane(unittest.TestCase):
         #print(diff.norm().min(), diff.norm().max())
         self.assertTrue(diff.norm().max() < 2.e-7)
 
+        #-------------------------------
         # CentricEllipsoid (lon,lat)
+        #-------------------------------
         lat = bp.latitude('rhea', lat_type='centric')
         lon = bp.longitude('rhea', reference='iau', direction='east',
                                      lon_type='centric')
@@ -5823,7 +5854,9 @@ class Test_Backplane(unittest.TestCase):
         #print(diff.norm().min(), diff.norm().max())
         self.assertTrue(diff.norm().max() < 2.e-7)
 
+        #------------------------------
         # GraphicEllipsoid (lon,lat)
+        #------------------------------
         lat = bp.latitude('rhea', lat_type='graphic')
         lon = bp.longitude('rhea', reference='iau', direction='east',
                                      lon_type='graphic')

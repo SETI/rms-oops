@@ -9,13 +9,24 @@ from oops.event        import Event
 from oops.path_.path   import Path
 from oops.frame_.frame import Frame
 
+#*******************************************************************************
+# CoordPath
+#*******************************************************************************
 class CoordPath(Path):
-    """A path defined by fixed coordinates on a specified Surface."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A path defined by fixed coordinates on a specified Surface.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['surface', 'coords', 'obs_path', 'path_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, surface, coords, obs=None, id=None):
-        """Constructor for a CoordPath.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a CoordPath.
 
         Input:
             surface     a surface.
@@ -26,7 +37,7 @@ class CoordPath(Path):
             id          the name under which to register the new path; None to
                         leave the path unregistered.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.surface = surface
         self.coords = coords
         self.obs_path = obs
@@ -36,20 +47,30 @@ class CoordPath(Path):
         else:
             self.pos = None
 
+        #--------------------------
         # Required attributes
+        #--------------------------
         self.path_id = id
         self.origin  = self.surface.origin
         self.frame   = self.origin.frame
         self.keys    = set()
         self.shape   = Qube.broadcasted_shape(*coords)
 
+        #------------------------------------------------------------
         # Update waypoint and path_id; register only if necessary
+        #------------------------------------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # event_at_time
+    #===========================================================================
     def event_at_time(self, time, quick={}):
-        """Return an Event corresponding to a specified time on this path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return an Event corresponding to a specified time on this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
@@ -57,13 +78,19 @@ class CoordPath(Path):
         Return:         an Event object containing (at least) the time, position
                         and velocity on the path.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.surface.IS_VIRTUAL:
             obs_event = self.obs_path.event_at_time(time, quick=quick)
             self.pos = self.surface.vector3_from_coords(self.coords,
                                                         obs_event.pos)
 
         return Event(time, self.pos, self.origin, self.frame)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
@@ -71,11 +98,22 @@ class CoordPath(Path):
 
 import unittest
 
+#*******************************************************************************
+# Test_CoordPath
+#*******************************************************************************
 class Test_CoordPath(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

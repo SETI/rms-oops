@@ -58,7 +58,7 @@ class Cadence(object):
         Return:         a Scalar of times in seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("time_at_tstep() is not implemented")
+        raise NotImplementedError("time_at_tstep() is not implemented")
     #===========================================================================
 
     
@@ -81,7 +81,7 @@ class Cadence(object):
             time_max    a Scalar defining the maximum time value.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("time_range_at_tstep() " +
+        raise NotImplementedError("time_range_at_tstep() " +
                                       "is not implemented")
     #===========================================================================
 
@@ -104,7 +104,7 @@ class Cadence(object):
         Return:         a Scalar or Pair of time step indices.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("tstep_at_time() is not implemented")
+        raise NotImplementedError("tstep_at_time() is not implemented")
     #===========================================================================
 
 
@@ -121,7 +121,7 @@ class Cadence(object):
             secs        the number of seconds to shift the time later.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("time_shift() is not implemented")
+        raise NotImplementedError("time_shift() is not implemented")
     #===========================================================================
 
     
@@ -135,7 +135,7 @@ class Cadence(object):
         Return a shallow copy forced to be continuous.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedException("as_continuous() is not implemented")
+        raise NotImplementedError("as_continuous() is not implemented")
     #===========================================================================
 
     
@@ -198,7 +198,7 @@ class Cadence(object):
                                      self.time_at_tstep(tstep + (0,1),
                                                         mask=mask) - now)
         else:
-            raise NotImplementedException("tstride_at_tstep() is not " +
+            raise NotImplementedError("tstride_at_tstep() is not " +
                                     "implemented for cadences larger than 2-D")
     #===========================================================================
 

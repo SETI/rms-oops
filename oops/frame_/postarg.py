@@ -8,16 +8,27 @@ from polymath import *
 from oops.frame_.frame import Frame
 from oops.transform    import Transform
 
+#*******************************************************************************
+# PosTarg
+#*******************************************************************************
 class PosTarg(Frame):
-    """PosTarg is a Frame subclass describing a fixed rotation about the X and
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    PosTarg is a Frame subclass describing a fixed rotation about the X and
     Y axes, so that the Z-axis of another frame falls at a slightly different
     position in this frame.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     PACKRAT_ARGS = ['xpos', 'ypos', 'reference', 'frame_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, xpos, ypos, reference, id=None):
-        """Constructor for a PosTarg Frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a PosTarg Frame.
 
         Input:
             xpos        the X-position of the reference frame's Z-axis in this
@@ -27,7 +38,7 @@ class PosTarg(Frame):
             reference   the frame relative to which this frame is defined.
             id          the ID to use; None to leave the frame unregistered.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.xpos = float(xpos)
         self.ypos = float(ypos)
 
@@ -53,19 +64,36 @@ class PosTarg(Frame):
         self.shape     = self.reference.shape
         self.keys      = set()
 
+        #---------------------------------------------------------
         # Update wayframe and frame_id; register if not temporary
+        #---------------------------------------------------------
         self.register()
 
+        #---------------------------------------------------------
         # It needs a wayframe before we can define the transform
+        #---------------------------------------------------------
         self.transform = Transform(mat, Vector3.ZERO,
                                    self, self.reference, self.origin)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
-        """The Transform into the this Frame at a Scalar of times."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The Transform into the this Frame at a Scalar of times.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.transform
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -73,8 +101,14 @@ class PosTarg(Frame):
 
 import unittest
 
+#*******************************************************************************
+# Test_PosTarg
+#*******************************************************************************
 class Test_PosTarg(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         Frame.reset_registry()
@@ -87,6 +121,11 @@ class Test_PosTarg(unittest.TestCase):
         self.assertTrue(abs(rotated.vals[1] - 0.0002) < 1.e-8)
 
         Frame.reset_registry()
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 #########################################
 if __name__ == '__main__':

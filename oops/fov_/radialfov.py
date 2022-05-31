@@ -4,6 +4,8 @@
 
 from __future__ import print_function
 
+from IPython import embed   ## TODO: remove
+
 import numpy as np
 import oops
 
@@ -115,7 +117,7 @@ class RadialFOV(FOV):
     #===========================================================================
     # xy_from_uv
     #===========================================================================
-    def xy_from_uv(self, uv, derivs=False):
+    def xy_from_uv(self, uv, derivs=False, fast=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return (x,y) camera frame coordinates given FOV coordinates (u,v).
@@ -140,7 +142,7 @@ class RadialFOV(FOV):
                              self.coefft_xy_from_uv, derivs, from_='uv')
         else:
             xy = self._solve_polynomial(uv, 
-                             self.coefft_uv_from_xy, derivs, from_='uv')
+                        self.coefft_uv_from_xy, derivs, from_='uv', fast=fast)
 
         return xy
     #===========================================================================
@@ -150,7 +152,7 @@ class RadialFOV(FOV):
     #===========================================================================
     # uv_from_xy
     #===========================================================================
-    def uv_from_xy(self, xy, derivs=False):
+    def uv_from_xy(self, xy, derivs=False, fast=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
@@ -176,7 +178,7 @@ class RadialFOV(FOV):
                             self.coefft_uv_from_xy, derivs, from_='xy')
         else:
             uv = self._solve_polynomial(xy, 
-                            self.coefft_xy_from_uv, derivs, from_='xy')
+                        self.coefft_xy_from_uv, derivs, from_='xy', fast=fast)
 
         return uv
     #===========================================================================
@@ -184,7 +186,7 @@ class RadialFOV(FOV):
 
 
     #===========================================================================
-    # _compute_polynomial
+    # _compute_polynomial 
     #===========================================================================
     def _compute_polynomial(self, r, coefft, derivs):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -211,7 +213,7 @@ class RadialFOV(FOV):
         #------------------------------------
         r_powers = [1.]
         for k in range(1, order+1):
-            r_powers.append(r_powers[-1] * r)
+            r_powers.append(r_powers[-1] * r.vals)
 
         #-----------------------------------------------------------------
         # Evaluate the polynomial
@@ -220,18 +222,26 @@ class RadialFOV(FOV):
         # improves accuracy. Stop at one because there are no zero-order 
         # terms.
         #-----------------------------------------------------------------
-        f = 0.
+        f_vals = np.zeros(r.shape)
         for i in range(order, -1, -1):
-            f += coefft[i] * r_powers[i]
+            f_vals += coefft[i] * r_powers[i]
+        f = Scalar(f_vals, r.mask)
 
         #---------------------------------------------------
         # Calculate derivatives if necessary
         #---------------------------------------------------
         if derivs:
-            df_dr = 0.
+            df_dr_vals = np.zeros(r.shape)
             for i in range(order, 0, -1):
-                df_dr += i*coefft[i]*r_powers[i-1]
-            f.insert_deriv('r', df_dr)
+                df_dr_vals += i*coefft[i]*r_powers[i-1]
+            df_dr = Scalar(df_dr_vals, r.mask)#   , drank=1)
+
+#            f.propagate_deriv(r, 'dr', df_dr, derivs)
+            new_derivs = {'r':df_dr}
+            if r.derivs:
+                for (key, r_deriv) in r.derivs.items():
+                    new_derivs[key] = df_dr.chain(r_deriv)
+            f.insert_derivs(new_derivs)
 
         return f
     #===========================================================================
@@ -241,7 +251,7 @@ class RadialFOV(FOV):
     #===========================================================================
     # _apply_polynomial
     #===========================================================================
-    def _apply_polynomial(self, pq, coefft, derivs, from_=None):
+    def _apply_polynomial(self, pq, coefft, derivs, from_):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Apply the polynomial to pair (p,q) to return (a,b).
@@ -264,7 +274,7 @@ class RadialFOV(FOV):
         dkey = from_
 
         #------------------------------------
-        # Correct polyniomial
+        # Correct polynomial
         #------------------------------------
         if derivs: pq.insert_deriv(dkey, Pair.IDENTITY)
 
@@ -298,7 +308,7 @@ class RadialFOV(FOV):
     #===========================================================================
     # _guess
     #===========================================================================
-    def _guess(self, ab, coefft, from_=None, derivs=False):
+    def _guess(self, ab, coefft, from_):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Computes initial guess for polynomial inversion.
@@ -315,8 +325,8 @@ class RadialFOV(FOV):
                      the inverted polynomial at each input point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if from_ == 'xy': return self.flat_fov.uv_from_xy(ab, derivs=derivs)
-        if from_ == 'uv': return self.flat_fov.xy_from_uv(ab, derivs=derivs)
+        if from_ == 'xy': return self.flat_fov.uv_from_xy(ab, derivs=False)
+        if from_ == 'uv': return self.flat_fov.xy_from_uv(ab, derivs=False)
     #===========================================================================
 
 
@@ -325,7 +335,7 @@ class RadialFOV(FOV):
     # _solve_polynomial
     #===========================================================================
     ####NOTE: this is identical to _solve_polynomial in polynomial.py
-    def _solve_polynomial(self, ab, coefft, derivs, from_=None):
+    def _solve_polynomial(self, ab, coefft, derivs, from_, fast=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Solve the polynomial for an (a,b) pair to return (p,q).
@@ -337,7 +347,14 @@ class RadialFOV(FOV):
             derivs   If True, derivatives are included in the output.
             from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
-            
+            fast     If True, a faster, but possibly less robust, convergence
+                     criterion is used.  The unittests with SpeedTest = True
+                     produced the folowing results:
+                     
+                     Slow Newton's method: convergence: 8.81250858307 ms
+                     Fast Newton's method: convergence: 4.69124555588 ms
+                     Slow/Fast =  1.87850081137
+
         Output:      pq
             pq       Pairs of of the same shape as ab giving the values of 
                      the inverted polynomial at each input point.
@@ -345,7 +362,7 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         src = {'uv','xy'}
         assert from_ in src
-        to_ = list(src^{from_})[0]
+        to_ = (src^{from_}).pop()
         dkey = from_
 
         ab = Pair.as_pair(ab, derivs)
@@ -354,7 +371,7 @@ class RadialFOV(FOV):
         #------------------------------------------
         # Make a rough initial guess
         #------------------------------------------
-        pq = self._guess(ab_wod, coefft, from_=from_, derivs=derivs)
+        pq = self._guess(ab_wod, coefft, from_)
         pq.insert_deriv(dkey, Pair.IDENTITY)
 
         #------------------------------------------
@@ -381,20 +398,53 @@ class RadialFOV(FOV):
             #- - - - - - - - - - - -# 
             # Convergence tests...  #
             #- - - - - - - - - - - -# 
-            error_max = abs(dpq).max() / abs(pq).max()
-            if RadialFOV.DEBUG:
-                print(iter, error_max)
+            
+            #- - - - - - - - - - - - - - - - - -
+            # simpler, but faster convergence
+            #- - - - - - - - - - - - - - - - - -
+            if fast == True:
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                # Compare the max step size with the max coordinate value
+                # This removes any positional dependence of the relative 
+                # error.  The denominator can only be zero if the entire
+                # grid is (0,0).
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                error_max = abs(dpq.vals).max() / abs(pq.vals).max()
+                if RadialFOV.DEBUG:
+                   print(iter, error_max)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Root found?
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if abs(dab).max() <= epsilon: break
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                # Test for root
+                #  This eliminates cases where the iteration bounces
+                #  around near the solution, as long as it's within 
+                #  epsilon.
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                if abs(dab).max() <= epsilon: break
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Relative correction below epsilon? 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if error_max <= epsilon: break
+                #- - - - - - - - - - - - - - - - - - -
+                # Relative correction below epsilon. 
+                #- - - - - - - - - - - - - - - - - - -
+                if error_max <= epsilon: break
 
+            #- - - - - - - - - - - - - - - - - - -
+            # slower convergence, but more robust
+            #- - - - - - - - - - - - - - - - - - -
+            else:
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                # The old convergence test below was looking for the correction
+                # to overshoot.  This may in principle be a more robust way to 
+                # ensure machine precision is achieved, but it requires some
+                # additonal iterations conmpared to the simpler test above.
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                try: prev_dpq_max
+                except: prev_dpq_max = 1.e99
+                dpq_max = abs(dpq).max()
+                if RadialFOV.DEBUG:
+                    print(iter, dpq_max)
+                if dpq_max >= prev_dpq_max: break
+                prev_dpq_max = dpq_max
+
+        if RadialFOV.DEBUG: print(iter+1, "iterations")
         pq = pq.wod
 
         #------------------------------------------
@@ -411,7 +461,6 @@ class RadialFOV(FOV):
         return pq
     #===========================================================================
 
-
 #*******************************************************************************
 
 
@@ -421,12 +470,61 @@ class RadialFOV(FOV):
 ################################################################################
 
 import unittest
+import time
 
 class Test_RadialFOV(unittest.TestCase):
 
     def runTest(self):
 
         RadialFOV.DEBUG = False
+        SpeedTest = False
+
+        #====================================================================
+        # uv_from_xy transform using xy_from_uv coefficients
+        # Test timing for _solve_polynomial fast vs slow convergence criteria
+        #====================================================================
+        if SpeedTest:
+            coefft_xy_from_uv = np.array([1.000, 
+                                          0, 
+                                         -5.9624209455667325e-08, 
+                                          0, 
+                                          2.7381910042256151e-14])
+            scale = 0.00067540618
+            shape = (1648,128)
+            fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
+                                                   uv_los=(800,64), uv_area=1.)
+            flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
+
+            uv = Pair.combos(np.arange(100), np.arange(8))
+            xy = flatfov.xy_from_uv(uv, derivs=False)   # generate uncorrected xy
+            xy.insert_deriv('t', Pair(np.random.randn(100,8,2)))
+            xy.insert_deriv('rs', Pair(np.random.randn(100,8,2,2), drank=1))
+
+            ### TODO: change to timeit in python 3
+            niter = 100
+        
+            t_fast = 0
+            t_slow = 0
+            for i in range(niter): 
+                t0 = time.time()
+                uv = fov.uv_from_xy(xy, derivs=True, fast=False)
+                t1 = time.time()
+                t_slow += t1-t0
+                
+                t0 = time.time()
+                uv = fov.uv_from_xy(xy, derivs=True, fast=True)
+                t1 = time.time()
+                t_fast += t1-t0
+                
+            print()
+            print()
+            print("Slow Newton's method: convergence:", t_slow/niter*1000, 'ms')
+            print("Fast Newton's method: convergence:", t_fast/niter*1000, 'ms')
+            print("Slow/Fast = ", t_slow/t_fast)
+
+            return
+
+
 
         #=================================================================
         # xy_from_uv transform using xy_from_uv coefficients

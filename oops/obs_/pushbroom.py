@@ -2,6 +2,8 @@
 # oops/obs_/pushbroom.py: Subclass Pushbroom of class Observation
 ################################################################################
 
+from IPython import embed   ## TODO: remove
+
 import numpy as np
 from polymath import *
 

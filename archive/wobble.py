@@ -39,14 +39,25 @@ DWOBB = 12  # elements[DWOBB] = rate of wobble epicyclic rotation (radians/s).
 KEPLER_ELEMENTS = 9
 WOBBLE_ELEMENTS = 4
 
+#*******************************************************************************
+# Wobble
+#*******************************************************************************
 class Wobble(Path, Fittable):
-    """Subclass Wobble defines a fittable Keplerian orbit, with an additional
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Subclass Wobble defines a fittable Keplerian orbit, with an additional
     component of "wobble" or libration.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, body, epoch, wobbles=1, elements=None, observer=None,
                        id=None):
-        """Constructor for a Wobble path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Constructor for a Wobble path.
 
         Input:
             body        a Body object defining the central planet, including its
@@ -90,7 +101,7 @@ class Wobble(Path, Fittable):
                         planet's ring_frame.
             id          the name under which to register the path.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
         global RWOBB, RATIO, WOBB0, DWOBB
         global KEPLER_ELEMENTS, WOBBLE_ELEMENTS
@@ -132,11 +143,17 @@ class Wobble(Path, Fittable):
             self.set_params(elements)
 
         self.reregister()
+    #========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # set_params_new
+    #===========================================================================
     def set_params_new(self, elements):
-        """Part of the Fittable interface. Re-defines the path given new orbital
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Part of the Fittable interface. Re-defines the path given new orbital
         elements.
 
         Input:
@@ -163,7 +180,7 @@ class Wobble(Path, Fittable):
               dwobble_dt  rate of rotation about the wobble epicycle, radians/s.
                         Positive for prograde wobble at radial minimum.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
         global RWOBB, RATIO, WOBB0, DWOBB
         global KEPLER_ELEMENTS, WOBBLE_ELEMENTS
@@ -174,7 +191,9 @@ class Wobble(Path, Fittable):
         self.kepler.set_params(elements[:9])
 
         for i in range(self.nwobbles):
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Make copies of the orbital elements for convenience
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             self.r_wobble   = self.elements[RWOBB::WOBBLE_ELEMENTS]
             self.l_wobble   = self.elements[RATIO::WOBBLE_ELEMENTS]
             self.l_wobble  *= self.r_wobble
@@ -185,31 +204,51 @@ class Wobble(Path, Fittable):
         self.rv_wobble = self.r_wobble * self.dwobble_dt
         self.lv_wobble = self.l_wobble * self.dwobble_dt
 
+        #--------------------------------------------------------------------
         # Empty the cache
+        #--------------------------------------------------------------------
         self.cached_observation_time = None
         self.cached_planet_event = None
+    #========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # copy
+    #===========================================================================
     def copy(self):
-        """Part of the Fittable interface. Returns a deep copy of the object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+	Part of the Fittable interface. Returns a deep copy of the object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Wobble(self.planet, self.epoch, self.get_params().copy(),
                       self.observer)
+    #========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # get_elements
+    #===========================================================================
     def get_elements(self):
-        """Returns the complete set of nine orbital elements.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+	Returns the complete set of nine orbital elements.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.elements
+    #========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # xyz_planet
+    #===========================================================================
     def xyz_planet(self, time, partials=False):
-        """Returns the body position and velocity relative to the planet as a
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Returns the body position and velocity relative to the planet as a
         function of time, in an inertial frame where the Z-axis is aligned with
         the planet's rotation pole. Optionally, it also returns the partial
         derivatives of the position vector with respect to the orbital elements,
@@ -227,16 +266,20 @@ class Wobble(Path, Fittable):
             xyz         a Vector3 of position vectors.
             dxyz_dt     a Vector3 of velocity vectors.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert not partials
         (xyz, dxyz_dt) = self.kepler.xyz_planet(time, partials=False)
 
+        #--------------------------------------------------------------------
         # Convert time to an array if necessary
+        #--------------------------------------------------------------------
         time = Scalar.as_scalar(time)
         t = time.vals - self.epoch
 
+        #--------------------------------------------------------------------
         # Add the offsets in position and velocity in the wobble epicycles
         # The last axis in all arrays holds the wobble index
+        #--------------------------------------------------------------------
         wlon = self.wobble0 + self.dwobble_dt * t[..., np.newaxis]
         cos_wlon = np.cos(wlon)
         sin_wlon = np.sin(wlon)
@@ -246,14 +289,17 @@ class Wobble(Path, Fittable):
         dr_dt = sin_wlon * self.rv_wobble
         dl_dt = cos_wlon * self.lv_wobble
 
+        #--------------------------------------------------------------------
         # Rotate into the xyz frame
+        #--------------------------------------------------------------------
         mean = self.kepler.mean0 + self.kepler.dmean * t[..., np.newaxis]
         cos_mean = np.cos(mean)
         sin_mean = np.sin(mean)
 
+        #--------------------------------------------------------------------
         # NOTE: This does not accommodate inclination. This is OK because we do
         # not claim accuracy to order (e*i).
-
+        #--------------------------------------------------------------------
         xyz.vals[...,0] += np.sum(r*cos_mean - l*sin_mean, axis=-1)
         xyz.vals[...,1] += np.sum(r*sin_mean + l*cos_mean, axis=-1)
 
@@ -261,11 +307,17 @@ class Wobble(Path, Fittable):
         dxyz_dt.vals[...,1] += np.sum(dr_dt*sin_mean + dl_dt*cos_mean, axis=-1)
 
         return (xyz, dxyz_dt)
+    #========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # xyz_observed
+    #===========================================================================
     def xyz_observed(self, time, planet_event, partials=False):
-        """Returns the body position and velocity relative to the observer and
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Returns the body position and velocity relative to the observer and
         in the J2000 coordinate frame. Optionally, it also returns the partial
         derivatives of the position with respect to the orbital elements,
         assuming they are all independent.
@@ -293,7 +345,7 @@ class Wobble(Path, Fittable):
             If partials is False, then the tuple (xyz, dxyz_dt) is returned;
             Otherwise, the tuple (xyz, dxyz_dt, dxyz_delements) is returned.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         xyz_planet = self.xyz_planet(planet_event.time, partials)
 
         pos_j2000 = self.to_j2000.rotate(xyz_planet[0]) + planet_event.pos
@@ -301,7 +353,9 @@ class Wobble(Path, Fittable):
 
         if not partials: return (pos_j2000, vel_j2000)
 
+        #--------------------------------------------------------------------
         # Rotate derivatives to J2000
+        #--------------------------------------------------------------------
         d_xyz_d_elem_vals = xyz_planet[2]                   # shape (...,3,9)
 
         derivs = Vector3(d_xyz_d_elem_vals.swapaxes(-1,-2)) # shape [...,9]
@@ -315,11 +369,17 @@ class Wobble(Path, Fittable):
                                                             # item shape [3,9]
 
         return (pos_j2000, vel_j2000, dpos_delem_j2000)
+    #========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # event_at_time
+    #===========================================================================
     def event_at_time(self, time, quick=None, partials=False):
-        """Returns an Event object corresponding to a specified Scalar time on
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+	Returns an Event object corresponding to a specified Scalar time on
         this path.
 
         Input:
@@ -328,7 +388,7 @@ class Wobble(Path, Fittable):
         Return:         an Event object containing (at least) the time, position
                         and velocity of the path.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.observer is None:
             (pos, vel) = self.xyz_planet(time, partials=partials)
             return Event(time, pos, vel, self.origin_id, self.frame_id)
@@ -347,29 +407,38 @@ class Wobble(Path, Fittable):
             event.pos.insert_subfield("d_dpath", xyz_observed[2])
 
         return event
+    #========================================================================
+
+
 
     ####################################################
     # Override for the case where observer != None
     ####################################################
 
+#     #===========================================================================
+#     # photon_to_event
+#     #===========================================================================
 #     def photon_to_event(self, link, quick=None, derivs=False, guess=None,
 #                               update=True,
 #                               iters     = PATH_PHOTONS.max_iterations,
 #                               precision = PATH_PHOTONS.dlt_precision,
 #                               limit     = PATH_PHOTONS.dlt_limit,
 #                               partials=False):
+#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #         """Returns the departure event at the given path for a photon, given the
 #         linking event of the photon's arrival. See _solve_photon() for details.
 #         """
-# 
+#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #         if self.observer is None or guess is None:
 #             return super(Kepler,self).photon_to_event(link, quick, derivs,
 #                                                       guess, update,
 #                                                       iters, precision, limit)
 # 
+#         #---------------------------------------------------------------------
 #         # When the observer is pre-defined, photon_to_event() gets an override
 #         # for quick evaluation, but is only valid at the observer event.
 #         # In this case, guess must contain the event time at the planet.
+#         #---------------------------------------------------------------------
 #         event = self.event_at_time(guess, quick=quick, partials=partials)
 # 
 #         event.dep = -event.pos
@@ -384,17 +453,32 @@ class Wobble(Path, Fittable):
 #             link.arr.insert_subfield("d_dt", -event.vel)
 # 
 #         return event
+#     #========================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
 ################################################################################
 
+#*******************************************************************************
+# Test_Wobble
+*******************************************************************************
 # class Test_Wobble(unittest.TestCase):
 # 
+#     #=========================================================================
+#     # runTest
+#     #========================================================================
 #     def runTest(self):
 # 
 #         # TBD
 #         pass
+#     #========================================================================
+
+
+#*******************************************************************************
 
 ########################################
 if __name__ == '__main__':
