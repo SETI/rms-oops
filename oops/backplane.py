@@ -86,7 +86,7 @@ class Backplane(object):
         self.obs = obs
 
         #-----------------------------------------
-        # Establish spaital and temporal grids
+        # Establish spatial and temporal grids
         #-----------------------------------------
         if meshgrid is None:
             self.meshgrid = obs.meshgrid()

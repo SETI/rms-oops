@@ -63,11 +63,18 @@ class Pushframe(Observation):
                         Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.cadence = cadence
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.axes = list(axes)
         assert (('u' in self.axes and 'vt' in self.axes) or
                 ('v' in self.axes and 'ut' in self.axes))
@@ -87,9 +94,14 @@ class Pushframe(Observation):
 
         self.swap_uv = (self.u_axis > self.v_axis)
 
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
+        duv_dt_basis_vals = np.zeros(2)
+        duv_dt_basis_vals[self.cross_scan_uv_index] = 1.
+        self.duv_dt_basis = Pair(duv_dt_basis_vals)
 
+
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
         assert len(self.cadence.shape) == 1
         assert (self.fov.uv_shape.vals[self.cross_scan_uv_index] ==
                 self.cadence.shape[0])
@@ -100,14 +112,36 @@ class Pushframe(Observation):
 
         self.uv_size = Pair.ONES
 
-        duv_dt_basis_vals = np.zeros(2)
-        duv_dt_basis_vals[self.cross_scan_uv_index] = 1.
-        self.duv_dt_basis = Pair(duv_dt_basis_vals)
-
         self.shape = len(axes) * [1]
         self.shape[self.u_axis] = self.uv_shape[0]
         self.shape[self.v_axis] = self.uv_shape[1]
 
+        #--------------------------------------------------
+        # Basic timing
+        #--------------------------------------------------
+        self.time = self.cadence.time
+        self.midtime = self.cadence.midtime
+
+        #-----------------------------------------------------------------------
+        # Fractional timing
+        #  For each pixel, determine the window within each exposure that
+        #  corresponds to the scene geometry
+        #-----------------------------------------------------------------------
+        time0 = self.cadence.time_at_tstep(0)
+        time1 = time0 + self.cadence.texp[self.cadence.steps-1]
+
+        times = self.cadence.time_range_at_tstep(
+	                                np.indices([self.shape[self.t_axis]]))
+        dtimes = times[1] - times[0]
+
+        tfrac0 = ((time0 - times[0])/dtimes).vals.T
+        tfrac1 = ((time1 - times[0])/dtimes).vals.T
+	self.tfrac = ( Scalar.as_scalar(np.broadcast_to(tfrac0, self.shape)), 
+		      Scalar.as_scalar(np.broadcast_to(tfrac1, self.shape)) )
+
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
@@ -245,34 +279,9 @@ class Pushframe(Observation):
                         time of each (u,v) pair, as seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        
-        # This is a fudge.  The start and stop times depend on the line, but
-        # that would give a mid time that does not correspond to the pointing when 
-        # the pixel was acquired.  Maybe need a cadence that models the line shift
-        # Problem is pointing varies during full pixel integration time
-        # backplane() doesn't care about this because it ultimately just
-        # uses the midtime for each pixel and doesn't ever look at the exposure
-        # duration
-        #
-        # think of pushframe as sum of searate shifted images
-        #  most accurate way is to compute separate backplane for each
-        #  tdi stage then shift and average results
-        #
-        # or need backplane to compute states of bodies at true mid time,
-        # but use pointing from fist tdi stage
-        # can this be done using light travel time?  prob not, since I think
-        # that's handled in spice
-        #
-        # what about adding an additional delay parameter for computing ephem?
-        #
-        # or try using time-dependent frame
-        
-        time0 = self.cadence.time_at_tstep(0)
-        time1 = time0 + self.cadence.texp[self.cadence.steps-1]
-
-#        uv_pair = uv_pair.as_int()
-#        tstep = uv_pair.to_scalar(self.cross_scan_uv_index)
-#        (time0, time1) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
+	uv_pair = uv_pair.as_int()
+	tstep = uv_pair.to_scalar(self.cross_scan_uv_index)
+	(time0, time1) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
         if fovmask:
             is_outside = self.uv_is_outside(uv_pair, inclusive=True)

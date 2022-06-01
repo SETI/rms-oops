@@ -525,10 +525,13 @@ class Observation(object):
                         - the possible case of a 2-D time-dependence that has
                           only one axis coupled to a spatial axis is not
                           supported.
+                        This argument is overridden by a tfrac property.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if isinstance(tfrac, numbers.Number):
-            tfrac = (tfrac, tfrac)
+        if hasattr(self, 'tfrac'): tfrac = self.tfrac
+        else :
+            if isinstance(tfrac, numbers.Number):
+                tfrac = (tfrac, tfrac)
 
         #-------------------------------------------
         # Handle a time-independent observation
