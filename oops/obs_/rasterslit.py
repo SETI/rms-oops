@@ -5,10 +5,11 @@
 import numpy as np
 from polymath import *
 
-from oops.obs_.observation import Observation
-from oops.path_.path       import Path
-from oops.frame_.frame     import Frame
-from oops.event            import Event
+from oops.obs_.observation   import Observation
+from oops.cadence_.cadence   import Cadence
+from oops.path_.path         import Path
+from oops.frame_.frame       import Frame
+from oops.event              import Event
 
 #*******************************************************************************
 # RasterSlit
@@ -43,6 +44,7 @@ class RasterSlit(Observation):
                         of the array's v-axis. The 'fast' suffix identifies
                         which of these is in the fast-scan direction; the 'slow'
                         suffix identifies the slow-scan direction.
+
             det_size    the size of the detector in FOV units parallel to the
                         slit. It will be < 1 if there are gaps between the
                         samples, or > 1 if the detector moves by less than its
@@ -53,28 +55,51 @@ class RasterSlit(Observation):
                         sampling along the slow axis and the second defines
                         time sub-sampling along the fast axis, which corresponds
                         to the motion of the detector within the slit.
+                        Alternatively, a dictionary containing the following 
+                        entries, from which a cadence object is constructed:
+
+                        TBD
+
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y). For a RasterSlit object, one of the
                         axes of the FOV must have length 1.
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        self.cadence = cadence
+
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
+#        self.cadence = cadence
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
+#        assert len(self.cadence.shape) == 2
+
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+        if isinstance(cadence, Cadence): self.cadence = cadence
+        else: self.cadence = self._default_cadence(cadence)
+
         assert len(self.cadence.shape) == 2
 
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.axes = list(axes)
         assert (('ufast' in self.axes and 'vslow' in self.axes) or
                 ('vfast' in self.axes and 'uslow' in self.axes))
@@ -98,15 +123,22 @@ class RasterSlit(Observation):
 
         self.swap_uv = (self.u_axis > self.v_axis)
 
-        self.along_slit_shape = self.uv_shape[self.along_slit_uv_axis]
-
         self.t_axis = [self.slow_axis, self.fast_axis]
+
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
         assert self.fov.uv_shape.vals[self.cross_slit_uv_axis] == 1
         assert (self.fov.uv_shape.vals[self.along_slit_uv_axis] ==
                 self.cadence.shape[1])
+
+        self.along_slit_shape = self.uv_shape[self.along_slit_uv_axis]
 
         self.det_size = det_size
         self.slit_is_discontinuous = (self.det_size != 1)
@@ -119,9 +151,35 @@ class RasterSlit(Observation):
         self.shape[self.u_axis] = self.uv_shape[0]
         self.shape[self.v_axis] = self.uv_shape[1]
 
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         TBD
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        ### TBD
+
+        return Metronome(tstart, length_stride, texp, swath_length)
     #===========================================================================
 
 

@@ -6,10 +6,11 @@ import numpy as np
 from polymath import *
 
 from oops.cadence_.metronome import Metronome
-from oops.obs_.observation import Observation
-from oops.path_.path       import Path
-from oops.frame_.frame     import Frame
-from oops.event            import Event
+from oops.obs_.observation   import Observation
+from oops.cadence_.metronome import Metronome
+from oops.path_.path         import Path
+from oops.frame_.frame       import Frame
+from oops.event              import Event
 
 #*******************************************************************************
 # Slit1D
@@ -40,23 +41,30 @@ class Slit1D(Observation):
                         appear at the location of the array's u-axis if any;
                         'v' should appear at the location of the array's v-axis
                         if any. Only one of 'u' or 'v' can appear in a Slit1D.
+
             det_size    the size of the detectors in FOV units parallel to the
                         slit. It will be < 1 if there are gaps between the
                         detectors.
+
             tstart      the start time of the observation in seconds TDB.
+
             texp        exposure time of the observation in seconds.
+
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y). For a Slit1D object, one of the axes
                         of the FOV must have length 1.
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """

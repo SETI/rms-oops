@@ -7,12 +7,14 @@ from IPython import embed   ## TODO: remove
 import numpy as np
 from polymath import *
 
-from oops.obs_.observation import Observation
-from oops.path_.path       import Path
-from oops.path_.multipath  import MultiPath
-from oops.frame_.frame     import Frame
-from oops.body             import Body
-from oops.event            import Event
+from oops.obs_.observation   import Observation
+from oops.cadence_.cadence   import Cadence
+from oops.cadence_.metronome import Metronome
+from oops.path_.path         import Path
+from oops.path_.multipath    import MultiPath
+from oops.frame_.frame       import Frame
+from oops.body               import Body
+from oops.event              import Event
 
 #*******************************************************************************
 # Pushbroom
@@ -51,30 +53,46 @@ class Pushbroom(Observation):
                         'vt' or 'v' should appear at the location of the array's
                         v-axis. The 't' suffix is used for the one of these axes
                         that is emulated by time-sampling the slit.
+
             uv_size     the size of the detector in FOV units along the (u,v)
                         axes. Default is (1,1), indicating no dead space between
                         the detectors. It will be < 1 if there are gaps.
+
             cadence     a Cadence object defining the start time and duration of
                         each consecutive position of the pushbroom.
+                        Alternatively, a dictionary containing the following 
+                        entries, from which a cadence object is constructed:
+
+                        TBD
+
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y).
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        self.cadence = cadence
+
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.axes = list(axes)
         assert (('u' in self.axes and 'vt' in self.axes) or
                 ('v' in self.axes and 'ut' in self.axes))
@@ -94,9 +112,21 @@ class Pushbroom(Observation):
 
         self.swap_uv = (self.u_axis > self.v_axis)
 
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+        if isinstance(cadence, Cadence): self.cadence = cadence
+        else: self.cadence = self._default_cadence(cadence)
+
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
         assert len(self.cadence.shape) == 1
         assert (self.fov.uv_shape.vals[self.cross_slit_uv_index] ==
                 self.cadence.shape[0])
@@ -116,11 +146,37 @@ class Pushbroom(Observation):
         self.shape[self.u_axis] = self.uv_shape[0]
         self.shape[self.v_axis] = self.uv_shape[1]
 
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
         return
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         TBD
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        ### TBD
+
+        return Metronome(tstart, length_stride, texp, swath_length)
     #===========================================================================
 
 

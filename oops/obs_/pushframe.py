@@ -8,7 +8,8 @@ import numpy as np
 from polymath import *
 
 from oops.obs_.observation   import Observation
-from oops.cadence_.metronome import Metronome
+from oops.cadence_.cadence   import Cadence
+from oops.cadence_.sequence  import Sequence
 from oops.path_.path         import Path
 from oops.path_.multipath    import MultiPath
 from oops.frame_.frame       import Frame
@@ -47,18 +48,29 @@ class Pushframe(Observation):
                         'vt' or 'v' should appear at the location of the array's
                         v-axis. The 't' suffix is used for the one of these axes
                         that is swept by the time-delayed integration.
+
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive line of the pushframe.
+                        each consecutive line of the pushframe.  Alternatively,
+                        a dictionary containing the following entries, from 
+                        which a cadence object is constructed:
+
+                         tstart: Observation start time.
+                         nexp:   Number of exposures in the observation.
+                         exp:    Exposure time for each observation.
+
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y).
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """
@@ -67,7 +79,6 @@ class Pushframe(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-        self.cadence = cadence
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
@@ -98,14 +109,9 @@ class Pushframe(Observation):
         duv_dt_basis_vals[self.cross_scan_uv_index] = 1.
         self.duv_dt_basis = Pair(duv_dt_basis_vals)
 
-
         #--------------------------------------------------
         # Shape / Size
         #--------------------------------------------------
-        assert len(self.cadence.shape) == 1
-        assert (self.fov.uv_shape.vals[self.cross_scan_uv_index] ==
-                self.cadence.shape[0])
-
         self.uv_shape = tuple(self.fov.uv_shape.values)
         self.along_scan_shape = self.uv_shape[self.along_scan_uv_index]
         self.cross_scan_shape = self.uv_shape[self.cross_scan_uv_index]
@@ -117,16 +123,26 @@ class Pushframe(Observation):
         self.shape[self.v_axis] = self.uv_shape[1]
 
         #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+        if isinstance(cadence, Cadence): self.cadence = cadence
+        else: self.cadence = self._default_cadence(cadence)
+
+        assert len(self.cadence.shape) == 1
+        assert (self.fov.uv_shape.vals[self.cross_scan_uv_index] ==
+                self.cadence.shape[0])
+
+        #--------------------------------------------------
         # Basic timing
         #--------------------------------------------------
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
-        #-----------------------------------------------------------------------
+        #---------------------------------------------------------------
         # Fractional timing
-        #  For each pixel, determine the window within each exposure that
-        #  corresponds to the scene geometry
-        #-----------------------------------------------------------------------
+        #  For each pixel, determine the fractional window within each 
+        #  exposure that corresponds to the scene geometry
+        #---------------------------------------------------------------
         time0 = self.cadence.time_at_tstep(0)
         time1 = time0 + self.cadence.texp[self.cadence.steps-1]
 
@@ -145,6 +161,38 @@ class Pushframe(Observation):
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         tstart: Observation start time.
+                         nexp:   Number of exposures in the observation.
+                         exp:    Exposure time for each observation.
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        tstart = dict['tstart']
+        nexp = dict['nexp']
+        exp = dict['exp']
+        nlines = self.shape[self.t_axis]
+
+        nstages = np.clip(np.arange(nlines-1,-1,-1)+1, 0, nexp) 
+        texp = nstages * exp
+        tstart = (nexp - nstages) * exp + tstart
+		
+        return Sequence(tstart, texp)
     #===========================================================================
 
 

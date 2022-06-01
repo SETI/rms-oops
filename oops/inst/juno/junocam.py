@@ -91,18 +91,11 @@ def from_file(filespec, fast_distortion=True,
 
 
         if not snap:
-            nstages = \
-                np.clip(np.arange(fmeta.frlines-1,-1,-1)+1, 0, fmeta.tdi_stages) 
-            texp = nstages * fmeta.tdi_texp
-            tstart = \
-                    (fmeta.tdi_stages - nstages) * fmeta.tdi_texp + fmeta.tstart
-            cadence = oops.cadence.Sequence(tstart, texp)
-##            cadence = oops.cadence.Echelon(fmeta.tstart, fmeta.tdi_texp, 
-##                                              fmeta.tdi_stages, fmeta.frlines)
-#            cadence = oops.cadence.Metronome(fmeta.tstart,
-#                            fmeta.tdi_texp, fmeta.tdi_texp, fmeta.tdi_stages)
             item = (oops.obs.Pushframe(("vt","u"), 
-                                 cadence, fmeta.fov,
+                                {'nexp':fmeta.tdi_stages, 
+                                 'tstart':fmeta.tstart, 
+                                 'exp':fmeta.tdi_texp}, 
+                                 fmeta.fov,
                                  "JUNO", "JUNO_JUNOCAM", 
                                  instrument = "JUNOCAM",
                                  filter = fmeta.filter, 

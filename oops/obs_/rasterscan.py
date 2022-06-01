@@ -5,12 +5,14 @@
 import numpy as np
 from polymath import *
 
-from oops.obs_.observation import Observation
-from oops.path_.path       import Path
-from oops.path_.multipath  import MultiPath
-from oops.frame_.frame     import Frame
-from oops.body             import Body
-from oops.event            import Event
+from oops.obs_.observation   import Observation
+from oops.cadence_.cadence   import Cadence
+from oops.cadence_.metronome import Metronome
+from oops.path_.path         import Path
+from oops.path_.multipath    import MultiPath
+from oops.frame_.frame       import Frame
+from oops.body               import Body
+from oops.event              import Event
 
 #*******************************************************************************
 # RasterScan
@@ -47,33 +49,49 @@ class RasterScan(Observation):
                         of the array's v-axis. The 'fast' suffix identifies
                         which of these is in the fast-scan direction; the 'slow'
                         suffix identifies the slow-scan direction.
+
             uv_size     the size of the detector in units of the FOV along the
                         (u,v) axes. A value of (1,1) would indicate that there
                         is no dead space between the detectors. A value < 1
                         indicates a gap along that axis; a value > 1 indicates
                         that the detector is larger than the shift, yielding
                         overlaps.
+
             cadence     a 2-D Cadence object defining the start time and
-                        duration of each sample.
+                        duration of each sample.  Alternatively, a dictionary 
+                        containing the following entries, from which a cadence 
+                        object is constructed:
+
+                        TBD
+
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y).
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        self.cadence = cadence
+
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.axes = list(axes)
         assert (('ufast' in self.axes and 'vslow' in self.axes) or
                 ('vfast' in self.axes and 'uslow' in self.axes))
@@ -96,9 +114,22 @@ class RasterScan(Observation):
         self.swap_uv = (self.u_axis > self.v_axis)
 
         self.t_axis = [self.slow_axis, self.fast_axis]
+
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+        if isinstance(cadence, Cadence): self.cadence = cadence
+        else: self.cadence = self._default_cadence(cadence)
+
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
         self.uv_shape = tuple(self.fov.uv_shape.vals)
         assert len(self.cadence.shape) == 2
         assert self.cadence.shape[0] == self.uv_shape[self.slow_uv_axis]
@@ -111,11 +142,37 @@ class RasterScan(Observation):
         self.shape[self.u_axis] = self.uv_shape[0]
         self.shape[self.v_axis] = self.uv_shape[1]
 
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
         return
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         TBD
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        ### TBD
+
+        return Metronome(tstart, length_stride, texp, swath_length)
     #===========================================================================
 
 
