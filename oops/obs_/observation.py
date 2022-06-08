@@ -4,7 +4,7 @@
 
 from __future__ import print_function
 
-from IPython import embed   ## TODO: remove
+#from IPython import embed   ## TODO: remove
 
 import numpy as np
 import numbers
@@ -74,7 +74,7 @@ class Observation(object):
                         pointing downward.
         subfields       a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
-            data        a reserved subfield to contain the NumPy array of
+        data            a reserved subfield to contain the NumPy array of
                         numbers associated with the observation.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -90,7 +90,8 @@ class Observation(object):
     def __init__(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        A constructor."""
+        A constructor.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass
     #===========================================================================

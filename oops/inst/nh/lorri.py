@@ -25,6 +25,9 @@ from oops.inst.nh.nh_ import NewHorizons
 # image and pixel centers have half-integer values.
 ################################################################################
 
+#===============================================================================
+# radec_from_uv
+#===============================================================================
 def radec_from_uv(u, v, header):
     dx = u - header['CRPIX1']
     dy = v - header['CRPIX2']
@@ -47,7 +50,13 @@ def radec_from_uv(u, v, header):
                                (np.sqrt(denom**2 + xi**2)))
 
     return (ra, dec)
+#===============================================================================
 
+
+
+#===============================================================================
+# uv_from_radec
+#===============================================================================
 def uv_from_radec(ra, dec, header):
     dra = ra - header['CRVAL1']
     ddec = dec - header['CRVAL2']
@@ -81,7 +90,13 @@ def uv_from_radec(ra, dec, header):
     v = oops.DPR * (dy_dra * xi + dy_ddec * eta) + header['CRPIX2']
 
     return (u,v)
+#===============================================================================
 
+
+
+#===============================================================================
+# to_xms
+#===============================================================================
 def to_xms(x):
     if x < 0.:
         x_sign = -1
@@ -97,14 +112,22 @@ def to_xms(x):
     x -= m
     x *= 60
     return (int(x_sign) * h, m, x)
+#===============================================================================
+
+
 
 ################################################################################
 # Standard class methods
 ################################################################################
 
+#===============================================================================
+# from_file
+#===============================================================================
 def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
               asof=None, meta=None, **parameters):
-    """Return a Snapshot object based on a given NewHorizons LORRI image file.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a Snapshot object based on a given NewHorizons LORRI image file.
 
     If parameters["data"] is False, no data or associated arrays are loaded.
     If parameters["calibration"] is False, no calibration objects are created.
@@ -134,19 +157,23 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
                                 method;
                     'flat'      to use a flat FOV model.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     assert geom in {'spice', 'fits'}
     assert pointing in {'spice', 'fits', 'fitsapp', 'fits90'}
     assert fov_type in {'fast', 'slow', 'flat'}
 
     LORRI.initialize(asof=asof, meta=meta)
 
+    #-------------------------
     # Load the FITS file
+    #-------------------------
     nh_file = pyfits.open(filespec)
     filename = os.path.split(filespec)[1]
     header = nh_file[0].header
 
+    #-----------------------------------------
     # Get key information from the header
+    #-----------------------------------------
     texp = header['EXPTIME']
     tdb_midtime = header['SPCSCET']
     tstart = tdb_midtime - texp/2
@@ -176,7 +203,9 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     if geom == 'spice':
         path = oops.Path.as_waypoint('NEW HORIZONS')
     else:
+        #- - - - - - - - - - - - - - - - - - - - - - - -
         # First construct a path from the Sun to NH
+        #- - - - - - - - - - - - - - - - - - - - - - - -
         posx = -header['SPCSSCX']
         posy = -header['SPCSSCY']
         posz = -header['SPCSSCZ']
@@ -185,7 +214,9 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         vely = -header['SPCSSCVY']
         velz = -header['SPCSSCVZ']
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # The path_id has to be unique to this observation
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - 
         sun_path = oops.Path.as_waypoint('SUN')
         path_id = '.NH_PATH_' + filename
         sc_path = oops.path.LinearPath((oops.Vector3([posx, posy, posz]),
@@ -198,13 +229,17 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     if pointing == 'spice':
         frame = oops.Frame.as_wayframe('NH_LORRI')
     else:
+        #- - - - - - - - - - - - - - - - - - - - - 
         # Create a frame based on the boresight
+        #- - - - - - - - - - - - - - - - - - - - - 
         u_center = shape[1]/2. + 0.5    # offset to put [1,1] at center of pixel
         v_center = shape[0]/2. + 0.5
         (ra_deg, dec_deg) = radec_from_uv(u_center, v_center, header)
         north_clock_deg = header['SPCEMEN']
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Apply the correction for apparent geometry if necessary
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if pointing == 'fitsapp':
             ra  = ra_deg  * oops.RPD
             dec = dec_deg * oops.RPD
@@ -218,7 +253,9 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
             ra_deg  = ra  * oops.DPR
             dec_deg = dec * oops.DPR
 
+        #- - - - - - - - - - - - - - - - - - - - - - - -
         # Apply the 90-degree rotation if necessary
+        #- - - - - - - - - - - - - - - - - - - - - - - -
         elif pointing == 'fits90':
             year = int(header['SPCUTCID'][:4])
             if year <= 2012:
@@ -237,12 +274,23 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         event.neg_arr_ap = oops.Vector3.ZAXIS
         los = event.neg_arr_ap_j2000
 
+    #----------------------
     # Create a Snapshot
+    #----------------------
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#    snapshot = oops.obs.Snapshot(('v','u'), {'tstart':tstart, 'texp':texp},
+#                                      fov, path, frame, instrument = 'LORRI')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     snapshot = oops.obs.Snapshot(('v','u'), tstart, texp, fov, path, frame,
                                  target = target_name,
                                  instrument = 'LORRI')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
+    #------------------------------
     # Interpret loader options
+    #------------------------------
     if ('astrometry' in parameters) and parameters['astrometry']:
         include_data = False
         include_calibration = False
@@ -274,13 +322,17 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         if 'calib_body' in parameters:
             spectral_name = parameters['calib_body']
 
+        #- - - - - - - - - - - - - - - - -
         # Look up the solar range...
+        #- - - - - - - - - - - - - - - - -
         try:
             solar_range = parameters['solar_range']
         except KeyError:
             solar_range = None
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If necessary, get the solar range from the target name
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if solar_range is None and target_body is not None:
             target_sun_path = oops.Path.as_waypoint(target_name).wrt('SUN')
             # Paths of the relevant bodies need to be defined in advance!
@@ -298,15 +350,21 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
 
         for spectral_name in ['SOLAR', 'PLUTO', 'PHOLUS', 'CHARON', 'JUPITER']:
 
+            #- - - - - - - - - - - 
             # Extended source
+            #- - - - - - - - - - - 
             spectral_radiance = header['R' + spectral_name]
 
+            #- - - - - - - - -
             # Point source
+            #- - - - - - - - -
             spectral_irradiance = header['P' + spectral_name]
 
             F_solar = 176.  # pivot 6076.2 A at 1 AU
 
+            #- - - - - - - - - - - - 
             # Conversion to I/F
+            #- - - - - - - - - - - - 
             extended_factor = (1. / texp / spectral_radiance * np.pi *
                                solar_range**2 / F_solar)
             point_factor = (1. / texp / spectral_irradiance / fov.uv_area *
@@ -328,11 +386,17 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         snapshot.insert_subfield('headers', headers)
 
     return snapshot
+#===============================================================================
 
-################################################################################
 
+
+#===============================================================================
+# from_index
+#===============================================================================
 def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
-    """Return a list of Snapshot objects, one for each row in a supplemental
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Return a list of Snapshot objects, one for each row in a supplemental
     index file.
 
     Inputs:
@@ -342,16 +406,20 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
                                 method;
                     'flat'      to use a flat FOV model.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     LORRI.initialize(asof=asof, meta=meta)
 
+    #------------------------------------------------------------------------
     # Read the index file
+    #------------------------------------------------------------------------
     COLUMNS = []                # Return all columns
     TIMES = ['START_TIME']      # Convert this one to TAI
     table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
+    #------------------------------------------------------------------------
     # Create a list of Snapshot objects
+    #------------------------------------------------------------------------
     snapshots = []
     for dict in row_dicts:
 
@@ -360,8 +428,16 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         fov = LORRI.fovs[dict['BINNING_MODE'].upper(), fov_type]
         target_name = dict['TARGET_NAME']
 
+        #- - - - - - - - - - - - -
         # Create a Snapshot
+        #- - - - - - - - - - - - -
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        item = oops.obs.Snapshot(('v','u'), {'tstart':tstart, 'texp':texp},
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         item = oops.obs.Snapshot(('v','u'), tstart, texp,
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
                                  fov, 'NEW HORIZONS', 'NH_LORRI',
                                  dict = dict,
                                  index_dict = dict,
@@ -371,23 +447,31 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         snapshots.append(item)
 
     return snapshots
+#===============================================================================
 
-################################################################################
 
+
+#*******************************************************************************
+# LORRI
+#*******************************************************************************
 class LORRI(object):
-    """A instance-free class to hold NewHorizons LORRI instrument parameters."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A instance-free class to hold NewHorizons LORRI instrument parameters.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     instrument_kernel = None
     fovs = {}
     initialized = False
     asof = None
     meta = None
 
+    #------------------------------------------------------------------------
     # Create a master version of the LORRI distortion models from
     #   Owen Jr., W.M., 2011. New Horizons LORRI Geometric Calibration of
     #   August 2006. JPL IOM 343L-11-002.
     # These polynomials convert from X,Y (radians) to U,V (pixels).
-
+    #------------------------------------------------------------------------
     LORRI_F  =  2619.008    # mm
     LORRI_E2 =  2.696e-5    # / mm2
     LORRI_E5 =  1.988e-5    # / mm
@@ -408,6 +492,7 @@ class LORRI(object):
     LORRI_COEFF[0,2,1] = LORRI_KY*LORRI_E5 * LORRI_F**2
     LORRI_COEFF[1,1,1] = LORRI_KY*LORRI_E6 * LORRI_F**2
 
+    #------------------------------------------------------------------------
     # Create a master version of the inverse distortion model.
     # These coefficients were computed by numerically solving the above
     # polynomials.
@@ -416,7 +501,7 @@ class LORRI(object):
     # then inverting:
     #   U DIFF MIN MAX -0.00261017184761 0.0018410196501
     #   V DIFF MIN MAX -0.00263250108583 0.00209864359397
-
+    #------------------------------------------------------------------------
     LORRI_INV_COEFF = np.zeros((4,4,2))
     LORRI_INV_COEFF[:,:,0] = [
         [  5.62144901e-10,  1.80741669e-15, -3.62872755e-15, -7.65201036e-21],
@@ -429,25 +514,41 @@ class LORRI(object):
         [  2.51861242e-15,  2.24491504e-14,  0.00000000e+00,  0.00000000e+00],
         [  7.85425602e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
 
+    #===========================================================================
+    # initialize
+    #===========================================================================
     @staticmethod
     def initialize(asof=None, time=None, meta=None):
-        """Fill in key information about LORRI. Must be called first.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
+        Fill in key information about LORRI. Must be called first.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #- - - - - - - - - - - - - - - - 
         # Update kernels if necessary
+        #- - - - - - - - - - - - - - - - 
         NewHorizons.initialize(asof=asof, time=time, meta=meta)
 
+        #- - - - - - - - - - - - - - - - 
         # Quick exit after first call
+        #- - - - - - - - - - - - - - - - 
         if LORRI.initialized and LORRI.asof == asof: return
 
+        #- - - - - - - - - - - - - - - -
         # Load the instrument kernel
+        #- - - - - - - - - - - - - - - -
         kernels = NewHorizons.spice_instrument_kernel('LORRI')
         LORRI.instrument_kernel = kernels[0]
 
+        #- - - - - - - - - - - - - - - - 
         # Construct a Polynomial FOV
+        #- - - - - - - - - - - - - - - - 
         info = LORRI.instrument_kernel['INS']['NH_LORRI_1X1']
 
+        #- - - - - - - - - - - -
         # Full field of view
+        #- - - - - - - - - - - -
         lines = info['PIXEL_LINES']
         samples = info['PIXEL_SAMPLES']
 
@@ -455,7 +556,9 @@ class LORRI(object):
         yfov = info['FOV_CROSS_ANGLE']
         assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
 
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         # Display directions: [u,v] = [right,down]
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         full_fov = oops.fov.Polynomial((samples,lines),
                                        coefft_uv_from_xy=LORRI.LORRI_COEFF,
                                        coefft_xy_from_uv=None)
@@ -465,7 +568,9 @@ class LORRI(object):
 
         full_fov_flat = oops.fov.FlatFOV((4.96e-6,-4.96e-6), (1024,1024))
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Load the dictionary, include the subsampling modes
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
         LORRI.fovs['1X1', 'slow'] = full_fov
         LORRI.fovs['1X1', 'fast'] = full_fov_fast
         LORRI.fovs['1X1', 'flat'] = full_fov_flat
@@ -473,10 +578,14 @@ class LORRI(object):
         LORRI.fovs['4X4', 'fast'] = oops.fov.Subsampled(full_fov_fast, 4)
         LORRI.fovs['4X4', 'flat'] = oops.fov.Subsampled(full_fov_flat, 4)
 
+        #- - - - - - - - - - - - - - -
         # Construct a SpiceFrame
+        #- - - - - - - - - - - - - - -
         lorri_flipped = oops.frame.SpiceFrame('NH_LORRI', id='NH_LORRI_FLIPPED')
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # The SPICE IK gives the boresight along -Z, so flip axes
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         flipxyz = oops.Matrix3([[ 1, 0, 0],
                                 [ 0,-1, 0],
                                 [ 0, 0,-1]])
@@ -485,13 +594,22 @@ class LORRI(object):
         LORRI.initialized = True
         LORRI.asof = asof
         LORRI.meta = meta
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # reset
+    #===========================================================================
     @staticmethod
     def reset():
-        """Reset the internal NewHorizons LORRI parameters.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Reset the internal NewHorizons LORRI parameters.
 
-        Can be useful for debugging."""
-
+        Can be useful for debugging.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         LORRI.instrument_kernel = None
         LORRI.fovs = {}
         LORRI.initialized = False
@@ -499,6 +617,13 @@ class LORRI(object):
         LORRI.meta = meta
 
         NewHorizons.reset()
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Initialize at load time
@@ -513,8 +638,14 @@ LORRI.initialize()
 import unittest
 import os.path
 
+#*******************************************************************************
+# Test_NewHorizons_LORRI
+#*******************************************************************************
 class Test_NewHorizons_LORRI(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
@@ -656,6 +787,13 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
                                fov_1024.uv_scale.vals[0])
         self.assertAlmostEqual(fov_256.uv_scale.vals[1]/4,
                                fov_1024.uv_scale.vals[1])
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ############################################
 if __name__ == '__main__':

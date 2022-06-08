@@ -2,7 +2,7 @@
 # oops/obs_/pushframe.py: Subclass Pushframe of class Observation
 ################################################################################
 
-from IPython import embed   ## TODO: remove
+#from IPython import embed   ## TODO: remove
 
 import numpy as np
 from polymath import *
@@ -56,7 +56,7 @@ class Pushframe(Observation):
 
                          tstart: Observation start time.
                          nexp:   Number of exposures in the observation.
-                         exp:    Exposure time for each observation.
+                         texp:    Exposure time for each observation.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -163,7 +163,8 @@ class Pushframe(Observation):
             self.insert_subfield(key, subfields[key])
     #===========================================================================
 
-
+    def _test():
+        print('test')
 
     #===========================================================================
     # _default_cadence
@@ -185,14 +186,14 @@ class Pushframe(Observation):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         tstart = dict['tstart']
         nexp = dict['nexp']
-        exp = dict['exp']
+        texp = dict['texp']
         nlines = self.shape[self.t_axis]
 
         nstages = np.clip(np.arange(nlines-1,-1,-1)+1, 0, nexp) 
-        texp = nstages * exp
-        tstart = (nexp - nstages) * exp + tstart
+        exp = nstages * texp
+        tstart = (nexp - nstages) * texp + tstart
 		
-        return Sequence(tstart, texp)
+        return Sequence(tstart, exp)
     #===========================================================================
 
 
@@ -637,7 +638,7 @@ class Test_Pushframe(unittest.TestCase):
         #-------------------------------
         (uv,time) = obs.uvt(indices, fovmask=True)
         
-        embed()
+#        embed()
         return      #####################################
 
         self.assertTrue(np.all(uv.mask == np.array(6*[False] + [True])))

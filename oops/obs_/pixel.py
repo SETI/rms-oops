@@ -38,34 +38,44 @@ class Pixel(Observation):
             axes        a list or tuple of strings, with one value for each axis
                         in the associated data array. A value of 't' should
                         appear at the location of the array's time-axis.
+
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive measurement. . As a special case, a
-                        Scalar value is converted to a Cadence of subclass
-                        Instant.
+                        each consecutive measurement. Alternatively, a dictionary 
+                        containing the following entries, from which a cadence 
+                        object is constructed:
+
+                         tbd:    TBD
+
+
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y). For a Pixel object, both axes of the
                         FOV must have length 1.
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if isinstance(cadence, Cadence):
-            self.cadence = cadence
-        else:
-            self.cadence = Instant(cadence)
 
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.axes = list(axes)
         self.u_axis = -1
         self.v_axis = -1
@@ -75,10 +85,22 @@ class Pixel(Observation):
         else:
             self.t_axis = -1
 
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+	if isinstance(cadence, Cadence): self.cadence = cadence
+	else: self.cadence = self._default_cadence(cadence)
+
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
         self.scalar_times = (Scalar(self.time[0]), Scalar(self.time[1]))
 
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
         assert self.fov.uv_shape == (1,1)
         self.uv_shape = (1,1)
 
@@ -87,11 +109,38 @@ class Pixel(Observation):
             shape_list[self.t_axis] = self.cadence.shape[0]
         self.shape = tuple(shape_list)
 
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
         return
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         tstart: Observation start time.
+                         nexp:   Number of exposures in the observation.
+                         exp:    Exposure time for each observation.
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        tbd = dict['tbd']
+        return Instant(tbd)
     #===========================================================================
 
 

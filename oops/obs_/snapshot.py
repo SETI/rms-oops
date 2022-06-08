@@ -26,13 +26,26 @@ class Snapshot(Observation):
 
     INVENTORY_IMPLEMENTED = True
 
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#    PACKRAT_ARGS = ['axes', 'cadence', 'fov', 'path', 'frame',
+#                    '**subfields']
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     PACKRAT_ARGS = ['axes', 'tstart', 'texp', 'fov', 'path', 'frame',
                     '**subfields']
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
     #===========================================================================
     # __init__
     #===========================================================================
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#    def __init__(self, axes, cadence, fov, path, frame, **subfields):
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for a Snapshot.
@@ -44,35 +57,79 @@ class Snapshot(Observation):
                         appear at the location of the array's v-axis. For
                         example, ('v','u'), is correct for a 2-D array read from
                         an image file in FITS or VICAR format.
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#            cadence     a Cadence object defining the start time and duration 
+#                        of the snapshot.  Alternatively, a dictionary 
+#                        containing the following entries, from which a
+#                        cadence object is constructed:
+#
+#                         tstart: Observation start time.
+#                         texp:   Exposure time for the observation.
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
             tstart      the start time of the observation in seconds TDB.
+
             texp        exposure time of the observation in seconds.
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y).
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        self.cadence = Metronome(tstart, texp, texp, 1)
+	
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.axes = list(axes)
         self.u_axis = self.axes.index('u')
         self.v_axis = self.axes.index('v')
-        self.uv_shape = list(self.fov.uv_shape.vals)
-
         self.swap_uv = (self.u_axis > self.v_axis)
 
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
+        self.uv_shape = list(self.fov.uv_shape.vals)
+        self.shape = len(axes) * [0]
+        self.shape[self.u_axis] = self.uv_shape[0]
+        self.shape[self.v_axis] = self.uv_shape[1]
+
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        if isinstance(cadence, Cadence): self.cadence = cadence
+#        else: self.cadence = self._default_cadence(cadence)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+        self.cadence = Metronome(tstart, texp, texp, 1)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
         self.tstart = tstart
         self.texp = texp
         self.t_axis = -1
@@ -82,13 +139,36 @@ class Snapshot(Observation):
         self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
         self.scalar_midtime = Scalar(self.midtime)
 
-        self.shape = len(axes) * [0]
-        self.shape[self.u_axis] = self.uv_shape[0]
-        self.shape[self.v_axis] = self.uv_shape[1]
-
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         tstart: Observation start time.
+                         texp:   Exposure time for the observation.
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        tstart = dict['tstart']
+        texp = dict['texp']
+        return Metronome(tstart, texp, texp, 1)
     #===========================================================================
 
 
@@ -371,8 +451,15 @@ class Snapshot(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Snapshot(self.axes, {'tstart':self.time[0] + dtime, 'texp':self.texp},
+#                       self.fov, self.path, self.frame)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Snapshot(self.axes, self.time[0] + dtime, self.texp,
                        self.fov, self.path, self.frame)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -739,8 +826,15 @@ class Test_Snapshot(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (10,20))
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Snapshot(axes=('u','v'), {'tstart':98., 'texp':2.},
+#                       fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Snapshot(axes=('u','v'), tstart=98., texp=2.,
                        fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         indices = Vector([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
 
@@ -832,8 +926,16 @@ class Test_Snapshot(unittest.TestCase):
         #----------------------------------
         # Alternative axis order ('v','u')
         #----------------------------------
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Snapshot(axes=('v','u'), {'tstart':98., 'texp':2.},
+#                       fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Snapshot(axes=('v','u'), tstart=98., texp=2.,
                        fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
         indices = Pair([(0,0),(0,10),(20,0),(20,10),(20,11)])
 
         (uv,time) = obs.uvt(indices)
@@ -848,8 +950,16 @@ class Test_Snapshot(unittest.TestCase):
         #----------------------------------------
         # Alternative axis order ('v', 'a', 'u')
         #----------------------------------------
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Snapshot(axes=('v','a','u'), {'tstart':98., 'texp':2.},
+#                       fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Snapshot(axes=('v','a','u'), tstart=98., texp=2.,
                        fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
         indices = Vector([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
         (uv,time) = obs.uvt(indices)
 

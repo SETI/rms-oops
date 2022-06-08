@@ -165,9 +165,12 @@ class RasterSlit1D(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        ### TBD
+        tstart = dict['tstart']
+        tstride = dict['tstride']
+        texp = dict['texp']
+        steps = dict['steps']
 
-        return Metronome(tstart, length_stride, texp, swath_length)
+        return Metronome(tstart, tstride, texp, steps)
     #===========================================================================
 
 

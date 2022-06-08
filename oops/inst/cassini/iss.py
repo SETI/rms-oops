@@ -77,7 +77,13 @@ def from_file(filespec, fast_distortion=True,
     #------------------------------------------------
     # Create a Snapshot
     #------------------------------------------------
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#    result = oops.obs.Snapshot(("v","u"), {'tstart':tstart, 'texp':texp},
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     result = oops.obs.Snapshot(("v","u"), tstart, texp,
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
                                ISS.fovs[camera,mode, fast_distortion],
                                "CASSINI", "CASSINI_ISS_" + camera,
                                dict = vicar_dict,       # Add the VICAR dict

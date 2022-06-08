@@ -2,7 +2,7 @@
 # oops/obs_/pushbroom.py: Subclass Pushbroom of class Observation
 ################################################################################
 
-from IPython import embed   ## TODO: remove
+#from IPython import embed   ## TODO: remove
 
 import numpy as np
 from polymath import *
@@ -174,9 +174,12 @@ class Pushbroom(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        ### TBD
+        tstart = dict['tstart']
+        tstride = dict['tstride']
+        texp = dict['texp']
+        swath_length = dict['swath_length']
 
-        return Metronome(tstart, length_stride, texp, swath_length)
+        return Metronome(tstart, tstride, texp, swath_length)
     #===========================================================================
 
 

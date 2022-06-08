@@ -59,10 +59,14 @@ class RasterScan(Observation):
 
             cadence     a 2-D Cadence object defining the start time and
                         duration of each sample.  Alternatively, a dictionary 
-                        containing the following entries, from which a cadence 
-                        object is constructed:
+                        containing the following entries, from which a dual 
+                        cadence object is constructed:
 
-                        TBD
+                         long:  long cadence or dictionary containing metronome 
+                                cadence parameters.
+
+                         short: short cadence or dictionary containing metronome 
+                                cadence parameters.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -155,6 +159,32 @@ class RasterScan(Observation):
 
 
     #===========================================================================
+    # _default_single_cadence
+    #===========================================================================
+    def _default_single_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object from a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         tstart: Observation start time.
+                         texp:   Exposure time for the observation.
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        tstart = dict['tstart']
+        tstride = dict['tstride']
+        texp = dict['texp']
+        steps = dict['steps']
+        return Metronome(tstart, tstride, texp, steps)
+    #===========================================================================
+
+
+
+    #===========================================================================
     # _default_cadence
     #===========================================================================
     def _default_cadence(self, dict):
@@ -170,9 +200,15 @@ class RasterScan(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        ### TBD
+        long = dict['long']
+        short = dict['short']
 
-        return Metronome(tstart, length_stride, texp, swath_length)
+        if isinstance(long, Cadence): long_cadence = long
+        else: long_cadence = self._default_single_cadence(long)
+        if isinstance(short, Cadence): short_cadence = short
+        else: short_cadence = self._default_single_cadence(short)
+
+        return DualCadence(long_cadence, short_cadence)
     #===========================================================================
 
 

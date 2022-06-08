@@ -4,7 +4,7 @@
 
 from __future__ import print_function
 
-from IPython import embed   ## TODO: remove
+#from IPython import embed   ## TODO: remove
 
 import numpy as np
 import oops

@@ -23,14 +23,28 @@ class Slit1D(Observation):
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#    PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path',
+#                    'frame', '**subfields']
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     PACKRAT_ARGS = ['axes', 'det_size', 'tstart', 'texp', 'fov', 'path',
                     'frame', '**subfields']
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
     #===========================================================================
     # __init__
     #===========================================================================
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#    def __init__(self, axes, det_size, cadence, fov, path, frame,
+#                       **subfields):
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     def __init__(self, axes, det_size, tstart, texp, fov, path, frame,
                        **subfields):
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for a Slit1D observation.
@@ -46,9 +60,23 @@ class Slit1D(Observation):
                         slit. It will be < 1 if there are gaps between the
                         detectors.
 
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#            cadence     a Cadence object defining the start time and duration 
+#                        of the slit1d.  Alternatively, a dictionary 
+#                        containing the following entries, from which a
+#                        cadence object is constructed:
+#
+#                         tstart: Observation start time.
+#                         texp:   Exposure time for the observation.
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
             tstart      the start time of the observation in seconds TDB.
 
             texp        exposure time of the observation in seconds.
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+
 
 
             fov         a FOV (field-of-view) object, which describes the field
@@ -69,16 +97,28 @@ class Slit1D(Observation):
                         Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        self.cadence = Metronome(tstart, texp, texp, 1)
+
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
+        self.shape = len(axes) * [0]
+
+        self.det_size = det_size
+        self.slit_is_discontinuous = (self.det_size < 1)
+
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.axes = list(axes)
         assert (('u' in self.axes and 'v' not in self.axes) or
                 ('v' in self.axes and 'u' not in self.axes))
-
-        self.shape = len(axes) * [0]
 
         if 'u' in self.axes:
             self.u_axis = self.axes.index('u')
@@ -102,9 +142,21 @@ class Slit1D(Observation):
         self.uv_shape = self.fov.uv_shape.vals
         assert self.fov.uv_shape.vals[self.cross_slit_uv_axis] == 1
 
-        self.det_size = det_size
-        self.slit_is_discontinuous = (self.det_size < 1)
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        if isinstance(cadence, Cadence): self.cadence = cadence
+#        else: self.cadence = self._default_cadence(cadence)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+        self.cadence = Metronome(tstart, texp, texp, 1)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+	
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
         self.tstart = tstart
         self.texp = texp
         self.t_axis = -1
@@ -114,9 +166,37 @@ class Slit1D(Observation):
         self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
         self.scalar_midtime = Scalar(self.midtime)
 
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         tstart: Observation start time.
+                         nexp:   Number of exposures in the observation.
+                         exp:    Exposure time for each observation.
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        tstart = dict['tstart']
+        texp = dict['texp']
+        return Metronome(tstart, texp, texp, 1)
     #===========================================================================
 
 
@@ -354,8 +434,16 @@ class Slit1D(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Slit1D(self.axes, self.det_size, 
+#                    {'tstart':self.tstart + dtime, 'texp':self.texp},
+#                     self.fov, self.path, self.frame)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Slit1D(self.axes, self.det_size, self.tstart + dtime, self.texp,
                      self.fov, self.path, self.frame)
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -386,8 +474,15 @@ class Test_Slit1D(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (20,1))
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Slit1D(axes=('u'), det_size=1, {'tstart':0., 'texp':10.},
+#                   fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Slit1D(axes=('u'), det_size=1, tstart=0., texp=10.,
                    fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         indices = Vector([(0,0),(1,0),(20,0),(21,0)])
 
@@ -476,8 +571,15 @@ class Test_Slit1D(unittest.TestCase):
         #----------------------------------------
 
         fov = FlatFOV((0.001,0.001), (20,1))
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Slit1D(axes=('a','u', 'b'), det_size=1, {'tstart':0., 'texp':10.},
+#                     fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Slit1D(axes=('a','u', 'b'), det_size=1, tstart=0., texp=10.,
                      fov=fov, path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         indices = Vector([(0,0,0),(0,1,99),(0,19,99),(10,20,99),(10,21,99)])
 
@@ -504,8 +606,15 @@ class Test_Slit1D(unittest.TestCase):
         #--------------------------------------------------
 
         fov = FlatFOV((0.001,0.001), (20,1))
+#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#        obs = Slit1D(axes=('u'), det_size=0.8, {'tstart':0., 'texp':10.}, fov=fov,
+#                     path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
         obs = Slit1D(axes=('u'), det_size=0.8, tstart=0., texp=10., fov=fov,
                      path='SSB', frame='J2000')
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         eps = 1.e-14
         delta = 1.e-13

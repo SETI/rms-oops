@@ -25,11 +25,15 @@ import oops
 # Global Variables
 ########################################
 
+#-----------------------
 # A handy constant
+#-----------------------
 RADIANS_PER_ARCSEC = oops.RPD / 3600.
 
+#----------------------------------------------------------------------------
 # This should be a reasonably complete procedure for mapping the first three
 # letters of the P.I.'s target name to the SPICE name of the target body.
+#----------------------------------------------------------------------------
 
 KECK_TARGET_DICT = {"MAR": "MARS",
                     "JUP": "JUPITER",
@@ -45,7 +49,9 @@ KECK_TARGET_DICT = {"MAR": "MARS",
                     "TIT": "TITAN",
                     "PHO": "PHOEBE"}
 
+#--------------------------------------------
 # Define some important paths and frames
+#--------------------------------------------
 oops.define_solar_system("1990-01-01", "2020-01-01")
 
 ################################################################################
@@ -63,46 +69,105 @@ def from_file(filespec, **parameters):
 # Class Keck
 ################################################################################
 
+#*******************************************************************************
+# Keck
+#*******************************************************************************
 class Keck(object):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """This class defines functions and properties unique to the Keck
     Telescope.
 
     Objects of this class are empty; they only exist to support inheritance.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # filespec
+    #===========================================================================
     def filespec(self, keck_file):
-        """Returns the full directory path and name of the file."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the full directory path and name of the file.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------------
         # Found by poking around inside a pyfits object
+        #---------------------------------------------------
         return keck_file._HDUList__file._File__file.name
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # telescope_name
+    #===========================================================================
     def telescope_name(self, keck_file):
-        """Returns the name of the telescope from which the observation was
-        obtained."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the name of the telescope from which the observation was
+        obtained.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return keck_file[0].header["TELESCOP"]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # instrument_name
+    #===========================================================================
     def instrument_name(self, keck_file):
-        """Returns the name of the Keck instrument associated with the file."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the name of the Keck instrument associated with the file.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return keck_file[0].header["CURRINST"]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # detector_name
+    #===========================================================================
     def detector_name(self, keck_file, **parameters):
-        """Returns the name of the detector on the Keck instrument that was used
-        to obtain this file."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the name of the detector on the Keck instrument that was used
+        to obtain this file.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return keck_file[0].header["CAMNAME"]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # data_array
+    #===========================================================================
     def data_array(self, keck_file, **parameters):
-        """Returns an array containing the data."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns an array containing the data.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return keck_file[0].data
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_limits
+    #===========================================================================
     # This works for Snapshot observations. Others must override.
     def time_limits(self, hst_file, **parameters):
-        """Returns a tuple containing the overall start and end times of the
-        observation."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns a tuple containing the overall start and end times of the
+        observation.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         date_obs = hst_file[0].header["DATE-OBS"]
         time_obs_start = hst_file[0].header["EXPSTART"]
         time_obs_end = hst_file[0].header["EXPSTOP"]
@@ -113,11 +178,20 @@ class Keck(object):
                                                        time_obs_end))
 
         return (tdb0, tdb1)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # target_body
+    #===========================================================================
     def target_body(self, keck_file):
-        """This procedure returns the body object defining the image target. It
-        is based on educated guesses from the target name used by the P.I."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        This procedure returns the body object defining the image target. It
+        is based on educated guesses from the target name used by the P.I.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         global KECK_TARGET_DICT
 
         targname = keck_file[0].header["OBJECT"].upper()
@@ -128,21 +202,33 @@ class Keck(object):
         if len(targname) >= 3:
             key3 = targname[0:3]
 
+        #----------------------------------
+        # Raises a KeyError on failure
+        #----------------------------------
         try:
             body_name = KECK_TARGET_DICT[key3]
         except KeyError:
             body_name = KECK_TARGET_DICT[key2]
-        # Raises a KeyError on failure
 
         return oops.registry.body_lookup(body_name)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # construct_snapshot
+    #===========================================================================
     def construct_snapshot(self, keck_file, **parameters):
-        """Returns a Snapshot object for the data found in the specified image.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Returns a Snapshot object for the data found in the specified image.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         fov = self.define_fov(keck_file, **parameters)
 
+        #---------------------------------------------------------
         # Create a list of FITS header objects for a subfield
+        #---------------------------------------------------------
         headers = []
         for objects in keck_file:
             headers.append(objects.header)
@@ -191,22 +277,34 @@ class Keck(object):
                         detector = self.detector_name(keck_file),
                         filter = self.filter_name(keck_file),
                         headers = headers)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # from_opened_fitsfile
+    #===========================================================================
     @staticmethod
     def from_opened_fitsfile(keck_file, **parameters):
-        """A general, static method to return an Observation object based on an
-        Keck data file generated by the Keck Telescope."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A general, static method to return an Observation object based on an
+        Keck data file generated by the Keck Telescope.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    # Make an instance of the Keck class
+        # Make an instance of the Keck class
         this = Keck()
 
+        #----------------------------------------
         # Confirm that the telescope is Keck
+        #----------------------------------------
         if this.telescope_name(keck_file) != "Keck II":
             raise IOError("not a Keck II file: " + this.filespec(keck_file))
 
+        #-------------------------------
         # Figure out the instrument
+        #-------------------------------
         instrument = this.instrument_name(keck_file)
 
         if instrument == "NIRC2":
@@ -218,6 +316,13 @@ class Keck(object):
                           this.filespec(keck_file) + ": " + instrument)
 
         return obs
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -225,10 +330,15 @@ class Keck(object):
 
 class Test_Keck(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         import cspyce
         from oops.inst.keck import Keck
+    #===========================================================================
+
 
 ########################################
 if __name__ == '__main__':

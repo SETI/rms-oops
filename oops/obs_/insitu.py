@@ -38,34 +38,79 @@ class InSitu(Observation):
 
         Input:
             cadence     a Cadence object defining the time and duration of
-                        each "measurement". As a special case, a Scalar value
-                        is converted to a Cadence of subclass Instant.
+                        each "measurement". Alternatively, a dictionary 
+                        containing the following entries, from which a cadence 
+                        object is constructed:
+
+                         tbd:    TBD
+
             path        the path waypoint co-located with the observer.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if isinstance(cadence, Cadence):
-            self.cadence = cadence
-        else:
-            self.cadence = Instant(cadence)
 
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.fov = NullFOV()
-        self.uv_shape = (1,1)
+        self.path = Path.as_waypoint(path)
+        self.frame = Frame.J2000
+	
+        #--------------------------------------------------
+        # Axes
+        #--------------------------------------------------
         self.u_axis = -1
         self.v_axis = -1
         self.swap_uv = False
-
         self.t_axis = -1
+
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+	if isinstance(cadence, Cadence): self.cadence = cadence
+	else: self.cadence = self._default_cadence(cadence)
+
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
         self.shape = self.cadence.shape
+        self.uv_shape = (1,1)
 
-        self.path = Path.as_waypoint(path)
-        self.frame = Frame.J2000
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
+        self.time = self.cadence.time
+        self.midtime = self.cadence.midtime
 
+        #--------------------------------------------------
+        # No optional subfields
+        #--------------------------------------------------
         self.subfields = {}
 
         return
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # _default_cadence
+    #===========================================================================
+    def _default_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         tstart: Observation start time.
+                         nexp:   Number of exposures in the observation.
+                         exp:    Exposure time for each observation.
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        tbd = dict['tbd']
+        return Instant(tbd)
     #===========================================================================
 
 

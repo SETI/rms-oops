@@ -82,12 +82,9 @@ class RasterSlit(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-#        self.cadence = cadence
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
-
-#        assert len(self.cadence.shape) == 2
 
         #--------------------------------------------------
         # Cadence
@@ -162,6 +159,32 @@ class RasterSlit(Observation):
 
 
     #===========================================================================
+    # _default_single_cadence
+    #===========================================================================
+    def _default_single_cadence(self, dict):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a cadence object from a dictionary of parameters.
+
+        Input:
+            dict        Dictionary containing the following entries:
+
+                         tstart: Observation start time.
+                         texp:   Exposure time for the observation.
+
+        Return:         Cadence object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        tstart = dict['tstart']
+        tstride = dict['tstride']
+        texp = dict['texp']
+        steps = dict['steps']
+        return Metronome(tstart, tstride, texp, steps)
+    #===========================================================================
+
+
+
+    #===========================================================================
     # _default_cadence
     #===========================================================================
     def _default_cadence(self, dict):
@@ -177,9 +200,15 @@ class RasterSlit(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        ### TBD
+        slow = dict['slow']
+        fast = dict['fast']
 
-        return Metronome(tstart, length_stride, texp, swath_length)
+        if isinstance(slow, Cadence): slow_cadence = slow
+        else: slow_cadence = self._default_single_cadence(slow)
+        if isinstance(fast, Cadence): fast_cadence = fast
+        else: fast_cadence = self._default_single_cadence(fast)
+
+        return DualCadence(slow_cadence, fast_cadence)
     #===========================================================================
 
 

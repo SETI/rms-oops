@@ -53,7 +53,8 @@ class Slit(Observation):
                         dictionary containing the following entries, from 
                         which a cadence object is constructed:
 
-                        TBD
+                         times: a list or 1-D array of times in seconds.
+                         texp:  exposure time in seconds for each step.
 
 
             fov         a FOV (field-of-view) object, which describes the field
@@ -78,7 +79,6 @@ class Slit(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-#        self.cadence = cadence
         self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
@@ -163,9 +163,10 @@ class Slit(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        ### TBD
+        times = dict['times']
+        texp = dict['texp']
 
-        return Metronome(tstart, length_stride, texp, swath_length)
+        return Sequence(times, texp)
     #===========================================================================
 
 

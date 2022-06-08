@@ -8,8 +8,13 @@ from polymath import *
 
 from oops.fov_.fov import FOV
 
+#*******************************************************************************
+# Meshgrid
+#*******************************************************************************
 class Meshgrid(object):
-    """A Meshgrid object defines a arbitrary array of coordinate pairs within
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A Meshgrid object defines a arbitrary array of coordinate pairs within
     a Field of View. It caches information about the line of sight and various
     derivatives, preventing the need for repeated calls to the FOV functions
     when the same field of view describes multiple images.
@@ -25,11 +30,16 @@ class Meshgrid(object):
     los_w_derivs    the line-of-sight unit vectors with d_duv.
     dlos_duv        the partial derivatives dlos/d(u,v).
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['fov', 'uv', 'fov_keywords']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, fov, uv_pair, fov_keywords={}):
-        """The Meshgrid constructor.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The Meshgrid constructor.
 
         Input:
             fov         a FOV object.
@@ -39,7 +49,7 @@ class Meshgrid(object):
                         FOV methods, containing parameters that might affect
                         the properties of the FOV.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.fov = fov
         self.uv = Pair.as_pair(uv_pair).wod
         self.fov_keywords = fov_keywords
@@ -48,11 +58,19 @@ class Meshgrid(object):
         self.filled_los_w_derivs = None
         self.filled_los = None
         self.filled_uv_w_derivs = None
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # for_fov
+    #===========================================================================
     @staticmethod
     def for_fov(fov, origin=0.5, undersample=1, oversample=1, limit=None,
                      swap=False, fov_keywords={}):
-        """Returns a 2-D rectangular Meshgrid object for a specified sampling of
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns a 2-D rectangular Meshgrid object for a specified sampling of
         the FOV.
 
         Input:
@@ -80,8 +98,11 @@ class Meshgrid(object):
                         FOV methods, containing parameters that might affect
                         the properties of the FOV.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------
         # Convert inputs to NumPy 2-element arrays
+        #---------------------------------------------
         if limit is None: limit = fov.uv_shape
         if isinstance(limit, numbers.Number): limit = (limit,limit)
         limit = Pair.as_pair(limit).values.astype('float')
@@ -97,14 +118,18 @@ class Meshgrid(object):
             oversample = (oversample, oversample)
         oversample = Pair.as_pair(oversample).values.astype('float')
 
+        #----------------------------------
         # Construct the 1-D index arrays
+        #----------------------------------
         step = undersample/oversample
         limit = limit + step * 1.e-10   # Allow a little slop at the upper end
 
         urange = np.arange(origin[0], limit[0], step[0])
         vrange = np.arange(origin[1], limit[1], step[1])
 
+        #-----------------------------------
         # Construct the 2-D index arrays
+        #-----------------------------------
         usize = urange.size
         vsize = vrange.size
 
@@ -113,11 +138,19 @@ class Meshgrid(object):
 
         grid = Pair.combos(urange, vrange).values
 
+        #---------------------------
         # Swap axes if necessary
+        #---------------------------
         if usize > 1 and vsize > 1 and swap: grid = grid.swapaxes(0,1)
 
         return Meshgrid(fov, grid, fov_keywords)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # los_w_derivs
+    #===========================================================================
     @property
     def los_w_derivs(self):
         if self.filled_los_w_derivs is None:
@@ -126,7 +159,13 @@ class Meshgrid(object):
             self.filled_los_w_derivs = los
 
         return self.filled_los_w_derivs
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # los
+    #===========================================================================
     @property
     def los(self):
         if self.filled_los is None:
@@ -137,11 +176,23 @@ class Meshgrid(object):
                                                        **self.fov_keywords)
 
         return self.filled_los
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dlos_duv
+    #===========================================================================
     @property
     def dlos_duv(self):
         return self.los_w_derivs.d_duv
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_w_derivs
+    #===========================================================================
     @property
     def uv_w_derivs(self):
         if self.filled_uv_w_derivs is None:
@@ -150,10 +201,23 @@ class Meshgrid(object):
             self.filled_uv_w_derivs = self.uv.with_deriv('los', uv.d_dlos)
 
         return self.filled_uv_w_derivs
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # duv_dlos
+    #===========================================================================
     @property
     def duv_dlos(self):
         return self.uv_w_derivs.d_dlos
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -161,12 +225,19 @@ class Meshgrid(object):
 
 import unittest
 
+#*******************************************************************************
+# Test_Meshgrid
+#*******************************************************************************
 class Test_Meshgrid(unittest.TestCase):
 
     def runTest(self):
 
         # TBD
         pass
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':
