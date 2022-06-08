@@ -91,8 +91,8 @@ class FlatFOV(FOV):
                      FOV coordinates.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-	return xy_pair.element_div(self.uv_scale) + self.uv_los
+        xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
+        return xy_pair.element_div(self.uv_scale) + self.uv_los
     #===========================================================================
 
 
@@ -115,8 +115,8 @@ class FlatFOV(FOV):
                      FOV coordinates.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
-	return (uv_pair - self.uv_los).element_mul(self.uv_scale)
+        uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
+        return (uv_pair - self.uv_los).element_mul(self.uv_scale)
     #===========================================================================
 
 

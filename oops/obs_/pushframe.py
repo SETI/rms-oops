@@ -152,8 +152,8 @@ class Pushframe(Observation):
 
         tfrac0 = ((time0 - times[0])/dtimes).vals.T
         tfrac1 = ((time1 - times[0])/dtimes).vals.T
-	self.tfrac = ( Scalar.as_scalar(np.broadcast_to(tfrac0, self.shape)), 
-		      Scalar.as_scalar(np.broadcast_to(tfrac1, self.shape)) )
+        self.tfrac = ( Scalar.as_scalar(np.broadcast_to(tfrac0, self.shape)), 
+                       Scalar.as_scalar(np.broadcast_to(tfrac1, self.shape)) )
 
         #--------------------------------------------------
         # Optional subfields
@@ -328,9 +328,9 @@ class Pushframe(Observation):
                         time of each (u,v) pair, as seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	uv_pair = uv_pair.as_int()
-	tstep = uv_pair.to_scalar(self.cross_scan_uv_index)
-	(time0, time1) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
+        uv_pair = uv_pair.as_int()
+        tstep = uv_pair.to_scalar(self.cross_scan_uv_index)
+        (time0, time1) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
         if fovmask:
             is_outside = self.uv_is_outside(uv_pair, inclusive=True)

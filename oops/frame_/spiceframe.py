@@ -507,7 +507,9 @@ class Test_SpiceFrame(unittest.TestCase):
 
         for i,t in np.ndenumerate(time.vals):
             matrix6 = cspyce.sxform('J2000', 'IAU_EARTH', t)
-            spiceval = np.matrix(matrix6) * np.matrix(posvel[i])
+# The matrix subclass is to be deprecated? Really?
+#             spiceval = np.matrix(matrix6) * np.matrix(posvel[i])
+            spiceval = np.matmul(matrix6, posvel[i])[...,np.newaxis]
 
             dpos = rotated.pos[i].vals[...,np.newaxis] - spiceval[0:3,0]
             dvel = rotated.vel[i].vals[...,np.newaxis] - spiceval[3:6,0]

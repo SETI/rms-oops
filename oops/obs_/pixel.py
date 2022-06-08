@@ -88,8 +88,8 @@ class Pixel(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-	if isinstance(cadence, Cadence): self.cadence = cadence
-	else: self.cadence = self._default_cadence(cadence)
+        if isinstance(cadence, Cadence): self.cadence = cadence
+        else: self.cadence = self._default_cadence(cadence)
 
         #--------------------------------------------------
         # Timing

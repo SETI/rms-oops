@@ -54,7 +54,7 @@ class InSitu(Observation):
         self.fov = NullFOV()
         self.path = Path.as_waypoint(path)
         self.frame = Frame.J2000
-	
+
         #--------------------------------------------------
         # Axes
         #--------------------------------------------------
@@ -66,8 +66,8 @@ class InSitu(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-	if isinstance(cadence, Cadence): self.cadence = cadence
-	else: self.cadence = self._default_cadence(cadence)
+        if isinstance(cadence, Cadence): self.cadence = cadence
+        else: self.cadence = self._default_cadence(cadence)
 
         #--------------------------------------------------
         # Shape / Size

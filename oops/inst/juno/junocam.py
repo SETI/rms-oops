@@ -2,7 +2,7 @@
 # oops/inst/juno/junocam.py
 ################################################################################
 
-#from IPython import embed   ## TODO: remove
+from IPython import embed   ## TODO: remove
 
 import numpy as np
 import julian
@@ -262,7 +262,7 @@ class Metadata(object):
         self.nlines = label['IMAGE']['LINES']
         self.nsamples = label['IMAGE']['LINE_SAMPLES']
         self.frlines = 128
-        self.nframelets = self.nlines/self.frlines
+        self.nframelets = int(self.nlines/self.frlines)
 
         #-----------------
         # Exposure time
@@ -312,10 +312,10 @@ class Metadata(object):
             #- - - - - - - - - - - - - - - - - - - - 
             # Filter-specific instrument id
             #- - - - - - - - - - - - - - - - - - - - 
-            if self.filter == 'RED': self.instc = -61503l
-            if self.filter == 'GREEN': self.instc = -61502l
-            if self.filter == 'BLUE': self.instc = -61501l
-            if self.filter == 'METHANE': self.instc = -61504l
+            if self.filter == 'RED': self.instc = -61503
+            if self.filter == 'GREEN': self.instc = -61502
+            if self.filter == 'BLUE': self.instc = -61501
+            if self.filter == 'METHANE': self.instc = -61504
             sinstc = str(self.instc)
 
             #- - - - - - - - - - - - - - - - - - - - - 
@@ -336,6 +336,7 @@ class Metadata(object):
             #- - - - - - - 
             # FOV
             #- - - - - - - 
+            embed()
             k1_var = 'INS' + sinstc + '_DISTORTION_K1'
             k2_var = 'INS' + sinstc + '_DISTORTION_K2'
             cx_var = 'INS' + sinstc + '_DISTORTION_X'

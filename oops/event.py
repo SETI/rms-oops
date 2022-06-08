@@ -509,7 +509,7 @@ class Event(object):
 
     ############################################################################
     # Special properties: Photon arrival vectors
-    # 
+    #
     # These values are cached for repeated use.
     #
     # Upon setting any of these parameters, the immediate value is saved and at
@@ -538,7 +538,7 @@ class Event(object):
     @arr.setter
     def arr(self, value):
         if (self.__arr_ is not None) or (self.__arr_ap_ is not None):
-            raise ValueError('arriving photons were already defined in ' + 
+            raise ValueError('arriving photons were already defined in ' +
                              str(self))
 
         #---------------------------------------------------
@@ -584,7 +584,7 @@ class Event(object):
             return
 
         if (self.__arr_ap_ is not None) or (self.__arr_ is not None):
-            raise ValueError('arriving photons were already defined in ' + 
+            raise ValueError('arriving photons were already defined in ' +
                              str(self))
 
         #---------------------------------------------------
@@ -683,7 +683,7 @@ class Event(object):
     @arr_lt.setter
     def arr_lt(self, value):
         if self.__arr_lt_ is not None:
-            raise ValueError('arriving photons were already defined in ' + 
+            raise ValueError('arriving photons were already defined in ' +
                              str(self))
 
         #---------------------------------------------------
@@ -704,7 +704,7 @@ class Event(object):
 
     ############################################################################
     # Special properties: Photon arrival vectors, reversed
-    # 
+    #
     # These values are cached for repeated use.
     #
     # Upon setting any of these parameters, the immediate value is saved and at
@@ -834,7 +834,7 @@ class Event(object):
 
     ############################################################################
     # Special properties: Photon departure vectors
-    # 
+    #
     # These values are cached for repeated use.
     #
     # Upon setting any of these parameters, the immediate value is saved and at
@@ -863,7 +863,7 @@ class Event(object):
     @dep.setter
     def dep(self, value):
         if (self.__dep_ is not None) or (self.__dep_ap_ is not None):
-            raise ValueError('departing photons were already defined in ' + 
+            raise ValueError('departing photons were already defined in ' +
                              str(self))
 
         #----------------------------------------------------
@@ -907,7 +907,7 @@ class Event(object):
         if ABERRATION.old: return self.__dep_
 
         if (self.__dep_ap_ is not None) or (self.__dep_ is not None):
-            raise ValueError('departing photons were already defined in ' + 
+            raise ValueError('departing photons were already defined in ' +
                              str(self))
 
         #-----------------------------------------------------------------------
@@ -1006,7 +1006,7 @@ class Event(object):
     @dep_lt.setter
     def dep_lt(self, value):
         if self.__dep_lt_ is not None:
-            raise ValueError('departing photons were already defined in ' + 
+            raise ValueError('departing photons were already defined in ' +
                              str(self))
 
         #----------------------------------------------------
@@ -1045,7 +1045,7 @@ class Event(object):
     @perp.setter
     def perp(self, value):
         if self.__perp_ is not None:
-            raise ValueError('perpendiculars were already defined in ' + 
+            raise ValueError('perpendiculars were already defined in ' +
                              str(self))
 
         #----------------------------------------------------
@@ -1083,7 +1083,7 @@ class Event(object):
     @vflat.setter
     def vflat(self, value):
         if self.__vflat_ is not None:
-            raise ValueError('surface velocities were already defined in ' + 
+            raise ValueError('surface velocities were already defined in ' +
                              str(self))
 
         #----------------------------------------------------
@@ -1148,7 +1148,7 @@ class Event(object):
                      self.__origin_.path_id, ', ',
                      self.__frame_.frame_id]
 
-        keys = self.__subfields_.keys()
+        keys = list(self.__subfields_.keys())
         keys.sort()
         for key in keys:
             str_list += ['; ', key]
