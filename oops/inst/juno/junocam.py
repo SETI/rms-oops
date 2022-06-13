@@ -96,7 +96,6 @@ def from_file(filespec, fast_distortion=True,
 
 
 
-
         if not snap:
             item = (oops.obs.Pushframe(("vt","u"), 
                                 {'nexp':fmeta.tdi_stages, 
@@ -325,8 +324,8 @@ class Metadata(object):
             delta_var = prefix + '_INTERFRAME_DELTA'
             bias_var = prefix + '_START_TIME_BIAS'
             
-            self.delta = cspyce.gdpool(delta_var)
-            self.bias = cspyce.gdpool(bias_var)
+            self.delta = cspyce.gdpool(delta_var, 0)[0]
+            self.bias = cspyce.gdpool(bias_var, 0)[0]
 
             self.tinter = self.tinter0 + self.delta
             self.tstart = self.tstart0 + self.bias + frn*self.tinter
@@ -336,19 +335,19 @@ class Metadata(object):
             #- - - - - - - 
             # FOV
             #- - - - - - - 
-            embed()
             k1_var = 'INS' + sinstc + '_DISTORTION_K1'
             k2_var = 'INS' + sinstc + '_DISTORTION_K2'
             cx_var = 'INS' + sinstc + '_DISTORTION_X'
             cy_var = 'INS' + sinstc + '_DISTORTION_Y'
             fo_var = 'INS' + sinstc + '_FOCAL_LENGTH'
             px_var = 'INS' + sinstc + '_PIXEL_SIZE'
-            k1 = cspyce.gdpool(k1_var)[0]
-            k2 = cspyce.gdpool(k2_var)[0]
-            cx = cspyce.gdpool(cx_var)[0]
-            cy = cspyce.gdpool(cy_var)[0]
-            fo = cspyce.gdpool(fo_var)[0]
-            px = cspyce.gdpool(px_var)[0]
+
+            k1 = cspyce.gdpool(k1_var, 0)[0]
+            k2 = cspyce.gdpool(k2_var, 0)[0]
+            cx = cspyce.gdpool(cx_var, 0)[0]
+            cy = cspyce.gdpool(cy_var, 0)[0]
+            fo = cspyce.gdpool(fo_var, 0)[0]
+            px = cspyce.gdpool(px_var, 0)[0]
 
             scale = px/fo
             distortion_coeff = [1,0,k1,0,k2]

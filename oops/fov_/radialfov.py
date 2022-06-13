@@ -4,7 +4,7 @@
 
 from __future__ import print_function
 
-#from IPython import embed   ## TODO: remove
+from IPython import embed   ## TODO: remove
 
 import numpy as np
 import oops
@@ -84,9 +84,9 @@ class RadialFOV(FOV):
         self.coefft_uv_from_xy = None
         
         if coefft_xy_from_uv is not None:
-            self.coefft_xy_from_uv = np.asarray(coefft_xy_from_uv)
+            self.coefft_xy_from_uv = np.asarray(coefft_xy_from_uv, dtype=object)
         if coefft_uv_from_xy is not None:
-            self.coefft_uv_from_xy = np.asarray(coefft_uv_from_xy)
+            self.coefft_uv_from_xy = np.asarray(coefft_uv_from_xy, dtype=object)
 
         assert (self.coefft_xy_from_uv is not None or
                 self.coefft_uv_from_xy is not None)

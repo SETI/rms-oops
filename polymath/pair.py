@@ -50,16 +50,23 @@ class Pair(Vector):
         value repeated.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        #-------------------------------------
+        # Pair: just return the input arg
+        #-------------------------------------
         if type(arg) == Pair:
             if recursive:
                 return arg
             return arg.wod
 
+        #-------------------------------------------------
+        # Qube (not Pair): convert to Pair if possible
+        #-------------------------------------------------
         if isinstance(arg, Qube):
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Collapse a 1x2 or 2x1 Matrix down to a Pair
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             if arg.numer in ((1,2), (2,1)):
                 return arg.flatten_numer(Pair, recursive)
 
@@ -74,12 +81,15 @@ class Pair(Vector):
                 return arg
             return arg.wod
 
-        #------------------------------------------------------
-        # Special case of a single number
-        #------------------------------------------------------
+        #--------------------------------------
+        # Single number: broadcast to Pair
+        #--------------------------------------
         if isinstance(arg, numbers.Number):
             return Pair((arg,arg))
 
+        #-----------------------
+        # Everything else
+        #-----------------------
         return Pair(arg)
     #===========================================================================
 
