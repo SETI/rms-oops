@@ -8,22 +8,34 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_log
+#*******************************************************************************
 class Test_Scalar_log(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #----------------------
+    # Individual values        
+    #----------------------
     self.assertEqual(Scalar(0.3).log(), np.log(0.3))
     self.assertEqual(type(Scalar(0.3).log()), Scalar)
 
     self.assertEqual(Scalar(1.).log(), np.log(1.))
     self.assertEqual(Scalar(1).log(), 0.)
 
-    # Multiple values
+    #---------------------
+    # Multiple values	      
+    #---------------------
     self.assertEqual(Scalar((1,2,3)).log(), np.log((1,2,3)))
     self.assertEqual(type(Scalar((1,2,3)).log()), Scalar)
 
-    # Arrays
+    #--------------
+    # Arrays	       
+    #--------------
     N = 1000
     x = Scalar(np.random.randn(N))
     y = x.log()
@@ -38,7 +50,9 @@ class Test_Scalar_log(unittest.TestCase):
         if np.all(x.values[i:i+2] >= 0):
             self.assertEqual(y[i:i+2], np.log(x.values[i:i+2]))
 
-    # Test valid units
+    #---------------------
+    # Test valid units	      
+    #---------------------
     values = np.abs(np.random.randn(10))
     random = Scalar(values, units=Units.KM)
     self.assertEqual(random.log(), Scalar(np.log(values)))
@@ -61,17 +75,23 @@ class Test_Scalar_log(unittest.TestCase):
     x = Scalar(-4., units=Units.UNITLESS)
     self.assertTrue(x.log().mask)
 
-    # Units should be removed
+    #-----------------------------
+    # Units should be removed	      
+    #-----------------------------
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.log().units is None)
 
-    # Masks
+    #--------------
+    # Masks	       
+    #--------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     y = x.log()
     self.assertTrue(np.all(y.mask[x.mask]))
 
-    # Derivatives
+    #------------------
+    # Derivatives          
+    #------------------
     N = 100
     x = Scalar(np.random.randn(N))
     x.insert_deriv('t', Scalar(np.random.randn(N)))
@@ -93,12 +113,16 @@ class Test_Scalar_log(unittest.TestCase):
         self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i],
                                delta = DEL * abs(dy_dt[i]))
 
-    # Derivatives should be removed if necessary
+    #-----------------------------------------------
+    # Derivatives should be removed if necessary    	
+    #-----------------------------------------------
     self.assertEqual(x.log(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertFalse(hasattr(x.log(recursive=False), 'd_dt'))
 
-    # Read-only status should NOT be preserved
+    #---------------------------------------------
+    # Read-only status should NOT be preserved	      
+    #---------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
@@ -113,6 +137,13 @@ class Test_Scalar_log(unittest.TestCase):
 
     x = Scalar(np.random.randn(N).clip(1.e-99,1.e99))
     self.assertEqual(x.log(), np.log(x.values))
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

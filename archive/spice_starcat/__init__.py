@@ -1,7 +1,12 @@
 from spice_stcx01 import stcl01, stcf01, stcg01
 
+#*******************************************************************************
+# SPICE_StarCat
+#*******************************************************************************
 class SPICE_StarCat(object):
-    """Python interface to the SPICE star catalog system.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Python interface to the SPICE star catalog system.
 
     Example:
         >>> from spice_starcat import SPICE_StarCat as StarCat
@@ -15,20 +20,35 @@ class SPICE_StarCat(object):
         # (ra, dec, ra_uncertainty, dec_uncertainty,
         #  catalog_number, spectral_type, v_magnitude)
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, filename):
-        """Creates a star catalog object by reading a specified SPICE binary
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Creates a star catalog object by reading a specified SPICE binary
         star catalog file "*.bdb".
 
         Input:
             filename        name of the star catalog object.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         self.filename = filename
         self.catalog = stcl01(filename)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # search
+    #===========================================================================
     def search(self, west_ra, east_ra, south_dec, north_dec):
-        """Returns a list of stars found. Each star is described by a tuple
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns a list of stars found. Each star is described by a tuple
         containing (RA, dec, RA uncertainty, dec uncertainty, catalog number,
         spectral type, V magnitude).
 
@@ -39,6 +59,7 @@ class SPICE_StarCat(object):
             south_dec       lower limit on dec (radians).
             north_dec       upper limit on dec (radians).
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         nstars = stcf01(self.catalog, west_ra, east_ra, south_dec, north_dec)
 
@@ -47,5 +68,12 @@ class SPICE_StarCat(object):
             results.append(tuple(stcg01(i)))
 
         return results
+    #===========================================================================
 
 
+
+
+#*******************************************************************************
+
+
+s

@@ -34,7 +34,6 @@ RADIANS_PER_ARCSEC = oops.RPD / 3600.
 # This should be a reasonably complete procedure for mapping the first three
 # letters of the P.I.'s target name to the SPICE name of the target body.
 #----------------------------------------------------------------------------
-
 KECK_TARGET_DICT = {"MAR": "MARS",
                     "JUP": "JUPITER",
                     "SAT": "SATURN",

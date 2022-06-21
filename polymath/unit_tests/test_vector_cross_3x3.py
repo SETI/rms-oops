@@ -8,8 +8,14 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Units
 
+#*******************************************************************************
+# Test_Vector_cross_3x3
+#*******************************************************************************
 class Test_Vector_cross_3x3(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
     omega = Vector(np.random.randn(30,3))
@@ -25,7 +31,9 @@ class Test_Vector_cross_3x3(unittest.TestCase):
     dots = omega.dot(cross1)
     self.assertTrue(np.all(np.abs(dots.values) < 1.e-14))
 
-    # Test units
+    #------------------
+    # Test units           
+    #------------------
     omega = Vector(np.random.randn(3), units=Units.KM)
     omega_as_matrix = omega.cross_product_as_matrix()
 
@@ -37,7 +45,9 @@ class Test_Vector_cross_3x3(unittest.TestCase):
     self.assertEqual(cross1.units, Units.KM/Units.SECONDS)
     self.assertEqual(cross2.units, Units.KM/Units.SECONDS)
 
-    # Derivatives, denom = ()
+    #-----------------------------
+    # Derivatives, denom = ()	      
+    #-----------------------------
     N = 100
     x = Vector(np.random.randn(N,3))
     y = Vector(np.random.randn(N,3))
@@ -113,7 +123,9 @@ class Test_Vector_cross_3x3(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k], dz_dg.values[i,k], delta=EPS)
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=EPS)
 
-    # Derivatives, denom = (3,), using matrix multiply
+    #------------------------------------------------------
+    # Derivatives, denom = (3,), using matrix multiply	       
+    #------------------------------------------------------
     z = y.cross_product_as_matrix() * x
 
     for i in range(N):
@@ -122,7 +134,9 @@ class Test_Vector_cross_3x3(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k], dz_dg.values[i,k], delta=EPS)
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=EPS)
 
-    # Derivatives, denom = (2,)
+    #--------------------------------
+    # Derivatives, denom = (2,)      	 
+    #--------------------------------
     N = 100
     x = Vector(np.random.randn(N,3))
     y = Vector(np.random.randn(N,3))
@@ -214,7 +228,9 @@ class Test_Vector_cross_3x3(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k,1], dz_dg1.values[i,k], delta=EPS)
         self.assertAlmostEqual(z.d_dh.values[i,k,1], dz_dh1.values[i,k], delta=EPS)
 
-    # Derivatives should be removed if necessary
+    #------------------------------------------------
+    # Derivatives should be removed if necessary     	 
+    #------------------------------------------------
     self.assertEqual(y.cross(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
     self.assertTrue(hasattr(x, 'd_dh'))
@@ -224,7 +240,9 @@ class Test_Vector_cross_3x3(unittest.TestCase):
     self.assertFalse(hasattr(y.cross(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.cross(x, recursive=False), 'd_dh'))
 
-    # Read-only status should be preserved
+    #-------------------------------------------
+    # Read-only status should be preserved	    
+    #-------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,3))
     x = Vector(np.random.randn(N,3))
@@ -239,6 +257,13 @@ class Test_Vector_cross_3x3(unittest.TestCase):
 
     self.assertFalse(y.as_readonly().cross(x).readonly)
     self.assertFalse(y.cross(x.as_readonly()).readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

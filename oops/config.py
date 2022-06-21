@@ -12,6 +12,9 @@
 # parameters is used.
 ################################################################################
 
+#*******************************************************************************
+# QUICK
+#*******************************************************************************
 class QUICK(object):
   flag = True                   # Defines the default behavior as quick=True or
                                 # quick=False.
@@ -56,13 +59,17 @@ class QUICK(object):
                                 # quaternions. DEPRECATED by perserved for
                                 # testing purposes.
 }
+#*******************************************************************************
+
 
 ################################################################################
 # Photon solver parameters
 ################################################################################
 
-# For Path._solve_photon()
 
+#*******************************************************************************
+# PATH_PHOTONS -- For Path._solve_photon()
+#*******************************************************************************
 class PATH_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
     dlt_precision = 1.e-6       # Iterations stops when every change in light
@@ -72,9 +79,13 @@ class PATH_PHOTONS(object):
                                 # travel time before they are truncated. This
                                 # should be related to the physical scale of
                                 # the system being studied.
+#*******************************************************************************
 
-# For Surface._solve_photon_by_los()
 
+
+#*******************************************************************************
+# SURFACE_PHOTONS -- For Surface._solve_photon_by_los()
+#*******************************************************************************
 class SURFACE_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
     dlt_precision = 1.e-6       # See PATH_PHOTONS for more info.
@@ -84,22 +95,32 @@ class SURFACE_PHOTONS(object):
                                 # times are converted to a single value.
                                 # This approximation can speed up some
                                 # calculations substantially.
+#*******************************************************************************
+
 
 ################################################################################
 # Event precision
 ################################################################################
 
+#*******************************************************************************
+# EVENT_CONFIG
+#*******************************************************************************
 class EVENT_CONFIG(object):
     collapse_threshold = 3.     # When an event returned by a calculation spans
                                 # a range of times smaller than this threshold,
                                 # the time field is converted to a single value.
                                 # This approximation can speed up some
                                 # calculations substantially.
+#*******************************************************************************
+
 
 ################################################################################
 # Logging and Monitoring
 ################################################################################
 
+#*******************************************************************************
+# LOGGING
+#*******************************************************************************
 class LOGGING(object):
     prefix = ""                     # Prefix in front of a log message
     quickpath_creation = False      # Log the creation of QuickPaths.
@@ -126,13 +147,22 @@ class LOGGING(object):
         LOGGING.all(True)
         LOGGING.prefix = prefix
 
+#*******************************************************************************
+
+
+
 ################################################################################
 # Aberration method (for backward compatibility)
 ################################################################################
 
+#*******************************************************************************
+# ABERRATION
+#*******************************************************************************
 class ABERRATION(object):
     old = False                 # Change to True for previous, incorrect
                                 # interpretation of the C matrices.
+#*******************************************************************************
+
 
 ################################################################################
 

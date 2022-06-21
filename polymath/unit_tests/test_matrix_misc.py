@@ -8,14 +8,22 @@ import unittest
 
 from polymath import Qube, Vector, Matrix, Scalar, Units
 
+#*******************************************************************************
+# Test_Matrix_misc
+#*******************************************************************************
 class Test_Matrix_misc(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         a = Vector((1,2))
         b = Vector((0,1,-1))
 
-        # Outer multiply
+        #--------------------
+        # Outer multiply     	     
+        #--------------------
         ab = a.outer(b)
 
         self.assertEqual(ab, Matrix([(0.,1.,-1.),
@@ -47,7 +55,9 @@ class Test_Matrix_misc(unittest.TestCase):
         j = Matrix([(-1,0),(0,2),(1,1)])
         self.assertEqual(j*m, Matrix([(-3,-2,-1),(2,4,0),(4,4,1)]))
 
-        # 3x3 Matrix inverse
+        #------------------------
+        # 3x3 Matrix inverse	 	 
+        #------------------------
         test = Matrix(np.random.rand(200,3,3))
         inverse = test.inverse()
         product = test * inverse
@@ -62,6 +72,13 @@ class Test_Matrix_misc(unittest.TestCase):
         self.assertTrue(np.all(abs(product.vals[...,0,2]) < DEL))
         self.assertTrue(np.all(abs(product.vals[...,2,1]) < DEL))
         self.assertTrue(np.all(abs(product.vals[...,1,2]) < DEL))
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ############################################
 if __name__ == '__main__':

@@ -7,28 +7,47 @@ import numpy as np
 from polymath             import *
 from oops.nav_.navigation import Navigation
 
+#*******************************************************************************
+# TimeShift
+#*******************************************************************************
 class TimeShift(Navigation):
-    """A TimeShift is a Navigation subclass that shifts all of the times
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A TimeShift is a Navigation subclass that shifts all of the times
     associated with an observation.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, secs):
-        """Constructor for a TimeShift object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a TimeShift object.
 
         Input:
             secs        a single constant in seconds to be added to all times,
                         represented by a constant or a single-element
                         tuple/list/array.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.nparams = 1
         self.set_params(secs)
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # set_params
+    #===========================================================================
     def set_params(self, secs):
-        """Part of the Fittable interface. Re-defines the navigation given a
-        new set of parameters."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Part of the Fittable interface. Re-defines the navigation given a
+        new set of parameters.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         # Check the parameters
         if np.shape(secs) == ():
@@ -40,27 +59,45 @@ class TimeShift(Navigation):
 
         # Save the parameter
         self.secs = secs
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # get_params
+    #===========================================================================
     def get_params(self):
-        """Part of the Fittable interface. Returns the current parameters.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Part of the Fittable interface. Returns the current parameters.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.secs
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # copy
+    #===========================================================================
     def copy(self):
-        """Part of the Fittable interface. Returns a deep copy of the object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Part of the Fittable interface. Returns a deep copy of the object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return TimeShift(self.secs)
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # shift
+    #===========================================================================
     def shift(self, time, uv, partials=False):
-        """Applies the time-shift to the observation. This should be applied to
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Applies the time-shift to the observation. This should be applied to
         to times defined by external events, returning times applicable within
         the span of the observation.
 
@@ -75,18 +112,24 @@ class TimeShift(Navigation):
 
         Return:         a Vector3 of times within the span of the observation.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time) + secs
 
         if partials:
             time.insert_subfield("d_dnav", Scalar(1.))
 
         return time
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # unshift
+    #===========================================================================
     def unshift(self, time, uv, partials=False):
-        """Removes the time-shift from an observation's timing. This should be
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Removes the time-shift from an observation's timing. This should be
         applied to observation event times, returning times applicable to
         external events.
 
@@ -101,13 +144,18 @@ class TimeShift(Navigation):
 
         Return:         a Vector3 of times applicable to external events.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time) - secs
 
         if partials:
             time.insert_subfield("d_dnav", Scalar(-1.))
 
         return time
+    #===========================================================================
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -116,12 +164,25 @@ class TimeShift(Navigation):
 import unittest
 import numpy.random as random
 
+#*******************************************************************************
+# Test_TimeShift
+#*******************************************************************************
 class Test_TimeShift(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # TBD, testing needed!
         pass
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 #########################################
 if __name__ == '__main__':

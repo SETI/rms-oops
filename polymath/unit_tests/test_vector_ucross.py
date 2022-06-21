@@ -8,11 +8,19 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Units
 
+#*******************************************************************************
+# Test_Vector_ucross
+#*******************************************************************************
 class Test_Vector_ucross(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Single values
+    #-------------------
+    # Single values	    
+    #-------------------
     x = Vector((1.,0.,0.))
     y = Vector((0.,1.,0.))
     z = Vector((0.,0.,1.))
@@ -26,7 +34,9 @@ class Test_Vector_ucross(unittest.TestCase):
     self.assertEqual((3*x).ucross(4*y), z)
     self.assertEqual((-3*y).ucross(7*z), -x)
 
-    # Array values
+    #-------------------
+    # Array values	    
+    #-------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape(N,3))
     y = Vector(np.random.randn(N*3).reshape(N,3))
@@ -37,7 +47,9 @@ class Test_Vector_ucross(unittest.TestCase):
         self.assertAlmostEqual(y.dot(z)[i], 0., delta=1.e-12)
         self.assertAlmostEqual(z.dot(z)[i], 1., delta=1.e-12)
 
-    # Units are stripped
+    #-------------------------
+    # Units are stripped          
+    #-------------------------
     N = 10
     x = Vector(np.random.randn(N*3).reshape(N,3), units=Units.KM)
     y = Vector(np.random.randn(N*3).reshape(N,3), units=Units.SEC)
@@ -50,7 +62,9 @@ class Test_Vector_ucross(unittest.TestCase):
     z = x.ucross(y)
     self.assertTrue(z.units is None)
 
-    # Derivatives, denom = ()
+    #-----------------------------
+    # Derivatives, denom = ()	      
+    #-----------------------------
     N = 6
     x = Vector(np.random.randn(N*3).reshape(N,3))
     y = Vector(np.random.randn(N*3).reshape(N,3))
@@ -126,7 +140,9 @@ class Test_Vector_ucross(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k], dz_dg.values[i,k], delta=EPS)
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=EPS)
 
-    # Read-only status should NOT be preserved
+    #----------------------------------------------
+    # Read-only status should NOT be preserved	       
+    #----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -141,6 +157,12 @@ class Test_Vector_ucross(unittest.TestCase):
 
     self.assertFalse(y.as_readonly().ucross(x).readonly)
     self.assertFalse(y.ucross(x.as_readonly()).readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # Execute from command line...

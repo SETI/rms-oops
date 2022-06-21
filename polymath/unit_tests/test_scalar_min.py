@@ -8,17 +8,37 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_min
+#*******************************************************************************
 class Test_Scalar_min(unittest.TestCase):
 
+  #=============================================================================
+  # setUp
+  #=============================================================================
   def setUp(self):
     Qube.PREFER_BUILTIN_TYPES = True
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # tearDown
+  #=============================================================================
   def tearDown(self):
     Qube.PREFER_BUILTIN_TYPES = False
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #----------------------
+    # Individual values        
+    #----------------------
     self.assertEqual(Scalar(0.3).min(), 0.3)
     self.assertEqual(type(Scalar(0.3).min()), float)
 
@@ -28,14 +48,18 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertTrue(Scalar(4, mask=True).min().mask)
     self.assertEqual(type(Scalar(4, mask=True).min()), Scalar)
 
-    # Multiple values
+    #---------------------
+    # Multiple values	      
+    #---------------------
     self.assertTrue(Scalar((1,2,3)).min() == 1)
     self.assertEqual(type(Scalar((1,2,3)).min()), int)
 
     self.assertTrue(Scalar((1.,2.,3.)).min() == 1.)
     self.assertEqual(type(Scalar((1.,2,3)).min()), float)
 
-    # Arrays
+    #-------------
+    # Arrays	      
+    #-------------
     N = 400
     x = Scalar(np.random.randn(N).reshape((2,4,5,10)))
     self.assertEqual(x.min(), np.min(x.values))
@@ -43,7 +67,9 @@ class Test_Scalar_min(unittest.TestCase):
     argmin = x.argmin()
     self.assertEqual(x.flatten()[argmin], x.min())
 
-    # Test units
+    #---------------
+    # Test units    	
+    #---------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
     self.assertEqual(random.min().units, Units.KM)
@@ -56,7 +82,9 @@ class Test_Scalar_min(unittest.TestCase):
     random = Scalar(values, units=None)
     self.assertEqual(type(random.min()), float)
 
-    # Masks
+    #-------------
+    # Masks	      
+    #-------------
     N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
 
@@ -70,7 +98,9 @@ class Test_Scalar_min(unittest.TestCase):
     argmin = x.argmin()
     self.assertEqual(x[argmin], x.min())
 
+    #---------------------------------------------------------------
     # If we mask the minimum value(s), the minimum should increase
+    #---------------------------------------------------------------
     x = x.mask_where_eq(minval)
     self.assertTrue(x.min() > minval)
 
@@ -84,11 +114,15 @@ class Test_Scalar_min(unittest.TestCase):
     argmin = x.argmin()
     self.assertEqual(x[argmin], x.min())
 
-    # Denominators
+    #-----------------
+    # Denominators        
+    #-----------------
     a = Scalar([1.,2.], drank=1)
     self.assertRaises(ValueError, a.min)
 
-    # Mins over axes
+    #--------------------
+    # Mins over axes	     
+    #--------------------
     x = Scalar(np.arange(30).reshape(2,3,5))
     m0 = x.min(axis=0)
     m01 = x.min(axis=(0,1))
@@ -112,7 +146,9 @@ class Test_Scalar_min(unittest.TestCase):
       for k in range(5):
         self.assertEqual(x[argmin[j,k],j,k], m0[j,k])
 
-    # Mins with masks
+    #----------------------
+    # Mins with masks	       
+    #----------------------
     values = np.arange(30).reshape(2,3,5)
     mask = (values < 5)
     x = Scalar(values, mask)
@@ -151,6 +187,13 @@ class Test_Scalar_min(unittest.TestCase):
     for k in range(5):
         self.assertEqual(m0[j,k], Scalar.MASKED)
         self.assertTrue(np.all(m0[j,k].values == np.min(x.values[:,j,k])))
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

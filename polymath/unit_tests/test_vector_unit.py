@@ -8,11 +8,19 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Units
 
+#*******************************************************************************
+# Test_Vector_unit
+#*******************************************************************************
 class Test_Vector_unit(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Single values
+    #------------------
+    # Single values        
+    #------------------
     x = Vector((1.,2.,4.,8.))
     u = x.unit()
 
@@ -27,7 +35,9 @@ class Test_Vector_unit(unittest.TestCase):
     u = x.unit()
     self.assertTrue(u.mask is True)
 
-    # Arrays and masks
+    #----------------------
+    # Arrays and masks	       
+    #----------------------
     x = Vector(np.zeros((30,7)))
     u = x.unit()
     self.assertTrue(np.all(u.mask))
@@ -58,7 +68,9 @@ class Test_Vector_unit(unittest.TestCase):
             if not u[i].mask:
                 self.assertAlmostEqual(u[i].norm(), 1., delta=1.e-15)
 
-    # Derivatives, denom = ()
+    #----------------------------
+    # Derivatives, denom = ()	     
+    #----------------------------
     N = 100
     x = Vector(np.random.randn(N,3))
 
@@ -119,7 +131,9 @@ class Test_Vector_unit(unittest.TestCase):
         self.assertAlmostEqual(y.d_dv.values[i,k,1], dy_dv1.values[i,k], delta=EPS)
         self.assertAlmostEqual(y.d_dv.values[i,k,2], dy_dv2.values[i,k], delta=EPS)
 
-    # Read-only status should be preserved
+    #-------------------------------------------
+    # Read-only status should be preserved	    
+    #-------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,3))
     x = Vector(np.random.randn(N,3))
@@ -127,6 +141,12 @@ class Test_Vector_unit(unittest.TestCase):
     self.assertFalse(x.readonly)
     self.assertFalse(x.unit().readonly)
     self.assertFalse(x.as_readonly().unit().readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # Execute from command line...

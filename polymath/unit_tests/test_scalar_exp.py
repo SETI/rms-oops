@@ -8,8 +8,14 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_exp
+#*******************************************************************************
 class Test_Scalar_exp(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
     # Individual values
@@ -19,11 +25,15 @@ class Test_Scalar_exp(unittest.TestCase):
     self.assertEqual(Scalar(1).exp(), np.exp(1.))
     self.assertEqual(Scalar(0).exp(), 1.)
 
-    # Multiple values
+    #----------------------
+    # Multiple values	       
+    #----------------------
     self.assertEqual(Scalar((-1,0,1)).exp(), np.exp((-1,0,1)))
     self.assertEqual(type(Scalar((-1,0,1)).exp()), Scalar)
 
-    # Arrays
+    #----------------
+    # Arrays	     	 
+    #----------------
     N = 1000
     values = np.random.randn(N) * 10.
     angles = Scalar(values)
@@ -34,7 +44,9 @@ class Test_Scalar_exp(unittest.TestCase):
     for i in range(N-1):
         self.assertEqual(funcvals[i:i+2], np.exp(values[i:i+2]))
 
-    # Test valid units
+    #----------------------
+    # Test valid units	       
+    #----------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
     self.assertRaises(ValueError, Scalar.exp, random)
@@ -51,19 +63,25 @@ class Test_Scalar_exp(unittest.TestCase):
     random = Scalar(values, units=Units.UNITLESS)
     self.assertEqual(random.exp(), np.exp(values))
 
-    # Units should be removed
+    #-----------------------------
+    # Units should be removed	      
+    #-----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.exp().units is None)
 
-    # Masks
+    #--------------
+    # Masks	       
+    #--------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     y = x.exp()
     self.assertTrue(np.all(y.mask[x.mask]))
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
-    # Derivatives
+    #-----------------
+    # Derivatives         
+    #-----------------
     N = 100
     x = Scalar(np.random.randn(N) * 10.)
     x.insert_deriv('t', Scalar(np.random.randn(N) * 10.))
@@ -95,14 +113,18 @@ class Test_Scalar_exp(unittest.TestCase):
                                    dy_dvec[i].values[k],
                                    delta = max(1,abs(dy_dvec[i].values[k]))*EPS)
 
+    #---------------------------------------------
     # Derivatives should be removed if necessary
+    #---------------------------------------------
     self.assertEqual(x.exp(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertTrue(hasattr(x, 'd_dvec'))
     self.assertFalse(hasattr(x.exp(recursive=False), 'd_dt'))
     self.assertFalse(hasattr(x.exp(recursive=False), 'd_dvec'))
 
+    #---------------------------------------------
     # Read-only status should NOT be preserved
+    #---------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(x.readonly)
@@ -119,6 +141,13 @@ class Test_Scalar_exp(unittest.TestCase):
     self.assertTrue(x.exp(check=True).max() > 1.e200)
     self.assertEqual(type(x.exp(check=True).mask), np.ndarray)
     self.assertTrue(np.sum(x.exp(check=True).mask) > 0)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

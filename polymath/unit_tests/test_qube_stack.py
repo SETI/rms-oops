@@ -8,8 +8,14 @@ import unittest
 
 from polymath import Qube, Scalar, Vector3, Boolean, Units
 
+#*******************************************************************************
+# Test_Qube_stack
+#*******************************************************************************
 class Test_Qube_stack(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
     a = Scalar(np.arange(10))
@@ -22,7 +28,9 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(ab.is_int())
     self.assertTrue(np.all(Qube.stack(a,b).mask == False))
 
-    # Cast int to float
+    #-----------------------
+    # Cast int to float     	
+    #-----------------------
     b = Scalar(np.arange(10,20.))
     ab = Scalar(np.arange(20.).reshape(2,10))
     self.assertEqual(Qube.stack(a,b), ab)
@@ -30,7 +38,9 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(ab.is_float())
     self.assertTrue(np.all(Qube.stack(a,b).mask == False))
 
-    # Cast bools, None to float
+    #------------------------------
+    # Cast bools, None to float        
+    #------------------------------
     c = Boolean(5*[True] + 5*[False])
     d = None
     abcd = Qube.stack(a,b,c,d)
@@ -41,7 +51,9 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(c.is_bool())
     self.assertTrue(abcd.is_float())
 
-    # Cast bools, None to int
+    #----------------------------
+    # Cast bools, None to int	     
+    #----------------------------
     b = Scalar(np.arange(10,20))
     abcd = Qube.stack(a,b,c,d)
     self.assertEqual(abcd[:2], ab)
@@ -50,14 +62,18 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(np.all(abcd.mask == False))
     self.assertTrue(abcd.is_int())
 
-    # Cast bools, None to bool
+    #-----------------------------
+    # Cast bools, None to bool	      
+    #-----------------------------
     cd = Qube.stack(c,d)
     self.assertEqual(cd[0], 5*[True] + 5*[False])
     self.assertEqual(cd[1], 10*[False])
     self.assertTrue(np.all(cd.mask == False))
     self.assertTrue(cd.is_bool())
 
+    #-------------
     # Derivs
+    #-------------
     b_d_dx = Scalar(np.arange(30.).reshape(10,3), drank=1)
     a_d_dt = Scalar(np.arange(10.) / 10.)
     a.insert_deriv('t', a_d_dt)
@@ -81,7 +97,9 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertEqual(Qube.stack(a,b,recursive=False), ab)
     self.assertEqual(Qube.stack(a,b,recursive=False).derivs, {})
 
-    # Ranks
+    #-----------   
+    # Ranks	   
+    #-----------   
     a = Scalar(np.arange(30.).reshape(10,3), drank=1)
     b = Scalar(np.arange(10.))
     self.assertRaises(ValueError, Qube.stack, a, b)
@@ -106,7 +124,9 @@ class Test_Qube_stack(unittest.TestCase):
     b = Scalar(np.arange(10,20), units=Units.DEG)
     self.assertRaises(ValueError, Qube.stack, a, b)
 
-    # Masks
+    #-------------
+    # Masks	      
+    #-------------
     a = Scalar(np.arange(10), mask=True)
     b = Scalar(np.arange(10.,20.), mask=True)
     c = Boolean(5*[True] + 5*[False], mask=True)
@@ -138,7 +158,9 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(np.all(abcd[0:3].mask == 3*[[1,1,1,1,1,0,0,0,0,0]]))
     self.assertTrue((abcd[3] == False).all())
 
-    # Broadcasting
+    #------------------
+    # Broadcasting         
+    #------------------
     a = Scalar(np.arange(10).reshape(10,1))
     b = Scalar(11.)
     c = Boolean(5*[True] + 5*[False])
@@ -177,7 +199,9 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(np.all(abcd[0:3].mask == 3*[[1,1,1,1,1,0,0,0,0,0]]))
     self.assertTrue((abcd[3] == False).all())
 
-    # Booleans
+    #---------------
+    # Booleans	    	
+    #---------------
     c = Boolean(5*[True] + 5*[False])
     d = Scalar(np.arange(10))
     cd = Qube.stack(c,d)
@@ -213,6 +237,13 @@ class Test_Qube_stack(unittest.TestCase):
     cd = Qube.stack(c,d)
     self.assertTrue(cd.is_bool())
     self.assertEqual(type(cd), Boolean)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

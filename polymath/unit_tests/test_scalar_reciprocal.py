@@ -8,11 +8,19 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_reciprocal
+#*******************************************************************************
 class Test_Scalar_reciprocal(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #-----------------------
+    # Individual values     	
+    #-----------------------
     self.assertEqual(Scalar(1.).reciprocal(), 1.)
     self.assertEqual(type(Scalar(1.).reciprocal()), Scalar)
 
@@ -21,10 +29,14 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertTrue(Scalar(0.).reciprocal().mask)
     self.assertEqual(type(Scalar(0.).reciprocal()), Scalar)
 
-    # Multiple values
+    #---------------------
+    # Multiple values	      
+    #---------------------
     self.assertEqual(Scalar((-1,1)).reciprocal(), (-1,1))
 
-    # Arrays
+    #------------
+    # Arrays	     
+    #------------
     N = 1000
     x = Scalar(np.random.randn(N))
     self.assertTrue(x.reciprocal().mask is False)
@@ -36,7 +48,9 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertEqual(np.shape(x.reciprocal().mask), (N,))
     self.assertTrue(np.sum(x.reciprocal().mask) > 0)
 
-    # Test valid units
+    #----------------------
+    # Test valid units	       
+    #----------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
     self.assertEqual(random.reciprocal().units, Units.KM**(-1))
@@ -53,7 +67,9 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     random = Scalar(values, units=None)
     self.assertTrue(random.reciprocal().units is None)
 
-    # Masks
+    #-------------
+    # Masks	      
+    #-------------
     N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     zero_mask = np.random.randn(N) < -0.5
@@ -66,7 +82,9 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertTrue(np.all(y.mask[zero_mask]))
     self.assertTrue(not np.any(y.mask[~zero_mask & ~x.mask]))
 
-    # Derivatives
+    #-----------------
+    # Derivatives         
+    #-----------------
     N = 1000
     x = Scalar(np.random.randn(N))
     zero_mask = np.random.randn(N) < -0.5
@@ -107,20 +125,31 @@ class Test_Scalar_reciprocal(unittest.TestCase):
                     self.assertAlmostEqual(dy_dx[i] * x.d_dvec[i].values[k],
                                            deriv, delta = DEL * abs(deriv))
 
-    # Derivatives should be removed if necessary
+    #------------------------------------------------
+    # Derivatives should be removed if necessary     	 
+    #------------------------------------------------
     self.assertEqual(x.reciprocal(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertTrue(hasattr(x, 'd_dvec'))
     self.assertFalse(hasattr(x.reciprocal(recursive=False), 'd_dt'))
     self.assertFalse(hasattr(x.reciprocal(recursive=False), 'd_dvec'))
 
-    # Read-only status should NOT be preserved
+    #----------------------------------------------
+    # Read-only status should NOT be preserved	       
+    #----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
     self.assertFalse(x.reciprocal().readonly)
     self.assertTrue(x.as_readonly().readonly)
     self.assertFalse(x.as_readonly().reciprocal().readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

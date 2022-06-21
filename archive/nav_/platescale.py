@@ -7,19 +7,31 @@ import numpy as np
 from polymath             import *
 from oops.nav_.navigation import Navigation
 
+#*******************************************************************************
+# PlateScale
+#*******************************************************************************
 class PlateScale(Navigation):
-    """A PlateScale is a Navigation subclass that expands or contracts the x-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A PlateScale is a Navigation subclass that expands or contracts the x-
     and y-components of all line-of-sight vectors by constant factors.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, scale):
-        """Constructor for a PlateScale object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a PlateScale object.
 
         Input:
             scale       one or two scale factors. If one, then it is applied to
                         both the x- and y-components of the vectors; if two,
                         then the x- and y-components are scaled independently.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         scale = np.array(scale)
         if np.shape(scale) == ():       # allow a constant instead of a tuple
@@ -35,24 +47,39 @@ class PlateScale(Navigation):
         self.xymat = np.array([[1.,0.,0.],
                                [0.,1.,0.],
                                [0.,0.,0.]])
+    #===========================================================================
 
-    ####################################
 
+    
+
+    #===========================================================================
+    # set_params
+    #===========================================================================
     def set_params(self, scale):
-        """Part of the Fittable interface. Re-defines the navigation given a
-        new set of parameters."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Part of the Fittable interface. Re-defines the navigation given a
+        new set of parameters.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------
         # Check the parameters
+        #---------------------------
         scale = np.array(scale)
         if np.shape(scale) == ():       # allow a constant instead of a tuple
             scale = np.array((scale,))
 
         assert scale.shape == (self.nparams,)
 
+        #--------------------------
         # Save the parameters
+        #--------------------------
         self.scale = scale
 
+        #--------------------------------------------------
         # Define a vector scale factor and its inverse
+        #--------------------------------------------------
         if self.nparams == 1:
             self.vector = Vector3((scale[0], scale[0], 1.))
         else:
@@ -63,31 +90,56 @@ class PlateScale(Navigation):
         self.inverse = 1. / self.vector
         self.inverse.insert_subfield("d_dt", self.inverse.plain())
 
+        #------------------------------------------------------------------
         # Prepare for the partial derivatives of the inverse distortion
+        #------------------------------------------------------------------
         self.xyinv = np.array([[-self.inverse[0], 0., 0.],
                                [0., -self.inverse[1], 0.],
                                [0., 0., 0.]])
+    #===========================================================================
 
-    ####################################
 
+    
+
+    #===========================================================================
+    # get_params
+    #===========================================================================
     def get_params(self):
-        """Part of the Fittable interface. Returns the current parameters.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
+        Part of the Fittable interface. Returns the current parameters.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         return self.scale
+    #===========================================================================
 
-    ####################################
 
+    
+
+    #===========================================================================
+    # copy
+    #===========================================================================
     def copy(self):
-        """Part of the Fittable interface. Returns a deep copy of the object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
+        Part of the Fittable interface. Returns a deep copy of the object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         return PlateScale(self.get_params().copy())
+    #===========================================================================
 
-    ####################################
 
+
+
+    #===========================================================================
+    # distort
+    #===========================================================================
     def distort(self, los, t, partials=False):
-        """Applies the distortion to line-of-sight vectors. This should be
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Applies the distortion to line-of-sight vectors. This should be
         applied to a vector in the instrument's coordinate frame, before it is
         converted to FOV (u,v) coordinates.
 
@@ -105,21 +157,33 @@ class PlateScale(Navigation):
                         has a subfield "d_dt", this is also distorted and
                         returned as a subfield.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #--------------------------------------------------------------------------
         # Distort the line of sight, with optional time-derivatives
+        #--------------------------------------------------------------------------
         distorted_los = los * self.vector
 
+        #-------------------------------------------------
         # Fill in the partial derivatives if needed
+        #-------------------------------------------------
         if partials:
             dlos_dparams = MatrixN(los.vals[...,np.newaxis] * self.xymat)
             distorted_los.insert_subfield("d_dnav", dlos_dparams)
 
         return distorted_los
+    #===========================================================================
 
-    ####################################
 
+    
+
+    #===========================================================================
+    # undistort
+    #===========================================================================
     def undistort(self, los, t, partials=False):
-        """Removes the distortion from the line-of-sight vectors. This should
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Removes the distortion from the line-of-sight vectors. This should
         be applied to a vector derived from FOV (u,v) coordinates, before
         conversion out of the instrument's coordinate frame.
 
@@ -137,16 +201,26 @@ class PlateScale(Navigation):
                         has a subfield "d_dt", this is also un-distorted and
                         returned as a subfield.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------------------------------------------------------
         # Un-distort the line of sight, with optional time-derivatives
+        #-------------------------------------------------------------------
         undistorted_los = los * self.inverse
 
-        # Fill in the partial derivatives if needed
+        #-----------------------------------------------
+        # Fill in the partial derivatives if needed		
+        #-----------------------------------------------
         if partials:
             dlos_dparams = MatrixN(los.vals[...,np.newaxis] * self.xyinv)
             undistorted_los.insert_subfield("d_dnav", dlos_dparams)
 
         return undistorted_los
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
@@ -155,12 +229,24 @@ class PlateScale(Navigation):
 import unittest
 import numpy.random as random
 
+#*******************************************************************************
+# Test_PlateScale
+#*******************************************************************************
 class Test_PlateScale(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # TBD, testing needed!
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 #########################################
 if __name__ == '__main__':

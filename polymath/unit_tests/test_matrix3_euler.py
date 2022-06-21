@@ -8,8 +8,14 @@ import unittest
 
 from polymath import Qube, Matrix3
 
+#*******************************************************************************
+# Test_Matrix3_euler
+#*******************************************************************************
 class Test_Matrix3_euler(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
     DEL = 1.e-12
@@ -28,12 +34,21 @@ class Test_Matrix3_euler(unittest.TestCase):
             self.assertAlmostEqual(test.values[i,j,k], int(j==k), delta=DEL)
             self.assertAlmostEqual(test.values[i,j,k], int(j==k), delta=DEL)
 
+    #---------------------------------------------------------------------
     # Conversion to Euler angles and back always returns the same matrix
+    #---------------------------------------------------------------------
     for code in Matrix3._AXES2TUPLE.keys():
         angles = a.to_euler(axes=code)
         b = Matrix3.from_euler(*angles, axes=code)
 
         self.assertTrue(np.max(abs((a - b).values)) < DEL)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

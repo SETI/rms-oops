@@ -6,14 +6,25 @@ import numpy as np
 
 from polymath import *
 
+#*******************************************************************************
+# CoordinateModel
+#*******************************************************************************
 class CoordinateModel(object):
-    """CoordinateModel is an abstract class used to describe the default
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    CoordinateModel is an abstract class used to describe the default
     numeric range, units, and formating of a geometric quantity.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, units, minimum=-np.inf, maximum=np.inf, modulus=None,
                        reference=0., negated=False):
-        """The general constructor for a Coordinate object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The general constructor for a Coordinate object.
 
         Input:
             units       the default Units object.
@@ -37,30 +48,47 @@ class CoordinateModel(object):
         used when a modulus is also given. We might eventually use minimum and
         maximum to implement range checks.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.units     = units
         self.minimum   = minimum
         self.maximum   = maximum
         self.modulus   = modulus
         self.reference = reference
         self.negated   = negated
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # to_standard
+    #===========================================================================
     def to_standard(self, scalar):
-        """Converts a scalar of coordinates to standard units involving km,
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Converts a scalar of coordinates to standard units involving km,
         seconds and radians, and measured in the default direction relative to
-        the default origin."""
-
+        the default origin.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         result = Scalar.as_scalar(scalar).convert_units(self.units)
         if self.negated: result = -result
         if self.reference != 0: result += self.reference
         return result.convert_units(None)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # to_model
+    #===========================================================================
     def to_model(self, scalar):
-        """Converts the scalar of a coordinate from standard units involving km,
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Converts the scalar of a coordinate from standard units involving km,
         seconds and radians into a value relative to the specified units, origin
         and direction. Applies the modulus if any.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         result = Scalar.as_scalar(scalar).convert_units(self.units)
         if self.reference != 0: result -= self.reference
         if self.negated: result = -result
@@ -69,6 +97,13 @@ class CoordinateModel(object):
             result = self.minimum + (result - self.minimum) % self.modulus
 
         return result
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -76,13 +111,25 @@ class CoordinateModel(object):
 
 import unittest
 
+#*******************************************************************************
+# Test_CoordinateModel
+#*******************************************************************************
 class Test_CoordinateModel(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # No tests here - this is just an abstract superclass
 
         pass
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
 
 #########################################
 if __name__ == '__main__':

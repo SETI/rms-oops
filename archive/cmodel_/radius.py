@@ -7,14 +7,25 @@ import numpy as np
 from oops.cmodel_.cmodel import CoordinateModel
 from polymath import Units
 
+#*******************************************************************************
+# Radius
+#*******************************************************************************
 class Radius(CoordinateModel):
-    """Radius is a subclass of CoordinateModel used to describe the length of a
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Radius is a subclass of CoordinateModel used to describe the length of a
     radial vector, typically in spherical or cylindrical coordinates. It cannot
     be negative.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, units=None, reference=0., inward=False):
-        """The constructor for a Radius coordinate model.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The constructor for a Radius coordinate model.
 
         Input:
             units       the Units object used by the coordinate.
@@ -24,7 +35,7 @@ class Radius(CoordinateModel):
             inward      True to measure radii inward from the reference radius
                         rather than outward.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if units is None: units = Units.KM
 
         Coordinate.__init__(self, units,
@@ -37,6 +48,11 @@ class Radius(CoordinateModel):
         if self.units.exponents != (1,0,0):
             raise ValueError("illegal units for a Radius coordinate: " +
                              unit.name)
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
@@ -44,11 +60,22 @@ class Radius(CoordinateModel):
 
 import unittest
 
+#*******************************************************************************
+# Test_Radius
+#*******************************************************************************
 class Test_Radius(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 #########################################
 if __name__ == '__main__':

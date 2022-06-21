@@ -8,11 +8,19 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Units
 
+#*******************************************************************************
+# Test_Vector_sep
+#*******************************************************************************
 class Test_Vector_sep(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Single values
+    #------------------
+    # Single values        
+    #------------------
     DEL = 1.e-12
     a = Vector((2,0,0))
     self.assertAlmostEqual(a.sep(Vector((0,1,0))),  0.50 * np.pi, delta=DEL)
@@ -20,7 +28,9 @@ class Test_Vector_sep(unittest.TestCase):
     self.assertAlmostEqual(a.sep(Vector((-1,0,1))), 0.75 * np.pi, delta=DEL)
     self.assertAlmostEqual(a.sep(Vector((-1,0,0))), 1.00 * np.pi, delta=DEL)
 
-    # Multiple values
+    #----------------------
+    # Multiple values	       
+    #----------------------
     N = 100
     a = Vector(np.random.randn(N,3))
     b = Vector(np.random.randn(N,3))
@@ -38,7 +48,9 @@ class Test_Vector_sep(unittest.TestCase):
     for i in range(N):
         self.assertAlmostEqual(sep[i], sep2[i], delta=2.e-10)
 
-    # Test units
+    #----------------
+    # Test units     	 
+    #----------------
     N = 10
     a = Vector(np.random.randn(N,3), units=Units.KM)
     b = Vector(np.random.randn(N,3), units=Units.KM)
@@ -55,7 +67,9 @@ class Test_Vector_sep(unittest.TestCase):
     self.assertTrue(a.sep(b).mask is False)
     self.assertTrue(a.sep(b).units is None)
 
-    # Derivatives
+    #-------------------
+    # Derivatives	    
+    #-------------------
     N = 100
     x = Vector(np.random.randn(N,3))
     y = Vector(np.random.randn(N,3))
@@ -130,7 +144,9 @@ class Test_Vector_sep(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i], dz_dg.values[i], delta=EPS)
         self.assertAlmostEqual(z.d_dh.values[i], dz_dh.values[i], delta=EPS)
 
-    # Derivatives should be removed if necessary
+    #-----------------------------------------------
+    # Derivatives should be removed if necessary    	
+    #-----------------------------------------------
     self.assertEqual(y.sep(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
     self.assertTrue(hasattr(x, 'd_dh'))
@@ -140,7 +156,9 @@ class Test_Vector_sep(unittest.TestCase):
     self.assertFalse(hasattr(y.sep(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.sep(x, recursive=False), 'd_dh'))
 
-    # Read-only status should NOT be preserved
+    #-----------------------------------------------
+    # Read-only status should NOT be preserved	    	
+    #-----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,7))
     x = Vector(np.random.randn(N,7))
@@ -155,6 +173,12 @@ class Test_Vector_sep(unittest.TestCase):
 
     self.assertFalse(y.as_readonly().sep(x).readonly)
     self.assertFalse(y.sep(x.as_readonly()).readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # Execute from command line...

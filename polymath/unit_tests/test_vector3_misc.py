@@ -8,15 +8,23 @@ import unittest
 
 from polymath import Qube, Boolean, Scalar, Vector, Vector3, Pair, Units
 
+#*******************************************************************************
+# Test_Vector3_misc
+#*******************************************************************************
 class Test_Vector3_misc(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
     def runTest(self):
 
         eps = 3.e-16
         lo = 1. - eps
         hi = 1. + eps
 
-        # Basic comparisons and indexing
+        #------------------------------------
+        # Basic comparisons and indexing     	     
+        #------------------------------------
         vecs = Vector3([[1,2,3],[3,4,5],[5,6,7]])
         self.assertEqual(vecs.numer, (3,))
         self.assertEqual(vecs.shape, (3,))
@@ -54,11 +62,15 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertEqual(vecs[0:2], [[1,2,3],[3,4,5]])
         self.assertEqual(vecs[0:2], Vector3([[1,2,3],[3,4,5]]))
 
-        # Unary operations
+        #- - - - - - - - - - - - 
+        # Unary operations	 	 
+        #- - - - - - - - - - - - 
         self.assertEqual(+vecs, vecs)
         self.assertEqual(-vecs, Vector3([[-1,-2,-3],[-3,-4,-5],(-5,-6,-7)]))
 
-        # Binary operations
+        #- - - - - - - - - - - 
+        # Binary operations            
+        #- - - - - - - - - - - 
         vecs = Vector3([[1,2,3],[3,4,5],[5,6,7]])
 
         self.assertEqual(vecs + (0,1,2), [[1,3,5],[3,5,7],(5,7,9)])
@@ -106,7 +118,9 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertRaises(ValueError, vecs.__div__, (1,2))
         self.assertRaises(TypeError, vecs.__div__, Pair((1,2)))
 
-        # In-place operations
+        #- - - - - - - - - - - - 
+        # In-place operations	 	 
+        #- - - - - - - - - - - - 
         vecs = Vector3([[1,2,3],[3,4,5],[5,6,7]])
         test = vecs.copy()
         test += (1,2,3)
@@ -145,9 +159,13 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertRaises(TypeError, test.__idiv__, Pair((1,2)))
         self.assertRaises(ValueError, test.__idiv__, (1,2,3,4))
 
-        # Other functions...
+        #------------------------
+        # Other functions...	 	 
+        #------------------------
 
-        # to_scalar()
+        #- - - - - - - - -
+        # to_scalar()	  	  
+        #- - - - - - - - -
         self.assertEqual(vecs.to_scalar(0),  Scalar((1,3,5)))
         self.assertEqual(vecs.to_scalar(1),  Scalar((2,4,6)))
         self.assertEqual(vecs.to_scalar(2),  Scalar((3,5,7)))
@@ -155,23 +173,31 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertEqual(vecs.to_scalar(-2), Scalar((2,4,6)))
         self.assertEqual(vecs.to_scalar(-3), Scalar((1,3,5)))
 
-        # to_scalars()
+        #- - - - - - - - - 
+        # to_scalars()	   	   
+        #- - - - - - - - - 
         self.assertEqual(vecs.to_scalars(), (Scalar((1,3,5)),
                                              Scalar((2,4,6)),
                                              Scalar((3,5,7))))
 
-        # dot()
+        #- - - - - -
+        # dot()     	    
+        #- - - - - -
         self.assertEqual(vecs.dot((1,0,0)), vecs.to_scalar(0))
         self.assertEqual(vecs.dot((0,1,0)), vecs.to_scalar(1))
         self.assertEqual(vecs.dot((0,0,1)), vecs.to_scalar(2))
         self.assertEqual(vecs.dot((1,1,0)),
                          vecs.to_scalar(0) + vecs.to_scalar(1))
 
-        # norm()
+        #- - - - - - -
+        # norm()              
+        #- - - - - - -
         v = Vector3([[[1,2,3],[2,3,4]],[[0,1,2],[3,4,5]]])
         self.assertEqual(v.norm(), np.sqrt([[14,29],[5,50]]))
 
-        # cross(), ucross()
+        #- - - - - - - - - - -
+        # cross(), ucross()           
+        #- - - - - - - - - - -
         a = Vector3([[[1,0,0]],[[0,2,0]],[[0,0,3]]])
         b = Vector3([ [0,3,3] , [2,0,2] , [1,1,0] ])
         axb = a.cross(b)
@@ -201,7 +227,9 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertEqual(axb[2,1], Vector3(( 0, 6, 0)).unit())
         self.assertEqual(axb[2,2], Vector3((-3, 3, 0)).unit())
 
-        # perp, proj, sep
+        #- - - - - - - - - - 
+        # perp, proj, sep    	     
+        #- - - - - - - - - - 
         a = Vector3(np.random.rand(2,1,4,1,3))
         b = Vector3(np.random.rand(  3,4,2,3))
 
@@ -219,10 +247,13 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertTrue(np.all((a - aperp - aproj).vals > -eps))
         self.assertTrue(np.all((a - aperp - aproj).vals <  eps))
 
+        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         # Note: the sep(reverse=True) option is not tested here
+        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-        # New tests 2/1/12 (MRS)
-
+        #-------------------------------
+        # New tests 2/1/12 (MRS)		
+        #-------------------------------
         test = Vector3(np.arange(6).reshape(2,3))
         str_test = str(test).replace('  ', ' ').replace('[ ','[')
         self.assertEqual(str_test, "Vector3([0. 1. 2.]\n [3. 4. 5.])")
@@ -254,6 +285,13 @@ class Test_Vector3_misc(unittest.TestCase):
                 "Vector3([-- -- --]; mask)")
         self.assertEqual(str(test[1:2]).replace('[ ','[').replace('  ',' '),
                 "Vector3([3. 4. 5.])")
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

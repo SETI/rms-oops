@@ -192,8 +192,9 @@ def _load_data(filespec, label, meta):
     #----------------
     # Read data 
     #----------------
-    data = np.fromfile(filespec, \
-                      dtype='>u2').reshape(meta.nlines,meta.nsamples)
+    bits = label['IMAGE']['SAMPLE_BITS'] 
+    dtype = '>u' +str(int(bits/8))
+    data = np.fromfile(filespec, dtype=dtype).reshape(meta.nlines,meta.nsamples)
 
     #--------------------------------------------------------
     # Split into framelets:
