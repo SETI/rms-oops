@@ -264,6 +264,8 @@ class Juno(object):
 
         kdir = "/home/spitale/ominas_data/trs/juno/kernels/"
 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_131006_131012_v01.bc") 
+        cspyce.furnsh(kdir + "spk/spk_rec_131005_131014_131101.bsp")
         cspyce.furnsh(kdir + "ck/juno_sc_rec_161211_161217_v01.bc") 
         cspyce.furnsh(kdir + "spk/juno_rec_161115_170106_170113.bsp")
         cspyce.furnsh(kdir + "ck/juno_sc_rec_170702_170708_v01.bc") 
@@ -299,6 +301,7 @@ class Juno(object):
         cspyce.furnsh(kdir + "sclk/jno_sclkscet_00128.tsc")
         cspyce.furnsh(kdir + "fk/juno_v12.tf")
         cspyce.furnsh(kdir + "ik/juno_junocam_v03.ti")
+        cspyce.furnsh(kdir + "ik/juno_jiram_v02.ti")
         cspyce.furnsh(kdir + "spk/de421.bsp")
         cspyce.furnsh(kdir + "spk/de432s.bsp")
 

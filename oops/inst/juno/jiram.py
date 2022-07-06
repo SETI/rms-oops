@@ -1,5 +1,5 @@
 ################################################################################
-# oops/inst/juno/junocam.py
+# oops/inst/juno/jiram.py
 ################################################################################
 
 from IPython import embed   ## TODO: remove
@@ -26,8 +26,8 @@ def from_file(filespec, fast_distortion=True,
               return_all_planets=False, **parameters):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    A general, static method to return a Pushframe object based on a given
-    JUNOCAM image file.
+    A general, static method to return a Snapshot object based on a given
+    JIRAM image file.
 
     Inputs:
         fast_distortion     True to use a pre-inverted polynomial;
@@ -38,7 +38,7 @@ def from_file(filespec, fast_distortion=True,
                             Jupiter or Saturn.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    JUNOCAM.initialize()    # Define everything the first time through; use 
+    JIRAM.initialize()    # Define everything the first time through; use 
                             # defaults unless initialize() is called explicitly.
 
     #-----------------------
@@ -61,61 +61,34 @@ def from_file(filespec, fast_distortion=True,
     #--------------------------------
     # Load time-dependent kernels 
     #--------------------------------
-    Juno.load_cks(meta.tstart0, meta.tstart0 + 3600.)
-    Juno.load_spks(meta.tstart0, meta.tstart0 + 3600.)
+    Juno.load_cks(meta.tstart, meta.tstart + 3600.)
+    Juno.load_spks(meta.tstart, meta.tstart + 3600.)
 
     #-----------------------------------------
-    # Construct a Pushframe for each framelet
+    # Construct a Snapshot for each framelet
     #-----------------------------------------
-
-    snap = False
-
 
     obs = []
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
 
-        if snap:
-            item = (oops.obs.Snapshot(("v","u"), 
+        item = (oops.obs.Snapshot(("v","u"), 
 #+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#                                 {'tstart':fmeta.tstart, 'texp':fmeta.tdi_texp}, fmeta.fov,
+#                                 {'tstart':fmeta.tstart, 'texp':fmeta.exposure}, fmeta.fov,
 #-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
 #-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                 fmeta.tstart, fmeta.tdi_texp, fmeta.fov,
+                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
 #-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
-                                 "JUNO", "JUNO_JUNOCAM", 
-                                 instrument = "JUNOCAM",
+                                 "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame, 
+                                 instrument = "JIRAM_I",
                                  filter = fmeta.filter, 
                                  data = framelets[:,:,i]))
-
-
-
-        if not snap:
-            item = (oops.obs.Pushframe(("vt","u"), 
-                                {'nexp':fmeta.tdi_stages, 
-                                 'tstart':fmeta.tstart, 
-                                 'texp':fmeta.tdi_texp}, 
-                                 fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM", 
-                                 instrument = "JUNOCAM",
-                                 filter = fmeta.filter, 
-                                 data = framelets[:,:,i]))
-
-#            item = (oops.obs.Pushbroom(("vt","u"), Pair.ONES, 
-#                                 cadence, fmeta.fov,
-#                                 "JUNO", "JUNO_JUNOCAM", 
-#                                 instrument = "JUNOCAM",
-#                                 filter = fmeta.filter, 
-#                                 data = framelets[:,:,i]))
-
-
 
 
 #        item.insert_subfield('spice_kernels', \
-#                   Juno.used_kernels(item.time, 'junocam', return_all_planets))
+#                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
 
 
         item.insert_subfield('filespec', filespec)
@@ -136,7 +109,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                mst_pck=True, irregulars=True):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    Initialize key information about the JUNOCAM instrument.
+    Initialize key information about the JIRAM instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
@@ -158,7 +131,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                     False otherwise.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    JUNOCAM.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
+    JIRAM.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
@@ -190,16 +163,15 @@ def _load_data(filespec, label, meta):
     # Read data 
     #----------------
     # seems like this should be handled in a readpds-style function somewhere
-    bits = label['IMAGE']['SAMPLE_BITS']
-    dtype = '>u' +str(int(bits/8))
-    data = np.fromfile(filespec, dtype=dtype).reshape(meta.nlines,meta.nsamples)
+    data = np.fromfile(filespec, dtype='<f4').reshape(meta.nlines,meta.nsamples)
 
     #--------------------------------------------------------
     # Split into framelets:
     #   - Add framelet number and filter index to label
     #   - Change image dimensions in label
     #--------------------------------------------------------
-    nf = len(meta.filter)
+    filters = meta.filter
+    nf = len(filters)
     framelets = np.empty([meta.frlines,meta.nsamples,meta.nframelets])
     framelet_labels = []
     
@@ -213,8 +185,6 @@ def _load_data(filespec, label, meta):
         framelet_label['FRAMELET'] = {}
         framelet_label['FRAMELET']['FRAME_NUMBER'] = frn
         framelet_label['FRAMELET']['FRAMELET_NUMBER'] = i
-
-        filters = label['FILTER_NAME']
         framelet_label['FRAMELET']['FRAMELET_FILTER'] = filters[ifl]
 
         label['LINES'] = meta.frlines
@@ -258,38 +228,29 @@ class Metadata(object):
         #---------------------
         # image dimensions
         #---------------------
-        self.nlines = label['IMAGE']['LINES']
-        self.nsamples = label['IMAGE']['LINE_SAMPLES']
+        self.nlines = label['FILE']['IMAGE']['LINES']
+        self.nsamples = label['FILE']['IMAGE']['LINE_SAMPLES']
         self.frlines = 128
         self.nframelets = int(self.nlines/self.frlines)
+        self.size = [self.nsamples, self.frlines]
 
         #-----------------
         # Exposure time
         #-----------------
-        exposure_ms = label['EXPOSURE_DURATION']
-        self.exposure = exposure_ms/1000.
+        self.exposure = label['EXPOSURE_DURATION']
 
         #-------------
         # Filters
         #-------------
-        self.filter = label['FILTER_NAME']
- 
+        self.filter = ['L_BAND', 'M_BAND']
+
         #--------------------------------------------
         # Default timing for unprocessed frame
         #--------------------------------------------
-        self.tinter = label['INTERFRAME_DELAY']
-        self.tinter0 = self.tinter
-
         self.tstart = julian.tdb_from_tai(
                         julian.tai_from_iso(label['START_TIME']))
-        self.tstart0 = self.tstart        
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
-
-
-        self.tdi_stages = label['JNO:TDI_STAGES_COUNT']        
-        self.tdi_texp = self.exposure/self.tdi_stages
-        if self.exposure < self.tdi_texp: self.tdi_texp = self.exposure
       
         #-------------
         # target
@@ -310,51 +271,30 @@ class Metadata(object):
             #- - - - - - - - - - - - - - - - - - - - 
             # Filter-specific instrument id
             #- - - - - - - - - - - - - - - - - - - - 
-            if self.filter == 'RED': self.instc = -61503
-            if self.filter == 'GREEN': self.instc = -61502
-            if self.filter == 'BLUE': self.instc = -61501
-            if self.filter == 'METHANE': self.instc = -61504
+            if self.filter == 'L_BAND': 
+                self.instc = -61411
+                self.filter_frame = 'LBAND'
+            if self.filter == 'M_BAND': 
+                self.instc = -61412
+                self.filter_frame = 'MBAND'
             sinstc = str(self.instc)
 
             #- - - - - - - - - - - - - - - - - - - - - 
             # Timing
             #- - - - - - - - - - - - - - - - - - - - - 
             prefix = 'INS' + sinstc
-            delta_var = prefix + '_INTERFRAME_DELTA'
-            bias_var = prefix + '_START_TIME_BIAS'
-            
-            self.delta = cspyce.gdpool(delta_var, 0)[0]
-            self.bias = cspyce.gdpool(bias_var, 0)[0]
 
-            self.tinter = self.tinter0 + self.delta
-            self.tstart = self.tstart0 + self.bias + frn*self.tinter
-
-            self.tstop = self.tstart + self.exposure
-            
             #- - - - - - - 
             # FOV
             #- - - - - - - 
-            k1_var = 'INS' + sinstc + '_DISTORTION_K1'
-            k2_var = 'INS' + sinstc + '_DISTORTION_K2'
-            cx_var = 'INS' + sinstc + '_DISTORTION_X'
-            cy_var = 'INS' + sinstc + '_DISTORTION_Y'
-            fo_var = 'INS' + sinstc + '_FOCAL_LENGTH'
-            px_var = 'INS' + sinstc + '_PIXEL_SIZE'
+            cross_angle = cspyce.gdpool(prefix + '_FOV_CROSS_ANGLE', 0)[0]
+            fo = cspyce.gdpool(prefix + '_FOCAL_LENGTH', 0)[0]
+            px = cspyce.gdpool(prefix + '_PIXEL_SIZE', 0)[0]
+            cxy = cspyce.gdpool(prefix + '_CCD_CENTER', 0)
+            scale = px/1000/fo
 
-            k1 = cspyce.gdpool(k1_var, 0)[0]
-            k2 = cspyce.gdpool(k2_var, 0)[0]
-            cx = cspyce.gdpool(cx_var, 0)[0]
-            cy = cspyce.gdpool(cy_var, 0)[0]
-            fo = cspyce.gdpool(fo_var, 0)[0]
-            px = cspyce.gdpool(px_var, 0)[0]
-
-            scale = px/fo
-            distortion_coeff = [1,0,k1,0,k2]
-
-            self.fov = oops.fov.RadialFOV(scale, 
-                                            (self.nsamples, self.frlines),
-                                            coefft_uv_from_xy=distortion_coeff, 
-                                            uv_los=(cx, cy))
+            self.fov = oops.fov.FlatFOV(scale, 
+	                                (self.nsamples, self.frlines), cxy)
 
         return
     #===========================================================================
@@ -366,12 +306,12 @@ class Metadata(object):
 
 
 #*******************************************************************************
-# JUNOCAM 
+# JIRAM 
 #*******************************************************************************
-class JUNOCAM(object):
+class JIRAM(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    A instance-free class to hold JUNOCAM instrument parameters.
+    A instance-free class to hold JIRAM instrument parameters.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -388,7 +328,7 @@ class JUNOCAM(object):
                    mst_pck=True, irregulars=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Initialize key information about the JUNOCAM instrument; fill in key
+        Initialize key information about the JIRAM instrument; fill in key
         information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
@@ -411,21 +351,27 @@ class JUNOCAM(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         # Quick exit after first call
-        if JUNOCAM.initialized: return
+        if JIRAM.initialized: return
 
         Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                            gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
         Juno.load_instruments(asof=asof)
 
-
-
         #-----------------------------------
-        # Construct the SpiceFrame
+        # Construct the SpiceFrames
         #-----------------------------------
-        ignore = oops.frame.SpiceFrame("JUNO_JUNOCAM")
+        rot90 = oops.Matrix3([[0,-1,0],[-1,0,0],[0,0,1]])
+        mband_rot = oops.frame.SpiceFrame("JUNO_JIRAM_I_MBAND", 
+	                                            id="JUNO_JIRAM_I_MBAND_ROT")
+        mband = oops.frame.Cmatrix(rot90, mband_rot, id="JUNO_JIRAM_I_MBAND")
 
-        JUNOCAM.initialized = True
+        lband_rot = oops.frame.SpiceFrame("JUNO_JIRAM_I_LBAND", 
+	                                            id="JUNO_JIRAM_I_LBAND_ROT")
+        lband = oops.frame.Cmatrix(rot90, lband_rot, id="JUNO_JIRAM_I_LBAND")
+
+
+        JIRAM.initialized = True
     #===========================================================================
 
 
@@ -437,13 +383,13 @@ class JUNOCAM(object):
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Resets the internal JUNOCAM parameters. Can be useful for
+        Resets the internal JIRAM parameters. Can be useful for
         debugging.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        JUNOCAM.instrument_kernel = None
-        JUNOCAM.fovs = {}
-        JUNOCAM.initialized = False
+        JIRAM.instrument_kernel = None
+        JIRAM.fovs = {}
+        JIRAM.initialized = False
 
         Juno.reset()
     #============================================================================
