@@ -60,10 +60,17 @@ class Pushbroom(Observation):
 
             cadence     a Cadence object defining the start time and duration of
                         each consecutive position of the pushbroom.
-                        Alternatively, a dictionary containing the following 
-                        entries, from which a cadence object is constructed:
+                        Alternatively, a tuple of the form:
 
-                        TBD
+                          (tstart, tstride, texp, steps)
+
+                        with:
+
+                          tstart:       Observation start time.
+                          tstride:      Interval from the start of one time 
+                                        step to the start of the next.
+                          texp:         Exposure time for each step.
+                          steps:        Number of time steps.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -116,7 +123,7 @@ class Pushbroom(Observation):
         # Cadence
         #--------------------------------------------------
         if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(cadence)
+        else: self.cadence = self._default_cadence(*cadence)
 
         #--------------------------------------------------
         # Timing
@@ -161,25 +168,22 @@ class Pushbroom(Observation):
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, dict):
+    def _default_cadence(self, tstart, tstride, texp, steps):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         TBD
+            tstart      Observation start time.
+            tstride     Interval from the start of one time 
+                        step to the start of the next.
+            texp        Exposure time for each step.
+            steps       Number of time steps.
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstart = dict['tstart']
-        tstride = dict['tstride']
-        texp = dict['texp']
-        swath_length = dict['swath_length']
-
-        return Metronome(tstart, tstride, texp, swath_length)
+        return Metronome(tstart, tstride, texp, steps)
     #===========================================================================
 
 

@@ -49,11 +49,10 @@ class RasterSlit1D(Observation):
 
 
             cadence     a 1-D Cadence object defining the timing of each
-                        consecutive measurement along the slit.  Alternatively,
-                        a dictionary containing the following entries, from 
-                        which a cadence object is constructed:
+                        consecutive measurement along the slit.  Alternatively, 
+                        a tuple of the form:
 
-                        TBD
+                          (tbd)
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -85,7 +84,7 @@ class RasterSlit1D(Observation):
         # Cadence
         #--------------------------------------------------
         if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(cadence)
+        else: self.cadence = self._default_cadence(*cadence)
 
         assert len(self.cadence.shape) == 1
 
@@ -152,7 +151,7 @@ class RasterSlit1D(Observation):
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, dict):
+    def _default_cadence(self, tstart, tstride, texp, steps):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
@@ -165,11 +164,6 @@ class RasterSlit1D(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstart = dict['tstart']
-        tstride = dict['tstride']
-        texp = dict['texp']
-        steps = dict['steps']
-
         return Metronome(tstart, tstride, texp, steps)
     #===========================================================================
 

@@ -2,8 +2,6 @@
 # oops/obs_/pushframe.py: Subclass Pushframe of class Observation
 ################################################################################
 
-#from IPython import embed   ## TODO: remove
-
 from IPython import embed   ## TODO: remove
 
 import numpy as np
@@ -52,13 +50,16 @@ class Pushframe(Observation):
                         that is swept by the time-delayed integration.
 
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive line of the pushframe.  Alternatively,
-                        a dictionary containing the following entries, from 
-                        which a cadence object is constructed:
+                        each consecutive line of the pushframe.  Alternatively, a tuple of
+                        the form:
 
-                         tstart: Observation start time.
-                         nexp:   Number of exposures in the observation.
-                         texp:    Exposure time for each observation.
+                          (tstart, texp, nexp)
+
+                        with:
+
+                          tstart: Observation start time.
+                          texp:   Exposure time for each observation.
+                          nexp:   Number of exposures in the observation.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -128,7 +129,7 @@ class Pushframe(Observation):
         # Cadence
         #--------------------------------------------------
         if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(cadence)
+        else: self.cadence = self._default_cadence(*cadence)
 
         assert len(self.cadence.shape) == 1
         assert (self.fov.uv_shape.vals[self.cross_scan_uv_index] ==
@@ -165,30 +166,24 @@ class Pushframe(Observation):
             self.insert_subfield(key, subfields[key])
     #===========================================================================
 
-    def _test():
-        print('test')
+
 
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, dict):
+    def _default_cadence(self, tstart, texp, nexp):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         tstart: Observation start time.
-                         nexp:   Number of exposures in the observation.
-                         exp:    Exposure time for each observation.
+           tstart       Observation start time.
+           texp         Exposure time for each observation.
+           nexp         Number of exposures in the observation.
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstart = dict['tstart']
-        nexp = dict['nexp']
-        texp = dict['texp']
         nlines = self.shape[self.t_axis]
 
         nstages = np.clip(np.arange(nlines-1,-1,-1)+1, 0, nexp) 

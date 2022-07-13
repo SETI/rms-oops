@@ -49,12 +49,15 @@ class Slit(Observation):
                         detectors.
 
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive measurement.  Alternatively, a 
-                        dictionary containing the following entries, from 
-                        which a cadence object is constructed:
+                        each consecutive measurement.  Alternatively, a tuple of
+                        the form:
 
-                         times: a list or 1-D array of times in seconds.
-                         texp:  exposure time in seconds for each step.
+			  (times, texp)
+
+			with:
+
+                          times: List or 1-D array of times in seconds.
+                          texp:  Exposure time in seconds for each step.
 
 
             fov         a FOV (field-of-view) object, which describes the field
@@ -87,7 +90,7 @@ class Slit(Observation):
         # Cadence
         #--------------------------------------------------
         if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(cadence)
+        else: self.cadence = self._default_cadence(*cadence)
 
         #--------------------------------------------------
         # Axes
@@ -150,22 +153,18 @@ class Slit(Observation):
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, dict):
+    def _default_cadence(self, times, texp):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         TBD
+            times       List or 1-D array of times in seconds.
+            texp        Exposure time in seconds for each step.
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        times = dict['times']
-        texp = dict['texp']
-
         return Sequence(times, texp)
     #===========================================================================
 

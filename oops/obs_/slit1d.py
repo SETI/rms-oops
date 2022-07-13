@@ -62,12 +62,14 @@ class Slit1D(Observation):
 
 #+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #            cadence     a Cadence object defining the start time and duration 
-#                        of the slit1d.  Alternatively, a dictionary 
-#                        containing the following entries, from which a
-#                        cadence object is constructed:
+#                        of the slit1d.  Alternatively, a tuple of the form:
 #
-#                         tstart: Observation start time.
-#                         texp:   Exposure time for the observation.
+#                          (tstart, texp)
+#
+#                        with:
+#
+#                          tstart: Observation start time.
+#                          texp:   Exposure time for the observation.
 #-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
 #-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -147,7 +149,7 @@ class Slit1D(Observation):
         #--------------------------------------------------
 #+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #        if isinstance(cadence, Cadence): self.cadence = cadence
-#        else: self.cadence = self._default_cadence(cadence)
+#        else: self.cadence = self._default_cadence(*cadence)
 #-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
 #-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -179,23 +181,18 @@ class Slit1D(Observation):
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, dict):
+    def _default_cadence(self, tstart, texp):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         tstart: Observation start time.
-                         nexp:   Number of exposures in the observation.
-                         exp:    Exposure time for each observation.
+            tstart      Observation start time.
+            texp        Exposure time for the observation.
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstart = dict['tstart']
-        texp = dict['texp']
         return Metronome(tstart, texp, texp, 1)
     #===========================================================================
 

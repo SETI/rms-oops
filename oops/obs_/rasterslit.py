@@ -55,10 +55,9 @@ class RasterSlit(Observation):
                         sampling along the slow axis and the second defines
                         time sub-sampling along the fast axis, which corresponds
                         to the motion of the detector within the slit.
-                        Alternatively, a dictionary containing the following 
-                        entries, from which a cadence object is constructed:
+                        Alternatively, a tuple of the form:
 
-                        TBD
+                          (tbd)
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -90,7 +89,7 @@ class RasterSlit(Observation):
         # Cadence
         #--------------------------------------------------
         if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(cadence)
+        else: self.cadence = self._default_cadence(*cadence)
 
         assert len(self.cadence.shape) == 2
 
@@ -187,7 +186,7 @@ class RasterSlit(Observation):
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, dict):
+    def _default_cadence(self, slow, fast):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
@@ -200,9 +199,6 @@ class RasterSlit(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        slow = dict['slow']
-        fast = dict['fast']
-
         if isinstance(slow, Cadence): slow_cadence = slow
         else: slow_cadence = self._default_single_cadence(slow)
         if isinstance(fast, Cadence): fast_cadence = fast

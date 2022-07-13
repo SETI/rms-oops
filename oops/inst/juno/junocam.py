@@ -95,9 +95,7 @@ def from_file(filespec, fast_distortion=True,
 
         if not snap:
             item = (oops.obs.Pushframe(("vt","u"), 
-                                {'nexp':fmeta.tdi_stages, 
-                                 'tstart':fmeta.tstart, 
-                                 'texp':fmeta.tdi_texp}, 
+                                (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages), 
                                  fmeta.fov,
                                  "JUNO", "JUNO_JUNOCAM", 
                                  instrument = "JUNOCAM",

@@ -40,13 +40,10 @@ class Pixel(Observation):
                         appear at the location of the array's time-axis.
 
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive measurement. Alternatively, a dictionary 
-                        containing the following entries, from which a cadence 
-                        object is constructed:
+                        Alternatively, a tuple of the form:
 
-                         tbd:    TBD
-
-
+                          (tbd)
+=
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
@@ -89,7 +86,7 @@ class Pixel(Observation):
         # Cadence
         #--------------------------------------------------
         if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(cadence)
+        else: self.cadence = self._default_cadence(*cadence)
 
         #--------------------------------------------------
         # Timing
@@ -124,7 +121,7 @@ class Pixel(Observation):
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, dict):
+    def _default_cadence(self, tbd):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
@@ -139,7 +136,6 @@ class Pixel(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tbd = dict['tbd']
         return Instant(tbd)
     #===========================================================================
 

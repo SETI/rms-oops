@@ -296,6 +296,18 @@ class Juno(object):
         cspyce.furnsh(kdir + "spk/juno_rec_210127_210321_210329.bsp")
         cspyce.furnsh(kdir + "ck/juno_sc_rec_190528_190529_v01.bc") 
         cspyce.furnsh(kdir + "spk/juno_rec_190504_190626_190627.bsp")
+	
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_160710_160716_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_160717_160723_v01.bc") 
+        cspyce.furnsh(kdir + "spk/spk_rec_160522_160729_160909.bsp")
+	
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_170827_170902_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_170903_170909_v01.bc") 
+        cspyce.furnsh(kdir + "spk/spk_rec_170728_170918_170922.bsp")
+	
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_180715_180716_v01.bc")
+        cspyce.furnsh(kdir + "spk/spk_rec_180620_180812_180821.bsp")
+
 
         cspyce.furnsh(kdir + "lsk/naif0012.tls")
         cspyce.furnsh(kdir + "sclk/jno_sclkscet_00128.tsc")

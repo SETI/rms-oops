@@ -27,7 +27,7 @@ def from_file(filespec, fast_distortion=True,
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A general, static method to return a Snapshot object based on a given
-    JIRAM image file.
+    JIRAM image or spectrum file.
 
     Inputs:
         fast_distortion     True to use a pre-inverted polynomial;
@@ -237,12 +237,25 @@ class Metadata(object):
         #-----------------
         # Exposure time
         #-----------------
-        self.exposure = label['EXPOSURE_DURATION']
+        self.exposure = 0
+        try:
+            self.exposure = label['EXPOSURE_DURATION']
+        except: 
+            print('No exposure information')
+#            self.exposure = 1.		# TBD: figure this out, why do some images 
+                                        #      have no exposure time?  Use stop-start time?
+            self.exposure = 0.004	# works for JIR_IMG_RDR_2017244T104633_V01.img
 
         #-------------
         # Filters
         #-------------
-        self.filter = ['L_BAND', 'M_BAND']
+        self.filter = []
+	
+        Lparm = label['L_BAND_PARAMETERS']['LINE_FIRST_PIXEL']
+        if type(Lparm) is int: self.filter.append('L_BAND')
+	
+        Mparm = label['M_BAND_PARAMETERS']['LINE_FIRST_PIXEL']
+        if type(Mparm) is int: self.filter.append('M_BAND')
 
         #--------------------------------------------
         # Default timing for unprocessed frame
@@ -251,7 +264,9 @@ class Metadata(object):
                         julian.tai_from_iso(label['START_TIME']))
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
-      
+        if self.exposure == 0: self.exposure = self.tstop - self.tstart
+
+	
         #-------------
         # target
         #-------------
@@ -279,14 +294,10 @@ class Metadata(object):
                 self.filter_frame = 'MBAND'
             sinstc = str(self.instc)
 
-            #- - - - - - - - - - - - - - - - - - - - - 
-            # Timing
-            #- - - - - - - - - - - - - - - - - - - - - 
-            prefix = 'INS' + sinstc
-
             #- - - - - - - 
             # FOV
             #- - - - - - - 
+            prefix = 'INS' + sinstc
             cross_angle = cspyce.gdpool(prefix + '_FOV_CROSS_ANGLE', 0)[0]
             fo = cspyce.gdpool(prefix + '_FOCAL_LENGTH', 0)[0]
             px = cspyce.gdpool(prefix + '_PIXEL_SIZE', 0)[0]
