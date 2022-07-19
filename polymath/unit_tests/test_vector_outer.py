@@ -41,7 +41,7 @@ class Test_Vector_outer(unittest.TestCase):
     self.assertEqual(b.outer(a).units, Units.KM/Units.SECONDS)
 
     #--------------------
-    # Derivatives	     
+    # Derivatives     
     #--------------------
     N = 100
     x = Vector(np.random.randn(N,3))
@@ -123,7 +123,7 @@ class Test_Vector_outer(unittest.TestCase):
                                                          delta=EPS)
 
     #------------------------------------------------
-    # Derivatives should be removed if necessary     	 
+    # Derivatives should be removed if necessary      
     #------------------------------------------------
     self.assertEqual(y.outer(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))

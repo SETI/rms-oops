@@ -19,13 +19,13 @@ class Test_Vector3(unittest.TestCase):
     def runTest(self):
 
         #--------------------------------------------
-        # arrays of wrong shape raise ValueError     	     
+        # arrays of wrong shape raise ValueError          
         #--------------------------------------------
         self.assertRaises(ValueError, Vector3, np.random.randn(3,4,5))
         self.assertRaises(ValueError, Vector3, 1.)
 
         #------------------------------------
-        # automatic coercion of booleans     	     
+        # automatic coercion of booleans          
         #------------------------------------
         self.assertEqual(Vector3([True,True,False]), (1.,1.,0.))
 

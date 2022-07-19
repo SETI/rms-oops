@@ -30,7 +30,7 @@ class Cmatrix(Frame):
     def __init__(self, cmatrix, reference=None, id=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Cmatrix frame.
+        Constructor for a Cmatrix frame.
 
         Input:
             cmatrix     a Matrix3 object.
@@ -42,23 +42,23 @@ class Cmatrix(Frame):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.cmatrix = Matrix3.as_matrix3(cmatrix)
 
-	#---------------------------
+        #---------------------------
         # Required attributes
-	#---------------------------
+        #---------------------------
         self.frame_id  = id
         self.reference = Frame.as_wayframe(reference) or Frame.J2000
         self.origin    = self.reference.origin
         self.shape     = self.cmatrix.shape
         self.keys      = set()
 
-	#------------------------------------------------------------
+        #------------------------------------------------------------
         # Update wayframe and frame_id; register if not temporary
-	#------------------------------------------------------------
+        #------------------------------------------------------------
         self.register()
 
-	#------------------------------------------------------------
+        #------------------------------------------------------------
         # It needs a wayframe before we can construct the transform
-	#------------------------------------------------------------
+        #------------------------------------------------------------
         self.transform = Transform(cmatrix, Vector3.ZERO,
                                    self.wayframe, self.reference)
     #===========================================================================
@@ -72,7 +72,7 @@ class Cmatrix(Frame):
     def from_ra_dec(ra, dec, clock, reference=None, id=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Construct a Cmatrix from RA, dec and celestial north clock angles.
+        Construct a Cmatrix from RA, dec and celestial north clock angles.
 
         Input:
             ra          a Scalar defining the right ascension of the optic axis
@@ -95,9 +95,9 @@ class Cmatrix(Frame):
         clock = Scalar.as_scalar(clock)
         mask = ra.mask | dec.mask | clock.mask
 
-	#--------------------------------------------
+        #--------------------------------------------
         # The transform is fixed so save it now
-	#--------------------------------------------
+        #--------------------------------------------
         ra = constants.RPD * ra.values
         dec = constants.RPD * dec.values
         twist = constants.RPD * (180. - clock.values)
@@ -115,10 +115,10 @@ class Cmatrix(Frame):
          sinr, sind, sint) = np.broadcast_arrays(cosr, cosd, cost,
                                                  sinr, sind, sint)
 
-	#----------------------------------------------------------------------
+        #----------------------------------------------------------------------
         # Extracted from the PDS Data Dictionary definition, which is appended
         # below
-	#----------------------------------------------------------------------
+        #----------------------------------------------------------------------
         cmatrix_values = np.empty(cosr.shape + (3,3))
         cmatrix_values[...,0,0] = -sinr * cost - cosr * sind * sint
         cmatrix_values[...,0,1] =  cosr * cost - sinr * sind * sint
@@ -141,7 +141,7 @@ class Cmatrix(Frame):
     def transform_at_time(self, time, quick=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Transform into this Frame at a Scalar of times."""
+        Transform into this Frame at a Scalar of times."""
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.transform
     #===========================================================================
@@ -164,9 +164,9 @@ class Test_Cmatrix(unittest.TestCase):
     #===========================================================================
     def runTest(self):
 
-	#-----------------------------------------
+        #-----------------------------------------
         # Imports are here to avoid conflicts
-	#-----------------------------------------
+        #-----------------------------------------
         import os
         import cspyce
 
@@ -185,10 +185,10 @@ class Test_Cmatrix(unittest.TestCase):
         ignore = SpicePath("MARS", "SSB")
         mars = SpiceFrame("IAU_MARS", "J2000")
 
-	#----------------------------------------------------------------------
+        #----------------------------------------------------------------------
         # Define a version of the IAU Mars frame always rotated by 180 degrees
         # around the Z-axis
-	#----------------------------------------------------------------------
+        #----------------------------------------------------------------------
         mars180 = Cmatrix([[-1,0,0],[0,-1,0],[0,0,1]], "IAU_MARS")
 
         time = Scalar(np.random.rand(100) * 1.e8)
@@ -198,9 +198,9 @@ class Test_Cmatrix(unittest.TestCase):
         wrt_mars = event.wrt_frame("IAU_MARS")
         wrt_mars180 = event.wrt_frame(mars180)
 
-	#---------------------------------------------------------
+        #---------------------------------------------------------
         # Confirm that the components are related as expected
-	#---------------------------------------------------------
+        #---------------------------------------------------------
         self.assertTrue(np.all(wrt_mars.pos.vals[...,0] == -wrt_mars180.pos.vals[...,0]))
         self.assertTrue(np.all(wrt_mars.pos.vals[...,1] == -wrt_mars180.pos.vals[...,1]))
         self.assertTrue(np.all(wrt_mars.pos.vals[...,2] ==  wrt_mars180.pos.vals[...,2]))
@@ -209,10 +209,10 @@ class Test_Cmatrix(unittest.TestCase):
         self.assertTrue(np.all(wrt_mars.vel.vals[...,1] == -wrt_mars180.vel.vals[...,1]))
         self.assertTrue(np.all(wrt_mars.vel.vals[...,2] ==  wrt_mars180.vel.vals[...,2]))
 
-	#------------------------------------------------------------------
+        #------------------------------------------------------------------
         # Define a version of the IAU Mars frame containing four 90-degree
         # rotations
-	#------------------------------------------------------------------
+        #------------------------------------------------------------------
         matrices = []
         for (cos,sin) in ((1,0), (0,1), (-1,0), (0,-1)):
             matrices.append([[cos,sin,0],[-sin,cos,0],[0,0,1]])
@@ -229,9 +229,9 @@ class Test_Cmatrix(unittest.TestCase):
         self.assertEqual(wrt_mars.shape, (100,1))
         self.assertEqual(wrt_mars90s.shape, (100,4))
 
-	#--------------------------------------------------------
+        #--------------------------------------------------------
         # Confirm that the components are related as expected
-	#--------------------------------------------------------
+        #--------------------------------------------------------
         self.assertTrue(wrt_mars.pos[:,0] == wrt_mars90s.pos[:,0])
         self.assertTrue(wrt_mars.vel[:,0] == wrt_mars90s.vel[:,0])
 

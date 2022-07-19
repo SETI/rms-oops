@@ -50,9 +50,9 @@ class RasterSlit1D(Observation):
 
             cadence     a 1-D Cadence object defining the timing of each
                         consecutive measurement along the slit.  Alternatively, 
-                        a tuple of the form:
+                        a tuple || dictionary of the form:
 
-                          (tbd)
+                          (tbd) || {tbd}
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -83,8 +83,12 @@ class RasterSlit1D(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
         assert len(self.cadence.shape) == 1
 
@@ -151,20 +155,18 @@ class RasterSlit1D(Observation):
     #===========================================================================
     # _default_cadence
     #===========================================================================
-    def _default_cadence(self, tstart, tstride, texp, steps):
+    def _default_cadence(self, tbd):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         TBD
+            TBD
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Metronome(tstart, tstride, texp, steps)
+        return Metronome(tbd)
     #===========================================================================
 
 

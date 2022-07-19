@@ -209,7 +209,7 @@ class PlateScale(Navigation):
         undistorted_los = los * self.inverse
 
         #-----------------------------------------------
-        # Fill in the partial derivatives if needed		
+        # Fill in the partial derivatives if needed
         #-----------------------------------------------
         if partials:
             dlos_dparams = MatrixN(los.vals[...,np.newaxis] * self.xyinv)

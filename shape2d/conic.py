@@ -30,9 +30,9 @@ class Conic(object):
     def __init__(self, a, b, c, d, e, f):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Conic to use in those situations where it is not
+        Constructor for a Conic to use in those situations where it is not
         used as attributes of another object.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.a = a
         self.b = b
@@ -52,10 +52,10 @@ class Conic(object):
     def fill_conic_attributes(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Fill in additional attributes to support quick calculations of conic
+        Fill in additional attributes to support quick calculations of conic
         sections. The six Scalar attributes a,b,c,d,e,f must already be filled
         in.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.a = Scalar.as_scalar(self.a)
         self.b = Scalar.as_scalar(self.b)
@@ -86,8 +86,8 @@ class Conic(object):
     def swapxy(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	A shallow clone of this Conic with the x and y axes reversed.
-	"""
+        A shallow clone of this Conic with the x and y axes reversed.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Conic(self.c, self.b, self.a, self.e, self.d, self.f)
     #===========================================================================
@@ -100,7 +100,7 @@ class Conic(object):
     def apply_affine(self, affine, recursive=True, shapeclass=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Apply the given affine transformation to all the points comprising
+        Apply the given affine transformation to all the points comprising
         this conic.
 
         Input:
@@ -144,7 +144,7 @@ class Conic(object):
     def undo_affine(affine, recursive=True, shapeclass=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Apply the inverse of the given affine transformation to all the
+        Apply the inverse of the given affine transformation to all the
         points comprising this conic.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -163,7 +163,7 @@ class Conic(object):
     def eval_conic(self, pt, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Evaluate the conic at Pair(x,y).
+        Evaluate the conic at Pair(x,y).
 
         Inputs:
             pt          Pair at which to evaluate the Conic. The value will be
@@ -188,7 +188,7 @@ class Conic(object):
     def perp2d(self, pt, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Two scalars (dx,dy) that point in the direction of the outward local
+        Two scalars (dx,dy) that point in the direction of the outward local
         normal to the curve.
 
         Inputs:
@@ -230,7 +230,7 @@ class Conic(object):
     def slope2d(self, pt, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Two scalars (dy,dx) that represent the slope of the local tangent.
+        Two scalars (dy,dx) that represent the slope of the local tangent.
 
         Inputs:
             pt          Pair at which to evaluate the slope.
@@ -252,7 +252,7 @@ class Conic(object):
     def slope(self, pt, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Slope of the local tangent.
+        Slope of the local tangent.
 
         Inputs:
             pt          Pair at which to evaluate the slope.
@@ -274,7 +274,7 @@ class Conic(object):
     def perp(self, pt, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Slope of the local perpendicular.
+        Slope of the local perpendicular.
 
         Inputs:
             pt          Pair at which to evaluate the perpendicular.
@@ -296,7 +296,7 @@ class Conic(object):
     def _unit_circle_intersection_angles(self, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Tuple of the four parameters on a unit circle centered on the origin
+        Tuple of the four parameters on a unit circle centered on the origin
         that intersect this Conic.
 
         Inputs:

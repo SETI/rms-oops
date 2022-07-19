@@ -1010,7 +1010,7 @@ class Event(object):
                              str(self))
 
         #----------------------------------------------------
-        # Raise a ValueError if the shape is incompatible    	     
+        # Raise a ValueError if the shape is incompatible    
         #----------------------------------------------------
         dep_lt = Scalar.as_scalar(value).as_readonly()
         self.__shape_ = Qube.broadcasted_shape(self.shape, dep_lt)
@@ -1857,9 +1857,9 @@ class Event(object):
         xform1 = None
         if event.__origin_.waypoint != path.waypoint:
 
-            #- - - - - - - - - - - - - - - - - - - - - - 	      
-            # ...and the current frame is rotating...	 	     
-            #- - - - - - - - - - - - - - - - - - - - - - 	      
+            #- - - - - - - - - - - - - - - - - - - - - -       
+            # ...and the current frame is rotating...      
+            #- - - - - - - - - - - - - - - - - - - - - -       
             old_frame = event.__frame_
             if old_frame.origin is not None:
 
@@ -1871,7 +1871,7 @@ class Event(object):
                                                   include_xform=True)
 
         #-------------------------------
-        # If the frame is changing...		
+        # If the frame is changing...
         #-------------------------------
         if event.__frame_.wayframe != frame.wayframe:
 

@@ -2,8 +2,6 @@
 # oops/inst/juno/junocam.py
 ################################################################################
 
-from IPython import embed   ## TODO: remove
-
 import numpy as np
 import julian
 import pdstable
@@ -77,15 +75,7 @@ def from_file(filespec, fast_distortion=True,
 
         if snap:
             item = (oops.obs.Snapshot(("v","u"), 
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#                                 {'tstart':fmeta.tstart, 'texp':fmeta.tdi_texp}, fmeta.fov,
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                 fmeta.tstart, fmeta.tdi_texp, fmeta.fov,
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
+                                 (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
                                  "JUNO", "JUNO_JUNOCAM", 
                                  instrument = "JUNOCAM",
                                  filter = fmeta.filter, 

@@ -30,7 +30,7 @@ class Test_Vector_cross_2x2(unittest.TestCase):
     cross2 = omega.unit().dot(vec.unit()).arccos().sin()
 
     #---------------------------------------------------------------
-    # This calculation has a small probability of a sizable error   	
+    # This calculation has a small probability of a sizable error   
     #---------------------------------------------------------------
     diff = abs(abs(cross1) - cross2)
     self.assertTrue(np.all(diff.values < 1.e-10))
@@ -45,7 +45,7 @@ class Test_Vector_cross_2x2(unittest.TestCase):
     self.assertEqual(cross.units, Units.KM/Units.SECONDS)
 
     #----------------------------
-    # Derivatives, denom = ()	     
+    # Derivatives, denom = ()     
     #----------------------------
     N = 10
     x = Vector(np.random.randn(N,2))

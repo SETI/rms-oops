@@ -116,7 +116,6 @@ def iss_test_suite(filespec, derivs, info, display):
     #-------------------------------------------------------
     # Define the bodies we care about
     #-------------------------------------------------------
-    embed()
     ring_body = oops.Body.lookup("SATURN_MAIN_RINGS")
     saturn_body = oops.Body.lookup("SATURN")
     sun_body = oops.Body.lookup("SUN")

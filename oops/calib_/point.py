@@ -32,7 +32,7 @@ class PointSource(Calibration):
     def __init__(self, name, factor, fov):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for an Distorted Calibration.
+        Constructor for an Distorted Calibration.
 
         Input:
             name        the name of the value returned by the calibration, e.g.,
@@ -54,7 +54,7 @@ class PointSource(Calibration):
     def value_from_dn(self, dn, uv_pair):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns calibrated values based an uncalibrated image value ("DN")
+        Returns calibrated values based an uncalibrated image value ("DN")
         and image coordinates.
 
         Input:
@@ -77,7 +77,7 @@ class PointSource(Calibration):
     def dn_from_value(self, value, uv_pair):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns uncalibrated image values ("dn") based on calibrated values
+        Returns uncalibrated image values ("dn") based on calibrated values
         and image coordinates.
 
         Input:

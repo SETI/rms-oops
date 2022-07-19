@@ -23,7 +23,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     #-------------------------------------------------------------------------
 
     #- - - - - - - - - - 
-    # One quaternion	     
+    # One quaternion     
     #- - - - - - - - - - 
     a = Quaternion(np.random.rand(4)).unit()
     mat = a.to_matrix3()
@@ -43,7 +43,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     self.assertFalse(b.readonly)
 
     #- - - - - - - - - -
-    # N Quaternions	    
+    # N Quaternions    
     #- - - - - - - - - -
     N = 100
     a = Quaternion(np.random.rand(N,4)).unit()

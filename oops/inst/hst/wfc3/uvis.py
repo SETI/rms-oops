@@ -29,7 +29,7 @@ def from_file(filespec, **parameters):
     hst_file = pyfits.open(filespec)
 
     #----------------------------------------
-    # Make an instance of the UVIS class     	 
+    # Make an instance of the UVIS class      
     #----------------------------------------
     this = UVIS()
 
@@ -40,7 +40,7 @@ def from_file(filespec, **parameters):
         raise IOError("not an HST file: " + this.filespec(hst_file))
 
     #----------------------------------------
-    # Confirm that the instrument is ACS     	 
+    # Confirm that the instrument is ACS      
     #----------------------------------------
     if this.instrument_name(hst_file) != "WFC3":
         raise IOError("not an HST/WFC3 file: " + this.filespec(hst_file))
@@ -98,13 +98,13 @@ class UVIS(WFC3):
         global IDC_DICT
 
         #--------------------------------------------------------
-        # Load the dictionary of IDC parameters if necessary	 	 
+        # Load the dictionary of IDC parameters if necessary  
         #--------------------------------------------------------
         if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("DETCHIP", "FILTER"))
 
         #-----------------------------------------
-        # Define the key into the dictionary	  	  
+        # Define the key into the dictionary    
         #-----------------------------------------
         idc_key = (hst_file[1].header["CCDCHIP"],hst_file[0].header["FILTER"])
 
@@ -147,7 +147,7 @@ class UVIS(WFC3):
                              FILTER_SYN_FILE_PARTS[1])
 
         #--------------------------------------------------
-        # Determine the layer of the FITS file to read	   	   
+        # Determine the layer of the FITS file to read      
         #--------------------------------------------------
         try:
             layer = parameters["layer"]
@@ -156,7 +156,7 @@ class UVIS(WFC3):
             layer = 1
 
         #----------------------------
-        # Add the CCD file name      	     
+        # Add the CCD file name           
         #----------------------------
         syn_filenames.append(CCD_SYN_FILE_PARTS[0] +
                              str(hst_file[layer].header["CCDCHIP"]) +

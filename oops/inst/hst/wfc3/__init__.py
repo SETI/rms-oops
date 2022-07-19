@@ -25,12 +25,12 @@ def from_file(filespec, **parameters):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     #--------------------
-    # Open the file	     
+    # Open the file     
     #--------------------
     hst_file = pyfits.open(filespec)
 
     #----------------------------------------
-    # Make an instance of the WFC3 class     	 
+    # Make an instance of the WFC3 class      
     #----------------------------------------
     this = WFC3()
 
@@ -41,7 +41,7 @@ def from_file(filespec, **parameters):
         raise IOError("not an HST file: " + this.filespec(hst_file))
 
     #---------------------------------------
-    # Confirm that the instrument is ACS    	
+    # Confirm that the instrument is ACS    
     #---------------------------------------
     if this.instrument_name(hst_file) != "WFC3":
         raise IOError("not an HST/WFC3 file: " + this.filespec(hst_file))
@@ -96,7 +96,7 @@ class WFC3(HST):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #----------------------------------------
-        # Make an instance of the WFC3 class	 	 
+        # Make an instance of the WFC3 class  
         #----------------------------------------
         this = WFC3()
 

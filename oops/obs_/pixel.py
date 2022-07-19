@@ -40,9 +40,9 @@ class Pixel(Observation):
                         appear at the location of the array's time-axis.
 
             cadence     a Cadence object defining the start time and duration of
-                        Alternatively, a tuple of the form:
+                        Alternatively, a tuple || dictionary of the form:
 
-                          (tbd)
+                          (tbd) || {tbd}
 =
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -85,8 +85,12 @@ class Pixel(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
         #--------------------------------------------------
         # Timing
@@ -127,11 +131,7 @@ class Pixel(Observation):
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         tstart: Observation start time.
-                         nexp:   Number of exposures in the observation.
-                         exp:    Exposure time for each observation.
+            TBD
 
         Return:         Cadence object.
         """

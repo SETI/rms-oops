@@ -451,7 +451,7 @@ class HST(object):
         frame_id = hst_file[0].header["FILENAME"] + suffix
 
         #--------------------------------------------------
-        # Applies at the start time of the observation	   	   
+        # Applies at the start time of the observation      
         #--------------------------------------------------
         cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
                                                  id=frame_id + "_CMATRIX")
@@ -464,7 +464,7 @@ class HST(object):
             return cmatrix.frame_id
 
         #--------------------------------------------------
-        # Applies for the duration of the observation	   	   
+        # Applies for the duration of the observation      
         #--------------------------------------------------
         time_limits = self.time_limits(hst_file)
         tracker = oops.frame.Tracker(cmatrix, target_body.path,
@@ -1486,7 +1486,7 @@ class Test_HST(unittest.TestCase):
         self.assertRaises(IOError, from_file, os.path.join(prefix, "a.b.c.d"))
 
         #--------------------------------------------------
-        # Raw ACS/HRC, full-frame with overscan pixels	   	   
+        # Raw ACS/HRC, full-frame with overscan pixels      
         #--------------------------------------------------
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/j9dh35h7q_raw.fits")
         snapshot = from_file(filespec)
@@ -1495,7 +1495,7 @@ class Test_HST(unittest.TestCase):
         self.assertEqual(snapshot.detector, "HRC")
 
         #-----------------------
-        # Test time_limits()		
+        # Test time_limits()
         #-----------------------
         (time0, time1) = HST().time_limits(hst_file)
 
@@ -1507,7 +1507,7 @@ class Test_HST(unittest.TestCase):
                                hst_file[0].header["TIME-OBS"])
 
         #--------------------
-        # Test get_fov()     	     
+        # Test get_fov()          
         #--------------------
         fov = HRC().define_fov(hst_file)
         shape = tuple(fov.uv_shape.vals)
@@ -1529,7 +1529,7 @@ class Test_HST(unittest.TestCase):
         # test_pixels = fov.uv_from_los(los)
 
         #---------------------------------
-        # Faster version, 1/64 pixels	  	  
+        # Faster version, 1/64 pixels    
         #---------------------------------
         NSTEP = 256
         pixels = oops.Pair(buffer[::NSTEP,::NSTEP])
@@ -1539,7 +1539,7 @@ class Test_HST(unittest.TestCase):
         self.assertTrue(abs(test_pixels - pixels).max() < 1.e-7)
 
         #-----------------------------------------------------------
-        # Separations between pixels in arcsec are around 0.025     	    
+        # Separations between pixels in arcsec are around 0.025         
         #-----------------------------------------------------------
         seps = los[1:].sep(los[:-1])
         self.assertTrue(np.min(seps.vals) * APR > 0.028237 * NSTEP)
@@ -1550,7 +1550,7 @@ class Test_HST(unittest.TestCase):
         self.assertTrue(np.max(seps.vals) * APR < 0.025186 * NSTEP)
 
         #----------------------------------------
-        # Pixel area factors are near unity	 	 
+        # Pixel area factors are near unity  
         #----------------------------------------
         areas = fov.area_factor(pixels)
         self.assertTrue(np.min(areas.vals) > 1.102193)

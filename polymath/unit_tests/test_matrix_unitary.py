@@ -19,7 +19,7 @@ class Test_Matrix_unitary(unittest.TestCase):
   def runTest(self):
 
     #----------------------------------------
-    # Matrices 10% perturbed from unitary    	 
+    # Matrices 10% perturbed from unitary     
     #----------------------------------------
     N = 100
     SCALE = 0.1
@@ -33,7 +33,7 @@ class Test_Matrix_unitary(unittest.TestCase):
     self.assertEqual(b.masked(), 0)
 
     #----------------------------------------
-    # Matrices 30% perturbed from unitary    	 
+    # Matrices 30% perturbed from unitary     
     #----------------------------------------
     N = 100
     SCALE = 0.3

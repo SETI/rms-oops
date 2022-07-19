@@ -19,7 +19,7 @@ class Test_Vector_as_index(unittest.TestCase):
   def runTest(self):
 
     #--------------------------------
-    # Array to test for indexing     	 
+    # Array to test for indexing      
     #--------------------------------
     array = np.arange(1000).reshape(10,10,10)
 
@@ -29,14 +29,14 @@ class Test_Vector_as_index(unittest.TestCase):
     index1 = np.where(array % 13 == 0)
 
     #-----------------------------------------------------
-    # There are 77 elements. Reshape into a 7x11 array	      
+    # There are 77 elements. Reshape into a 7x11 array      
     #-----------------------------------------------------
     index2 = (index1[0].reshape((7,11)),
               index1[1].reshape((7,11)),
               index1[2].reshape((7,11)))
 
     #-------------------------------------
-    # Convert to a 3-vector of indices	      
+    # Convert to a 3-vector of indices      
     #-------------------------------------
     values = np.empty((7,11,3), dtype='int')
     values[...,0] = index2[0]
@@ -46,12 +46,12 @@ class Test_Vector_as_index(unittest.TestCase):
     vec = Vector(values)
 
     #------------------------
-    # Index into array	     	 
+    # Index into array      
     #------------------------
     index13 = vec.as_index()
 
     #--------------------------------------------
-    # Show that the index has been recovered	     
+    # Show that the index has been recovered     
     #--------------------------------------------
     indexed = array[index13]
     self.assertEqual(indexed.shape, (7,11))
@@ -76,7 +76,7 @@ class Test_Vector_as_index(unittest.TestCase):
     self.assertEqual(qube[index13].flatten() // 13, np.arange(77))
 
     #-------------------------------------------
-    # Mask the first two items in the vector	    
+    # Mask the first two items in the vector    
     #-------------------------------------------
     mask = np.zeros(vec.shape, dtype='bool')
     mask[0,0] = True
@@ -84,7 +84,7 @@ class Test_Vector_as_index(unittest.TestCase):
     vec_one_masked = Vector(vec, mask)
     
     #-----------------------------------------------------------------------
-    # This will create a flattened array with the first two items missing   	
+    # This will create a flattened array with the first two items missing   
     #-----------------------------------------------------------------------
     new_index = vec_one_masked.as_index(masked=None)
     self.assertEqual(qube[new_index].shape, (7*11-2,))

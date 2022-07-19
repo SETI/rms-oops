@@ -24,7 +24,7 @@ def from_file(filespec, **parameters):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     #--------------------
-    # Open the file	     
+    # Open the file     
     #--------------------
     hst_file = pyfits.open(filespec)
 

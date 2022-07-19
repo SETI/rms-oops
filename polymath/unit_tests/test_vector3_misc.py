@@ -23,7 +23,7 @@ class Test_Vector3_misc(unittest.TestCase):
         hi = 1. + eps
 
         #------------------------------------
-        # Basic comparisons and indexing     	     
+        # Basic comparisons and indexing          
         #------------------------------------
         vecs = Vector3([[1,2,3],[3,4,5],[5,6,7]])
         self.assertEqual(vecs.numer, (3,))
@@ -63,7 +63,7 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertEqual(vecs[0:2], Vector3([[1,2,3],[3,4,5]]))
 
         #- - - - - - - - - - - - 
-        # Unary operations	 	 
+        # Unary operations  
         #- - - - - - - - - - - - 
         self.assertEqual(+vecs, vecs)
         self.assertEqual(-vecs, Vector3([[-1,-2,-3],[-3,-4,-5],(-5,-6,-7)]))
@@ -119,7 +119,7 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertRaises(TypeError, vecs.__div__, Pair((1,2)))
 
         #- - - - - - - - - - - - 
-        # In-place operations	 	 
+        # In-place operations  
         #- - - - - - - - - - - - 
         vecs = Vector3([[1,2,3],[3,4,5],[5,6,7]])
         test = vecs.copy()
@@ -160,11 +160,11 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertRaises(ValueError, test.__idiv__, (1,2,3,4))
 
         #------------------------
-        # Other functions...	 	 
+        # Other functions...  
         #------------------------
 
         #- - - - - - - - -
-        # to_scalar()	  	  
+        # to_scalar()    
         #- - - - - - - - -
         self.assertEqual(vecs.to_scalar(0),  Scalar((1,3,5)))
         self.assertEqual(vecs.to_scalar(1),  Scalar((2,4,6)))
@@ -174,14 +174,14 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertEqual(vecs.to_scalar(-3), Scalar((1,3,5)))
 
         #- - - - - - - - - 
-        # to_scalars()	   	   
+        # to_scalars()      
         #- - - - - - - - - 
         self.assertEqual(vecs.to_scalars(), (Scalar((1,3,5)),
                                              Scalar((2,4,6)),
                                              Scalar((3,5,7))))
 
         #- - - - - -
-        # dot()     	    
+        # dot()         
         #- - - - - -
         self.assertEqual(vecs.dot((1,0,0)), vecs.to_scalar(0))
         self.assertEqual(vecs.dot((0,1,0)), vecs.to_scalar(1))
@@ -228,7 +228,7 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertEqual(axb[2,2], Vector3((-3, 3, 0)).unit())
 
         #- - - - - - - - - - 
-        # perp, proj, sep    	     
+        # perp, proj, sep         
         #- - - - - - - - - - 
         a = Vector3(np.random.rand(2,1,4,1,3))
         b = Vector3(np.random.rand(  3,4,2,3))
@@ -252,7 +252,7 @@ class Test_Vector3_misc(unittest.TestCase):
         #* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
         #-------------------------------
-        # New tests 2/1/12 (MRS)		
+        # New tests 2/1/12 (MRS)
         #-------------------------------
         test = Vector3(np.arange(6).reshape(2,3))
         str_test = str(test).replace('  ', ' ').replace('[ ','[')

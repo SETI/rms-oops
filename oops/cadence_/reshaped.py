@@ -26,7 +26,7 @@ class ReshapedCadence(Cadence):
     def __init__(self, cadence, shape):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a ReshapedCadence.
+        Constructor for a ReshapedCadence.
 
         Input:
             cadence     the cadence to re-shape.
@@ -63,8 +63,8 @@ class ReshapedCadence(Cadence):
                               newshape, newstride, newrank):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Perform translations between new and old shapes of the cadence.
-	"""
+        Perform translations between new and old shapes of the cadence.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if oldrank == 1:
             tstep = Scalar.as_scalar(tstep)
@@ -122,8 +122,8 @@ class ReshapedCadence(Cadence):
     def _old_tstep_from_new(self, tstep):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Convert tsteps in the new stride to the original stride.
-	"""
+        Convert tsteps in the new stride to the original stride.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return ReshapedCadence._reshape_tstep(tstep,
                                    self.shape, self.stride, self.rank,
@@ -138,8 +138,8 @@ class ReshapedCadence(Cadence):
     def _new_tstep_from_old(self, tstep):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Convert tsteps in the original stride the new stride.
-	"""
+        Convert tsteps in the original stride the new stride.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return ReshapedCadence._reshape_tstep(tstep,
                                    self.oldshape, self.oldstride, self.oldrank,
@@ -154,7 +154,7 @@ class ReshapedCadence(Cadence):
     def time_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the time(s) associated with the given time step(s).
+        Return the time(s) associated with the given time step(s).
         
         This method supports non-integer step values.
 
@@ -176,7 +176,7 @@ class ReshapedCadence(Cadence):
     def time_range_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the range of time(s) for the given integer time step(s).
+        Return the range of time(s) for the given integer time step(s).
 
         Input:
             indices     a Scalar time step index or a Pair of indices.
@@ -200,7 +200,7 @@ class ReshapedCadence(Cadence):
     def tstep_at_time(self, time, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the time step(s) for given time(s).
+        Return the time step(s) for given time(s).
 
         This method supports non-integer time values.
 
@@ -222,7 +222,7 @@ class ReshapedCadence(Cadence):
     def time_is_inside(self, time, inclusive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return which time(s) fall inside the cadence.
+        Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.

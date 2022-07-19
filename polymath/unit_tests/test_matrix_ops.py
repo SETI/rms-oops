@@ -19,7 +19,7 @@ class Test_Matrix_ops(unittest.TestCase):
   def runTest(self):
 
     #-------------------------
-    # Unary plus	          
+    # Unary plus          
     #-------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
@@ -56,7 +56,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertRaises(ValueError, a.__iadd__, [(1,0),(1,1)]) # because readonly
 
     #-------------------------
-    # Unary minus	          
+    # Unary minus          
     #-------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
@@ -81,7 +81,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertFalse(b.d_dt.readonly)
 
     #- - - - - - - - - - - - - -
-    # Derivatives, readonly	    
+    # Derivatives, readonly    
     #- - - - - - - - - - - - - -
     a = Matrix([(1,2),(3,4)], derivs={'t':Matrix([(1,0),(1,1)])}).as_readonly()
     b = -a
@@ -96,14 +96,14 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertRaises(ValueError, a.__isub__, [(1,0),(1,1)]) # because readonly
 
     #-------------------------
-    # abs()		          
+    # abs()          
     #-------------------------
 
     a = Matrix([(1,0,0),(0,0,1),(0,-1,0)])
     self.assertRaises(TypeError, a.__abs__)
 
     #--------------------------
-    # Addition		           
+    # Addition           
     #--------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
@@ -157,7 +157,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertTrue(b.d_dt.readonly)    # deriv is a direct copy
 
     #- - - - - - - - - - - -
-    # In-place		    	
+    # In-place    
     #- - - - - - - - - - - -
     a = Matrix([(1,2),(3,4)])
     a += [(1,1),(0,0)]
@@ -184,7 +184,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, ((5,5),(5,5)))
 
     #----------------------------
-    # Subtraction		     
+    # Subtraction     
     #----------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
@@ -238,7 +238,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertTrue(b.d_dt.readonly)        # deriv is an exact copy
 
     #- - - - - - - - - - - - -
-    # In-place		          
+    # In-place          
     #- - - - - - - - - - - - -
     a = Matrix([(1,2),(3,4)])
     a -= [(1,1),(0,0)]
@@ -354,7 +354,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertFalse(c.readonly)
 
     #- - - - - - - 
-    # In-place	       
+    # In-place       
     #- - - - - - - 
     a = Matrix([(1,2),(3,4)])
     a *= 2
@@ -380,7 +380,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, [(1,-2),(-3,-2)])
 
     #--------------------------------
-    # Division			     	 
+    # Division      
     #--------------------------------
 
     a = Matrix([(2,4,6),(6,8,10)])
@@ -466,7 +466,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertFalse(c.d_dt.readonly)
 
     #- - - - - - - - - - 
-    # In-place		     
+    # In-place     
     #- - - - - - - - - - 
     a = Matrix([(2,4),(6,8)])
     a /= 2
@@ -491,14 +491,14 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, da_dt)
 
     #-------------------------------
-    # Floor division		    	
+    # Floor division    
     #-------------------------------
 
     self.assertRaises(TypeError, Matrix([(2,4),(6,8)]).__floordiv__, 1)
     self.assertRaises(TypeError, Matrix([(2,4),(6,8)]).__ifloordiv__, 1)
 
     #--------------------------------
-    # Modulus			     	 
+    # Modulus      
     #--------------------------------
 
     self.assertRaises(TypeError, Matrix([(2,4),(6,8)]).__mod__, 1)

@@ -19,7 +19,7 @@ class Test_Qube_shrink(unittest.TestCase):
   def runTest(self):
 
     #--------------
-    # corners	       
+    # corners       
     #--------------
     values = np.ones((100,200))
     a = Scalar(values)
@@ -68,7 +68,7 @@ class Test_Qube_shrink(unittest.TestCase):
     self.assertEqual(a.corners, ((1,1), (100,200)))
 
     #-----------------
-    # slicer	          
+    # slicer          
     #-----------------
     values = np.ones((100,200))
     mask = np.zeros((100,200), dtype='bool')
@@ -105,7 +105,7 @@ class Test_Qube_shrink(unittest.TestCase):
     self.assertEqual(a[a.slicer].shape, (100,200))
 
     #--------------------
-    # antimask		     
+    # antimask     
     #--------------------
     values = np.ones((100,200))
     mask = np.zeros((100,200), dtype='bool')
@@ -146,7 +146,7 @@ class Test_Qube_shrink(unittest.TestCase):
         Qube._IGNORE_UNSHRUNK_AS_CACHED = ignore
 
         #- - - - - - - - - - - - - - - - - 
-        # shrink and unshrink, unmasked    	   
+        # shrink and unshrink, unmasked       
         #- - - - - - - - - - - - - - - - - 
         values = np.arange(100*200).reshape(100,200)
         a = Scalar(values)
@@ -169,7 +169,7 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertTrue(np.all(c.mask[1:]))
 
         #- - - - - - - - - - - - - - - - -
-        # shrink and unshrink, masked	  	  
+        # shrink and unshrink, masked    
         #- - - - - - - - - - - - - - - - -
         values = np.arange(100*200).reshape(100,200)
         a = Scalar(values, mask=(np.random.randn(100,200) < 0))
@@ -217,7 +217,7 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertEqual(v, v3)
 
         #- - - - - - - - - -
-        # Shape control     	    
+        # Shape control         
         #- - - - - - - - - -
         a = Scalar(np.arange(900).reshape(100,3,3), drank=1, mask=True)
         b = a.shrink(False)
@@ -241,7 +241,7 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertEqual(aa.shape, ())
 
         #- - - - - - - - - - - - 
-        # Zero-sized objects	 	 
+        # Zero-sized objects  
         #- - - - - - - - - - - - 
 
         a = a[:0]
@@ -258,7 +258,7 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertEqual(aa.shape, ())
 
         #- - - - - - - - - - - - - - - - 
-        # Unshaped, unmasked objects	 	 
+        # Unshaped, unmasked objects  
         #- - - - - - - - - - - - - - - - 
         a = Scalar(8.)
 
@@ -321,7 +321,7 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertEqual(a, c)
 
         #- - - - - - - - - - - - - - - - - 
-        # Shaped object, unshaped mask	   	   
+        # Shaped object, unshaped mask      
         #- - - - - - - - - - - - - - - - - 
         a = Scalar(np.random.randn(7,5), mask=False)
 

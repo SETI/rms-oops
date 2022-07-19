@@ -123,18 +123,18 @@ class NICMOS(HST):
         global IDC_DICT
 
         #----------------------------
-        # Identify the detector      	     
+        # Identify the detector           
         #----------------------------
         det = self.detector_name(hst_file)
 
         #--------------------------------------------------------
-        # Load the dictionary of IDC parameters if necessary	   	   
+        # Load the dictionary of IDC parameters if necessary      
         #--------------------------------------------------------
         if IDC_DICT[det] is None:
             IDC_DICT[det] = self.load_idc_dict(hst_file, ("FILTER",))
 
         #----------------------------------------
-        # Define the key into the dictionary	 	 
+        # Define the key into the dictionary  
         #----------------------------------------
         idc_key = (hst_file[0].header["FILTER"],)
 
@@ -164,13 +164,13 @@ class NICMOS(HST):
             syn_filenames.append(filename)
 
         #-------------------------------------------------
-        # Append all the detector-specific file names	  	  
+        # Append all the detector-specific file names    
         #-------------------------------------------------
         for filename in self.DETECTOR_SYN_FILES:
             syn_filenames.append(filename)
 
         #-------------------------------
-        # Add the filter file name		
+        # Add the filter file name
         #-------------------------------
         syn_filenames.append(self.FILTER_SYN_FILE_PARTS[0] +
                              hst_file[0].header["FILTER"].lower() +
@@ -213,7 +213,7 @@ class NICMOS(HST):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #------------------------------------------
-        # Make an instance of the NICMOS class	   	   
+        # Make an instance of the NICMOS class     
         #------------------------------------------
         this = NICMOS()
 

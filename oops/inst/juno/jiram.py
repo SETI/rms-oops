@@ -73,14 +73,7 @@ def from_file(filespec, fast_distortion=True,
         fmeta = Metadata(flabels[i])
 
         item = (oops.obs.Snapshot(("v","u"), 
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#                                 {'tstart':fmeta.tstart, 'texp':fmeta.exposure}, fmeta.fov,
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
+                                 (fmeta.tstart, fmeta.exposure), fmeta.fov,
                                  "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame, 
                                  instrument = "JIRAM_I",
                                  filter = fmeta.filter, 
@@ -242,18 +235,18 @@ class Metadata(object):
             self.exposure = label['EXPOSURE_DURATION']
         except: 
             print('No exposure information')
-#            self.exposure = 1.		# TBD: figure this out, why do some images 
+#            self.exposure = 1.         # TBD: figure this out, why do some images 
                                         #      have no exposure time?  Use stop-start time?
-            self.exposure = 0.004	# works for JIR_IMG_RDR_2017244T104633_V01.img
+            self.exposure = 0.004       # works for JIR_IMG_RDR_2017244T104633_V01.img
 
         #-------------
         # Filters
         #-------------
         self.filter = []
-	
+
         Lparm = label['L_BAND_PARAMETERS']['LINE_FIRST_PIXEL']
         if type(Lparm) is int: self.filter.append('L_BAND')
-	
+
         Mparm = label['M_BAND_PARAMETERS']['LINE_FIRST_PIXEL']
         if type(Mparm) is int: self.filter.append('M_BAND')
 
@@ -266,7 +259,7 @@ class Metadata(object):
                        julian.tai_from_iso(label['STOP_TIME']))
         if self.exposure == 0: self.exposure = self.tstop - self.tstart
 
-	
+
         #-------------
         # target
         #-------------
@@ -305,7 +298,7 @@ class Metadata(object):
             scale = px/1000/fo
 
             self.fov = oops.fov.FlatFOV(scale, 
-	                                (self.nsamples, self.frlines), cxy)
+                                        (self.nsamples, self.frlines), cxy)
 
         return
     #===========================================================================
@@ -374,11 +367,11 @@ class JIRAM(object):
         #-----------------------------------
         rot90 = oops.Matrix3([[0,-1,0],[-1,0,0],[0,0,1]])
         mband_rot = oops.frame.SpiceFrame("JUNO_JIRAM_I_MBAND", 
-	                                            id="JUNO_JIRAM_I_MBAND_ROT")
+                                                    id="JUNO_JIRAM_I_MBAND_ROT")
         mband = oops.frame.Cmatrix(rot90, mband_rot, id="JUNO_JIRAM_I_MBAND")
 
         lband_rot = oops.frame.SpiceFrame("JUNO_JIRAM_I_LBAND", 
-	                                            id="JUNO_JIRAM_I_LBAND_ROT")
+                                                    id="JUNO_JIRAM_I_LBAND_ROT")
         lband = oops.frame.Cmatrix(rot90, lband_rot, id="JUNO_JIRAM_I_LBAND")
 
 

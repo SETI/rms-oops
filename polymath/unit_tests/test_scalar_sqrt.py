@@ -19,7 +19,7 @@ class Test_Scalar_sqrt(unittest.TestCase):
   def runTest(self):
 
     #-----------------------
-    # Individual values     	
+    # Individual values     
     #-----------------------
     self.assertEqual(Scalar(0.3).sqrt(), np.sqrt(0.3))
     self.assertEqual(type(Scalar(0.3).sqrt()), Scalar)
@@ -28,13 +28,13 @@ class Test_Scalar_sqrt(unittest.TestCase):
     self.assertEqual(Scalar(4).sqrt(), 2.)
 
     #---------------------
-    # Multiple values	      
+    # Multiple values      
     #---------------------
     self.assertEqual(Scalar((1,2,3)).sqrt(), np.sqrt((1,2,3)))
     self.assertEqual(type(Scalar((1,2,3)).sqrt()), Scalar)
 
     #------------
-    # Arrays	     
+    # Arrays     
     #------------
     N = 1000
     x = Scalar(np.random.randn(N))
@@ -51,7 +51,7 @@ class Test_Scalar_sqrt(unittest.TestCase):
             self.assertEqual(y[i:i+2], np.sqrt(x.values[i:i+2]))
 
     #----------------------
-    # Test valid units	       
+    # Test valid units       
     #----------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
@@ -78,7 +78,7 @@ class Test_Scalar_sqrt(unittest.TestCase):
     self.assertTrue(x.sqrt().mask)
 
     #------------
-    # Masks	     
+    # Masks     
     #------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -110,7 +110,7 @@ class Test_Scalar_sqrt(unittest.TestCase):
                                delta = abs(dy_dt[i]) * DEL)
 
     #-----------------------------------------------
-    # Read-only status should NOT be preserved	    	
+    # Read-only status should NOT be preserved    
     #-----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))

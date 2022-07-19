@@ -49,7 +49,7 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertEqual(type(Scalar(4, mask=True).min()), Scalar)
 
     #---------------------
-    # Multiple values	      
+    # Multiple values      
     #---------------------
     self.assertTrue(Scalar((1,2,3)).min() == 1)
     self.assertEqual(type(Scalar((1,2,3)).min()), int)
@@ -58,7 +58,7 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertEqual(type(Scalar((1.,2,3)).min()), float)
 
     #-------------
-    # Arrays	      
+    # Arrays      
     #-------------
     N = 400
     x = Scalar(np.random.randn(N).reshape((2,4,5,10)))
@@ -68,7 +68,7 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertEqual(x.flatten()[argmin], x.min())
 
     #---------------
-    # Test units    	
+    # Test units    
     #---------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
@@ -83,7 +83,7 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertEqual(type(random.min()), float)
 
     #-------------
-    # Masks	      
+    # Masks      
     #-------------
     N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -121,7 +121,7 @@ class Test_Scalar_min(unittest.TestCase):
     self.assertRaises(ValueError, a.min)
 
     #--------------------
-    # Mins over axes	     
+    # Mins over axes     
     #--------------------
     x = Scalar(np.arange(30).reshape(2,3,5))
     m0 = x.min(axis=0)
@@ -147,7 +147,7 @@ class Test_Scalar_min(unittest.TestCase):
         self.assertEqual(x[argmin[j,k],j,k], m0[j,k])
 
     #----------------------
-    # Mins with masks	       
+    # Mins with masks       
     #----------------------
     values = np.arange(30).reshape(2,3,5)
     mask = (values < 5)

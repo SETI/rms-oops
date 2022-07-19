@@ -141,7 +141,7 @@ class Packrat(object):
                        crlf=None, compress=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Create a Packrat object for write or append.
+        Create a Packrat object for write or append.
 
         It opens a new file of the given name. Use the close() method when
         finished. An associated .npz file is opened only if it is needed.

@@ -108,7 +108,7 @@ class NIRC2(Keck):
         pix_scale = pix_scale * oops.RPD/3600. # Convert to radians
         
         #--------------------------
-        # Full field of view	   	   
+        # Full field of view      
         #--------------------------
         lines = 1024
         samples = 1024
@@ -182,7 +182,7 @@ class NIRC2(Keck):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #-----------------------------------------
-        # Make an instance of the NIRC2 class	  	  
+        # Make an instance of the NIRC2 class    
         #-----------------------------------------
         this = NIRC2()
 

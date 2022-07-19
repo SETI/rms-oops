@@ -34,7 +34,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertEqual(type(c[0]), Scalar)
 
     #---------------------------
-    # check units and masks	    
+    # check units and masks    
     #---------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5),
@@ -52,7 +52,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertEqual(a[0].values[1], 22.)
 
     #------------------------
-    # check derivatives      	 
+    # check derivatives       
     #------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
@@ -107,7 +107,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(a.d_dv.values[...,3,:] == c.d_dv.values))
 
     #-------------------------
-    # read-only status	          
+    # read-only status          
     #-------------------------
     N = 10
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))

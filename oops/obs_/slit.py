@@ -49,12 +49,12 @@ class Slit(Observation):
                         detectors.
 
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive measurement.  Alternatively, a tuple of
-                        the form:
+                        each consecutive measurement.  Alternatively, a tuple || 
+                        dictionary of the form:
 
-			  (times, texp)
+                          (times, texp) || {'times':times, 'texp':texp}
 
-			with:
+                        with:
 
                           times: List or 1-D array of times in seconds.
                           texp:  Exposure time in seconds for each step.
@@ -89,8 +89,13 @@ class Slit(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
+
 
         #--------------------------------------------------
         # Axes
@@ -199,20 +204,20 @@ class Slit(Observation):
         #---------------------------------
         if self.slit_is_discontinuous:
 
-	    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Identify indices at exact upper limit; treat these as inside
-	    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             at_upper_limit = (slit_coord == self.along_slit_shape)
 
-	    #- - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - 
             # Map continuous index to discontinuous (u,v)
-	    #- - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - 
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
 
-	    #- - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - -
             # Adjust values at upper limit
-	    #- - - - - - - - - - - - - - - -
+            #- - - - - - - - - - - - - - - -
             slit_coord = slit_coord.mask_where(at_upper_limit,
                             replace = self.along_slit_shape + self.det_size - 1,
                             remask = False)

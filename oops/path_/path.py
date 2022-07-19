@@ -41,7 +41,7 @@ class Path(object):
     def __init__(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Path object. Every path must have these attributes:
+        Constructor for a Path object. Every path must have these attributes:
 
             path_id     the string ID of this Path.
             waypoint    the waypoint that uniquely identifies this path. For

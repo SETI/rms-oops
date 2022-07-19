@@ -24,7 +24,7 @@ class Line(Shape2D, Conic):
     def __init__(pt0, pt1):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Line object, which has no limits.
+        Constructor for a Line object, which has no limits.
 
         Input:
             pt0         one point on the line, represented as a Pair of
@@ -80,7 +80,7 @@ class Line(Shape2D, Conic):
     def from_conics(a,b,c,d,e,f):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Construct a Line object from the coefficients of a conic section:
+        Construct a Line object from the coefficients of a conic section:
                 a x^2 + b xy + c y^2 + d x + e y + f = 0
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -163,9 +163,9 @@ class Line(Shape2D, Conic):
     def rotate(self, angle):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Rotate a line from the center point through a specified angle
+        Rotate a line from the center point through a specified angle
         counterclockwise.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         angle = Scalar.as_scalar(angle)
         return Line(self.pt0,
@@ -180,9 +180,9 @@ class Line(Shape2D, Conic):
     def rotate90(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Rotate a line from the center point through 90 degrees
+        Rotate a line from the center point through 90 degrees
         counterclockwise. This is quicker than the general formula.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Line(self.pt0, self.pt0 + self.perp)
     #===========================================================================
@@ -199,7 +199,7 @@ class Line(Shape2D, Conic):
     def _mask(self, t, obj=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Masks where Scalar t is outside the allowed range.
+        Masks where Scalar t is outside the allowed range.
 
         Input:
             t       parameter of shape.
@@ -221,8 +221,8 @@ class Line(Shape2D, Conic):
     def _clip(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Clips Scalar t to the allowed range. No masking is applied.
-	"""
+        Clips Scalar t to the allowed range. No masking is applied.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return t
     #===========================================================================
@@ -239,7 +239,7 @@ class Line(Shape2D, Conic):
     def _line_param_closest_to_point(self, pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the parameter where the point on this line is closest to the
+        Return the parameter where the point on this line is closest to the
         given point. The returned parameter is clipped to the allowed range and
         left unmasked.
         """
@@ -269,7 +269,7 @@ class Line(Shape2D, Conic):
     def _line_intersection_params(self, line):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the parameter values where two lines intersect. Parameters
+        Return the parameter values where two lines intersect. Parameters
         are masked if the Lines or Line subclasses do not intersect.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -314,8 +314,8 @@ class Line(Shape2D, Conic):
     def _more_accurate_intersection(self, s, line, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the intersection points requiring shorter extrapolations.
-	"""
+        Return the intersection points requiring shorter extrapolations.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         result0 = self.point_at(s)
         result1 = line.point_at(t)
@@ -333,7 +333,7 @@ class Line(Shape2D, Conic):
     def _line_conic_intersection_params(self, conic, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Find the intersection points between this line and a conic.
+        Find the intersection points between this line and a conic.
 
         Inputs:
             conic       a Conic represented by N object with six Scalar
@@ -388,9 +388,9 @@ class Line(Shape2D, Conic):
     def dimensions(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Scalar dimension of this object: 0 for a point; 1 for a line; 2
+        The Scalar dimension of this object: 0 for a point; 1 for a line; 2
         for a shape object that has nonzero area.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.ONE
     #===========================================================================
@@ -403,8 +403,8 @@ class Line(Shape2D, Conic):
     def is_convex(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the shape is convex.
-	"""
+        True if the shape is convex.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Boolean.TRUE
     #===========================================================================
@@ -417,8 +417,8 @@ class Line(Shape2D, Conic):
     def point_at(t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameterization of the shape.
-	"""
+        Parameterization of the shape.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Point(self.pt0 + self._mask(t) * self.dpt)
     #===========================================================================
@@ -431,7 +431,7 @@ class Line(Shape2D, Conic):
     def param_at(pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameter at a point, which is assumed to fall on the edge of this
+        Parameter at a point, which is assumed to fall on the edge of this
         object.
 
         What happens when the point does not fall on the shape is undetermined.
@@ -448,8 +448,8 @@ class Line(Shape2D, Conic):
     def param_limits(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameter limits to define the shape.
-	"""
+        Parameter limits to define the shape.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (self.tmin, self.tmax)
     #===========================================================================
@@ -462,7 +462,7 @@ class Line(Shape2D, Conic):
     def closest(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Tuple containing the pairs of closest points between the edges of
+        Tuple containing the pairs of closest points between the edges of
         this object and the given Shape2D object.
 
         Input:
@@ -552,7 +552,7 @@ class Line(Shape2D, Conic):
     def intersections(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Points defining intersections between the edges of this shape and the
+        Points defining intersections between the edges of this shape and the
         given Shape2D object.
 
         Input:
@@ -603,7 +603,7 @@ class Line(Shape2D, Conic):
     def tangents_from(self, pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The two points where this Shape2D object is tangent to a line from
+        The two points where this Shape2D object is tangent to a line from
         the given Point.
 
         Note: If the two points are degenerate, the second one is masked.
@@ -632,7 +632,7 @@ class Line(Shape2D, Conic):
     def tangent_at(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Line object tangent to this Shape2D object at the given parameter
+        The Line object tangent to this Shape2D object at the given parameter
         value.
 
         Input:
@@ -656,7 +656,7 @@ class Line(Shape2D, Conic):
     def normal_at(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The outward HalfLine object normal to this Shape2D object at the
+        The outward HalfLine object normal to this Shape2D object at the
         given parameter value.
 
         Note: for Line subclasses, the "outward" normal is defined to be the
@@ -687,7 +687,7 @@ class Line(Shape2D, Conic):
     def is_subset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as subset of (i.e., is entirely contained by)
+        True if this object is as subset of (i.e., is entirely contained by)
         the given Shape2D object.
 
         Input:
@@ -730,7 +730,7 @@ class Line(Shape2D, Conic):
     def is_superset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as superset of (i.e., entirely contains) the
+        True if this object is as superset of (i.e., entirely contains) the
         given Shape2D object.
 
         Input:
@@ -774,7 +774,7 @@ class Line(Shape2D, Conic):
     def is_disjoint_from(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the this object and the given Shape2D object are disjoint
+        True if the this object and the given Shape2D object are disjoint
         (i.e., do not touch or overlap).
 
         Input:
@@ -817,7 +817,7 @@ class Line(Shape2D, Conic):
     def touches(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the this object and the given Shape2D touch but do not share
+        True if the this object and the given Shape2D touch but do not share
         any common interior points.
 
         Input:
@@ -901,7 +901,7 @@ class (Line):
     def __init__(pt0, pt1):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a HalfLine object, which has a limit in only one
+        Constructor for a HalfLine object, which has a limit in only one
         direction.
 
         Input:
@@ -928,7 +928,7 @@ class (Line):
     def _mask(self, t, obj=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Masks where Scalar t is outside the allowed range.
+        Masks where Scalar t is outside the allowed range.
 
         Input:
             t       parameter of shape.
@@ -950,8 +950,8 @@ class (Line):
     def _clip(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Clips Scalar t to the allowed range. No masking is applied.
-	"""
+        Clips Scalar t to the allowed range. No masking is applied.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(t).clip(0., None, remask=False)
     #===========================================================================
@@ -964,7 +964,7 @@ class (Line):
     def tangents_from(self, pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The two points where this Shape2D object is tangent to a line from
+        The two points where this Shape2D object is tangent to a line from
         the given Point.
 
         Note: If the two points are degenerate, the second one is masked.
@@ -1010,7 +1010,7 @@ class (Line):
     def __init__(pt0, pt1):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Segment object, which is a straight line between
+        Constructor for a Segment object, which is a straight line between
         two endpoints.
 
         Input:
@@ -1059,8 +1059,8 @@ class (Line):
     def _clip(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Clips Scalar t to the allowed range. No masking is applied.
-	"""
+        Clips Scalar t to the allowed range. No masking is applied.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(t).clip(0., 1., remask=False)
     #===========================================================================
@@ -1075,9 +1075,9 @@ class (Line):
     def dimensions(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Scalar dimension of this object: 0 for a point; 1 for a line; 2
+        The Scalar dimension of this object: 0 for a point; 1 for a line; 2
         for a shape object that has nonzero area.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if (self.r == 0).any():
             return (self.r != 0).as_int()
@@ -1093,8 +1093,8 @@ class (Line):
     def is_convex(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Boolean True if the shape is convex.
-	"""
+        Boolean True if the shape is convex.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Boolean.TRUE
     #===========================================================================
@@ -1107,7 +1107,7 @@ class (Line):
     def tangents_from(self, pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The two points where this Shape2D object is tangent to a line from
+        The two points where this Shape2D object is tangent to a line from
         the given Point.
 
         Note: If the two points are degenerate, the second one is masked.

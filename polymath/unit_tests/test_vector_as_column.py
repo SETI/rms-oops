@@ -43,7 +43,7 @@ class Test_Vector_as_column(unittest.TestCase):
     self.assertEqual(b.values[0,0,0], 22.)
 
     #-----------------------
-    # check derivatives     	
+    # check derivatives     
     #-----------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
@@ -77,7 +77,7 @@ class Test_Vector_as_column(unittest.TestCase):
     self.assertTrue(np.all(a.d_dv.values == b.d_dv.values[...,0,:]))
 
     #------------------------
-    # read-only status	     	 
+    # read-only status      
     #------------------------
     N = 10
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))

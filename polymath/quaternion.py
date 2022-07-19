@@ -44,8 +44,8 @@ class Quaternion(Vector):
     def as_quaternion(arg, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	This object converted to a Quaternion.
-	"""
+        This object converted to a Quaternion.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(arg) == Quaternion:
             if recursive:
@@ -77,11 +77,11 @@ class Quaternion(Vector):
     def from_parts(scalar, vector, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Construct a Quaternion from separate scalar and vector components.
+        Construct a Quaternion from separate scalar and vector components.
 
         If either argument is None, the associated components are filled with
         zeros.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #----------------------------
@@ -159,8 +159,8 @@ class Quaternion(Vector):
     def to_parts(self, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Scalar and Vector components of a Quaternion.
-	"""
+        The Scalar and Vector components of a Quaternion.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (self.extract_numer(0, 0, Scalar, recursive),
                 self.slice_numer(0, 1, 4, Vector3, recursive))
@@ -175,7 +175,7 @@ class Quaternion(Vector):
     def from_rotation(angle, vector, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Construct a Quaternion for an angular rotation about an axis vector.
+        Construct a Quaternion for an angular rotation about an axis vector.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         angle = Scalar.as_scalar(angle)
@@ -201,7 +201,7 @@ class Quaternion(Vector):
     def to_rotation(self, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The rotation angle and unit vector defined by a Quaternion.
+        The rotation angle and unit vector defined by a Quaternion.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (cos_half_angle, vector) = self.to_parts(recursive)
@@ -219,8 +219,8 @@ class Quaternion(Vector):
     def conj(self, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Complex conjugate of this quaternion.
-	"""
+        Complex conjugate of this quaternion.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         new_values = self.values.copy()
 
@@ -250,7 +250,7 @@ class Quaternion(Vector):
     def to_matrix3(self, recursive=True, partials=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Convert this Quaternion to a Matrix3.
+        Convert this Quaternion to a Matrix3.
 
         Input:
             recursive   if True, the returned Matrix3 contains representations
@@ -403,7 +403,7 @@ class Quaternion(Vector):
     def from_matrix3(matrix, recursive=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Convert a Matrix3 to a Quaternion.
+        Convert a Matrix3 to a Quaternion.
 
         Input:
             recursive   if True, the returned Matrix3 contains representations
@@ -650,8 +650,8 @@ class Quaternion(Vector):
     def mul_values(a, b):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Internal method to multiply two quaternions.
-	"""
+        Internal method to multiply two quaternions.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #-------------------------------------
@@ -742,7 +742,7 @@ class Quaternion(Vector):
     def reciprocal(self, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	A object equivalent to the reciprocal of this object.
+        A object equivalent to the reciprocal of this object.
 
         Input:
             recursive   True to return the derivatives of the reciprocal too;
@@ -764,8 +764,8 @@ class Quaternion(Vector):
     def identity(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return an identity-valued Quaternion.
-	"""
+        Return an identity-valued Quaternion.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Quaternion(np.array([1.,0.,0.,0.])).as_readonly()
     #===========================================================================
@@ -821,7 +821,7 @@ class Quaternion(Vector):
     def from_euler(ai, aj, ak, axes='rzxz'):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Creates a Quaternion from three Scalars of Euler angles plus an axis
+        Creates a Quaternion from three Scalars of Euler angles plus an axis
         sequence.
 
         ai, aj, ak : Euler's roll, pitch and yaw angles
@@ -911,8 +911,8 @@ class Quaternion(Vector):
     def from_euler_via_matrix(ai, aj, ak, axes='rzxz'):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Just for testing and validation.
-	"""
+        Just for testing and validation.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         m = Matrix3.from_euler(ai, aj, ak, axes)
         return Quaternion.from_matrixs(m)

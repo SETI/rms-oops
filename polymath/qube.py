@@ -6,7 +6,6 @@
 
 from __future__ import division
 
-#from IPython import embed   ## TODO: remove
 import sys
 import numbers
 import warnings

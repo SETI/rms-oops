@@ -28,9 +28,9 @@ class Shape2D(object):
     def dimensions(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Scalar dimension of this object: 0 for a point; 1 for a line; 2
+        The Scalar dimension of this object: 0 for a point; 1 for a line; 2
         for a shape object that has nonzero area.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method dimensions() is not implemented')
     #===========================================================================
@@ -43,8 +43,8 @@ class Shape2D(object):
     def is_convex(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Boolean True if the shape is convex.
-	"""
+        Boolean True if the shape is convex.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method is_convex() is not implemented')
     #===========================================================================
@@ -57,8 +57,8 @@ class Shape2D(object):
     def point_at(t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameterization of the shape.
-	"""
+        Parameterization of the shape.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method point_at() is not implemented')
     #===========================================================================
@@ -71,7 +71,7 @@ class Shape2D(object):
     def param_at(pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameter at a point, which is assumed to fall on the edge of this
+        Parameter at a point, which is assumed to fall on the edge of this
         object.
 
         What happens when the point does not fall on the shape is undetermined.
@@ -88,8 +88,8 @@ class Shape2D(object):
     def param_limits(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameter limits to define the shape.
-	"""
+        Parameter limits to define the shape.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         raise NotImplementedError('method param_limits() is not implemented')
     #===========================================================================
@@ -102,7 +102,7 @@ class Shape2D(object):
     def closest(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Tuple containing the pairs of closest points between the edges of
+        Tuple containing the pairs of closest points between the edges of
         this object and the given Shape2D object.
 
         Input:
@@ -132,7 +132,7 @@ class Shape2D(object):
     def intersections(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Points defining intersections between the edges of this shape and the
+        Points defining intersections between the edges of this shape and the
         given Shape2D object.
 
         Input:
@@ -159,7 +159,7 @@ class Shape2D(object):
     def tangents_from(self, pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The two Points where this Shape2D object is tangent to a line from
+        The two Points where this Shape2D object is tangent to a line from
         the given Point.
 
         Note: If the two points are degenerate, the second one is masked.
@@ -187,7 +187,7 @@ class Shape2D(object):
     def tangent_at(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Line object tangent to this Shape2D object at the given parameter
+        The Line object tangent to this Shape2D object at the given parameter
         value.
 
         Input:
@@ -211,7 +211,7 @@ class Shape2D(object):
     def normal_at(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The outward HalfLine object normal to this Shape2D object at the
+        The outward HalfLine object normal to this Shape2D object at the
         given parameter value.
 
         Note: for Line subclasses, the "outward" normal is defined to be the
@@ -240,7 +240,7 @@ class Shape2D(object):
     def is_subset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as subset of (i.e., is entirely contained by)
+        True if this object is as subset of (i.e., is entirely contained by)
         the given Shape2D object.
 
         Input:
@@ -262,7 +262,7 @@ class Shape2D(object):
     def is_superset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as superset of (i.e., entirely contains) the
+        True if this object is as superset of (i.e., entirely contains) the
         given Shape2D object.
 
         Input:
@@ -284,7 +284,7 @@ class Shape2D(object):
     def is_disjoint_from(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the this object and the given Shape2D object are disjoint
+        True if the this object and the given Shape2D object are disjoint
         (i.e., do not touch or overlap).
 
         Input:
@@ -319,7 +319,7 @@ class Shape2D(object):
     def touches(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the this object and the given Shape2D touch but do not share
+        True if the this object and the given Shape2D touch but do not share
         any common interior points.
 
         Input:
@@ -367,8 +367,8 @@ class Shape2D(object):
     def _meshgrid_for_arg(arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Meshgrid to convert the results of argmin(axis=0) in an index.
-	"""
+        Meshgrid to convert the results of argmin(axis=0) in an index.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         axes = [arg.values]
         for k in arg.shape[::-1]:
@@ -386,7 +386,7 @@ class Shape2D(object):
     def _closest_of_pairings(shape1_pts, shape2_pts)
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Select the pairings of points on shape1 and shape2 that are closest.
+        Select the pairings of points on shape1 and shape2 that are closest.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(shape1_pts) == list:

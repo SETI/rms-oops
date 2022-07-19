@@ -2443,7 +2443,7 @@ def unload_by_name(names):
 
                 if len(fileno_list) == 0:
                     del FURNISHED_FILENOS[name]
-		    
+
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Delete the kernel name from the dictionaries if there a no other files
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

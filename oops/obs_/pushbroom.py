@@ -2,8 +2,6 @@
 # oops/obs_/pushbroom.py: Subclass Pushbroom of class Observation
 ################################################################################
 
-#from IPython import embed   ## TODO: remove
-
 import numpy as np
 from polymath import *
 
@@ -60,9 +58,11 @@ class Pushbroom(Observation):
 
             cadence     a Cadence object defining the start time and duration of
                         each consecutive position of the pushbroom.
-                        Alternatively, a tuple of the form:
+                        Alternatively, a tuple || dictionary of the form:
 
-                          (tstart, tstride, texp, steps)
+                          (tstart, tstride, texp, steps) ||
+                          {'tstart':tstart, 'tstride':tstride, 
+                           'texp':texp, 'steps':steps} 
 
                         with:
 
@@ -122,8 +122,12 @@ class Pushbroom(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
         #--------------------------------------------------
         # Timing

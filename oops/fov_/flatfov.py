@@ -85,7 +85,7 @@ class FlatFOV(FOV):
                      coordinates.
             derivs   If True, any derivatives in (u,v) get propagated into
                      the returned (x,y).
-	    
+    
         Return:      xy
             xy       Pairs of same shape as uv giving the transformed
                      FOV coordinates.
@@ -109,7 +109,7 @@ class FlatFOV(FOV):
                      coordinates.
             derivs   If True, any derivatives in (x,y) get propagated into
                      the returned (u,v).
-	    
+    
         Return:      uv
             uv       Pairs of same shape as xy giving the computed
                      FOV coordinates.

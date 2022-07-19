@@ -386,17 +386,9 @@ def from_file(filespec, fast=False, **parameters):
         if not vis_is_off:
             if vis_data is not None: vis_data = vis_data.reshape((samples, 96))
 
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#            vis_obs = oops.obs.Slit1D(("u","b"), 1.,
-#                                {'tstart':tstart, 'texp:vis_texp_nonzero}, 
-#                                vis_fov, "CASSINI", vis_frame_id)
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
             vis_obs = oops.obs.Slit1D(("u","b"), 1.,
-                                tstart, vis_texp_nonzero, vis_fov,
-                                "CASSINI", vis_frame_id)
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+                                (tstart, vis_texp_nonzero), 
+                                vis_fov, "CASSINI", vis_frame_id)
 
 
         if not ir_is_off:
@@ -405,7 +397,6 @@ def from_file(filespec, fast=False, **parameters):
             if backplane_cadence is not None:
                 ir_fast_cadence = backplane_cadence
 
-#DEFCAD: Note this call is already compliant with the proposed DEFCAD mod...
             ir_obs = oops.obs.RasterSlit1D(("ut","b"), ir_det_size,
                                 ir_fast_cadence, ir_fov,
                                 "CASSINI", ir_frame_id)
@@ -635,7 +626,8 @@ def _load_data_and_times(filespec, label):
         suffix_item_type = ""
 
     record_bytes = label["RECORD_BYTES"]
-    header_bytes = record_bytes * (label["^QUBE"] - 1)
+###    header_bytes = record_bytes * (label["^QUBE"] - 1)     JNS
+    header_bytes = record_bytes * (label["^QUBE"][0] - 1)
 
     #-------------------------------------------
     # Make sure we have byte-aligned values
@@ -660,7 +652,8 @@ def _load_data_and_times(filespec, label):
     #----------------------------------------------------------------
     # Locate the cube data in the file in units of core_item_bytes
     #----------------------------------------------------------------
-    offset = header_bytes / core_item_bytes
+###    offset = header_bytes / core_item_bytes             JNS
+    offset = int(header_bytes / core_item_bytes)
     size = line_stride * core_lines
 
     #------------------------------------------

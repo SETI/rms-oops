@@ -253,28 +253,28 @@ class SpiceFrame(Frame):
 
             for i,t in np.ndenumerate(time.values):
 
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Define a set of three times centered on given time
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 times = np.array((t - self.omega_dt, t, t + self.omega_dt))
 
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Generate the rotation matrix at each time
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 mats = np.empty((3,3,3))
                 for j in range(len(times)):
                     mats[j] = cspyce.pxform(self.spice_reference_name,
                                             self.spice_frame_name,
                                             times[j])
 
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Convert these three matrices to quaternions
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 quats = Quaternion.as_quaternion(Matrix3(mats))
 
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Use a Univariate spline to get components of the derivative
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 qdot = np.empty(4)
                 for j in range(4):
                     spline = UnivariateSpline(times, quats.values[:,j], k=2,
@@ -413,14 +413,14 @@ class SpiceFrame(Frame):
                                             self.spice_frame_name,
                                             times[j])
 
-		#- - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - -
                 # Convert three matrices to quaternions
-		#- - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - -
                 quats = Quaternion.as_quaternion(Matrix3(mats))
 
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Use a Univariate spline to get components of the derivative
-		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 qdot = np.empty(4)
                 for j in range(4):
                     spline = UnivariateSpline(times, quats.values[:,j], k=2,

@@ -23,7 +23,7 @@ class DualCadence(Cadence):
     def __init__(self, long, short):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a DualCadence.
+        Constructor for a DualCadence.
 
         Input:
             long        the long or outer cadence. It defines the larger steps
@@ -42,9 +42,9 @@ class DualCadence(Cadence):
                                         self.short.time[0])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
 
-	#-----------------------------------------------------------------
+        #-----------------------------------------------------------------
         # Arbitrary definitions and may need to be changed in the future
-	#-----------------------------------------------------------------
+        #-----------------------------------------------------------------
         self.is_continuous = self.short.is_continuous
         self.lasttime = self.long.lasttime
 
@@ -59,7 +59,7 @@ class DualCadence(Cadence):
     def time_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the min time(s) associated with the given time step(s).
+        Return the min time(s) associated with the given time step(s).
         
         This method supports non-integer step values.
 
@@ -85,7 +85,7 @@ class DualCadence(Cadence):
     def time_range_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the range of time(s) for the given integer time step(s).
+        Return the range of time(s) for the given integer time step(s).
 
         Input:
             indices     a Scalar time step index or a Pair of indices.
@@ -114,7 +114,7 @@ class DualCadence(Cadence):
     def tstep_at_time(self, time, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the time step(s) for given time(s).
+        Return the time step(s) for given time(s).
 
         This method supports non-integer time values.
 
@@ -142,7 +142,7 @@ class DualCadence(Cadence):
     def time_is_inside(self, time, inclusive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return which time(s) fall inside the cadence.
+        Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
@@ -170,7 +170,7 @@ class DualCadence(Cadence):
     def time_shift(self, secs):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return a duplicate with all times shifted by given amount."
+        Return a duplicate with all times shifted by given amount."
 
         Input:
             secs        the number of seconds to shift the time later.
@@ -187,7 +187,7 @@ class DualCadence(Cadence):
     def as_continuous(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return a shallow copy forced to be continuous.
+        Return a shallow copy forced to be continuous.
         
         For DualCadence, this is accomplished by forcing the stride of
         the short cadence to be continuous.
@@ -220,7 +220,7 @@ class Test_DualCadence(unittest.TestCase):
     def meshgrid(*args):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns a new Vector constructed by combining every possible set of
+        Returns a new Vector constructed by combining every possible set of
         components provided as a list of scalars. The returned Vector will have
         a shape defined by concatenating the shapes of all the arguments.
         
@@ -269,11 +269,11 @@ class Test_DualCadence(unittest.TestCase):
         import numpy.random as random
         from oops.cadence_.metronome import Metronome
 
-	#------------------------------------------------
+        #------------------------------------------------
         # These should be equivalent except for 1-D vs. 2-D indexing
         # Note that we don't test the invalid data cases because nothing
         # in the implementation depends on them
-	#------------------------------------------------
+        #------------------------------------------------
         cad1d = Metronome(100., 2., 1., 50)
 
         long = Metronome(100., 10., 1., 10)
@@ -322,19 +322,19 @@ class Test_DualCadence(unittest.TestCase):
         self.assertEqual(test1d // 5, test2d.to_scalar(0))
         self.assertEqual(test1d %  5, test2d.to_scalar(1))
 
-	#---------------------------------------------------------------
+        #---------------------------------------------------------------
         # time_is_inside differs in the two cases at exactly time=200
         # so we carefully skip over that case
-	#---------------------------------------------------------------
+        #---------------------------------------------------------------
         time_seq = Scalar(np.arange(90,220)+0.5)
         test1d = cad1d.time_is_inside(time_seq)
         test2d = cad2d.time_is_inside(time_seq)
 
         self.assertTrue(test1d == test2d)
 
-	#---------------------
+        #---------------------
         # Test masked values
-	#---------------------
+        #---------------------
         tstep = Pair(((0,0),(1,1),(2,2)), [False,True,False])
         time = Scalar((100,110,120), [False,True,False])
         self.assertTrue(Boolean(cad2d.time_at_tstep(tstep).mask) ==
@@ -349,9 +349,9 @@ class Test_DualCadence(unittest.TestCase):
         self.assertTrue(Boolean(cad2d.time_range_at_tstep(tstep)[1].mask) ==
                         [False,True,False])
 
-	#-------------------
+        #-------------------
         # Random tsteps
-	#-------------------
+        #-------------------
         values = np.random.rand(10,10,10,10,2)
         values[...,0] *= 12
         values[...,1] *= 7
@@ -373,9 +373,9 @@ class Test_DualCadence(unittest.TestCase):
         self.assertEqual(test1d // 5, test2d.to_scalar(0))
         self.assertTrue((abs(test1d % 5 - test2d.to_scalar(1)) < 1.e-12).all())
 
-	#-------------------------------------------
+        #-------------------------------------------
         # Make sure everything works with scalars
-	#-------------------------------------------
+        #-------------------------------------------
         for iter in range(1000):
             random1d = np.random.random()
             random2d = Vector((random1d//5, random1d%5))
@@ -394,16 +394,16 @@ class Test_DualCadence(unittest.TestCase):
             self.assertEqual(test1d // 5, test2d.to_scalar(0))
             self.assertTrue(abs(test1d % 5 - test2d.to_scalar(1)) < 1.e-12)
 
-	#------------------
+        #------------------
         # time_shift()
-	#------------------
+        #------------------
         shifted = cad2d.time_shift(0.5)
         self.assertEqual(cad2d.time_at_tstep(grid2d),
                          shifted.time_at_tstep(grid2d) - 0.5)
 
-	#----------------------
+        #----------------------
         # tstride_at_tstep()
-	#----------------------
+        #----------------------
         self.assertEqual(cad2d.tstride_at_tstep(Pair((0,0))), Pair((10,2)))
         self.assertEqual(cad2d.tstride_at_tstep(Pair((5,3))), Pair((10,2)))
     #===========================================================================

@@ -23,7 +23,7 @@ class Instant(Cadence):
     def __init__(self, tdb):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for an Instant.
+        Constructor for an Instant.
 
         Input:
             tdb         a time Scalar in seconds TDB.
@@ -46,7 +46,7 @@ class Instant(Cadence):
     def time_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the time(s) associated with the given time step(s).
+        Return the time(s) associated with the given time step(s).
         
         This method supports non-integer step values.
 
@@ -68,7 +68,7 @@ class Instant(Cadence):
     def time_range_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the range of time(s) for the given integer time step(s).
+        Return the range of time(s) for the given integer time step(s).
 
         Input:
             indices     a Scalar time step index or a Pair of indices.
@@ -91,7 +91,7 @@ class Instant(Cadence):
     def tstep_at_time(self, time, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the time step(s) for given time(s).
+        Return the time step(s) for given time(s).
 
         This method supports non-integer time values.
 
@@ -113,7 +113,7 @@ class Instant(Cadence):
     def time_is_inside(self, time, inclusive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return which time(s) fall inside the cadence.
+        Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
@@ -136,7 +136,7 @@ class Instant(Cadence):
     def time_shift(self, secs):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return a duplicate with all times shifted by given amount."
+        Return a duplicate with all times shifted by given amount."
 
         Input:
             secs        the number of seconds to shift the time later.
@@ -153,7 +153,7 @@ class Instant(Cadence):
     def as_continuous(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return a shallow copy forced to be continuous.
+        Return a shallow copy forced to be continuous.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         instant = Instant(self.tdb)

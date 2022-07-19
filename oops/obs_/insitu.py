@@ -38,10 +38,10 @@ class InSitu(Observation):
 
         Input:
             cadence     a Cadence object defining the time and duration of
-                        each "measurement".  Alternatively, a tuple of the 
-                        form:
+                        each "measurement".  Alternatively, a tuple || 
+                        dictionaryof the form:
 
-                          (tbd)
+                          (tbd) || {tbd}
 
             path        the path waypoint co-located with the observer.
         """
@@ -65,8 +65,12 @@ class InSitu(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
         #--------------------------------------------------
         # Shape / Size
@@ -99,11 +103,7 @@ class InSitu(Observation):
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         tstart: Observation start time.
-                         nexp:   Number of exposures in the observation.
-                         exp:    Exposure time for each observation.
+            TBD
 
         Return:         Cadence object.
         """

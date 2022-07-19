@@ -29,7 +29,7 @@ class ExtendedSource(Calibration):
     def __init__(self, name, factor):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Scaling.
+        Constructor for a Scaling.
 
         Input:
             name        the name of the value returned by the calibration, e.g.,
@@ -50,7 +50,7 @@ class ExtendedSource(Calibration):
     def value_from_dn(self, dn, uv_pair=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns calibrated values based an uncalibrated image value ("DN")
+        Returns calibrated values based an uncalibrated image value ("DN")
 
         and image coordinates.
 
@@ -74,7 +74,7 @@ class ExtendedSource(Calibration):
     def dn_from_value(self, value, uv_pair=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns uncalibrated image values ("dn") based on calibrated values
+        Returns uncalibrated image values ("dn") based on calibrated values
         and image coordinates.
 
         Input:

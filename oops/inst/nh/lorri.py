@@ -277,16 +277,8 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     #----------------------
     # Create a Snapshot
     #----------------------
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#    snapshot = oops.obs.Snapshot(('v','u'), {'tstart':tstart, 'texp':texp},
-#                                      fov, path, frame, instrument = 'LORRI')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    snapshot = oops.obs.Snapshot(('v','u'), tstart, texp, fov, path, frame,
-                                 target = target_name,
-                                 instrument = 'LORRI')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    snapshot = oops.obs.Snapshot(('v','u'), (tstart, texp),
+                                       fov, path, frame, instrument = 'LORRI')
 
     #------------------------------
     # Interpret loader options
@@ -431,13 +423,7 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         #- - - - - - - - - - - - -
         # Create a Snapshot
         #- - - - - - - - - - - - -
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#        item = oops.obs.Snapshot(('v','u'), {'tstart':tstart, 'texp':texp},
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+        item = oops.obs.Snapshot(('v','u'), (tstart,  texp),
                                  fov, 'NEW HORIZONS', 'NH_LORRI',
                                  dict = dict,
                                  index_dict = dict,

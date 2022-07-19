@@ -29,7 +29,7 @@ class Fittable(object):
     def set_params(self, params):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Redefine the object using this set of parameters.
+        Redefine the object using this set of parameters.
 
         This implementation checks the cache first, and then calls
         set_params_new() if the instance is not cached. Override this method
@@ -59,7 +59,7 @@ class Fittable(object):
     def set_params_new(self, params):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Redefine using this set of parameters. Do not check the cache first.
+        Redefine using this set of parameters. Do not check the cache first.
 
         Override this method if the subclass uses a cache. Then calls to
         set_params() will check the cache and only invoke this function when
@@ -82,7 +82,7 @@ class Fittable(object):
     def get_params(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the current set of parameters defining this fittable object.
+        Return the current set of parameters defining this fittable object.
 
         This method normally does not need to be overridden.
 
@@ -101,7 +101,7 @@ class Fittable(object):
     def copy(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return a deep copy of this object.
+        Return a deep copy of this object.
 
         The copy can be safely modified without affecting the original.
         """
@@ -117,8 +117,8 @@ class Fittable(object):
     def clear_cache(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Clear the current cache.
-	"""
+        Clear the current cache.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.cache = {}
     #===========================================================================

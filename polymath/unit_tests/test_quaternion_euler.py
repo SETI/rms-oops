@@ -31,7 +31,7 @@ class Test_Quaternion_euler(unittest.TestCase):
         self.assertAlmostEqual(a.values[j], b.values[j], delta=DEL)
 
     #------------------------------------------------
-    # Quaternion to Euler and back, N Quaternions    	 
+    # Quaternion to Euler and back, N Quaternions     
     #------------------------------------------------
     N = 100
     for code in Quaternion._AXES2TUPLE.keys():
@@ -45,7 +45,7 @@ class Test_Quaternion_euler(unittest.TestCase):
             self.assertAlmostEqual(a.values[i,j], b.values[i,j], delta=DEL)
 
     #--------------------------------------------
-    # Quaternion to Matrix3 to Euler and back	     
+    # Quaternion to Matrix3 to Euler and back     
     #--------------------------------------------
     N = 100
     for code in Quaternion._AXES2TUPLE.keys():

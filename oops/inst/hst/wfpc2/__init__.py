@@ -44,7 +44,7 @@ def from_file(filespec, **parameters):
     this = WFPC2()
 
     #---------------------------------------
-    # Confirm that the telescope is HST     	
+    # Confirm that the telescope is HST     
     #---------------------------------------
     if this.telescope_name(hst_file) != "HST":
         raise IOError("not an HST file: " + this.filespec(hst_file))
@@ -198,7 +198,7 @@ class WFPC2(HST):
                              mask_option + "'")
 
         #-----------------------------------------
-        # Get the full path to the image file	  	  
+        # Get the full path to the image file    
         #-----------------------------------------
         data_filespec = self.filespec(hst_file)
 
@@ -208,7 +208,7 @@ class WFPC2(HST):
         (head,tail) = os.path.splitext(data_filespec)
 
         #-----------------------------------------
-        # Attempt to define the mask filespec	  	  
+        # Attempt to define the mask filespec    
         #-----------------------------------------
         data_tag = head[-3:-1]
         try:
@@ -221,7 +221,7 @@ class WFPC2(HST):
                               data_filespec)
 
         #-----------------------------------------
-        # Attempt to load and return the mask	  	  
+        # Attempt to load and return the mask    
         #-----------------------------------------
         mask_filespec = head[:-3] + mask_tag + head[-1] + tail
         try:

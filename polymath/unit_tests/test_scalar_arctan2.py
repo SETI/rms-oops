@@ -19,7 +19,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
   def runTest(self):
 
     #-----------------------
-    # Individual values     	
+    # Individual values     
     #-----------------------
     self.assertEqual(Scalar(1.).arctan2(1.), np.arctan2(1,1))
     self.assertEqual(type(Scalar(1.).arctan2(1.)), Scalar)
@@ -36,7 +36,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertAlmostEqual(Scalar(-1.).arctan2( 1.), -0.25 * np.pi, 1.e-15)
 
     #---------------------
-    # Multiple values	      
+    # Multiple values      
     #---------------------
     self.assertTrue(abs(4/np.pi * Scalar(1.).arctan2((1,0,-1)) -
                      (1,2,3)).max() < 1.e-15)
@@ -51,7 +51,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
                      (1,0,-1)).max() < 1.e-15)
 
     #----------------
-    # Arrays	     	 
+    # Arrays      
     #----------------
     N = 1000
     y = Scalar(np.random.randn(N))
@@ -65,7 +65,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
                                                   x.values[i:i+2]))
 
     #----------------------
-    # Test valid units	       
+    # Test valid units       
     #----------------------
     values = np.random.rand
     y = Scalar(values, units=Units.KM)
@@ -88,7 +88,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertRaises(ValueError, y.arctan2, x)
 
     #-----------------------------
-    # Units should be removed	      
+    # Units should be removed      
     #-----------------------------
     values = np.random.randn(10)
     y = Scalar(values, units=Units.KM)
@@ -96,7 +96,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertTrue(y.arctan2(x).units is None)
 
     #----------------------------
-    # Units should be removed	     
+    # Units should be removed     
     #----------------------------
     N = 100
     y = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -107,7 +107,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertTrue(not np.any(z.mask[~x.mask & ~y.mask]))
 
     #-------------------
-    # Derivatives	    
+    # Derivatives    
     #-------------------
     N = 20
     y = Scalar(np.random.randn(N))
@@ -159,7 +159,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
                                z.d_dh[i], delta=EPS)
 
     #-----------------------------------------------
-    # Derivatives should be removed if necessary    	
+    # Derivatives should be removed if necessary    
     #-----------------------------------------------
     self.assertEqual(y.arctan2(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))

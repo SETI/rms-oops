@@ -63,7 +63,7 @@ class Test_Scalar_as_scalar(unittest.TestCase):
     self.assertEqual(b.values, 1)
 
     #-------------------
-    # Other cases	    
+    # Other cases    
     #-------------------
     b = Scalar.as_scalar(3.14159)
     self.assertTrue(type(b), Scalar)

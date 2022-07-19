@@ -142,7 +142,7 @@ class RingFrame(Frame):
         time = Scalar.as_scalar(time)
 
         #-----------------------------------------
-        # Check cache first if time is a Scalar   	  
+        # Check cache first if time is a Scalar     
         #-----------------------------------------
         if time.shape == ():
             key = time.values
@@ -157,7 +157,7 @@ class RingFrame(Frame):
         self.cached_value_returned = False
 
         #------------------------------------------------
-        # Otherwise, calculate it for the current time	 	 
+        # Otherwise, calculate it for the current time  
         #------------------------------------------------
         xform = self.planet_frame.transform_at_time(time, quick=quick)
 

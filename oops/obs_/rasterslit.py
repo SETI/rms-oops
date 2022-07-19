@@ -55,9 +55,16 @@ class RasterSlit(Observation):
                         sampling along the slow axis and the second defines
                         time sub-sampling along the fast axis, which corresponds
                         to the motion of the detector within the slit.
-                        Alternatively, a tuple of the form:
+                        Alternatively, a tuple || dictionary of the form:
 
-                          (tbd)
+                          (slow, fast) || {'slow':slow, 'fast':fast}
+
+                        with:
+
+                          slow:  Slow cadence or tuple or dictionary containing
+                                 metronome cadence parameters.
+                          fast:  Fast cadence or tuple or dictionary containing
+                                 metronome cadence parameters.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -88,8 +95,12 @@ class RasterSlit(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
         assert len(self.cadence.shape) == 2
 
@@ -160,24 +171,21 @@ class RasterSlit(Observation):
     #===========================================================================
     # _default_single_cadence
     #===========================================================================
-    def _default_single_cadence(self, dict):
+    def _default_single_cadence(self, tstart, tstride, texp, steps):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a cadence object from a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         tstart: Observation start time.
-                         texp:   Exposure time for the observation.
+            tstart      Observation start time.
+            tstride     Interval from the start of one time 
+                        step to the start of the next.
+            texp        Exposure time for each step.
+            steps       Number of time steps.
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstart = dict['tstart']
-        tstride = dict['tstride']
-        texp = dict['texp']
-        steps = dict['steps']
         return Metronome(tstart, tstride, texp, steps)
     #===========================================================================
 
@@ -192,17 +200,27 @@ class RasterSlit(Observation):
         Return a cadence object a dictionary of parameters.
 
         Input:
-            dict        Dictionary containing the following entries:
-
-                         TBD
+            slow        Slow cadence or tuple or dictionary containing metronome 
+                        cadence parameters.
+            fast        Fast cadence or tuple or dictionary containing metronome 
+                        cadence parameters.
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if isinstance(slow, Cadence): slow_cadence = slow
-        else: slow_cadence = self._default_single_cadence(slow)
-        if isinstance(fast, Cadence): fast_cadence = fast
-        else: fast_cadence = self._default_single_cadence(fast)
+        if isinstance(slow, Cadence): 
+            slow_cadence = slow
+        elif isinstance(slow, tuple): 
+            slow_cadence = self._default_single_cadence(*slow)
+        elif isinstance(slow, dict): 
+            slow_cadence = self._default_single_cadence(**slow)
+    
+        if isinstance(fast, Cadence): 
+            fast_cadence = fast
+        elif isinstance(fast, tuple): 
+            fast_cadence = self._default_single_cadence(*fast)
+        elif isinstance(fast, dict): 
+            fast_cadence = self._default_single_cadence(**fast)
 
         return DualCadence(slow_cadence, fast_cadence)
     #===========================================================================

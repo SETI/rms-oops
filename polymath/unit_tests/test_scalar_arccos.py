@@ -19,7 +19,7 @@ class Test_Scalar_arccos(unittest.TestCase):
   def runTest(self):
 
     #------------------------
-    # Individual values      	 
+    # Individual values       
     #------------------------
     self.assertEqual(Scalar(-0.3).arccos(), np.arccos(-0.3))
     self.assertEqual(type(Scalar(-0.3).arccos()), Scalar)
@@ -32,13 +32,13 @@ class Test_Scalar_arccos(unittest.TestCase):
     self.assertAlmostEqual(Scalar( 0.).arccos(), np.pi/2., 1.e-15)
 
     #------------------------
-    # Multiple values	     	 
+    # Multiple values      
     #------------------------
     self.assertEqual(Scalar((-0.1,0.,0.1)).arccos(), np.arccos((-0.1,0.,0.1)))
     self.assertEqual(type(Scalar((-0.1,0.,0.1)).arccos()), Scalar)
 
     #---------------
-    # Arrays	    	
+    # Arrays    
     #---------------
     N = 1000
     x = Scalar(np.random.randn(N))
@@ -55,7 +55,7 @@ class Test_Scalar_arccos(unittest.TestCase):
             self.assertEqual(y[i:i+2], np.arccos(x.values[i:i+2]))
 
     #---------------------
-    # Test valid units	      
+    # Test valid units      
     #---------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
@@ -84,14 +84,14 @@ class Test_Scalar_arccos(unittest.TestCase):
     self.assertEqual(x.arccos(), np.arccos(x.values))
 
     #-----------------------------
-    # Units should be removed	      
+    # Units should be removed      
     #-----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.UNITLESS)
     self.assertTrue(random.arccos().units is None)
 
     #----------------
-    # Masks	     	 
+    # Masks      
     #----------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -123,14 +123,14 @@ class Test_Scalar_arccos(unittest.TestCase):
             self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i], delta=DEL)
 
     #------------------------------------------------
-    # Derivatives should be removed if necessary     	 
+    # Derivatives should be removed if necessary      
     #------------------------------------------------
     self.assertEqual(x.arccos(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertFalse(hasattr(x.arccos(recursive=False), 'd_dt'))
 
     #---------------------------------------------
-    # Read-only status should NOT be preserved	      
+    # Read-only status should NOT be preserved      
     #---------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))

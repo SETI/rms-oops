@@ -57,7 +57,7 @@ class Wobble(Path, Fittable):
                        id=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Wobble path.
+        Constructor for a Wobble path.
 
         Input:
             body        a Body object defining the central planet, including its
@@ -153,7 +153,7 @@ class Wobble(Path, Fittable):
     def set_params_new(self, elements):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Part of the Fittable interface. Re-defines the path given new orbital
+        Part of the Fittable interface. Re-defines the path given new orbital
         elements.
 
         Input:
@@ -219,7 +219,7 @@ class Wobble(Path, Fittable):
     def copy(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Part of the Fittable interface. Returns a deep copy of the object.
+        Part of the Fittable interface. Returns a deep copy of the object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Wobble(self.planet, self.epoch, self.get_params().copy(),
@@ -234,7 +234,7 @@ class Wobble(Path, Fittable):
     def get_elements(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns the complete set of nine orbital elements.
+        Returns the complete set of nine orbital elements.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.elements
@@ -248,7 +248,7 @@ class Wobble(Path, Fittable):
     def xyz_planet(self, time, partials=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns the body position and velocity relative to the planet as a
+        Returns the body position and velocity relative to the planet as a
         function of time, in an inertial frame where the Z-axis is aligned with
         the planet's rotation pole. Optionally, it also returns the partial
         derivatives of the position vector with respect to the orbital elements,
@@ -317,7 +317,7 @@ class Wobble(Path, Fittable):
     def xyz_observed(self, time, planet_event, partials=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns the body position and velocity relative to the observer and
+        Returns the body position and velocity relative to the observer and
         in the J2000 coordinate frame. Optionally, it also returns the partial
         derivatives of the position with respect to the orbital elements,
         assuming they are all independent.
@@ -379,7 +379,7 @@ class Wobble(Path, Fittable):
     def event_at_time(self, time, quick=None, partials=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Returns an Event object corresponding to a specified Scalar time on
+        Returns an Event object corresponding to a specified Scalar time on
         this path.
 
         Input:

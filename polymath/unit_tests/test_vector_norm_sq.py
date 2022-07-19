@@ -19,7 +19,7 @@ class Test_Vector_norm_sq(unittest.TestCase):
   def runTest(self):
 
     #-------------------
-    # Single values	    
+    # Single values    
     #-------------------
     x = Vector((-1.,))
     self.assertAlmostEqual(x.norm_sq(), 1.)
@@ -31,7 +31,7 @@ class Test_Vector_norm_sq(unittest.TestCase):
     self.assertTrue(x.norm_sq().mask is True)
 
     #----------------------
-    # Arrays and masks	       
+    # Arrays and masks       
     #----------------------
     x = Vector(np.random.randn(3,7))
     n = x.norm_sq()
@@ -43,7 +43,7 @@ class Test_Vector_norm_sq(unittest.TestCase):
     n = x.norm_sq()
 
     #------------------------------
-    # Test the unmasked items	       
+    # Test the unmasked items       
     #------------------------------
     nn = n[~n.mask]
     xx = x[~n.mask]
@@ -114,7 +114,7 @@ class Test_Vector_norm_sq(unittest.TestCase):
         self.assertAlmostEqual(y.d_dv.values[i,2], dy_dv2.values[i], delta=EPS)
 
     #-----------------------------------------------
-    # Read-only status should NOT be preserved	    	
+    # Read-only status should NOT be preserved    
     #-----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,3))

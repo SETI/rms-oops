@@ -77,13 +77,7 @@ def from_file(filespec, fast_distortion=True,
     #------------------------------------------------
     # Create a Snapshot
     #------------------------------------------------
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#    result = oops.obs.Snapshot(("v","u"), {'tstart':tstart, 'texp':texp},
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    result = oops.obs.Snapshot(("v","u"), tstart, texp,
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    result = oops.obs.Snapshot(("v","u"), (tstart, texp),
                                ISS.fovs[camera,mode, fast_distortion],
                                "CASSINI", "CASSINI_ISS_" + camera,
                                dict = vicar_dict,       # Add the VICAR dict
@@ -346,7 +340,7 @@ class ISS(object):
                    mst_pck=True, irregulars=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Initialize key information about the ISS instrument; fill in key
+        Initialize key information about the ISS instrument; fill in key
         information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
@@ -487,9 +481,9 @@ class ISS(object):
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Resets the internal Cassini ISS parameters. Can be useful for
+        Resets the internal Cassini ISS parameters. Can be useful for
         debugging.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         ISS.instrument_kernel = None
         ISS.fovs = {}

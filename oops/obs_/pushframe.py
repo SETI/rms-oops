@@ -2,8 +2,6 @@
 # oops/obs_/pushframe.py: Subclass Pushframe of class Observation
 ################################################################################
 
-from IPython import embed   ## TODO: remove
-
 import numpy as np
 from polymath import *
 
@@ -50,10 +48,11 @@ class Pushframe(Observation):
                         that is swept by the time-delayed integration.
 
             cadence     a Cadence object defining the start time and duration of
-                        each consecutive line of the pushframe.  Alternatively, a tuple of
-                        the form:
+                        each consecutive line of the pushframe.  Alternatively,
+                        a tuple || dictionary of the form:
 
-                          (tstart, texp, nexp)
+                          (tstart, texp, nexp) ||
+                          {'tstart':tstart, 'texp':texp, 'nexp':nexp}
 
                         with:
 
@@ -128,8 +127,12 @@ class Pushframe(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
         assert len(self.cadence.shape) == 1
         assert (self.fov.uv_shape.vals[self.cross_scan_uv_index] ==
@@ -150,7 +153,7 @@ class Pushframe(Observation):
         time1 = time0 + self.cadence.texp[self.cadence.steps-1]
 
         times = self.cadence.time_range_at_tstep(
-	                                np.indices([self.shape[self.t_axis]]))
+                                       np.indices([self.shape[self.t_axis]]))
         dtimes = times[1] - times[0]
 
         tfrac0 = ((time0 - times[0])/dtimes).vals.T
@@ -189,7 +192,7 @@ class Pushframe(Observation):
         nstages = np.clip(np.arange(nlines-1,-1,-1)+1, 0, nexp) 
         exp = nstages * texp
         tstart = (nexp - nstages) * texp + tstart
-		
+
         return Sequence(tstart, exp)
     #===========================================================================
 
@@ -635,8 +638,8 @@ class Test_Pushframe(unittest.TestCase):
         #-------------------------------
         (uv,time) = obs.uvt(indices, fovmask=True)
         
-#        embed()
         return      #####################################
+
 
         self.assertTrue(np.all(uv.mask == np.array(6*[False] + [True])))
         self.assertTrue(np.all(time.mask == uv.mask))

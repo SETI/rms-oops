@@ -25,7 +25,7 @@ class Triangle(Shape2D):
     def __init__(pt0, pt1, pt2):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Triangle object, defined by three corners.
+        Constructor for a Triangle object, defined by three corners.
 
         Input:
             pt0         one corner of the triangle, represented as a Pair of
@@ -73,9 +73,9 @@ class Triangle(Shape2D):
     def dimensions(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Scalar dimension of this object: 0 for a point; 1 for a line; 2
+        The Scalar dimension of this object: 0 for a point; 1 for a line; 2
         for a shape object that has nonzero area.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if (self.r <= Shape2D.PREC).any():
             return (self.r > Shape2D.PREC).as_int()
@@ -91,8 +91,8 @@ class Triangle(Shape2D):
     def is_convex(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the shape is convex.
-	"""
+        True if the shape is convex.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Boolean.TRUE
     #===========================================================================
@@ -105,8 +105,8 @@ class Triangle(Shape2D):
     def point_at(t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameterization of the shape.
-	"""
+        Parameterization of the shape.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         t = Scalar.as_scalar(t) % 3.
         k = t.as_int()
@@ -123,7 +123,7 @@ class Triangle(Shape2D):
     def param_at(pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameter at a point, which is assumed to fall on the edge of this
+        Parameter at a point, which is assumed to fall on the edge of this
         object.
 
         What happens when the point does not fall on the shape is undetermined.
@@ -149,8 +149,8 @@ class Triangle(Shape2D):
     def param_limits(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Parameter limits to define the shape.
-	"""
+        Parameter limits to define the shape.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (0., 3.)
     #===========================================================================
@@ -163,7 +163,7 @@ class Triangle(Shape2D):
     def closest(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Tuple containing the pairs of closest points between the edges of
+        Tuple containing the pairs of closest points between the edges of
         this object and the given Shape2D object.
 
         Input:
@@ -200,7 +200,7 @@ class Triangle(Shape2D):
     def intersections(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Points defining intersections between the edges of this shape and the
+        Points defining intersections between the edges of this shape and the
         given Shape2D object.
 
         Input:
@@ -268,7 +268,7 @@ class Triangle(Shape2D):
     def tangents_from(self, pt):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The two points where this Shape2D object is tangent to a line from
+        The two points where this Shape2D object is tangent to a line from
         the given Point.
 
         Note: If the two points are degenerate, the second one is masked.
@@ -318,7 +318,7 @@ class Triangle(Shape2D):
     def tangent_at(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Line object tangent to this Shape2D object at the given parameter
+        The Line object tangent to this Shape2D object at the given parameter
         value.
 
         Input:
@@ -350,7 +350,7 @@ class Triangle(Shape2D):
     def normal_at(self, t):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The outward HalfLine object normal to this Shape2D object at the
+        The outward HalfLine object normal to this Shape2D object at the
         given parameter value.
 
         Note: for Line subclasses, the "outward" normal is defined to be the
@@ -391,7 +391,7 @@ class Triangle(Shape2D):
     def is_subset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as subset of (i.e., is entirely contained by)
+        True if this object is as subset of (i.e., is entirely contained by)
         the given Shape2D object.
 
         Input:
@@ -428,7 +428,7 @@ class Triangle(Shape2D):
     def is_superset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as superset of (i.e., entirely contains) the
+        True if this object is as superset of (i.e., entirely contains) the
         given Shape2D object.
 
         Input:
@@ -516,7 +516,7 @@ class Triangle(Shape2D):
     def is_disjoint_from(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the this object and the given Shape2D object are disjoint
+        True if the this object and the given Shape2D object are disjoint
         (i.e., do not touch or overlap).
 
         Input:
@@ -574,7 +574,7 @@ class Triangle(Shape2D):
     def touches(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the this object and the given Shape2D touch but do not share
+        True if the this object and the given Shape2D touch but do not share
         any common interior points.
 
         Input:

@@ -163,13 +163,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
     #-----------------------
     # Create a Snapshot
     #-----------------------
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#    result = oops.obs.Snapshot(('v','u'), {'tstart':tstart, 'texp:texp}, fovs[camera],
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    result = oops.obs.Snapshot(('v','u'), (tstart, texp), fovs[camera],
                                spacecraft,
                                image_frame,
                                dict = vicar_dict,           # Add the VICAR dict
@@ -303,13 +297,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
             image_frame = spacecraft + '_ISS_' + camera
 
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#        item = oops.obs.Snapshot(('v','u'), {'tstart':tstart, 'texp':texp}, fovs[camera],
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-        item = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+        item = oops.obs.Snapshot(('v','u'), (tstart, 'texp), fovs[camera],
                                  spacecraft,
                                  image_frame,
                                  dict = label_dict,     # Add index dictionary

@@ -28,7 +28,7 @@ class Arc(Ellipse):
     def __init__(pt0, rpt, ratio=1., tmin=0., tmax=TWOPI):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a Arc object.
+        Constructor for a Arc object.
 
         Input:
             pt0         center of the ellipse.
@@ -56,7 +56,7 @@ class Arc(Ellipse):
     def _mask(self, t, obj=None):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Masks where Scalar t is outside the allowed range.
+        Masks where Scalar t is outside the allowed range.
 
         Input:
             t       parameter of shape.
@@ -84,9 +84,9 @@ class Arc(Ellipse):
     def dimensions(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Scalar dimension of this object: 0 for a point; 1 for a line; 2
+        The Scalar dimension of this object: 0 for a point; 1 for a line; 2
         for a shape object that has nonzero area.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         dims = (self.dt > Shape2D.PREC) & (self.r > Shape2D.PREC)
         dims = dims.as_int()
@@ -105,8 +105,8 @@ class Arc(Ellipse):
     def is_convex(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Boolean True if the shape is convex.
-	"""
+        Boolean True if the shape is convex.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (self.dimensions() == 0) |
                ((self.dt - TWOPI).abs() <= Shape2D.PREC)
@@ -120,7 +120,7 @@ class Arc(Ellipse):
     def is_subset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as subset of (i.e., is entirely contained by)
+        True if this object is as subset of (i.e., is entirely contained by)
         the given Shape2D object.
 
         Input:
@@ -192,7 +192,7 @@ class Arc(Ellipse):
     def is_superset_of(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if this object is as superset of (i.e., entirely contains) the
+        True if this object is as superset of (i.e., entirely contains) the
         given Shape2D object.
 
         Input:
@@ -255,7 +255,7 @@ class Arc(Ellipse):
     def touches(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	True if the this object and the given Shape2D touch but do not share
+        True if the this object and the given Shape2D touch but do not share
         any common interior points.
 
         Input:

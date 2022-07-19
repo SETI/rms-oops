@@ -58,17 +58,17 @@ class RasterScan(Observation):
                         overlaps.
 
             cadence     a 2-D Cadence object defining the start time and
-                        duration of each sample.  Alternatively, a tuple of
-                        the form:
+                        duration of each sample.  Alternatively, a tuple || 
+                        dictionary of the form:
 
-                          (long, short)
+                          (long, short) || {'long':long, 'short':short}
 
                         with:
 
-                          long:  Long cadence or dictionary containing metronome 
-                                 cadence parameters.
-                          short: Short cadence or dictionary containing metronome 
-                                 cadence parameters.
+                          long:  Long cadence or tuple or dictionary containing
+                                 metronome cadence parameters.
+                          short: Short cadence or tuple or dictionary containing
+                                 metronome cadence parameters.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -124,8 +124,12 @@ class RasterScan(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): self.cadence = cadence
-        else: self.cadence = self._default_cadence(*cadence)
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
         #--------------------------------------------------
         # Timing
@@ -178,10 +182,6 @@ class RasterScan(Observation):
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstart = dict['tstart']
-        tstride = dict['tstride']
-        texp = dict['texp']
-        steps = dict['steps']
         return Metronome(tstart, tstride, texp, steps)
     #===========================================================================
 
@@ -196,18 +196,27 @@ class RasterScan(Observation):
         Return a cadence object a dictionary of parameters.
 
         Input:
-            long        Long cadence or dictionary containing metronome 
+            long        Long cadence or tuple or dictionary containing metronome 
                         cadence parameters.
-            short       Short cadence or dictionary containing metronome 
+            short       Short cadence or tuple or dictionary containing metronome 
                         cadence parameters.
 
         Return:         Cadence object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if isinstance(long, Cadence): long_cadence = long
-        else: long_cadence = self._default_single_cadence(*long)
-        if isinstance(short, Cadence): short_cadence = short
-        else: short_cadence = self._default_single_cadence(*short)
+        if isinstance(long, Cadence): 
+            long_cadence = long
+        elif isinstance(long, tuple): 
+            long_cadence = self._default_single_cadence(*long)
+        elif isinstance(long, dict): 
+            long_cadence = self._default_single_cadence(**long)
+    
+        if isinstance(short, Cadence): 
+            short_cadence = short
+        elif isinstance(short, tuple): 
+            short_cadence = self._default_single_cadence(*short)
+        elif isinstance(short, dict): 
+            short_cadence = self._default_single_cadence(**short)
 
         return DualCadence(long_cadence, short_cadence)
     #===========================================================================

@@ -19,7 +19,7 @@ class Test_Vector_ucross(unittest.TestCase):
   def runTest(self):
 
     #-------------------
-    # Single values	    
+    # Single values    
     #-------------------
     x = Vector((1.,0.,0.))
     y = Vector((0.,1.,0.))
@@ -35,7 +35,7 @@ class Test_Vector_ucross(unittest.TestCase):
     self.assertEqual((-3*y).ucross(7*z), -x)
 
     #-------------------
-    # Array values	    
+    # Array values    
     #-------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -63,7 +63,7 @@ class Test_Vector_ucross(unittest.TestCase):
     self.assertTrue(z.units is None)
 
     #-----------------------------
-    # Derivatives, denom = ()	      
+    # Derivatives, denom = ()      
     #-----------------------------
     N = 6
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -141,7 +141,7 @@ class Test_Vector_ucross(unittest.TestCase):
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=EPS)
 
     #----------------------------------------------
-    # Read-only status should NOT be preserved	       
+    # Read-only status should NOT be preserved       
     #----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))

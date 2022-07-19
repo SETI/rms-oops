@@ -5,6 +5,7 @@
 import numpy as np
 from polymath import *
 
+from oops.cadence_.cadence   import Cadence
 from oops.cadence_.metronome import Metronome
 from oops.obs_.observation   import Observation
 from oops.cadence_.metronome import Metronome
@@ -23,28 +24,13 @@ class Slit1D(Observation):
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#    PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path',
-#                    'frame', '**subfields']
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     PACKRAT_ARGS = ['axes', 'det_size', 'tstart', 'texp', 'fov', 'path',
                     'frame', '**subfields']
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
     #===========================================================================
     # __init__
     #===========================================================================
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#    def __init__(self, axes, det_size, cadence, fov, path, frame,
-#                       **subfields):
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    def __init__(self, axes, det_size, tstart, texp, fov, path, frame,
-                       **subfields):
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    def __init__(self, axes, det_size, cadence, fov, path, frame, **subfields):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for a Slit1D observation.
@@ -60,26 +46,16 @@ class Slit1D(Observation):
                         slit. It will be < 1 if there are gaps between the
                         detectors.
 
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#            cadence     a Cadence object defining the start time and duration 
-#                        of the slit1d.  Alternatively, a tuple of the form:
-#
-#                          (tstart, texp)
-#
-#                        with:
-#
-#                          tstart: Observation start time.
-#                          texp:   Exposure time for the observation.
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+            cadence     a Cadence object defining the start time and duration 
+                        of the slit1d.  Alternatively, a tuple || dictionary of
+                        the form:
 
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-            tstart      the start time of the observation in seconds TDB.
+                          (tstart, texp) || {'tstart':tstart, 'texp':texp}
 
-            texp        exposure time of the observation in seconds.
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+                        with:
 
-
-
+                          tstart: Observation start time.
+                          texp:   Exposure time for the observation.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -147,20 +123,19 @@ class Slit1D(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#        if isinstance(cadence, Cadence): self.cadence = cadence
-#        else: self.cadence = self._default_cadence(*cadence)
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+        if isinstance(cadence, Cadence): 
+            self.cadence = cadence
+        elif isinstance(cadence, tuple): 
+            self.cadence = self._default_cadence(*cadence)
+        elif isinstance(cadence, dict): 
+            self.cadence = self._default_cadence(**cadence)
 
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-        self.cadence = Metronome(tstart, texp, texp, 1)
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-	
         #--------------------------------------------------
         # Timing
         #--------------------------------------------------
-        self.tstart = tstart
-        self.texp = texp
+        self.tstart = self.cadence.tstart
+        self.texp = self.cadence.texp
+
         self.t_axis = -1
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
@@ -431,16 +406,9 @@ class Slit1D(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#        obs = Slit1D(self.axes, self.det_size, 
-#                    {'tstart':self.tstart + dtime, 'texp':self.texp},
-#                     self.fov, self.path, self.frame)
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-        obs = Slit1D(self.axes, self.det_size, self.tstart + dtime, self.texp,
+        obs = Slit1D(self.axes, self.det_size, 
+                    (self.tstart + dtime, self.texp),
                      self.fov, self.path, self.frame)
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -471,15 +439,8 @@ class Test_Slit1D(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (20,1))
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#        obs = Slit1D(axes=('u'), det_size=1, {'tstart':0., 'texp':10.},
-#                   fov=fov, path='SSB', frame='J2000')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-        obs = Slit1D(axes=('u'), det_size=1, tstart=0., texp=10.,
-                   fov=fov, path='SSB', frame='J2000')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+        obs = Slit1D(('u'), 1, {'tstart':0., 'texp':10.},
+                     fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(1,0),(20,0),(21,0)])
 
@@ -568,15 +529,8 @@ class Test_Slit1D(unittest.TestCase):
         #----------------------------------------
 
         fov = FlatFOV((0.001,0.001), (20,1))
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#        obs = Slit1D(axes=('a','u', 'b'), det_size=1, {'tstart':0., 'texp':10.},
-#                     fov=fov, path='SSB', frame='J2000')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-        obs = Slit1D(axes=('a','u', 'b'), det_size=1, tstart=0., texp=10.,
+        obs = Slit1D(('a','u', 'b'), 1, {'tstart':0., 'texp':10.},
                      fov=fov, path='SSB', frame='J2000')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         indices = Vector([(0,0,0),(0,1,99),(0,19,99),(10,20,99),(10,21,99)])
 
@@ -603,15 +557,8 @@ class Test_Slit1D(unittest.TestCase):
         #--------------------------------------------------
 
         fov = FlatFOV((0.001,0.001), (20,1))
-#+DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#        obs = Slit1D(axes=('u'), det_size=0.8, {'tstart':0., 'texp':10.}, fov=fov,
-#                     path='SSB', frame='J2000')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-#-DEFCAD:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-        obs = Slit1D(axes=('u'), det_size=0.8, tstart=0., texp=10., fov=fov,
+        obs = Slit1D(('u'), 0.8, {'tstart':0., 'texp':10.}, fov=fov,
                      path='SSB', frame='J2000')
-#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
         eps = 1.e-14
         delta = 1.e-13

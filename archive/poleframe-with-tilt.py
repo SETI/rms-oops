@@ -38,7 +38,7 @@ class PoleFrame(Frame):
                        cache_size=1000):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for a PoleFrame.
+        Constructor for a PoleFrame.
 
         Input:
             frame       a (possibly) rotating frame, or its ID, describing the
@@ -120,8 +120,8 @@ class PoleFrame(Frame):
     def transform_at_time(self, time, quick={}):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	The Transform into the this Frame at a Scalar of times.
-	"""
+        The Transform into the this Frame at a Scalar of times.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #------------------------------------------
@@ -246,11 +246,11 @@ class PoleFrame(Frame):
     def node_at_time(self, time, quick={}):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Angle from the original X-axis to the invariable plane's ascending
+        Angle from the original X-axis to the invariable plane's ascending
         node.
 
         This serves as the X-axis of this frame.
-	"""
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return 0.
     #===========================================================================

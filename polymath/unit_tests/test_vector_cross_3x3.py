@@ -46,7 +46,7 @@ class Test_Vector_cross_3x3(unittest.TestCase):
     self.assertEqual(cross2.units, Units.KM/Units.SECONDS)
 
     #-----------------------------
-    # Derivatives, denom = ()	      
+    # Derivatives, denom = ()      
     #-----------------------------
     N = 100
     x = Vector(np.random.randn(N,3))
@@ -124,7 +124,7 @@ class Test_Vector_cross_3x3(unittest.TestCase):
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=EPS)
 
     #------------------------------------------------------
-    # Derivatives, denom = (3,), using matrix multiply	       
+    # Derivatives, denom = (3,), using matrix multiply       
     #------------------------------------------------------
     z = y.cross_product_as_matrix() * x
 
@@ -135,7 +135,7 @@ class Test_Vector_cross_3x3(unittest.TestCase):
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=EPS)
 
     #--------------------------------
-    # Derivatives, denom = (2,)      	 
+    # Derivatives, denom = (2,)       
     #--------------------------------
     N = 100
     x = Vector(np.random.randn(N,3))
@@ -229,7 +229,7 @@ class Test_Vector_cross_3x3(unittest.TestCase):
         self.assertAlmostEqual(z.d_dh.values[i,k,1], dz_dh1.values[i,k], delta=EPS)
 
     #------------------------------------------------
-    # Derivatives should be removed if necessary     	 
+    # Derivatives should be removed if necessary      
     #------------------------------------------------
     self.assertEqual(y.cross(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
@@ -241,7 +241,7 @@ class Test_Vector_cross_3x3(unittest.TestCase):
     self.assertFalse(hasattr(y.cross(x, recursive=False), 'd_dh'))
 
     #-------------------------------------------
-    # Read-only status should be preserved	    
+    # Read-only status should be preserved    
     #-------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,3))

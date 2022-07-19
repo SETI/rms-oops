@@ -19,7 +19,7 @@ class Test_Vector_proj(unittest.TestCase):
   def runTest(self):
 
     #--------------------
-    # Single values	     
+    # Single values     
     #--------------------
     self.assertEqual(Vector((2,3,0)).proj((0,7,0)), (0,3,0))
     self.assertEqual(Vector((2,3,0)).proj((-1,0,0)), (2,0,0))
@@ -28,7 +28,7 @@ class Test_Vector_proj(unittest.TestCase):
     self.assertEqual(Vector((0,0,0)).proj((1,1,1)).norm(), 0.)
 
     #-----------------------
-    # Arrays and masks	    	
+    # Arrays and masks    
     #-----------------------
     N = 100
     x = Vector(np.random.randn(N,3))
@@ -51,7 +51,7 @@ class Test_Vector_proj(unittest.TestCase):
     self.assertTrue(np.all(z.mask == (x.mask | y.mask | zero_mask)))
 
     #-----------------------------
-    # Test the unmasked items	      
+    # Test the unmasked items      
     #-----------------------------
     xx = x[~z.mask]
     yy = y[~z.mask]
@@ -61,7 +61,7 @@ class Test_Vector_proj(unittest.TestCase):
         self.assertAlmostEqual((yy[i] - zz[i]).dot(xx[i]), 0., delta=1.e-14)
 
     #--------------------
-    # Test units	     
+    # Test units     
     #--------------------
     N = 100
     x = Vector(np.random.randn(N,3), units=Units.KM)
@@ -71,7 +71,7 @@ class Test_Vector_proj(unittest.TestCase):
     self.assertEqual(z.units, Units.SECONDS**(-1))
 
     #-----------------------------
-    # Derivatives, denom = ()	      
+    # Derivatives, denom = ()      
     #-----------------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -150,7 +150,7 @@ class Test_Vector_proj(unittest.TestCase):
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=DEL)
 
     #-------------------------------
-    # Derivatives, denom = (2,)     	
+    # Derivatives, denom = (2,)     
     #-------------------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -257,7 +257,7 @@ class Test_Vector_proj(unittest.TestCase):
     self.assertFalse(hasattr(y.proj(x, recursive=False), 'd_dh'))
 
     #----------------------------------------------
-    # Read-only status should NOT be preserved	       
+    # Read-only status should NOT be preserved       
     #----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))

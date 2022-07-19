@@ -28,8 +28,8 @@ class Affine(object):
     def __init__(self, a, b, c, d, e, f):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Constructor for an Affine transform.
-	"""
+        Constructor for an Affine transform.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.a = Scalar.as_scalar(a).as_float()
         self.b = Scalar.as_scalar(b).as_float()
@@ -63,8 +63,8 @@ class Affine(object):
     def inverse(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Return the Affine transform that undoes this one.
-	"""
+        Return the Affine transform that undoes this one.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.inverted: return self.inverted
 
@@ -114,8 +114,8 @@ class Affine(object):
     def to_matrix(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Matrix representation of the transform.
-	"""
+        Matrix representation of the transform.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Matrix3.from_scalars(self.a, self.b, self.c,
                                     self.d, self.e, self.f,
@@ -132,7 +132,7 @@ class Affine(object):
     def from_matrix(matrix, tol=1.e-12):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Affine representation of the given Matrix.
+        Affine representation of the given Matrix.
 
         Input:
             matrix      matrix to convert to a Affine transform object.
@@ -172,8 +172,8 @@ class Affine(object):
     def apply(self, pt, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Apply the Affine transform to this point.
-	"""
+        Apply the Affine transform to this point.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (x,y) = Pair.as_pair(pt, recursive).to_scalars()
         (a,b,c,d,e,f) = self.abcdef[recursive]
@@ -196,8 +196,8 @@ class Affine(object):
     def undo(self, pt, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-	Apply the inverse Affine transform to this point.
-	"""
+        Apply the inverse Affine transform to this point.
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.inverse().apply(pt, recursive)
     #===========================================================================
