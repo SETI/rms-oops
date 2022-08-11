@@ -90,13 +90,13 @@ class SBC(ACS):
         global IDC_DICT
 
         #---------------------------------------------------------
-        # Load the dictionary of IDC parameters if necessary    
+        # Load the dictionary of IDC parameters if necessary
         #---------------------------------------------------------
         if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("FILTER1",))
 
         #-----------------------------------------
-        # Define the key into the dictionary    
+        # Define the key into the dictionary
         #-----------------------------------------
         idc_key = (hst_file[0].header["FILTER1"],)
 
@@ -145,7 +145,7 @@ class SBC(ACS):
         #-------------------------------
         # Add the filter file name
         #-------------------------------
-        syn_filenames.append(FILTER_SYN_
+        syn_filenames.append(FILTER_SYN_FILE[0] +
                              hst_file[0].header["FILTER1"].lower() +
                              FILTER_SYN_FILE[1])
 

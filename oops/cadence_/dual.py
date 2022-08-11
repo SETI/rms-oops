@@ -3,7 +3,8 @@
 ################################################################################
 
 from polymath import *
-from oops.cadence_.cadence import Cadence
+from oops.cadence_.cadence   import Cadence
+from oops.cadence_.metronome import Metronome
 
 #*******************************************************************************
 # DualCadence
@@ -37,7 +38,7 @@ class DualCadence(Cadence):
         self.short = short
         self.shape = self.long.shape + self.short.shape
 
-        self.time = (self.long.time[0], self.long.lasttime + 
+        self.time = (self.long.time[0], self.long.lasttime +
                                         self.short.time[1] -
                                         self.short.time[0])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
@@ -60,7 +61,7 @@ class DualCadence(Cadence):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return the min time(s) associated with the given time step(s).
-        
+
         This method supports non-integer step values.
 
         Input:
@@ -88,7 +89,7 @@ class DualCadence(Cadence):
         Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -188,12 +189,54 @@ class DualCadence(Cadence):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a shallow copy forced to be continuous.
-        
+
         For DualCadence, this is accomplished by forcing the stride of
         the short cadence to be continuous.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return DualCadence(self.long, self.short.as_continuous())
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # for_array2d
+    #===========================================================================
+    @staticmethod
+    def for_array2d(samples, lines, tstart, texp, intersample_delay=0.,
+                                                  interline_delay=None):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Alternative constructor for a DualCadence involving two Metronome
+        classes, with streamlined input.
+
+        Input:
+            samples             number of samples (along fast axis).
+            lines               number of lines (along slow axis).
+            tstart              start time of observation in TDB seconds.
+            texp                single-sample integration time in seconds.
+            intersample_delay   deadtime in seconds between consecutive samples;
+                                default 0.
+            interline_delay     deadtime in seconds between consecutive lines,
+                                i.e., the delay between the end of the last
+                                sample integration on one line and the start of
+                                the first sample integration on the next line.
+                                If not specified, the interline_delay is assumed
+                                to match the intersample_delay.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        fast_cadence = Metronome(tstart, texp + intersample_delay, texp,
+                                 samples)
+
+        if interline_delay is None:
+            interline_delay = intersample_delay
+
+        long_texp = samples * texp + (samples-1) * intersample_delay
+        long_stride = long_texp + interline_delay
+
+        slow_cadence = Metronome(tstart, long_stride, long_texp, lines)
+
+        return DualCadence(slow_cadence, fast_cadence)
     #===========================================================================
 
 
@@ -223,7 +266,7 @@ class Test_DualCadence(unittest.TestCase):
         Returns a new Vector constructed by combining every possible set of
         components provided as a list of scalars. The returned Vector will have
         a shape defined by concatenating the shapes of all the arguments.
-        
+
         This routine was stolen from the old array_ module and is not optimized
         for use with polymath.
         """
@@ -369,7 +412,7 @@ class Test_DualCadence(unittest.TestCase):
 
         test1d = cad1d.tstep_at_time(times1d, mask=False)
         test2d = cad2d.tstep_at_time(times2d, mask=False)
-        
+
         self.assertEqual(test1d // 5, test2d.to_scalar(0))
         self.assertTrue((abs(test1d % 5 - test2d.to_scalar(1)) < 1.e-12).all())
 

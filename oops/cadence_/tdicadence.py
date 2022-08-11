@@ -1,41 +1,66 @@
 ################################################################################
-# oops/cadence_/instant.py: Class Instant
+# oops/cadence_/tdicadence.py: TdiCadence subclass of class Cadence
 ################################################################################
 
 from polymath import *
 from oops.cadence_.cadence import Cadence
 
-#*******************************************************************************
-# Instant
-#*******************************************************************************
-class Instant(Cadence):
+#*****************************************************************************
+# TdiCadence
+#*****************************************************************************
+class TdiCadence(Cadence):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    Instant is a class that represents the timing of an observation as an
-    Scalar time of arbitrary shape.
+    A Cadence subclass defining the integration intervals of lines in a TDI
+    ("Time Delay and Integration") camera. It returns the time range given an
+    index in the TDI direction.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    PACKRAT_ARGS = ['tdb', '+is_continuous']
+    PACKRAT_ARGS = ['lines', 'tstart', 'tdi_texp', 'tdi_stages', 'tdi_sign']
 
     #===========================================================================
     # __init__
     #===========================================================================
-    def __init__(self, tdb):
+    def __init__(self, lines, tstart, tdi_texp, tdi_stages, tdi_sign=-1):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Constructor for an Instant.
+        """Constructor for a TdiCadence.
 
         Input:
-            tdb         a time Scalar in seconds TDB.
+            lines       the number of lines in the detector.
+
+            tstart      the start time of the observation in seconds TDB.
+
+            tdi_texp    the interval in seconds from the start of one TDI step
+                        to the start of the next.
+
+            tdi_stages  the number of TDI time steps.
+
+            tdi_sign    +1 if pixel DNs are shifted in the positive direction
+                        along the 'ut' or 'vt' axis; -1 if DNs are shifted in
+                        the negative direction. Default is -1, suitable for
+                        JunoCam.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        self.tdb = Scalar.as_scalar(tdb, recursive=False).as_float()
 
-        self.shape = self.tdb.shape
-        self.time = (self.tdb.min(), self.tdb.max())
+        #-----------------------------------
+        # Save the input parameters
+        #-----------------------------------
+        self.lines = lines
+        self.tstart = float(tstart)
+        self.tdi_texp = float(tdi_texp)
+        self.tdi_stages = tdi_stages
+        self.tdi_sign = tdi_sign
+
+        self._tdi_upward = (self.tdi_sign > 0)
+
+        #-----------------------------------
+        # Fill in the required attributes
+        #-----------------------------------
+        self.time = (self.tstart, self.tstart + self.tdi_texp * self.tdi_stages)
         self.midtime = 0.5 * (self.time[0] + self.time[1])
-        self.lasttime = self.tdb.max()
-        self.is_continuous = False
+        self.lasttime = self.time[1] - self.tdi_texp
+        self.shape = (self.lines,)
+        self.is_continuous = True
     #===========================================================================
 
 
@@ -43,21 +68,28 @@ class Instant(Cadence):
     #===========================================================================
     # time_at_tstep
     #===========================================================================
-    def time_at_tstep(self, tstep, mask=True):
+    def time_at_tstep(self, tstep, mask=True, line=0):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Return the time(s) associated with the given time step(s).
+        Return the min time(s) associated with the given time step(s).
 
-        This method supports non-integer step values.
+        This method supports non-integer step values. Note that it overloads the
+        standard Cadence.time_at_tstep() method with an additional argument, the
+        line number.
 
         Input:
             tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
+            line        line number in the TDI array.
 
         Return:         a Scalar of times in seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return self.tdb
+        tstep_int = Scalar.as_scalar(tstep).as_int()
+        (time_min, time_max) = self.time_range_at_tstep(tstep_int, mask=mask)
+
+        time = time_min + tfrac * (time_max - time_min)
+        return time
     #===========================================================================
 
 
@@ -71,7 +103,8 @@ class Instant(Cadence):
         Return the range of time(s) for the given integer time step(s).
 
         Input:
-            tstep       a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices. For this
+                        class
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -80,29 +113,17 @@ class Instant(Cadence):
             time_max    a Scalar defining the maximum time value.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return (self.tdb, self.tdb)
-    #===========================================================================
+        tstep_int = Scalar.as_scalar(tstep).as_int()
+        tstep_int = tstep_int.clip(0, self.lines, remask=mask)
 
+        if self._tdi_upward:
+            offset = tstep_int + 1
+        else:
+            offset = Scalar.minimum(self.lines - tstep_int, 1)
 
-
-    #===========================================================================
-    # tstep_at_time
-    #===========================================================================
-    def tstep_at_time(self, time, mask=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the time step(s) for given time(s).
-
-        This method supports non-integer time values.
-
-        Input:
-            time        a Scalar of times in seconds TDB.
-            mask        True to mask time values not sampled within the cadence.
-
-        Return:         a Scalar or Pair of time step indices.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Scalar(np.zeros(self.shape), self.tdb != time)
+        time0 = Scalar.maximum(self.time[0],
+                               self.time[1] - offset * self.tdi_texp)
+        return (time0, self.time[1])
     #===========================================================================
 
 
@@ -125,7 +146,9 @@ class Instant(Cadence):
                         value of False, not a masked Boolean.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Scalar(time == self.tdb)
+        time = Scalar.as_scalar(time)
+
+        return (time >= self.time[0]) & (time <= self.time[1])
     #===========================================================================
 
 
@@ -142,7 +165,8 @@ class Instant(Cadence):
             secs        the number of seconds to shift the time later.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Instant(self.tdb + secs)
+        return TdiCadence(self.tstart + secs, self.tdi_texp, self.tdi_stages,
+                          self.tdi_sign, self.lines)
     #===========================================================================
 
 
@@ -156,13 +180,8 @@ class Instant(Cadence):
         Return a shallow copy forced to be continuous.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        instant = Instant(self.tdb)
-        instant.is_continuoue = True
-        return instant
+        return self
     #===========================================================================
-
-
-#*******************************************************************************
 
 ################################################################################
 # UNIT TESTS
@@ -170,27 +189,14 @@ class Instant(Cadence):
 
 import unittest
 
-#*******************************************************************************
-# Test_Instant
-#*******************************************************************************
-class Test_Instant(unittest.TestCase):
+class Test_TdiCadence(unittest.TestCase):
 
-    #===========================================================================
-    # runTest
-    #===========================================================================
     def runTest(self):
 
-        # No tests here - TBD
-
-        pass
-    #===========================================================================
-
-
-#*******************************************************************************
-
-
+        pass        # Needed!
 
 ########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
+

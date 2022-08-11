@@ -53,10 +53,6 @@ def show_info(title, array):
             print(        np.max(array.vals), "(unmasked min, max)")
             print("    ", array.min(), end='')
             print(        array.max(), "(masked min, max)")
-#            print("    ", (np.min(array.vals), end='')
-#                           np.max(array.vals)), "(unmasked min, max)"
-#            print("    ", (array.min(), end='')
-#                           array.max()), "(masked min, max)"
             masked = np.sum(array.mask)
             total = np.size(array.mask)
             percent = int(masked / float(total) * 100. + 0.5)
@@ -132,7 +128,7 @@ def iss_test_suite(filespec, derivs, info, display):
     fov_shape = snapshot.fov.uv_shape
     print("fov_shape:")
     print(fov_shape)
-    
+
     uv_pair = oops.Pair.cross_scalars(
         np.arange(fov_shape.vals[0]) + 0.5,
         np.arange(fov_shape.vals[1]) + 0.5
@@ -164,7 +160,7 @@ def iss_test_suite(filespec, derivs, info, display):
     point_event = oops.Event(
         snapshot.midtime, (0.,0.,0.), (0.,0.,0.),
         snapshot.path_id, snapshot.frame_id)
- 
+
     ############################################
     # Sky coordinates
     ############################################
@@ -198,7 +194,7 @@ def iss_test_suite(filespec, derivs, info, display):
     obs_wrt_ring_longitude,
     obs_wrt_ring_elevation) = ring_body.surface.event_as_coords(obs_wrt_ring_center.event,
                                                                 axes=3)
-    
+
     show_info("Ring range to observer (km)", obs_wrt_ring_range)
     show_info("Ring radius of observer (km)", obs_wrt_ring_radius)
     show_info("Ring longitude of observer(deg)", obs_wrt_ring_longitude *
@@ -232,7 +228,7 @@ def iss_test_suite(filespec, derivs, info, display):
     sun_wrt_ring_longitude,
     sun_wrt_ring_elevation) = ring_body.surface.event_as_coords(sun_wrt_ring_center.event,
                                                                 axes=3)
-    
+
     show_info("Ring range to Sun (km)", sun_wrt_ring_range)
     show_info("Ring radius of Sun (km)", sun_wrt_ring_radius)
     show_info("Ring longitude of Sun (deg)", sun_wrt_ring_longitude * oops.DPR)
@@ -267,7 +263,7 @@ def iss_test_suite(filespec, derivs, info, display):
                                                                     axes=3)
     print("obs_wrt_saturn_latitude.shape: ", obs_wrt_saturn_latitude.vals.shape)
     print("size(obs_wrt_saturn_latitude): ", obs_wrt_saturn_latitude.vals.size)
-    
+
     show_info("Saturn range to observer (km)", obs_wrt_saturn_range)
     show_info("Saturn longitude of observer (deg)", obs_wrt_saturn_longitude *
                                                   oops.DPR)
@@ -611,7 +607,7 @@ class Test_Cassini_ISS_Suite(unittest.TestCase):
     def runTest(self):
 
         from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
-        
+
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
 
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/W1573721822_1.IMG")

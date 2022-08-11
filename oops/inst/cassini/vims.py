@@ -42,23 +42,23 @@ TIME_FACTOR = 1.01725
 # vims_params(3)=+1.5 ; VIS offset z (in pixels)
 # vims_params(4)=1.98; HI-RES IR
 # vims_params(5)=2.99; HI-RES VIS
-# 
+#
 # xi=(xo-1+i-31.5)*vims_params[0]
 # zi=(zo-1+j-31.5)*vims_params[0]
 # xv=(xo-1+i-31.5+vims_params[2])*vims_params[1]
 # zv=(zo-1+j-31.5+vims_params[3])*vims_params[1]
-# 
+#
 # if hires(0) eq 1 then begin
 #     hrf=vims_params(4)
 #     xi=(xo-1+sq(1)/2./hrf+i/hrf-31.5)*vims_params[0]
 # end
-# 
+#
 # if hires(1) eq 1 then begin
 #     hrf=vims_params(5)
 #     xv=(xo-1+sq(1)/hrf+i/hrf-31.5 +vims_params[2])*vims_params[1]
 #     zv=(zo-1-0+sq(3)/hrf+j/hrf-31.5 +vims_params[3])*vims_params[1]
 # end
-# 
+#
 # aimpointi=[xi,zi]
 # aimpointv=[xv,zv]
 
@@ -131,14 +131,14 @@ def from_file(filespec, fast=False, **parameters):
     # Otherwise, use the standard parser
     #---------------------------------------
     else:
-        #- - - - - - - - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - - - - - - - -
         # Load the VIMS file or the PDS label
-        #- - - - - - - - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - - - - - - - -
         lines = pdsparser.PdsLabel.load_file(filespec)
 
-        #- - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - -
         # Fix known syntax errors
-        #- - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - -
         for i in range(len(lines)):
             line = lines[i]
 
@@ -150,9 +150,9 @@ def from_file(filespec, fast=False, **parameters):
                 lines[i] = line.replace('(N/A',  '("N/A"')
                 lines[i] = line.replace('N/A)',  '"N/A")')
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Sometimes a comment begins on one line and and ends on the next
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if line.strip().endswith("*/") and "/*" not in line:
                 lines[i] = "\n"
 
@@ -214,7 +214,7 @@ def from_file(filespec, fast=False, **parameters):
     swath_length = info["SWATH_LENGTH"]
 
     frame_size = swath_width * swath_length
-    frames = (samples * lines) / frame_size
+    frames = (samples * lines) // frame_size
     assert samples * lines == frames * frame_size
 
     #----------------------------------------------------------------
@@ -387,7 +387,7 @@ def from_file(filespec, fast=False, **parameters):
             if vis_data is not None: vis_data = vis_data.reshape((samples, 96))
 
             vis_obs = oops.obs.Slit1D(("u","b"), 1.,
-                                (tstart, vis_texp_nonzero), 
+                                tstart, vis_texp_nonzero,
                                 vis_fov, "CASSINI", vis_frame_id)
 
 
@@ -450,71 +450,71 @@ def from_file(filespec, fast=False, **parameters):
 #     #---------------------------
 #     elif lines == frames and samples == swath_width * swath_length:
 #         if not vis_is_off:
-# 
-#             #- - - - - - - - - - - - - 
+#
+#             #- - - - - - - - - - - - -
 #             # Reshape the data array
-#             #- - - - - - - - - - - - - 
+#             #- - - - - - - - - - - - -
 #             if vis_data is not None:
 #                 vis_data = vis_data.reshape(frames, swath_length, swath_width,
 #                                 vis_data.shape[-1])
-# 
+#
 #             #- - - - - - - - - - - - - - - - - - - - - - -
 #             # Define the first 2-D pushbroom observation
 #             #- - - - - - - - - - - - - - - - - - - - - - -
 #             vis_first_obs = oops.obs.Pushbroom(("t", "vt","u","b"), (1.,1.),
 #                                 vis_header_cadence, vis_fov,
 #                                 "CASSINI", vis_frame_id)
-# 
-#             #- - - - - - - - - - - 
+#
+#             #- - - - - - - - - - -
 #             # Define the movie
-#             #- - - - - - - - - - - 
+#             #- - - - - - - - - - -
 #             movie_cadence = oops.cadence.DualCadence(frame_cadence,
 #                                 vis_header_cadence)
-# 
+#
 #             vis_obs = oops.obs.Movie(("t","vt","u","b"), vis_first_obs,
 #                                 movie_cadence)
-# 
+#
 #         if not ir_is_off:
-# 
-#             #- - - - - - - - - - - - - 
+#
+#             #- - - - - - - - - - - - -
 #             # Reshape the data array
-#             #- - - - - - - - - - - - - 
+#             #- - - - - - - - - - - - -
 #             if ir_data is not None:
 #                 ir_data = ir_data.reshape(frames, swath_length, swath_width,
 #                                           ir_data.shape[-1])
-# 
+#
 #             # Define the first 2-D raster-scan observation
 #             ir_first_obs = oops.obs.RasterScan(("vslow","ufast","b"),
 #                                 (1., ir_det_size),
 #                                 ir_first_cadence, ir_fov,
 #                                 "CASSINI", ir_frame_id)
-# 
-#             #- - - - - - - - - - - - - - 
+#
+#             #- - - - - - - - - - - - - -
 #             # Define the 3-D cadence
-#             #- - - - - - - - - - - - - - 
+#             #- - - - - - - - - - - - - -
 #             if backplane_cadence is None:
 #                 ir_first_cadence = oops.cadence.DualCadence(vis_header_cadence,
 #                                 ir_fast_cadence)
-# 
+#
 #                 ir_cadence = oops.cadence.DualCadence(frame_cadence,
 #                                 ir_first_cadence)
 #             else:
 #                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
 #                                 (frames,lines,samples))
-# 
+#
 #             #- - - - - - - - - - -
 #             # Define the movie
 #             #- - - - - - - - - - -
 #             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
 #                                 ir_cadence)
-# 
-#             #- - - - - - - - - - - - - 
+#
+#             #- - - - - - - - - - - - -
 #             # Reshape the data array
-#             #- - - - - - - - - - - - - 
+#             #- - - - - - - - - - - - -
 #             if ir_data is not None:
 #                 ir_data = ir_data.reshape(frames, swath_length, swath_width,
 #                                           ir_data.shape[-1])
-# 
+#
 #             #- - - - - - - - - - - - - - - - - - - - - - - -
 #             # Define the first 2-D raster-scan observation
 #             #- - - - - - - - - - - - - - - - - - - - - - - -
@@ -522,23 +522,23 @@ def from_file(filespec, fast=False, **parameters):
 #                                 (1., ir_det_size),
 #                                 ir_first_cadence, ir_fov,
 #                                 "CASSINI", ir_frame_id)
-# 
+#
 #             #- - - - - - - - - - - - - -
 #             # Define the 3-D cadence
 #             #- - - - - - - - - - - - - -
 #             if backplane_cadence is None:
 #                 ir_first_cadence = oops.cadence.DualCadence(vis_header_cadence,
 #                                 ir_fast_cadence)
-# 
+#
 #                 ir_cadence = oops.cadence.DualCadence(frame_cadence,
 #                                 ir_first_cadence)
 #             else:
 #                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
 #                                 (frames,lines,samples))
-# 
-#             #- - - - - - - - - - - 
+#
+#             #- - - - - - - - - - -
 #             # Define the movie
-#             #- - - - - - - - - - - 
+#             #- - - - - - - - - - -
 #             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
 #                                 ir_cadence)
 
@@ -626,8 +626,7 @@ def _load_data_and_times(filespec, label):
         suffix_item_type = ""
 
     record_bytes = label["RECORD_BYTES"]
-###    header_bytes = record_bytes * (label["^QUBE"] - 1)     JNS
-    header_bytes = record_bytes * (label["^QUBE"][0] - 1)
+    header_bytes = record_bytes * (label["^QUBE"][1] - 1)
 
     #-------------------------------------------
     # Make sure we have byte-aligned values
@@ -652,8 +651,7 @@ def _load_data_and_times(filespec, label):
     #----------------------------------------------------------------
     # Locate the cube data in the file in units of core_item_bytes
     #----------------------------------------------------------------
-###    offset = header_bytes / core_item_bytes             JNS
-    offset = int(header_bytes / core_item_bytes)
+    offset = header_bytes // core_item_bytes
     size = line_stride * core_lines
 
     #------------------------------------------
@@ -795,11 +793,11 @@ def pds_value_from_constants(string_value):
     """
     Returns a value or tuple from a string that does not contain quotes and
         therefore expects a pre-defined constant
-        
+
     Input:
         string_value    a string that is either a pre-defined constant OR a
                         tuple of pre-defined constants
-        
+
     Return:             a string of that constant or a tuple of strings of those
                         constants.
     """

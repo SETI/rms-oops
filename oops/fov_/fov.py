@@ -11,7 +11,7 @@ from polymath import *
 class FOV(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """The FOV (Field of View) abstract class provides a description of the
-    geometry of a field of view. 
+    geometry of a field of view.
 
     The properties of an FOV are defined within a fixed coordinate frame, with
     the positive Z axis oriented near the center of the line of sight. The x and
@@ -223,8 +223,8 @@ class FOV(object):
         """
         Return the line of sight vector given FOV coordinates (u,v).
 
-        The los points in the direction specified by coordinate Pair (u,v). 
-        Note that this is the direction _opposite_ to that of the arriving 
+        The los points in the direction specified by coordinate Pair (u,v).
+        Note that this is the direction _opposite_ to that of the arriving
         photon.
 
         If derivs is True, then any derivatives in (u,v) get propagated into
@@ -248,8 +248,8 @@ class FOV(object):
         """
         Return FOV coordinates (u,v) given a line of sight vector.
 
-        The los points in the direction specified by coordinate Pair (u,v). 
-        Note that this is the direction _opposite_ to that of the arriving 
+        The los points in the direction specified by coordinate Pair (u,v).
+        Note that this is the direction _opposite_ to that of the arriving
         photon.
 
         If derivs is True, then any derivatives in (u,v) get propagated into
@@ -276,7 +276,7 @@ class FOV(object):
         Input:
             uv_pair     a Pair of (u,v) coordinates.
             inclusive   True to interpret coordinate values at the upper end of
-                        each range as inside the FOV; False to interpet them as
+                        each range as inside the FOV; False to interpret them as
                         outside.
             uv_min      an integer Pair representing the lower (u,v) corner of
                         the area observed at the FOV's active area; None for the

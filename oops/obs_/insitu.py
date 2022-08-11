@@ -26,51 +26,64 @@ class InSitu(Observation):
     do not require directional information.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    PACKRAT_ARGS = ['cadence', 'path']
+    PACKRAT_ARGS = ['cadence', 'path', 'subfields']
 
     #===========================================================================
     # __init__
     #===========================================================================
-    def __init__(self, cadence, path):
+    def __init__(self, cadence, path, **subfields):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for an InSitu observation.
 
         Input:
-            cadence     a Cadence object defining the time and duration of
-                        each "measurement".  Alternatively, a tuple || 
-                        dictionaryof the form:
-
-                          (tbd) || {tbd}
+            cadence     a Cadence object defining the time and duration of each
+                        "measurement". Note that the shape of the cadence
+                        defines the dimensions of the observation. As a special
+                        case, a Scalar value is converted to a Cadence of
+                        subclass Instant, making this observation suitable for
+                        evaluating any gridless backplane. The shape of this
+                        cadence defines the shape of the observation.
 
             path        the path waypoint co-located with the observer.
+
+            subfields   a dictionary containing all of the optional attributes.
+                        Additional subfields may be included as needed.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-        self.fov = NullFOV()
         self.path = Path.as_waypoint(path)
         self.frame = Frame.J2000
 
         #--------------------------------------------------
-        # Axes
+        # FOV
         #--------------------------------------------------
-        self.u_axis = -1
-        self.v_axis = -1
-        self.swap_uv = False
-        self.t_axis = -1
+        self.fov = NullFOV()
 
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): 
+        if isinstance(cadence, Cadence):
             self.cadence = cadence
-        elif isinstance(cadence, tuple): 
-            self.cadence = self._default_cadence(*cadence)
-        elif isinstance(cadence, dict): 
-            self.cadence = self._default_cadence(**cadence)
+        elif isinstance(cadence, Scalar):
+            self.cadence = Instant(cadence)
+        else:
+            raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
+
+        #--------------------------------------------------
+        # Axes / Shape / Size
+        #--------------------------------------------------
+        self.u_axis = -1
+        self.v_axis = -1
+        self.swap_uv = False
+
+        self.uv_shape = (1,1)
+
+        self.shape = self.cadence.shape
+        self.t_axis = list(np.range(len(self.shape)))
 
         #--------------------------------------------------
         # Shape / Size
@@ -85,31 +98,15 @@ class InSitu(Observation):
         self.midtime = self.cadence.midtime
 
         #--------------------------------------------------
-        # No optional subfields
+        # Optional subfields
         #--------------------------------------------------
         self.subfields = {}
+        for key in subfields.keys():
+            self.insert_subfield(key, subfields[key])
 
         return
     #===========================================================================
 
-
-
-    #===========================================================================
-    # _default_cadence
-    #===========================================================================
-    def _default_cadence(self, tbd):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return a cadence object a dictionary of parameters.
-
-        Input:
-            TBD
-
-        Return:         Cadence object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Instant(tbd)
-    #===========================================================================
 
 
 #*******************************************************************************
