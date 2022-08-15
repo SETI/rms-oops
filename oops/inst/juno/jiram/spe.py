@@ -61,7 +61,7 @@ def from_file(filespec, label, fast_distortion=True,
     slits = []
     for i in range(meta.nsamples):
         item = oops.obs.Snapshot(("v","u"), 
-                             (meta.tstart, meta.exposure), meta.fov_slits,
+                             meta.tstart, meta.exposure, meta.fov_slits,
                              "JUNO", "JUNO_JIRAM_S", 
                              data=np.reshape(data[:,i],(1,meta.nlines)) )
                              
@@ -78,7 +78,7 @@ def from_file(filespec, label, fast_distortion=True,
     # Construct Snapshot for all bands 
     #-------------------------------------------
     obs = oops.obs.Snapshot(("v","u","b"), 
-                         (meta.tstart, meta.exposure), meta.fov,
+                         meta.tstart, meta.exposure, meta.fov,
                          "JUNO", "JUNO_JIRAM_S", data=data )
                          
 #    obs.insert_subfield('spice_kernels', \

@@ -63,7 +63,7 @@ def from_file(filespec, label, fast_distortion=True,
         fmeta = Metadata(flabels[i])
 
         item = (oops.obs.Snapshot(("v","u"), 
-                                 (fmeta.tstart, fmeta.exposure), fmeta.fov,
+                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
                                  "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame, 
                                  instrument = "JIRAM_I",
                                  filter = fmeta.filter, 
