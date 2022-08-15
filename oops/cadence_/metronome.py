@@ -61,7 +61,7 @@ class Metronome(Cadence):
         """
         Return the min time(s) associated with the given time step(s).
 
-        
+
         This method supports non-integer step values.
 
         Input:
@@ -100,7 +100,7 @@ class Metronome(Cadence):
         Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -110,7 +110,7 @@ class Metronome(Cadence):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         tstep_int = Scalar.as_scalar(tstep).int()
-        
+
         time_min = self.time[0] + tstep_int * self.tstride
         time_max = time_min + self.texp
 
@@ -224,7 +224,7 @@ class Metronome(Cadence):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return a shallow copy forced to be continuous.
-        
+
         For Metronome this is accomplished by forcing the exposure times to
         be equal to the stride.
         """
@@ -282,7 +282,7 @@ class Test_Metronome(unittest.TestCase):
         self.assertEqual(Boolean(cadence.time_at_tstep(Scalar((0.,1.,2.),
                                             [False,True,False])).mask),
                          [False,True,False])
-        
+
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,140])
         self.assertEqual(cadence.time_at_tstep(tstep), time)
@@ -294,7 +294,7 @@ class Test_Metronome(unittest.TestCase):
         test = cadence.time_at_tstep(tstep)
         self.assertTrue(Boolean(test.mask) ==
                         [[True,False],[False,False],[True,True]])
-                        
+
         #---------------------
         # time_is_inside()
         #---------------------
@@ -334,17 +334,17 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue((abs(tstep - test) < 1.e-14).all())
         self.assertEqual(time.masked(), 0)
         self.assertEqual(test.masked(), 0)
-        
+
         mask = (tstep < 0) | (tstep > cadence.steps)
         mask1 = (tstep < 0) | (tstep > cadence.steps-1)
-        
+
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep, mask=False) - 10.) <
                          1.e-13).all())
         self.assertEqual(cadence.tstride_at_tstep(tstep, mask=False).masked(), 0)
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep) -
                              10.).mvals < 1.e-13).all())
         self.assertTrue(Boolean(cadence.tstride_at_tstep(tstep).mask) == mask1)
-        
+
         test = cadence.time_at_tstep(tstep)
         self.assertTrue((abs(time - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask)
@@ -362,7 +362,7 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue((abs(tstep - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask2)
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
-        
+
         #--------------------------
         # time_range_at_tstep()
         #--------------------------
@@ -392,7 +392,7 @@ class Test_Metronome(unittest.TestCase):
         (time0, time1) = cadence.time_range_at_tstep(tstep)
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
-        
+
         #------------------
         # time_shift()
         #------------------
@@ -405,7 +405,7 @@ class Test_Metronome(unittest.TestCase):
         # Discontinuous case
         # 100-108, 110-118, 120-128, 130-138
         ####################################
-        
+
         texp = 8.
         cadence = Metronome(100., 10., texp, 4)
         self.assertFalse(cadence.is_continuous)
@@ -430,7 +430,7 @@ class Test_Metronome(unittest.TestCase):
         self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
                                             [False,True,False])).mask),
                          [False,True,False])
-        
+
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,138])
         self.assertEqual(cadence.time_at_tstep(tstep), time)
@@ -484,21 +484,21 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue((abs(tstep - test) < 1.e-14).all())
         self.assertEqual(time.masked(), 0)
         self.assertEqual(test.masked(), 0)
-        
+
         mask = (tstep < 0) | (tstep > cadence.steps)
         test = cadence.time_at_tstep(tstep)
         self.assertTrue((abs(time - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask)
         self.assertTrue(cadence.time_is_inside(time) == ~mask)
         mask1 = (tstep < 0) | (tstep > cadence.steps-1)
-        
+
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep, mask=False) - 10.) <
                          1.e-13).all())
         self.assertEqual(cadence.tstride_at_tstep(tstep, mask=False).masked(), 0)
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep) -
                              10.).mvals < 1.e-13).all())
         self.assertTrue(Boolean(cadence.tstride_at_tstep(tstep).mask) == mask1)
-        
+
 
         #------------------------------------------------------------------
         # We can't recompute "time" for the discontinuous case because not
@@ -548,7 +548,7 @@ class Test_Metronome(unittest.TestCase):
         (time0, time1) = cadence.time_range_at_tstep(tstep)
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
-        
+
         #------------------
         # time_shift()
         #------------------

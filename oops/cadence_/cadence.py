@@ -23,9 +23,9 @@ class Cadence(object):
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-########################################################
-# Methods to be defined for each Cadence subclass
-########################################################
+    ########################################################
+    # Methods to be defined for each Cadence subclass
+    ########################################################
 
     #===========================================================================
     # __init__
@@ -39,7 +39,7 @@ class Cadence(object):
         pass
     #===========================================================================
 
-    
+
 
     #===========================================================================
     # time_at_tstep
@@ -61,7 +61,7 @@ class Cadence(object):
         raise NotImplementedError("time_at_tstep() is not implemented")
     #===========================================================================
 
-    
+
 
     #===========================================================================
     # time_range_at_tstep
@@ -72,7 +72,7 @@ class Cadence(object):
         Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -85,7 +85,7 @@ class Cadence(object):
                                       "is not implemented")
     #===========================================================================
 
-    
+
 
     #===========================================================================
     # tstep_at_time
@@ -124,7 +124,7 @@ class Cadence(object):
         raise NotImplementedError("time_shift() is not implemented")
     #===========================================================================
 
-    
+
 
     #===========================================================================
     # as_continuous
@@ -138,7 +138,7 @@ class Cadence(object):
         raise NotImplementedError("as_continuous() is not implemented")
     #===========================================================================
 
-    
+
 
     ####################################################
     # Methods probably not requiring overrides
@@ -179,7 +179,7 @@ class Cadence(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return the time interval(s) for the given time step(s). 
-        
+
         Input:
             tstep       a Scalar time step index or a Pair of time step
                         indices.
@@ -202,7 +202,7 @@ class Cadence(object):
                                     "implemented for cadences larger than 2-D")
     #===========================================================================
 
-    
+
 
 #*******************************************************************************
 
@@ -225,8 +225,8 @@ class Test_Cadence(unittest.TestCase):
         pass
     #===========================================================================
 
-    
-    
+
+
 ########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -12,7 +12,7 @@ from polymath import Units
 #*******************************************************************************
 class Latitude(CoordinateModel):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    ""
+    """
     Latitude is a subclass of CoordinateModel used to describe an angle
     between -90 and +90 degrees.
     """

@@ -403,7 +403,7 @@ class Wobble(Path, Fittable):
         event = Event(time, xyz_observed[0], xyz_observed[1],
                             self.observer.path_id, self.frame_id)
 
-        if partials: 
+        if partials:
             event.pos.insert_subfield("d_dpath", xyz_observed[2])
 
         return event
@@ -433,25 +433,25 @@ class Wobble(Path, Fittable):
 #             return super(Kepler,self).photon_to_event(link, quick, derivs,
 #                                                       guess, update,
 #                                                       iters, precision, limit)
-# 
+#
 #         #---------------------------------------------------------------------
 #         # When the observer is pre-defined, photon_to_event() gets an override
 #         # for quick evaluation, but is only valid at the observer event.
 #         # In this case, guess must contain the event time at the planet.
 #         #---------------------------------------------------------------------
 #         event = self.event_at_time(guess, quick=quick, partials=partials)
-# 
+#
 #         event.dep = -event.pos
 #         event.dep_lt = event.time - link.time
 #         event.link = link
-# 
+#
 #         link.arr = event.dep
 #         link.arr_lt = -event.dep_lt
-# 
+#
 #         if partials:
 #             link.arr.insert_subfield("d_dpath", -event.pos.d_dpath)
 #             link.arr.insert_subfield("d_dt", -event.vel)
-# 
+#
 #         return event
 #     #========================================================================
 
@@ -465,14 +465,14 @@ class Wobble(Path, Fittable):
 
 #*******************************************************************************
 # Test_Wobble
-*******************************************************************************
+#*******************************************************************************
 # class Test_Wobble(unittest.TestCase):
-# 
+#
 #     #=========================================================================
 #     # runTest
 #     #========================================================================
 #     def runTest(self):
-# 
+#
 #         # TBD
 #         pass
 #     #========================================================================

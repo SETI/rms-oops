@@ -47,7 +47,7 @@ class Instant(Cadence):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return the time(s) associated with the given time step(s).
-        
+
         This method supports non-integer step values.
 
         Input:
@@ -71,7 +71,7 @@ class Instant(Cadence):
         Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)

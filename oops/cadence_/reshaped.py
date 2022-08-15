@@ -13,7 +13,7 @@ class ReshapedCadence(Cadence):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     ReshapedCadence is a Cadence that has been reshaped.
-    
+
     The time steps are defined by another cadence with a different shape.
     This can be used, for example, to convert a 1-D cadence into an N-D cadence.
     """
@@ -155,7 +155,7 @@ class ReshapedCadence(Cadence):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return the time(s) associated with the given time step(s).
-        
+
         This method supports non-integer step values.
 
         Input:
@@ -179,7 +179,7 @@ class ReshapedCadence(Cadence):
         Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -259,7 +259,7 @@ class ReshapedCadence(Cadence):
     #===========================================================================
     def as_continuous(self):
         """Return a shallow copy forced to be continuous.
-        
+
         For Sequence this is accomplished by forcing the exposure times to
         be equal to the stride for each step.
         """
@@ -319,7 +319,7 @@ class Test_ReshapedCadence(unittest.TestCase):
     def runTest(self):
 
         from oops.cadence_.metronome import Metronome
-    
+
         self.TEST((10,), (10,), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1.5))
