@@ -2,6 +2,7 @@
 # oops/inst/juno/junocam.py
 ################################################################################
 
+import re
 import numpy as np
 import julian
 import pdstable
@@ -91,15 +92,6 @@ def from_file(filespec, fast_distortion=True,
                                  instrument = "JUNOCAM",
                                  filter = fmeta.filter, 
                                  data = framelets[:,:,i]))
-
-#            item = (oops.obs.Pushbroom(("vt","u"), Pair.ONES, 
-#                                 cadence, fmeta.fov,
-#                                 "JUNO", "JUNO_JUNOCAM", 
-#                                 instrument = "JUNOCAM",
-#                                 filter = fmeta.filter, 
-#                                 data = framelets[:,:,i]))
-
-
 
 
 #        item.insert_subfield('spice_kernels', \
@@ -336,6 +328,15 @@ class Metadata(object):
             fo = cspyce.gdpool(fo_var, 0)[0]
             px = cspyce.gdpool(px_var, 0)[0]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            # Check RATIONALE_DESC in label for modification to methane 
+            # DISTORTION_Y
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if self.filter== 'METHANE': cy = self.update_cy(label, cy)
+
+            #- - - - - - - - - - - -
+            # Construct FOV
+            #- - - - - - - - - - - -
             scale = px/fo
             distortion_coeff = [1,0,k1,0,k2]
 
@@ -347,6 +348,30 @@ class Metadata(object):
         return
     #===========================================================================
 
+
+
+    #===========================================================================
+    # update_cy
+    #===========================================================================
+    def update_cy(self, label, cy):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Looks at label RATIONALE_DESC for a correction to DISTORTION_Y for
+        some methane images.
+
+        Input:
+            label           The label dictionary.
+            cy              Uncorrected cy value.
+
+        Output:         
+            cy              Corrected cy value.
+
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        desc = label['RATIONALE_DESC']
+        desc = re.sub("\s+"," ", desc)                     # compress whitespace
+        kv = desc.partition('INS-61504_DISTORTION_Y = ')   # parse keyword
+        return float(kv[2].split()[0])                     # parse/convert value
 #*******************************************************************************
 
 
@@ -398,15 +423,19 @@ class JUNOCAM(object):
                         False otherwise.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        #-----------------------------------
         # Quick exit after first call
+        #-----------------------------------
         if JUNOCAM.initialized: return
 
+        #-----------------------------------
+        # Initialize Juno
+        #-----------------------------------
         Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                            gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
         Juno.load_instruments(asof=asof)
-
-
 
         #-----------------------------------
         # Construct the SpiceFrame

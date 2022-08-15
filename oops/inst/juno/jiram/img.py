@@ -1,5 +1,5 @@
 ################################################################################
-# oops/inst/juno/jiram.py
+# oops/inst/juno/jiram/img.py
 ################################################################################
 
 from IPython import embed   ## TODO: remove
@@ -14,6 +14,7 @@ import os.path
 import pdsparser
 
 from oops.inst.juno.juno_ import Juno
+from oops.inst.juno.jiram import JIRAM
 
 ################################################################################
 # Standard class methods
@@ -22,7 +23,7 @@ from oops.inst.juno.juno_ import Juno
 #===============================================================================
 # from_file
 #===============================================================================
-def from_file(filespec, fast_distortion=True,
+def from_file(filespec, label, fast_distortion=True,
               return_all_planets=False, **parameters):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
@@ -38,36 +39,25 @@ def from_file(filespec, fast_distortion=True,
                             Jupiter or Saturn.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    JIRAM.initialize()    # Define everything the first time through; use 
-                            # defaults unless initialize() is called explicitly.
-
-    #-----------------------
-    # Load the PDS label 
-    #-----------------------
-    lbl_filespec = filespec.replace(".img", ".LBL")
-    recs = pdsparser.PdsLabel.load_file(lbl_filespec)
-    label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     #---------------------------------
-    # Get composite image metadata 
+    # Get metadata 
     #---------------------------------
     meta = Metadata(label)
+    
+    #--------------------------------------------
+    # Define everything the first time through
+    #--------------------------------------------
+    IMG.initialize(meta.tstart)  
 
     #------------------------------------------------------------------
     # Load the data array as separate framelets, with associated labels
     #------------------------------------------------------------------
     (framelets, flabels) = _load_data(filespec, label, meta)
 
-    #--------------------------------
-    # Load time-dependent kernels 
-    #--------------------------------
-    Juno.load_cks(meta.tstart, meta.tstart + 3600.)
-    Juno.load_spks(meta.tstart, meta.tstart + 3600.)
-
     #-----------------------------------------
     # Construct a Snapshot for each framelet
     #-----------------------------------------
-
     obs = []
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
@@ -79,54 +69,13 @@ def from_file(filespec, fast_distortion=True,
                                  filter = fmeta.filter, 
                                  data = framelets[:,:,i]))
 
-
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
-
-
         item.insert_subfield('filespec', filespec)
         item.insert_subfield('basename', os.path.basename(filespec))
         obs.append(item)
 
     return obs
-
-#===============================================================================
-
-
-
-#===============================================================================
-# initialize
-#===============================================================================
-def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
-               spk='reconstructed', gapfill=True,
-               mst_pck=True, irregulars=True):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Initialize key information about the JIRAM instrument.
-
-    Must be called first. After the first call, later calls to this function
-    are ignored.
-
-    Input:
-        ck,spk      'predicted', 'reconstructed', or 'none', depending on which
-                    kernels are to be used. Defaults are 'reconstructed'. Use
-                    'none' if the kernels are to be managed manually.
-        planets     A list of planets to pass to define_solar_system. None or
-                    0 means all.
-        offset_wac  True to offset the WAC frame relative to the NAC frame as
-                    determined by star positions.
-        asof        Only use SPICE kernels that existed before this date; None
-                    to ignore.
-        gapfill     True to include gapfill CKs. False otherwise.
-        mst_pck     True to include MST PCKs, which update the rotation models
-                    for some of the small moons.
-        irregulars  True to include the irregular satellites;
-                    False otherwise.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    JIRAM.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
-                   spk=spk, gapfill=gapfill,
-                   mst_pck=mst_pck, irregulars=irregulars)
 
 #===============================================================================
 
@@ -235,9 +184,8 @@ class Metadata(object):
             self.exposure = label['EXPOSURE_DURATION']
         except: 
             print('No exposure information')
-#            self.exposure = 1.         # TBD: figure this out, why do some images 
-                                        #      have no exposure time?  Use stop-start time?
-            self.exposure = 0.004       # works for JIR_IMG_RDR_2017244T104633_V01.img
+            self.exposure = 1.      # This should go away after the labels are 
+                                    # redelivered
 
         #-------------
         # Filters
@@ -258,7 +206,6 @@ class Metadata(object):
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
         if self.exposure == 0: self.exposure = self.tstop - self.tstart
-
 
         #-------------
         # target
@@ -307,75 +254,70 @@ class Metadata(object):
 
 
 
-
-
 #*******************************************************************************
-# JIRAM 
+# IMG 
 #*******************************************************************************
-class JIRAM(object):
+class IMG(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    A instance-free class to hold JIRAM instrument parameters.
+    A instance-free class to hold IMG instrument parameters.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    instrument_kernel = None
-    fovs = {}
     initialized = False
 
-    @staticmethod
     #===========================================================================
     # initialize
     #===========================================================================
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
-                   mst_pck=True, irregulars=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    @staticmethod
+    def initialize(time, ck='reconstructed', planets=None, asof=None,
+               spk='reconstructed', gapfill=True,
+               mst_pck=True, irregulars=True):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Initialize key information about the JIRAM instrument; fill in key
-        information about the WAC and NAC.
+        Initialize key information about the IMG instrument.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
 
         Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                        which kernels are to be used. Defaults are
-                        'reconstructed'. Use 'none' if the kernels are to be
-                        managed manually.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
+            time        time at which to define the inertialy fixed mirror-
+                        corrected frame.
+            ck,spk      'predicted', 'reconstructed', or 'none', depending on which
+                        kernels are to be used. Defaults are 'reconstructed'. Use
+                        'none' if the kernels are to be managed manually.
+            planets     A list of planets to pass to define_solar_system. None or
+                        0 means all.
+            asof        Only use SPICE kernels that existed before this date; None
+                        to ignore.
             gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
+            mst_pck     True to include MST PCKs, which update the rotation models
+                        for some of the small moons.
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        # Quick exit after first call
-        if JIRAM.initialized: return
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                           gapfill=gapfill,
-                           mst_pck=mst_pck, irregulars=irregulars)
-        Juno.load_instruments(asof=asof)
+        #------------------------------------
+        # Quick exit after first call
+        #------------------------------------
+        if IMG.initialized: return
+
+        #------------------------------------
+        # initialize JIRAM
+        #------------------------------------
+        JIRAM.initialize(ck=ck, planets=planets, asof=asof,
+                     spk=spk, gapfill=gapfill,
+                     mst_pck=mst_pck, irregulars=irregulars)
 
         #-----------------------------------
         # Construct the SpiceFrames
         #-----------------------------------
-        rot90 = oops.Matrix3([[0,-1,0],[-1,0,0],[0,0,1]])
-        mband_rot = oops.frame.SpiceFrame("JUNO_JIRAM_I_MBAND", 
-                                                    id="JUNO_JIRAM_I_MBAND_ROT")
-        mband = oops.frame.Cmatrix(rot90, mband_rot, id="JUNO_JIRAM_I_MBAND")
+        JIRAM.create_frame(time, 'I_MBAND')
+        JIRAM.create_frame(time, 'I_LBAND')
+        
 
-        lband_rot = oops.frame.SpiceFrame("JUNO_JIRAM_I_LBAND", 
-                                                    id="JUNO_JIRAM_I_LBAND_ROT")
-        lband = oops.frame.Cmatrix(rot90, lband_rot, id="JUNO_JIRAM_I_LBAND")
-
-
-        JIRAM.initialized = True
+        IMG.initialized = True
     #===========================================================================
 
 
@@ -387,18 +329,14 @@ class JIRAM(object):
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Resets the internal JIRAM parameters. Can be useful for
+        Resets the internal IMG parameters. Can be useful for
         debugging.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        JIRAM.instrument_kernel = None
-        JIRAM.fovs = {}
-        JIRAM.initialized = False
+        IMG.initialized = False
 
-        Juno.reset()
+        JIRAM.reset()
     #============================================================================
 
 #*****************************************************************************
-
-
 
