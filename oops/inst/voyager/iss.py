@@ -152,7 +152,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
             platform_to_camera = cspyce.pxform('VG' + vgr + '_SCAN_PLATFORM',
                                                'VG' + vgr + 'ISS' + camera[:2],
                                                0.)
-            image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) * 
+            image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) *
                                              oops.Matrix3(j2000_to_platform))
 
         except LookupError:
@@ -163,7 +163,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
     #-----------------------
     # Create a Snapshot
     #-----------------------
-    result = oops.obs.Snapshot(('v','u'), (tstart, texp), fovs[camera],
+    result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
                                spacecraft,
                                image_frame,
                                dict = vicar_dict,           # Add the VICAR dict
@@ -266,17 +266,17 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
             tai = julian.tai_from_iso(label_dict['IMAGE_TIME']) - texp
             tstart = julian.tdb_from_tai(tai)
 
-        #- - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - -
         # Get spacecraft clock ticks
-        #- - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - -
         scid = -(30 + ivgr)
         start_ticks = cspyce.sce2t(scid, tstart)
         mid_ticks   = cspyce.sce2t(scid, tstart + texp/2.)
         stop_ticks  = cspyce.sce2t(scid, tstart + texp)
 
-        #- - - - - - - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - - - - - - -
         # Construct the image coordinate frame
-        #- - - - - - - - - - - - - - - - - - - - 
+        #- - - - - - - - - - - - - - - - - - - -
         scan_platform_id = scid * 1000 - 100
         tol_ticks = 800 + texp/48.
 
@@ -287,7 +287,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
             platform_to_camera = cspyce.pxform('VG' + vgr + '_SCAN_PLATFORM',
                                                'VG' + vgr + '_ISS' + camera[:2],
                                                0.)
-            image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) * 
+            image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) *
                                              oops.Matrix3(j2000_to_platform))
 
         except (LookupError, IOError):
@@ -297,7 +297,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
             image_frame = spacecraft + '_ISS_' + camera
 
-        item = oops.obs.Snapshot(('v','u'), (tstart, 'texp), fovs[camera],
+        item = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
                                  spacecraft,
                                  image_frame,
                                  dict = label_dict,     # Add index dictionary

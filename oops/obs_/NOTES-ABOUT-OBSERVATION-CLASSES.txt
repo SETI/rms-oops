@@ -1,0 +1,72 @@
+NOTES ABOUT OBSERVATION CLASSES
+
+Here is a summary of the properties of the existing observation classes.
+
+                Detector  Mirror  FOV   Rotation  Time  Cadence  Spatial  Shape
+                dims      dims    dims  dims      axes  dims     axes     def
+                ---------------------------------------------------------------
+InSitu           -         -       -     0         any   any      0       C
+Pixel            0         0       0     0         1     1        0       C
+Pushbroom        1         1       2     0         0     1        2       F
+Pushframe        2         TDI     2     1         0     1        2       F
+RasterScan       0         2       2     0         0     2        2       F
+RasterSlit       0         1       1     1         0     2        2       F,C
+RasterSlit1D     0         1       1     0         0     1        1       F
+Slit             1         0       1     1         0     1        2       F,C
+Slit1D           1         0       1     0         0     0        1       F
+Snapshot         2         0       2     0         0     0        2       F
+
+Detector dimensions:
+0 = a single detector.
+1 = a line of detectors with possible gaps between them.
+2 = an image array with no gaps.
+
+Mirror dimensions:
+0 = no internal mirror.
+1 = an internal mirror sweeps out one spatial axis as a function of time.
+2 = an internal mirror sweeps out two spatial axes as a function of time.
+TDI = an instrument in which the DNs accumulated in detector are being shifted
+along one axis of the detector as a function of time.
+
+FOV dimensions:
+The FOV always describes the combination of detectors plus internal mirrors, so
+it is always the sum of the dimensions of the detector and mirror. In practice,
+all FOVs have two axes (u,v), so 1 dimension means that one of the FOV axes has
+length one, whereas 0 dimensions means that both of the FOV axes have length
+one.
+
+Rotation dimensions:
+0 = rotation of the camera does not add a spatial axis to the product.
+1 = rotation of the camera is used to add one spatial axis to the data product.
+
+Time axes:
+0 = this data product does not have an explicit time axis.
+1 = this data product does have an explicit time axis.
+Note that the distinction between rotation dimensions and time dimensions is a
+bit arbitrary. In the table, we designate something to be a rotation axis if it
+is primarily intended to augment the spatial axes of the observation.
+
+Cadence dimensions:
+The cadence describes all of the time-dependencies within the product, so its
+dimension is always equal to:
+    Mirror dimensions + Rotation dimensions + Time axes
+
+Spatial axes:
+This is the number of spatial axes in the data product. It is always equal to
+    FOV dimensions + Rotation dimensions - (1 if TDI)
+Note that the role of a TDI instrument readout mode is to compensate for the
+rotational sweep of the instrument, so in effect, it plays the role of
+subtracting one spatial dimension.
+
+Shape definition:
+F = the dimensions of the data product are defined by the FOV.
+C = the dimensions of the data product are defined by the cadence.
+F,C = one spatial dimension of the data product is defined by the FOV; the other
+is defined by the cadence.
+
+Notes about class names:
+- "Raster" indicates that the FOV is partly handled by the movement of an
+  internal mirror. (The Pushbroom class also uses an internal mirror.)
+- "Slit1D" indicates an observation with one spatial dimension; "Slit" describes
+  an observation with two.
+

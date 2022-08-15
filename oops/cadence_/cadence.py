@@ -178,7 +178,7 @@ class Cadence(object):
     def tstride_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Return the time interval(s) for the given time step(s). 
+        Return the time interval(s) for the given time step(s).
 
         Input:
             tstep       a Scalar time step index or a Pair of time step

@@ -84,7 +84,7 @@ class Sequence(Cadence):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return the time(s) associated with the given time step(s).
-        
+
         This method supports non-integer step values.
 
         Input:
@@ -126,10 +126,9 @@ class Sequence(Cadence):
             time_max    a Scalar defining the maximum time value.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        tstep = Scalar.as_scalar(tstep).int()
-#        tstep = Scalar.as_int(tstep)
-        tstep_clipped = tstep.clip(0,self.steps-1,False)
-        time_min = Scalar(self.tlist[tstep_clipped]) # , tstep.mask) XXX
+        tstep = Scalar.as_scalar(tstep).as_int()
+        tstep_clipped = tstep.clip(0, self.steps-1, False)
+        time_min = Scalar(self.tlist[tstep_clipped])
         time_max = time_min + self.texp[tstep_clipped]
 
         if mask:
@@ -335,7 +334,7 @@ class Test_Sequence(unittest.TestCase):
         self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
                                             [False,True,False])).mask),
                          [False,True,False])
-        
+
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,140])
         self.assertEqual(cadence.time_at_tstep(tstep), time)
@@ -387,17 +386,17 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue((abs(tstep - test) < 1.e-14).all())
         self.assertEqual(time.masked(), 0)
         self.assertEqual(test.masked(), 0)
-        
+
         mask = (tstep < 0) | (tstep > cadence.steps)
         mask1 = (tstep < 0) | (tstep > cadence.steps-1)
-        
+
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep, mask=False) - 10.) <
                          1.e-13).all())
         self.assertEqual(cadence.tstride_at_tstep(tstep, mask=False).masked(), 0)
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep) -
                              10.).mvals < 1.e-13).all())
         self.assertTrue(Boolean(cadence.tstride_at_tstep(tstep).mask) == mask1)
-        
+
         test = cadence.time_at_tstep(tstep)
         self.assertTrue((abs(time - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask)
@@ -415,7 +414,7 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue((abs(tstep - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask2)
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
-        
+
         #--------------------------
         # time_range_at_tstep()
         #--------------------------
@@ -446,7 +445,7 @@ class Test_Sequence(unittest.TestCase):
         (time0, time1) = cadence.time_range_at_tstep(tstep)
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
-        
+
         #-------------------
         # time_shift()
         #-------------------
@@ -492,7 +491,7 @@ class Test_Sequence(unittest.TestCase):
         self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
                                             [False,True,False])).mask),
                          [False,True,False])
-        
+
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,138])
         self.assertEqual(cadence.time_at_tstep(tstep), time)
@@ -546,9 +545,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue((abs(tstep - test) < 1.e-14).all())
         self.assertEqual(time.masked(), 0)
         self.assertEqual(test.masked(), 0)
-        
+
         mask = (tstep < 0) | (tstep > cadence.steps)
-        
+
         test = cadence.time_at_tstep(tstep)
         self.assertTrue((abs(time - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask)
@@ -562,7 +561,7 @@ class Test_Sequence(unittest.TestCase):
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep) -
                              10.).mvals < 1.e-13).all())
         self.assertTrue(Boolean(cadence.tstride_at_tstep(tstep).mask) == mask1)
-        
+
         #-------------------------------------------------------------------
         # We can't recompute "time" for the discontinuous case because not
         # all times are valid
@@ -609,7 +608,7 @@ class Test_Sequence(unittest.TestCase):
         (time0, time1) = cadence.time_range_at_tstep(tstep)
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
-        
+
         #-----------------
         # time_shift()
         #-----------------
@@ -622,7 +621,7 @@ class Test_Sequence(unittest.TestCase):
         # Converted-to-continuous case
         # We just do spot-checking here
         ####################################
-        
+
         cadence = cadence.as_continuous()
         self.assertTrue(cadence.is_continuous)
 

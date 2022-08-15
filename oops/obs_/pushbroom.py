@@ -6,6 +6,7 @@ import numpy as np
 from polymath import *
 
 from oops.obs_.observation   import Observation
+from oops.obs_.snapshot      import Snapshot
 from oops.cadence_.cadence   import Cadence
 from oops.cadence_.metronome import Metronome
 from oops.path_.path         import Path
@@ -28,7 +29,7 @@ class Pushbroom(Observation):
     direction. The virtual array of data is assumed to have a t-dimension of 1,
     while the number of time steps is equal to the number of samples in the u
     or v direction, depending on the direction of sweep. In effect, then, the
-    virtual array samples a diagonal ramp through the cube.
+    virtual array samples a diagonal ramp through the (u,v,t) cube.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     INVENTORY_IMPLEMENTED = True
@@ -42,7 +43,7 @@ class Pushbroom(Observation):
     def __init__(self, axes, uv_size, cadence, fov, path, frame, **subfields):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Constructor for a Slit observation.
+        Constructor for a Pushbroom observation.
 
         Input:
             axes        a list or tuple of strings, with one value for each axis
@@ -56,21 +57,13 @@ class Pushbroom(Observation):
                         axes. Default is (1,1), indicating no dead space between
                         the detectors. It will be < 1 if there are gaps.
 
-            cadence     a Cadence object defining the start time and duration of
-                        each consecutive position of the pushbroom.
-                        Alternatively, a tuple || dictionary of the form:
-
-                          (tstart, tstride, texp, steps) ||
-                          {'tstart':tstart, 'tstride':tstride, 
-                           'texp':texp, 'steps':steps} 
-
-                        with:
-
-                          tstart:       Observation start time.
-                          tstride:      Interval from the start of one time 
-                                        step to the start of the next.
-                          texp:         Exposure time for each step.
-                          steps:        Number of time steps.
+            cadence     a 1-D Cadence object defining the start time and
+                        duration of each consecutive position in the sweep of
+                        the pushbroom. Alternatively, a tuple or dictionary
+                        providing input arguments to the constructor
+                        Metronome.for_array1d() (excluding the number of
+                        lines, which is defined by the FOV)
+                            (tstart, texp, interstep_delay)
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -93,9 +86,17 @@ class Pushbroom(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-        self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
+
+        #--------------------------------------------------
+        # FOV
+        #--------------------------------------------------
+        self.fov = fov
+        self.uv_shape = tuple(self.fov.uv_shape.vals)
+
+        self.uv_size = Pair.as_pair(uv_size)
+        self._uv_is_discontinuous = (self.uv_size != Pair.ONES)
 
         #--------------------------------------------------
         # Axes
@@ -108,26 +109,38 @@ class Pushbroom(Observation):
             self.u_axis = self.axes.index('ut')
             self.v_axis = self.axes.index('v')
             self.t_axis = self.u_axis
-            self.cross_slit_uv_index = 0
-            self.along_slit_uv_index = 1
+            self._cross_slit_uv_index = 0
+            self._along_slit_uv_index = 1
         else:
             self.u_axis = self.axes.index('u')
             self.v_axis = self.axes.index('vt')
             self.t_axis = self.v_axis
-            self.cross_slit_uv_index = 1
-            self.along_slit_uv_index = 0
+            self._cross_slit_uv_index = 1
+            self._along_slit_uv_index = 0
 
         self.swap_uv = (self.u_axis > self.v_axis)
 
         #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
+        self.shape = len(axes) * [0]
+        self.shape[self.u_axis] = self.uv_shape[0]
+        self.shape[self.v_axis] = self.uv_shape[1]
+
+        #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): 
+        lines = self.uv_shape[self._cross_slit_uv_index]
+
+        if isinstance(cadence, (tuple,list)):
+            self.cadence = Metronome.for_array1d(lines, *cadence)
+        elif isinstance(cadence, dict):
+            self.cadence = Metronome.for_array1d(lines, **cadence)
+        elif isinstance(cadence, Cadence):
             self.cadence = cadence
-        elif isinstance(cadence, tuple): 
-            self.cadence = self._default_cadence(*cadence)
-        elif isinstance(cadence, dict): 
-            self.cadence = self._default_cadence(**cadence)
+            assert self.cadence.shape == (lines,)
+        else:
+            raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
 
         #--------------------------------------------------
         # Timing
@@ -136,58 +149,26 @@ class Pushbroom(Observation):
         self.midtime = self.cadence.midtime
 
         #--------------------------------------------------
-        # Shape / Size
-        #--------------------------------------------------
-        assert len(self.cadence.shape) == 1
-        assert (self.fov.uv_shape.vals[self.cross_slit_uv_index] ==
-                self.cadence.shape[0])
-
-        self.uv_shape = tuple(self.fov.uv_shape.values)
-        self.along_slit_shape = self.uv_shape[self.along_slit_uv_index]
-        self.cross_slit_shape = self.uv_shape[self.cross_slit_uv_index]
-
-        self.uv_size = Pair.as_pair(uv_size)
-        self.uv_is_discontinuous = (self.uv_size != Pair.ONES)
-
-        duv_dt_basis_vals = np.zeros(2)
-        duv_dt_basis_vals[self.cross_slit_uv_index] = 1.
-        self.duv_dt_basis = Pair(duv_dt_basis_vals)
-
-        self.shape = len(axes) * [1]
-        self.shape[self.u_axis] = self.uv_shape[0]
-        self.shape[self.v_axis] = self.uv_shape[1]
-
-        #--------------------------------------------------
         # Optional subfields
         #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
-        return
-    #===========================================================================
+        #--------------------------------------------------
+        # Snapshot class proxy (for inventory)
+        #--------------------------------------------------
+        replacements = {
+            'ut':  'u',
+            'vt':  'v',
+        }
 
+        snapshot_axes = [replacements.get(axis, axis) for axis in axes]
+        snapshot_tstart = self.cadence.time[0]
+        snapshot_texp = self.cadence.time[1] - self.cadence.time[0]
 
-
-    #===========================================================================
-    # _default_cadence
-    #===========================================================================
-    def _default_cadence(self, tstart, tstride, texp, steps):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return a cadence object a dictionary of parameters.
-
-        Input:
-            tstart      Observation start time.
-            tstride     Interval from the start of one time 
-                        step to the start of the next.
-            texp        Exposure time for each step.
-            steps       Number of time steps.
-
-        Return:         Cadence object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Metronome(tstart, tstride, texp, steps)
+        self.snapshot = Snapshot(snapshot_axes, snapshot_tstart, snapshot_texp,
+                                 self.fov, self.path, self.frame, **subfields)
     #===========================================================================
 
 
@@ -219,13 +200,13 @@ class Pushbroom(Observation):
         #------------------------------------
         # Handle discontinuous detectors
         #------------------------------------
-        if self.uv_is_discontinuous:
+        if self._uv_is_discontinuous:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Identify indices at exact upper limits; treat these as inside
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-            at_upper_u = (uv.values[...,0] == self.uv_shape[0])
-            at_upper_v = (uv.values[...,1] == self.uv_shape[1])
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            at_upper_u = (uv.vals[...,0] == self.uv_shape[0])
+            at_upper_v = (uv.vals[...,1] == self.uv_shape[1])
 
             #- - - - - - - - - - - - - - - - - - - - - - - -
             # Map continuous index to discontinuous (u,v)
@@ -237,18 +218,18 @@ class Pushbroom(Observation):
             # Adjust values at upper limits
             #- - - - - - - - - - - - - - - - - -
             u = uv.to_scalar(0).mask_where(at_upper_u,
-                    replace = self.uv_shape[0] + self.uv_size.values[0] - 1,
+                    replace = self.uv_shape[0] + self.uv_size.vals[0] - 1,
                     remask = False)
             v = uv.to_scalar(1).mask_where(at_upper_v,
-                    replace = self.uv_shape[1] + self.uv_size.values[1] - 1,
+                    replace = self.uv_shape[1] + self.uv_size.vals[1] - 1,
                     remask = False)
 
-            #- - - - - - - - - - - 
+            #- - - - - - - - - - -
             # Re-create Pair
-            #- - - - - - - - - - - 
+            #- - - - - - - - - - -
             uv_values = np.empty(u.shape + (2,))
-            uv_values[...,0] = u.values
-            uv_values[...,1] = v.values
+            uv_values[...,0] = u.vals
+            uv_values[...,1] = v.vals
 
             uv = Pair(uv_values, indices.mask)
 
@@ -362,7 +343,7 @@ class Pushbroom(Observation):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         uv_pair = uv_pair.as_int()
-        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
+        tstep = uv_pair.to_scalar(self._cross_slit_uv_index)
         (time0, time1) = self.cadence.time_range_at_tstep(tstep, mask=fovmask)
 
         if fovmask:
@@ -372,29 +353,6 @@ class Pushbroom(Observation):
                 time1 = time1.mask_where(is_outside)
 
         return (time0, time1)
-    #===========================================================================
-
-
-
-    #===========================================================================
-    # sweep_duv_dt
-    #===========================================================================
-    def sweep_duv_dt(self, uv_pair):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the mean local sweep speed of the instrument along (u,v) axes.
-
-        Input:
-            uv_pair     a Pair of spatial indices (u,v).
-
-        Return:         a Pair containing the local sweep speed in units of
-                        pixels per second in the (u,v) directions.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        uv_pair = Pair.as_pair(uv_pair)
-        tstep = uv_pair.to_scalar(self.cross_slit_uv_index)
-
-        return self.duv_dt_basis / self.cadence.tstride_at_tstep(tstep)
     #===========================================================================
 
 
@@ -428,196 +386,19 @@ class Pushbroom(Observation):
     #===========================================================================
     # inventory
     #===========================================================================
-    def inventory(self, bodies, expand=0., return_type='list', fov=None,
-                        quick={}, converge={}, time_frac=0.5):
+    def inventory(*args, **kwargs):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Return the body names that appear unobscured inside the FOV.
+        Return the body names that appear unobscured inside the FOV. See
+        Snapshot.inventory() for details.
 
         WARNING: Not properly updated for class Pushbroom. Use at your own risk.
-
-        Restrictions: All inventory calculations are performed at a single
-        observation time specified by time_frac. All bodies are assumed to be
-        spherical.
-
-        Input:
-            bodies      a list of the names of the body objects to be included
-                        in the inventory.
-            expand      an optional angle in radians by which to extend the
-                        limits of the field of view. This can be used to
-                        accommodate pointing uncertainties. XXX NOT IMPLEMENTED XXX
-            return_type 'list' returns the inventory as a list of names.
-                        'flags' returns the inventory as an array of boolean
-                                flag values in the same order as bodies.
-                        'full' returns the inventory as a dictionary of
-                                dictionaries. The main dictionary is indexed by
-                                body name. The subdictionaries contain
-                                attributes of the body in the FOV.
-            fov         use this fov; if None, use self.fov.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-            converge    an optional dictionary of parameters to override the
-                        configured default convergence parameters. The default
-                        configuration is defined in config.py.
-            time_frac   fractional time from the beginning to the end of the
-                        observation for which the inventory applies. 0. for the
-                        beginning; 0.5 for the midtime, 1. for the end time.
-
-        Return:         list, array, or dictionary
-
-            If return_type is 'list', it returns a list of the names of all the
-            body objects that fall at least partially inside the FOV and are
-            not completely obscured by another object in the list.
-
-            If return_type is 'flags', it returns a boolean array containing
-            True everywhere that the body falls at least partially inside the
-            FOV and is not completely obscured.
-
-            If return_type is 'full', it returns a dictionary with one entry
-            per body that falls at least partially inside the FOV and is not
-            completely obscured. Each dictionary entry is itself a dictionary
-            containing data about the body in the FOV:
-
-                body_data['name']          The body name
-                body_data['center_uv']     The U,V coord of the center point
-                body_data['center']        The Vector3 direction of the center
-                                           point
-                body_data['range']         The range in km
-                body_data['outer_radius']  The outer radius of the body in km
-                body_data['inner_radius']  The inner radius of the body in km
-                body_data['resolution']    The resolution (km/pix) in the (U,V)
-                                           directions at the given range.
-                body_data['u_min']         The minimum U value covered by the
-                                           body (clipped to the FOV size) 
-                body_data['u_max']         The maximum U value covered by the
-                                           body (clipped to the FOV size)
-                body_data['v_min']         The minimum V value covered by the
-                                           body (clipped to the FOV size)
-                body_data['v_max']         The maximum V value covered by the
-                                           body (clipped to the FOV size)
-                body_data['u_min_unclipped']  Same as above, but not clipped
-                body_data['u_max_unclipped']  to the FOV size.
-                body_data['v_min_unclipped']
-                body_data['v_max_unclipped']
-                body_data['u_pixel_size']  The number of pixels (non-integer)
-                body_data['v_pixel_size']  covered by the diameter of the body 
-                                           in each direction.
+        This operates by returning every body that would have been inside the
+        FOV of this observation if it were instead a Snapshot, evaluated at the
+        given tfrac.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        assert return_type in ('list', 'flags', 'full')
-
-        if fov is None:
-            fov = self.fov
-
-        body_names = [Body.as_body_name(body) for body in bodies]
-        bodies  = [Body.as_body(body) for body in bodies]
-        nbodies = len(bodies)
-
-        path_ids = [body.path for body in bodies]
-        multipath = MultiPath(path_ids)
-
-        obs_time = self.time[0] + time_frac * (self.time[1] - self.time[0])
-        obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
-        (_,
-         arrival_event) = multipath.photon_to_event(obs_event, quick=quick,
-                                                    converge=converge)
-
-        centers = arrival_event.neg_arr_ap
-        ranges = centers.norm()
-        radii = Scalar([body.radius for body in bodies])
-        radius_angles = (radii/ranges).arcsin()
-
-        inner_radii = Scalar([body.inner_radius for body in bodies])
-        inner_angles = (inner_radii / ranges).arcsin()
-
-        #-----------------------------------------------------------------------
-        # This array equals True for each body falling somewhere inside the FOV
-        #-----------------------------------------------------------------------
-        falls_inside = np.empty(nbodies, dtype='bool')
-        for i in range(nbodies):
-            falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i])
-
-        #--------------------------------------------------------------------
-        # This array equals True for each body completely hidden by another
-        #--------------------------------------------------------------------
-        is_hidden = np.zeros(nbodies, dtype='bool')
-        for i in range(nbodies):
-          if not falls_inside[i]: continue
-
-          for j in range(nbodies):
-            if not falls_inside[j]: continue
-
-            if ranges[i] < ranges[j]: continue
-            if radius_angles[i] > inner_angles[j]: continue
-
-            sep = centers[i].sep(centers[j])
-            if sep < inner_angles[j] - radius_angles[i]:
-                is_hidden[i] = True
-
-        flags = falls_inside & ~is_hidden
-
-        #------------------------
-        # Return as flags
-        #------------------------
-        if return_type == 'flags':
-            return flags
-
-        #---------------------
-        # Return as list
-        #---------------------
-        if return_type == 'list':
-            ret_list = []
-            for i in range(nbodies):
-                if flags[i]: ret_list.append(body_names[i])
-            return ret_list
-
-        #-----------------------
-        # Return full info
-        #-----------------------
-        returned_dict = {}
-
-        u_scale = fov.uv_scale.vals[0]
-        v_scale = fov.uv_scale.vals[1]
-        body_uv = fov.uv_from_los(arrival_event.neg_arr_ap).vals
-        for i in range(nbodies):
-            body_data = {}
-            body_data['name'] = body_names[i]
-            body_data['inside'] = flags[i]
-            body_data['center_uv'] = body_uv[i]
-            body_data['center'] = centers[i].vals
-            body_data['range'] = ranges[i].vals
-            body_data['outer_radius'] = radii[i].vals
-            body_data['inner_radius'] = inner_radii[i].vals
-
-            u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
-            v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
-            body_data['resolution'] = Pair.from_scalars(u_res, v_res).vals
-
-            u = body_uv[i][0]
-            v = body_uv[i][1]
-            u_min_unclipped = int(np.floor(u-radius_angles[i].vals/u_scale))
-            u_max_unclipped = int(np.ceil( u+radius_angles[i].vals/u_scale))
-            v_min_unclipped = int(np.floor(v-radius_angles[i].vals/v_scale))
-            v_max_unclipped = int(np.ceil( v+radius_angles[i].vals/v_scale))
-
-            body_data['u_min_unclipped'] = u_min_unclipped
-            body_data['u_max_unclipped'] = u_max_unclipped
-            body_data['v_min_unclipped'] = v_min_unclipped
-            body_data['v_max_unclipped'] = v_max_unclipped
-
-            body_data['u_min'] = np.clip(u_min_unclipped, 0, self.uv_shape[0]-1)
-            body_data['u_max'] = np.clip(u_max_unclipped, 0, self.uv_shape[0]-1)
-            body_data['v_min'] = np.clip(v_min_unclipped, 0, self.uv_shape[1]-1)
-            body_data['v_max'] = np.clip(v_max_unclipped, 0, self.uv_shape[1]-1)
-
-            body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
-            body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
-
-            returned_dict[body_names[i]] = body_data
-
-        return returned_dict
+        return self.snapshot.inventory(*args, **kwargs)
     #===========================================================================
 
 
@@ -808,23 +589,23 @@ class Test_Pushbroom(unittest.TestCase):
         # Test the upper edge
         #--------------------------
         pair = (10-eps,20-eps)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[1] - 19.8) < delta)
         self.assertFalse(obs.uvt(pair, True)[0].mask)
 
         pair = (10,20-eps)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[1] - 19.8) < delta)
         self.assertFalse(obs.uvt(pair, True)[0].mask)
 
         pair = (10-eps,20)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[1] - 19.8) < delta)
         self.assertFalse(obs.uvt(pair, True)[0].mask)
 
         pair = (10,20)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[1] - 19.8) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[1] - 19.8) < delta)
         self.assertFalse(obs.uvt(pair, True)[0].mask)
 
         self.assertTrue(obs.uvt((10+eps,20), True)[0].mask)

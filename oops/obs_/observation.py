@@ -14,7 +14,6 @@ from oops.frame_.frame      import Frame
 from oops.meshgrid          import Meshgrid
 from oops.body              import Body
 from oops.cadence_.cadence  import Cadence
-from oops.cadence_.instant  import Instant
 
 #*******************************************************************************
 # Observation
@@ -72,7 +71,7 @@ class Observation(object):
                         pointing downward.
         subfields       a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
-        data            a reserved subfield to contain the NumPy array of
+            data        a reserved subfield to contain the NumPy array of
                         numbers associated with the observation.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -250,26 +249,6 @@ class Observation(object):
 
 
     #===========================================================================
-    # sweep_duv_dt
-    #===========================================================================
-    def sweep_duv_dt(self, uv_pair):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the mean local sweep speed of the instrument along (u,v) axes.
-
-        Input:
-            uv_pair     a Pair of spatial indices (u,v).
-
-        Return:         a Pair containing the local sweep speed in units of
-                        pixels per second in the (u,v) directions.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        raise NotImplementedError("sweep_duv_dt() is not implemented")
-    #===========================================================================
-
-
-
-    #===========================================================================
     # time_shift
     #===========================================================================
     def time_shift(self, dtime):
@@ -362,7 +341,33 @@ class Observation(object):
                         outside the FOV.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return self.fov.uv_is_outside(uv_pair, inclusive)
+#       This was wrong, because the (u,v) dimensions of the FOV do not
+#       necessarily match the (u,v) dimensions of the observation.
+#         return self.fov.uv_is_outside(uv_pair, inclusive)
+
+        #-----------------------------------------------------
+        # Interpret the (u,v) coordinates
+        #-----------------------------------------------------
+        uv_pair = Pair.as_pair(uv_pair)
+        (u,v) = uv_pair.to_scalars()
+
+        #-----------------------------------------------------
+        # Create the mask
+        #-----------------------------------------------------
+        if inclusive:
+            result = ((u < 0) | (v < 0) | (u > self.uv_shape[0])
+                                        | (v > self.uv_shape[1]))
+        else:
+            result = ((u < 0) | (v < 0) | (u >= self.uv_shape[0])
+                                        | (v >= self.uv_shape[1]))
+
+        #-----------------------------------------------------
+        # Convert to a boolean mask if necessary
+        #-----------------------------------------------------
+        if isinstance(result, Qube):
+            return result.values        # Convert to NumPy
+        else:
+            return result               # bool
     #===========================================================================
 
 
@@ -426,22 +431,22 @@ class Observation(object):
         # Convert inputs to NumPy 2-element arrays
         #---------------------------------------------
         if limit is None:
-            limit = self.fov.uv_shape
+            limit = self.uv_shape
         if isinstance(limit, numbers.Number):
             limit = (limit, limit)
-        limit = Pair.as_pair(limit).values.astype('float')
+        limit = Pair.as_pair(limit).vals.astype('float')
 
         if isinstance(origin, numbers.Number):
             origin = (origin, origin)
-        origin = Pair.as_pair(origin).values.astype('float')
+        origin = Pair.as_pair(origin).vals.astype('float')
 
         if isinstance(undersample, numbers.Number):
             undersample = (undersample, undersample)
-        undersample = Pair.as_pair(undersample).values.astype('float')
+        undersample = Pair.as_pair(undersample).vals.astype('float')
 
         if isinstance(oversample, numbers.Number):
             oversample = (oversample, oversample)
-        oversample = Pair.as_pair(oversample).values.astype('float')
+        oversample = Pair.as_pair(oversample).vals.astype('float')
 
         #-----------------------------------
         # Construct the 1-D index arrays
@@ -524,13 +529,16 @@ class Observation(object):
                         - the possible case of a 2-D time-dependence that has
                           only one axis coupled to a spatial axis is not
                           supported.
-                        This argument is overridden by a tfrac property.
         """
+# ???                        This argument is overridden by a tfrac property.
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if hasattr(self, 'tfrac'): tfrac = self.tfrac
-        else :
-            if isinstance(tfrac, numbers.Number):
-                tfrac = (tfrac, tfrac)
+# ???
+#         if hasattr(self, 'tfrac'): tfrac = self.tfrac
+#         else :
+#             if isinstance(tfrac, numbers.Number):
+#                 tfrac = (tfrac, tfrac)
+        if isinstance(tfrac, numbers.Number):
+            tfrac = (tfrac, tfrac)
 
         #-------------------------------------------
         # Handle a time-independent observation
@@ -552,9 +560,9 @@ class Observation(object):
             fracs = np.arange(oversample) / (oversample - 1.)
             times = time0 + fracs * (time1 - time0)
 
-            #- - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - -
             # Time is on a leading axis
-            #- - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - -
             tshape = times.shape + len(self.shape) * (1,)
             return Scalar.as_scalar(times.reshape(tshape))
 
@@ -574,14 +582,14 @@ class Observation(object):
         #-----------------------
         if isinstance(self.t_axis, numbers.Number):
 
-            #- - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - -
             # Time aligns with u-axis or v-axis
-            #- - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - -
             if self.t_axis in (self.u_axis, self.v_axis):
 
-                #- - - - - - - - - - - - - - - - - 
+                #- - - - - - - - - - - - - - - - -
                 # One time step implies midtime
-                #- - - - - - - - - - - - - - - - - 
+                #- - - - - - - - - - - - - - - - -
                 if oversample == 1:
                     return Scalar.as_scalar(0.5 * (time0 + time1))
 
@@ -592,9 +600,9 @@ class Observation(object):
                 fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
                 return Scalar(time0 + fracs * (time1 - time0))
 
-            #- - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - -
             # Otherwise time is along a unique axis
-            #- - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - -
             tstep0 = tfrac[0] * self.cadence.shape[0]
             tstep1 = tfrac[1] * self.cadence.shape[0]
             tsteps = np.arange(tstep0, tstep1 + 1.e-10, 1./oversample)
@@ -866,9 +874,9 @@ class Observation(object):
             (t0, t1) = self.times_at_uv(uv_min)
             new_obs_time = t0 + time_frac * (t1 - t0)
 
-            #- - - - - - - - - - - - - 
+            #- - - - - - - - - - - - -
             # Test for convergence
-            #- - - - - - - - - - - - - 
+            #- - - - - - - - - - - - -
             prev_max_dt = max_dt
             max_dt = abs(new_obs_time - obs_time).max()
             obs_time = new_obs_time
@@ -956,7 +964,7 @@ class Observation(object):
                 body_data['resolution']    The resolution (km/pix) in the (U,V)
                                            directions at the given range.
                 body_data['u_min']         The minimum U value covered by the
-                                           body (clipped to the FOV size) 
+                                           body (clipped to the FOV size)
                 body_data['u_max']         The maximum U value covered by the
                                            body (clipped to the FOV size)
                 body_data['v_min']         The minimum V value covered by the
@@ -968,7 +976,7 @@ class Observation(object):
                 body_data['v_min_unclipped']
                 body_data['v_max_unclipped']
                 body_data['u_pixel_size']  The number of pixels (non-integer)
-                body_data['v_pixel_size']  covered by the diameter of the body 
+                body_data['v_pixel_size']  covered by the diameter of the body
                                            in each direction.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -3,7 +3,8 @@
 ################################################################################
 
 from polymath import *
-from oops.cadence_.cadence import Cadence
+from oops.cadence_.cadence   import Cadence
+from oops.cadence_.metronome import Metronome
 
 #*******************************************************************************
 # DualCadence
@@ -194,6 +195,48 @@ class DualCadence(Cadence):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return DualCadence(self.long, self.short.as_continuous())
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # for_array2d
+    #===========================================================================
+    @staticmethod
+    def for_array2d(samples, lines, tstart, texp, intersample_delay=0.,
+                                                  interline_delay=None):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Alternative constructor for a DualCadence involving two Metronome
+        classes, with streamlined input.
+
+        Input:
+            samples             number of samples (along fast axis).
+            lines               number of lines (along slow axis).
+            tstart              start time of observation in TDB seconds.
+            texp                single-sample integration time in seconds.
+            intersample_delay   deadtime in seconds between consecutive samples;
+                                default 0.
+            interline_delay     deadtime in seconds between consecutive lines,
+                                i.e., the delay between the end of the last
+                                sample integration on one line and the start of
+                                the first sample integration on the next line.
+                                If not specified, the interline_delay is assumed
+                                to match the intersample_delay.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        fast_cadence = Metronome(tstart, texp + intersample_delay, texp,
+                                 samples)
+
+        if interline_delay is None:
+            interline_delay = intersample_delay
+
+        long_texp = samples * texp + (samples-1) * intersample_delay
+        long_stride = long_texp + interline_delay
+
+        slow_cadence = Metronome(tstart, long_stride, long_texp, lines)
+
+        return DualCadence(slow_cadence, fast_cadence)
     #===========================================================================
 
 

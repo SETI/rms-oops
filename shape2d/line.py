@@ -358,7 +358,7 @@ class Line(Shape2D, Conic):
         #   a x2 + b xy + c y2 + d x + e y + f = 0
         #
         # Solve for t. This is a quadratic equation.
-        # 
+        #
         # 0 = ( a DX DX +  b DX DY +             c DY DY) t2 +
         #     (2a X0 DX + 2b DX Y0 + 2b X0 DY + 2c Y0 DY + d DX + e DY) t +
         #     ( a X0 X0 +  b X0 Y0 +             c Y0 Y0 + d X0 + e Y0 + f
@@ -504,9 +504,9 @@ class Line(Shape2D, Conic):
             self_pts = [self._more_accurate_intersection(s, line, t)]
             line_pts = [self_pts[0]]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             # Return the easy solution now for infinite lines
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             if type(self) == Line and type(arg) == Line:
                 return (self_pts[0], line_pts[0])
 
@@ -887,7 +887,7 @@ class Line(Shape2D, Conic):
 #*******************************************************************************
 # HalfLine
 #*******************************************************************************
-class (Line):
+class HalfLine(Line):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     An semi-infinite line starting from one point and passing through
@@ -997,7 +997,7 @@ class (Line):
 #*******************************************************************************
 # Segment
 #*******************************************************************************
-class (Line):
+class Segment(Line):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     An line segment from one point to another.

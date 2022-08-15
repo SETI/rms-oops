@@ -77,7 +77,7 @@ def from_file(filespec, fast_distortion=True,
     #------------------------------------------------
     # Create a Snapshot
     #------------------------------------------------
-    result = oops.obs.Snapshot(("v","u"), (tstart, texp),
+    result = oops.obs.Snapshot(("v","u"), tstart, texp,
                                ISS.fovs[camera,mode, fast_distortion],
                                "CASSINI", "CASSINI_ISS_" + camera,
                                dict = vicar_dict,       # Add the VICAR dict
@@ -432,7 +432,7 @@ class ISS(object):
 
         #---------------------------------------------------
         # Construct a SpiceFrame for each camera
-        # Deal with the fact that the instrument's internal 
+        # Deal with the fact that the instrument's internal
         # coordinate  system is rotated 180 degrees
         #---------------------------------------------------
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])

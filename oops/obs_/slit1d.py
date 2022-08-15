@@ -20,7 +20,9 @@ class Slit1D(Observation):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A Slit1D is subclass of Observation consisting of a 1-D slit measurement
-    with no time-dependence. However, it may still have additional axes.
+    with no time-dependence. However, it may still have additional axes (e.g.,
+    bands. This class supports a linear array of detectors that may have gaps
+    between them.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -30,7 +32,8 @@ class Slit1D(Observation):
     #===========================================================================
     # __init__
     #===========================================================================
-    def __init__(self, axes, det_size, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, det_size, tstart, texp, fov, path, frame,
+                       **subfields):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for a Slit1D observation.
@@ -46,16 +49,9 @@ class Slit1D(Observation):
                         slit. It will be < 1 if there are gaps between the
                         detectors.
 
-            cadence     a Cadence object defining the start time and duration 
-                        of the slit1d.  Alternatively, a tuple || dictionary of
-                        the form:
+            tstart      the start time of the observation in seconds TDB.
 
-                          (tstart, texp) || {'tstart':tstart, 'texp':texp}
-
-                        with:
-
-                          tstart: Observation start time.
-                          texp:   Exposure time for the observation.
+            texp        exposure duration of the observation in seconds.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -79,56 +75,53 @@ class Slit1D(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-        self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
         #--------------------------------------------------
-        # Shape / Size
+        # FOV
         #--------------------------------------------------
-        self.shape = len(axes) * [0]
+        self.fov = fov
+        self.uv_shape = tuple(self.fov.uv_shape.vals)
 
         self.det_size = det_size
-        self.slit_is_discontinuous = (self.det_size < 1)
+        self._slit_is_discontinuous = (self.det_size < 1)
 
         #--------------------------------------------------
-        # Axes
+        # Axes / Shape / Size
         #--------------------------------------------------
         self.axes = list(axes)
         assert (('u' in self.axes and 'v' not in self.axes) or
                 ('v' in self.axes and 'u' not in self.axes))
 
+        self.shape = len(axes) * [0]
+
         if 'u' in self.axes:
             self.u_axis = self.axes.index('u')
             self.v_axis = -1
-            self.along_slit_index = self.u_axis
-            self.along_slit_uv_axis = 0
-            self.cross_slit_uv_axis = 1
-            self.shape[self.u_axis] = self.fov.uv_shape.vals[0]
-            self.along_slit_shape = self.shape[self.u_axis]
+            self.shape[self.u_axis] = self.uv_shape[0]
+            self._along_slit_index = self.u_axis
+            self._along_slit_uv_axis = 0
+            self._cross_slit_uv_axis = 1
+            self._along_slit_size = self.shape[self.u_axis]
         else:
             self.u_axis = -1
             self.v_axis = self.axes.index('v')
-            self.along_slit_index = self.v_axis
-            self.along_slit_uv_axis = 1
-            self.cross_slit_uv_axis = 0
-            self.shape[self.v_axis] = self.fov.uv_shape.vals[1]
-            self.along_slit_shape = self.shape[self.v_axis]
+            self.shape[self.v_axis] = self.uv_shape[1]
+            self._along_slit_index = self.v_axis
+            self._along_slit_uv_axis = 1
+            self._cross_slit_uv_axis = 0
+            self._along_slit_size = self.shape[self.v_axis]
 
         self.swap_uv = False
 
-        self.uv_shape = self.fov.uv_shape.vals
-        assert self.fov.uv_shape.vals[self.cross_slit_uv_axis] == 1
+        assert self.uv_shape[self._cross_slit_uv_axis] == 1
+        self.t_axis = -1
 
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): 
-            self.cadence = cadence
-        elif isinstance(cadence, tuple): 
-            self.cadence = self._default_cadence(*cadence)
-        elif isinstance(cadence, dict): 
-            self.cadence = self._default_cadence(**cadence)
+        self.cadence = Metronome.for_array0d(tstart, texp)
 
         #--------------------------------------------------
         # Timing
@@ -136,12 +129,11 @@ class Slit1D(Observation):
         self.tstart = self.cadence.tstart
         self.texp = self.cadence.texp
 
-        self.t_axis = -1
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
-        self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
-        self.scalar_midtime = Scalar(self.midtime)
+        self._scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
+        self._scalar_midtime = Scalar(self.midtime)
 
         #--------------------------------------------------
         # Optional subfields
@@ -149,26 +141,6 @@ class Slit1D(Observation):
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
-    #===========================================================================
-
-
-
-    #===========================================================================
-    # _default_cadence
-    #===========================================================================
-    def _default_cadence(self, tstart, texp):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return a cadence object a dictionary of parameters.
-
-        Input:
-            tstart      Observation start time.
-            texp        Exposure time for the observation.
-
-        Return:         Cadence object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Metronome(tstart, texp, texp, 1)
     #===========================================================================
 
 
@@ -196,17 +168,17 @@ class Slit1D(Observation):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         indices = Vector.as_vector(indices)
-        slit_coord = indices.to_scalar(self.along_slit_index)
+        slit_coord = indices.to_scalar(self._along_slit_index)
 
         #---------------------------------
         # Handle discontinuous detectors
         #---------------------------------
-        if self.slit_is_discontinuous:
+        if self._slit_is_discontinuous:
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Identify indices at exact upper limit; treat these as inside
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            at_upper_limit = (slit_coord == self.along_slit_shape)
+            at_upper_limit = (slit_coord == self._along_slit_size)
 
             #- - - - - - - - - - - - - - - - - - - - - - - -
             # Map continuous index to discontinuous (u,v)
@@ -218,21 +190,21 @@ class Slit1D(Observation):
             # Adjust values at upper limit
             #- - - - - - - - - - - - - - - - -
             slit_coord = slit_coord.mask_where(at_upper_limit,
-                            replace = self.along_slit_shape + self.det_size - 1,
+                            replace = self._along_slit_size + self.det_size - 1,
                             remask = False)
 
         #----------------------
         # Create (u,v) Pair
         #----------------------
         uv_vals = np.empty(indices.shape + (2,))
-        uv_vals[..., self.along_slit_uv_axis] = slit_coord.values
-        uv_vals[..., self.cross_slit_uv_axis] = 0.5
+        uv_vals[..., self._along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self._cross_slit_uv_axis] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
         #-------------------------
         # Create time Scalar
         #-------------------------
-        time = self.scalar_midtime
+        time = self._scalar_midtime
 
         #----------------------------
         # Apply mask if necessary
@@ -245,7 +217,7 @@ class Slit1D(Observation):
                 #- - - - - - - - - - - - -
                 # Create time Scalar
                 #- - - - - - - - - - - - -
-                if indices.values.shape == ():
+                if indices.vals.shape == ():
                     time_values = self.midtime
                 else:
                     time_values = np.empty(indices.shape)
@@ -281,16 +253,16 @@ class Slit1D(Observation):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         indices = Vector.as_vector(indices).as_int()
 
-        slit_coord = indices.to_scalar(self.along_slit_index)
+        slit_coord = indices.to_scalar(self._along_slit_index)
 
         uv_vals = np.empty(indices.shape + (2,), dtype='int')
-        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_axis] = 0
+        uv_vals[..., self._along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self._cross_slit_uv_axis] = 0
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
-        time_min = self.scalar_time[0]
-        time_max = self.scalar_time[1]
+        time_min = self._scalar_time[0]
+        time_max = self._scalar_time[1]
 
         if fovmask:
             is_outside = self.uv_is_outside(uv_min, inclusive=False)
@@ -332,7 +304,7 @@ class Slit1D(Observation):
                         active at this time step (exclusive).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return (Pair.ZERO, self.fov.uv_shape)
+        return (Pair.ZERO, self.uv_shape)
     #===========================================================================
 
 
@@ -369,24 +341,7 @@ class Slit1D(Observation):
 
                 return (time_min, time_max)
 
-        return self.scalar_time
-
-    #===========================================================================
-    # sweep_duv_dt
-    #===========================================================================
-    def sweep_duv_dt(self, uv_pair):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the mean local sweep speed of the instrument along (u,v) axes.
-
-        Input:
-            uv_pair     a Pair of spatial indices (u,v).
-
-        Return:         a Pair containing the local sweep speed in units of
-                        pixels per second in the (u,v) directions.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Pair.ZERO
+        return self._scalar_time
     #===========================================================================
 
 
@@ -406,8 +361,7 @@ class Slit1D(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        obs = Slit1D(self.axes, self.det_size, 
-                    (self.tstart + dtime, self.texp),
+        obs = Slit1D(self.axes, self.det_size, self.tstart + dtime, self.texp,
                      self.fov, self.path, self.frame)
 
         for key in self.subfields.keys():
@@ -439,7 +393,7 @@ class Test_Slit1D(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (20,1))
-        obs = Slit1D(('u'), 1, {'tstart':0., 'texp':10.},
+        obs = Slit1D(('u'), det_size=1, tstart=0., texp=10.,
                      fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(1,0),(20,0),(21,0)])
@@ -529,7 +483,7 @@ class Test_Slit1D(unittest.TestCase):
         #----------------------------------------
 
         fov = FlatFOV((0.001,0.001), (20,1))
-        obs = Slit1D(('a','u', 'b'), 1, {'tstart':0., 'texp':10.},
+        obs = Slit1D(('a','u', 'b'), det_size=1, tstart=0., texp=10.,
                      fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0,0,0),(0,1,99),(0,19,99),(10,20,99),(10,21,99)])
@@ -557,7 +511,7 @@ class Test_Slit1D(unittest.TestCase):
         #--------------------------------------------------
 
         fov = FlatFOV((0.001,0.001), (20,1))
-        obs = Slit1D(('u'), 0.8, {'tstart':0., 'texp':10.}, fov=fov,
+        obs = Slit1D(('u'), det_size=0.8, tstart=0., texp=10., fov=fov,
                      path='SSB', frame='J2000')
 
         eps = 1.e-14
@@ -578,7 +532,7 @@ class Test_Slit1D(unittest.TestCase):
 
         self.assertTrue(abs(below - 19.8) < delta)
         self.assertTrue(abs(exact - 19.8) < delta)
-        self.assertTrue(abs(above.values - 20.0) < delta)
+        self.assertTrue(abs(above.vals - 20.0) < delta)
         self.assertTrue(above.mask)
 
         #-------------------------------
@@ -589,7 +543,7 @@ class Test_Slit1D(unittest.TestCase):
         u = obs.uvt(indices, fovmask=True)[0].to_scalar(0)
         self.assertTrue(abs(u[0] - 19.8) < delta)
         self.assertTrue(abs(u[1] - 19.8) < delta)
-        self.assertTrue(abs(u[2].values - 20.0) < delta)
+        self.assertTrue(abs(u[2].vals - 20.0) < delta)
         self.assertTrue(u.mask[2])
     #===========================================================================
 

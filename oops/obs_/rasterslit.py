@@ -5,11 +5,12 @@
 import numpy as np
 from polymath import *
 
-from oops.obs_.observation   import Observation
-from oops.cadence_.cadence   import Cadence
-from oops.path_.path         import Path
-from oops.frame_.frame       import Frame
-from oops.event              import Event
+from oops.obs_.observation  import Observation
+from oops.obs_.snapshot     import Snapshot
+from oops.cadence_.cadence  import Cadence
+from oops.path_.path        import Path
+from oops.frame_.frame      import Frame
+from oops.event             import Event
 
 #*******************************************************************************
 # RasterSlit
@@ -22,7 +23,8 @@ class RasterSlit(Observation):
     and the second dimension is simulated by rotation of the camera. The FOV
     describes the 1-D slit. This differs from a Slit subclass in that a single
     sensor is moving to emulate the 1-D slit. It differs from a RasterScan in
-    that the FOV describes a 1-D slit and not a 2-D image.
+    that the FOV describes a 1-D slit and not a 2-D image. This class supports a
+    linear array of detectors that have gaps between them.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
@@ -50,27 +52,21 @@ class RasterSlit(Observation):
                         samples, or > 1 if the detector moves by less than its
                         full size within the fast time step.
 
-            cadence     a 2-D Cadence object defining the timing of each
-                        consecutive measurement. The first index defines time
-                        sampling along the slow axis and the second defines
-                        time sub-sampling along the fast axis, which corresponds
-                        to the motion of the detector within the slit.
-                        Alternatively, a tuple || dictionary of the form:
-
-                          (slow, fast) || {'slow':slow, 'fast':fast}
-
-                        with:
-
-                          slow:  Slow cadence or tuple or dictionary containing
-                                 metronome cadence parameters.
-                          fast:  Fast cadence or tuple or dictionary containing
-                                 metronome cadence parameters.
+            cadence     a 2-D Cadence object defining the start time and
+                        duration of each consecutive measurement. Alternatively,
+                        this input can be a tuple or dictionary providing input
+                        arguments to the constructor DualCadence.for_array2d()
+                        (excluding the number of samples, which is defined by
+                        the FOV):
+                            (lines, tstart, texp,
+                                [intersample_delay [, interline_delay]])
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y). For a RasterSlit object, one of the
-                        axes of the FOV must have length 1.
+                        axes of the FOV must have length 1, and the other must
+                        match the length of the cadence's fast axis.
 
             path        the path waypoint co-located with the instrument.
 
@@ -88,21 +84,17 @@ class RasterSlit(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-        self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
         #--------------------------------------------------
-        # Cadence
+        # FOV
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): 
-            self.cadence = cadence
-        elif isinstance(cadence, tuple): 
-            self.cadence = self._default_cadence(*cadence)
-        elif isinstance(cadence, dict): 
-            self.cadence = self._default_cadence(**cadence)
+        self.fov = fov
+        fov_uv_shape = tuple(self.fov.uv_shape.vals)
 
-        assert len(self.cadence.shape) == 2
+        self.det_size = det_size
+        self._slit_is_discontinuous = (self.det_size < 1)
 
         #--------------------------------------------------
         # Axes
@@ -114,23 +106,55 @@ class RasterSlit(Observation):
         if 'ufast' in self.axes:
             self.u_axis = self.axes.index('ufast')
             self.v_axis = self.axes.index('vslow')
-            self.fast_axis = self.u_axis
-            self.slow_axis = self.v_axis
-            self.cross_slit_uv_axis = 1
-            self.along_slit_uv_axis = 0
-            self.uv_shape = [self.cadence.shape[1], self.cadence.shape[0]]
+            self._fast_axis = self.u_axis
+            self._slow_axis = self.v_axis
+            self._cross_slit_uv_axis = 1
+            self._along_slit_uv_axis = 0
         else:
             self.u_axis = self.axes.index('uslow')
             self.v_axis = self.axes.index('vfast')
-            self.fast_axis = self.v_axis
-            self.slow_axis = self.u_axis
-            self.cross_slit_uv_axis = 0
-            self.along_slit_uv_axis = 1
-            self.uv_shape = [self.cadence.shape[0], self.cadence.shape[1]]
+            self._fast_axis = self.v_axis
+            self._slow_axis = self.u_axis
+            self._cross_slit_uv_axis = 0
+            self._along_slit_uv_axis = 1
 
         self.swap_uv = (self.u_axis > self.v_axis)
+        self.t_axis = (self._slow_axis, self._fast_axis)
 
-        self.t_axis = [self.slow_axis, self.fast_axis]
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+        samples = fov_uv_shape[self._along_slit_uv_axis]
+
+        if isinstance(cadence, (tuple,list)):
+            self.cadence = DualCadence.for_array2d(samples, *cadence)
+        elif isinstance(cadence, dict):
+            self.cadence = DualCadence.for_array2d(samples, **cadence)
+        elif isinstance(cadence, Cadence):
+            self.cadence = cadence
+            assert len(self.cadence.shape) == 2
+            assert self.cadence.shape[1] == samples
+        else:
+            raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
+
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
+        lines = self.cadence.shape[0]
+
+        uv_shape = [0, 0]
+        uv_shape[self._cross_slit_uv_axis] = lines
+        uv_shape[self._along_slit_uv_axis] = samples
+        self.uv_shape = tuple(uv_shape)
+
+        self._along_slit_size = samples
+
+        assert fov_uv_shape[self._cross_slit_uv_axis] == 1
+        assert fov_uv_shape[self._along_slit_uv_axis] == samples
+
+        self.shape = len(axes) * [0]
+        self.shape[self.u_axis] = self.uv_shape[0]
+        self.shape[self.v_axis] = self.uv_shape[1]
 
         #--------------------------------------------------
         # Timing
@@ -139,90 +163,28 @@ class RasterSlit(Observation):
         self.midtime = self.cadence.midtime
 
         #--------------------------------------------------
-        # Shape / Size
-        #--------------------------------------------------
-        assert self.fov.uv_shape.vals[self.cross_slit_uv_axis] == 1
-        assert (self.fov.uv_shape.vals[self.along_slit_uv_axis] ==
-                self.cadence.shape[1])
-
-        self.along_slit_shape = self.uv_shape[self.along_slit_uv_axis]
-
-        self.det_size = det_size
-        self.slit_is_discontinuous = (self.det_size != 1)
-
-        duv_dt_basis_vals = np.zeros(2)
-        duv_dt_basis_vals[self.along_slit_uv_axis] = 1.
-        self.duv_dt_basis = Pair(duv_dt_basis_vals)
-
-        self.shape = len(axes) * [0]
-        self.shape[self.u_axis] = self.uv_shape[0]
-        self.shape[self.v_axis] = self.uv_shape[1]
-
-        #--------------------------------------------------
         # Optional subfields
         #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
-    #===========================================================================
 
+        #--------------------------------------------------
+        # Snapshot class proxy (for inventory)
+        #--------------------------------------------------
+        replacements = {
+            'ufast':  'u',
+            'uslow':  'u',
+            'vfast':  'v',
+            'vslow':  'v',
+        }
 
+        snapshot_axes = [replacements.get(axis, axis) for axis in axes]
+        snapshot_tstart = self.cadence.time[0]
+        snapshot_texp = self.cadence.time[1] - self.cadence.time[0]
 
-    #===========================================================================
-    # _default_single_cadence
-    #===========================================================================
-    def _default_single_cadence(self, tstart, tstride, texp, steps):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return a cadence object from a dictionary of parameters.
-
-        Input:
-            tstart      Observation start time.
-            tstride     Interval from the start of one time 
-                        step to the start of the next.
-            texp        Exposure time for each step.
-            steps       Number of time steps.
-
-        Return:         Cadence object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Metronome(tstart, tstride, texp, steps)
-    #===========================================================================
-
-
-
-    #===========================================================================
-    # _default_cadence
-    #===========================================================================
-    def _default_cadence(self, slow, fast):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return a cadence object a dictionary of parameters.
-
-        Input:
-            slow        Slow cadence or tuple or dictionary containing metronome 
-                        cadence parameters.
-            fast        Fast cadence or tuple or dictionary containing metronome 
-                        cadence parameters.
-
-        Return:         Cadence object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if isinstance(slow, Cadence): 
-            slow_cadence = slow
-        elif isinstance(slow, tuple): 
-            slow_cadence = self._default_single_cadence(*slow)
-        elif isinstance(slow, dict): 
-            slow_cadence = self._default_single_cadence(**slow)
-    
-        if isinstance(fast, Cadence): 
-            fast_cadence = fast
-        elif isinstance(fast, tuple): 
-            fast_cadence = self._default_single_cadence(*fast)
-        elif isinstance(fast, dict): 
-            fast_cadence = self._default_single_cadence(**fast)
-
-        return DualCadence(slow_cadence, fast_cadence)
+        self.snapshot = Snapshot(snapshot_axes, snapshot_tstart, snapshot_texp,
+                                 self.fov, self.path, self.frame, **subfields)
     #===========================================================================
 
 
@@ -250,17 +212,17 @@ class RasterSlit(Observation):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         indices = Vector.as_vector(indices)
-        slit_coord = indices.to_scalar(self.fast_axis)
+        slit_coord = indices.to_scalar(self._fast_axis)
 
         #-----------------------------------
         # Handle discontinuous detectors
         #-----------------------------------
-        if self.slit_is_discontinuous:
+        if self._slit_is_discontinuous:
 
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Identify indices at exact upper limit; treat these as inside
             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            at_upper_limit = (slit_coord == self.along_slit_shape)
+            at_upper_limit = (slit_coord == self._along_slit_size)
 
             #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Map continuous index to discontinuous (u,v)
@@ -272,15 +234,15 @@ class RasterSlit(Observation):
             # Adjust values at upper limit
             #- - - - - - - - - - - - - - - - -
             slit_coord = slit_coord.mask_where(at_upper_limit,
-                            replace = self.along_slit_shape + self.det_size - 1,
+                            replace = self._along_slit_size + self.det_size - 1,
                             remask = False)
 
         #-----------------------------------
         # Create (u,v) Pair
         #-----------------------------------
         uv_vals = np.empty(indices.shape + (2,))
-        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_axis] = 0.5
+        uv_vals[..., self._along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self._cross_slit_uv_axis] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
         #-----------------------------------
@@ -331,11 +293,11 @@ class RasterSlit(Observation):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         indices = Vector.as_vector(indices).as_int()
 
-        slit_coord = indices.to_scalar(self.fast_axis)
+        slit_coord = indices.to_scalar(self._fast_axis)
 
         uv_vals = np.empty(indices.shape + (2,), dtype='int')
-        uv_vals[..., self.along_slit_uv_axis] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_axis] = 0
+        uv_vals[..., self._along_slit_uv_axis] = slit_coord.vals
+        uv_vals[..., self._cross_slit_uv_axis] = 0
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
@@ -382,7 +344,7 @@ class RasterSlit(Observation):
                         active at this time step (exclusive).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if self.along_slit_uv_axis == 0:
+        if self._along_slit_uv_axis == 0:
             return (Pair(tstep[1], 0), Pair(tstep[1]+1, 1))
         else:
             return (Pair(0, tstep[1]), Pair(1, tstep[1]+1))
@@ -409,33 +371,13 @@ class RasterSlit(Observation):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         uv_pair = Pair.as_pair(uv_pair).as_int()
-        tstep = uv_pair.to_pair((self.cross_slit_uv_axis,
-                                 self.along_slit_uv_axis))
+        tstep = uv_pair.to_pair((self._cross_slit_uv_axis,
+                                 self._along_slit_uv_axis))
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
     #===========================================================================
 
 
-
-    #===========================================================================
-    # sweep_duv_dt
-    #===========================================================================
-    def sweep_duv_dt(self, uv_pair):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the mean local sweep speed of the instrument along (u,v) axes.
-
-        Input:
-            uv_pair     a Pair of spatial indices (u,v).
-
-        Return:         a Pair containing the local sweep speed in units of
-                        pixels per second in the (u,v) directions.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        uv_pair = Pair.as_pair(uv_pair)
-        tstep = uv_pair.to_scalar(self.cross_slit_uv_axis)
-
-        return self.duv_dt_basis / self.cadence.tstride_at_tstep(tstep)
 
     #===========================================================================
     # time_shift
@@ -460,6 +402,26 @@ class RasterSlit(Observation):
             obs.insert_subfield(key, self.subfields[key])
 
         return obs
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # inventory
+    #===========================================================================
+    def inventory(*args, **kwargs):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the body names that appear unobscured inside the FOV. See
+        Snapshot.inventory() for details.
+
+        WARNING: Not properly updated for class RasterSlit. Use at your own
+        risk. This operates by returning every body that would have been inside
+        the FOV of this observation if it were instead a Snapshot, evaluated at
+        the given tfrac.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        return self.snapshot.inventory(*args, **kwargs)
     #===========================================================================
 
 
@@ -724,11 +686,11 @@ class Test_RasterSlit(unittest.TestCase):
         # Test the upper edge
         #-----------------------
         pair = (10-eps,0)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] - 9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[0] - 9.5) < delta)
         self.assertFalse(obs.uvt(pair, True)[0].mask)
 
         pair = (10,0)
-        self.assertTrue(abs(obs.uvt(pair, True)[0].values[0] -  9.5) < delta)
+        self.assertTrue(abs(obs.uvt(pair, True)[0].vals[0] -  9.5) < delta)
         self.assertFalse(obs.uvt(pair, True)[0].mask)
 
         pair = (10+eps,0)

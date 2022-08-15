@@ -61,7 +61,6 @@ class Metronome(Cadence):
         """
         Return the min time(s) associated with the given time step(s).
 
-
         This method supports non-integer step values.
 
         Input:
@@ -230,6 +229,48 @@ class Metronome(Cadence):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Metronome(self.tstart, self.tstride, self.tstride, self.steps)
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # for_array1d
+    #===========================================================================
+    @staticmethod
+    def for_array1d(steps, tstart, texp, interstep_delay=0.):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Alternative constructor.
+
+        Input:
+            steps               number of time steps.
+            tstart              start time in seconds TDB.
+            texp                exposure duration in second for each sample.
+            interstep_delay     time delay in seconds between the end of one
+                                integration and the beginning of the next, in
+                                seconds. Default is 0.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        return Metronome(tstart, texp + interstep_delay, texp, steps)
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # for_array0d
+    #===========================================================================
+    @staticmethod
+    def for_array0d(tstart, texp):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Alternative constructor for a product with no time-axis.
+
+        Input:
+            tstart              start time in seconds TDB.
+            texp                exposure duration in seconds.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        return Metronome(tstart, texp, texp, 1)
     #===========================================================================
 
 
@@ -562,7 +603,7 @@ class Test_Metronome(unittest.TestCase):
         # Converted-to-continuous case
         # We just do spot-checking here
         ####################################
-        
+
         cadence = cadence.as_continuous()
         self.assertTrue(cadence.is_continuous)
 

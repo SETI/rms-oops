@@ -9,7 +9,6 @@ from oops.obs_.observation import Observation
 from oops.path_.path       import Path
 from oops.frame_.frame     import Frame
 from oops.cadence_.cadence import Cadence
-from oops.cadence_.instant import Instant
 from oops.event            import Event
 
 #*******************************************************************************
@@ -39,10 +38,9 @@ class Pixel(Observation):
                         in the associated data array. A value of 't' should
                         appear at the location of the array's time-axis.
 
-            cadence     a Cadence object defining the start time and duration of
-                        Alternatively, a tuple || dictionary of the form:
-
-                          (tbd) || {tbd}
+            cadence     a 1-D Cadence object defining the start time and
+                        duration of each consecutive measurement. Note that it
+                        also defines the number of measurements.
 =
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -66,9 +64,15 @@ class Pixel(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-        self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
+
+        #--------------------------------------------------
+        # FOV
+        #--------------------------------------------------
+        self.fov = fov
+        assert self.fov.uv_shape == (1,1)
+        self.uv_shape = (1,1)
 
         #--------------------------------------------------
         # Axes
@@ -85,30 +89,26 @@ class Pixel(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): 
-            self.cadence = cadence
-        elif isinstance(cadence, tuple): 
-            self.cadence = self._default_cadence(*cadence)
-        elif isinstance(cadence, dict): 
-            self.cadence = self._default_cadence(**cadence)
+        self.cadence = cadence
+        assert isinstance(self.cadence, Cadence)
+        assert len(self.cadence.shape) == 1
+        samples = self.cadence.shape[0]
+
+        #--------------------------------------------------
+        # Shape / Size
+        #--------------------------------------------------
+        shape_list = len(axes) * [0]
+        if self.t_axis >= 0:
+            shape_list[self.t_axis] = samples
+        self.shape = tuple(shape_list)
 
         #--------------------------------------------------
         # Timing
         #--------------------------------------------------
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
+
         self.scalar_times = (Scalar(self.time[0]), Scalar(self.time[1]))
-
-        #--------------------------------------------------
-        # Shape / Size
-        #--------------------------------------------------
-        assert self.fov.uv_shape == (1,1)
-        self.uv_shape = (1,1)
-
-        shape_list = len(axes) * [0]
-        if self.t_axis >= 0:
-            shape_list[self.t_axis] = self.cadence.shape[0]
-        self.shape = tuple(shape_list)
 
         #--------------------------------------------------
         # Optional subfields
@@ -121,27 +121,6 @@ class Pixel(Observation):
     #===========================================================================
 
 
-
-    #===========================================================================
-    # _default_cadence
-    #===========================================================================
-    def _default_cadence(self, tbd):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return a cadence object a dictionary of parameters.
-
-        Input:
-            TBD
-
-        Return:         Cadence object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Instant(tbd)
-    #===========================================================================
-
-
-
-    ############################################################################
 
     #===========================================================================
     # uvt
@@ -271,7 +250,8 @@ class Pixel(Observation):
                         time of each (u,v) pair, as seconds TDB.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if not fovmask: return self.scalar_times
+        if not fovmask:
+            return self.scalar_times
 
         uv_pair = Pair.as_pair(uv_pair)
         is_outside = self.uv_is_outside(uv_pair, inclusive=True)
@@ -288,27 +268,6 @@ class Pixel(Observation):
             time1 = Scalar(time1_vals, mask)
 
         return (time0, time1)
-    #===========================================================================
-
-
-
-    #===========================================================================
-    # sweep_duv_dt
-    #===========================================================================
-    def sweep_duv_dt(self, uv_pair):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the mean local sweep speed of the instrument along (u,v) axes.
-
-
-        Input:
-            uv_pair     a Pair of spatial indices (u,v).
-
-        Return:         a Pair containing the local sweep speed in units of
-                        pixels per second in the (u,v) directions.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Pair.ZEROS
     #===========================================================================
 
 

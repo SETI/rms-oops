@@ -33,7 +33,7 @@ class Snapshot(Observation):
     #===========================================================================
     # __init__
     #===========================================================================
-    def __init__(self, axes, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for a Snapshot.
@@ -45,16 +45,10 @@ class Snapshot(Observation):
                         appear at the location of the array's v-axis. For
                         example, ('v','u'), is correct for a 2-D array read from
                         an image file in FITS or VICAR format.
-            cadence     a Cadence object defining the start time and duration 
-                        of the snapshot.  Alternatively, a tuple || dictionary 
-                        of the form:
 
-                          (tstart, texp) \\ {'tstart':tstart, 'texp':texp}
+            tstart      the start time of the observation in seconds TDB.
 
-                        with:
-
-                          tstart: Observation start time.
-                          texp:   Exposure time for the observation.
+            texp        exposure duration of the observation in seconds.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -77,9 +71,14 @@ class Snapshot(Observation):
         #--------------------------------------------------
         # Basic properties
         #--------------------------------------------------
-        self.fov = fov
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
+
+        #--------------------------------------------------
+        # FOV
+        #--------------------------------------------------
+        self.fov = fov
+        self.uv_shape = tuple(self.fov.uv_shape.vals)
 
         #--------------------------------------------------
         # Axes
@@ -89,10 +88,11 @@ class Snapshot(Observation):
         self.v_axis = self.axes.index('v')
         self.swap_uv = (self.u_axis > self.v_axis)
 
+        self.t_axis = -1
+
         #--------------------------------------------------
         # Shape / Size
         #--------------------------------------------------
-        self.uv_shape = list(self.fov.uv_shape.vals)
         self.shape = len(axes) * [0]
         self.shape[self.u_axis] = self.uv_shape[0]
         self.shape[self.v_axis] = self.uv_shape[1]
@@ -100,12 +100,7 @@ class Snapshot(Observation):
         #--------------------------------------------------
         # Cadence
         #--------------------------------------------------
-        if isinstance(cadence, Cadence): 
-            self.cadence = cadence
-        elif isinstance(cadence, tuple): 
-            self.cadence = self._default_cadence(*cadence)
-        elif isinstance(cadence, dict): 
-            self.cadence = self._default_cadence(**cadence)
+        self.cadence = Metronome.for_array0d(tstart, texp)
 
         #--------------------------------------------------
         # Timing
@@ -113,12 +108,11 @@ class Snapshot(Observation):
         self.tstart = self.cadence.tstart
         self.texp = self.cadence.texp
 
-        self.t_axis = -1
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
-        self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
-        self.scalar_midtime = Scalar(self.midtime)
+        self._scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
+        self._scalar_midtime = Scalar(self.midtime)
 
         #--------------------------------------------------
         # Optional subfields
@@ -126,26 +120,6 @@ class Snapshot(Observation):
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
-    #===========================================================================
-
-
-
-    #===========================================================================
-    # _default_cadence
-    #===========================================================================
-    def _default_cadence(self, tstart, texp):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return a cadence object a dictionary of parameters.
-
-        Input:
-            tstart      Observation start time.
-            texp        Exposure time for the observation.
-
-        Return:         Cadence object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Metronome(tstart, texp, texp, 1)
     #===========================================================================
 
 
@@ -174,7 +148,7 @@ class Snapshot(Observation):
         indices = Vector.as_vector(indices)
 
         uv = indices.to_pair((self.u_axis,self.v_axis))
-        time = self.scalar_midtime
+        time = self._scalar_midtime
 
         if fovmask:
             is_outside = self.uv_is_outside(uv, inclusive=True)
@@ -218,8 +192,8 @@ class Snapshot(Observation):
         uv_min = indices.to_pair((self.u_axis,self.v_axis))
         uv_max = uv_min + Pair.ONES
 
-        time_min = self.scalar_time[0]
-        time_max = self.scalar_time[1]
+        time_min = self._scalar_time[0]
+        time_max = self._scalar_time[1]
 
         if fovmask:
             is_outside = self.uv_is_outside(uv_min, inclusive=False)
@@ -262,7 +236,7 @@ class Snapshot(Observation):
                         active at this time step (exclusive).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return (Pair.ZEROS, self.fov.uv_shape)
+        return (Pair.ZEROS, self.uv_shape)
     #===========================================================================
 
 
@@ -346,7 +320,7 @@ class Snapshot(Observation):
 
                 return (time_min, time_max)
 
-        return self.scalar_time
+        return self._scalar_time
     #===========================================================================
 
 
@@ -354,61 +328,40 @@ class Snapshot(Observation):
     #===========================================================================
     # uv_at_time
     #===========================================================================
-# Untested but not needed as of 7/7/12...
-#     def uv_at_time(self, time, fovmask=False):
-#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         """Returns the (u,v) ranges of spatial pixel observed at the specified
-#         time.
-#
-#         Input:
-#             uv_pair     a Scalar of time values in seconds TDB.
-#             fovmask     True to mask values outside the time limits and/or the
-#                         field of view.
-#
-#         Return:         (uv_min, uv_max)
-#             uv_min      the lower (u,v) corner of the area observed at the
-#                         specified time.
-#             uv_max      the upper (u,v) corner of the area observed at the
-#                         specified time.
-#         """
-#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         uv_min = Scalar((0,0))
-#         uv_max = Scalar(self.uv_shape)
-#
-#         if fovmask or np.any(time.mask):
-#             is_inside = (time >= self.time[0]) & (time <= self.time[1])
-#             if not np.all(is_inside):
-#                 uv_min_vals = np.zeros(time.shape + (2,))
-#
-#                 uv_max_vals = np.empty(time.shape + (2,))
-#                 uv_max_vals[...,0] = self.uv_shape[0]
-#                 uv_max_vals[...,1] = self.uv_shape[1]
-#
-#                 uv_min = Pair(uv_min_vals, time.mask |
-#                                            np.logical_not(is_inside))
-#                 uv_max = Pair(uv_max_vals, mask)
-#
-#         return (uv_min, uv_max)
-    #===========================================================================
-
-
-
-    #===========================================================================
-    # sweep_duv_dt
-    #===========================================================================
-    def sweep_duv_dt(self, uv_pair):
+    def uv_at_time(self, time, fovmask=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the mean local sweep speed of the instrument along (u,v) axes.
+        """Returns the (u,v) ranges of spatial pixel observed at the specified
+        time.
 
         Input:
-            uv_pair     a Pair of spatial indices (u,v).
+            uv_pair     a Scalar of time values in seconds TDB.
+            fovmask     True to mask values outside the time limits and/or the
+                        field of view.
 
-        Return:         a Pair containing the local sweep speed in units of
-                        pixels per second in the (u,v) directions.
+        Return:         (uv_min, uv_max)
+            uv_min      the lower (u,v) corner of the area observed at the
+                        specified time.
+            uv_max      the upper (u,v) corner of the area observed at the
+                        specified time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return Pair.ZEROS
+        uv_min = Scalar((0,0))
+        uv_max = Scalar(self.uv_shape)
+
+        if fovmask or np.any(time.mask):
+            is_inside = (time >= self.time[0]) & (time <= self.time[1])
+            if not np.all(is_inside):
+                uv_min_vals = np.zeros(time.shape + (2,))
+
+                uv_max_vals = np.empty(time.shape + (2,))
+                uv_max_vals[...,0] = self.uv_shape[0]
+                uv_max_vals[...,1] = self.uv_shape[1]
+
+                uv_min = Pair(uv_min_vals, time.mask |
+                                           np.logical_not(is_inside))
+                uv_max = Pair(uv_max_vals, mask)
+
+        return (uv_min, uv_max)
     #===========================================================================
 
 
@@ -428,7 +381,7 @@ class Snapshot(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        obs = Snapshot(self.axes, (self.time[0] + dtime, self.texp),
+        obs = Snapshot(self.axes, self.time[0] + dtime, self.texp,
                        self.fov, self.path, self.frame)
 
         for key in self.subfields.keys():
@@ -796,7 +749,7 @@ class Test_Snapshot(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (10,20))
-        obs = Snapshot(('u','v'), {'tstart':98., 'texp':2.},
+        obs = Snapshot(('u','v'), tstart=98., texp=2.,
                        fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
@@ -889,7 +842,7 @@ class Test_Snapshot(unittest.TestCase):
         #----------------------------------
         # Alternative axis order ('v','u')
         #----------------------------------
-        obs = Snapshot(('v','u'), {'tstart':98., 'texp':2.},
+        obs = Snapshot(('v','u'), tstart=98., texp=2.,
                        fov=fov, path='SSB', frame='J2000')
 
         indices = Pair([(0,0),(0,10),(20,0),(20,10),(20,11)])
@@ -906,7 +859,7 @@ class Test_Snapshot(unittest.TestCase):
         #----------------------------------------
         # Alternative axis order ('v', 'a', 'u')
         #----------------------------------------
-        obs = Snapshot(('v','a','u'), {'tstart':98., 'texp':2.},
+        obs = Snapshot(('v','a','u'), tstart=98., texp=2.,
                        fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
