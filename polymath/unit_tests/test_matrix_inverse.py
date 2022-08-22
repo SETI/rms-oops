@@ -161,7 +161,7 @@ class Test_Matrix_inverse(unittest.TestCase):
             self.assertAlmostEqual(bxa.values[i,j,k], int(j==k), delta=DEL)
 
     #----------------------------------
-    # Anything else raises an error        
+    # Anything else raises an error
     #----------------------------------
     a = Matrix(np.random.randn(N,3,4))
     self.assertRaises(ValueError, a.inverse)
@@ -170,7 +170,7 @@ class Test_Matrix_inverse(unittest.TestCase):
     self.assertRaises(ValueError, a.inverse)
 
     #---------------
-    # Test units    
+    # Test units
     #---------------
     N = 5
     a = Matrix(np.random.randn(N,3,3), units=Units.CM**2/Units.S)
@@ -178,7 +178,7 @@ class Test_Matrix_inverse(unittest.TestCase):
     self.assertEqual(b.units, Units.S/Units.CM**2)
 
     #--------------------
-    # Derivatives, 3x3     
+    # Derivatives, 3x3
     #--------------------
     N = 30
     a = Matrix(np.random.randn(N,3,3))

@@ -50,7 +50,7 @@ class SpinFrame(Frame):
         self.epoch = Scalar.as_scalar(epoch)
 
         self.shape = Qube.broadcasted_shape(self.rate, self.offset, self.epoch)
-        
+
         self.axis2 = axis           # Most often, the Z-axis
         self.axis0 = (self.axis2 + 1) % 3
         self.axis1 = (self.axis2 + 2) % 3

@@ -216,7 +216,7 @@ class Surface(object):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that 
+                        that
                             pos = intercept + p * normal(intercept).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -250,7 +250,7 @@ class Surface(object):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that 
+                        that
                             intercept = pos + p * normal(intercept).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -701,33 +701,25 @@ class Surface(object):
 
         for iter in range(iters):
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Quicken the path and frame evaluations on first iteration
             # Hereafter, we specify quick=False because it's already quick.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             path_wrt_ssb = path_wrt_ssb.quick_path(surface_time, quick=quick)
             frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
                                                           quick=quick)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Locate the photons relative to the current origin in SSB/J2000
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             origin_wrt_ssb = path_wrt_ssb.event_at_time(surface_time,
                                                         quick=False).pos.wod
             pos_in_j2000 = obs_wrt_ssb + lt * los_wrt_ssb - origin_wrt_ssb
 
-            #- - - - - - - - - - - - - - - - - - - -
             # Rotate into the surface-fixed frame
-            #- - - - - - - - - - - - - - - - - - - -
             surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
                                                               quick=False)
             pos_wrt_surface = surface_xform.rotate(pos_in_j2000, derivs=False)
             los_wrt_surface = surface_xform.rotate(los_wrt_ssb, derivs=False)
             obs_wrt_surface = pos_wrt_surface - lt * los_wrt_surface
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the intercept times; save the intercept positions
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             (pos_wrt_surface, new_lt) = self.intercept(obs_wrt_surface,
                                                        los_wrt_surface,
                                                        time=surface_time,
@@ -737,9 +729,7 @@ class Surface(object):
             dlt = new_lt - lt
             lt = new_lt
 
-            #- - - - - - - - - - - - 
             # Test for convergence
-            #- - - - - - - - - - - - 
             prev_max_dlt = max_dlt
             max_dlt = abs(dlt).max()
 
@@ -752,9 +742,7 @@ class Surface(object):
                 or max_dlt == Scalar.MASKED):
                     break
 
-            #- - - - - - - - - - - - - - - - 
             # Re-evaluate the surface time
-            #- - - - - - - - - - - - - - - - 
             surface_time = link_time + lt
 
         #### END OF LOOP
@@ -1123,24 +1111,18 @@ class Surface(object):
         new_lt = None
         for iter in range(iters+1):
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Quicken the path and frame evaluations on first iteration
             # Hereafter, we specify quick=False because it's already quick.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             path_wrt_ssb = path_wrt_ssb.quick_path(surface_time, quick=quick)
             frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
                                                           quick=quick)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Evaluate the observer position relative to the current surface
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             origin_wrt_ssb_then = path_wrt_ssb.event_at_time(surface_time,
                                                             quick=False).pos.wod
             obs_wrt_origin_j2000 = obs_wrt_ssb_now - origin_wrt_ssb_then
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Locate the coordinate position relative to the current surface
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
                                                               quick=False)
             if self.IS_VIRTUAL:
@@ -1149,24 +1131,18 @@ class Surface(object):
                                                     obs=obs_wrt_origin_frame,
                                                     time=surface_time)
 
-            #- - - - - - - - - - - - - - - - - - - - - -
             # Locate the coordinate position in J2000
-            #- - - - - - - - - - - - - - - - - - - - - -
             pos_wrt_origin_j2000 = surface_xform.unrotate(pos_wrt_origin_frame,
                                                           derivs=False)
 
-            #- - - - - - - - - - - - - - - -
             # Update the light travel time
-            #- - - - - - - - - - - - - - - -
             los_in_j2000 = pos_wrt_origin_j2000 - obs_wrt_origin_j2000
             new_lt = los_in_j2000.norm() / signed_c
             new_lt = new_lt.clip(lt_min, lt_max, False)
             dlt = new_lt - lt
             lt = new_lt
 
-            #- - - - - - - - - - - - 
             # Test for convergence
-            #- - - - - - - - - - - - 
             prev_max_dlt = max_dlt
             max_dlt = abs(dlt).max()
 
@@ -1179,13 +1155,11 @@ class Surface(object):
                 or max_dlt == Scalar.MASKED):
                     break
 
-            #- - - - - - - - - - - - - - - - 
             # Re-evaluate the surface time
-            #- - - - - - - - - - - - - - - - 
             surface_time = link_time + lt
 
         #### END OF LOOP
-    
+
         #---------------------------------------
         # If the link is entirely masked now
         #---------------------------------------
@@ -1280,7 +1254,7 @@ class Surface(object):
 #     ############################################################################
 #     # Photon Solver based on surface normal
 #     ############################################################################
-# 
+#
 #     #===========================================================================
 #     # photon_to_event_by_normal
 #     #===========================================================================
@@ -1290,7 +1264,7 @@ class Surface(object):
 #         """
 #         Photon departure from this surface, given arrival and surface normal
 #         requirement.
-# 
+#
 #         See _solve_photon_by_normal() for details.
 #         """
 #         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1299,7 +1273,7 @@ class Surface(object):
 #     #===========================================================================
 #
 #
-# 
+#
 #     #===========================================================================
 #     # photon_from_event_by_normal
 #     #===========================================================================
@@ -1309,17 +1283,17 @@ class Surface(object):
 #         """
 #         Photon arrival at this surface, given departure and surface normal
 #         requirement.
-# 
+#
 #         See _solve_photon_by_normal() for details.
 #         """
 #         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 
+#
 #         return self._solve_photon_by_los(departure, +1, derivs, guess,
 #                                                         quick, converge)
 #     #===========================================================================
 #
 #
-# 
+#
 #     #===========================================================================
 #     # _solve_photon_by_normal
 #     #===========================================================================
@@ -1328,50 +1302,50 @@ class Surface(object):
 #         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #         """
 #         Solve for a photon surface intercept from event and surface normal.
-# 
+#
 #         Input:
 #             link        the link event of a photon's arrival or departure.
-# 
+#
 #             sign        -1 to return earlier events, corresponding to photons
 #                            departing from the surface and arriving later at the
 #                            link.
 #                         +1 to return later events, corresponding to photons
 #                            departing from the link and arriving later at the
 #                            surface.
-# 
+#
 #             derivs      True to propagate derivatives of the link position and
 #                         and line of sight into the returned event. Derivatives
 #                         with respect to time are always retained.
-# 
+#
 #             guess       an initial guess to use as the event time for the
 #                         surface; otherwise None. Should only be used if the event
 #                         time was already returned from a similar calculation.
-# 
+#
 #             quick       an optional dictionary to override the configured
 #                         default parameters for QuickPaths and QuickFrames; False
 #                         to disable the use of QuickPaths and QuickFrames. The
 #                         default configuration is defined in config.py.
-# 
+#
 #             converge    an optional dictionary of parameters to override the
 #                         configured default convergence parameters. The default
 #                         configuration is defined in config.py.
-# 
+#
 #         Return:         a tuple (surface_event, link_event).
-# 
+#
 #             surface_event
 #                         the event on the surface that matches the light travel
 #                         time from the link event. This is event is defined in
 #                         the frame of the surface and relative to the surface's
 #                         origin.
-# 
+#
 #                         The surface event also contains three Scalar subfields,
 #                         "coord1", "coord2", and "coord3", containing the surface
 #                         coordinates at the intercept point (and their optional
 #                         derivatives).
-# 
+#
 #             link_event  a copy of the given event, with the photon travel time
 #                         filled in.
-# 
+#
 #             If sign is +1, then these subfields and derivatives are defined.
 #                 In path_event:
 #                     arr         direction of the arriving photon at the surface.
@@ -1380,12 +1354,12 @@ class Surface(object):
 #                                 event to the surface.
 #                 In link_event:
 #                     dep_lt      light travel time between the events.
-# 
+#
 #             If sign is -1, then 'arr' and 'dep' are swapped for the two events.
 #             Note that subfield 'arr_lt' is always negative and 'dep_lt' is
 #             always positive. Subfields 'arr' and 'dep' have the same direction
 #             in both events.
-# 
+#
 #         Convergence parameters are as follows:
 #             iters       the maximum number of iterations of Newton's method to
 #                         perform. It should almost never need to be > 5.
@@ -1399,16 +1373,16 @@ class Surface(object):
 #                         divergence of the solution in some cases.
 #         """
 #         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         if self.IS_VIRTUAL: 
+#         if self.IS_VIRTUAL:
 #             raise ValueError("_solve_photon_by_normal() does not support " +
 #                              "virtual surface class " + type(self).__name__)
-# 
+#
 #         #-----------------------
 #         # Handle derivatives
 #         #-----------------------
 #         if not derivs:
 #             link = link.wod        # preserves time-dependence
-# 
+#
 #         #-----------------------------------
 #         # Assemble convergence parameters
 #         #-----------------------------------
@@ -1418,12 +1392,12 @@ class Surface(object):
 #             converge = defaults
 #         else:
 #             converge = SURFACE_PHOTONS.__dict__
-# 
+#
 #         iters = converge['max_iterations']
 #         precision = converge['dlt_precision']
 #         limit = converge['dlt_limit']
 #         # collapse_threshold = converge['collapse_threshold']
-# 
+#
 #         #-----------------------------------
 #         # Interpret the quick parameters
 #         #-----------------------------------
@@ -1431,7 +1405,7 @@ class Surface(object):
 #             quick = quick.copy()
 #             quick['path_time_extension'] = limit
 #             quick['frame_time_extension'] = limit
-# 
+#
 #         #-----------------------
 #         # Interpret the sign
 #         #-----------------------
@@ -1442,7 +1416,7 @@ class Surface(object):
 #         else:
 #             link_key = 'dep'
 #             surface_key = 'arr'
-# 
+#
 #         #-------------------------------------
 #         # If the link is entirely masked...
 #         #-------------------------------------
@@ -1451,11 +1425,11 @@ class Surface(object):
 #                                   self.origin, self.frame.wayframe)
 #             surface_event.insert_subfield(surface_key, Vector3.MASKED)
 #             surface_event.insert_subfield(surface_key + '_lt', Scalar.MASKED)
-# 
+#
 #             new_link = link.replace(link_key + '_lt', Scalar.MASKED)
-# 
+#
 #             return (surface_event, new_link)
-# 
+#
 #         #------------------------------------------------------
 #         # Define the link event relative to the SSB in J2000
 #         #------------------------------------------------------
@@ -1465,19 +1439,19 @@ class Surface(object):
 #         obs_wrt_ssb = link_wrt_ssb.pos
 #         los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).wod
 #         los_wrt_ssb = los_wrt_ssb.unit() * constants.C  # scale factor is lt
-# 
+#
 #         #----------------------------------------------------------------
 #         # Define the surface path and frame relative to the SSB in J2000
 #         #----------------------------------------------------------------
 #         origin_wrt_ssb  = self.origin.wrt(Path.SSB, Frame.J2000)
 #         frame_wrt_j2000 = self.frame.wrt(Frame.J2000)
-# 
+#
 #         #----------------------------------------
 #         # Define the observer in the SSB frame
 #         #----------------------------------------
 #         link_wrt_ssb = link.wrt_ssb(quick)
 #         obs_wrt_ssb_now = link_wrt_ssb.pos
-# 
+#
 #         #---------------------------------------------------
 #         # Make an initial guess at the light travel time
 #         #---------------------------------------------------
@@ -1491,47 +1465,47 @@ class Surface(object):
 #             lt = (origin_wrt_ssb.event_at_time(link_time, quick=quick).pos -
 #                   obs_wrt_ssb).norm() / signed_c
 #             surface_time = link_time + lt
-# 
+#
 #         #--------------------------------------------------------------
 #         # Set light travel time limits to avoid a diverging solution
 #         #--------------------------------------------------------------
 #         lt_min = (surface_time - link_time).min() - limit
 #         lt_max = (surface_time - link_time).max() + limit
-# 
+#
 #         lt_min = lt_min.as_builtin()
 #         lt_max = lt_max.as_builtin()
-# 
+#
 #         #--------------------------------------------------------
-#         # Iterate. Convergence is rapid because all speeds are 
+#         # Iterate. Convergence is rapid because all speeds are
 #         # non-relativistic
 #         #--------------------------------------------------------
 #         max_dlt = np.inf
 #         new_lt = False
 #         for iter in range(iters):
-# 
+#
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             # Quicken the path and frame evaluations (but no more than once)
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             origin_wrt_ssb = origin_wrt_ssb.quick_path(surface_time,
 #                                                        quick=quick)
-# 
+#
 #             frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
 #                                                           quick=quick)
-# 
+#
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             # Evaluate the observer position relative to the current surface
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             origin_wrt_ssb_then = origin_wrt_ssb.event_at_time(surface_time,
 #                                                                quick=False).pos
 #             obs_wrt_origin_j2000 = obs_wrt_ssb_now - origin_wrt_ssb_then
-# 
+#
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             # Locate the coordinate position relative to the current surface
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
 #                                                               quick=False)
 #             obs_wrt_origin_frame = surface_xform.rotate(obs_wrt_origin_j2000)
-# 
+#
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             # Update the intercept times; save the intercept normal positions
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1540,45 +1514,45 @@ class Surface(object):
 #                                                 time=surface_time,
 #                                                 derivs=False,
 #                                                 guess=new_lt)
-# 
+#
 #             new_lt = new_lt.clip(lt_min, lt_max, False)
-# 
+#
 #             tmin = new_lt.min().as_builtin()
 #             tmax = new_lt.max().as_builtin()
 #             span = tmax - tmin
-# 
+#
 #             collapsed_mask = (span == Scalar.MASKED)
-# 
+#
 #             if span <= collapse_threshold:
 #                 if LOGGING.surface_time_collapse:
 #                     print(LOGGING.prefix, "Surface.collapse_time()", end='')
 #                     print(tmin, tmax - tmin)
 #                 new_lt = Scalar((tmin + tmax)/2., collapsed_mask)
-# 
+#
 #             dlt = new_lt - lt
 #             lt = new_lt
-# 
+#
 #             #- - - - - - - - - - - - -
 #             # Test for convergence
 #             #- - - - - - - - - - - - -
 #             prev_max_dlt = max_dlt
 #             max_dlt = abs(dlt).max()
-# 
+#
 #             if LOGGING.surface_iterations:
 #                 print(LOGGING.prefix, "Surface._solve_photon_by_normal", end='')
 #                 print(iter, max_dlt)
-# 
+#
 #             if max_dlt <= precision or max_dlt >= prev_max_dlt or \
 #                max_dlt == Scalar.MASKED:
 #                     break
-# 
-#             #- - - - - - - - - - - - - - - - 
+#
+#             #- - - - - - - - - - - - - - - -
 #             # Re-evaluate the surface time
-#             #- - - - - - - - - - - - - - - - 
+#             #- - - - - - - - - - - - - - - -
 #             surface_time = link_time + lt
-# 
+#
 #         #### END OF LOOP
-# 
+#
 #         #---------------------------------------------------------------------
 #         # Update the mask on light time to hide intercepts outside the defined
 #         # limits
@@ -1586,7 +1560,7 @@ class Surface(object):
 #         mask = (link.mask | lt.mask | (lt.values * sign < 0.) |
 #                 (lt.values == lt_min) | (lt.values == lt_max))
 #         if not np.any(mask): mask = False
-# 
+#
 #         #---------------------------------------------------------
 #         # The remasking will fail if lt has been time-collapsed
 #         #---------------------------------------------------------
@@ -1594,41 +1568,41 @@ class Surface(object):
 #             lt = lt.remask(mask)
 #         except ValueError:
 #             pass
-# 
+#
 #         surface_time = link_time + lt
-# 
+#
 #         (pos_wrt_surface, _) = self.intercept_normal_to(obs_wrt_origin_frame,
 #                                                         time=surface_time,
 #                                                         derivs=derivs,
 #                                                         guess=lt)
-# 
+#
 #         surface_event = Event(surface_time, pos_wrt_surface,
 #                               self.origin, self.frame)
 #         #----------------------------------
 #         # surface_event.collapse_time()
 #         #----------------------------------
 #         los_j2000 = sign * (surface_event.ssb.pos - obs_event.ssb.pos)
-# 
+#
 #         surface_event.insert_subfield('perp',
 #                               self.normal(pos_wrt_surface,
 #                                           time=surface_time, derivs=derivs))
-#         surface_event.insert_subfield('vflat', 
+#         surface_event.insert_subfield('vflat',
 #                               self.velocity(pos_wrt_surface,
 #                                             time=surface_time))
 #         surface_event.insert_subfield(surface_key + '_j2000', los_j2000)
 #         surface_event.insert_subfield(surface_key + '_lt', -lt)
-# 
+#
 #         new_link = Event(link_event.time, link_event.state,
 #                           link_event.origin, link_event.frame)
 #         new_link.insert_subfield(link_key + '_j2000', los_j2000)
 #         new_link.insert_subfield(link_key + '_lt', lt)
-# 
+#
 #         #------------------------------------
 #         # Construct the updated link_event
 #         #------------------------------------
 #         new_link = link.replace(link_key + '_j2000', los_in_j2000,
 #                                 link_key + '_lt', lt)
-# 
+#
 #         return (surface_event, new_link)
     #===========================================================================
 

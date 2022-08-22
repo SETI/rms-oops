@@ -203,9 +203,8 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     if geom == 'spice':
         path = oops.Path.as_waypoint('NEW HORIZONS')
     else:
-        #- - - - - - - - - - - - - - - - - - - - - - - -
+
         # First construct a path from the Sun to NH
-        #- - - - - - - - - - - - - - - - - - - - - - - -
         posx = -header['SPCSSCX']
         posy = -header['SPCSSCY']
         posz = -header['SPCSSCZ']
@@ -214,9 +213,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         vely = -header['SPCSSCVY']
         velz = -header['SPCSSCVZ']
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         # The path_id has to be unique to this observation
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         sun_path = oops.Path.as_waypoint('SUN')
         path_id = '.NH_PATH_' + filename
         sc_path = oops.path.LinearPath((oops.Vector3([posx, posy, posz]),
@@ -229,17 +226,14 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     if pointing == 'spice':
         frame = oops.Frame.as_wayframe('NH_LORRI')
     else:
-        #- - - - - - - - - - - - - - - - - - - - -
+
         # Create a frame based on the boresight
-        #- - - - - - - - - - - - - - - - - - - - -
         u_center = shape[1]/2. + 0.5    # offset to put [1,1] at center of pixel
         v_center = shape[0]/2. + 0.5
         (ra_deg, dec_deg) = radec_from_uv(u_center, v_center, header)
         north_clock_deg = header['SPCEMEN']
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Apply the correction for apparent geometry if necessary
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if pointing == 'fitsapp':
             ra  = ra_deg  * oops.RPD
             dec = dec_deg * oops.RPD
@@ -253,9 +247,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
             ra_deg  = ra  * oops.DPR
             dec_deg = dec * oops.DPR
 
-        #- - - - - - - - - - - - - - - - - - - - - - - -
         # Apply the 90-degree rotation if necessary
-        #- - - - - - - - - - - - - - - - - - - - - - - -
         elif pointing == 'fits90':
             year = int(header['SPCUTCID'][:4])
             if year <= 2012:
@@ -315,17 +307,13 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         if 'calib_body' in parameters:
             spectral_name = parameters['calib_body']
 
-        #- - - - - - - - - - - - - - - - -
         # Look up the solar range...
-        #- - - - - - - - - - - - - - - - -
         try:
             solar_range = parameters['solar_range']
         except KeyError:
             solar_range = None
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If necessary, get the solar range from the target name
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if solar_range is None and target_body is not None:
             target_sun_path = oops.Path.as_waypoint(target_name).wrt('SUN')
             # Paths of the relevant bodies need to be defined in advance!
@@ -343,21 +331,15 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
 
         for spectral_name in ['SOLAR', 'PLUTO', 'PHOLUS', 'CHARON', 'JUPITER']:
 
-            #- - - - - - - - - - -
             # Extended source
-            #- - - - - - - - - - -
             spectral_radiance = header['R' + spectral_name]
 
-            #- - - - - - - - -
             # Point source
-            #- - - - - - - - -
             spectral_irradiance = header['P' + spectral_name]
 
             F_solar = 176.  # pivot 6076.2 A at 1 AU
 
-            #- - - - - - - - - - - -
             # Conversion to I/F
-            #- - - - - - - - - - - -
             extended_factor = (1. / texp / spectral_radiance * np.pi *
                                solar_range**2 / F_solar)
             point_factor = (1. / texp / spectral_irradiance / fov.uv_area *
@@ -421,9 +403,7 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         fov = LORRI.fovs[dict['BINNING_MODE'].upper(), fov_type]
         target_name = dict['TARGET_NAME']
 
-        #- - - - - - - - - - - - -
         # Create a Snapshot
-        #- - - - - - - - - - - - -
         item = oops.obs.Snapshot(('v','u'), tstart, texp,
                                  fov, 'NEW HORIZONS', 'NH_LORRI',
                                  dict = dict,
@@ -512,30 +492,20 @@ class LORRI(object):
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #- - - - - - - - - - - - - - - -
         # Update kernels if necessary
-        #- - - - - - - - - - - - - - - -
         NewHorizons.initialize(asof=asof, time=time, meta=meta)
 
-        #- - - - - - - - - - - - - - - -
         # Quick exit after first call
-        #- - - - - - - - - - - - - - - -
         if LORRI.initialized and LORRI.asof == asof: return
 
-        #- - - - - - - - - - - - - - - -
         # Load the instrument kernel
-        #- - - - - - - - - - - - - - - -
         kernels = NewHorizons.spice_instrument_kernel('LORRI')
         LORRI.instrument_kernel = kernels[0]
 
-        #- - - - - - - - - - - - - - - -
         # Construct a Polynomial FOV
-        #- - - - - - - - - - - - - - - -
         info = LORRI.instrument_kernel['INS']['NH_LORRI_1X1']
 
-        #- - - - - - - - - - - -
         # Full field of view
-        #- - - - - - - - - - - -
         lines = info['PIXEL_LINES']
         samples = info['PIXEL_SAMPLES']
 
@@ -543,9 +513,7 @@ class LORRI(object):
         yfov = info['FOV_CROSS_ANGLE']
         assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
 
-        #- - - - - - - - - - - - - - - - - - - - - - -
         # Display directions: [u,v] = [right,down]
-        #- - - - - - - - - - - - - - - - - - - - - - -
         full_fov = oops.fov.Polynomial((samples,lines),
                                        coefft_uv_from_xy=LORRI.LORRI_COEFF,
                                        coefft_xy_from_uv=None)
@@ -555,9 +523,7 @@ class LORRI(object):
 
         full_fov_flat = oops.fov.FlatFOV((4.96e-6,-4.96e-6), (1024,1024))
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Load the dictionary, include the subsampling modes
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
         LORRI.fovs['1X1', 'slow'] = full_fov
         LORRI.fovs['1X1', 'fast'] = full_fov_fast
         LORRI.fovs['1X1', 'flat'] = full_fov_flat
@@ -565,14 +531,10 @@ class LORRI(object):
         LORRI.fovs['4X4', 'fast'] = oops.fov.Subsampled(full_fov_fast, 4)
         LORRI.fovs['4X4', 'flat'] = oops.fov.Subsampled(full_fov_flat, 4)
 
-        #- - - - - - - - - - - - - - -
         # Construct a SpiceFrame
-        #- - - - - - - - - - - - - - -
         lorri_flipped = oops.frame.SpiceFrame('NH_LORRI', id='NH_LORRI_FLIPPED')
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # The SPICE IK gives the boresight along -Z, so flip axes
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         flipxyz = oops.Matrix3([[ 1, 0, 0],
                                 [ 0,-1, 0],
                                 [ 0, 0,-1]])

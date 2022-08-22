@@ -53,9 +53,7 @@ class Polynomial(Vector):
                 for (key, value) in args[0].__dict__.items():
                     self.__dict__[key] = value
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Convert derivatives to class Polynomial if necessary
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 if type(self) != Polynomial:
                     derivs = {}
                     for (key,value) in args[0].derivs.items():
@@ -151,7 +149,7 @@ class Polynomial(Vector):
         Extra leading polynomial coefficients are filled with zeros.
 
         Input:
-            order       minimum order of the Polynomial. 
+            order       minimum order of the Polynomial.
             recursive   True to include derivatives in the conversion.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -187,7 +185,7 @@ class Polynomial(Vector):
         order requested, raise an exception.
 
         Input:
-            order       minimum number of the Polynomial. 
+            order       minimum number of the Polynomial.
             recursive   True to include derivatives in the conversion.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -323,17 +321,13 @@ class Polynomial(Vector):
             else:
                 new_mask = self.mask | arg.mask
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # It's simpler to work in order of increasing powers
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             tail_indx = self.drank * (slice(None),)
             indx = (Ellipsis, slice(None,None,-1)) + tail_indx
             self_values = self.values[indx]
             arg_values  = arg.values[indx]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Perform the multiplication
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             kstop = arg.values.shape[-self.drank-1]
             dk    = self.values.shape[-self.drank-1]
             for k in range(kstop):
@@ -344,9 +338,7 @@ class Polynomial(Vector):
             result = Polynomial(new_values[indx], new_mask, derivs={},
                                 units=Units.mul_units(self.units,arg.units))
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Deal with derivatives
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             derivs = {}
             for (key, value) in self.derivs.items():
                 derivs[key] = arg.wod * value
@@ -614,9 +606,7 @@ class Polynomial(Vector):
         all_zeros = np.all(coefficients == 0., axis=-1)
         if np.any(all_zeros):
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Problem is now 1 * x**n = 0 so solution is no longer undefined
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             coefficients[all_zeros,0] = 1.
             poly_mask |= all_zeros
 

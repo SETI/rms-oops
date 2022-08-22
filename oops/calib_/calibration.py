@@ -75,7 +75,7 @@ class Calibration(object):
             value       a scalar, numpy array or arbitrary oops Array subclass
                         containing calibrated values.
             uv_pair     a Pair containing (u,v) indices into the image.
- 
+
         Return:         an object of the same class and shape as value, but
                         containing the uncalibrated DN values.
         """

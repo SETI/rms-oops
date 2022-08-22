@@ -19,7 +19,7 @@ class Test_Scalar_arctan(unittest.TestCase):
   def runTest(self):
 
     #-----------------------
-    # Individual values     
+    # Individual values
     #-----------------------
     self.assertEqual(Scalar(-0.3).arctan(), np.arctan(-0.3))
     self.assertEqual(type(Scalar(-0.3).arctan()), Scalar)
@@ -28,13 +28,13 @@ class Test_Scalar_arctan(unittest.TestCase):
     self.assertEqual(Scalar(0).arctan(), 0.)
 
     #---------------------
-    # Multiple values      
+    # Multiple values
     #---------------------
     self.assertEqual(Scalar((-0.1,0.,0.1)).arctan(), np.arctan((-0.1,0.,0.1)))
     self.assertEqual(type(Scalar((-0.1,0.,0.1)).arctan()), Scalar)
 
     #---------------
-    # Arrays    
+    # Arrays
     #---------------
     N = 1000
     x = Scalar(np.random.randn(N))
@@ -47,7 +47,7 @@ class Test_Scalar_arctan(unittest.TestCase):
             self.assertEqual(y[i:i+2], np.arctan(x.values[i:i+2]))
 
     #---------------------
-    # Test valid units      
+    # Test valid units
     #---------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
@@ -69,14 +69,14 @@ class Test_Scalar_arctan(unittest.TestCase):
     self.assertFalse(x.arctan().mask)
 
     #-----------------------------
-    # Units should be removed      
+    # Units should be removed
     #-----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.UNITLESS)
     self.assertTrue(random.arctan().units is None)
 
     #--------------
-    # Masks       
+    # Masks
     #--------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -85,7 +85,7 @@ class Test_Scalar_arctan(unittest.TestCase):
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
     #------------------
-    # Derivatives          
+    # Derivatives
     #------------------
     N = 100
     x = Scalar(np.random.randn(N))
@@ -107,14 +107,14 @@ class Test_Scalar_arctan(unittest.TestCase):
         self.assertAlmostEqual(dy_dx[i] * x.d_dt[i], dy_dt[i], delta=EPS)
 
     #-----------------------------------------------
-    # Derivatives should be removed if necessary    
+    # Derivatives should be removed if necessary
     #-----------------------------------------------
     self.assertEqual(x.arctan(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertFalse(hasattr(x.arctan(recursive=False), 'd_dt'))
 
     #----------------------------------------------
-    # Read-only status should NOT be preserved       
+    # Read-only status should NOT be preserved
     #----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))

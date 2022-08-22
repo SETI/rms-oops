@@ -548,21 +548,15 @@ class Observation(object):
             time0 = self.time[0] + tfrac[0] * (self.time[1] - self.time[0])
             time1 = self.time[0] + tfrac[1] * (self.time[1] - self.time[0])
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # One step implies midtime, which can be returned as a scalar
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if oversample == 1:
                 return Scalar(0.5 * (time0 + time1))
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             # Otherwise, uniform time steps between endpoints
-            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             fracs = np.arange(oversample) / (oversample - 1.)
             times = time0 + fracs * (time1 - time0)
 
-            #- - - - - - - - - - - - - - -
             # Time is on a leading axis
-            #- - - - - - - - - - - - - - -
             tshape = times.shape + len(self.shape) * (1,)
             return Scalar.as_scalar(times.reshape(tshape))
 
@@ -582,27 +576,19 @@ class Observation(object):
         #-----------------------
         if isinstance(self.t_axis, numbers.Number):
 
-            #- - - - - - - - - - - - - - - - - - -
             # Time aligns with u-axis or v-axis
-            #- - - - - - - - - - - - - - - - - - -
             if self.t_axis in (self.u_axis, self.v_axis):
 
-                #- - - - - - - - - - - - - - - - -
                 # One time step implies midtime
-                #- - - - - - - - - - - - - - - - -
                 if oversample == 1:
                     return Scalar.as_scalar(0.5 * (time0 + time1))
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Otherwise, uniform time steps on a leading axis
-                #- - - - - - - - - - - - - - - - - - - - - - - - - -
                 fracs = np.arange(oversample) / (oversample - 1.)
                 fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
                 return Scalar(time0 + fracs * (time1 - time0))
 
-            #- - - - - - - - - - - - - - - - - - - - -
             # Otherwise time is along a unique axis
-            #- - - - - - - - - - - - - - - - - - - - -
             tstep0 = tfrac[0] * self.cadence.shape[0]
             tstep1 = tfrac[1] * self.cadence.shape[0]
             tsteps = np.arange(tstep0, tstep1 + 1.e-10, 1./oversample)
@@ -759,9 +745,7 @@ class Observation(object):
         uv = None
         for iter in range(iters):
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Define the photon arrival event
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
 
             if apparent:
@@ -769,21 +753,15 @@ class Observation(object):
             else:
                 obs_event.neg_arr_j2000 = neg_arr_j2000
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Convert to FOV coordinates
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             prev_uv = uv
             uv = self.fov.uv_from_los(obs_event.neg_arr_ap)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the time
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             (t0,t1) = self.times_at_uv(uv)
             obs_time = t0 + time_frac * (t1 - t0)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Stop at convergence
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if uv == prev_uv: break
 
         return uv
@@ -858,9 +836,7 @@ class Observation(object):
 
         for iter in range(iters):
 
-            #- - - - - - - - - - - - - - - - - - - - -
             # Locate the object in the field of view
-            #- - - - - - - - - - - - - - - - - - - - -
             obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
             (path_event, obs_event) = path.photon_to_event(obs_event,
                                         derivs=False, guess=guess,
@@ -868,15 +844,11 @@ class Observation(object):
             guess = path_event.time
             (uv_min, uv_max) = self.uv_at_time(obs_event.time)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the observation times based on pixel midtimes
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             (t0, t1) = self.times_at_uv(uv_min)
             new_obs_time = t0 + time_frac * (t1 - t0)
 
-            #- - - - - - - - - - - - -
             # Test for convergence
-            #- - - - - - - - - - - - -
             prev_max_dt = max_dt
             max_dt = abs(new_obs_time - obs_time).max()
             obs_time = new_obs_time

@@ -49,9 +49,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertFalse(b.is_int())
     self.assertTrue(b.is_float())
 
-    #- - - - - - - - - - - - - - 
-    # Derivatives, readonly     
-    #- - - - - - - - - - - - - - 
+    # Derivatives, readonly
     a = Vector((1,2,3), derivs={'t':Vector((1,1,2))})
     b = +a
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -100,7 +98,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertRaises(ValueError, b.__iadd__, 1)
 
     #---------------------
-    # Unary minus      
+    # Unary minus
     #---------------------
     a = Vector((1,2,3))
     b = -a
@@ -126,9 +124,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(b), Vector)
     self.assertTrue(b.is_float())
 
-    #- - - - - - - - - - - - - 
-    # Derivatives, readonly        
-    #- - - - - - - - - - - - - 
+    # Derivatives, readonly
     a = Vector((1,2,3), derivs={'t':Vector((1,1,2))})
     b = -a
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -178,7 +174,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertRaises(ValueError, a.__isub__, Vector([1,2]))    # read-only
 
     #---------------
-    # abs()    
+    # abs()
     #---------------
 
     # Single values
@@ -191,9 +187,7 @@ class Test_Vector_ops(unittest.TestCase):
     x = Vector((1.,2.,4.,8.), mask=True)
     self.assertTrue(abs(x).mask is True)
 
-    #- - - - - - - - - - - 
-    # Arrays and masks       
-    #- - - - - - - - - - - 
+    # Arrays and masks
     x = Vector(np.random.randn(3,7))
     n = abs(x)
     self.assertTrue(not np.any(n.mask))
@@ -203,18 +197,14 @@ class Test_Vector_ops(unittest.TestCase):
                mask=(np.random.randn(N) < -0.3))    # Mask out a fraction
     n = abs(x)
 
-    #- - - - - - - - - - - - - - 
-    # Test the unmasked items     
-    #- - - - - - - - - - - - - - 
+    # Test the unmasked items
     nn = n[~n.mask]
     xx = x[~n.mask]
     for i in range(len(nn)):
         self.assertAlmostEqual(nn[i]**2, np.sum(xx.values[i]**2), delta=1.e-14)
         self.assertEqual(nn[i].mask, xx[i].mask)
 
-    #- - - - - - - - - - - - - - 
-    # Derivatives, denom = ()     
-    #- - - - - - - - - - - - - - 
+    # Derivatives, denom = ()
     N = 100
     x = Vector(np.random.randn(N,3))
 
@@ -274,9 +264,7 @@ class Test_Vector_ops(unittest.TestCase):
         self.assertAlmostEqual(y.d_dv.values[i,1], dy_dv1.values[i], delta=EPS)
         self.assertAlmostEqual(y.d_dv.values[i,2], dy_dv2.values[i], delta=EPS)
 
-    #- - - - - - - - - - - - - - - - - - - - -
-    # Read-only status should be preserved        
-    #- - - - - - - - - - - - - - - - - - - - -
+    # Read-only status should be preserved
     N = 10
     y = Vector(np.random.randn(N,3))
     x = Vector(np.random.randn(N,3))
@@ -286,7 +274,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertFalse(x.as_readonly().norm().readonly)
 
     #-------------------
-    # Addition    
+    # Addition
     #-------------------
     a = Vector((1,2,3))
     self.assertRaises(TypeError, a.__add__, 1)      # rank mismatch
@@ -386,9 +374,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-    #- - - - - - - - - - - - - 
-    # Derivatives, readonly        
-    #- - - - - - - - - - - - - 
+    # Derivatives, readonly
     a = Vector((1,2,3), derivs={'t':Vector((3,2,1))})
     b = a + (1,2,3)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -429,9 +415,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(a.d_dt.readonly)
     self.assertTrue(b.d_dt.readonly)
 
-    #- - - - - - - 
-    # In-place       
-    #- - - - - - - 
+    # In-place
     a = Vector((1,2))
     a += (1,1)
     self.assertEqual(a, (2,3))
@@ -471,7 +455,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, ((5,5),(5,5)))
 
     #--------------------
-    # Subtraction     
+    # Subtraction
     #--------------------
     a = Vector((1,2,3))
     self.assertRaises(TypeError, a.__add__, 1)  # rank mismatch
@@ -571,9 +555,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-    #- - - - - - - - - - - - - 
-    # Derivatives, readonly        
-    #- - - - - - - - - - - - - 
+    # Derivatives, readonly
     a = Vector((1,2,3), derivs={'t':Vector((3,2,1))})
     b = a - (1,2,3)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -614,9 +596,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(a.d_dt.readonly)
     self.assertTrue(b.d_dt.readonly)        # because objects are identical
 
-    #- - - - - - -
-    # In-place      
-    #- - - - - - -
+    # In-place
     a = Vector((1,2))
     a -= (1,1)
     self.assertEqual(a, (0,1))
@@ -656,7 +636,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, ((-3,-1),(1,3)))
 
     #----------------------
-    # Multiplication       
+    # Multiplication
     #----------------------
     expr = Vector((1,2,3)) * 2
     self.assertEqual(expr, (2,4,6))
@@ -733,9 +713,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-    #- - - - - - - - - - - - - 
-    # Derivatives, readonly        
-    #- - - - - - - - - - - - - 
+    # Derivatives, readonly
     a = Vector((1,2,3), derivs={'t':Vector((3,2,1))})
     b = a * 2
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -798,9 +776,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(c, [(1,2),(3,6)])
     self.assertEqual(c.d_dt, [(4,4),(11,10)])
 
-    #- - - - - - - -
-    # In-place    
-    #- - - - - - - -
+    # In-place
     a = Vector((1,2))
     a *= 2
     self.assertEqual(a, (2,4))
@@ -836,7 +812,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, (7,6))
 
     #----------------
-    # Division      
+    # Division
     #----------------
     expr = Vector((2,4,6)) / 2
     self.assertEqual(expr, (1,2,3))
@@ -848,9 +824,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-    #- - - - - - - - - - - - - -
-    # Derivatives, readonly    
-    #- - - - - - - - - - - - - -
+    # Derivatives, readonly
     a = Vector((2,4,6), derivs={'t':Vector((6,4,2))})
     b = a / 2
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -901,9 +875,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertFalse(c.readonly)
     self.assertFalse(c.d_dt.readonly)
 
-    #- - - - - - - -
-    # In-place    
-    #- - - - - - - -
+    # In-place
     a = Vector((4,6))
     self.assertRaises(TypeError, a.__itruediv__, 2)
     self.assertRaises(TypeError, a.__itruediv__, 0.5)
@@ -959,7 +931,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(a.mask)
 
     #-----------------------
-    # Floor division    
+    # Floor division
     #-----------------------
     expr = Vector((2,4,7)) // 2
     self.assertEqual(expr, (1,2,3))
@@ -991,9 +963,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-    #- - - - - - - - - - - - -
-    # Derivatives, readonly       
-    #- - - - - - - - - - - - -
+    # Derivatives, readonly
     a = Vector((2,4,7), derivs={'t':Vector((6,4,2))})
     b = a // 2
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -1021,9 +991,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(a.readonly)
     self.assertFalse(b.readonly)
 
-    #- - - - - - -
-    # In-place      
-    #- - - - - - -
+    # In-place
     a = Vector((4,7))
     a //= 2
     self.assertEqual(a, (2,3))
@@ -1056,7 +1024,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a[1].mask, True)
 
     #----------------
-    # Modulus      
+    # Modulus
     #----------------
     expr = Vector((2,4,7)) % 2
     self.assertEqual(expr, (0,0,1))
@@ -1088,9 +1056,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(type(expr), Vector)
     self.assertTrue(expr.is_float())
 
-    #- - - - - - - - - - - - -
-    # Derivatives, readonly       
-    #- - - - - - - - - - - - -
+    # Derivatives, readonly
     a = Vector((2,4,7), derivs={'t':Vector((6,4,2))})
     b = a % 2
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -1119,9 +1085,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertTrue(a.readonly)
     self.assertFalse(b.readonly)
 
-    #- - - - - - - - -
     # In-place
-    #- - - - - - - - -
     a = Vector((4,7))
     a %= 2
     self.assertEqual(a, (0,1))
@@ -1153,7 +1117,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a[1].mask, True)
 
     #-----------------
-    # Reciprocal          
+    # Reciprocal
     #-----------------
     a = Vector((2,4,7))
     self.assertRaises(TypeError, a.reciprocal)

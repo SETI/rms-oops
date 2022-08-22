@@ -93,7 +93,7 @@ class Rotation(Frame, Fittable):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Redefine the Fittable object, using this set of parameters.
-        
+
         In this case, params is the set of angles of rotation.
 
         Input:

@@ -23,30 +23,30 @@ def from_file(filespec, **parameters):
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #---------------------   
-    # Open the file      
-    #---------------------   
+    #---------------------
+    # Open the file
+    #---------------------
     hst_file = pyfits.open(filespec)
 
     #---------------------------------------
-    # Make an instance of the NIC2 class    
+    # Make an instance of the NIC2 class
     #---------------------------------------
     this = NIC2()
 
     #-------------------------------------
-    # Confirm that the telescope is HST       
+    # Confirm that the telescope is HST
     #-------------------------------------
     if this.telescope_name(hst_file) != "HST":
         raise IOError("not an HST file: " + this.filespec(hst_file))
 
     #------------------------------------------
-    # Confirm that the instrument is NICMOS        
+    # Confirm that the instrument is NICMOS
     #------------------------------------------
     if this.instrument_name(hst_file) != "NICMOS":
         raise IOError("not an HST/NICMOS file: " + this.filespec(hst_file))
 
     #--------------------------------------
-    # Confirm that the detector is NIC2        
+    # Confirm that the detector is NIC2
     #--------------------------------------
     if this.detector_name(hst_file) != "IR":
         raise IOError("not an HST/NICMOS/NIC2 file: " + this.filespec(hst_file))

@@ -316,7 +316,7 @@ class Ellipsoid(Surface):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that 
+                        that
                             pos = intercept + p * normal(intercept).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -349,7 +349,7 @@ class Ellipsoid(Surface):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that 
+                        that
                             intercept = pos + p * normal(intercept).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -358,7 +358,6 @@ class Ellipsoid(Surface):
 
         pos = pos_with_derivs.wod
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # The intercept point satisfies:
         #   cept + p * perp(cept) = pos
         # where
@@ -401,7 +400,6 @@ class Ellipsoid(Surface):
         # f(p) = (pos * scale) dot (pos * scale) - req_sq
         #
         # df/dt = -2 (pos * scale) dot (pos * unsquash/denom)
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         #--------------------------------------------
         # Make an initial guess at p, if necessary
@@ -443,7 +441,7 @@ class Ellipsoid(Surface):
         cept = pos.element_div(denom)
 
         if derivs:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # First, we need dt/dpos
             #
             # pos_x**2 / (1 + p)**2 +
@@ -492,12 +490,10 @@ class Ellipsoid(Surface):
             # dt/dpos_x * denom1 = pos_x / (1+p)**2
             # dt/dpos_y * denom1 = pos_y * B2 / (1 + B2 p)**2
             # dt/dpos_z * denom1 = pos_z * C2 / (1 + C2 p)**2
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             stretch = self.unsquash_sq.element_div(denom.element_mul(denom))
             dp_dpos = pos.element_mul(stretch) / df_dp_div_neg2
             dp_dpos = dp_dpos.swap_items([Scalar])
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Now we can proceed with dcept/dpos
             #
             # cept + perp(cept) * p = pos
@@ -507,7 +503,6 @@ class Ellipsoid(Surface):
             # (I + p dperp/dcept) dcept/dpos = I - perp(cept) dt/dpos
             #
             # dcept/dpos = (I + p dperp/dcept)**(-1) * (I - perp dt/dpos)
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             cept_with_derivs = cept.copy(readonly=False, recursive=False)
             cept_with_derivs.insert_deriv('cept', Vector3.IDENTITY)
             perp = self.normal(cept_with_derivs, derivs=True)
@@ -741,7 +736,7 @@ class Ellipsoid(Surface):
         return (lat.tan() * self.squash_z * factor).arctan()
     #===========================================================================
 
-    
+
 #*******************************************************************************
 
 
@@ -852,12 +847,10 @@ class Test_Ellipsoid(unittest.TestCase):
         # Intercept derivatives
         #--------------------------
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Lines of sight with grazing incidence can have large numerical errors,
         # but this is not to be considered an error in the analytic calculation.
         # As a unit test, we ignore the largest 3% of the errors, but require
         # that the rest of the errors be very small.
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
         los = -np.random.rand(NPTS,3)                   # range is -1 to 0
 

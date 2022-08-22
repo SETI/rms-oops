@@ -68,9 +68,7 @@ class Test_Indices(unittest.TestCase):
         self.assertEqual(a[Scalar(1)], b[1])
         self.assertEqual(a[Scalar(1,True)], make_masked(b, [1])[1])
 
-        #- - - - - - - - - 
         # Two elements
-        #- - - - - - - - - 
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])
@@ -95,15 +93,11 @@ class Test_Indices(unittest.TestCase):
         b[:] = np.ma.masked
         a = Scalar(b)
 
-        #- - - - - - - - - -
         # Single element
-        #- - - - - - - - - -
         self.assertEqual(a[Scalar(1)], b[1])
         self.assertEqual(a[Scalar(1,True)], make_masked(b, [1])[1])
 
-        #- - - - - - - - -
         # Two elements
-        #- - - - - - - - -
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])
@@ -128,15 +122,11 @@ class Test_Indices(unittest.TestCase):
         b[3] = np.ma.masked
         a = Scalar(b)
 
-        #- - - - - - - - - -
         # Single element
-        #- - - - - - - - - -
         self.assertEqual(a[Scalar(1)], b[1])
         self.assertEqual(a[Scalar(1,True)], make_masked(b, [1])[1])
 
-        #- - - - - - - - -
         # Two elements
-        #- - - - - - - - -
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])
@@ -147,9 +137,7 @@ class Test_Indices(unittest.TestCase):
         b = np.ma.arange(25).reshape(5,5)
         a = Scalar(b)
 
-        #- - - - - - - - - - - - -
         # Traditional indexing
-        #- - - - - - - - - - - - -
         self.assertEqual(a, b)
         self.assertEqual(a[1], b[1])
         self.assertEqual(a[1:5], b[1:5])
@@ -162,15 +150,11 @@ class Test_Indices(unittest.TestCase):
         b = np.ma.arange(25).reshape(5,5)
         a = Scalar(b)
 
-        #- - - - - - - - - - 
         # Single element
-        #- - - - - - - - - - 
         self.assertEqual(a[Scalar(1)], b[1])
         self.assertEqual(a[Scalar(1,True)], make_masked(b, [1])[1])
 
-        #- - - - - - - - - 
         # Two elements
-        #- - - - - - - - - 
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])
@@ -245,15 +229,11 @@ class Test_Indices(unittest.TestCase):
         b = np.ma.arange(125).reshape(5,5,5)
         a = Scalar(b)
 
-        #- - - - - - - - - - 
         # Single element
-        #- - - - - - - - - - 
         self.assertEqual(a[Scalar(1)], b[1])
         self.assertEqual(a[Scalar(1,True)], make_masked(b, [1])[1])
 
-        #- - - - - - - - - -
         # Two elements
-        #- - - - - - - - - -
         self.assertEqual(a[Scalar((1,2))], b[1:3])
         self.assertEqual(a[Scalar((1,2),(True,False))], make_masked(b, [1])[1:3])
         self.assertEqual(a[Scalar((1,2),True)], make_masked(b, [1,2])[1:3])

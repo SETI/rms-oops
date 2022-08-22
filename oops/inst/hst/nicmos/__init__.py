@@ -123,18 +123,18 @@ class NICMOS(HST):
         global IDC_DICT
 
         #----------------------------
-        # Identify the detector           
+        # Identify the detector
         #----------------------------
         det = self.detector_name(hst_file)
 
         #--------------------------------------------------------
-        # Load the dictionary of IDC parameters if necessary      
+        # Load the dictionary of IDC parameters if necessary
         #--------------------------------------------------------
         if IDC_DICT[det] is None:
             IDC_DICT[det] = self.load_idc_dict(hst_file, ("FILTER",))
 
         #----------------------------------------
-        # Define the key into the dictionary  
+        # Define the key into the dictionary
         #----------------------------------------
         idc_key = (hst_file[0].header["FILTER"],)
 
@@ -157,14 +157,14 @@ class NICMOS(HST):
         global NICMOS_SYN_FILES
 
         #----------------------------------------------
-        # Copy all the NICMOS general file names               
+        # Copy all the NICMOS general file names
         #----------------------------------------------
         syn_filenames = []
         for filename in NICMOS_SYN_FILES:
             syn_filenames.append(filename)
 
         #-------------------------------------------------
-        # Append all the detector-specific file names    
+        # Append all the detector-specific file names
         #-------------------------------------------------
         for filename in self.DETECTOR_SYN_FILES:
             syn_filenames.append(filename)
@@ -188,10 +188,10 @@ class NICMOS(HST):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Returns a factor that converts a pixel value to DN per second.
-        
+
         Input:
-            hst_file        the object returned by pyfits.open()            
-        
+            hst_file        the object returned by pyfits.open()
+
         Return              the factor to multiply a pixel value by to get DN/sec
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -213,12 +213,12 @@ class NICMOS(HST):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #------------------------------------------
-        # Make an instance of the NICMOS class     
+        # Make an instance of the NICMOS class
         #------------------------------------------
         this = NICMOS()
 
         #------------------------------
-        # Figure out the detector              
+        # Figure out the detector
         #------------------------------
         detector = this.detector_name(hst_file)
 

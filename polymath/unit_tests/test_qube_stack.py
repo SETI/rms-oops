@@ -29,7 +29,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(np.all(Qube.stack(a,b).mask == False))
 
     #-----------------------
-    # Cast int to float     
+    # Cast int to float
     #-----------------------
     b = Scalar(np.arange(10,20.))
     ab = Scalar(np.arange(20.).reshape(2,10))
@@ -39,7 +39,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(np.all(Qube.stack(a,b).mask == False))
 
     #------------------------------
-    # Cast bools, None to float        
+    # Cast bools, None to float
     #------------------------------
     c = Boolean(5*[True] + 5*[False])
     d = None
@@ -52,7 +52,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(abcd.is_float())
 
     #----------------------------
-    # Cast bools, None to int     
+    # Cast bools, None to int
     #----------------------------
     b = Scalar(np.arange(10,20))
     abcd = Qube.stack(a,b,c,d)
@@ -63,7 +63,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue(abcd.is_int())
 
     #-----------------------------
-    # Cast bools, None to bool      
+    # Cast bools, None to bool
     #-----------------------------
     cd = Qube.stack(c,d)
     self.assertEqual(cd[0], 5*[True] + 5*[False])
@@ -97,9 +97,9 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertEqual(Qube.stack(a,b,recursive=False), ab)
     self.assertEqual(Qube.stack(a,b,recursive=False).derivs, {})
 
-    #-----------   
-    # Ranks   
-    #-----------   
+    #-----------
+    # Ranks
+    #-----------
     a = Scalar(np.arange(30.).reshape(10,3), drank=1)
     b = Scalar(np.arange(10.))
     self.assertRaises(ValueError, Qube.stack, a, b)
@@ -125,7 +125,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertRaises(ValueError, Qube.stack, a, b)
 
     #-------------
-    # Masks      
+    # Masks
     #-------------
     a = Scalar(np.arange(10), mask=True)
     b = Scalar(np.arange(10.,20.), mask=True)
@@ -159,7 +159,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue((abcd[3] == False).all())
 
     #------------------
-    # Broadcasting         
+    # Broadcasting
     #------------------
     a = Scalar(np.arange(10).reshape(10,1))
     b = Scalar(11.)
@@ -200,7 +200,7 @@ class Test_Qube_stack(unittest.TestCase):
     self.assertTrue((abcd[3] == False).all())
 
     #---------------
-    # Booleans    
+    # Booleans
     #---------------
     c = Boolean(5*[True] + 5*[False])
     d = Scalar(np.arange(10))

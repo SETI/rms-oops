@@ -26,13 +26,13 @@ class Test_Scalar_exp(unittest.TestCase):
     self.assertEqual(Scalar(0).exp(), 1.)
 
     #----------------------
-    # Multiple values       
+    # Multiple values
     #----------------------
     self.assertEqual(Scalar((-1,0,1)).exp(), np.exp((-1,0,1)))
     self.assertEqual(type(Scalar((-1,0,1)).exp()), Scalar)
 
     #----------------
-    # Arrays      
+    # Arrays
     #----------------
     N = 1000
     values = np.random.randn(N) * 10.
@@ -45,7 +45,7 @@ class Test_Scalar_exp(unittest.TestCase):
         self.assertEqual(funcvals[i:i+2], np.exp(values[i:i+2]))
 
     #----------------------
-    # Test valid units       
+    # Test valid units
     #----------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
@@ -64,14 +64,14 @@ class Test_Scalar_exp(unittest.TestCase):
     self.assertEqual(random.exp(), np.exp(values))
 
     #-----------------------------
-    # Units should be removed      
+    # Units should be removed
     #-----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.exp().units is None)
 
     #--------------
-    # Masks       
+    # Masks
     #--------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -80,7 +80,7 @@ class Test_Scalar_exp(unittest.TestCase):
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
     #-----------------
-    # Derivatives         
+    # Derivatives
     #-----------------
     N = 100
     x = Scalar(np.random.randn(N) * 10.)

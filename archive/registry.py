@@ -92,7 +92,7 @@ def temporary_frame_id():
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Return a temporary frame ID.
-    
+
     This is assigned once and never re-used.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -114,7 +114,7 @@ def initialize_frame_registry():
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Initialize the registry.
-    
+
     It is not generally necessary to call this function, but it can be used
     to reset the registry for purposes of debugging.
     """
@@ -262,7 +262,7 @@ def initialize_path_registry():
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Initialize the registry.
-    
+
     It is not generally necessary to call this function, but it can be used
     to reset the registry for purposes of debugging.
     """
@@ -284,7 +284,7 @@ def connect_paths(target, origin, frame=None):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Return a path that connects two paths.
-    
+
     The returned path creates event objects in which vectors point from any
     origin path to any target path, using any coordinate frame.
 
@@ -391,7 +391,7 @@ def initialize_body_registry():
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Initialize the registry.
-    
+
     It is not generally necessary to call this function, but it can be used
     to reset the registry for purposes of debugging.
     """

@@ -32,7 +32,7 @@ class Test_Vector_outer(unittest.TestCase):
                                  b.values.reshape((3,10,1,5)))
 
     #------------------
-    # Test units           
+    # Test units
     #------------------
     a = Vector(np.random.randn(3), units=Units.KM)
     b = Vector(np.random.randn(3), units=Units.SECONDS**(-1))
@@ -41,7 +41,7 @@ class Test_Vector_outer(unittest.TestCase):
     self.assertEqual(b.outer(a).units, Units.KM/Units.SECONDS)
 
     #--------------------
-    # Derivatives     
+    # Derivatives
     #--------------------
     N = 100
     x = Vector(np.random.randn(N,3))
@@ -123,7 +123,7 @@ class Test_Vector_outer(unittest.TestCase):
                                                          delta=EPS)
 
     #------------------------------------------------
-    # Derivatives should be removed if necessary      
+    # Derivatives should be removed if necessary
     #------------------------------------------------
     self.assertEqual(y.outer(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
@@ -135,7 +135,7 @@ class Test_Vector_outer(unittest.TestCase):
     self.assertFalse(hasattr(y.outer(x, recursive=False), 'd_dh'))
 
     #------------------------------------------
-    # Read-only status should be preserved         
+    # Read-only status should be preserved
     #------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,7))

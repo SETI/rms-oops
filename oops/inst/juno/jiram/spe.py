@@ -41,7 +41,7 @@ def from_file(filespec, label, fast_distortion=True,
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     #---------------------------------
-    # Get metadata 
+    # Get metadata
     #---------------------------------
     meta = Metadata(label)
 
@@ -56,15 +56,15 @@ def from_file(filespec, label, fast_distortion=True,
     data = _load_data(filespec, label, meta)
 
     #-------------------------------------------
-    # Construct Snapshots for slit in each band 
+    # Construct Snapshots for slit in each band
     #-------------------------------------------
     slits = []
     for i in range(meta.nsamples):
-        item = oops.obs.Snapshot(("v","u"), 
+        item = oops.obs.Snapshot(("v","u"),
                              meta.tstart, meta.exposure, meta.fov_slits,
-                             "JUNO", "JUNO_JIRAM_S", 
+                             "JUNO", "JUNO_JIRAM_S",
                              data=np.reshape(data[:,i],(1,meta.nlines)) )
-                             
+
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
         item.insert_subfield('filespec', filespec)
@@ -75,12 +75,12 @@ def from_file(filespec, label, fast_distortion=True,
 
 
     #-------------------------------------------
-    # Construct Snapshot for all bands 
+    # Construct Snapshot for all bands
     #-------------------------------------------
-    obs = oops.obs.Snapshot(("v","u","b"), 
+    obs = oops.obs.Snapshot(("v","u","b"),
                          meta.tstart, meta.exposure, meta.fov,
                          "JUNO", "JUNO_JIRAM_S", data=data )
-                         
+
 #    obs.insert_subfield('spice_kernels', \
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
     obs.insert_subfield('filespec', filespec)
@@ -99,7 +99,7 @@ def from_file(filespec, label, fast_distortion=True,
 def _load_data(filespec, label, meta):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    Loads the data array from the file and splits into individual framelets. 
+    Loads the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -107,14 +107,14 @@ def _load_data(filespec, label, meta):
         meta            Image Metadata object.
 
     Return:             (framelets, framelet_labels)
-        framelets       A Numpy array containing the individual frames in 
+        framelets       A Numpy array containing the individual frames in
                         axis order (line, sample, framelet #).
         framelet_labels List of labels for each framelet.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    
+
     #----------------
-    # Read data 
+    # Read data
     #----------------
     # seems like this should be handled in a readpds-style function somewhere
     data = np.fromfile(filespec, dtype='<f4').reshape(meta.nlines,meta.nsamples)
@@ -125,7 +125,7 @@ def _load_data(filespec, label, meta):
 
 
 #*******************************************************************************
-# Metadata 
+# Metadata
 #*******************************************************************************
 class Metadata(object):
 
@@ -140,11 +140,11 @@ class Metadata(object):
         Input:
             label           The label dictionary.
 
-        Attributes:         
+        Attributes:
             nlines          A Numpy array containing the data in axis order
                             (line, sample).
-            nsamples        The time sampling array in (line, sample) axis 
-                            order, or None if no time backplane is found in 
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
                             the file.
 
         """
@@ -162,7 +162,7 @@ class Metadata(object):
         self.exposure = label['EXPOSURE_DURATION']
 
         #--------------------
-        # Default timing 
+        # Default timing
         #--------------------
         self.tstart = julian.tdb_from_tai(
                         julian.tai_from_iso(label['START_TIME']))
@@ -187,7 +187,7 @@ class Metadata(object):
         # FOVs
         #-------------
         self.fov_slits = oops.fov.FlatFOV(scale, (self.nlines, 1), cxy)
-        self.fov = oops.fov.FlatFOV(scale, (self.nlines, self.nsamples), 
+        self.fov = oops.fov.FlatFOV(scale, (self.nlines, self.nsamples),
                                                    [cxy[0], self.nsamples/2])
 
         return
@@ -198,7 +198,7 @@ class Metadata(object):
 
 
 #*******************************************************************************
-# SPE 
+# SPE
 #*******************************************************************************
 class SPE(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

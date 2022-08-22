@@ -249,9 +249,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
         else:
             camera = 'NAC'
 
-        #- - - - - - - - - -
         # Get image time
-        #- - - - - - - - - -
         texp = label_dict['EXPOSURE_DURATION']
         if texp <= 1.e-6: texp = 1.e-6
 
@@ -266,17 +264,13 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
             tai = julian.tai_from_iso(label_dict['IMAGE_TIME']) - texp
             tstart = julian.tdb_from_tai(tai)
 
-        #- - - - - - - - - - - - - - -
         # Get spacecraft clock ticks
-        #- - - - - - - - - - - - - - -
         scid = -(30 + ivgr)
         start_ticks = cspyce.sce2t(scid, tstart)
         mid_ticks   = cspyce.sce2t(scid, tstart + texp/2.)
         stop_ticks  = cspyce.sce2t(scid, tstart + texp)
 
-        #- - - - - - - - - - - - - - - - - - - -
         # Construct the image coordinate frame
-        #- - - - - - - - - - - - - - - - - - - -
         scan_platform_id = scid * 1000 - 100
         tol_ticks = 800 + texp/48.
 

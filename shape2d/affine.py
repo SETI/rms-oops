@@ -48,7 +48,7 @@ class Affine(object):
                             self.d.without_derivs(),
                             self.e.without_derivs(),
                             self.f.without_derivs())
-    
+
         self.abcdef = [self.scalars_wod, self.scalars]
         self.shape = Qube.broadcasted_shape(*self.scalars)
 
