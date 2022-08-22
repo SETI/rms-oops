@@ -209,15 +209,21 @@ class RasterScan(Observation):
         #---------------------------------------
         if self._uv_is_discontinuous:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Identify indices at exact upper limits; treat these as inside
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             at_upper_u = (uv.vals[...,0] == self.uv_shape[0])
             at_upper_v = (uv.vals[...,1] == self.uv_shape[1])
 
+            #- - - - - - - - - - - - - - - - - - - - - - -
             # Map continuous index to discontinuous (u,v)
+            #- - - - - - - - - - - - - - - - - - - - - - -
             uv_int = Pair.as_pair(uv).as_int()
             uv = uv_int + (uv - uv_int).element_mul(self.uv_size)
 
+            #- - - - - - - - - - - - - - - - - -
             # Adjust values at upper limits
+            #- - - - - - - - - - - - - - - - - -
             u = uv.to_scalar(0).mask_where(at_upper_u,
                     replace = self.uv_shape[0] + self.uv_size.vals[0] - 1,
                     remask = False)
@@ -225,7 +231,9 @@ class RasterScan(Observation):
                     replace = self.uv_shape[1] + self.uv_size.vals[1] - 1,
                     remask = False)
 
+            #- - - - - - - - - - -
             # Re-create Pair
+            #- - - - - - - - - - -
             uv_values = np.empty(u.shape + (2,))
             uv_values[...,0] = u.vals
             uv_values[...,1] = v.vals

@@ -191,8 +191,9 @@ class Wobble(Path, Fittable):
         self.kepler.set_params(elements[:9])
 
         for i in range(self.nwobbles):
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Make copies of the orbital elements for convenience
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             self.r_wobble   = self.elements[RWOBB::WOBBLE_ELEMENTS]
             self.l_wobble   = self.elements[RATIO::WOBBLE_ELEMENTS]
             self.l_wobble  *= self.r_wobble

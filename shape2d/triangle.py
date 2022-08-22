@@ -244,11 +244,15 @@ class Triangle(Shape2D):
         #--------------------------------------------------------------------
         for k in range(axis0-1,-1,0):
 
+          #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           # Compare each value to all values to its left on axis 0
+          #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           for j in range(k-1,-1,-1):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If the left value (j) is equal to the right value (k) and the
             # left value is unmasked, mask the right value
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask[k] |= ((x[j] - x[k]).abs() <= Shape2D.PREC &
                             (y[j] - y[k]).abs() <= Shape2D.PREC &
                             unmasked[j])
@@ -461,12 +465,14 @@ class Triangle(Shape2D):
         if type(arg) == Circle:
             circle = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # A triangle is a superset of a circle if...
             # 1. The circle's center is inside the triangle
             # 2. The circle's diameter is smaller than the triangle's longest
             #    side.
             # 3. None of the three sides intersects the circle (although they
             #    can touch)
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             circle_center_is_inside = self.is_superset_of(circle.pt0)
 
             if self.half_longest is None:
@@ -475,7 +481,9 @@ class Triangle(Shape2D):
 
             circle_is_small_enough = self.half_longest < circle.r
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Second index [1] is masked when circle and segment just touch
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             crosses_side01 = self.seg01.intersections(circle)[1].antimask
             crosses_side12 = self.seg12.intersections(circle)[1].antimask
             crosses_side20 = self.seg20.intersections(circle)[1].antimask
@@ -519,7 +527,7 @@ class Triangle(Shape2D):
                         shape.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+        
         #--------------------------------------------------------------------
         # Is disjoint from, Triangle to Point
         #--------------------------------------------------------------------
@@ -532,8 +540,10 @@ class Triangle(Shape2D):
         if type(arg) == Line:
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # A triangle is disjoint from an infinite line if all three points
             # fall on the same side of the line.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             diffs = self.pts3 - line.pt0
             sides = diffs.dot(line.perp)
@@ -542,8 +552,10 @@ class Triangle(Shape2D):
         if type(arg) in (HalfLine, Segment):
             line == arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # A triangle is disjoint from a half-line or segment if the full
             # line would be disjoint or if one endpoint is outside the triangle
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             return (self.is_disjoint_from(Line.as_line(line)) |
                     self.is_disjoin_from(line.pt0))
@@ -589,12 +601,16 @@ class Triangle(Shape2D):
         if isinstance(type(arg), Line):
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # True if exactly one line endpoint touches the triangle or if the
             # line touches one corner
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             touchings = [line.touches(self.pt0), line.touches(self.pt1),
                                                  line.touches(self.pt2)]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Count matches on the side but not the corners
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             (side_pt, line_pt) = self.seg01.closest(line)
             touches_side = (side_pt - line_pt).norm_sq() <= Shape2D.PREC_SQ
             mask = ((side_pt - self.pt0).norm_sq() <= Shape2D.PREC_SQ) |

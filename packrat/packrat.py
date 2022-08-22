@@ -97,7 +97,7 @@ class Packrat(object):
     to provide additional parameters passed to function encode_array, which
     define how to pack the attribute. For example, "time{'single':True}" will
     save the time attribute in single precision.
-
+    
     Packrat's procedure for reading and reconstructing objects:
 
     1. If the class has a function PACKRAT__init__, then Packrat calls the
@@ -247,10 +247,14 @@ class Packrat(object):
             tree = ET.parse(filename)
             root = tree.getroot()
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             # On read, use the file's Packrat version number
+            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             self._version = root.attrib['version']
 
+            #- - - - - - - - - - - - - - -
             # Load the tree recursively
+            #- - - - - - - - - - - - - - -
             for node in root:
                 try:
                     name = unescape(node.attrib['name'], UNENTITIES)
@@ -260,7 +264,9 @@ class Packrat(object):
                 self.objects.append(self._read_node(node))
                 self.object_names.append(name)
 
+            #- - - - - - - - - - - - -
             # Check the npz count
+            #- - - - - - - - - - - - -
             if len(self.npz_list) != self.npz_no:
                 raise IOError('Packrat file "%s" does not match its .npz file' %
                               filename)
@@ -341,7 +347,9 @@ class Packrat(object):
         #-------------------------------------------
         if self.file is not None:
 
+            #- - - - - - - - - - - - - - - - - - - 
             # Terminate anything already begun
+            #- - - - - - - - - - - - - - - - - - - 
             levels = len(self.begun) - 1
             for (k, typename) in enumerate(self.begun[::-1]):
                 self.file.write(self.indent * (levels - k) * ' ')
@@ -487,7 +495,9 @@ class Packrat(object):
                 if changed:
                     del self.xml_id_by_python_id[python_id]
 
+            #- - - - - - - - - - - - - - - - - - - -
             # For mutable objects, save a copy
+            #- - - - - - - - - - - - - - - - - - - -
             if typename == 'list':
                 object_to_cache = list(obj)
             else:
@@ -525,7 +535,9 @@ class Packrat(object):
         # Write a standard Python class without caching
         #----------------------------------------------------------------------
 
+        #- - - - - - - - - - - - - - - - - - - - - 
         # float, int, bool, decimal, str, None
+        #- - - - - - - - - - - - - - - - - - - - - 
         if typename in ('int', 'float', 'bool'):
             self._start_node(typename, level, name, index, xml_attr)
             self.file.write(repr(obj))
@@ -553,7 +565,9 @@ class Packrat(object):
         # Write a Python class with caching
         #----------------------------------------------------------------------
 
+        #- - - - - - - - - - 
         # tuple, list, set
+        #- - - - - - - - - - 
         if typename in ('tuple', 'list', 'set', 'frozenset'):
             lenval = len(obj)
             xml_attr += [('len', str(lenval))]
@@ -571,7 +585,9 @@ class Packrat(object):
             self._end_node(typename, level)
             return
 
+        #- - - - -  
         # dict
+        #- - - - -  
         if typename == 'dict':
             lenval = len(obj)
             xml_attr += [('len', str(lenval))]
@@ -602,7 +618,9 @@ class Packrat(object):
             self._end_node(typename, level)
             return
 
+        #- - - - - - - - - - - - -
         # Write a NumPy ndarray
+        #- - - - - - - - - - - - -
         if typename == 'array':
             if xml_link:
                 xml_attr += [('shape', str(obj.shape).replace(' ','')),
@@ -619,7 +637,9 @@ class Packrat(object):
             slash = self._start_node(typename, level, name, index, xml_attr,
                                      slash=(npz_value is not None))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Hold the data for the npz file if the savings is large enough
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if npz_value is not None:
                 self.npz_list.append(npz_value)
                 self.npz_no += 1
@@ -635,7 +655,9 @@ class Packrat(object):
         # Otherwise write an object
         #-------------------------------
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Use the special attribute list if available
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         obj_attr = None
         if hasattr(obj, 'PACKRAT__args__'):
             result = obj.PACKRAT__args__()
@@ -644,34 +666,46 @@ class Packrat(object):
             else:
                 obj = result    # object might be replaced by this func
 
+        #- - - - - - - - - - - - - - - - - - - - -
         # Write the XML header for this object
+        #- - - - - - - - - - - - - - - - - - - - -
         xml_attr += [('module', type(obj).__module__),
                      ('class', type(obj).__name__)]
         slash = self._start_node(typename, level, name, index, xml_attr,
                                  terminate=True)
         if slash: return
 
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         # Use the class attribute list if available
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         if obj_attr is None:
             if hasattr(obj, 'PACKRAT_ARGS'):
                 obj_attr = obj.PACKRAT_ARGS
 
+        #- - - - - - - - - - - - - - - - - - - 
         # Otherwise, use all the attributes
+        #- - - - - - - - - - - - - - - - - - - 
         if obj_attr is None:
             obj_attr = obj.__dict__.keys()
             obj_attr.sort()
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Generate (name, value) pairs
         # Also clean up the internal names of attributes
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         stripped = [k.lstrip('*').lstrip('+') for k in obj_attr]
         pairs = [(clean_attr(k), obj.__dict__[k]) for k in stripped]
 
+        #- - - - - - - - - - - - 
         # Write the subnodes
+        #- - - - - - - - - - - - 
         for indx in range(len(pairs)):
             (attr_name, value) = pairs[indx]
             self._write(value, attr_name, indx, level=level+1, **params)
 
+        #- - - - - - - - - - -
         # End this object
+        #- - - - - - - - - - -
         self._end_node(typename, level)
     #===========================================================================
 
@@ -696,7 +730,7 @@ class Packrat(object):
                     break
 
         #---------------
-        # Determine
+        # Determine 
         #---------------
         if slash:
             terminate = True
@@ -916,23 +950,31 @@ class Packrat(object):
 
             obj = None
 
+            #- - - - - - - - - - - - - - - - - - -
             # Create a dictionary of elements
+            #- - - - - - - - - - - - - - - - - - -
             object_dict = {}
             for subnode in node:
                 key = subnode.attrib['name']
                 value = self._read_node(subnode)
                 object_dict[key] = value
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # For an unrecognized class, just return the attribute dictionary
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if cls is None:
                 obj = object_dict
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If the class has a PACKRAT__init__ function, call it with the full
             # dictionary
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if obj is None and hasattr(cls,'PACKRAT__init__'):
                 obj = cls.PACKRAT__init__(cls, **object_dict)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If the class has a PACKRAT_ARGS list, call the constructor
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if obj is None and hasattr(cls, 'PACKRAT_ARGS'):
                 arglist = []
                 argdict = {}
@@ -952,8 +994,10 @@ class Packrat(object):
                 for (attr_name, value) in extras:
                     obj.__dict__[attr_name] = value
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Otherwise, create a new object and install the attributes.
             # This approach is not recommended but it will often work.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if obj is None:
                 obj = object.__new__(cls)
                 obj.__dict__ = object_dict
@@ -1184,7 +1228,9 @@ class Test_Packrat(unittest.TestCase):
 
         f.close()
 
+        #- - - - - - - - - - - - - - - - - - - -
         # Now spot-check using indices and keys
+        #- - - - - - - - - - - - - - - - - - - -
         f = Packrat.open(filename, access='r')
         rec = f.read(key='two')
         self.assertEqual(rec, 2)
@@ -1216,7 +1262,9 @@ class Test_Packrat(unittest.TestCase):
 
         f.close()
 
+        #- - - - - - - - - - -
         # read_as_dict
+        #- - - - - - - - - - -
         f = Packrat.open(filename, access='r')
         recs = f.read_as_dict()
         f.close()
@@ -1260,7 +1308,9 @@ class Test_Packrat(unittest.TestCase):
         self.assertTrue(np.all(recs['bar'].floats == sample_bar.floats))
         self.assertTrue(np.all(recs['bar'].sum    == sample_bar.sum))
 
+        #- - - - - - - - - - -
         # read_as_list
+        #- - - - - - - - - - -
         f = Packrat.open(filename, access='r')
         recs = f.read_as_list()
         self.assertEqual(len(recs), f.object_names.index('bar')+1)

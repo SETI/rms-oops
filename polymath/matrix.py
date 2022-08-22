@@ -331,8 +331,9 @@ class Matrix(Qube):
         # If necessary, calculate the matrix RMS
         #-----------------------------------------------------
         if delta != 0.:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # rms, scaled to be unity for an identity matrix
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             rms = (np.sqrt(np.sum(np.sum(self.values**2, axis=-1), axis=-1)) /
                                                                         size)
 
@@ -479,7 +480,9 @@ class Matrix(Qube):
         if recursive and self.derivs:
             new_derivs = {}
 
+            #- - - - - - - - - - - - -
             # -M^-1 * dM/dt * M^-1
+            #- - - - - - - - - - - - -
             for (key, deriv) in self.derivs.items():
                 new_derivs[key] = -obj * deriv * obj
 
@@ -547,20 +550,20 @@ class Matrix(Qube):
 #         A and a Vector B of results.
 #         """
 #         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#
+# 
 #         b = Vector.as_vector(values, recursive=True)
-#
+# 
 #         size = self.item[0]
 #         if size != self.item[1]:
 #             raise ValueError('solver requires a square Matrix')
-#
+# 
 #         if self.drank:
 #             raise ValueError('solver does not suppart a Matrix with a ' +
 #                              'denominator')
-#
+# 
 #         if size != b.item[0]:
 #             raise ValueError('Matrix and Vector have incompatible sizes')
-#
+# 
 #         #-----------------------------------------------------
 #         # Easy cases: X = A-1 B
 #         #-----------------------------------------------------
@@ -569,52 +572,52 @@ class Matrix(Qube):
 #                 return self.inverse(True) * b
 #             else:
 #                 return self.inverse(False) * b.wod
-#
+# 
 #         new_shape = Qube.broadcasted_shape(self.shape, b.shape)
-#
+# 
 #         #-------------------------------------------------------------
 #         # Algorithm is simpler with matrix indices rolled to front
-#         # Also, Vector b's elements are placed after the elements of
+#         # Also, Vector b's elements are placed after the elements of 
 #         # Matrix a
 #         #-------------------------------------------------------------
-#
+# 
 #         ab_vals = np.empty((size,size+1) + new_shape)
 #         rolled = np.rollaxis(self.values, -1, 0)
 #         rolled = np.rollaxis(rolled, -1, 0)
-#
+# 
 #         ab_vals[:,:-1] = rolled
 #         ab_vals[:,-1] = b.values
-#
+# 
 #         for k in range(size-1):
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#             # Zero out the leading coefficients from each row at each
+#             # Zero out the leading coefficients from each row at each 
 #             # iteration
 #             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #             ab_saved = ab_vals[k+1:,k:k+1]
 #             ab_vals[k+1:,k:] *= ab_vals[k,k:k+1]
 #             ab_vals[k+1:,k:] -= ab_vals[k,k:] * ab_saved
-#
+# 
 #         #----------------------------------------------------------
 #         # Now work backward solving for values, replacing Vector b
 #         #----------------------------------------------------------
 #         for k in range(size,0):
 #             ab_vals[ k,-1] /= ab_vals[k,k]
 #             ab_vals[:k,-1] -= ab_vals[k,-1] * ab_vals[:k,k]
-#
+# 
 #         ab_vals[0,-1] /= ab_vals[0,0]
-#
+# 
 #         x = np.rollaxis(ab_vals[:,-1], 0, len(shape))
-#
+# 
 #         x = Vector(x, self.mask | b.mask, derivs={},
 #                       units=Units.units_div(self.units, b.units))
-#
+# 
 #         #-----------------------------------------------------
 #         # Deal with derivatives if necessary
 #         # A x = B
 #         # A dx/dt + dA/dt x = dB/dt
 #         # A dx/dt = dB/dt - dA/dt x
 #         #-----------------------------------------------------
-#
+# 
 #         if recursive and (self.derivs or b.derivs):
 #             derivs = {}
 #             for key in self.derivs:
@@ -622,15 +625,15 @@ class Matrix(Qube):
 #                     values = b.derivs[key] - self.derivs[key] * x
 #                 else:
 #                     values = -self.derivs[k] * x
-#
+# 
 #             derivs[key] = self.solve(values, recursive=False)
-#
+# 
 #             for key in b.derivs:
 #                 if key not in self.derivs:
 #                     derivs[key] = self.solve(b.derivs[k], recursive=False)
-#
+# 
 #             self.insert_derivs(derivs)
-#
+# 
 #         return x
     #===========================================================================
 

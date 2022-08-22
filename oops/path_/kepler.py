@@ -189,7 +189,7 @@ class Kepler(Path, Fittable):
         """
         Re-define the path given new orbital elements.
 
-        Part of the Fittable interface.
+        Part of the Fittable interface. 
 
         Input:
             elements    An array or list of orbital elements. In order, they are
@@ -373,15 +373,21 @@ class Kepler(Path, Fittable):
         # Apply the wobbles
         #------------------------
 
+        #- - - - - - - - - - - -
         # For Laplace planes
+        #- - - - - - - - - - - -
         laplace_plane = False
 
+        #- - - - - - - - - - - -
         # For each wobble...
+        #- - - - - - - - - - - -
         start = NELEMENTS - NWOBBLES
         for k in range(self.nwobbles):
             start += NWOBBLES
 
+            #- - - - - - - - - - -
             # 2-D librations
+            #- - - - - - - - - - -
             if self.wobbles[k] in ('e2d', 'i2d'):
                 if self.wobbles[k] == 'e2d':
                     amp = e
@@ -487,7 +493,9 @@ class Kepler(Path, Fittable):
                         di_delem = damp2_delem
                         dnode_delem = dangle2_delem
 
+            #- - - - - - - - - - - - - - -
             # Single-element librations
+            #- - - - - - - - - - - - - - -
             elif self.wobbles[k] in ('mean', 'peri', 'node', 'a', 'e', 'i'):
 
                 arg = self.phase0[k] + t * self.dphase_dt[k]
@@ -539,7 +547,9 @@ class Kepler(Path, Fittable):
                     if partials:
                         di_delem += dw_delem
 
+            #- - - - - - - - - - - - 
             # Laplace plane case
+            #- - - - - - - - - - - - 
             else:
                 arg = self.phase0[k] + t * self.dphase_dt[k]
                 sin_arg = np.sin(arg)
@@ -558,12 +568,16 @@ class Kepler(Path, Fittable):
         cos_i = np.cos(i)
         sin_i = np.sin(i)
 
+        #- - - - - - - - - - - -
         # Time-derivatives...
+        #- - - - - - - - - - - -
         dae_dt = a * de_dt + da_dt * e
         dcosi_dt = -sin_i * di_dt
         dsini_dt =  cos_i * di_dt
 
+        #- - - - - - - - - - - -
         # Partials...
+        #- - - - - - - - - - - -
         if partials:
             dae_delem = np.zeros(partials_shape)
             dae_delem[..., SEMIM] = e
@@ -586,7 +600,9 @@ class Kepler(Path, Fittable):
         r     = a - ae * cos_mp
         theta = mean + 2. * e * sin_mp
 
+        #- - - - - - - - - - -
         # Time-derivatives...
+        #- - - - - - - - - - -
         dmp_dt = dmean_dt - dperi_dt
         dcosmp_dt = -sin_mp * dmp_dt
         dsinmp_dt =  cos_mp * dmp_dt
@@ -594,7 +610,9 @@ class Kepler(Path, Fittable):
         dr_dt = da_dt - ae * dcosmp_dt - dae_dt * cos_mp
         dtheta_dt = dmean_dt + 2. * (e * dsinmp_dt + de_dt * sin_mp)
 
+        #- - - - - - - -
         # Partials...
+        #- - - - - - - -
         if partials:
             dmp_delem = dmean_delem - dperi_delem
             dcosmp_delem = -sin_mp[...,np.newaxis] * dmp_delem
@@ -624,7 +642,9 @@ class Kepler(Path, Fittable):
 
         asc = r[...,np.newaxis] * unit1
 
+        #- - - - - - - - - - -
         # Time-derivatives...
+        #- - - - - - - - - - -
         dtn_dt = dtheta_dt - dnode_dt
         dcostn_dt = -sin_tn * dtn_dt
         dsintn_dt =  cos_tn * dtn_dt
@@ -636,7 +656,9 @@ class Kepler(Path, Fittable):
 
         dasc_dt = dr_dt[...,np.newaxis] * unit1 + r[...,np.newaxis] * dunit1_dt
 
+        #- - - - - - - 
         # Partials...
+        #- - - - - - - 
         if partials:
             dtn_delem = dtheta_delem - dnode_delem
             dcostn_delem = -sin_tn[...,np.newaxis] * dtn_delem
@@ -671,7 +693,9 @@ class Kepler(Path, Fittable):
 
         xyz = np.sum(rotate[...,:,:] * asc[...,np.newaxis,:], axis=-1)
 
+        #- - - - - - - - - - -
         # Time-derivatives...
+        #- - - - - - - - - - -
         dcosnode_dt = -sin_node * dnode_dt
         dsinnode_dt =  cos_node * dnode_dt
 
@@ -684,7 +708,9 @@ class Kepler(Path, Fittable):
         dxyz_dt = (np.sum(rotate * dasc_dt[...,np.newaxis,:], axis=-1) +
                    np.sum(drotate_dt * asc[...,np.newaxis,:], axis=-1))
 
+        #- - - - - - - - -
         # Partials...
+        #- - - - - - - - -
         if partials:
             dcosnode_delem = -sin_node[...,np.newaxis] * dnode_delem
             dsinnode_delem =  cos_node[...,np.newaxis] * dnode_delem
@@ -974,7 +1000,9 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
     errors = np.zeros(np.shape(t) + (3,kep.nparams))
     for e in range(kep.nparams):
 
+        #- - - - - - - - - - - - -
         # Tweak one parameter
+        #- - - - - - - - - - - - -
         hi = params.copy()
         lo = params.copy()
 
@@ -990,7 +1018,9 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
         khi.set_params(hi)
         klo.set_params(lo)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Compare the change with that derived from the partial derivative
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         xyz_hi = khi.xyz_planet(t, partials=False)[0].vals
         xyz_lo = klo.xyz_planet(t, partials=False)[0].vals
         hi_lo_diff = xyz_hi - xyz_lo
@@ -1042,7 +1072,9 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     errors = np.zeros(np.shape(t) + (3,kep.nparams))
     for e in range(kep.nparams):
 
+        #- - - - - - - - - - - -
         # Tweak one parameter
+        #- - - - - - - - - - - -
         hi = params.copy()
         lo = params.copy()
 
@@ -1058,7 +1090,9 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
         khi.set_params(hi)
         klo.set_params(lo)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Compare the change with that derived from the partial derivative
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         xyz_hi = khi.event_at_time(t, partials=False).pos.vals
         xyz_lo = klo.event_at_time(t, partials=False).pos.vals
         hi_lo_diff = xyz_hi - xyz_lo

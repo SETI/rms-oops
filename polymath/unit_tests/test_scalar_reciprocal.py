@@ -19,7 +19,7 @@ class Test_Scalar_reciprocal(unittest.TestCase):
   def runTest(self):
 
     #-----------------------
-    # Individual values
+    # Individual values     
     #-----------------------
     self.assertEqual(Scalar(1.).reciprocal(), 1.)
     self.assertEqual(type(Scalar(1.).reciprocal()), Scalar)
@@ -30,12 +30,12 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertEqual(type(Scalar(0.).reciprocal()), Scalar)
 
     #---------------------
-    # Multiple values
+    # Multiple values      
     #---------------------
     self.assertEqual(Scalar((-1,1)).reciprocal(), (-1,1))
 
     #------------
-    # Arrays
+    # Arrays     
     #------------
     N = 1000
     x = Scalar(np.random.randn(N))
@@ -49,7 +49,7 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertTrue(np.sum(x.reciprocal().mask) > 0)
 
     #----------------------
-    # Test valid units
+    # Test valid units       
     #----------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
@@ -68,7 +68,7 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertTrue(random.reciprocal().units is None)
 
     #-------------
-    # Masks
+    # Masks      
     #-------------
     N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -76,14 +76,14 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     x.values[zero_mask] = 0.
     self.assertTrue(np.sum(x.mask) > 0)
     self.assertTrue(np.sum(zero_mask) > 0)
-
+    
     y = x.reciprocal()
     self.assertTrue(np.all(y.mask[x.mask]))
     self.assertTrue(np.all(y.mask[zero_mask]))
     self.assertTrue(not np.any(y.mask[~zero_mask & ~x.mask]))
 
     #-----------------
-    # Derivatives
+    # Derivatives         
     #-----------------
     N = 1000
     x = Scalar(np.random.randn(N))
@@ -126,7 +126,7 @@ class Test_Scalar_reciprocal(unittest.TestCase):
                                            deriv, delta = DEL * abs(deriv))
 
     #------------------------------------------------
-    # Derivatives should be removed if necessary
+    # Derivatives should be removed if necessary      
     #------------------------------------------------
     self.assertEqual(x.reciprocal(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
@@ -135,7 +135,7 @@ class Test_Scalar_reciprocal(unittest.TestCase):
     self.assertFalse(hasattr(x.reciprocal(recursive=False), 'd_dvec'))
 
     #----------------------------------------------
-    # Read-only status should NOT be preserved
+    # Read-only status should NOT be preserved       
     #----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))

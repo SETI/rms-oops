@@ -174,7 +174,7 @@ class Test_Cmatrix(unittest.TestCase):
         from oops.path_.spicepath import SpicePath
         from oops.event import Event
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-
+        
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
@@ -285,7 +285,7 @@ if __name__ == '__main__':
 #            the value of the TWIST_ANGLE_TYPE element. If unspecified,
 #            TWIST_ANGLE_TYPE = GALILEO for Galileo data and
 #      TWIST_ANGLE_TYPE = DEFAULT for all other data.
-#
+#       
 #      Note: This element bears a simple relationship to the value of
 #            CELESTIAL_NORTH_CLOCK_ANGLE.
 #            When TWIST_ANGLE_TYPE = DEFAULT,
@@ -293,7 +293,7 @@ if __name__ == '__main__':
 #            when TWIST_ANGLE_TYPE = GALILEO,
 #                 TWIST_ANGLE = (270 - CELESTIAL_NORTH_CLOCK_ANGLE) mod 360."
 # END_OBJECT = ELEMENT_DEFINITION
-# END
+# END 
 # OBJECT = ELEMENT_DEFINITION
 #   NAME = TWIST_ANGLE_TYPE
 #   STATUS_TYPE = APPROVED
@@ -307,7 +307,7 @@ if __name__ == '__main__':
 #      pointing of an image or scan platform. Allowed values are DEFAULT and
 #      GALILEO. If unspecified, the value is GALILEO for Galileo data and
 #      DEFAULT for all other data.
-#
+#       
 #      The three elements RIGHT_ASCENSION,
 #      DECLINATION and TWIST_ANGLE define the C-matrix, which transforms a
 #      3-vector in celestial coordinates into a frame fixed to an image plane.
@@ -318,17 +318,17 @@ if __name__ == '__main__':
 #      points right, the y-axis points down, and the z-axis points along the
 #      camera's optic axis, when an image is displayed as defined by the
 #      SAMPLE_DISPLAY_DIRECTION and LINE_DISPLAY_DIRECTION elements.
-#
+#       
 #      For TWIST_ANGLE_TYPE = DEFAULT, the C-matrix is equal to
 #        C-matrix = [T]3 [90-D]1 [R+90]3
-#
+#       
 #       = |-sinR cosT-cosR sinD sinT  cosR cosT-sinR sinD sinT  cosD sinT|
 #         | sinR sinT-cosR sinD cosT -cosR sinT-sinR sinD cosT  cosD cosT|
 #         |        cosR cosD                 sinR cosD             sinD  |
-#
+#       
 #      For TWIST_ANGLE_TYPE = GALILEO, the C-matrix is defined by
 #...
-#
+#       
 #      Here the notation [X]n specifies a rotation about the nth axis by
 #      angle X (in degrees). R refers to right ascension, D to declination,
 #      and T to twist angle."

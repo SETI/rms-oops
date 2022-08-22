@@ -103,7 +103,7 @@ class Spheroid(Surface):
         self.exclusion = exclusion * self.rpol
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # coords_from_vector3
@@ -142,7 +142,7 @@ class Spheroid(Surface):
             return (lon, lat, r - self.req)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # vector3_from_coords
@@ -188,7 +188,7 @@ class Spheroid(Surface):
         return Vector3.from_scalars(x,y,z)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # intercept
@@ -253,7 +253,7 @@ class Spheroid(Surface):
         return (pos, t)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # normal
@@ -277,7 +277,7 @@ class Spheroid(Surface):
         return pos.element_mul(self.unsquash_sq)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # intercept_with_normal
@@ -303,7 +303,7 @@ class Spheroid(Surface):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that
+                        that 
                             pos = intercept + p * normal(intercept).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -311,7 +311,7 @@ class Spheroid(Surface):
         return normal.element_mul(self.squash).unit().element_mul(self.radii)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # intercept_normal_to
@@ -336,7 +336,7 @@ class Spheroid(Surface):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that
+                        that 
                             intercept = pos + p * normal(intercept).
 
                         If groundtrack is True, the associated point on the
@@ -431,7 +431,7 @@ class Spheroid(Surface):
         cept = pos.element_div(denom)
 
         if derivs:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # First, we need dp/dpos
             #
             # pos_x**2 / (1 + p)**2 +
@@ -466,10 +466,12 @@ class Spheroid(Surface):
             # dp/dpos_x * denom1 = pos_x  / (1+p)**2
             # dp/dpos_y * denom1 = pos_y  / (1+p)**2
             # dp/dpos_z * denom1 = pos_z  * C2 / (1 + C2 p)**2
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             stretch = self.unsquash_sq.element_div(denom.element_mul(denom))
             dp_dpos = pos.element_mul(stretch) / df_dp_div_neg2
             dp_dpos = dp_dpos.swap_items([Scalar])
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Now we can proceed with dcept/dpos
             #
             # cept + perp(cept) * p = pos
@@ -479,6 +481,7 @@ class Spheroid(Surface):
             # (I + p dperp/dcept) dcept/dpos = I - perp(cept) dp/dpos
             #
             # dcept/dpos = (I + p dperp/dcept)**(-1) * (I - perp dp/dpos)
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             cept_with_derivs = cept.with_deriv('cept', Vector3.IDENTITY)
             perp = self.normal(cept_with_derivs, derivs=True)
 
@@ -501,7 +504,7 @@ class Spheroid(Surface):
             return (cept, p)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # _apply_exclusion
@@ -548,7 +551,7 @@ class Spheroid(Surface):
             return pos * Scalar(factor, mask)
     #===========================================================================
 
-
+    
 
     ############################################################################
     # Longitude conversions
@@ -575,7 +578,7 @@ class Spheroid(Surface):
         return Scalar.as_scalar(lon, derivs)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # lon_from_centric
@@ -598,7 +601,7 @@ class Spheroid(Surface):
         return Scalar.as_scalar(lon, derivs)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # lon_to_graphic
@@ -621,7 +624,7 @@ class Spheroid(Surface):
         return Scalar.as_scalar(lon, derivs)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # lon_from_graphic
@@ -644,7 +647,7 @@ class Spheroid(Surface):
         return Scalar.as_scalar(lon, derivs)
     #===========================================================================
 
-
+    
 
     ############################################################################
     # Latitude conversions
@@ -670,7 +673,7 @@ class Spheroid(Surface):
         return (lat.tan(derivs) * self.squash_z).arctan()
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # lat_from_centric
@@ -692,7 +695,7 @@ class Spheroid(Surface):
         return (lat.tan(derivs) * self.unsquash_z).arctan()
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # lat_to_graphic
@@ -714,7 +717,7 @@ class Spheroid(Surface):
         return (lat.tan(derivs) * self.unsquash_z).arctan()
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # lat_from_graphic
@@ -736,7 +739,7 @@ class Spheroid(Surface):
         return (lat.tan(derivs) * self.squash_z).arctan()
     #===========================================================================
 
-
+    
 
 #*******************************************************************************
 
@@ -949,7 +952,7 @@ class Test_Spheroid(unittest.TestCase):
         Frame.reset_registry()
     #===========================================================================
 
-
+    
 #*******************************************************************************
 
 

@@ -170,7 +170,7 @@ class Gravity(object):
     ###################################
     # Useful alternative names...
     ###################################
-
+    
     #===========================================================================
     # n
     #===========================================================================
@@ -235,7 +235,7 @@ class Gravity(object):
     def d_dmean_dt_da(self, a):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Returns the radial derivative of the mean motion at semimajor axis a.
+        Returns the radial derivative of the mean motion at semimajor axis a. 
         Identical to domega_da(a).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

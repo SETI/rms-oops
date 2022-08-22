@@ -37,7 +37,7 @@ class Test_Scalar_max(unittest.TestCase):
   def runTest(self):
 
     #-----------------------
-    # Individual values
+    # Individual values     
     #-----------------------
     self.assertEqual(Scalar(0.3).max(), 0.3)
     self.assertEqual(type(Scalar(0.3).max()), float)
@@ -49,7 +49,7 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertEqual(type(Scalar(4, mask=True).max()), Scalar)
 
     #--------------------
-    # Multiple values
+    # Multiple values     
     #--------------------
     self.assertTrue(Scalar((1,2,3)).max() == 3)
     self.assertEqual(type(Scalar((1,2,3)).max()), int)
@@ -62,7 +62,7 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertTrue(Scalar((1,2,3)).argmax() == 2)
 
     #-------------
-    # Arrays
+    # Arrays      
     #-------------
     N = 400
     x = Scalar(np.random.randn(N).reshape((2,4,5,10)))
@@ -72,7 +72,7 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertEqual(x.flatten()[argmax], x.max())
 
     #------------------
-    # Test units
+    # Test units           
     #------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
@@ -87,7 +87,7 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertEqual(type(random.max()), float)
 
     #------------
-    # Masks
+    # Masks     
     #------------
     N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -103,7 +103,7 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertEqual(x[argmax], x.max())
 
     #-----------------------------------------------------------------
-    # If we mask the maximum value(s), the maximum should decrease
+    # If we mask the maximum value(s), the maximum should decrease        
     #-----------------------------------------------------------------
     x = x.mask_where_eq(maxval)
     self.assertTrue(x.max() < maxval)
@@ -119,13 +119,13 @@ class Test_Scalar_max(unittest.TestCase):
     self.assertEqual(x[argmax], x.max())
 
     #-------------------
-    # Denominators
+    # Denominators    
     #-------------------
     a = Scalar([1.,2.], drank=1)
     self.assertRaises(ValueError, a.max)
 
     #---------------------
-    # Maxes over axes
+    # Maxes over axes      
     #---------------------
     x = -Scalar(np.arange(30).reshape(2,3,5))
     m0 = x.max(axis=0)
@@ -151,7 +151,7 @@ class Test_Scalar_max(unittest.TestCase):
         self.assertEqual(x[argmax[j,k],j,k], m0[j,k])
 
     #----------------------
-    # Maxes with masks
+    # Maxes with masks       
     #----------------------
     values = -np.arange(30).reshape(2,3,5)
     mask = (values > -5)

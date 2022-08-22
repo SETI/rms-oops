@@ -22,7 +22,7 @@ class Test_Matrix_misc(unittest.TestCase):
         b = Vector((0,1,-1))
 
         #--------------------
-        # Outer multiply
+        # Outer multiply          
         #--------------------
         ab = a.outer(b)
 
@@ -56,7 +56,7 @@ class Test_Matrix_misc(unittest.TestCase):
         self.assertEqual(j*m, Matrix([(-3,-2,-1),(2,4,0),(4,4,1)]))
 
         #------------------------
-        # 3x3 Matrix inverse
+        # 3x3 Matrix inverse  
         #------------------------
         test = Matrix(np.random.rand(200,3,3))
         inverse = test.inverse()

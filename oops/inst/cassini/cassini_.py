@@ -118,8 +118,9 @@ class Cassini(object):
 
         spk = spk.upper()
         if spk == 'NONE':
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             # This means no SPK will ever be loaded; handling is manual
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             Cassini.initialize_kernels([], Cassini.SPK_LIST)
             Cassini.SPK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
         else:
@@ -131,8 +132,9 @@ class Cassini(object):
 
         ck = ck.upper()
         if ck == 'NONE':
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             # This means no CK will ever be loaded; handling is manual
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             Cassini.initialize_kernels([], Cassini.CK_LIST)
             Cassini.CK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
         else:
@@ -299,7 +301,9 @@ class Cassini(object):
 
         for kernel in kernels:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Find the range of months applicable, extended by 12 hours
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             t0 = cspyce.str2et(kernel.start_time) - Cassini.SLOP
             t1 = cspyce.str2et(kernel.stop_time)  + Cassini.SLOP
 
@@ -309,7 +313,9 @@ class Cassini(object):
             m1 = max(m1, 0)     # ignore time limits outside mission duration
             m2 = min(m2, Cassini.MONTHS - 1)
 
+            #- - - - - - - - - - - - - - - - - - - -
             # Add this kernel to each month's list
+            #- - - - - - - - - - - - - - - - - - - -
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
     #===========================================================================

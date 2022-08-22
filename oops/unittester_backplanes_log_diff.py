@@ -3,7 +3,7 @@
 # Usage:
 #   python unittester_backplanes_log_diff.py old_log new_log [--verbose]
 # where:
-#   old_log and new_log are logs from runs of unittester_backplanes.py, e.g.,
+#   old_log and new_log are logs from runs of unittester_backplanes.py, e.g., 
 #       backplane-unittest-results-2019-07-21/unittest-log-2019-07-21.txt
 #
 # For each numeric entry in the new log file that differs from that in the old

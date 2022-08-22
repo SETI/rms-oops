@@ -207,7 +207,7 @@ class GraphicEllipsoid(Surface):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that
+                        that 
                             pos = intercept + p * normal(intercept).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -240,7 +240,7 @@ class GraphicEllipsoid(Surface):
 
                         If guess is not None, then it instead returns a tuple
                         (intercepts, p), where p is the converged solution such
-                        that
+                        that 
                             intercept = pos + p * normal(intercept).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -548,10 +548,12 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         # Intercept derivatives
         #--------------------------
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Lines of sight with grazing incidence can have large numerical errors,
         # but this is not to be considered an error in the analytic calculation.
         # As a unit test, we ignore the largest 3% of the errors, but require
         # that the rest of the errors be very small.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
         los = -np.random.rand(NPTS,3)                   # range is -1 to 0

@@ -84,7 +84,9 @@ def query(sql_string):
         columns = []
         for item in row:
 
+            #- - - - - - - - - - - - - - - - - - - - - -
             # convert items to Python type if necessary
+            #- - - - - - - - - - - - - - - - - - - - - -
             if type(item) == type(0):               # Item is an integer
                 value = item
 
@@ -100,7 +102,7 @@ def query(sql_string):
             else:
                 value = item
 
-            columns.append(value)
+            columns.append(value) 
 
         table.append(columns)
 

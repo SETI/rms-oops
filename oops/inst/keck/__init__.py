@@ -252,7 +252,7 @@ class Keck(object):
         decoff = keck_file[0].header["DECOFF"]
         ra -= raoff
         dec -= decoff
-
+        
         cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
                                                  frame_id + "_CMATRIX")
 
@@ -268,7 +268,7 @@ class Keck(object):
                         fov = fov,
                         frame = frame,
                         path_id = "EARTH",
-                        frame_id = frame_id,
+                        frame_id = frame_id,                        
                         data = self.data_array(keck_file, **parameters),
                         target = self.target_body(keck_file),
                         telescope = self.telescope_name(keck_file),

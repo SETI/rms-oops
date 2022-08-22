@@ -39,12 +39,12 @@ def from_file(filespec, **parameters):
     hst_file = pyfits.open(filespec)
 
     #-----------------------------------------
-    # Make an instance of the NICMOS class
+    # Make an instance of the NICMOS class        
     #-----------------------------------------
     this = WFPC2()
 
     #---------------------------------------
-    # Confirm that the telescope is HST
+    # Confirm that the telescope is HST     
     #---------------------------------------
     if this.telescope_name(hst_file) != "HST":
         raise IOError("not an HST file: " + this.filespec(hst_file))
@@ -198,17 +198,17 @@ class WFPC2(HST):
                              mask_option + "'")
 
         #-----------------------------------------
-        # Get the full path to the image file
+        # Get the full path to the image file    
         #-----------------------------------------
         data_filespec = self.filespec(hst_file)
 
         #-----------------------------
-        # Extract the extension
+        # Extract the extension               
         #-----------------------------
         (head,tail) = os.path.splitext(data_filespec)
 
         #-----------------------------------------
-        # Attempt to define the mask filespec
+        # Attempt to define the mask filespec    
         #-----------------------------------------
         data_tag = head[-3:-1]
         try:
@@ -221,7 +221,7 @@ class WFPC2(HST):
                               data_filespec)
 
         #-----------------------------------------
-        # Attempt to load and return the mask
+        # Attempt to load and return the mask    
         #-----------------------------------------
         mask_filespec = head[:-3] + mask_tag + head[-1] + tail
         try:
@@ -282,7 +282,9 @@ class WFPC2(HST):
             IDC_DICT = self.load_idc_dict(hst_file, ("FILTER1",
                                                      "FILTER2", "DETCHIP"))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # The IDC_DICT parameters for WFPC2 need to be re-scaled!
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             for entry in IDC_DICT.keys():
                 dict = IDC_DICT[entry]
                 scale = dict["SCALE"]
@@ -307,7 +309,7 @@ class WFPC2(HST):
         fov = super(WFPC2,self).construct_fov(IDC_DICT[idc_key], hst_file)
 
         #----------------------
-        # Handle AREA mode
+        # Handle AREA mode             
         #----------------------
         if hst_file[0].header["MODE"] == "AREA":
             fov = oops.fov.Subsampled(fov, 2)
@@ -360,10 +362,10 @@ class WFPC2(HST):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Returns a factor that converts a pixel value to DN per second.
-
+        
         Input:
-            hst_file        the object returned by pyfits.open()
-
+            hst_file        the object returned by pyfits.open()            
+        
         Return              the factor to multiply a pixel value by to get DN/sec
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -382,26 +382,36 @@ class Frame(object):
         #----------------------------------------------------------------------
         if id not in WAYFRAME_REG:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Fill in the ancestry
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             reference = Frame.as_primary_frame(self.reference)
             self.ancestry = [reference] + reference.ancestry
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Register the Wayframe
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             wayframe = Wayframe(id, self.origin, self.shape)
             self.wayframe = wayframe
             WAYFRAME_REG[id] = wayframe
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Cache the frame under two keys
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             self.keys = {wayframe, (wayframe, self.reference)}
             for key in self.keys:
                 FRAME_CACHE[key] = self
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Cache the wayframe
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             wayframe.keys = {(wayframe, wayframe)}
             for key in wayframe.keys:
                 FRAME_CACHE[key] = wayframe
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Also define the frame with respect to J2000
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.reference == Frame.J2000:
                 self.wrt_j2000 = self
             else:
@@ -418,7 +428,9 @@ class Frame(object):
             if not hasattr(self, 'wayframe') or self.wayframe is None:
                 self.wayframe = WAYFRAME_REG[id]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Cache (self.wayframe, self.reference); overwrite if necessary
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             key = (self.wayframe, self.reference)
             if key in FRAME_CACHE:          # remove an old version
                 FRAME_CACHE[key].keys -= {key}
@@ -598,8 +610,9 @@ class Frame(object):
         try:
             target = Frame.FRAME_CACHE[self.wayframe]
         except KeyError:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             # On failure, link from the reference frame
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             return LinkedFrame(self, self.reference.wrt(reference))
 
         #----------------------------------------------------------------------
@@ -608,8 +621,9 @@ class Frame(object):
         try:
             reference = Frame.FRAME_CACHE[reference.wayframe]
         except KeyError:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             # On failure, link through the reference's reference
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             return RelativeFrame(target.wrt(reference.reference),
                                  reference)
 
@@ -736,11 +750,15 @@ class Frame(object):
         #----------------------------------------------------------------------
         for quickframe in self.quickframes:
 
+            #- - - - - - - - - - - - - - - - - - - - 
             # If there's no overlap, skip it
+            #- - - - - - - - - - - - - - - - - - - - 
             if (quickframe.t0 > tmax + dt) or (quickframe.t1 < tmin - dt):
                 continue
 
+            #- - - - - - - - - - - - - - - - - - - - 
             # Otherwise, check the effort involved
+            #- - - - - - - - - - - - - - - - - - - - 
             duration = (max(tmax, quickframe.t1) - min(tmin, quickframe.t0))
             steps = int(duration // dt) - quickframe.steps
 
@@ -1395,7 +1413,9 @@ class QuickFrame(Frame):
         elif time_diff < collapse_threshold:
             frac = (tflat.vals - tflat_min) / time_diff
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create a time scalar just containing the end points
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             tflat2 = Scalar([tflat_min, tflat_max])
 
             quat = np.empty((2,4))
@@ -1540,9 +1560,10 @@ class QuickFrame(Frame):
         omega  = np.zeros(list(tflat.shape) + [3])
 
         if time_diff < collapse_threshold:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If all time values are basically the same, we only need to do
             # linear interpolation.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             tflat_diff = tflat.vals - tflat_min
             tflat2 = Scalar([tflat_min, tflat_max])
             matrix00 = self.matrix_splines[0,0](tflat2.vals)
@@ -1555,7 +1576,7 @@ class QuickFrame(Frame):
                 omega0 = self.omega_splines[0](tflat2.vals)
                 omega1 = self.omega_splines[1](tflat2.vals)
                 omega2 = self.omega_splines[2](tflat2.vals)
-
+        
             if time_diff == 0.:
                 matrix[...,0,0] = matrix00[0]
                 matrix[...,0,1] = matrix01[0]
@@ -1589,8 +1610,9 @@ class QuickFrame(Frame):
                                     tflat_diff + omega2[0])
 
         else:
-
+            #- - - - - - - - - - - - - - - - - - - - - -   
             # Evaluate the matrix and rotation vector
+            #- - - - - - - - - - - - - - - - - - - - - -   
             matrix[...,0,0] = self.matrix_splines[0,0](tflat.vals)
             matrix[...,0,1] = self.matrix_splines[0,1](tflat.vals)
             matrix[...,0,2] = self.matrix_splines[0,2](tflat.vals)

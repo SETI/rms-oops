@@ -227,23 +227,31 @@ class Ellipse(Shape2D, Conic):
         # Apply a shift, rotation, and scaling in that order
         #-------------------------------------------------------
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Shift so that the center point (x0,y0) lands at the origin
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         (x0,y0) = self.pt0.to_scalars()
         shift = Affine(1., 0., -x0,
                        0., 1., -y0)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Long axis vector is dpt. Rotate to place dpt on the x-axis
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         (dx,dy) = self.dpt.unit().to_scalars()
         rotate = Affine( dx, dy, 0.,
                         -dy, dx, 0.)
 
+        #- - - - - - - - - - - - - - - -
         # Radii are (self.r, self.rb
+        #- - - - - - - - - - - - - - - -
         r_inv = 1. / self.r
         rb_inv = 1. / self.rb
         scale = Affine(r_inv,  r_inv, 0.,
                        rb_inv, rb_inv,  0.)
 
+        #- - - - - - - - - - - - - - - - - - - - 
         # Construct the transform and return
+        #- - - - - - - - - - - - - - - - - - - - 
         return scale * rotate * shift
     #===========================================================================
 
@@ -264,7 +272,7 @@ class Ellipse(Shape2D, Conic):
         #-----------------------------------------------
         # Apply a shift and rotation in that order
         #-----------------------------------------------
-
+        
         #--------------------------------------------------------------
         # Shift so that the center point (x0,y0) lands at the origin
         #--------------------------------------------------------------
@@ -503,11 +511,14 @@ class Ellipse(Shape2D, Conic):
         #-------------------------------
         if type(arg) in (Point, Pair):
 
+            #- - - - - - - - - - - - - - - - - - - - - 
             # Transform to the centered unit circle
+            #- - - - - - - - - - - - - - - - - - - - - 
             affine = self._affine_to_centered_unit_circle()
             pt = affine.apply(arg)
             (px,py) = pt.to_scalars()
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # ept = (x,y) is a point on the transformed ellipse.
             #
             # The local tangent is (-y,x).
@@ -537,6 +548,7 @@ class Ellipse(Shape2D, Conic):
             #   p2 = px^2 + Q^2 py^2 - (1-Q)^2
             #   p1 = -2 Q (1-Q) py
             #   p0 = -Q^2 py^2
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             Q = self.ratio_sq
             one_minus_Q = 1. - Q
             one_minus_Q_sq = one_minus_Q**2
@@ -556,6 +568,7 @@ class Ellipse(Shape2D, Conic):
             y0 = roots.mask_where(root.abs() > 1.)
             x0 = (one_minus_Q * y + Q_py) / px
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # The above procedure fails if px = 0, so we also need to try the
             # alternative method by eliminating y first.
             #   (Q-1) x y - Q py x + px y = 0
@@ -574,6 +587,7 @@ class Ellipse(Shape2D, Conic):
             #   p2 = (Q py)^2 + px^2 - (1-Q)^2
             #   p1 = -2 (1-Q) px
             #   p0 = -px^2
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
             px_term = 2. * one_minus_Q * px
 
@@ -594,7 +608,9 @@ class Ellipse(Shape2D, Conic):
             self_pts = [affine.undo(cpt) for cpt in circle_pts]
             points = 8*[arg]
 
+            #- - - - - - - - - - - - - - - - - - - 
             # Also check endpoints of Arcs
+            #- - - - - - - - - - - - - - - - - - - 
             if type(self).__name__ == 'Arc':
                 self_pts += [self.end0, self.end1]
                 points   += 2*[arg]
@@ -607,17 +623,22 @@ class Ellipse(Shape2D, Conic):
         if isinstance(self, Line):
             line = arg
 
+            #- - - - - - - - - - - -  
             # Find intersections
+            #- - - - - - - - - - - -  
             (s0, s1) = self._line_intersection_params(line)
             self_pts = [line.point_at(s0), line.point_at(s1)]
             line_pts = list(self_pts)   # a copy
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -  
             # Transform line to centered unit circle coordinates
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -  
             affine = self._affine_to_centered_unit_circle()
             line_pt0 = affine.apply(line.pt0)
             line_pt1 = affine.apply(line.pt1)
             newline = type(line).__init__(line_pt0, line_pt1)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # The point on an ellipse closest to a line is the point where the
             # tangent and the line are parallel
             #
@@ -642,8 +663,11 @@ class Ellipse(Shape2D, Conic):
             #
             # x =  k * dy
             # y = -k * dx
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             # Two solutions exist: (cx,cy) and its negative
+            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             k = newline.r_inv
             (dx,dy) = newline.dpt.to_scalars()
             cx = -k*y
@@ -652,6 +676,7 @@ class Ellipse(Shape2D, Conic):
             ellipse_pt0 = affine.undo( circle_pt)
             ellipse_pt1 = affine.unto(-circle_pt)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # This is the point on the ellipse. Where is the point on the line?
             #   line(t) = pt0 + t * dpt
             #   pt0 = (x0,y0)
@@ -661,6 +686,7 @@ class Ellipse(Shape2D, Conic):
             #
             # t * (dx^2 + dy^2) + (x0-x)*dx + self.ratio_sq * (y0-y)*dy = 0
             # t = -((x0-x)*dx + self.ratio_sq * (y0-y)*dy) / (dx^2 + dy^2)
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             (x0,y0) = newline.pt0.to_scalars()
 
@@ -670,7 +696,9 @@ class Ellipse(Shape2D, Conic):
             self_pts += [ellipse_pt0,       ellipse_pt1      ]
             line_pts += [line.point_at(t0), line.point_at(t1)]
 
+            #- - - - - - - - - - - - - - - - - - - 
             # Also consider endpoints of line
+            #- - - - - - - - - - - - - - - - - - - 
             if type(line) in (HalfLine, Segment):
                 (self_pt, line_pt) = self.closest(line.pt0)
                 self_pts.append(self_pt)
@@ -681,14 +709,18 @@ class Ellipse(Shape2D, Conic):
                 self_pts.append(self_pt)
                 line_pts.append(line_pt)
 
+            #- - - - - - - - - - - - - - - - - 
             # Also check endpoints of Arcs
+            #- - - - - - - - - - - - - - - - - 
             if type(self).__name__ == 'Arc':
                 (line_pt0, self_pt0) = line._closest(self.end0)
                 (line_pt1, self_pt1) = line._closest(self.end1)
                 self_pts += [self_pt0, self_pt1]
                 line_pts += [line_pt0, line_pt1]
 
+            #- - - - - - - - - - - - - - - - - - - - - 
             # Select and return closest pairings
+            #- - - - - - - - - - - - - - - - - - - - - 
             return Shape2D._closest_of_pairings(self_pts, line_pts)
 
         #---------------------------------
@@ -697,15 +729,19 @@ class Ellipse(Shape2D, Conic):
         if isinstance(self, Ellipse):
             ellipse = arg
 
+            #- - - - - - - - - - - - 
             # Find intersections
+            #- - - - - - - - - - - - 
             (t0,t1,t2,t3) = self._conic_intersection_params(ellipse)
             self_pts = [self.point_at(t0), self.point_at(t1),
                         self.point_at(t2), self.point_at(t3)]
             ellipse_pts = list(self_pts)   # a copy
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Find ellipse parameters t and s that satisfy
             #   dot(e0(t).slope2d(), e0(t) - e1(s)) = 0
             # where e1(s) is the closest point on the second ellipse to e0(t)
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             e0 = type(self).__init__(self.pt0.wod, self.pt1.wod, self.ratio.wod)
             e0.fill_limits(self.tmin.wod, self.tmax.wod)
 
@@ -713,20 +749,26 @@ class Ellipse(Shape2D, Conic):
                                      ellipse.ratio.wod)
             e1.fill_limits(self.tmin.wod, self.tmax.wod)
 
+            #- - - - - - - - - - - 
             # Initial guess
+            #- - - - - - - - - - - 
             t = e0.param_at(e1.pt0)
             t.insert_deriv('t', 1.)     # insert self-derivative
 
+            #- - - - - - - - - - - - -  
             # Apply Newton's method
             # t' = t - f(t) / f'(t)
+            #- - - - - - - - - - - - -  
             for iter in range(ITERS):
                 ept = e0.point_at(t)
                 f = e0.slope2d(ept).dot(ept - e1.closest(ept))  # recursive call
                 t = t - f/f.d_dt
 
+            #- - - - - - - - - - - - - - - - 
             # Restore derivatives to t
             # df_dx = df_dt * dt_dx
             # dt_dx = df_dx / df_dt
+            #- - - - - - - - - - - - - - - - 
             df_dt = f.d_dt
             ept = self.point_at(t.wod)
             e1pt = ellipse.closest(ept)
@@ -742,7 +784,9 @@ class Ellipse(Shape2D, Conic):
             self_pts.append(self_pt)
             ellipse_pts.append(e1pt)
 
+            #- - - - - - - - - - - - - - - - -  
             # Also check endpoints of Arcs
+            #- - - - - - - - - - - - - - - - -  
             if type(self).__name__ == 'Arc':
                 (ellipse_pt0, self_pt0) = ellipse._closest(self.end0)
                 (ellipse_pt1, self_pt1) = ellipse._closest(self.end1)
@@ -755,7 +799,9 @@ class Ellipse(Shape2D, Conic):
                 self_pts    += [self_pt0,    self_pt1]
                 ellipse_pts += [ellipse_pt0, ellipse_pt1]
 
+            #- - - - - - - - - - - - - - - - - - - - 
             # Select and return closest pairings
+            #- - - - - - - - - - - - - - - - - - - - 
             return Shape2D._closest_of_pairings(self_pts, ellipse_pts)
 
         #---------------------------------------------------------------
@@ -1132,8 +1178,10 @@ class Ellipse(Shape2D, Conic):
             line = Line(affine.apply(arg.pt0), affine.apply(arg.pt1))
             closest = line.closest(Pair.ZEROS)[0]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Touches if line's closest point to origin is on unit circle and
             # circle is unmasked here
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             touches = (((closest.norm_sq() - 1.).abs() <= 2.*Shape2D.PREC) &
                         self.param_at(closest).antimask)
             if type(arg) == Line: return touches

@@ -554,7 +554,9 @@ def _sort_kernels(kernel_list):
         namekey = (kernel.kernel_name, kernel.kernel_version)
         timeless_by_name[namekey] = kernel.timeless
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Accumulate kernel names in load order and bodies per kernel name
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         if namekey in namekeys:
             i = namekeys.index(namekey)
             del namekeys[i]
@@ -683,24 +685,34 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
     filtered_kernels = []
     for id in body_dict:
 
+        #- - - - - - - - - - - - - - - 
         # Create an empty interval
+        #- - - - - - - - - - - - - - - 
         inter = interval.Interval(interval_start_tai, interval_stop_tai)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Insert the kernels for this body, beginning with the lowest priority
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         for kernel in body_dict[id]:
             kernel_start_tai = julian.tai_from_iso(kernel.start_time)
             kernel_stop_tai  = julian.tai_from_iso(kernel.stop_time)
 
             inter[(kernel_start_tai,kernel_stop_tai)] = kernel
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Retrieve the needed kernels in the proper order
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         interval_kernels = inter[(interval_start_tai, interval_stop_tai)]
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # A leading value of None means there is a gap in time coverage
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if interval_kernels[0] is None:
             interval_kernels = interval_kernels[1:]
 
+        #- - - - - - - - - - - - - - 
         # Add this set to the list
+        #- - - - - - - - - - - - - - 
         filtered_kernels += interval_kernels
 
     return _sort_kernels(filtered_kernels)
@@ -730,20 +742,28 @@ def _fileno_str(filenos):
 
     for k in filenos[1:]:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Don't write anything till we reach the end of a sequence
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if k == k_prev + 1:
             k_prev = k
             continue
 
+        #- - - - - - - - - - - - - - - - - - -
         # Separate single values by commas
+        #- - - - - - - - - - - - - - - - - - -
         if k_prev == k_written:
             strlist += [',']
 
+        #- - - - - - - - - - - - - - - - - - - -
         # Use a comma on a list of just two
+        #- - - - - - - - - - - - - - - - - - - -
         elif k_prev == k_written + 1:
             strlist += [',', str(k_prev), ',']
 
+        #- - - - - - - - - - - - - 
         # Otherwise, use a dash
+        #- - - - - - - - - - - - - 
         else:
             strlist += ['-', str(k_prev), ',']
 
@@ -1180,12 +1200,16 @@ def _query_by_filespec(filespecs, time=None):
 
     for filespec in filespecs:
 
+        #- - - - - - - - - - - -
         # Query the database
+        #- - - - - - - - - - - -
         sql_string = _sql_query_by_filespec(filespec, time)
 
         table = db.query(sql_string)
 
+        #- - - - - - - - - - - -- - - - - - - - - -
         # If we have nothing, raise an exception
+        #- - - - - - - - - - - -- - - - - - - - - -
         if len(table) == 0:
             if time is not None:        # Maybe it's just out of time range
                 sql_string = _sql_query_by_filespec(filespec)
@@ -1625,19 +1649,25 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
     kernel_list = []
     for id in ids:
 
+        #- - - - - - - - - - - - - - - - - - - -
         # Select the spacecraft clock kernels
+        #- - - - - - - - - - - - - - - - - - - -
         if "SCLK" in types:
             kernel_list += _query_kernels("SCLK", body=id,
                                           asof=asof, after=after, redo=redo,
                                           limit=True)
 
+        #- - - - - - - - - - - - - - - -
         # Select the frames kernels
+        #- - - - - - - - - - - - - - - -
         if "FK" in types:
             kernel_list += _query_kernels("FK", body=id,
                                           asof=asof, after=after, redo=redo,
                                           limit=False)
 
+        #- - - - - - - - - - - - - - - - - 
         # Select the instrument kernels
+        #- - - - - - - - - - - - - - - - - 
         if "IK" in types:
             if inst is None:
                 kernel_list += _query_kernels("IK", body=id,
@@ -1706,7 +1736,9 @@ def select_ck(ids, name=None, time=None, asof=None, after=None, redo=True):
     kernel_list = []
     for id in ids:
 
+        #- - - - - - - - - - - - -
         # Select the C kernels
+        #- - - - - - - - - - - - -
         kernel_list += _query_kernels("CK", name=name, time=time,
                                             body=id, asof=asof, after=after,
                                             limit=False)
@@ -1799,14 +1831,18 @@ def as_dict(kernel_list):
     clear_dict = True       # clear dictionary on the first pass
     for kernel in kernel_list:
 
+        #- - - - - - - - - - - - - - 
         # Check for a text kernel
+        #- - - - - - - - - - - - - - 
         ext = os.path.splitext(kernel.filespec)[1].lower()
         if ext[0:2] != ".t": continue
 
         filespec = os.path.join(spice_path, kernel.filespec)
         result = textkernel.from_file(filespec, clear=clear_dict)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - 
         # On later passes, don't clear the dictionary
+        #- - - - - - - - - - - - - - - - - - - - - - - - 
         clear_dict = False
 
     return result
@@ -1856,13 +1892,17 @@ def furnish_kernels(kernel_list, fast=True):
     #----------------------
     for kernel in kernel_list:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Add the full name to the end of the name list
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         name = kernel.full_name
         if name not in name_list:
             name_list.append(name)
             name_types[name] = kernel.kernel_type
 
+        #- - - - - - - - - - - - - - - - - -
         # Keep track of file_nos required
+        #- - - - - - - - - - - - - - - - - -
         if kernel.file_no is not None:
             if name not in fileno_dict:
                 fileno_dict[name] = []
@@ -1870,7 +1910,9 @@ def furnish_kernels(kernel_list, fast=True):
             if kernel.file_no not in fileno_dict[name]:
                 fileno_dict[name].append(kernel.file_no)
 
+        #- - - - - - - - - - - - - - - - - - - - -
         # Update the list of files to furnish
+        #- - - - - - - - - - - - - - - - - - - - -
         filepaths = kernel.filespec.split(',')
         abspaths = [os.path.join(spice_path, f) for f in filepaths]
         if TRANSLATOR:
@@ -1884,15 +1926,21 @@ def furnish_kernels(kernel_list, fast=True):
 
         for abspath in abspaths:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Remove the name from earlier in the list if necessary
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if abspath in abspath_list:
                 abspath_list.remove(abspath)
 
+            #- - - - - - - - - - - - - - -
             # Always add it at the end
+            #- - - - - - - - - - - - - - -
             abspath_list.append(abspath)
             abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
+            #- - - - - - - - - - - - - - - - - - - - - 
             # Save the info for each furnished file
+            #- - - - - - - - - - - - - - - - - - - - - 
             basename = os.path.basename(abspath)
             if basename in FURNISHED_INFO:
                 if kernel not in FURNISHED_INFO[basename]:
@@ -1910,21 +1958,29 @@ def furnish_kernels(kernel_list, fast=True):
         for abspath in abspath_list:
             furnished_list = FURNISHED_ABSPATHS[abspath_types[abspath]]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - 
             # In fast mode, avoid re-furnishing kernels
+            #- - - - - - - - - - - - - - - - - - - - - - - 
             already_furnished = (abspath in furnished_list)
             if fast and already_furnished:
                 continue
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Otherwise, unload the kernel if it was already furnished
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             if already_furnished:
                 furnished_list.remove(abspath)
                 cspyce.unload(abspath)
 
+            #- - - - - - - - - - 
             # Load the kernel
+            #- - - - - - - - - - 
             cspyce.furnsh(abspath)
             furnished_list.append(abspath)
 
+        #- - - - - - - - - - - - - - - - - -
         # Track the kernel names loaded
+        #- - - - - - - - - - - - - - - - - -
         for name in name_list:
             furnished_names = FURNISHED_NAMES[name_types[name]]
 
@@ -1941,7 +1997,9 @@ def furnish_kernels(kernel_list, fast=True):
         k = name_list.index(name)
         name_list[k] = name + _fileno_str(filenos)
 
+        #- - - - - - - - - - - - - - - - - - -
         # Track kernels loaded by file_no
+        #- - - - - - - - - - - - - - - - - - -
         if not DEBUG:
             if name not in FURNISHED_FILENOS:
                 FURNISHED_FILENOS[name] = []
@@ -2363,7 +2421,9 @@ def unload_by_name(names):
     for kernel in kernel_list:
         key = kernel.kernel_type
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Remove the kernel files from the dictionary and unload from SPICE
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         filespecs = kernel.filespec.split(',')
         abspaths = [os.path.join(spice_path, f) for f in filespecs]
         for abspath in abspaths:
@@ -2372,7 +2432,9 @@ def unload_by_name(names):
                 del FURNISHED_INFO[os.path.basename(abspath)]
                 cspyce.unload(abspath)
 
+        #- - - - - - - - - - - - - - - - - - -
         # Delete the file_no from the list
+        #- - - - - - - - - - - - - - - - - - -
         name = kernel.full_name
         if name in FURNISHED_FILENOS:
             fileno_list = FURNISHED_FILENOS[name]
@@ -2382,7 +2444,9 @@ def unload_by_name(names):
                 if len(fileno_list) == 0:
                     del FURNISHED_FILENOS[name]
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Delete the kernel name from the dictionaries if there a no other files
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if name not in FURNISHED_FILENOS:
             furnished_list = FURNISHED_NAMES[key]
             if name in furnished_list:
@@ -2420,16 +2484,22 @@ def unload_by_type(types=None):
     #------------------------------
     for key in types:
 
+        #- - - - - - - - - - - - - - - - 
         # Unload each file from SPICE
+        #- - - - - - - - - - - - - - - - 
         abspath_list = FURNISHED_ABSPATHS[key]
         for file in abspath_list:
             cspyce.unload(os.path.join(spice_path, file))
             del FURNISHED_INFO[os.path.basename(file)]
 
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         # Delete the file list from the dictionary
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         FURNISHED_ABSPATHS[key] = []
 
+        #- - - - - - - - - - - - - - - - - - - - -
         # Delete the file_no list if necessary
+        #- - - - - - - - - - - - - - - - - - - - -
         name_list = FURNISHED_NAMES[key]
         for name in name_list:
             if name in FURNISHED_FILENOS:
@@ -2493,14 +2563,18 @@ def as_names(kernels):
     #-------------------------------
     for kernel in kernels:
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Add the name to the end of the list, avoiding duplicates
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         name = kernel.full_name
         if name in name_list:
             name_list.remove(name)
 
         name_list.append(name)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # If the kernel has a file_no, accumulate a list
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         if kernel.file_no is None: continue
 
         if name not in fileno_dict:
@@ -2551,7 +2625,9 @@ def furnished_names(types=None):
     #-------------------------------
     for key in types:
 
+        #- - - - - - - - - -
         # Walk down list
+        #- - - - - - - - - -
         for name in FURNISHED_NAMES[key]:
             if name in FURNISHED_FILENOS:
                 name_list.append(name + _fileno_str(FURNISHED_FILENOS[name]))
@@ -2591,7 +2667,9 @@ def furnished_basenames(types=None):
     #-------------------------------
     for key in types:
 
+        #- - - - - - - - - -
         # Walk down list
+        #- - - - - - - - - -
         for filespec in FURNISHED_ABSPATHS[key]:
             basename = os.path.basename(filespec)
             name_list.append(basename)
@@ -2658,7 +2736,9 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
       if key == 'CK' and not ck_needed: continue
       if key == 'IK' and not inst: continue
 
+      #- - - - - - - - - - -
       # Walk down list
+      #- - - - - - - - - - -
       temp_list = []
       for filespec in FURNISHED_ABSPATHS[key]:
         basename = os.path.basename(filespec)

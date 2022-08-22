@@ -41,14 +41,14 @@ def from_file(filespec, label, fast_distortion=True,
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     #---------------------------------
-    # Get metadata
+    # Get metadata 
     #---------------------------------
     meta = Metadata(label)
-
+    
     #--------------------------------------------
     # Define everything the first time through
     #--------------------------------------------
-    IMG.initialize(meta.tstart)
+    IMG.initialize(meta.tstart)  
 
     #------------------------------------------------------------------
     # Load the data array as separate framelets, with associated labels
@@ -62,11 +62,11 @@ def from_file(filespec, label, fast_distortion=True,
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
 
-        item = (oops.obs.Snapshot(("v","u"),
+        item = (oops.obs.Snapshot(("v","u"), 
                                  fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                 "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame,
+                                 "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame, 
                                  instrument = "JIRAM_I",
-                                 filter = fmeta.filter,
+                                 filter = fmeta.filter, 
                                  data = framelets[:,:,i]))
 
 #        item.insert_subfield('spice_kernels', \
@@ -87,7 +87,7 @@ def from_file(filespec, label, fast_distortion=True,
 def _load_data(filespec, label, meta):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    Loads the data array from the file and splits into individual framelets.
+    Loads the data array from the file and splits into individual framelets. 
 
     Input:
         filespec        Full path to the data file.
@@ -95,14 +95,14 @@ def _load_data(filespec, label, meta):
         meta            Image Metadata object.
 
     Return:             (framelets, framelet_labels)
-        framelets       A Numpy array containing the individual frames in
+        framelets       A Numpy array containing the individual frames in 
                         axis order (line, sample, framelet #).
         framelet_labels List of labels for each framelet.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+    
     #----------------
-    # Read data
+    # Read data 
     #----------------
     # seems like this should be handled in a readpds-style function somewhere
     data = np.fromfile(filespec, dtype='<f4').reshape(meta.nlines,meta.nsamples)
@@ -116,7 +116,7 @@ def _load_data(filespec, label, meta):
     nf = len(filters)
     framelets = np.empty([meta.frlines,meta.nsamples,meta.nframelets])
     framelet_labels = []
-
+    
     for i in range(meta.nframelets):
         framelets[:,:,i] = data[meta.frlines*i:meta.frlines*(i+1),:]
 
@@ -133,15 +133,15 @@ def _load_data(filespec, label, meta):
         label['LINE_SAMPLES'] = meta.nsamples
 
         framelet_labels.append(framelet_label)
-
-
+        
+        
     return (framelets, framelet_labels)
 #===============================================================================
 
 
 
 #*******************************************************************************
-# Metadata
+# Metadata 
 #*******************************************************************************
 class Metadata(object):
 
@@ -156,13 +156,13 @@ class Metadata(object):
         Input:
             label           The label dictionary.
 
-        Attributes:
+        Attributes:         
             nlines          A Numpy array containing the data in axis order
                             (line, sample).
-            nsamples        The time sampling array in (line, sample) axis
-                            order, or None if no time backplane is found in
+            nsamples        The time sampling array in (line, sample) axis 
+                            order, or None if no time backplane is found in 
                             the file.
-            nframelets
+            nframelets         
 
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -182,9 +182,9 @@ class Metadata(object):
         self.exposure = 0
         try:
             self.exposure = label['EXPOSURE_DURATION']
-        except:
+        except: 
             print('No exposure information')
-            self.exposure = 1.      # This should go away after the labels are
+            self.exposure = 1.      # This should go away after the labels are 
                                     # redelivered
 
         #-------------
@@ -217,20 +217,26 @@ class Metadata(object):
         #----------------------------------------------
         if 'FRAMELET' in label.keys():
             frn = label['FRAMELET']['FRAME_NUMBER']
-
+            
+            #- - - - - - - - - - - - - - - - - - - - 
             # Filter
+            #- - - - - - - - - - - - - - - - - - - - 
             self.filter = label['FRAMELET']['FRAMELET_FILTER']
 
+            #- - - - - - - - - - - - - - - - - - - - 
             # Filter-specific instrument id
-            if self.filter == 'L_BAND':
+            #- - - - - - - - - - - - - - - - - - - - 
+            if self.filter == 'L_BAND': 
                 self.instc = -61411
                 self.filter_frame = 'LBAND'
-            if self.filter == 'M_BAND':
+            if self.filter == 'M_BAND': 
                 self.instc = -61412
                 self.filter_frame = 'MBAND'
             sinstc = str(self.instc)
 
+            #- - - - - - - 
             # FOV
+            #- - - - - - - 
             prefix = 'INS' + sinstc
             cross_angle = cspyce.gdpool(prefix + '_FOV_CROSS_ANGLE', 0)[0]
             fo = cspyce.gdpool(prefix + '_FOCAL_LENGTH', 0)[0]
@@ -238,7 +244,7 @@ class Metadata(object):
             cxy = cspyce.gdpool(prefix + '_CCD_CENTER', 0)
             scale = px/1000/fo
 
-            self.fov = oops.fov.FlatFOV(scale,
+            self.fov = oops.fov.FlatFOV(scale, 
                                         (self.nsamples, self.frlines), cxy)
 
         return
@@ -249,7 +255,7 @@ class Metadata(object):
 
 
 #*******************************************************************************
-# IMG
+# IMG 
 #*******************************************************************************
 class IMG(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -309,7 +315,7 @@ class IMG(object):
         #-----------------------------------
         JIRAM.create_frame(time, 'I_MBAND')
         JIRAM.create_frame(time, 'I_LBAND')
-
+        
 
         IMG.initialized = True
     #===========================================================================

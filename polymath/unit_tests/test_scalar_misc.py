@@ -19,7 +19,7 @@ class Test_Scalar_misc(unittest.TestCase):
   def runTest(self):
 
     #----------------------------
-    # Arithmetic operations
+    # Arithmetic operations     
     #----------------------------
     ints = Scalar((1,2,3))
     test = Scalar(np.array([1,2,3]))
@@ -67,7 +67,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(ValueError, ints.__mod__, Scalar((4,5)))
 
     #------------------
-    # Integer ops
+    # Integer ops          
     #------------------
     ints = Scalar((1,2,3))
     ints += 1
@@ -125,7 +125,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(TypeError, ints.__idiv__, Scalar((4,5)))
 
     #---------------
-    # Float ops
+    # Float ops     
     #---------------
     floats = Scalar((1.,2.,3.))
     floats += 1
@@ -182,7 +182,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(ValueError, floats.__ifloordiv__, Scalar((4,5)))
 
     #------------------------
-    # Generic operations
+    # Generic operations      
     #------------------------
     self.assertEqual(ints[0], 1)
 
@@ -231,7 +231,7 @@ class Test_Scalar_misc(unittest.TestCase):
                            [[5,12], [15,24]]])
 
     #-----------------
-    # Mask tests
+    # Mask tests          
     #-----------------
     test = Scalar(list(range(6)))
     self.assertEqual(str(test), "Scalar(0 1 2 3 4 5)")
@@ -311,7 +311,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertEqual(str(mvals), "[-- -- -- -- -- --]")
 
     #--------------------
-    # Test of units
+    # Test of units     
     #--------------------
     test = Scalar(list(range(6)))
     self.assertEqual(test, np.arange(6))

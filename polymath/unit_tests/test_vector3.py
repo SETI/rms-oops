@@ -19,17 +19,17 @@ class Test_Vector3(unittest.TestCase):
     def runTest(self):
 
         #--------------------------------------------
-        # arrays of wrong shape raise ValueError
+        # arrays of wrong shape raise ValueError          
         #--------------------------------------------
         self.assertRaises(ValueError, Vector3, np.random.randn(3,4,5))
         self.assertRaises(ValueError, Vector3, 1.)
 
         #------------------------------------
-        # automatic coercion of booleans
+        # automatic coercion of booleans          
         #------------------------------------
         self.assertEqual(Vector3([True,True,False]), (1.,1.,0.))
 
-        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
         # Most operations are inherited from Vector. These include:
         #     def to_scalar(self, axis, recursive=True)
         #     def to_scalars(self, recursive=True)
@@ -49,10 +49,10 @@ class Test_Vector3(unittest.TestCase):
         #     def element_mul(self, arg, recursive=True):
         #     def element_div(self, arg, recursive=True):
         #     def __abs__(self)
-        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 
         #---------------------------------------------
-        # Make sure proper objects are returned...
+        # Make sure proper objects are returned...            
         #---------------------------------------------
         a = Vector3(np.random.randn(4,1,5,3))
         b = Vector3(np.random.randn(8,5,3))

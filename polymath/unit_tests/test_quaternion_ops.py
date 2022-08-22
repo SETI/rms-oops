@@ -54,7 +54,7 @@ class Test_Quaternion_ops(unittest.TestCase):
     self.assertTrue((dab_dt - (a*b).d_dt).rms().max() < DEL)
 
     #--------------
-    # Divide...
+    # Divide...        
     #--------------
     test = ab / b
     self.assertTrue((test - a).rms().max() < DEL)

@@ -27,7 +27,7 @@ class Subsampled(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Constructor for a Subsampled FOV.
-
+        
         Returns a new FOV object in which the pixel size has been modified.
         The origin and the optic axis are unchanged.
 

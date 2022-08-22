@@ -84,7 +84,7 @@ class PointSource(Calibration):
             value       a scalar, numpy array or arbitrary oops Array subclass
                         containing calibrated values.
             uv_pair     a Pair containing (u,v) indices into the image.
-
+ 
         Return:         an object of the same class and shape as value, but
                         containing the uncalibrated DN values.
         """
@@ -111,7 +111,7 @@ class Test_PointSource(unittest.TestCase):
         from oops.fov_.flatfov import FlatFOV
         from oops.constants import RPD
 
-        flat_fov = FlatFOV((RPD/3600.,RPD/3600.), (1024,1024))
+        flat_fov = FlatFOV((RPD/3600.,RPD/3600.), (1024,1024)) 
         ps = PointSource("TEST", 5., flat_fov)
         self.assertEqual(ps.value_from_dn(0., (512,512)), 0.)
         self.assertEqual(ps.value_from_dn(0., (10,10)), 0.)

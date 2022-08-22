@@ -166,11 +166,15 @@ class PoleFrame(Frame):
         #-----------------------------------------------------------------
         if self.tilt != 0.:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # This is the axis to rotate around by angle self.tilt
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             rotation_pole = z_axis.ucross(self.invariable_pole)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # This is the vector perpendicular to both z_axis and perp
             # It is where the Z-axis ends up if the tilt is 90 degrees
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             target_pole = rotation_pole.ucross(z_axis)
 
             z_axis = z_axis * self.cos_tilt + target_pole * self.sin_tilt

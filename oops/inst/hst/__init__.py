@@ -402,7 +402,9 @@ class HST(object):
             path = oops.path.Path.as_waypoint('EARTH').wrt('SSB','J2000')
             event = path.event_at_time(tdb_midtime)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Insert apparent vector as actual to reverse the aberration effect
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             event.neg_arr_j2000 = oops.Vector3.from_ra_dec_length(
                                                             ra_rad, dec_rad,
                                                             recursive=False)
@@ -430,7 +432,7 @@ class HST(object):
         try:
             orient = header1["ORIENTAT"]
         except KeyError:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If ORIENT is missing, as is the case for NICMOS, we can construct
             # it from the partial derivatives CD1_1 = dRA/du, CD1_2 = dRA/dv,
             # CD2_1 = dDEC/du, CD2_2 = dDEC/dv
@@ -438,6 +440,7 @@ class HST(object):
             # Note: Previously I had this:
             #   dleft_dv  = header1["CD1_2"] * np.cos(ra * oops.RPD)
             # However, I found that the cosine term is not used by STScI.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             dnorth_dv = header1["CD2_2"]
             dleft_dv  = header1["CD1_2"]
 
@@ -448,20 +451,20 @@ class HST(object):
         frame_id = hst_file[0].header["FILENAME"] + suffix
 
         #--------------------------------------------------
-        # Applies at the start time of the observation
+        # Applies at the start time of the observation      
         #--------------------------------------------------
         cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
                                                  id=frame_id + "_CMATRIX")
 
         #-----------------------------------------------------
-        # If there is no target, assume inertial pointing
+        # If there is no target, assume inertial pointing             
         #-----------------------------------------------------
         target_body = self.target_body(hst_file, **parameters)
         if target_body is None:
             return cmatrix.frame_id
 
         #--------------------------------------------------
-        # Applies for the duration of the observation
+        # Applies for the duration of the observation      
         #--------------------------------------------------
         time_limits = self.time_limits(hst_file)
         tracker = oops.frame.Tracker(cmatrix, target_body.path,
@@ -574,7 +577,7 @@ class HST(object):
                             if present, this parameters defines the Sun-target
                             distance in AU. If not defined or None, the range
                             is inferred from the observation's target name and
-                            mid-time and the mid-time of the exposure, using
+                            mid-time and the mid-time of the exposure, using 
                             the loaded SPICE kernels.
                 parameters["solar_model"]
                             if present, this is the name of the model to use for
@@ -943,16 +946,24 @@ class HST(object):
         nrows = header1["NAXIS2"]
         for r in range(nrows):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             # if the direction is not FORWARD, skip this row
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             if object1.data[r]["DIRECTION"] != "FORWARD": continue
 
+            #- - - - - - - - - - - - - - - - - - -
             # Initialize the row's dictionary
+            #- - - - - - - - - - - - - - - - - - -
             row_dict = {}
 
+            #- - - - - - - - - - - - - 
             # For each column...
+            #- - - - - - - - - - - - - 
             for c in range(ncolumns):
 
+                #- - - - - - - - - - - - - - - - - - - - - - - - -
                 # Convert the value to a standard Python type
+                #- - - - - - - - - - - - - - - - - - - - - - - - -
                 value = object1.data[r][c]
                 dtype = str(object1.data.dtype[c])
 
@@ -962,10 +973,14 @@ class HST(object):
                 else:
                     raise ValueError("Unrecognized dtype: " + dtype)
 
+                #- - - - - - - - - - - - - - - - - 
                 # Add to the row's dictionary
+                #- - - - - - - - - - - - - - - - - 
                 row_dict[names[c]] = value
 
+            #- - - - - - - - - - - - - - - - -
             # Derive the key for this row
+            #- - - - - - - - - - - - - - - - -
             tuple = ()
             for key in keys:
                 value = row_dict[key]
@@ -973,7 +988,9 @@ class HST(object):
 
                 tuple += (value,)
 
+            #- - - - - - - - - - - - - - - - - - - -
             # Add a new entry to the dictionary
+            #- - - - - - - - - - - - - - - - - - - -
             idc_dict[tuple] = row_dict
 
         return idc_dict
@@ -1023,9 +1040,10 @@ class HST(object):
         for   i in range(1, order+1):
           for j in range(i+1):
             try:
-
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # In these arrays, the indices are the powers of x (increasing
                 # rightward) and y (increasing upward).
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 cxy[j,i-j,0] =  fov_dict["CX" + str(i) + str(j)] * platescale
                 cxy[j,i-j,1] = -fov_dict["CY" + str(i) + str(j)] * platescale
             except KeyError: pass
@@ -1468,7 +1486,7 @@ class Test_HST(unittest.TestCase):
         self.assertRaises(IOError, from_file, os.path.join(prefix, "a.b.c.d"))
 
         #--------------------------------------------------
-        # Raw ACS/HRC, full-frame with overscan pixels
+        # Raw ACS/HRC, full-frame with overscan pixels      
         #--------------------------------------------------
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/j9dh35h7q_raw.fits")
         snapshot = from_file(filespec)
@@ -1489,7 +1507,7 @@ class Test_HST(unittest.TestCase):
                                hst_file[0].header["TIME-OBS"])
 
         #--------------------
-        # Test get_fov()
+        # Test get_fov()          
         #--------------------
         fov = HRC().define_fov(hst_file)
         shape = tuple(fov.uv_shape.vals)
@@ -1511,7 +1529,7 @@ class Test_HST(unittest.TestCase):
         # test_pixels = fov.uv_from_los(los)
 
         #---------------------------------
-        # Faster version, 1/64 pixels
+        # Faster version, 1/64 pixels    
         #---------------------------------
         NSTEP = 256
         pixels = oops.Pair(buffer[::NSTEP,::NSTEP])
@@ -1521,7 +1539,7 @@ class Test_HST(unittest.TestCase):
         self.assertTrue(abs(test_pixels - pixels).max() < 1.e-7)
 
         #-----------------------------------------------------------
-        # Separations between pixels in arcsec are around 0.025
+        # Separations between pixels in arcsec are around 0.025         
         #-----------------------------------------------------------
         seps = los[1:].sep(los[:-1])
         self.assertTrue(np.min(seps.vals) * APR > 0.028237 * NSTEP)
@@ -1532,7 +1550,7 @@ class Test_HST(unittest.TestCase):
         self.assertTrue(np.max(seps.vals) * APR < 0.025186 * NSTEP)
 
         #----------------------------------------
-        # Pixel area factors are near unity
+        # Pixel area factors are near unity  
         #----------------------------------------
         areas = fov.area_factor(pixels)
         self.assertTrue(np.min(areas.vals) > 1.102193)

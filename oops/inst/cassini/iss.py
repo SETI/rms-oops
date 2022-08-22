@@ -386,7 +386,9 @@ class ISS(object):
         for detector in ["NAC", "WAC"]:
             info = ISS.instrument_kernel["INS"]["CASSINI_ISS_" + detector]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Full field of view
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             lines = info["PIXEL_LINES"]
             samples = info["PIXEL_SAMPLES"]
 
@@ -397,7 +399,9 @@ class ISS(object):
             uscale = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
             vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Display directions: [u,v] = [right,down]
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             full_fov = oops.fov.Polynomial((samples,lines),
                                            coefft_uv_from_xy=
                                    ISS.DISTORTION_COEFF_XY_TO_UV[detector],
@@ -409,7 +413,9 @@ class ISS(object):
                                    ISS.DISTORTION_COEFF_UV_TO_XY[detector])
             full_fov_none = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Load the dictionary, include the subsampling modes
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             ISS.fovs[detector, "FULL", False] = full_fov
             ISS.fovs[detector, "SUM2", False] = oops.fov.Subsampled(full_fov, 2)
             ISS.fovs[detector, "SUM4", False] = oops.fov.Subsampled(full_fov, 4)
@@ -438,8 +444,9 @@ class ISS(object):
                                        id="CASSINI_ISS_NAC")
 
         if offset_wac:
-
+            #- - - - - - - - - - - - - - - - - - - - -
             # Apply offset for WAC relative to NAC
+            #- - - - - - - - - - - - - - - - - - - - -
             info = ISS.instrument_kernel["INS"]["CASSINI_ISS_NAC"]
             xfov = info["FOV_REF_ANGLE"]
             yfov = info["FOV_CROSS_ANGLE"]
@@ -449,7 +456,9 @@ class ISS(object):
             xpixel = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
             ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # This is Rob's determination of WAC - NAC in units of NAC pixels
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             xshift = -7. * xpixel
             yshift = 4.4 * ypixel
             wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,

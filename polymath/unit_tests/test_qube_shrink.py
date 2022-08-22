@@ -19,7 +19,7 @@ class Test_Qube_shrink(unittest.TestCase):
   def runTest(self):
 
     #--------------
-    # corners
+    # corners       
     #--------------
     values = np.ones((100,200))
     a = Scalar(values)
@@ -68,7 +68,7 @@ class Test_Qube_shrink(unittest.TestCase):
     self.assertEqual(a.corners, ((1,1), (100,200)))
 
     #-----------------
-    # slicer
+    # slicer          
     #-----------------
     values = np.ones((100,200))
     mask = np.zeros((100,200), dtype='bool')
@@ -105,7 +105,7 @@ class Test_Qube_shrink(unittest.TestCase):
     self.assertEqual(a[a.slicer].shape, (100,200))
 
     #--------------------
-    # antimask
+    # antimask     
     #--------------------
     values = np.ones((100,200))
     mask = np.zeros((100,200), dtype='bool')
@@ -145,7 +145,9 @@ class Test_Qube_shrink(unittest.TestCase):
 
         Qube._IGNORE_UNSHRUNK_AS_CACHED = ignore
 
-        # shrink and unshrink, unmasked
+        #- - - - - - - - - - - - - - - - - 
+        # shrink and unshrink, unmasked       
+        #- - - - - - - - - - - - - - - - - 
         values = np.arange(100*200).reshape(100,200)
         a = Scalar(values)
 
@@ -166,7 +168,9 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertEqual(a[0], c[0])
         self.assertTrue(np.all(c.mask[1:]))
 
-        # shrink and unshrink, masked
+        #- - - - - - - - - - - - - - - - -
+        # shrink and unshrink, masked    
+        #- - - - - - - - - - - - - - - - -
         values = np.arange(100*200).reshape(100,200)
         a = Scalar(values, mask=(np.random.randn(100,200) < 0))
 
@@ -212,7 +216,9 @@ class Test_Qube_shrink(unittest.TestCase):
         v3 = v2.unshrink(antimask)
         self.assertEqual(v, v3)
 
-        # Shape control
+        #- - - - - - - - - -
+        # Shape control         
+        #- - - - - - - - - -
         a = Scalar(np.arange(900).reshape(100,3,3), drank=1, mask=True)
         b = a.shrink(False)
         aa = b.unshrink(False, shape=a.shape)
@@ -234,7 +240,9 @@ class Test_Qube_shrink(unittest.TestCase):
         aa = b.unshrink(False)
         self.assertEqual(aa.shape, ())
 
-        # Zero-sized objects
+        #- - - - - - - - - - - - 
+        # Zero-sized objects  
+        #- - - - - - - - - - - - 
 
         a = a[:0]
         self.assertEqual(a.shape, (0,))
@@ -249,7 +257,9 @@ class Test_Qube_shrink(unittest.TestCase):
         aa = b.unshrink(False)
         self.assertEqual(aa.shape, ())
 
-        # Unshaped, unmasked objects
+        #- - - - - - - - - - - - - - - - 
+        # Unshaped, unmasked objects  
+        #- - - - - - - - - - - - - - - - 
         a = Scalar(8.)
 
         antimask = (np.random.randn(7,5) < 0.)
@@ -281,7 +291,9 @@ class Test_Qube_shrink(unittest.TestCase):
         c = b.unshrink(antimask)
         self.assertEqual(c, Scalar.MASKED)
 
-        # Unshaped, masked objects
+        #- - - - - - - - - - - - - - - 
+        # Unshaped, masked objects             
+        #- - - - - - - - - - - - - - - 
         a = Scalar(0., mask=True)
 
         antimask = (np.random.randn(7,5) < 0.)
@@ -308,7 +320,9 @@ class Test_Qube_shrink(unittest.TestCase):
         c = b.unshrink(antimask)
         self.assertEqual(a, c)
 
-        # Shaped object, unshaped mask
+        #- - - - - - - - - - - - - - - - - 
+        # Shaped object, unshaped mask      
+        #- - - - - - - - - - - - - - - - - 
         a = Scalar(np.random.randn(7,5), mask=False)
 
         antimask = True
@@ -323,7 +337,9 @@ class Test_Qube_shrink(unittest.TestCase):
         c = b.unshrink(antimask)
         self.assertEqual(c, Scalar.MASKED)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Object becomes totally masked only upon shrinking
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         antimask = (np.random.randn(7,5) < 0.)
         a = Scalar(np.random.randn(7,5), mask=antimask)
         b = a.shrink(antimask)
@@ -331,7 +347,9 @@ class Test_Qube_shrink(unittest.TestCase):
         c = b.unshrink(antimask)
         self.assertEqual(c, Scalar.MASKED)
 
+        #- - - - - - - - - - 
         # Calculations
+        #- - - - - - - - - - 
         b = Vector3(np.random.randn(100,3), mask=np.random.randn(100) > 1.)
         c = Scalar(np.random.randn(3,1,100), mask=np.random.randn(3,1,100) > 1.)
         d = Vector3(np.random.randn(100,3), mask=np.random.randn(100) > 1.)

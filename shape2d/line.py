@@ -497,16 +497,22 @@ class Line(Shape2D, Conic):
         if isinstance(type(arg), Line):
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - -
             # Locate intersection; masked if necessary
+            #- - - - - - - - - - - - - - - - - - - - - - -
             (s,t) = self._line_intersection_params(line)
             self_pts = [self._more_accurate_intersection(s, line, t)]
             line_pts = [self_pts[0]]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             # Return the easy solution now for infinite lines
+            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             if type(self) == Line and type(arg) == Line:
                 return (self_pts[0], line_pts[0])
 
+            #- - - - - - - - - - - - - - -
             # Also consider endpoints
+            #- - - - - - - - - - - - - - -
             if type(self) in (HalfLine, Segment):
                 (line_pt, self_pt) = line.closest(self.pt0)
                 self_pts.append(self_pt)
@@ -527,7 +533,9 @@ class Line(Shape2D, Conic):
                 self_pts.append(self_pt)
                 line_pts.append(line_pt)
 
+            #- - - - - - - - - - - - - - - - - - - - -
             # Select and return closest pairings
+            #- - - - - - - - - - - - - - - - - - - - -
             return Shape2D._closest_of_pairings(self_pts, line_pts)
 
         #--------------------------------------------------------------------
@@ -835,7 +843,9 @@ class Line(Shape2D, Conic):
         if isinstance(type(arg), Line):
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # True if exactly one endpoint falls on the other line
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             touchings = []
 
             if type(self) in (HalfLine, Segment):

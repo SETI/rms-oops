@@ -105,10 +105,10 @@ class ACS(HST):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Returns a factor that converts a pixel value to DN per second.
-
+        
         Input:
-            hst_file        the object returned by pyfits.open()
-
+            hst_file        the object returned by pyfits.open()            
+        
         Return              the factor to multiply a pixel value by to get DN/sec
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

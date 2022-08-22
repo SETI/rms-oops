@@ -104,11 +104,11 @@ class NIRC2(Keck):
             pix_scale = 0.019829 # arcsec/pixel
         elif camera == 'wide':
             pix_scale = 0.039686 # arcsec/pixel
-
+        
         pix_scale = pix_scale * oops.RPD/3600. # Convert to radians
-
+        
         #--------------------------
-        # Full field of view
+        # Full field of view      
         #--------------------------
         lines = 1024
         samples = 1024
@@ -143,22 +143,22 @@ class NIRC2(Keck):
 #        decoff = keck_file[0].header["DECOFF"]
 #        ra = ra_w_off - raoff
 #        dec = dec_w_off - decoff
-#
+#        
 #        nparang = - keck_file[0].header["PARANG"] * oops.RPD
 #        az_off = ra*np.cos(nparang) + dec*np.sin(nparang)
 #        el_off = -ra*np.sin(nparang) + dec*np.cos(nparang)
-#
+#        
 #        # AZ flip?
-#
+#        
 #        azoff = 0. #keck_file[0].header["AZOFF"]
 #        eloff = 0. #keck_file[0].header["ELOFF"]
-
+        
         uscale = pix_scale
         vscale = pix_scale
-
+        
         if keck_file[0].header['INSTFLIP'] != 'yes':  # Flip Y
             vscale = -vscale
-
+            
         #----------------------------------------------
         # Display directions: [u,v] = [right,down]
         #----------------------------------------------
@@ -182,12 +182,12 @@ class NIRC2(Keck):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #-----------------------------------------
-        # Make an instance of the NIRC2 class
+        # Make an instance of the NIRC2 class    
         #-----------------------------------------
         this = NIRC2()
 
         #-----------------------------
-        # Figure out the detector
+        # Figure out the detector             
         #-----------------------------
         detector = this.detector_name(keck_file)
 

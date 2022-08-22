@@ -142,8 +142,10 @@ def get_qube(filespec, tstart, label, data, enclose):
         array_null = 65535                  # Incorrectly -1 in many labels
         array = load_data(filespec, label["^QUBE"], ">u2")
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Re-shape into something sensible
         # Note that the axis order in the label is first-index-fastest
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if lines > 1:
             array = array.reshape((samples,lines,bands))
             array = array.swapaxes(0,1)
@@ -656,10 +658,14 @@ class UVIS(object):
         for key in UVIS.abbrevs.keys():
             (detector, resolution) = UVIS.abbrevs[key]
 
+            #- - - - - - - - - - - - - - - 
             # Construct the SpiceFrame
+            #- - - - - - - - - - - - - - - 
             ignore = oops.frame.SpiceFrame(UVIS.frame_ids[detector])
 
+            #- - - - - - - - - - - -
             # Get the FOV angles
+            #- - - - - - - - - - - -
             info = UVIS.instrument_kernel["INS"][key]
 
             if info["FOV_SHAPE"] == "RECTANGLE":
@@ -671,8 +677,10 @@ class UVIS(object):
             else:
                 raise ValueError("Unrecognized FOV_SHAPE: " + info["FOV_SHAPE"])
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Define the frame for 1 or 64 lines
             # Not every combination is really used but that doesn't matter
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             for lines in {1, 64}:
                 fov = oops.fov.FlatFOV((u_angle, v_angle/lines), (1,lines))
                 UVIS.fovs[(detector, resolution, lines)] = fov
@@ -716,7 +724,7 @@ import unittest
 # Test_Cassini_UVIS
 #*******************************************************************************
 class Test_Cassini_UVIS(unittest.TestCase):
-
+    
     #===========================================================================
     # runTest
     #===========================================================================

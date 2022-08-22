@@ -145,7 +145,7 @@ class Event(object):
 
 
     #===========================================================================
-    #
+    # 
     #===========================================================================
     def set_prop(self, prop_name, value):
         Event.__dict__[prop_name].fset(self, value)
@@ -1010,7 +1010,7 @@ class Event(object):
                              str(self))
 
         #----------------------------------------------------
-        # Raise a ValueError if the shape is incompatible
+        # Raise a ValueError if the shape is incompatible    
         #----------------------------------------------------
         dep_lt = Scalar.as_scalar(value).as_readonly()
         self.__shape_ = Qube.broadcasted_shape(self.shape, dep_lt)
@@ -1306,7 +1306,9 @@ class Event(object):
         #---------------------
         for name in omit:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # For 'arr' and 'dep', wipe out all associated vectors
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if name == 'arr' or name == 'dep':
                 for prop_name in Event.SPECIAL_PROPERTIES:
                     if name in prop_name and '_lt' not in prop_name:
@@ -1315,14 +1317,18 @@ class Event(object):
                         if result.__ssb_ is not None:
                             result.__ssb_.__dict__[attr] = None
 
+            #- - - - - - - - - - - - - - - - - - - - - -
             # Wipe out other properties individually
+            #- - - - - - - - - - - - - - - - - - - - - -
             elif name in Event.SPECIAL_PROPERTIES:
                 attr = Event.attr_name(name)
                 result.__dict__[attr] = None
                 if result.__ssb_ is not None:
                     result.__ssb_.__dict__[attr] = None
 
+            #- - - - - - - - - - - - - - - - - - - -
             # Otherwise assume it is a subfield
+            #- - - - - - - - - - - - - - - - - - - -
             else:
                 try:
                     del result.subfields[name]
@@ -1851,11 +1857,15 @@ class Event(object):
         xform1 = None
         if event.__origin_.waypoint != path.waypoint:
 
-            # ...and the current frame is rotating...
+            #- - - - - - - - - - - - - - - - - - - - - -       
+            # ...and the current frame is rotating...      
+            #- - - - - - - - - - - - - - - - - - - - - -       
             old_frame = event.__frame_
             if old_frame.origin is not None:
 
+                #- - - - - - - - - - - - - - - 
                 # ...then rotate to J2000
+                #- - - - - - - - - - - - - - - 
                 (event, xform1) = event.wrt_frame(Frame.J2000,
                                                   derivs=derivs, quick=quick,
                                                   include_xform=True)
@@ -1865,10 +1875,14 @@ class Event(object):
         #-------------------------------
         if event.__frame_.wayframe != frame.wayframe:
 
+            #- - - - - - - - - - - - - - - - - - - - 
             # ...and the new frame is rotating...
+            #- - - - - - - - - - - - - - - - - - - - 
             if frame.origin is not None:
 
+                #- - - - - - - - - - - - - - - - - - - - - - - - 
                 # ...then shift to the origin of the new frame
+                #- - - - - - - - - - - - - - - - - - - - - - - - 
                 event = event.wrt_path(frame.origin, derivs=derivs, quick=quick)
 
         #-----------------------------------------------
@@ -2876,42 +2890,58 @@ class Test_Event(unittest.TestCase):
         SPEED = BETA * C        # largest speed we care about is 300 km/s
         HALFPI = np.pi/2
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Incoming aberration in the forward direction
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), 'SSB', 'J2000')
         ev.arr = -Vector3.ZAXIS
         self.assertEqual(Vector3.ZAXIS.sep(ev.neg_arr_ap), 0.)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - -
         # Incoming aberration in the side direction
+        #- - - - - - - - - - - - - - - - - - - - - - - -
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.arr = -Vector3.YAXIS
         self.assertTrue(abs(Vector3.XAXIS.sep(ev.neg_arr_ap) - (HALFPI-BETA)) < DEL)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - 
         # Outgoing aberration in the forward direction
+        #- - - - - - - - - - - - - - - - - - - - - - - - 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.dep = Vector3.XAXIS
         self.assertEqual(Vector3.XAXIS.sep(ev.dep_ap), 0.)
 
+        #- - - - - - - - - - - - - - - - - - - - - - -
         # Incoming aberration in the side direction
+        #- - - - - - - - - - - - - - - - - - - - - - -
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.dep = Vector3.YAXIS
         self.assertTrue(abs(Vector3.XAXIS.sep(ev.dep_ap) - (HALFPI+BETA)) < DEL)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Incoming aberration in the forward direction
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.arr_ap = -Vector3.XAXIS
         self.assertEqual(Vector3.XAXIS.sep(ev.neg_arr_ap), 0.)
 
+        #- - - - - - - - - - - - - - - - - - - - - - -
         # Incoming aberration in the side direction
+        #- - - - - - - - - - - - - - - - - - - - - - -
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.arr_ap = -Vector3.YAXIS
         self.assertTrue(abs(Vector3.XAXIS.sep(ev.neg_arr) - (HALFPI+BETA)) < DEL)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Outgoing aberration in the forward direction
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.dep = Vector3.XAXIS
         self.assertEqual(Vector3.XAXIS.sep(ev.dep_ap), 0.)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         # Incoming aberration in the side direction
+        #- - - - - - - - - - - - - - - - - - - - - - - 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
         ev.dep_ap = Vector3.YAXIS
         self.assertTrue(abs(Vector3.XAXIS.sep(ev.dep) - (HALFPI-BETA)) < DEL)
@@ -2925,8 +2955,10 @@ class Test_Event(unittest.TestCase):
         for angle in angles:
             vobs = np.array([SPEED, 0., 0.])
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Note the sign change on pobj, because we consider the photon's
             # direction, not the direction to the target
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             pobj = np.array([-np.cos(angle * RPD), -np.sin(angle * RPD), 0.])
             appobj = cspyce.stelab(pobj, vobs)
             cspyce_arr_ap.append(np.arctan2(-appobj[1], -appobj[0]))
@@ -3039,7 +3071,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__neg_arr_ap_)
             self.assertIsNone(ev._Event__ssb_)
 
+            #- - - - - - - - - - - - - - - - - -
             # Let arr_ap and ssb be filled in
+            #- - - - - - - - - - - - - - - - - -
             ignore = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3090,7 +3124,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__neg_arr_)
             self.assertIsNone(ev._Event__ssb_)
 
+            #- - - - - - - - - - - - - - - - 
             # Let arr and ssb be filled in
+            #- - - - - - - - - - - - - - - - 
             ignore = ev.arr
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3157,7 +3193,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__neg_arr_)
             self.assertIsNone(ev._Event__neg_arr_ap_)
 
+            #- - - - - - - - - - - - - - - - - -
             # Let arr_ap and ssb be filled in
+            #- - - - - - - - - - - - - - - - - -
             ignore = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3224,7 +3262,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__neg_arr_)
             self.assertIsNone(ev._Event__neg_arr_ap_)
 
+            #- - - - - - - - - - - - - - - - -
             # Let arr and ssb be filled in
+            #- - - - - - - - - - - - - - - - -
             ignore = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3285,7 +3325,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__neg_arr_ap_)
             self.assertIsNone(ev._Event__ssb_)
 
+            #- - - - - - - - - - - - - - - - - - -
             # Let arr_ap and ssb be filled in
+            #- - - - - - - - - - - - - - - - - - -
             ignore = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3346,7 +3388,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__neg_arr_)
             self.assertIsNone(ev._Event__ssb_)
 
+            #- - - - - - - - - - - - - - - - - 
             # Let arr and ssb be filled in
+            #- - - - - - - - - - - - - - - - - 
             ignore = ev.arr
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3399,7 +3443,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
+            #- - - - - - - - - - - - - - - - - - 
             # Let arr_ap and ssb be filled in
+            #- - - - - - - - - - - - - - - - - - 
             ignore = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3452,7 +3498,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
+            #- - - - - - - - - - - - - - - - 
             # Let arr and ssb be filled in
+            #- - - - - - - - - - - - - - - - 
             ignore = ev.arr
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
@@ -3491,7 +3539,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__dep_ap_)
             self.assertIsNone(ev._Event__ssb_)
 
+            #- - - - - - - - - - - - - - 
             # Fill in dep_ap and ssb
+            #- - - - - - - - - - - - - - 
             ignore = ev.dep_ap
             self.assertTrue((ev.dep_ap - ev.dep).norm() < 5*BETA)
 
@@ -3526,7 +3576,9 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._Event__dep_)
             self.assertIsNone(ev._Event__ssb_)
 
+            #- - - - - - - - - - - - -
             # Fill in dep and ssb
+            #- - - - - - - - - - - - -
             ignore = ev.dep
             self.assertTrue((ev.dep_ap - ev.dep).norm() < 5*BETA)
 

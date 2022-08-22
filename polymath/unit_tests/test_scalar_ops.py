@@ -19,7 +19,7 @@ class Test_Scalar_ops(unittest.TestCase):
   def runTest(self):
 
     #----------------------
-    # Unary plus
+    # Unary plus       
     #----------------------
     a = Scalar(1)
     b = +a
@@ -49,7 +49,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(b.is_int())
     self.assertTrue(b.is_float())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - 
+    # Derivatives, readonly        
+    #- - - - - - - - - - - - - 
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = +a
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -97,7 +99,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertRaises(ValueError, b.__iadd__, 1)
 
     #--------------------
-    # Unary minus
+    # Unary minus     
     #--------------------
     a = Scalar(1)
     b = -a
@@ -123,7 +125,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(b), Scalar)
     self.assertTrue(b.is_float())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - 
+    # Derivatives, readonly        
+    #- - - - - - - - - - - - - 
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = -a
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -173,7 +177,7 @@ class Test_Scalar_ops(unittest.TestCase):
     b -= 1
 
     #------------------
-    # abs()
+    # abs()           
     #------------------
     a = abs(Scalar(1))
     b = abs(a)
@@ -211,7 +215,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(b), Scalar)
     self.assertTrue(b.is_float())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - 
+    # Derivatives, readonly        
+    #- - - - - - - - - - - - - 
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = abs(a)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -253,7 +259,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(b.d_dt.readonly)
 
     #-------------------
-    # Addition
+    # Addition    
     #-------------------
     expr = Scalar(1) + 1
     self.assertEqual(expr, 2)
@@ -355,7 +361,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(expr), Scalar)
     self.assertTrue(expr.is_float())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - - -
+    # Derivatives, readonly      
+    #- - - - - - - - - - - - - - -
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = a + (1,2,3)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -412,7 +420,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(b.readonly)
     self.assertFalse(c.d_dt.readonly)
 
-    # In-place
+    #- - - - - - - - -
+    # In-place          
+    #- - - - - - - - -
     a = Scalar((1,2))
     a += 1
     self.assertEqual(a, (2,3))
@@ -449,7 +459,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a, (3,6))
     self.assertEqual(a.d_dt, ((2,3),(5,6)))
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     # Make sure these operations work and mask shapes are always valid
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     for avals in (1., np.arange(24.).reshape(4,3,2)):
       for amask in (True, False, np.random.randn(4,3,2) < 0.):
         if len(np.shape(amask)) > len(np.shape(avals)):
@@ -479,7 +491,7 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     #--------------------
-    # Subtraction
+    # Subtraction     
     #--------------------
     expr = Scalar(3) - 1
     self.assertEqual(expr, 2)
@@ -581,7 +593,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(expr), Scalar)
     self.assertTrue(expr.is_float())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - -
+    # Derivatives, readonly    
+    #- - - - - - - - - - - - - -
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = a - (1,2,3)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -638,7 +652,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(b.readonly)
     self.assertFalse(c.d_dt.readonly)
 
-    # In-place
+    #- - - - - - - - 
+    # In-place      
+    #- - - - - - - - 
     a = Scalar((3,4))
     a -= 1
     self.assertEqual(a, (2,3))
@@ -676,7 +692,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a, (0,0))
     self.assertEqual(a.d_dt, ((-2,-3),(-5,-6)))
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Make sure these operations work and mask shapes are always valid
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     for avals in (1., np.arange(24.).reshape(4,3,2)):
       for amask in (True, False, np.random.randn(4,3,2) < 0.):
         if len(np.shape(amask)) > len(np.shape(avals)):
@@ -706,7 +724,7 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     #-----------------------
-    # Multiplication
+    # Multiplication    
     #-----------------------
     expr = Scalar(1) * 2
     self.assertEqual(expr, 2)
@@ -808,7 +826,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(expr), Scalar)
     self.assertTrue(expr.is_float())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - -
+    # Derivatives, readonly    
+    #- - - - - - - - - - - - - -
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = a * (1,2,3)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -863,7 +883,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(b.readonly)
     self.assertFalse(c.d_dt.readonly)
 
-    # In-place
+    #- - - - - - - - 
+    # In-place      
+    #- - - - - - - - 
     a = Scalar((1,2))
     a *= 2
     self.assertEqual(a, (2,4))
@@ -903,7 +925,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(a.d_dt, ((5,12),(16,18)))
         # ((3*(1,2) + 2*(1,3), (4*(3,4) + 1*(4,2)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Make sure these operations work and mask shapes are always valid
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     for avals in (1., np.arange(24.).reshape(4,3,2)):
       for amask in (True, False, np.random.randn(4,3,2) < 0.):
         if len(np.shape(amask)) > len(np.shape(avals)):
@@ -933,7 +957,7 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     #---------------
-    # Division
+    # Division    
     #---------------
     expr = Scalar(4) / 2
     self.assertEqual(expr, 2)
@@ -975,7 +999,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(expr), Scalar)
     self.assertTrue(expr.is_float())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - -
+    # Derivatives, readonly    
+    #- - - - - - - - - - - - - -
     a = Scalar(1, derivs={'t':Scalar(6)})
     b = a / (6,3,2)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -1020,7 +1046,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(b.readonly)
     self.assertFalse(c.d_dt.readonly)
 
-    # In-place
+    #- - - - - - - - 
+    # In-place      
+    #- - - - - - - - 
     a = Scalar((4,6))
     self.assertRaises(TypeError, a.__itruediv__, 2)
 
@@ -1083,7 +1111,9 @@ class Test_Scalar_ops(unittest.TestCase):
     a /= 0
     self.assertTrue(a.mask)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Make sure these operations work and mask shapes are always valid
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     for avals in (1., np.arange(24.).reshape(4,3,2)):
       for amask in (True, False, np.random.randn(4,3,2) < 0.):
         if len(np.shape(amask)) > len(np.shape(avals)):
@@ -1113,7 +1143,7 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     #---------------------
-    # Floor division
+    # Floor division      
     #---------------------
     expr = Scalar(5) // 2
     self.assertEqual(expr, 2)
@@ -1180,7 +1210,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(expr), Scalar)
     self.assertTrue(expr.is_int())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - -
+    # Derivatives, readonly    
+    #- - - - - - - - - - - - - -
     a = Scalar(1, derivs={'t':Scalar(2)})
     b = a // (1,2,3)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -1213,7 +1245,9 @@ class Test_Scalar_ops(unittest.TestCase):
     c = a // b
     self.assertFalse(c.readonly)
 
-    # In-place
+    #- - - - - - - 
+    # In-place       
+    #- - - - - - - 
     a = Scalar((4,6))
     a //= 2
     self.assertEqual(a, (2,3))
@@ -1252,7 +1286,9 @@ class Test_Scalar_ops(unittest.TestCase):
     a //= 0
     self.assertTrue(a.mask)
 
-    # Make sure operations work and mask shapes are always valid
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Make sure operations work and mask shapes are always valid    
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     for avals in (1., np.arange(24.).reshape(4,3,2)):
       for amask in (True, False, np.random.randn(4,3,2) < 0.):
         if len(np.shape(amask)) > len(np.shape(avals)):
@@ -1268,7 +1304,7 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     #--------------
-    # Modulus
+    # Modulus       
     #--------------
     expr = Scalar(5) % 3
     self.assertEqual(expr, 2)
@@ -1335,7 +1371,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(type(expr), Scalar)
     self.assertTrue(expr.is_int())
 
-    # Derivatives, readonly
+    #- - - - - - - - - - - - - -
+    # Derivatives, readonly    
+    #- - - - - - - - - - - - - -
     a = Scalar(9, derivs={'t':Scalar(2)})
     b = a % (3,4,5)
     self.assertTrue(hasattr(a, 'd_dt'))
@@ -1370,7 +1408,9 @@ class Test_Scalar_ops(unittest.TestCase):
     c = a % b
     self.assertFalse(c.readonly)
 
-    # In-place
+    #- - - - - - - 
+    # In-place       
+    #- - - - - - - 
     a = Scalar((5,7))
     a %= 3
     self.assertEqual(a, (2,1))
@@ -1409,7 +1449,9 @@ class Test_Scalar_ops(unittest.TestCase):
     a %= 0
     self.assertTrue(a.mask)
 
-    # Make sure operations work and mask shapes are always valid
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Make sure operations work and mask shapes are always valid    
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     for avals in (1., np.arange(24.).reshape(4,3,2)):
       for amask in (True, False, np.random.randn(4,3,2) < 0.):
         if len(np.shape(amask)) > len(np.shape(avals)):
@@ -1425,7 +1467,7 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
     #-----------
-    # Power
+    # Power    
     #-----------
     a = Scalar(2)
     b = a**1
@@ -1507,7 +1549,9 @@ class Test_Scalar_ops(unittest.TestCase):
         if a[i] != 0:
             self.assertAlmostEqual(a[i]*b[i], 1., delta=1.e-14)
 
-    # Derivatives
+    #- - - - - - - - 
+    # Derivatives     
+    #- - - - - - - - 
     a = Scalar(np.arange(20) + 1, derivs={'t':Scalar(np.ones(20))})
     b = a**0
     self.assertEqual(b, 1)
@@ -1533,7 +1577,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(abs(b*a - 1).max() < 1.e-14)
     self.assertTrue(abs(b.d_dt + b*b).max() < 1.e-14)
 
-    # Read-only status
+    #- - - - - - - - - - - 
+    # Read-only status       
+    #- - - - - - - - - - - 
     self.assertFalse(a.readonly)
     self.assertFalse((a**0).readonly)
     self.assertFalse((a**1).readonly)
@@ -1554,7 +1600,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse((b**(-1)).readonly)
 
     #------------------------------------
-    # Power, multiple exponents, etc.
+    # Power, multiple exponents, etc.     
     #------------------------------------
     a = Scalar(2)
     b = a**(-0,1,2,3,4)
@@ -1631,7 +1677,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(b.d_dt[2], (0,1,4))
 
     #-----------------
-    # Reciprocal
+    # Reciprocal          
     #-----------------
     a = Scalar((1,-1))
     b = a.reciprocal()
@@ -1681,10 +1727,12 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertRaises(ValueError, a.reciprocal, nozeros=True)
 
     #-------------------------
-    # Comparisons
+    # Comparisons         
     #-------------------------
-
+    
+    #- - - - - - - - - - - 
     # Individual values
+    #- - - - - - - - - - - 
     self.assertTrue(Scalar(-0.3) <= -0.3)
     self.assertTrue(Scalar(-0.3) >= -0.3)
     self.assertFalse(Scalar(-0.3) < -0.3)
@@ -1710,7 +1758,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(Scalar(1,True) >  Scalar(0,True))
     self.assertTrue (Scalar(1,True) >= Scalar(2,True))
 
-    # Comparisons: Multiple values
+    #- - - - - - - - - - - - - - - - - 
+    # Comparisons: Multiple values         
+    #- - - - - - - - - - - - - - - - - 
     self.assertTrue((Scalar((-0.1,0.,0.1)) <= (-0.1,0.,0.1)).all())
     self.assertTrue((Scalar((-0.1,0.,0.1)) >= (-0.1,0.,0.1)).all())
     self.assertFalse((Scalar((-0.1,0.,0.1)) < (-0.1,0.,0.1)).all())
@@ -1737,7 +1787,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse((Scalar((1,2),(True,False)) >
                       Scalar((0,1),(True,False))).all())
 
-    # Arrays
+    #- - - - - - - 
+    # Arrays       
+    #- - - - - - - 
     N = 100
     x = Scalar(np.random.randn(N))
     y = Scalar(np.random.randn(N))
@@ -1770,7 +1822,9 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertFalse((x[i:i+2] < y[i:i+2]).all())
             self.assertFalse((x[i:i+2] <= y[i:i+2]).all())
 
-    # Units
+    #- - - - - - - 
+    # Units       
+    #- - - - - - - 
     x = Scalar(np.random.randn(10), units=Units.KM)
     y = Scalar(np.random.randn(10), units=Units.CM)
     self.assertTrue((x > y).mask is False)
@@ -1792,7 +1846,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertRaises(ValueError, x.__lt__, y)
     self.assertRaises(ValueError, x.__gt__, y)
 
-    # Units should be removed
+    #- - - - - - - - - - - - - - -
+    # Units should be removed      
+    #- - - - - - - - - - - - - - -
     x = Scalar(np.random.randn(10), units=Units.KM)
     y = Scalar(np.random.randn(10), units=Units.CM)
     self.assertTrue((x > y).units is None)
@@ -1800,7 +1856,9 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue((x >= y).units is None)
     self.assertTrue((x <= y).units is None)
 
-    # Masks
+    #- - - - - - - - 
+    # Masks      
+    #- - - - - - - - 
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -0.2))
     y = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -0.2))
@@ -1832,7 +1890,9 @@ class Test_Scalar_ops(unittest.TestCase):
             self.assertFalse(x[i] > y[i])
             self.assertFalse(x[i] < y[i])
 
-    # Read-only status should be preserved
+    #- - - - - - - - - - - - - - - - - - - - - -
+    # Read-only status should be preserved    
+    #- - - - - - - - - - - - - - - - - - - - - -
     x = Scalar(np.random.randn(N))
     y = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)

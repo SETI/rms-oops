@@ -19,7 +19,7 @@ class Test_Scalar_log(unittest.TestCase):
   def runTest(self):
 
     #----------------------
-    # Individual values
+    # Individual values        
     #----------------------
     self.assertEqual(Scalar(0.3).log(), np.log(0.3))
     self.assertEqual(type(Scalar(0.3).log()), Scalar)
@@ -28,13 +28,13 @@ class Test_Scalar_log(unittest.TestCase):
     self.assertEqual(Scalar(1).log(), 0.)
 
     #---------------------
-    # Multiple values
+    # Multiple values      
     #---------------------
     self.assertEqual(Scalar((1,2,3)).log(), np.log((1,2,3)))
     self.assertEqual(type(Scalar((1,2,3)).log()), Scalar)
 
     #--------------
-    # Arrays
+    # Arrays       
     #--------------
     N = 1000
     x = Scalar(np.random.randn(N))
@@ -51,7 +51,7 @@ class Test_Scalar_log(unittest.TestCase):
             self.assertEqual(y[i:i+2], np.log(x.values[i:i+2]))
 
     #---------------------
-    # Test valid units
+    # Test valid units      
     #---------------------
     values = np.abs(np.random.randn(10))
     random = Scalar(values, units=Units.KM)
@@ -76,13 +76,13 @@ class Test_Scalar_log(unittest.TestCase):
     self.assertTrue(x.log().mask)
 
     #-----------------------------
-    # Units should be removed
+    # Units should be removed      
     #-----------------------------
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.log().units is None)
 
     #--------------
-    # Masks
+    # Masks       
     #--------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -90,7 +90,7 @@ class Test_Scalar_log(unittest.TestCase):
     self.assertTrue(np.all(y.mask[x.mask]))
 
     #------------------
-    # Derivatives
+    # Derivatives          
     #------------------
     N = 100
     x = Scalar(np.random.randn(N))
@@ -114,14 +114,14 @@ class Test_Scalar_log(unittest.TestCase):
                                delta = DEL * abs(dy_dt[i]))
 
     #-----------------------------------------------
-    # Derivatives should be removed if necessary
+    # Derivatives should be removed if necessary    
     #-----------------------------------------------
     self.assertEqual(x.log(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertFalse(hasattr(x.log(recursive=False), 'd_dt'))
 
     #---------------------------------------------
-    # Read-only status should NOT be preserved
+    # Read-only status should NOT be preserved      
     #---------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))

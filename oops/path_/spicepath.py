@@ -228,8 +228,9 @@ class SpicePath(Path):
         elif isinstance(origin, SpicePath):
             spice_origin_id = origin.spice_target_id
         else:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If the origin is not a SpicePath, seek from the other direction
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             return ReversedPath(origin.wrt(self, frame))
 
         origin_id = spice.PATH_TRANSLATION[spice_origin_id]
@@ -252,7 +253,7 @@ class SpicePath(Path):
             frame_id = spice.FRAME_TRANSLATION[spice_frame_name]
         else:
             frame_id = 'J2000'
-
+    
         shortcut = ('SPICE_SHORTCUT[' + str(self.path_id) + ',' +
                                         str(origin_id)    + ',' +
                                         str(frame_id)     + ']')
@@ -324,7 +325,9 @@ class Test_SpicePath(unittest.TestCase):
         earth = SpicePath("EARTH", "SSB")
         moon  = SpicePath("MOON", "EARTH")
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         # Validate state vectors using event_at_time()
+        #- - - - - - - - - - - - - - - - - - - - - - - - -
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
         moon_event = moon.event_at_time(times)
         for i in range(len(times)):
@@ -332,7 +335,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertEqual(moon_event.pos[i], state[0:3])
             self.assertEqual(moon_event.vel[i], state[3:6])
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Check light travel time corrections to/from SSB
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         saturn = SpicePath(6, "SSB", id="SATURN")
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
         ssb_event = Path.as_primary_path("SSB").event_at_time(times)
@@ -359,9 +364,13 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((ssb_event.dep[i] - state[0:3]).norm() < 1.e-8)
             self.assertTrue((Vector3(state[0:3]) - ssb_event.dep[i]).norm() < 1.e-8)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check instantaneous geometry using linked paths
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
 
+        #- - - - - - - - - - 
         # Moon wrt Earth
+        #- - - - - - - - - - 
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
         moon_event = moon.event_at_time(times).wrt_path("EARTH")
         for i in range(len(times)):
@@ -371,7 +380,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6] -
                                           moon_event.vel.vals[i]) < 1.e-8))
 
+        #- - - - - - - - 
         # Moon to SSB
+        #- - - - - - - - 
         moon_event = moon.event_at_time(times).wrt_path("SSB")
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(301,times[i],"J2000","NONE",0)
@@ -380,7 +391,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6] -
                                           moon_event.vel.vals[i]) < 1.e-6))
 
+        #- - - - - - - - - - 
         # Moon to Saturn
+        #- - - - - - - - - - 
         moon_event = moon.event_at_time(times).wrt_path("SATURN")
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(301,times[i],"J2000","NONE",6)
@@ -389,7 +402,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6] -
                                           moon_event.vel.vals[i]) < 1.e-6))
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         # Tests of combined paths but no frame rotation
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -416,7 +431,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dpos.vals) < 1.e-7))
             self.assertTrue(np.all(np.abs(dvel.vals) < 1.e-14))
 
+        #- - - - - - - - - - - - - - - - -
         # Tests using different frames
+        #- - - - - - - - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -522,7 +539,9 @@ class Test_SpicePath(unittest.TestCase):
 
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check light travel time corrections, Saturn to Earth wrt SSB
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         earth_event = earth.event_at_time(times)
         (saturn_event, earth_event) = saturn.photon_to_event(earth_event)
 
@@ -545,7 +564,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(saturn_rel.pos[i]  - state[0:3]) < 1.e-6)
             self.assertTrue(abs(saturn_rel.vel[i]  - state[3:6]) < 1.e-3)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check light travel time corrections, Saturn from Earth wrt SSB
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         earth_event = earth.event_at_time(times)
         (saturn_event,earth_event) = saturn.photon_from_event(earth_event)
         saturn_rel = saturn_event.sub(earth_event)
@@ -562,7 +583,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6]
                                           - saturn_rel.vel[i].vals) < 1.e-3))
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Check light travel time corrections, Saturn wrt Earth, Earth-centered
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         earth_event = Path.as_path("EARTH").event_at_time(times)
         self.assertEqual(earth_event.pos, (0.,0.,0.))
         self.assertEqual(earth_event.vel, (0.,0.,0.))
@@ -592,7 +615,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[3:6]
                                         - saturn_rel.vel[i].vals) < 1.e-3))
 
+        #- - - - - - - - - -
         # Apparent case
+        #- - - - - - - - - -
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(6,times[i],"J2000","CN+S",399)
             self.assertTrue(np.abs(lt + saturn_rel.time.vals[i] < 1.e-7))
@@ -603,7 +628,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.all(np.abs(state[0:3] / length +
                                    earth_event.arr_ap[i].unit().vals) < 1.e-8))
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Fixed and then rotating frames, forward calculation
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         times = np.arange(0., 86401., 8640.)
 
         for frame in ["J2000", "IAU_EARTH"]:
@@ -663,7 +690,9 @@ class Test_SpicePath(unittest.TestCase):
                 self.assertTrue(np.all(np.abs(state[0:3] / length +
                                     earth_event.arr_ap[i].unit().vals) < 1.e-8))
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Fixed and then rotating frames, reverse calculation
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         times = np.arange(0., 86401., 8640.)
 
         for frame in ["J2000", "IAU_EARTH"]:
@@ -716,7 +745,9 @@ class Test_SpicePath(unittest.TestCase):
                 self.assertTrue(np.all(np.abs(state[0:3] / length +
                                     earth_event.dep_ap[i].unit().vals) < 1.e-8))
 
+        #- - - - - - - - - - - - - -
         # More linked frames...
+        #- - - - - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -742,7 +773,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((mars_rel.pos[i] - state[0:3]).norm() < 1.e-5)
             self.assertTrue((mars_rel.vel[i] - state[3:6]).norm() < 1.e-3)
 
+        #- - - - - - - - - - - - - - - - - - - - - - -
         # The IAU_EARTH frame works fine on Earth
+        #- - - - - - - - - - - - - - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -766,7 +799,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((pluto_rel.pos[i] - state[0:3]).norm() < 1.e-5)
             self.assertTrue((pluto_rel.vel[i] - state[3:6]).norm() < 1.e-3)
 
+        #- - - - - - - - - - -
         # IAU_MARS on Mars
+        #- - - - - - - - - - -
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -791,7 +826,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue((pluto_rel.pos[i] - state[0:3]).norm() < 1.e-5)
             self.assertTrue((pluto_rel.vel[i] - state[3:6]).norm() < 1.e-3)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check stellar aberration calculation in J2000
+        #- - - - - - - - - - - - - - - - - - - - - - - - - 
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -819,7 +856,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
+        #- - - - - - - - - -
         # Time-reversed
+        #- - - - - - - - - -
         pluto = AliasPath("PLUTO","J2000")
         earth_event = AliasPath("EARTH","J2000").event_at_time(times)
         (pluto_event,earth_event) = pluto.photon_from_event(earth_event)
@@ -839,7 +878,9 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(ra[i]  - ra_test)  < 1.e-7)
             self.assertTrue(abs(dec[i] - dec_test) < 1.e-7)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # Check stellar aberration calculation in a rotating frame
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         Path.reset_registry()
         Frame.reset_registry()
 
@@ -854,7 +895,9 @@ class Test_SpicePath(unittest.TestCase):
         (pluto_event,earth_event) = pluto.photon_to_event(earth_event)
         pluto_rel = pluto_event.sub(earth_event)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Note: These "RA,dec" values are in the IAU_EARTH frame, not J2000!
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         (ra,dec) = earth_event.ra_and_dec(apparent=False, frame=None)
         for i in range(len(times)):
             (state, lt) = cspyce.spkez(9, times[i], "IAU_EARTH", "CN", 399)

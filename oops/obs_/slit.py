@@ -197,14 +197,20 @@ class Slit(Observation):
         #---------------------------------
         if self._slit_is_discontinuous:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Identify indices at exact upper limit; treat these as inside
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             at_upper_limit = (slit_coord == self._along_slit_size)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - -
             # Map continuous index to discontinuous (u,v)
+            #- - - - - - - - - - - - - - - - - - - - - - - -
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
 
+            #- - - - - - - - - - - - - - - -
             # Adjust values at upper limit
+            #- - - - - - - - - - - - - - - -
             slit_coord = slit_coord.mask_where(at_upper_limit,
                             replace = self._along_slit_size + self.det_size - 1,
                             remask = False)

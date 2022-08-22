@@ -17,7 +17,7 @@ class RadialFOV(FOV):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     The Radial subclass of FOV describes a field of view in which the
-    distortion is described by a 1-D polynomial in distance from the image
+    distortion is described by a 1-D polynomial in distance from the image 
     center.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -39,7 +39,7 @@ class RadialFOV(FOV):
 
         Inputs:
             uv_scale    a single value, tuple or Pair defining the ratios dx/du
-                        and dy/dv. At the center of the FOV.  For example, if
+                        and dy/dv. At the center of the FOV.  For example, if 
                         (u,v) are in units of  arcseconds, then
                             uv_scale = Pair((pi/180/3600.,pi/180/3600.))
                         Use the sign of the second element to define the
@@ -52,19 +52,19 @@ class RadialFOV(FOV):
                         pixels.
 
             coefft_xy_from_uv
-                        the coefficient array of the polynomial to convert
-                        U,V to X,Y. The array has shape [order+2], where
-                        coefft[i] is the coefficient on r**i, where
-                        r = sqrt((u-ulos)**2 + (v-vlos)**2), yielding x(u,v)
-                        and y(u,v). All coefficients are 0 for i > order. If
+                        the coefficient array of the polynomial to convert 
+                        U,V to X,Y. The array has shape [order+2], where 
+                        coefft[i] is the coefficient on r**i, where 
+                        r = sqrt((u-ulos)**2 + (v-vlos)**2), yielding x(u,v) 
+                        and y(u,v). All coefficients are 0 for i > order. If 
                         None, then the polynomial for uv_from_xy is inverted.
 
             coefft_uv_from_xy
-                        the coefficient array of the polynomial to convert
-                        X,Y to U,V. The array has shape [order+1], where
-                        coefft[i] is the coefficient on r**i, where
-                        r = sqrt((u-ulos)**2 + (v-vlos)**2), yielding x(u,v)
-                        and y(u,v). All coefficients are 0 for i > order. If
+                        the coefficient array of the polynomial to convert 
+                        X,Y to U,V. The array has shape [order+1], where 
+                        coefft[i] is the coefficient on r**i, where 
+                        r = sqrt((u-ulos)**2 + (v-vlos)**2), yielding x(u,v) 
+                        and y(u,v). All coefficients are 0 for i > order. If 
                         None, then the polynomial for xy_from_uv is inverted.
 
             uv_los      a single value, tuple or Pair defining the (u,v)
@@ -80,7 +80,7 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.coefft_xy_from_uv = None
         self.coefft_uv_from_xy = None
-
+        
         if coefft_xy_from_uv is not None:
             self.coefft_xy_from_uv = np.asarray(coefft_xy_from_uv, dtype=object)
         if coefft_uv_from_xy is not None:
@@ -99,7 +99,7 @@ class RadialFOV(FOV):
             self.uv_los.as_readonly()
 
         self.iters = iters
-
+        
         self.flat_fov = \
                    oops.fov.FlatFOV(self.uv_scale, self.uv_shape, self.uv_los)
 
@@ -119,27 +119,27 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return (x,y) camera frame coordinates given FOV coordinates (u,v).
-
+        
         Input:
             uv       Pairs of arbitrary shape to be transformed from FOV
                      coordinates.
             derivs   If True, any derivatives in (u,v) get propagated into
                      the returned (x,y).
-
+            
         Output:      xy
             xy       Pairs of same shape as uv giving the transformed
                      FOV coordinates.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+        
         #-----------------------------------------------------
         # Transform based on which type of coeffs are given
         #-----------------------------------------------------
         if self.coefft_xy_from_uv is not None:
-            xy = self._apply_polynomial(uv,
+            xy = self._apply_polynomial(uv, 
                              self.coefft_xy_from_uv, derivs, from_='uv')
         else:
-            xy = self._solve_polynomial(uv,
+            xy = self._solve_polynomial(uv, 
                         self.coefft_uv_from_xy, derivs, from_='uv', fast=fast)
 
         return xy
@@ -154,13 +154,13 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
-
+        
         Input:
             xy       Pairs of arbitrary shape to be transformed to FOV
                      coordinates.
             derivs   If True, any derivatives in (x,y) get propagated into
                      the returned (u,v).
-
+            
         Output:      uv
             uv       Pairs of same shape as xy giving the computed
                      FOV coordinates.
@@ -172,10 +172,10 @@ class RadialFOV(FOV):
         # Transform based on which type of coeffs are given
         #-----------------------------------------------------
         if self.coefft_uv_from_xy is not None:
-            uv = self._apply_polynomial(xy,
+            uv = self._apply_polynomial(xy, 
                             self.coefft_uv_from_xy, derivs, from_='xy')
         else:
-            uv = self._solve_polynomial(xy,
+            uv = self._solve_polynomial(xy, 
                         self.coefft_xy_from_uv, derivs, from_='xy', fast=fast)
 
         return uv
@@ -184,22 +184,22 @@ class RadialFOV(FOV):
 
 
     #===========================================================================
-    # _compute_polynomial
+    # _compute_polynomial 
     #===========================================================================
     def _compute_polynomial(self, r, coefft, derivs):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Compute the 1-D polynomial.
-
+        
         Input:
-            r        Scalar of arbitrary shape specifying the points at which
+            r        Scalar of arbitrary shape specifying the points at which 
                      to evaluate the polynomial.
             coefft   The coefficient array defining the polynomial.
-            derivs   If True, derivatives are computed and included in the
+            derivs   If True, derivatives are computed and included in the 
                      result.
 
         Output:      (f, deriv)
-            f        Scalar of the same shape as r giving the values of
+            f        Scalar of the same shape as r giving the values of 
                      the polynomial at each input point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -217,7 +217,7 @@ class RadialFOV(FOV):
         # Evaluate the polynomial
         #
         # Start with the high-order terms and work downward, because this
-        # improves accuracy. Stop at one because there are no zero-order
+        # improves accuracy. Stop at one because there are no zero-order 
         # terms.
         #-----------------------------------------------------------------
         f_vals = np.zeros(r.shape)
@@ -253,18 +253,18 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Apply the polynomial to pair (p,q) to return (a,b).
-
+        
         Input:
-            pq       Pairs of arbitrary shape specifying the points at which
+            pq       Pairs of arbitrary shape specifying the points at which 
                      to evaluate the polynomial.
             coefft   The coefficient array defining the polynomial.
-            derivs   If True, derivatives are computed and included in the
+            derivs   If True, derivatives are computed and included in the 
                      result.
-            from_    Source system, for labeling the derivatives, e.g., 'uv'
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
 
         Output:      ab
-            ab       Pairs of the same shape as pq giving the values of
+            ab       Pairs of the same shape as pq giving the values of 
                      the polynomial at each input point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -277,14 +277,14 @@ class RadialFOV(FOV):
         if derivs: pq.insert_deriv(dkey, Pair.IDENTITY)
 
         if from_ == 'xy': ab0 = pq.element_div(self.uv_scale, recursive=derivs)
-        if from_ == 'uv':
+        if from_ == 'uv': 
             pq = pq - self.uv_los
             ab0 = pq.element_mul(self.uv_scale, recursive=derivs)
-
+            
         r = ab0.norm(recursive=derivs)
         c = self._compute_polynomial(r, coefft, derivs=derivs)
 
-        ab = ab0*c
+        ab = ab0*c          
         if from_ == 'xy': ab = ab + self.uv_los
 
         #------------------------------------------------
@@ -310,16 +310,16 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Computes initial guess for polynomial inversion.
-
+        
         Input:
             ab       Pairs of arbitrary shape specifying the points at which
                      to compute the guess.
             coefft   The coefficient array defining the polynomial.
-            from_    Source system, for labeling the derivatives, e.g., 'uv'
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
-
+            
         Output:      pq
-            pq       Pairs of of the same shape as ab giving the values of
+            pq       Pairs of of the same shape as ab giving the values of 
                      the inverted polynomial at each input point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -337,24 +337,24 @@ class RadialFOV(FOV):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Solve the polynomial for an (a,b) pair to return (p,q).
-
+        
         Input:
             ab       Pairs of arbitrary shape specifying the points at which
                      to invert the polynomial.
             coefft   The coefficient array defining the polynomial to invert.
             derivs   If True, derivatives are included in the output.
-            from_    Source system, for labeling the derivatives, e.g., 'uv'
+            from_    Source system, for labeling the derivatives, e.g., 'uv' 
                      or 'xy'.
             fast     If True, a faster, but possibly less robust, convergence
                      criterion is used.  The unittests with SpeedTest = True
                      produced the folowing results:
-
+                     
                      Slow Newton's method: convergence: 8.81250858307 ms
                      Fast Newton's method: convergence: 4.69124555588 ms
                      Slow/Fast =  1.87850081137
 
         Output:      pq
-            pq       Pairs of of the same shape as ab giving the values of
+            pq       Pairs of of the same shape as ab giving the values of 
                      the inverted polynomial at each input point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -378,48 +378,62 @@ class RadialFOV(FOV):
         epsilon = 1.e-15
         for iter in range(self.iters):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Evaluate the forward transform and its partial derivatives
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             ab0 = self._apply_polynomial(pq, coefft, derivs=True, from_=to_)
             dab_dpq = ab0.derivs[dkey]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Apply one step of Newton's method in 2-D
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             dab = ab_wod - ab0.wod
 
             dpq_dab = dab_dpq.reciprocal()
             dpq = dpq_dab.chain(dab)
             pq += dpq
 
-            #- - - - - - - - - - - -#
+            #- - - - - - - - - - - -# 
             # Convergence tests...  #
-            #- - - - - - - - - - - -#
-
+            #- - - - - - - - - - - -# 
+            
+            #- - - - - - - - - - - - - - - - - -
             # simpler, but faster convergence
+            #- - - - - - - - - - - - - - - - - -
             if fast == True:
-
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Compare the max step size with the max coordinate value
-                # This removes any positional dependence of the relative
+                # This removes any positional dependence of the relative 
                 # error.  The denominator can only be zero if the entire
                 # grid is (0,0).
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 error_max = abs(dpq.vals).max() / abs(pq.vals).max()
                 if RadialFOV.DEBUG:
                    print(iter, error_max)
 
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Test for root
                 #  This eliminates cases where the iteration bounces
-                #  around near the solution, as long as it's within
+                #  around near the solution, as long as it's within 
                 #  epsilon.
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 if abs(dab).max() <= epsilon: break
 
-                # Relative correction below epsilon.
+                #- - - - - - - - - - - - - - - - - - -
+                # Relative correction below epsilon. 
+                #- - - - - - - - - - - - - - - - - - -
                 if error_max <= epsilon: break
 
+            #- - - - - - - - - - - - - - - - - - -
             # slower convergence, but more robust
+            #- - - - - - - - - - - - - - - - - - -
             else:
-
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # The old convergence test below was looking for the correction
-                # to overshoot.  This may in principle be a more robust way to
+                # to overshoot.  This may in principle be a more robust way to 
                 # ensure machine precision is achieved, but it requires some
                 # additonal iterations conmpared to the simpler test above.
+                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 try: prev_dpq_max
                 except: prev_dpq_max = 1.e99
                 dpq_max = abs(dpq).max()
@@ -468,14 +482,14 @@ class Test_RadialFOV(unittest.TestCase):
         # Test timing for _solve_polynomial fast vs slow convergence criteria
         #====================================================================
         if SpeedTest:
-            coefft_xy_from_uv = np.array([1.000,
-                                          0,
-                                         -5.9624209455667325e-08,
-                                          0,
+            coefft_xy_from_uv = np.array([1.000, 
+                                          0, 
+                                         -5.9624209455667325e-08, 
+                                          0, 
                                           2.7381910042256151e-14])
             scale = 0.00067540618
             shape = (1648,128)
-            fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv,
+            fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                    uv_los=(800,64), uv_area=1.)
             flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
@@ -486,20 +500,20 @@ class Test_RadialFOV(unittest.TestCase):
 
             ### TODO: change to timeit in python 3
             niter = 100
-
+        
             t_fast = 0
             t_slow = 0
-            for i in range(niter):
+            for i in range(niter): 
                 t0 = time.time()
                 uv = fov.uv_from_xy(xy, derivs=True, fast=False)
                 t1 = time.time()
                 t_slow += t1-t0
-
+                
                 t0 = time.time()
                 uv = fov.uv_from_xy(xy, derivs=True, fast=True)
                 t1 = time.time()
                 t_fast += t1-t0
-
+                
             print()
             print()
             print("Slow Newton's method: convergence:", t_slow/niter*1000, 'ms')
@@ -512,17 +526,17 @@ class Test_RadialFOV(unittest.TestCase):
 
         #=================================================================
         # xy_from_uv transform using xy_from_uv coefficients
-        # Validate uv derivative propagation against central differences
+        # Validate uv derivative propagation against central differences 
         # / chain rule
         #=================================================================
-        coefft_xy_from_uv = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_xy_from_uv = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv,
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
 
         uv = Pair.combos(np.arange(100), np.arange(8)) * 16
@@ -556,17 +570,17 @@ class Test_RadialFOV(unittest.TestCase):
 
         #====================================================================
         # uv_from_xy transform using uv_from_xy coefficients
-        # Validate derivative propagation against central differences
+        # Validate derivative propagation against central differences 
         # / chain rule
         #====================================================================
-        coefft_uv_from_xy = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_uv_from_xy = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy,
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
         flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
@@ -605,17 +619,17 @@ class Test_RadialFOV(unittest.TestCase):
 
         #====================================================================
         # uv_from_xy transform using xy_from_uv coefficients
-        # Validate derivative propagation against central differences
+        # Validate derivative propagation against central differences 
         # / chain rule
         #====================================================================
-        coefft_xy_from_uv = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_xy_from_uv = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv,
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
         flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
@@ -651,24 +665,24 @@ class Test_RadialFOV(unittest.TestCase):
 
         #====================================================================
         # xy_from_uv transform with uv_from_xy coefficients
-        # Validate derivative propagation against central differences
+        # Validate derivative propagation against central differences 
         # / chain rule
         #====================================================================
-        coefft_uv_from_xy = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_uv_from_xy = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy,
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
         uv = Pair.combos(np.arange(100), np.arange(8))
         uv.insert_deriv('t', Pair(np.random.randn(100,8,2)))
         uv.insert_deriv('rs', Pair(np.random.randn(100,8,2,2), drank=1))
 
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy,
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
         xy = fov.xy_from_uv(uv, derivs=True)
@@ -703,14 +717,14 @@ class Test_RadialFOV(unittest.TestCase):
         # xy_from_uv vs. uv_from_xy transform with xy_from_uv coefficients,
         # no derivatives
         #====================================================================
-        coefft_xy_from_uv = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_xy_from_uv = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv,
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
 
         uv = Pair.combos(np.arange(100), np.arange(8))
@@ -724,14 +738,14 @@ class Test_RadialFOV(unittest.TestCase):
         # uv_from_xy vs. xy_from_uv transform with uv_from_xy coefficients,
         # no derivatives
         #====================================================================
-        coefft_uv_from_xy = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_uv_from_xy = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy,
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
         uv = Pair.combos(np.arange(100), np.arange(8))
@@ -748,14 +762,14 @@ class Test_RadialFOV(unittest.TestCase):
         # uv_from_xy vs. xy_from_uv transform with xy_from_uv coefficients,
         # test derivative propagation
         #====================================================================
-        coefft_xy_from_uv = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_xy_from_uv = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv,
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
         flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
@@ -795,14 +809,14 @@ class Test_RadialFOV(unittest.TestCase):
         # xy_from_uv vs. uv_from_xy transform with uv_from_xy coefficients,
         # test derivative propagation
         #====================================================================
-        coefft_uv_from_xy = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_uv_from_xy = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy,
+        fov = RadialFOV(scale, shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
         uv = Pair.combos(np.arange(100), np.arange(8))
@@ -843,14 +857,14 @@ class Test_RadialFOV(unittest.TestCase):
         # uv_from_xy transform with xy_from_uv coefficients
         # Verify that derivatives are not propagated for derivs=False
         #====================================================================
-        coefft_xy_from_uv = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_xy_from_uv = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv,
+        fov = RadialFOV(scale, shape, coefft_xy_from_uv=coefft_xy_from_uv, 
                                                     uv_los=(800,64), uv_area=1.)
         flatfov = oops.fov.FlatFOV(scale, shape, uv_los=(800,64), uv_area=1.)
 
@@ -869,14 +883,14 @@ class Test_RadialFOV(unittest.TestCase):
         # xy_from_uv transform with uv_from_xy coefficients
         # Verify that derivatives are not propagated for derivs=False
         #====================================================================
-        coefft_uv_from_xy = np.array([1.000,
-                                      0,
-                                     -5.9624209455667325e-08,
-                                      0,
+        coefft_uv_from_xy = np.array([1.000, 
+                                      0, 
+                                     -5.9624209455667325e-08, 
+                                      0, 
                                       2.7381910042256151e-14])
         scale = 0.00067540618
         shape = (1648,128)
-        fov = RadialFOV(scale, xy.shape, coefft_uv_from_xy=coefft_uv_from_xy,
+        fov = RadialFOV(scale, xy.shape, coefft_uv_from_xy=coefft_uv_from_xy, 
                                                     uv_los=(800,64), uv_area=1.)
 
         uv = Pair.combos(np.arange(100), np.arange(8))

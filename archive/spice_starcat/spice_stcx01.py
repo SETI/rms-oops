@@ -73,7 +73,7 @@ def stcl01(*args):
 
 def stcf01(*args):
   """
-    stcf01(char catnam, double west_ra, double east_ra, double south_dec,
+    stcf01(char catnam, double west_ra, double east_ra, double south_dec, 
         double north_dec)
     """
   return _spice_stcx01.stcf01(*args)

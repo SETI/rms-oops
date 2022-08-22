@@ -492,12 +492,16 @@ def encode_bool_array(values, b64_savings, npz_savings):
     # Find optimal binary encoding
     #---------------------------------
 
+    #- - - - - - - - - - - - - - - - - - - - - - - -
     # Count the number of True and False values
+    #- - - - - - - - - - - - - - - - - - - - - - - -
     total_items = len(values)
     true_items = np.count_nonzero(values)
     false_items = total_items - true_items
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Method 'all_equal' works only if all mask values are the same
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if true_items == 0 or false_items == 0:
         attr_list += [('method', 'all_equal'), ('encoding', 'text')]
 
@@ -506,8 +510,10 @@ def encode_bool_array(values, b64_savings, npz_savings):
         else:
             return ('True', None, attr_list)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # method 'list_false' and 'list_true' explicitly list the locations of
     # False or True values
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if total_items < 256:
         index_bytes = 1
         index_dtype = UINT8
@@ -529,10 +535,14 @@ def encode_bool_array(values, b64_savings, npz_savings):
 
     list_bytes = list_items * index_bytes
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Method 'packbits' combines eight values per byte
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - -
     packbits_bytes = (len(values) + 7) // 8
 
+    #- - - - - - - - - - - - - - - - - - - 
     # Select the best npz/base64 option
+    #- - - - - - - - - - - - - - - - - - - 
     if packbits_bytes <= list_bytes:
         compressed_method = 'packbits'
         compressed_bytes = packbits_bytes
@@ -543,7 +553,9 @@ def encode_bool_array(values, b64_savings, npz_savings):
     npz_bytes = 0.8 * compressed_bytes
     b64_bytes = 1.3 * compressed_bytes
 
+    #- - - - - - - - - - - - - - - - 
     # Select the best text option
+    #- - - - - - - - - - - - - - - - 
     list_text_bytes = (len(str(total_items)) + 1) * list_items
     if list_text_bytes < text_bytes:
         text_bytes = list_text_bytes
@@ -551,7 +563,9 @@ def encode_bool_array(values, b64_savings, npz_savings):
     else:
         text_method = 'TF'
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     # Hold the data for the npz file if the savings is large enough
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     if min(text_bytes, b64_bytes) > npz_bytes + npz_savings:
         attr_list += [('method', compressed_method)]
 
@@ -564,7 +578,9 @@ def encode_bool_array(values, b64_savings, npz_savings):
         attr_list += [('encoding', 'npz')]
         return ('', compressed, attr_list)  # XML value, npz value, attributes
 
+    #- - - - - - - - - - - - - - - - - - - 
     # For something short, return text
+    #- - - - - - - - - - - - - - - - - - - 
     if text_bytes < b64_bytes + b64_savings:
         if text_method == 'TF':
             string = ''.join(['FT'[v] for v in values])
@@ -575,7 +591,9 @@ def encode_bool_array(values, b64_savings, npz_savings):
         attr_list += [('method', text_method), ('encoding', 'text')]
         return (string, None, attr_list)
 
+    #- - - - - - - - - - - - - - - 
     # Otherwise, base64 encode
+    #- - - - - - - - - - - - - - - 
     attr_list += [('method', compressed_method)]
 
     if compressed_method == 'packbits':
@@ -1373,14 +1391,18 @@ class Test_Packrat_arrays(unittest.TestCase):
     self.assertEqual(attr['encoding'], 'text')
     self.assertEqual(attr['storage_dtype'], FLOAT32_ENC)
 
+    #- - - - - - - - - - - - - - - - - - -
     # In text mode, we never use ints
+    #- - - - - - - - - - - - - - - - - - -
     attr = test_float_array(randoms[:20], 1000, 1000, absolute=0.05)
     self.assertEqual(attr['storage_dtype'], FLOAT32_ENC)
 
     attr = test_float_array([randoms[:20]], 1000, 1000, relative=0.05)
     self.assertEqual(attr['storage_dtype'], FLOAT32_ENC)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     # Test int usage for npz encoding, absolute or relative
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     attr = test_float_array([randoms[:100].clip(-2,2)], 1000, 0, absolute=0.1)
     self.assertEqual(attr['storage_dtype'], UINT8_ENC)
 
@@ -1396,7 +1418,9 @@ class Test_Packrat_arrays(unittest.TestCase):
     attr = test_float_array(cleaned[:100].clip(-2,2), 1000, 0, relative=0.0001)
     self.assertEqual(attr['storage_dtype'], FLOAT32_ENC)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     # Test int usage for npz encoding, absolute and relative
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     attr = test_float_array([randoms[:100].clip(-2,2)], 1000, 0, absolute=0.1, relative=1.e-8, worstcase=False)
     self.assertEqual(attr['storage_dtype'], UINT8_ENC)
 
@@ -1412,7 +1436,9 @@ class Test_Packrat_arrays(unittest.TestCase):
     attr = test_float_array(cleaned[:100].clip(-2,2), 1000, 0, relative=0.0001, absolute=1, worstcase=True)
     self.assertEqual(attr['storage_dtype'], FLOAT32_ENC)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Test int usage for base64 encoding, absolute or relative
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     attr = test_float_array([randoms[:100].clip(-2,2)], 0, 1000, absolute=0.1)
     self.assertEqual(attr['storage_dtype'], UINT8_ENC)
 
@@ -1428,7 +1454,9 @@ class Test_Packrat_arrays(unittest.TestCase):
     attr = test_float_array(cleaned[:100].clip(-2,2), 0, 1000, relative=0.0001)
     self.assertEqual(attr['storage_dtype'], FLOAT32_ENC)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Test int usage for base64 encoding, absolute and relative
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     attr = test_float_array([randoms[:100].clip(-2,2)], 0, 1000, absolute=0.1, relative=1.e-8, worstcase=False)
     self.assertEqual(attr['storage_dtype'], UINT8_ENC)
 

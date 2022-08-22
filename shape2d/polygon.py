@@ -273,11 +273,15 @@ class Polygon(Shape2D):
         #------------------------
         for k in range(axis0-1,-1,0):
 
+          #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           # Compare each value to all values to its left on axis 0
+          #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           for j in range(k-1,-1,-1):
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If the left value (j) is equal to the right value (k) and the
             # left value is unmasked, mask the right value
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask[k] |= ((x[j] - x[k]).abs() <= Shape2D.PREC &
                             (y[j] - y[k]).abs() <= Shape2D.PREC &
                             unmasked[j])
@@ -495,11 +499,13 @@ class Polygon(Shape2D):
         if type(arg) == Circle:
             circle = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # A polygon is a superset of a circle if...
             # 1. The circle's center is inside the polygon
             # 2. Every point is outside the circle.
             # 3. None of the sides intersects the circle (although they can
             #    touch)
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             circle_center_is_inside = self.is_superset_of(circle.pt0)
 
@@ -566,7 +572,7 @@ class Polygon(Shape2D):
                         shape.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+        
         #----------------------------------------------
         # Is disjoint from, Triangle to Polygon
         #----------------------------------------------
@@ -579,8 +585,10 @@ class Polygon(Shape2D):
         if type(arg) == Line:
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # A polygon is disjoint from an infinite line if all points
             # fall on the same side of the line.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             diffs = self.ptsn - line.pt0
             sides = diffs.dot(line.perp)
@@ -589,8 +597,10 @@ class Polygon(Shape2D):
         if type(arg) in (HalfLine, Segment):
             line == arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # A polygon is disjoint from a half-line or segment if the full
             # line would be disjoint or if one endpoint is outside the polygon
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
             return (self.is_disjoint_from(Line.as_line(line)) |
                     self.is_disjoin_from(line.pt0))
@@ -639,13 +649,17 @@ class Polygon(Shape2D):
         if isinstance(type(arg), Line):
             line = arg
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # True if exactly one line endpoint touches the triangle or if the
             # line touches one corner
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             touchings = []
             for pt in self.pts:
                 touchings.append(line.touches(pt))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Count matches on the side but not the corners
+            #- - - - - - - - - - - - - - - - - - - - - - - - -
             for seg in self.segs:
                 (side_pt, line_pt) = seg.closest(line)
                 touches_side = (side_pt - line_pt).norm_sq() <= Shape2D.PREC_SQ

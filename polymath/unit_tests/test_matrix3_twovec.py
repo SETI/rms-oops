@@ -47,10 +47,14 @@ class Test_Matrix3_twovec(unittest.TestCase):
 
     for i in range(N):
 
+        #- - - - - - - - - - - - - - - - - - - - 
         # The new Y-axis is perpendicular to X
+        #- - - - - - - - - - - - - - - - - - - - 
         self.assertAlmostEqual(mat.values[i,1,0], 0., delta=DEL)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - -
         # The new Z-axis coincides with the line of sight
+        #- - - - - - - - - - - - - - - - - - - - - - - - - -
         self.assertAlmostEqual(mat.values[i,2,0], a.values[i,0], delta=DEL)
         self.assertAlmostEqual(mat.values[i,2,1], a.values[i,1], delta=DEL)
         self.assertAlmostEqual(mat.values[i,2,2], a.values[i,2], delta=DEL)
@@ -64,7 +68,9 @@ class Test_Matrix3_twovec(unittest.TestCase):
 
     self.assertTrue(np.all(mat.mask == (a.mask | b.mask)))
 
+    #- - - - - - - - - - -
     # With derivatives
+    #- - - - - - - - - - -
     DEL = 1.e-12
 
     N = 100
@@ -97,7 +103,9 @@ class Test_Matrix3_twovec(unittest.TestCase):
     diffs = (dmat_dt.vals - mat.d_dt.vals)[~mat.mask]
     self.assertLess(np.max(np.abs(diffs)), 1.e-6)
 
+    #- - - - - - - - - - - - - - -
     # With derivatives, denoms
+    #- - - - - - - - - - - - - - -
     DEL = 1.e-12
 
     N = 100

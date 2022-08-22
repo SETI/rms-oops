@@ -112,7 +112,7 @@ class Transform(object):
         self.filled_inverse_with_deriv = None
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # shape
@@ -135,7 +135,7 @@ class Transform(object):
         return self.filled_shape
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # omega1
@@ -155,7 +155,7 @@ class Transform(object):
         return self.filled_omega1
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # matrix_with_deriv
@@ -177,7 +177,7 @@ class Transform(object):
         return self.filled_matrix_with_deriv
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # inverse_matrix
@@ -195,7 +195,7 @@ class Transform(object):
         return self.filled_inverse_matrix
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # inverse_with_deriv
@@ -215,7 +215,7 @@ class Transform(object):
         return self.filled_inverse_with_deriv
     #===========================================================================
 
-
+    
 
     ########################
     # string operations
@@ -230,7 +230,7 @@ class Transform(object):
                 repr(self.frame.frame_id) + ')')
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # __repr__
@@ -238,7 +238,7 @@ class Transform(object):
     def __repr__(self): return self.__str__()
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # identity
@@ -253,7 +253,7 @@ class Transform(object):
         return Transform(Matrix3.IDENTITY, Vector3.ZERO, frame, frame)
     #===========================================================================
 
-
+    
 
     ############################################################################
     # Vector operations
@@ -294,7 +294,7 @@ class Transform(object):
             return self.matrix * pos.wod
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # rotate_pos_vel
@@ -334,7 +334,7 @@ class Transform(object):
         return (pos_target, vel_target)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # unrotate
@@ -371,7 +371,7 @@ class Transform(object):
             return self.inverse_matrix * pos.wod
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # unrotate_pos_vel
@@ -409,7 +409,7 @@ class Transform(object):
         return (pos_ref, vel_ref)
     #===========================================================================
 
-
+    
 
     ############################################################################
     # Operations on Transforms
@@ -428,7 +428,7 @@ class Transform(object):
                          self.reference, self.frame, self.origin)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # rotate_transform
@@ -437,7 +437,7 @@ class Transform(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Apply this transform to another, as a left-multiply.
-
+        
         The result is a single transform that converts coordinates in the
         reference frame of the argument transform into the frame of this
         transform.
@@ -474,7 +474,7 @@ class Transform(object):
                          self.frame, arg.reference, origin)
     #===========================================================================
 
-
+    
 
     #===========================================================================
     # unrotate_transform
@@ -483,7 +483,7 @@ class Transform(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Apply the inverse of this transform to another, as a left-multiply.
-
+        
         The result is a single transform that applies the convert coordinates
         in the parent frame of the argument transform into the parent frame of
         this transform. I.e., if arg rotates A to B and self rotates C to B,
@@ -493,7 +493,7 @@ class Transform(object):
         return self.invert().rotate_transform(arg)
     #===========================================================================
 
-
+    
 
 #*******************************************************************************
 
@@ -591,8 +591,8 @@ class Test_Transform(unittest.TestCase):
         # Transform derivatives are unit tested as part of the SpinFrame tests
     #===========================================================================
 
-
-
+    
+    
 #*******************************************************************************
 
 

@@ -137,7 +137,9 @@ class Circle(Shape2D, Ellipse):
         if type(arg) in (Point, Pair):
             pt = Point(arg)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Draw a radial vector from the circle center through the point
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             halfline = HalfLine(self.pt0, pt)
             self_pt = halfline.point_at(self.r * halfline.r_inv)
 
@@ -158,12 +160,16 @@ class Circle(Shape2D, Ellipse):
         if isinstance(self, Line):
             line = arg
 
+            #- - - - - - - - - - - - -
             # Find intersections
+            #- - - - - - - - - - - - -
             (s0, s1) = Circle._line_intersection_params(self, line)
             self_pts = [line.point_at(s0), line.point_at(s1)]
             line_pts = list(self_pts)   # a copy
 
+            #- - - - - - - - - - - - - - - - - - - - - 
             # Find point on line closest to center
+            #- - - - - - - - - - - - - - - - - - - - - 
             s = Line._line_param_closest_to_point(line, self.pt0)
             line_pt = line.point_at(s)
             halfline = HalfLine(line_pt, self.pt0)
@@ -171,7 +177,9 @@ class Circle(Shape2D, Ellipse):
             self_pts.append(self_pt)
             line_pts.append(line_pt)
 
+            #- - - - - - - - - - - - - - -
             # Also consider endpoints
+            #- - - - - - - - - - - - - - -
             if type(line) in (HalfLine, Segment):
                 (self_pt, line_pt) = self.closest(line.pt0)
                 self_pts.append(self_pt)
@@ -188,7 +196,9 @@ class Circle(Shape2D, Ellipse):
                 self_pts += [self_pt0, self_pt1]
                 line_pts += [line_pt0, line_pt1]
 
+            #- - - - - - - - - - - - - - - - - - - -
             # Select and return closest pairings
+            #- - - - - - - - - - - - - - - - - - - -
             return Shape2D._closest_of_pairings(self_pts, line_pts)
 
         #------------------------------
@@ -197,16 +207,22 @@ class Circle(Shape2D, Ellipse):
         if isinstance(self, Circle):
             circle = arg
 
+            #- - - - - - - - - - - - -
             # Find intersections
+            #- - - - - - - - - - - - -
             (t0, t1) = self._circle_intersection_params(circle)
             self_pt0 = self.point_at(t0)
             circle_pt0 = self_pt0
 
+            #- - - - - - - - - - - - - - - - - -
             # Find closest points on circles
+            #- - - - - - - - - - - - - - - - - -
             self_pt1 = self.point_at(self.param_at(circle.pt0))
             circle_pt1 = circle.point_at(circle.param_at(self.pt0))
 
+            #- - - - - - - - - - - - - - - - - - - 
             # Select and return closest pairings
+            #- - - - - - - - - - - - - - - - - - - 
             return Shape2D._closest_of_pairings([self_pt0, self_pt1],
                                                 [circle_pt0, circle_pt1])
 

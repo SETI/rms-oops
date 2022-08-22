@@ -24,7 +24,7 @@ class NullNav(Navigation):
     def __init__(self, angles):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Constructor for a NullNav object.
+        Constructor for a NullNav object. 
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.nparams = 0

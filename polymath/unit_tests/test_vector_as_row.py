@@ -28,7 +28,7 @@ class Test_Vector_as_row(unittest.TestCase):
     self.assertEqual(type(b), Matrix)
 
     #---------------------------
-    # check units and masks
+    # check units and masks    
     #---------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5),
@@ -43,7 +43,7 @@ class Test_Vector_as_row(unittest.TestCase):
     self.assertEqual(b.values[0,0,0], 22.)
 
     #------------------------
-    # check derivatives
+    # check derivatives       
     #------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))

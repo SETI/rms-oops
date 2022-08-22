@@ -84,8 +84,9 @@ def body_id_and_name(arg):
         try:
             name = cspyce.bodc2n(arg)
         except LookupError:
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # In rare cases, a body has no name; use the ID instead
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             name = str(arg)
 
         return (arg, name)
@@ -117,14 +118,20 @@ def frame_id_and_name(arg):
         except KeyError:
             name = ''
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If the int is recognized as a frame ID, return it
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - -
         if name != '': return (arg, name)
 
+        #- - - - - - - - - - - - - - - - - - - - - 
         # Make sure the body's frame is defined
+        #- - - - - - - - - - - - - - - - - - - - - 
         if not cspyce.bodfnd(arg, 'POLE_RA'):
             raise LookupError('frame for body %d is undefined' % arg)
 
+        #- - - - - - - - - - - - - - - - - - - 
         # Otherwise, perhaps it is a body ID
+        #- - - - - - - - - - - - - - - - - - - 
         return cspyce.cidfrm(arg) # LookupError if not found
 
     #---------------------------------------------
@@ -132,7 +139,9 @@ def frame_id_and_name(arg):
     #---------------------------------------------
     if type(arg) == type(""):
 
+        #- - - - - - - - - - - - - - - - - - - - - 
         # Validate this as the name of a frame
+        #- - - - - - - - - - - - - - - - - - - - - 
         try:
             id = cspyce.namfrm(arg)     # does not raise an error; I may fix
         except ValueError:
@@ -140,25 +149,37 @@ def frame_id_and_name(arg):
         except KeyError:
             id = 0
 
+        #- - - - - - - - - - - - - - - - 
         # If a nonzero ID is found...
+        #- - - - - - - - - - - - - - - - 
         if id != 0:
 
+            #- - - - - - - - - - - - - - - - - - 
             # Make sure the frame is defined
+            #- - - - - - - - - - - - - - - - - - 
             body_id = cspyce.frinfo(id)[0]
             if (body_id > 0) and not cspyce.bodfnd(body_id, 'POLE_RA'):
                 raise LookupError('frame "%s" is undefined' % arg)
 
+            #- - - - - - - - - - - - - - - - - - - - -
             # Return the official, capitalized name
+            #- - - - - - - - - - - - - - - - - - - - -
             return (id, cspyce.frmnam(id))
 
+        #- - - - - - - - - - - - - - - - - - -
         # See if this is the name of a body
+        #- - - - - - - - - - - - - - - - - - -
         body_id = cspyce.bodn2c(arg)         # raises LookupError if not found
 
+        #- - - - - - - - - - - - - - - - - - - - - 
         # Make sure the body's frame is defined
+        #- - - - - - - - - - - - - - - - - - - - - 
         if not cspyce.bodfnd(body_id, 'POLE_RA'):
             raise LookupError('frame for body "%s" is undefined' % arg)
 
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         # If this is a body, return the name of the associated frame
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         return cspyce.cidfrm(body_id)
 #===============================================================================
 

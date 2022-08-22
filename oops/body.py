@@ -874,7 +874,7 @@ class Body(object):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Initialize the registry.
-
+    
         It is not generally necessary to call this function, but it can be used
         to reset the registry for purposes of debugging.
         """

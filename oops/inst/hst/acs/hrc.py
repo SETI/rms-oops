@@ -24,29 +24,29 @@ def from_file(filespec, **parameters):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     #---------------------
-    # Open the file
+    # Open the file      
     #---------------------
     hst_file = pyfits.open(filespec)
 
     #---------------------------------------
-    # Make an instance of the HRC class
+    # Make an instance of the HRC class     
     #---------------------------------------
     this = HRC()
 
     #---------------------------------------
-    # Confirm that the telescope is HST
+    # Confirm that the telescope is HST     
     #---------------------------------------
     if this.telescope_name(hst_file) != "HST":
         raise IOError("not an HST file: " + this.filespec(hst_file))
 
     #----------------------------------------
-    # Confirm that the instrument is ACS
+    # Confirm that the instrument is ACS      
     #----------------------------------------
     if this.instrument_name(hst_file) != "ACS":
         raise IOError("not an HST/ACS file: " + this.filespec(hst_file))
 
     #--------------------------------------
-    # Confirm that the detector is HRC
+    # Confirm that the detector is HRC       
     #--------------------------------------
     if this.detector_name(hst_file) != "HRC":
         raise IOError("not an HST/ACS/HRC file: " + this.filespec(hst_file))
@@ -98,18 +98,18 @@ class HRC(ACS):
         global IDC_DICT
 
         #---------------------------------------------------------
-        # Load the dictionary of IDC parameters if necessary
+        # Load the dictionary of IDC parameters if necessary    
         #---------------------------------------------------------
         if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("FILTER1", "FILTER2"))
 
         #----------------------------------------
-        # Define the key into the dictionary
+        # Define the key into the dictionary  
         #----------------------------------------
         idc_key = (hst_file[0].header["FILTER1"], hst_file[0].header["FILTER2"])
 
         #----------------------------
-        # Define the plate scale
+        # Define the plate scale          
         #----------------------------
         if 'platescale' in parameters:
             platescale = parameters['platescale']
@@ -141,14 +141,14 @@ class HRC(ACS):
         global GENERAL_SYN_FILES, CORONOGRAPH_SYN_FILE, FILTER_SYN_FILE
 
         #--------------------------------------
-        # Copy all the standard file names
+        # Copy all the standard file names             
         #--------------------------------------
         syn_filenames = []
         for filename in GENERAL_SYN_FILES:
             syn_filenames.append(filename)
 
         #---------------------------------
-        # Add the filter file names
+        # Add the filter file names    
         #---------------------------------
         for filter_name in (hst_file[0].header["FILTER1"],
                             hst_file[0].header["FILTER2"]):
@@ -165,7 +165,7 @@ class HRC(ACS):
                                      FILTER_SYN_FILE[1])
 
         #------------------------------------------------
-        # Add the coronograph file name if necessary
+        # Add the coronograph file name if necessary  
         #------------------------------------------------
         if hst_file[0].header["APERTURE"][0:9] == "HRC-CORON":
             syn_filenames.append(CORONOGRAPH_SYN_FILE)
