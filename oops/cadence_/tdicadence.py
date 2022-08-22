@@ -68,7 +68,7 @@ class TdiCadence(Cadence):
     #===========================================================================
     # time_at_tstep
     #===========================================================================
-    def time_at_tstep(self, tstep, mask=True, line=0):
+    def time_at_tstep(self, tstep, mask=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Return the min time(s) associated with the given time step(s).
@@ -80,7 +80,6 @@ class TdiCadence(Cadence):
         Input:
             tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
-            line        line number in the TDI array.
 
         Return:         a Scalar of times in seconds TDB.
         """
