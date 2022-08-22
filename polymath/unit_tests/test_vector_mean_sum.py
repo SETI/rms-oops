@@ -8,12 +8,19 @@ import unittest
 
 from polymath import Qube, Vector
 
+#*******************************************************************************
+# Test_Vector_mean_sum
+#*******************************************************************************
 class Test_Vector_mean_sum(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Mean
-
+    #------------
+    # Mean     
+    #------------
     self.assertEqual(Vector([1,2,3,4]).mean(), [1,2,3,4])
 
     vals = np.random.randn(5,4)
@@ -38,8 +45,9 @@ class Test_Vector_mean_sum(unittest.TestCase):
     self.assertEqual(v.mean(axis=0)[:2], np.mean(vals[:,:2], axis=0))
     self.assertEqual(np.all(v.mean(axis=0)[2:].mask), True)
 
-    # Mean, with derivs
-
+    #----------------------
+    # Mean, with derivs        
+    #----------------------
     vals = np.random.randn(5,4)
     dv_dt = Vector(np.random.randn(5,4,2,2), drank=2)
     v = Vector(vals, derivs={'t': dv_dt})
@@ -78,8 +86,9 @@ class Test_Vector_mean_sum(unittest.TestCase):
     self.assertEqual(v.mean(axis=0)[:2].d_dt, np.mean(dv_dt.vals[:,:2], axis=0))
     self.assertEqual(np.all(v.mean(axis=0)[2:].d_dt.mask), True)
 
-    # Sum
-
+    #------------
+    # Sum     
+    #------------
     self.assertEqual(Vector([1,2,3,4]).sum(), [1,2,3,4])
 
     vals = np.random.randn(5,4)
@@ -104,8 +113,9 @@ class Test_Vector_mean_sum(unittest.TestCase):
     self.assertEqual(v.sum(axis=0)[:2], np.sum(vals[:,:2], axis=0))
     self.assertEqual(np.all(v.sum(axis=0)[2:].mask), True)
 
-    # Sum, with derivs
-
+    #---------------------
+    # Sum, with derivs      
+    #---------------------
     vals = np.random.randn(5,4)
     dv_dt = Vector(np.random.randn(5,4,2,2), drank=2)
     v = Vector(vals, derivs={'t': dv_dt})
@@ -143,6 +153,13 @@ class Test_Vector_mean_sum(unittest.TestCase):
     self.assertEqual(v.sum(axis=-1).d_dt, np.sum(dv_dt.vals[:,:2], axis=1))
     self.assertEqual(v.sum(axis=0)[:2].d_dt, np.sum(dv_dt.vals[:,:2], axis=0))
     self.assertEqual(np.all(v.sum(axis=0)[2:].d_dt.mask), True)
+  #=============================================================================
+
+
+
+
+#*******************************************************************************
+
 
 
 

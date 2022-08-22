@@ -12,20 +12,30 @@ from oops.transform        import Transform
 from oops.path_.path       import Path
 from oops.constants        import *
 
+#*******************************************************************************
+# InclinedFrame
+#*******************************************************************************
 class InclinedFrame(Frame):
-    """InclinedFrame is a Frame subclass describing a frame that is inclined to
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    InclinedFrame is a Frame subclass describing a frame that is inclined to
     the equator of another frame. It is defined by an inclination, a node at
     epoch, and a nodal regression rate. This frame is oriented to be "nearly
     inertial," meaning that a longitude in the new frame is determined by
     measuring from the reference longitude in the reference frame, along that
     frame's equator to the ascending node, and thence along the ascending node.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['inc', 'node', 'rate', 'epoch', 'reference', 'despin',
                     'frame_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, inc, node, rate, epoch, reference, despin=True, id=None):
-        """Constructor for a InclinedFrame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a InclinedFrame.
 
         Input:
             inc         the inclination of the plane in radians.
@@ -55,7 +65,7 @@ class InclinedFrame(Frame):
         shape. The shape of the InclinedFrame is the result of broadcasting all
         these shapes together.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.inc = Scalar.as_scalar(inc)
         self.node = Scalar.as_scalar(node)
         self.rate = Scalar.as_scalar(rate)
@@ -79,14 +89,23 @@ class InclinedFrame(Frame):
         else:
             self.spin2 = None
 
+        #----------------------------------------------------
         # Update wayframe and frame_id; register if not temporary
+        #----------------------------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
+    
 
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick=False):
-        """The Transform into the this Frame at a Scalar of times."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The Transform into the this Frame at a Scalar of times.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         xform = self.spin1.transform_at_time(time)
         xform = self.rotate.transform_at_time(time).rotate_transform(xform)
 
@@ -94,15 +113,31 @@ class InclinedFrame(Frame):
             xform = self.spin2.transform_at_time(time).rotate_transform(xform)
 
         return xform
+    #===========================================================================
 
-    ########################################
+    
 
+    #===========================================================================
+    # node_at_time
+    #===========================================================================
     def node_at_time(self, time):
-        """Return the longitude of ascending node at the specified time."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the longitude of ascending node at the specified time.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        #----------------------------------------------------
         # Locate the ascending nodes in the reference frame
+        #----------------------------------------------------
         return (self.node +
                 self.rate * (Scalar.as_scalar(time) - self.epoch)) % TWOPI
+    #===========================================================================
+
+    
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -110,12 +145,25 @@ class InclinedFrame(Frame):
 
 import unittest
 
+#*******************************************************************************
+# Test_InclinedFrame
+#*******************************************************************************
 class Test_InclinedFrame(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # Note: Unit testing is performed in surface/orbitplane.py
         pass
+    #===========================================================================
+
+    
+    
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

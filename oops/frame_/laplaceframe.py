@@ -11,8 +11,13 @@ from oops.frame_.poleframe  import PoleFrame
 from oops.path_.kepler      import Kepler
 from oops.transform         import Transform
 
+#*******************************************************************************
+# LaplaceFrame
+#*******************************************************************************
 class LaplaceFrame(Frame):
-    """LaplaceFrame is a Frame subclass defined by a Kepler Path and a tilt
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    LaplaceFrame is a Frame subclass defined by a Kepler Path and a tilt
     angle. The new Z-axis is constructed by rotating the planet's pole by a
     specified, fixed angle toward the pole of the orbit. The rotation occurs
     around the ascending node of the orbit on the orbit's defined reference
@@ -24,11 +29,16 @@ class LaplaceFrame(Frame):
     negative because Triton is retrograde, and therefore its orbital ascending
     node is the descending node for the orbits of the inner moons.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['orbit', 'tilt', 'frame_id', 'given_cache_size']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, orbit, tilt=0., id='+', cache_size=1000):
-        """Constructor for a LaplaceFrame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a LaplaceFrame.
 
         Input:
             orbit       a Kepler Path object.
@@ -47,7 +57,7 @@ class LaplaceFrame(Frame):
                         because it avoids unnecessary SPICE calls when the frame
                         is being used repeatedly at a finite set of times.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.orbit = orbit
         self.planet = self.orbit.planet
 
@@ -63,7 +73,9 @@ class LaplaceFrame(Frame):
         self.shape = Qube.broadcasted_shape(orbit.shape, self.tilt)
         self.keys = set()
 
+        #-----------------
         # Define cache
+        #-----------------
         self.cache = {}
         self.trim_size = max(cache_size//10, 1)
         self.given_cache_size = cache_size
@@ -71,7 +83,9 @@ class LaplaceFrame(Frame):
         self.cache_counter = 0
         self.cached_value_returned = False          # Just used for debugging
 
+        #-------------------------
         # Fill in the frame ID
+        #-------------------------
         if id is None:
             self.frame_id = Frame.temporary_frame_id()
         elif id == '+':
@@ -81,20 +95,31 @@ class LaplaceFrame(Frame):
         else:
             self.frame_id = id
 
+        #--------------------------
         # Register if necessary
+        #--------------------------
         if id:
             self.register()
         else:
             self.wayframe = self
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
-        """The Transform into the this Frame at a Scalar of times."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The Transform into the this Frame at a Scalar of times.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time)
 
+        #------------------------------------------
         # Check cache first if time is a Scalar
+        #------------------------------------------
         if time.shape == ():
             key = time.values
 
@@ -107,49 +132,63 @@ class LaplaceFrame(Frame):
 
         self.cached_value_returned = False
 
+        #-----------------------------------------------
         # All vectors below are in J2000 coordinates
-
+        #-----------------------------------------------
         orbit_ref_xform = self.orbit.frame_wrt_j2000.transform_at_time(time,
                                                                 quick=quick)
         orbit_ref_x_axis = orbit_ref_xform.unrotate(Vector3.XAXIS).wod
         orbit_ref_y_axis = orbit_ref_xform.unrotate(Vector3.YAXIS).wod
         orbit_ref_z_axis = orbit_ref_xform.unrotate(Vector3.ZAXIS).wod
 
+        #---------------------------------------------------------------
         # Locate the node of the orbit on the orbit reference equator
+        #---------------------------------------------------------------
         node_lon = self.orbit.node_at_time(time).wod
         cos_node = np.cos(node_lon)
         sin_node = np.sin(node_lon)
         orbit_node = cos_node * orbit_ref_x_axis + sin_node * orbit_ref_y_axis
 
+        #---------------------------------------------------------------------
         # This vector is 90 degrees behind of the node on the orbit reference
         # equator
+        #---------------------------------------------------------------------
         orbit_target = ( sin_node * orbit_ref_x_axis +
                         -cos_node * orbit_ref_y_axis)
 
+        #----------------------------------
         # This is the pole of the orbit
+        #----------------------------------
         orbit_pole = (self.orbit.cos_i * orbit_ref_z_axis +
                       self.orbit.sin_i * orbit_target)
 
+        #-----------------------------------
         # Get the planet's pole in J2000
+        #-----------------------------------
         planet_xform = self.planet_frame.transform_at_time(time, quick=quick)
         planet_pole = planet_xform.unrotate(Vector3.ZAXIS).wod
 
+        #-----------------------------------------------------------------------
         # This is the vector we tilt toward
         # The projection of the orbit's pole perpendicular to the planet's pole
+        #-----------------------------------------------------------------------
         tilt_target = orbit_pole.perp(planet_pole).unit()
 
+        #----------------------------
         # Now, rotation is easy
+        #----------------------------
         laplace_pole = (self.cos_tilt * planet_pole +
                         self.sin_tilt * tilt_target)
 
+        #-----------------------------------------------------------------------
         # We still have to be very careful to match up the orbital longitude.
-
+        # 
         # Angles are measured...
         # 1. From the reference direction in the orbit's reference frame.
         # 2. Along the equator plane of the orbit's reference frame to the
         #    ascending node of the Laplace plane
         # 3. Then along the Laplace plane
-
+        # 
         # This vector is at the intersection of the reference plane and the
         # Laplace plane
         # common_node = orbit_ref_z_axis.cross(laplace_pole)
@@ -161,44 +200,65 @@ class LaplaceFrame(Frame):
         # Laplace pole; for the Neptune system, the angle is 90.07 degrees. The
         # error arising in the longitude by ignoring tilt of the plane by 0.07
         # degrees will be a factor of ~ cos(0.07 deg) ~ one part in 10^6.
-
+        #-----------------------------------------------------------------------
         common_node = orbit_node
 
+        #-------------------------------
         # Create the rotation matrix
+        #-------------------------------
         matrix = Matrix3.twovec(laplace_pole, 2, common_node, 0)
         # This matrix rotates coordinates from J2000 to a frame in which the
         # Z-axis is along the Laplace pole and the X-axis is at the common node.
 
+        #-------------------------------------------------------------------
         # Get the longitude of the common node in the orbit reference frame
+        #-------------------------------------------------------------------
         common_node_wrt_orbit_ref = orbit_ref_xform.rotate(common_node).wod
         (x, y, _) = common_node_wrt_orbit_ref.to_scalars()
         common_node_lon = y.arctan2(x)
 
+        #------------------------------------------------------------------
         # Rotate vectors around the Z-axis in the new frame to so that the
         # X-axis falls at this longitude
+        #------------------------------------------------------------------
         matrix = Matrix3.z_rotation(common_node_lon) * matrix
 
+        #--------------------------
         # Create the transform
+        #--------------------------
         xform = Transform(matrix, Vector3.ZERO, self.wayframe, Frame.J2000,
                                                 self.origin)
 
+        #-------------------------------------
         # Cache the transform if necessary
+        #-------------------------------------
         if time.shape == () and self.given_cache_size > 0:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Trim the cache, removing the values used least recently
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if len(self.cache) >= self.cache_size:
                 all_keys = self.cache.values()
                 all_keys.sort()
                 for (_, old_key, _) in all_keys[:self.trim_size]:
                     del self.cache[old_key]
 
+            #- - - - - - - - - - - - -
             # Insert into the cache
+            #- - - - - - - - - - - - -
             key = time.values
             self.cache_counter += 1
             count = np.array([self.cache_counter])
             self.cache[key] = (count, key, xform)
 
         return xform
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -206,11 +266,23 @@ class LaplaceFrame(Frame):
 
 import unittest
 
+#*******************************************************************************
+# Test_LaplaceFrame
+#*******************************************************************************
 class Test_LaplaceFrame(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

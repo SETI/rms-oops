@@ -9,17 +9,27 @@ from oops.frame_.frame import Frame
 from oops.path_.path   import Path
 from oops.transform    import Transform
 
+#*******************************************************************************
+# SpinFrame
+#*******************************************************************************
 class SpinFrame(Frame):
-    """SpinFrame is a Frame subclass describing a frame in uniform rotation
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    SpinFrame is a Frame subclass describing a frame in uniform rotation
     about one axis of another frame. It can be created without a frame_id,
     reference_id or origin_id; in this case it is not registered and can
     therefore be used as a component of another frame.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['offset', 'rate', 'epoch', 'axis2', 'reference', 'frame_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, offset, rate, epoch, axis, reference, id=None):
-        """Constructor for a Spin Frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Spin Frame.
 
         Input:
             offset      the angular offset of the frame at the epoch.
@@ -34,7 +44,7 @@ class SpinFrame(Frame):
         shape of the SpinFrame is defined by broadcasting the shapes of these
         Scalars.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.offset = Scalar.as_scalar(offset)
         self.rate = Scalar.as_scalar(rate)
         self.epoch = Scalar.as_scalar(epoch)
@@ -49,23 +59,33 @@ class SpinFrame(Frame):
         omega_vals[..., self.axis2] = self.rate.vals
         self.omega = Vector3(omega_vals, self.rate.mask)
 
+        #-------------------------
         # Required attributes
+        #-------------------------
         self.frame_id  = id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin or Path.SSB
         self.keys      = set()
 
+        #----------------------------------------------------------
         # Update wayframe and frame_id; register if not temporary
+        #----------------------------------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
-        """Return the Transform to this Frame at a specified Scalar of times.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the Transform to this Frame at a specified Scalar of times.
 
         QuickFrame options are ignored.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time)
         angle = (time - self.epoch) * self.rate + self.offset
 
@@ -79,6 +99,13 @@ class SpinFrame(Frame):
         matrix = Matrix3(mat, angle.mask)
         return Transform(matrix, self.omega, self.wayframe, self.reference,
                                  self.origin)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -86,11 +113,19 @@ class SpinFrame(Frame):
 
 import unittest
 
+#*******************************************************************************
+# Test_SpinFrame
+#*******************************************************************************
 class Test_SpinFrame(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
+        #----------------------------------
         # Import here to avoid conflicts
+        #----------------------------------
         from oops.event import Event
         from oops.transform import Transform
 
@@ -148,7 +183,9 @@ class Test_SpinFrame(unittest.TestCase):
         self.assertTrue((event1a.pos - (1, -eps,0)).norm() < 1.e-15)
         self.assertTrue((event1a.vel - (-eps,-1,0)).norm() < 1.e-15)
 
+        #--------------------------------------
         # Test time-derivatives of transforms
+        #--------------------------------------
         time = Scalar(np.random.randn(400))
         pos  = Vector3(np.random.randn(400,3))
         vel  = Vector3(np.random.randn(400,3))
@@ -178,6 +215,13 @@ class Test_SpinFrame(unittest.TestCase):
         self.assertTrue(abs(dpos_dt_test - pos0.d_dt).max() < 1.e-5)
 
         Frame.reset_registry()
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 #########################################
 if __name__ == '__main__':

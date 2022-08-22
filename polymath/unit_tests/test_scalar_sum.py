@@ -8,17 +8,31 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_sum
+#*******************************************************************************
 class Test_Scalar_sum(unittest.TestCase):
 
+  #=============================================================================
+  # setUp
+  #=============================================================================
   def setUp(self):
     Qube.PREFER_BUILTIN_TYPES = True
 
+  #=============================================================================
+  # tearDown
+  #=============================================================================
   def tearDown(self):
     Qube.PREFER_BUILTIN_TYPES = False
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #-----------------------
+    # Individual values     
+    #-----------------------
     self.assertEqual(Scalar(0.3).sum(), 0.3)
     self.assertEqual(type(Scalar(0.3).sum()), float)
 
@@ -29,19 +43,25 @@ class Test_Scalar_sum(unittest.TestCase):
     self.assertEqual(type(Scalar(4, mask=True).sum()), Scalar)
     self.assertEqual(type(Scalar(4, mask=True).sum()), Scalar)
 
-    # Multiple values
+    #----------------------
+    # Multiple values       
+    #----------------------
     self.assertTrue(Scalar((1,2,3)).sum() == 6)
     self.assertEqual(type(Scalar((1,2,3)).sum()), int)
 
     self.assertTrue(Scalar((1.,2.,3.)).sum() == 6.)
     self.assertEqual(type(Scalar((1.,2,3)).sum()), float)
 
+    #------------
     # Arrays
+    #------------
     N = 400
     x = Scalar(np.random.randn(N).reshape((2,4,5,10)))
     self.assertEqual(x.sum(), np.sum(x.values))
 
+    #---------------------------------------------------------
     # Test units
+    #---------------------------------------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
     self.assertEqual(random.sum().units, Units.KM)
@@ -54,7 +74,9 @@ class Test_Scalar_sum(unittest.TestCase):
     random = Scalar(values, units=None)
     self.assertEqual(type(random.sum()), float)
 
-    # Masks
+    #---------------
+    # Masks    
+    #---------------
     N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
 
@@ -69,13 +91,17 @@ class Test_Scalar_sum(unittest.TestCase):
     self.assertTrue(masked.sum().mask)
     self.assertTrue(type(masked.sum()), Scalar)
 
-    # Denominators
+    #------------------
+    # Denominators         
+    #------------------
     a = Scalar(np.arange(24.).reshape(4,3,2), drank=1)
     b = a.sum(axis=1)
     self.assertEqual(b.shape, (4,))
     self.assertEqual(b, Scalar([[6,9],[24,27],[42,45],[60,63]], drank=1))
 
-    # Sums over axes
+    #-------------------
+    # Sums over axes    
+    #-------------------
     x = Scalar(np.arange(30).reshape(2,3,5))
     m0 = x.sum(axis=0)
     m01 = x.sum(axis=(0,1))
@@ -94,7 +120,9 @@ class Test_Scalar_sum(unittest.TestCase):
     self.assertEqual(type(m012), int)
     self.assertEqual(m012, np.sum(np.arange(30)))
 
-    # Sums with masks
+    #-----------------------
+    # Sums with masks    
+    #-----------------------
     mask = np.zeros((2,3,5), dtype='bool')
     mask[0,0,0] = True
     mask[1,1,1] = True
@@ -137,6 +165,13 @@ class Test_Scalar_sum(unittest.TestCase):
     for k in range(5):
         self.assertEqual(m0[j,k], Scalar.MASKED)
         self.assertTrue(np.all(m0[j,k].values == m0.default))
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

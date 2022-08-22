@@ -10,8 +10,13 @@ from oops.path_.spicepath    import SpicePath
 from oops.frame_.spiceframe  import SpiceFrame
 import oops.spice_support as spice
 
+#===============================================================================
+# spice_shape
+#===============================================================================
 def spice_shape(spice_id, frame_id=None, default_radii=None):
-    """Returns a Spheroid or Ellipsoid defining the path, orientation and shape
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Returns a Spheroid or Ellipsoid defining the path, orientation and shape
     of a body defined in the SPICE toolkit.
 
     Input:
@@ -23,7 +28,7 @@ def spice_shape(spice_id, frame_id=None, default_radii=None):
         default_radii   three radii values to use if PCK values are not found;
                         None to raise a LookupError on missing radii.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     spice_body_id = spice.body_id_and_name(spice_id)[0]
     origin_id = spice.PATH_TRANSLATION[spice_body_id]
 
@@ -46,6 +51,9 @@ def spice_shape(spice_id, frame_id=None, default_radii=None):
         return Spheroid(origin_id, frame_id, (radii[0], radii[2]))
     else:
         return Ellipsoid(origin_id, frame_id, radii)
+#===============================================================================
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -53,8 +61,14 @@ def spice_shape(spice_id, frame_id=None, default_radii=None):
 
 import unittest
 
+#*******************************************************************************
+# Test_spice_shape
+#*******************************************************************************
 class Test_spice_shape(unittest.TestCase):
     
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.path_.path import Path
@@ -76,6 +90,11 @@ class Test_spice_shape(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

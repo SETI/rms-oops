@@ -11,8 +11,13 @@ from oops.surface_.limb      import Limb
 from oops.config             import SURFACE_PHOTONS, LOGGING
 from oops.constants          import *
 
+#*******************************************************************************
+#PolarLimb
+#*******************************************************************************
 class PolarLimb(Surface):
-    """The PolarLimb surface is a variant of the Limb surface, in which the
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    The PolarLimb surface is a variant of the Limb surface, in which the
     coordinates are redefined as follows:
         z       the elevation above the surface, the vertical distance from the
                 surface.
@@ -21,12 +26,14 @@ class PolarLimb(Surface):
         d       offset distance beyond the virtual limb plane along the line of
                 sight.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
 
+    #-----------------------------------------------------------
     # Class constants to override where derivs are undefined
+    #-----------------------------------------------------------
     coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
     vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
     intercept_DERIVS_ARE_IMPLEMENTED = False
@@ -34,8 +41,13 @@ class PolarLimb(Surface):
 
     PACKRAT_ARGS = ['ground', 'limits']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, ground, limits=None):
-        """Constructor for a Limb surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Limb surface.
 
         Input:
             ground      the Surface object relative to which limb points are to
@@ -45,7 +57,7 @@ class PolarLimb(Surface):
                         numerical limit(s) placed on z; values outside this
                         range are masked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         assert ground.COORDINATE_TYPE == "spherical"
         self.ground = ground
         self.origin = ground.origin
@@ -57,10 +69,18 @@ class PolarLimb(Surface):
             self.limits = None
         else:
             self.limits = (limits[0], limits[1])
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False, groundtrack=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -80,7 +100,7 @@ class PolarLimb(Surface):
                         if groundtrack is True, a Vector3 of ground points is
                         appended to the returned tuple.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if derivs:
             raise NotImplementedError("PolarLimb.coords_from_vector3() " +
                                       "does not implement derivatives")
@@ -102,10 +122,18 @@ class PolarLimb(Surface):
             results += (track,)
 
         return results
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
                                   groundtrack=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the coordinates
@@ -119,7 +147,7 @@ class PolarLimb(Surface):
         Return:         a Vector3 of intercept points defined by the
                         coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if derivs:
             raise NotImplementedError("PolarLimb.vector3_from_coords() " +
                                       "does not implement derivatives")
@@ -137,10 +165,18 @@ class PolarLimb(Surface):
             return (cept, track)
         else:
             return cept
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None,
                         groundtrack=False):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -161,15 +197,23 @@ class PolarLimb(Surface):
             t           a Scalar such that:
                             intercept = obs + t * los
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if derivs:
             raise NotImplementedError("PolarLimb.intercept() " +
                                       "does not implement derivatives")
 
         return self.limb.intercept(obs, los, derivs, guess, groundtrack)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -180,16 +224,29 @@ class PolarLimb(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ground.normal(pos, derivs)
+    #===========================================================================
+
+    
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # (lon,lat) conversions
 ################################################################################
 
+    #===========================================================================
+    # lonlat_from_vector3
+    #===========================================================================
     def lonlat_from_vector3(pos, derivs=False, groundtrack=True):
-        """Longitude and latitude for a position near the surface."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Longitude and latitude for a position near the surface.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         track = self.ground.intercept_normal_to(pos, derivs=derivs)
         coords = self.ground.coords_from_vector3(track, derivs=derivs)
 
@@ -197,6 +254,9 @@ class PolarLimb(Surface):
             return (coords[0], coords[1], track)
         else:
             return coords[:2]
+    #===========================================================================
+
+    
 
 ################################################################################
 # UNIT TESTS
@@ -204,8 +264,14 @@ class PolarLimb(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_PolarLimb
+#*******************************************************************************
 class Test_PolarLimb(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.frame_.frame import Frame
@@ -268,6 +334,12 @@ class Test_PolarLimb(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+    
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

@@ -8,17 +8,27 @@ import unittest
 
 from polymath import Qube, Pair, Scalar, Units
 
+#*******************************************************************************
+# Test_Pair_swapxy
+#*******************************************************************************
 class Test_Pair_swapxy(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Single values
+    #-------------------
+    # Single values    
+    #-------------------
     a = Pair((1,2))
     b = a.swapxy()
     self.assertEqual(b, (2,1))
     self.assertTrue(a.mask is b.mask)
 
-    # Arrays & denoms
+    #--------------------
+    # Arrays & denoms     
+    #--------------------
     N = 10
     a = Pair(np.arange(N*6).reshape(N,2,3), drank=1)
     b = a.swapxy()
@@ -29,19 +39,25 @@ class Test_Pair_swapxy(unittest.TestCase):
     self.assertEqual(aparts[0], bparts[1])
     self.assertEqual(aparts[1], bparts[0])
 
-    # Masks
+    #------------------
+    # Masks           
+    #------------------
     a = Pair(np.random.randn(N,2,3), drank=1,
              mask = (np.random.randn(N) < -0.4))
     b = a.swapxy()
     self.assertTrue(np.all(a.mask == b.mask))
 
-    # Units
+    #------------------
+    # Units           
+    #------------------
     N = 10
     a = Pair(np.arange(N*6).reshape(N,2,3), drank=1, units=Units.DEG)
     b = a.swapxy()
     self.assertEqual(b.units, a.units)
 
-    # Derivatives, denom = ()
+    #----------------------------
+    # Derivatives, denom = ()     
+    #----------------------------
     N = 100
     a = Pair(np.random.randn(N,2))
 
@@ -109,7 +125,9 @@ class Test_Pair_swapxy(unittest.TestCase):
     self.assertEqual(da_dv_parts[0], db_dv_parts[1])
     self.assertEqual(da_dv_parts[1], db_dv_parts[0])
 
-    # Read-only status should be preserved
+    #----------------------------------------
+    # Read-only status should be preserved    
+    #----------------------------------------
     N = 10
     a = Pair(np.random.randn(N,2))
     b = Pair(np.random.randn(N,2))
@@ -117,6 +135,13 @@ class Test_Pair_swapxy(unittest.TestCase):
     self.assertFalse(a.readonly)
     self.assertFalse(a.swapxy().readonly)
     self.assertTrue(a.as_readonly().swapxy().readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

@@ -7,27 +7,40 @@ import warnings
 import numpy as np
 from oops.gravity_.gravity import Gravity
 
+#*******************************************************************************
+# OblateGravity
+#*******************************************************************************
 class OblateGravity(Gravity):
-    """A class describing the gravity field of an oblate planet using an
-    expansion in gravity moments J2, J4, etc."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A class describing the gravity field of an oblate planet using an
+    expansion in gravity moments J2, J4, etc.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['gm', 'jn', 'rp'] # used inside OOPS
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, gm, jlist=[], radius=1.):
-        """The constructor for a OblateGravity object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The constructor for a OblateGravity object.
 
         Input:
             gm          The body's GM in units of km^3/s^2
             jlist       optional list of even gravity harmonics: [jJ2, J4, ...].
             radius      body radius for associated J-values.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.gm = gm
         self.jn = jlist
         self.rp = radius
         self.r2 = radius * radius
 
+        #------------------------------------------
         # Evaluate coefficients for frequencies
+        #------------------------------------------
         n = 0
         pn_zero = 1.
         potential_jn = []
@@ -59,26 +72,49 @@ class OblateGravity(Gravity):
         self.domega_jn = np.array(domega_jn)
         self.dkappa_jn = np.array(dkappa_jn)
         self.dnu_jn    = np.array(dnu_jn)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _jseries
+    #===========================================================================
     @staticmethod
     def _jseries(coefficients, ratio2):
         """Internal method to evaluate a series of the form:
         coefficients[0] * ratio2 + coefficients[1] * ratio2^2 ..."""
 
         return ratio2 * np.polyval(coefficients[::-1], ratio2)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # potential
+    #===========================================================================
     def potential(self, a):
-        """Returns the potential energy at radius a, in the equatorial plane."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the potential energy at radius a, in the equatorial plane.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return -self.gm/a * (1. - OblateGravity._jseries(self.potential_jn,
                                                          self.r2/a2))
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # omega
+    #===========================================================================
     def omega(self, a, e=0., sin_i=0.):
-        """Returns the mean motion (radians/s) at semimajor axis a.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the mean motion (radians/s) at semimajor axis a.
 
         Corrections for e and sin(i) are accurate to second order.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a2 = a * a
         gm_a3 = self.gm / (a*a2)
         ratio2 = self.r2 / a2
@@ -91,20 +127,38 @@ class OblateGravity(Gravity):
                       (3. * e**2 - 12. * sin_i**2)
 
         return omega1
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # kappa2
+    #===========================================================================
     def kappa2(self, a):
-        """Returns the square of the radial oscillation frequency (radians/s) at
-        semimajor axis a."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the square of the radial oscillation frequency (radians/s) at
+        semimajor axis a.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a2 = a * a
         kappa2 = self.gm/(a*a2) * (1. + OblateGravity._jseries(self.kappa_jn,
                                                                self.r2/a2))
         return kappa2
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # kappa
+    #===========================================================================
     def kappa(self, a, e=0., sin_i=0.):
-        """Returns the radial oscillation frequency (radians/s) at semimajor
-        axis a."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial oscillation frequency (radians/s) at semimajor
+        axis a.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a2 = a * a
         gm_a3 = self.gm / (a*a2)
         ratio2 = self.r2 / a2
@@ -116,11 +170,20 @@ class OblateGravity(Gravity):
             kappa1 += np.sqrt(gm_a3) * ratio2 * self.jn[0] * (-9. * sin_i**2)
 
         return kappa1
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # nu
+    #===========================================================================
     def nu(self, a, e=0., sin_i=0.):
-        """Returns the vertical oscillation frequency (radians/s) at semimajor
-        axis a."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the vertical oscillation frequency (radians/s) at semimajor
+        axis a.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a2 = a * a
         gm_a3 = self.gm / (a*a2)
         ratio2 = self.r2 / a2
@@ -133,11 +196,20 @@ class OblateGravity(Gravity):
                       (6. * e**2 - 12.75 * sin_i**2)
 
         return nu1
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # domega_da
+    #===========================================================================
     def domega_da(self, a, e=0., sin_i=0.):
-        """Returns the radial derivative of the mean motion (radians/s/km) at
-        semimajor axis a."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial derivative of the mean motion (radians/s/km) at
+        semimajor axis a.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a2 = a * a
         gm_a4 = self.gm / (a2*a2)
         ratio2 = self.r2 / a2
@@ -150,11 +222,20 @@ class OblateGravity(Gravity):
                        (3. * e**2 - 12. * sin_i**2)
 
         return domega1
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dkappa_da
+    #===========================================================================
     def dkappa_da(self, a, e=0., sin_i=0.):
-        """Returns the radial derivative of the radial oscillation frequency
-        (radians/s/km) at semimajor axis a."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial derivative of the radial oscillation frequency
+        (radians/s/km) at semimajor axis a.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a2 = a * a
         gm_a4 = self.gm / (a2*a2)
         ratio2 = self.r2 / a2
@@ -168,10 +249,16 @@ class OblateGravity(Gravity):
 
         return dkappa1
 
+    #===========================================================================
+    # dnu_da
+    #===========================================================================
     def dnu_da(self, a, e=0., sin_i=0.):
-        """Returns the radial derivative of the vertical oscillation frequency
-        (radians/s/km) at semimajor axis a."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial derivative of the vertical oscillation frequency
+        (radians/s/km) at semimajor axis a.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a2 = a * a
         gm_a4 = self.gm / (a2*a2)
         ratio2 = self.r2 / a2
@@ -184,13 +271,25 @@ class OblateGravity(Gravity):
                        (6. * e**2 - 12.75 * sin_i**2)
 
         return dnu1
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # combo
+    #===========================================================================
     def combo(self, a, factors, e=0., sin_i=0.):
-        """Returns a frequency combination, based on given coefficients for
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns a frequency combination, based on given coefficients for
         omega, kappa and nu. Full numeric precision is preserved in the limit
-        of first- or second-order cancellation of the coefficients."""
+        of first- or second-order cancellation of the coefficients.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------
         # Shortcut for nonzero e or i, to be refined later
+        #----------------------------------------------------
         if e or sin_i:
             sum_values = 0.
             if factors[0]:
@@ -209,7 +308,9 @@ class OblateGravity(Gravity):
         sum_factors = 0
         sum_values = 0.
 
+        #---------------
         # omega term
+        #---------------
         if factors[0] != 0:
             omega2_jsum = OblateGravity._jseries(self.omega_jn, ratio2)
             omega2 = gm_over_a3 * (1. + omega2_jsum)
@@ -218,7 +319,9 @@ class OblateGravity(Gravity):
             sum_factors += factors[0]
             sum_values  += factors[0] * omega
 
+        #---------------
         # kappa term
+        #---------------
         if factors[1] != 0:
             kappa2_jsum = OblateGravity._jseries(self.kappa_jn, ratio2)
             kappa2 = gm_over_a3 * (1. + kappa2_jsum)
@@ -227,7 +330,9 @@ class OblateGravity(Gravity):
             sum_factors += factors[1]
             sum_values  += factors[1] * kappa
 
+        #-------------
         # nu term
+        #-------------
         if factors[2] != 0:
             nu2_jsum = OblateGravity._jseries(self.nu_jn, ratio2)
             nu2 = gm_over_a3 * (1. + nu2_jsum)
@@ -238,6 +343,7 @@ class OblateGravity(Gravity):
 
         if sum_factors != 0: return sum_values
 
+        #-----------------------------------------------------------------------
         # In the special cause where sum_factors = 0, we get cancellation to
         # leading order. We employ the following trick to improve accuracy.
         #
@@ -251,7 +357,7 @@ class OblateGravity(Gravity):
         # Similarly for kappa and nu. Our solution is to sum the quantities
         # (omega - sqrt(GM/a^3)), (kappa - sqrt(GM/a^3)) and (nu - sqrt(GM/a^3))
         # instead.
-
+        #-----------------------------------------------------------------------
         sqrt_gm_over_a3 = np.sqrt(gm_over_a3)
         sum_values = 0.
 
@@ -269,6 +375,7 @@ class OblateGravity(Gravity):
 
         if factors[1] != factors[2]: return sum_values
 
+        #-----------------------------------------------------------------------
         # In the final special case where
         #   factors[1] = factors[2] = -factors[0]/2
         # we get still higher-order cancellation. We employ another trick. The
@@ -286,7 +393,7 @@ class OblateGravity(Gravity):
         #       = (nu - omega) (nu - kappa)
         # Thus,
         #   2 omega - kappa - nu = (nu - omega) (nu - kappa) / (omega + kappa)
-
+        #-----------------------------------------------------------------------
         if factors[1] == 0: return 0
 
         sum_values = -factors[1] * ((nu_diff - omega_diff)
@@ -294,13 +401,21 @@ class OblateGravity(Gravity):
                                  /  (omega + kappa))
 
         return sum_values
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dcombo_da
+    #===========================================================================
     def dcombo_da(self, a, factors, e=0., sin_i=0.):
-        """Returns the radial derivative of a frequency combination, based on
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial derivative of a frequency combination, based on
         given coefficients for omega, kappa and nu. Unlike method combo(), this
         one does not guarantee full precision if the coefficients cancel to
         first or second order."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         sum_values = 0.
 
         if factors[0]: sum_values += factors[0] * self.domega_da(a, e, sin_i)
@@ -308,52 +423,70 @@ class OblateGravity(Gravity):
         if factors[2]: sum_values += factors[2] * self.dnu_da(a, e, sin_i)
 
         return sum_values
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # solve_a
+    #===========================================================================
     def solve_a(self, freq, factors=(1,0,0), e=0., sin_i=0.):
-        """Solves for the semimajor axis at which the frequency is equal to the
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Solves for the semimajor axis at which the frequency is equal to the
         given combination of factors on omega, kappa and nu. Solution is via
-        Newton's method."""
+        Newton's method.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------
         # Find an initial guess
+        #----------------------------
         sum_factors = np.sum(factors)
 
+        #---------------------------------------------
         # No first-order cancellation:
         #   freq(a) ~ sum[factors] * sqrt(GM/a^3)
         #
         #   a^3 ~ GM * (sum[factors] / freq)^2
-
+        #---------------------------------------------
         if sum_factors != 0:
             a = (self.gm * (sum_factors/freq)**2)**(1./3.)
 
+        #-------------------------------------------------------------------
         # No second-order cancellation:
         #   freq(a) ~ 1/2 * sum[factor*term] * sqrt(GM/a^3) * Rp^2 / a^2
         #
         #   a^7 ~ GM * (sum[factor*term]/2 / freq)^2 Rp^4
-
+        #-------------------------------------------------------------------
         elif factors[1] != factors[2]:
             term = (factors[0] * self.omega_jn[0] +
                     factors[1] * self.kappa_jn[0] +
                     factors[2] * self.nu_jn[0]) / 2.
             a = (self.gm * (term * self.r2 / freq)**2)**(1/7.)
 
+        #-------------------------------------------------------------------
         # Second-order cancellation:
         #   freq(a) ~ -1/8 * sum[factor*term^2] * sqrt(GM/a^3) * Rp^4 / a^4
         #
         #   a^11 ~ GM * (-sum[factor*term^2]/8 / freq)^2 Rp^8
-
+        #-------------------------------------------------------------------
         else:
             term = (factors[0] * self.omega_jn[0]**2 +
                     factors[1] * self.kappa_jn[0]**2 +
                     factors[2] * self.nu_jn[0]**2) / (-8.)
             a = (self.gm * (term * self.r2 * self.r2 / freq)**2)**(1/11.)
 
+        #---------------------------------
         # Iterate using Newton's method
+        #---------------------------------
         da_prev_max = 1.e99
         for iter in range(20):
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # a step in Newton's method: x(i+1) = x(i) - f(xi) / fp(xi)
             # our f(x) = self.combo() - freq
             #     fp(x) = self.dcombo()
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             da = ((self.combo(a, factors, e, sin_i) - freq) / \
                    self.dcombo_da(a, factors, e, sin_i))
             da_max = np.max(np.abs(da))
@@ -361,91 +494,177 @@ class OblateGravity(Gravity):
 
             a -= da
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If Newton's method stops converging, return what we've got
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if iter > 4 and da_max >= da_prev_max:
                 break
 
             da_prev_max = da_max
 
         return a
+    #===========================================================================
 
+
+
+
+    ####################################
     # Useful alternative names...
+    ####################################
+
+    #===========================================================================
+    # n
+    #===========================================================================
     def n(self, a, e=0., sin_i=0.):
-        """Returns the mean motion at semimajor axis a. Identical to omega(a).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Returns the mean motion at semimajor axis a. Identical to omega(a).
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.omega(a, e, sin_i)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dmean_dt
+    #===========================================================================
     def dmean_dt(self, a, e=0., sin_i=0.):
-        """Returns the mean motion at semimajor axis a. Identical to omega(a).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Returns the mean motion at semimajor axis a. Identical to omega(a).
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.omega(a, e, sin_i)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dperi_dt
+     #===========================================================================
     def dperi_dt(self, a, e=0., sin_i=0.):
-        """Returns the pericenter precession rate at semimajor axis a. Identical
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the pericenter precession rate at semimajor axis a. Identical
         to combo(a, (1,-1,0)).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.combo(a, (1,-1,0), e, sin_i)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dnode_dt
+    #===========================================================================
     def dnode_dt(self, a, e=0., sin_i=0.):
-        """Returns the nodal regression rate (negative) at semimajor axis a.
+        """
+        Returns the nodal regression rate (negative) at semimajor axis a.
         Identical to combo(a, (1,0,-1)).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.combo(a, (1,0,-1), e, sin_i)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # d_dmean_dt_da
+    #===========================================================================
     def d_dmean_dt_da(self, a, e=0., sin_i=0.):
-        """Returns the radial derivative of the mean motion at semimajor axis a. 
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial derivative of the mean motion at semimajor axis a. 
         Identical to domega_da(a).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.domega_da(a, e, sin_i)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # d_dperi_dt_da
+    #===========================================================================
     def d_dperi_dt_da(self, a, e=0., sin_i=0.):
-        """Returns the radial derivative of the pericenter precession rate at
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial derivative of the pericenter precession rate at
         semimajor axis a. Identical to dcombo_da(a, (1,-1,0)).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.dcombo_da(a, (1,-1,0), e, sin_i)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # d_dnode_dt_da
+    #===========================================================================
     def d_dnode_dt_da(self, a, e=0., sin_i=0.):
-        """Returns the radial derivative of the nodal regression rate (negative)
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the radial derivative of the nodal regression rate (negative)
         at semimajor axis a. Identical to dcombo_da(a, (1,0,-1)).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.dcombo_da(a, (1,0,-1), e, sin_i)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # ilr_pattern
+    #===========================================================================
     def ilr_pattern(self, n, m, p=1):
-        """Returns the pattern speed of the m:m-p inner Lindblad resonance,
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the pattern speed of the m:m-p inner Lindblad resonance,
         given the mean motion n of the perturber.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a = self.solve_a(n, (1,0,0))
         return (n + self.kappa(a) * p/m)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # olr_pattern
+    #===========================================================================
     def olr_pattern(self, n, m, p=1):
-        """Returns the pattern speed of the m:m+p outer Lindblad resonance,
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns the pattern speed of the m:m+p outer Lindblad resonance,
         given the mean motion n of the perturber.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a = self.solve_a(n, (1,0,0))
         return (n - self.kappa(a) * p/(m+p))
+    #===========================================================================
 
-################################################################################
-# Orbital elements
-################################################################################
 
+
+
+    ############################
+    # Orbital elements
+    ############################
+
+    #===========================================================================
+    # state_from_osc
+    #===========================================================================
     def state_from_osc(self, elements, body_gm=0.):
-        """Return position and velocity based on osculating orbital elements:
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return position and velocity based on osculating orbital elements:
         (a, e, i, mean longitude, longitude of pericenter,
          longitude of ascending node).
 
         Routine adapted from SWIFT's orbel_el2xv.f by Rob French. Only works
         well for e < 0.18.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         gm = self.gm + body_gm
 
         (a, e, inc, mean_lon, long_peri, long_node) = elements
@@ -507,24 +726,34 @@ class OblateGravity(Gravity):
         vy = d12*vfac1 + d22*vfac2
         vz = d13*vfac1 + d23*vfac2
 
+        #----------------------------------------------------
         # Broadcast to a common shape and create vectors
+        #----------------------------------------------------
         (x,y,z,vx,vy,vz) = np.broadcast_arrays(x,y,z,vx,vy,vz)
 
         pos = np.stack([x, y, z], axis=-1)
         vel = np.stack([vx, vy, vz], axis=-1)
 
         return (pos,vel)
+    #===========================================================================
 
-    ############################################################################
+
+
+    #########################
     # Orbital elements
-    ############################################################################
+    #########################
 
+    #===========================================================================
+    # osc_from_state
+    #===========================================================================
     def osc_from_state(self, pos, vel, body_gm=0.):
-        """Return osculating orbital elements based on position and velocity.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return osculating orbital elements based on position and velocity.
 
         Routine adapted from SWIFT's orbel_vx2el.f by Rob French.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (pos, vel) = np.broadcast_arrays(pos, vel)
         pos = np.asfarray(pos)
         vel = np.asfarray(vel)
@@ -539,10 +768,14 @@ class OblateGravity(Gravity):
 
         tiny = 1e-300
 
+        #------------------------------------------------------
         # Warning: This only works with elliptical orbits!
+        #------------------------------------------------------
         gmsum = self.gm + body_gm
     
+        #-------------------------------------------------------------------
         # Compute the angular momentum H, and thereby the inclination INC.
+        #-------------------------------------------------------------------
         hx = y*vz - z*vy
         hy = z*vx - x*vz
         hz = x*vy - y*vx
@@ -550,8 +783,10 @@ class OblateGravity(Gravity):
         h  = np.sqrt(h2)
         inc = np.arccos(hz/h)
 
+        #-------------------------------------------------------------------
         # Compute longitude of ascending node long_node and the argument of
         # latitude u.
+        #-------------------------------------------------------------------
         fac = np.sqrt(hx**2 + hy**2)/h
 
         long_node = np.where(fac < tiny, np.zeros(x.shape),
@@ -570,8 +805,10 @@ class OblateGravity(Gravity):
                                                            x*np.cos(long_node) + 
                                                            y*np.sin(long_node)))
 
+        #------------------------------------------------------------
         #  Compute the radius R and velocity squared V2, and the dot
         #  product RDOTV, the energy per unit mass ENERGY.
+        #------------------------------------------------------------
         r = np.sqrt(x*x + y*y + z*z)
         v2 = vx*vx + vy*vy + vz*vz
         v = np.sqrt(v2)
@@ -597,7 +834,9 @@ class OblateGravity(Gravity):
 
         mean_lon = (mean_anomaly + long_peri) % TWOPI
 
+        #------------------------------------------
         # Convert any shapeless arrays to scalars
+        #------------------------------------------
         elements = []
         for element in (a, e, inc, mean_lon, long_peri, long_node):
             if isinstance(element, np.ndarray) and element.shape == ():
@@ -606,19 +845,28 @@ class OblateGravity(Gravity):
                 elements.append(element)
 
         return tuple(elements)
+    #===========================================================================
 
-    # Take the geometric osculating elements and convert to X,Y,Z,VX,VY,VZ
-    # Returns x, y, z, vx, vy, vz
-    # From Renner & Sicardy (2006) EQ 2-13
 
+
+
+    #===========================================================================
+    # state_from_geom
+    #===========================================================================
     def state_from_geom(self, elements, body_gm=0.):
-        """Return position and velocity based on geometric orbital elements:
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return position and velocity based on geometric orbital elements:
         (a, e, i, mean longitude, longitude of pericenter,
          longitude of ascending node).
 
-        Adapted from Renner & Sicardy (2006) EQ 2-13 by Rob French.
-        """
+        Adapted from Renner & Sicardy (2006) EQ 2-13 by Rob French. 
 
+        Take the geometric osculating elements and convert to X,Y,Z,VX,VY,VZ
+        Returns x, y, z, vx, vy, vz
+        From Renner & Sicardy (2006) EQ 2-13
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (a, e, inc, mean_lon, long_peri, long_node) = elements
         a = np.asfarray(a)
         e = np.asfarray(e)
@@ -635,7 +883,9 @@ class OblateGravity(Gravity):
         n2 = n**2
         nu2 = nu**2
 
+        #------------------------------
         # Convert to cylindrical
+        #------------------------------
         r = a*(1. - e*np.cos(lam-long_peri) + 
                e**2*(3./2. * eta2/kappa2 - 1. -
                       eta2/2./kappa2 * np.cos(2.*(lam-long_peri))) +
@@ -671,24 +921,34 @@ class OblateGravity(Gravity):
         vx = rdot*np.cos(L) - r*Ldot*np.sin(L)
         vy = rdot*np.sin(L) + r*Ldot*np.cos(L)
 
+        #-------------------------------------------------
         # Broadcast to a common shape and create vectors
+        #-------------------------------------------------
         (x,y,z,vx,vy,vz) = np.broadcast_arrays(x,y,z,vx,vy,vz)
 
         pos = np.stack([x, y, z], axis=-1)
         vel = np.stack([vx, vy, vz], axis=-1)
 
         return (pos, vel)
+    #===========================================================================
 
-    # Given the state vector x,y,z,vx,vy,vz retrieve the geometric elements
-    # Returns: a, e, inc, long_peri, long_node, mean_anomaly
-    # From Renner and Sicardy (2006) EQ 22-47
 
+
+    #===========================================================================
+    # geom_from_state
+    #===========================================================================
     def geom_from_state(self, pos, vel, body_gm=0., tol=1.e-6):
-        """Return geometric orbital elements based on position and velocity.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return geometric orbital elements based on position and velocity.
 
         Routine adapted from SWIFT's orbel_vx2el.f by Rob French.
-        """
 
+        Given the state vector x,y,z,vx,vy,vz retrieve the geometric elements
+        Returns: a, e, inc, long_peri, long_node, mean_anomaly
+        From Renner and Sicardy (2006) EQ 22-47
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (pos, vel) = np.broadcast_arrays(pos, vel)
         pos = np.asfarray(pos)
         vel = np.asfarray(vel)
@@ -701,13 +961,17 @@ class OblateGravity(Gravity):
         vy = vel[...,1]
         vz = vel[...,2]
 
+        #----------------
         # EQ 22-25
+        #----------------
         r = np.sqrt(x**2 + y**2)
         L = Gravity._pos_arctan2(y, x)
         rdot = vx*np.cos(L) + vy*np.sin(L)
         Ldot = (vy*np.cos(L)-vx*np.sin(L))/r
 
+        #-----------------------
         # Initial conditions
+        #-----------------------
         a = r
         e = 0.
         inc = 0.
@@ -756,16 +1020,26 @@ class OblateGravity(Gravity):
             old_diff = diff
 
         return (a, e, inc, lam, long_peri, long_node)
+    #===========================================================================
+
+
 
     ####################################
     # Internal methods
     ####################################
 
-    # Take the geometric osculating elements and create frequencies
-    # Returns n, kappa, nu, eta2, chi2, alpha1, alpha2, alphasq
-    # From Renner & Sicardy (2006)  EQ 14-21
 
+    #===========================================================================
+    # _geom_to_freq
+    #===========================================================================
     def _geom_to_freq(self, a, e, inc, body_gm=0.):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Take the geometric osculating elements and create frequencies
+        Returns n, kappa, nu, eta2, chi2, alpha1, alpha2, alphasq
+        From Renner & Sicardy (2006)  EQ 14-21
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         gmsum = self.gm + body_gm
         j2 = 0.
         j4 = 0.
@@ -800,19 +1074,31 @@ class OblateGravity(Gravity):
         alphasq = alpha1 * alpha2
 
         return (n, kappa, nu, eta2, chi2, alpha1, alpha2, alphasq)
+    #===========================================================================
 
 
-    # Take the frequencies and convert them to cylindrical coordinates
-    # Returns a, e, inc, long_peri, long_node, lam, rc, Lc, zc, rdotc, Ldotc, zdotc
-    # From Renner & Sicardy (2006) EQ 36-41
 
+
+
+    #===========================================================================
+    # _freq_to_geom
+    #===========================================================================
     @staticmethod
     def _freq_to_geom(r, L, z, rdot, Ldot, zdot, rc, Lc, zc, rdotc, Ldotc, 
                       zdotc, n, kappa, nu, eta2, chi2, alpha1, alpha2, alphasq):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Take the frequencies and convert them to cylindrical coordinates
+        Returns a, e, inc, long_peri, long_node, lam, rc, Lc, zc, rdotc, Ldotc, zdotc
+        From Renner & Sicardy (2006) EQ 36-41
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         kappa2 = kappa**2
         n2 = n**2
 
+        #--------------
         # EQ 42-47
+        #--------------
         a = (r-rc) / (1.-(Ldot-Ldotc-n)/(2.*n))
 
         e = np.sqrt(((Ldot-Ldotc-n)/(2.*n))**2 + ((rdot-rdotc)/(a*kappa))**2)
@@ -826,7 +1112,9 @@ class OblateGravity(Gravity):
 
         long_node = (lam - Gravity._pos_arctan2(nu*(z-zc), zdot-zdotc)) % TWOPI
 
+        #--------------
         # EQ 36-41
+        #--------------
         rc = (a * e**2 * (3./2.*eta2/kappa2 - 1. - 
                            eta2/2./kappa2*np.cos(2.*(lam-long_peri))) +
               a * inc**2 * (3./4.*chi2/kappa2 - 1. + 
@@ -850,7 +1138,9 @@ class OblateGravity(Gravity):
                             alpha1*np.cos(2*lam-long_peri-long_node) + 
                  3./2.*chi2*(kappa-nu)/kappa/alpha2*np.cos(long_peri-long_node))
 
+        #--------------
         # EQ 30-35
+        #--------------
     #    r = a*(1. - e*np.cos(lam-long_peri)) + rc
     #    
     #    L = lam + 2*e*n/kappa*np.sin(lam-long_peri) + Lc
@@ -865,11 +1155,24 @@ class OblateGravity(Gravity):
 
         return (a, e, inc, long_peri, long_node, lam,
                 rc, Lc, zc, rdotc, Ldotc, zdotc)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _pos_arctan2
+    #===========================================================================
     # A nicer version of arctan2
     @staticmethod
     def _pos_arctan2(y, x):
         return np.arctan2(y, x) % TWOPI 
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Planetary gravity fields defined...
@@ -970,7 +1273,7 @@ PLUTO_CHARON_OLD = OblateGravity(PLUTO_ONLY.gm + CHARON.gm, [], PLUTO_ONLY.rp)
 #   J2' = J2 (GM1 (R1/R2)^2 + GM2) / (GM1 + GM2)
 #   J4' = J4 (GM1 (R1/R2)^4 + GM2) / (GM1 + GM2)
 # etc.
-
+################################################################################
 PLUTO_A  = 19596. * CHARON.gm / (PLUTO.gm + CHARON.gm)
 CHARON_A = 19596. - PLUTO_A
 ratio2 = (PLUTO_A / CHARON_A)**2
@@ -1039,11 +1342,19 @@ import unittest
 
 ERROR_TOLERANCE = 1.e-15
 
+#*******************************************************************************
+# Test_Gravity
+#*******************************************************************************
 class Test_Gravity(unittest.TestCase):
 
+    #===========================================================================
+    # test_uncombo
+    #===========================================================================
     def test_uncombo(self):
 
+        #---------------------------------
         # Testing scalars in a loop...
+        #---------------------------------
         tests = 100
         planets = [JUPITER, SATURN, URANUS, NEPTUNE]
         factors = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
@@ -1058,7 +1369,9 @@ class Test_Gravity(unittest.TestCase):
                     c = abs((b - a) / a)
                     self.assertTrue(c < ERROR_TOLERANCE)
 
+        #-----------------------------------------------
         # PLUTO_CHARON with factors (1,0,0) and (0,0,1)
+        #-----------------------------------------------
         for test in range(tests):
           for obj in [PLUTO_CHARON]:
             for e in (0., 0.1):
@@ -1069,7 +1382,9 @@ class Test_Gravity(unittest.TestCase):
                     c = abs((b - a) / a)
                     self.assertTrue(c < ERROR_TOLERANCE)
 
+        #------------------------------------------------------------------
         # PLUTO_CHARON with factors (0,1,0) can have duplicated values...
+        #------------------------------------------------------------------
         for test in range(tests):
           for obj in [PLUTO_CHARON]:
             a = obj.rp * 10. ** (np.random.rand() * 2.)
@@ -1082,7 +1397,9 @@ class Test_Gravity(unittest.TestCase):
                 c = abs((combo2 - combo1) / combo1)
                 self.assertTrue(c < ERROR_TOLERANCE)
 
+        #--------------------------
         # Testing a 100x100 array
+        #--------------------------
         for obj in planets:
           a = obj.rp * 10. ** (np.random.rand(100,100) * 2.)
           for e in (0., 0.1):
@@ -1092,7 +1409,9 @@ class Test_Gravity(unittest.TestCase):
                 c = abs((b - a) / a)
                 self.assertTrue(np.all(c < ERROR_TOLERANCE))
 
+        #-----------------------------------------
         # Testing with first-order cancellation
+        #-----------------------------------------
         factors = [(1, -1, 0), (1, 0, -1), (0, 1, -1)]
         planets = [JUPITER, SATURN, URANUS, NEPTUNE]
 
@@ -1103,7 +1422,9 @@ class Test_Gravity(unittest.TestCase):
                 c = abs((b - a) / a)
                 self.assertTrue(np.all(c < ERROR_TOLERANCE))
 
+        #------------------------------------------
         # Testing with second-order cancellation
+        #------------------------------------------
         factors = [(2, -1, -1)]
         planets = [JUPITER, SATURN, URANUS, NEPTUNE]
 
@@ -1113,6 +1434,13 @@ class Test_Gravity(unittest.TestCase):
                 b = obj.solve_a(obj.combo(a, f), f)
                 c = abs((b - a) / a)
                 self.assertTrue(np.all(c < ERROR_TOLERANCE))
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -14,14 +14,19 @@ import unittest
 
 from polymath import *
 
+#*******************************************************************************
+# Test_qube_reshaping
+#*******************************************************************************
 class Test_qube_reshaping(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    ############################################################################
-    # reshape(self, shape, recursive=True)
-    ############################################################################
-
+    #-----------------------------------------
+    # reshape(self, shape, recursive=True)        
+    #-----------------------------------------
     a = Vector(np.random.randn(3,4,5,2))
     b = a.reshape((3,4,5))
     self.assertEqual(a.shape, (3,4,5))
@@ -104,7 +109,9 @@ class Test_qube_reshaping(unittest.TestCase):
     b = a.reshape((6,5,4,3,2))
     self.assertEqual(type(b), Vector3)
 
-    # With mask
+    #- - - - - - - - 
+    # With mask       
+    #- - - - - - - - 
     a = Scalar(np.random.randn(3,4,5), mask=True)
     b = a.reshape((3,4,5))
     self.assertEqual(a.shape, (3,4,5))
@@ -137,10 +144,9 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 3.e-15)
 
-    ############################################################################
-    # flatten(self, recursive=True)
-    ############################################################################
-
+    #-----------------------------------
+    # flatten(self, recursive=True)    
+    #-----------------------------------
     a = Vector(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.flatten()
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -151,7 +157,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(b.denom, (2,))
     self.assertEqual(type(b), Vector)
 
-    # Derivatives & read-only status
+    #- - - - - - - - - - - - - - - - - - 
+    # Derivatives & read-only status     
+    #- - - - - - - - - - - - - - - - - - 
     a = Vector(np.random.randn(2,3,4,5,6,3))
     a.insert_deriv('t', Vector(np.random.randn(3,1,5,6,3,2,2), drank=2))
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -182,7 +190,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertFalse(b.readonly)
     self.assertTrue(b.d_dt.readonly)    # because of broadcast
 
-    # Readonly status
+    #- - - - - - - - - - - 
+    # Readonly status       
+    #- - - - - - - - - - - 
     a = a.as_readonly()
     self.assertTrue(a.readonly)
     self.assertTrue(a.d_dt.readonly)
@@ -191,7 +201,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertTrue(b.readonly)
     self.assertTrue(b.d_dt.readonly)
 
-    # With mask
+    #- - - - - - - -
+    # With mask     
+    #- - - - - - - -
     a = Scalar(np.random.randn(3,4,5), mask=True)
     b = a.flatten((3,4,5))
     self.assertEqual(b.shape, (60,))
@@ -223,10 +235,9 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 3.e-15)
 
-    ############################################################################
-    # swap_axes(self, axis1, axis2, recursive=True)
-    ############################################################################
-
+    #--------------------------------------------------
+    # swap_axes(self, axis1, axis2, recursive=True)        
+    #--------------------------------------------------
     a = Vector(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.swap_axes(0,1)
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -253,12 +264,16 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(a[0,:,:,:,0], b[0,:,:,:,0])
     self.assertEqual(a[1,:,:,:,5], b[5,:,:,:,1])
 
-    # Try a different subclass
+    #- - - - - - - - - - - - - - 
+    # Try a different subclass     
+    #- - - - - - - - - - - - - - 
     a = Vector3(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.swap_axes(0,-1)
     self.assertEqual(type(b), Vector3)
 
-    # Derivatives
+    #- - - - - - - - -
+    # Derivatives         
+    #- - - - - - - - -
     a = Vector(np.random.randn(2,3,4,5,6,3))
     a.insert_deriv('t', Vector(np.random.randn(3,1,5,6,3,2,2), drank=2))
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -291,7 +306,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(a.d_dt[0,:,:,:,0], b.d_dt[0,:,:,:,0])
     self.assertEqual(a.d_dt[1,:,:,:,5], b.d_dt[5,:,:,:,1])
 
-    # Read-only status
+    #- - - - - - - - - - -
+    # Read-only status      
+    #- - - - - - - - - - -
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)        # because of broadcast
@@ -304,7 +321,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertTrue(a.d_dt.readonly)
     self.assertTrue(b.d_dt.readonly)
 
-    # With mask
+    #- - - - - - - - 
+    # With mask       
+    #- - - - - - - - 
     a = Scalar(np.random.randn(3,4,5), mask=True)
     b = a.swap_axes(0,-1)
     self.assertEqual(b.shape, (5,4,3))
@@ -336,10 +355,9 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 1.e-14)
 
-    ############################################################################
-    # roll_axis(self, axis, start, recursive=True, rank=None)
-    ############################################################################
-
+    #------------------------------------------------------------
+    # roll_axis(self, axis, start, recursive=True, rank=None)     
+    #------------------------------------------------------------
     a = Vector(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.roll_axis(1)
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -377,13 +395,17 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(a[1,:,:,:,4], b[1,4,:,:,:])
     self.assertEqual(a[1,:,:,:,5], b[1,5,:,:,:])
 
-    # Try a different subclass
+    #- - - - - - - - - - - - - - 
+    # Try a different subclass     
+    #- - - - - - - - - - - - - - 
     a = Vector3(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.roll_axis(3,1)
     self.assertEqual(type(b), Vector3)
     self.assertEqual(b.shape, (2,5,3,4,6))
 
-    # Derivatives
+    #- - - - - - - - 
+    # Derivatives     
+    #- - - - - - - - 
     a = Vector(np.random.randn(2,3,4,5,6,3))
     a.insert_deriv('t', Vector(np.random.randn(3,1,5,6,3,2,2), drank=2))
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -424,7 +446,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(a.d_dt[0,2], b.d_dt[2,0])
     self.assertEqual(a.d_dt[1,2], b.d_dt[2,1])
 
-    # Read-only status
+    #- - - - - - - - - - - 
+    # Read-only status       
+    #- - - - - - - - - - - 
     self.assertFalse(a.readonly)
     self.assertFalse(b.readonly)
     self.assertTrue(a.d_dt.readonly)        # because of broadcast
@@ -437,7 +461,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertTrue(a.d_dt.readonly)
     self.assertTrue(b.d_dt.readonly)
 
-    # Rank
+    #- - - - - -
+    # Rank    
+    #- - - - - -
     a = Scalar(np.random.randn(2,4,3))
     a.insert_deriv('t', Scalar(np.random.randn(3,2), drank=1))
     self.assertEqual(a.shape, (2,4,3))
@@ -470,7 +496,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(a.d_dt[...,2,:], b.d_dt[2])
     self.assertEqual(a.d_dt[...,3,:], b.d_dt[3])
 
-    # With mask
+    #- - - - - - - 
+    # With mask        
+    #- - - - - - - 
     a = Scalar(np.random.randn(3,4,5), mask=True)
     b = a.roll_axis(-1)
     self.assertEqual(a.shape, (3,4,5))
@@ -503,10 +531,9 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 5.e-15)
 
-    ############################################################################
+    #----------------------------------------------------------------------
     # broadcast_into_shape(self, shape, recursive=True, sample_array=None)
-    ############################################################################
-
+    #----------------------------------------------------------------------
     a = Matrix(np.random.randn(3,1,4,3,2), drank=1)
     self.assertEqual(a.shape, (3,1))
     b = a.broadcast_into_shape((4,3,2))
@@ -543,10 +570,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertTrue(b.readonly)
     self.assertTrue(b.d_dt.readonly)
 
-    ############################################################################
-    # broadcasted_shape(*objects, item=())
-    ############################################################################
-
+    #------------------------------------------
+    # broadcasted_shape(*objects, item=())         
+    #------------------------------------------
     a = Scalar(np.random.randn(2,1,4,1,3,1,3, 2,2), drank=2)
     b = Vector(np.random.randn(  7,4,1,3,7,3, 3))
     c = Matrix(np.random.randn(      4,1,1,1, 3,3,5), drank=1)
@@ -570,10 +596,9 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(Qube.broadcasted_shape(a,b,c,(),None,(3,),item=(2,2)),
                                             (2,7,4,4,3,7,3,2,2))
 
-    ############################################################################
-    # broadcast(*objects, recursive=True)
-    ############################################################################
-
+    #----------------------------------------
+    # broadcast(*objects, recursive=True)     
+    #----------------------------------------
     a = Scalar(np.random.randn(2,1,1,3, 2,2), drank=2)
     b = Pair(np.random.randn(    3,1,1, 2))
     c = Matrix(np.random.randn(    4,1, 3,3))
@@ -601,6 +626,13 @@ class Test_qube_reshaping(unittest.TestCase):
     (aa,bb,cc,ee,ff) = Qube.broadcast(a,b,c,e,f,recursive=True)
     self.assertEqual(bb.d_dt.shape, (2,3,4,3))
     self.assertTrue(bb.d_dt.readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ############################################
 if __name__ == '__main__':

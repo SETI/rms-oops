@@ -7,15 +7,26 @@ from polymath import *
 
 from oops.fov_.fov import FOV
 
+#*******************************************************************************
+# NullFOV class
+#*******************************************************************************
 class NullFOV(FOV):
-    """NullFOV is a subclass of FOV that describes an instrument with no field
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    NullFOV is a subclass of FOV that describes an instrument with no field
     of view, e.g., an in situ instrument.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     PACKRAT_ARGS = ['uv_scale', 'uv_shape', 'uv_los', 'uv_area']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self):
-        """Constructor for a NullFOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a NullFOV.
 
         The U-axis is assumed to align with X and the V-axis aligns with Y.
 
@@ -41,45 +52,79 @@ class NullFOV(FOV):
                         of a pixel. If not provided, the area is calculated
                         based on the area of the central pixel.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.uv_los = Pair.ZEROS
         self.uv_scale = Pair.ONES
         self.uv_shape = (1,1)
         self.uv_area = 1.
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_from_xy
+    #===========================================================================
     def uv_from_xy(self, xy_pair, derivs=False):
-        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Pair.ZEROS
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # xy_from_uv
+    #===========================================================================
     def xy_from_uv(self, uv_pair, derivs=False):
-        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         If derivs is True, then any derivatives in (x,y) get propagated into
         the (u,v) returned.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Pair.ZEROS
+    #===========================================================================
 
+
+
+    ########################################################
     # Overrides of the default FOV functions
+    ########################################################
 
+    #===========================================================================
+    # area_factor
+    #===========================================================================
     def area_factor(self, uv_pair, **keywords):
-        """The relative area of a pixel or other sensor at (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The relative area of a pixel or other sensor at (u,v).
 
         Results are scaled to the nominal pixel area.
 
         Additional parameters that might affect the transform can be included
         as keyword arguments.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.ONE
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # los_from_xy
+    #===========================================================================
     def los_from_xy(self, xy_pair, derivs=False):
-        """Return the unit line-of-sight vector for camera coordinates (x,y).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the unit line-of-sight vector for camera coordinates (x,y).
 
         Note that this is vector points in the direction _opposite_ to the path
         of arriving photons.
@@ -87,11 +132,19 @@ class NullFOV(FOV):
         If derivs is True, then derivatives in (x,y) get propagated forward
         into the components of the line-of-sight vector.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Vector3.ZAXIS
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # xy_from_los
+    #===========================================================================
     def xy_from_los(self, los, derivs=False):
-        """Return camera frame coordinates (x,y) given a line of sight.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return camera frame coordinates (x,y) given a line of sight.
 
         Lines of sight point outward from the camera, near the Z-axis, and are
         therefore opposite to the direction in which a photon is moving. The
@@ -101,11 +154,19 @@ class NullFOV(FOV):
         sight get propagated forward into the components of the (x,y)
         coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Pair.ONES
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # los_from_uv
+    #===========================================================================
     def los_from_uv(self, uv_pair, derivs=False, **keywords):
-        """Return the line of sight vector given FOV coordinates (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the line of sight vector given FOV coordinates (u,v).
 
         The los points  the direction specified by coordinate Pair (u,v). Note
         that this is the direction _opposite_ to that of the arriving photon.
@@ -116,11 +177,19 @@ class NullFOV(FOV):
         Additional parameters that might affect the transform can be included
         as keyword arguments.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Vector3.ZAXIS
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_from_los
+    #===========================================================================
     def uv_from_los(self, los, derivs=False, **keywords):
-        """Return FOV coordinates (u,v) given a line of sight vector.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return FOV coordinates (u,v) given a line of sight vector.
 
         The los points  the direction specified by coordinate Pair (u,v). Note
         that this is the direction _opposite_ to that of the arriving photon.
@@ -131,11 +200,19 @@ class NullFOV(FOV):
         Additional parameters that might affect the transform can be included
         as keyword arguments.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Pair.ONES
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_is_outside
+    #===========================================================================
     def uv_is_outside(self, uv_pair, inclusive=True, uv_min=None, uv_max=None):
-        """Return a boolean mask identifying coordinates outside the FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
@@ -152,12 +229,20 @@ class NullFOV(FOV):
         Return:         a boolean indicating True where the point is outside the
                         FOV.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return True
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # u_or_v_is_outside
+    #===========================================================================
     def u_or_v_is_outside(self, uv_coord, uv_index, inclusive=True,
                                           uv_min=None, uv_max=None):
-        """Return a boolean mask identifying coordinates outside the FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_coord    a Scalar of u-coordinates or v-coordinates.
@@ -175,12 +260,20 @@ class NullFOV(FOV):
         Return:         a boolean NumPy array indicating True where the point is
                         outside the FOV.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return True
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # xy_is_outside
+    #===========================================================================
     def xy_is_outside(self, xy_pair, inclusive=True, uv_min=None, uv_max=None,
                                                                     **keywords):
-        """Return a boolean mask identifying coordinates outside the FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a boolean mask identifying coordinates outside the FOV.
 
         Input:
             xy_pair     a Pair of (x,y) coordinates, assuming z == 1.
@@ -194,12 +287,20 @@ class NullFOV(FOV):
                         the area observed at the FOV's active area; None for the
                         full FOV.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return True
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # los_is_outside
+    #===========================================================================
     def los_is_outside(self, los, inclusive=True, uv_min=None, uv_max=None,
                                                                **keywords):
-        """Return a boolean mask identifying lines of sight outside the FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a boolean mask identifying lines of sight outside the FOV.
 
         Input:
             los         an outward line-of-sight vector.
@@ -213,11 +314,19 @@ class NullFOV(FOV):
                         the area observed at the FOV's active area; None for the
                         full FOV.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return True
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # nearest_uv
+    #===========================================================================
     def nearest_uv(self, uv_pair, remask=False):
-        """Return the closest (u,v) coordinates inside the FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the closest (u,v) coordinates inside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
@@ -225,8 +334,13 @@ class NullFOV(FOV):
 
         Return:         a new Pair of (u,v) coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Pair.ZEROS
+    #===========================================================================
+
+
+
+#*******************************************************************************
 
 ################################################################################
 # UNIT TESTS

@@ -12,25 +12,36 @@ from oops.path_.path       import Path
 from oops.frame_.frame     import Frame
 from oops.constants        import *
 
+#*******************************************************************************
+# RingPlane
+#*******************************************************************************
 class RingPlane(Surface):
-    """RingPlane is a subclass of Surface describing a flat surface in the (x,y)
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    RingPlane is a subclass of Surface describing a flat surface in the (x,y)
     plane, in which the optional velocity field is defined by circular Keplerian
     motion about the center point. Coordinates are cylindrical (radius,
     longitude, elevation), with an optional offset in elevation from the
     equatorial (z=0) plane.
 
     Optional modes can be used to apply sinusoidal offset patterns in the radial
-    coordinate."""
-
+    coordinate.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = False
 
     PACKRAT_ARGS = ['origin', 'frame', 'radii', 'gravity', 'elevation',
                     'modes', 'epoch']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, origin, frame, radii=None, gravity=None,
                        elevation=0., modes=[], epoch=0.):
-        """Constructor for a RingPlane surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a RingPlane surface.
 
         Input:
             origin      a Path object or ID defining the motion of the center
@@ -59,8 +70,8 @@ class RingPlane(Surface):
 
             epoch       the epoch at which the radial mode parameters apply.
                         Not used unless radial modes are present.
-            """
-
+         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.origin    = Path.as_waypoint(origin)
         self.frame     = Frame.as_wayframe(frame)
         self.gravity   = gravity
@@ -74,10 +85,18 @@ class RingPlane(Surface):
         else:
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=0., axes=2,
                                   derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -92,10 +111,12 @@ class RingPlane(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos = Vector3.as_vector3(pos, derivs)
 
+        #------------------------------------
         # Generate cylindrical coordinates
+        #------------------------------------
         (x,y,z) = pos.to_scalars()
         r = (x**2 + y**2).sqrt()
         theta = y.arctan2(x) % TWOPI
@@ -111,9 +132,17 @@ class RingPlane(Surface):
             return (a, theta, z)
         else:
             return (a, theta, z - self.elevation)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=0, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the
@@ -130,7 +159,7 @@ class RingPlane(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         a = Scalar.as_scalar(coords[0], derivs)
         theta = Scalar.as_scalar(coords[1], derivs)
 
@@ -148,9 +177,17 @@ class RingPlane(Surface):
         y = r * theta.sin()
 
         return Vector3.from_scalars(x, y, z)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=0., derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -166,9 +203,12 @@ class RingPlane(Surface):
             t           a Scalar such that:
                             position = obs + t * los
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------------------------
         # Solve for obs + factor * los for scalar t, such that the z-component
         # equals zero.
+        #----------------------------------------------------------------------
         obs = Vector3.as_vector3(obs, derivs)
         los = Vector3.as_vector3(los, derivs)
 
@@ -178,7 +218,9 @@ class RingPlane(Surface):
         t = (self.elevation - obs_z)/los_z
         pos = obs + t * los
 
+        #--------------------------------------------
         # Mask based on radial limits if necessary
+        #--------------------------------------------
         if self.radii is not None:
             r_sq = pos.norm_sq(False)
             mask = (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
@@ -186,9 +228,17 @@ class RingPlane(Surface):
             t = t.mask_where(mask)
 
         return (pos, t)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=0., derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -199,22 +249,35 @@ class RingPlane(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         pos = Vector3.as_vector3(pos, derivs)
 
+        #---------------------
         # Always the Z-axis
+        #---------------------
         perp = pos.all_constant((0.,0.,1.))
 
+        #------------------------------------------------------------
         # The normal is undefined outside the ring's radial limits
+        #------------------------------------------------------------
         if self.radii is not None:
             r_sq = pos.norm_sq(False)
             mask = (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
             perp = perp.mask_where(mask)
 
         return perp
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # velocity
+    #===========================================================================
     def velocity(self, pos, time=0.):
-        """The local velocity vector at a point within the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The local velocity vector at a point within the surface.
 
         This can be used to describe the orbital motion of ring particles or
         local wind speeds on a planet.
@@ -225,20 +288,26 @@ class RingPlane(Surface):
 
         Return:         a Vector3 of velocities, in units of km/s.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos = Vector3.as_vector3(pos, False)
 
+        #------------------------------------
         # Handle special case that's easy
+        #------------------------------------
         if self.gravity is None and self.nmodes == 0:
             return Vector3(np.zeros(pos.vals.shape), pos.mask)
 
+        #----------------------------------------
         # Generate info about intercept points
+        #----------------------------------------
         (x,y,z) = pos.to_scalars(recursive=False)
         radius = (x**2 + y**2).sqrt()
 
         r_vector = Vector3.from_scalars(x,y,0.)
 
+        #-----------------------
         # Handle radial modes
+        #-----------------------
         if self.nmodes > 0:
             lon = y.arctan2(x)
             a = radius - self.mode_offset(lon, time)
@@ -248,14 +317,18 @@ class RingPlane(Surface):
             a = radius
             v_radial = None
 
+        #---------------------------------
         # Calculate the velocity field
+        #---------------------------------
         if self.gravity is None:
             v_angular = None
         else:
             n = Scalar(self.gravity.n(radius.values))
             v_angular = Vector3.ZAXIS.cross(r_vector) * n
 
+        #----------
         # Sum
+        #----------
         if v_radial is None:
             vflat = v_angular
         elif v_angular is None:
@@ -263,7 +336,9 @@ class RingPlane(Surface):
         else:
             vflat = v_radial + v_angular
 
+        #-------------------------------------------------------------
         # The velocity is undefined outside the ring's radial limits
+        #-------------------------------------------------------------
         if self.radii is not None:
             if self.radii[0] == 0:  # Avoids a hole in the middle due to modes
                 mask = (a > self.radii[1])
@@ -273,14 +348,23 @@ class RingPlane(Surface):
             vflat = vflat.mask_where(mask)
 
         return vflat
+    #===========================================================================
+
+
 
     ############################################################################
     # Radius conversions
     ############################################################################
 
+    #===========================================================================
+    # mode_offset
+    #===========================================================================
     def mode_offset(self, lon, time, derivs=False):
-        """Sum of the modes as a local radial offset."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Sum of the modes as a local radial offset.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         offset = 0.
         for mode in self.modes:
             (cycles, amp, peri0, speed) = mode
@@ -288,10 +372,19 @@ class RingPlane(Surface):
             offset = offset + amp * arg.cos(recursive=derivs)
 
         return offset
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dmode_dt
+    #===========================================================================
     def dmode_dt(self, lon, time):
-        """Sum of the radial velocities associated with the modes."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Sum of the radial velocities associated with the modes.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         dr_dt = 0.
         for mode in self.modes:
             (cycles, amp, peri0, speed) = mode
@@ -301,6 +394,13 @@ class RingPlane(Surface):
             dr_dt = dr_dt + (amp * speed) * arg.sin()
 
         return dr_dt
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -308,15 +408,23 @@ class RingPlane(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_RingPlane
+#*******************************************************************************
 class Test_RingPlane(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         import oops.body as body
 
         plane = RingPlane(Path.SSB, Frame.J2000)
 
+        #----------------------------------
         # Coordinate/vector conversions
+        #----------------------------------
         obs = np.random.rand(2,4,3,3)
 
         (r,theta,z) = plane.coords_from_vector3(obs,axes=3)
@@ -327,7 +435,9 @@ class Test_RingPlane(unittest.TestCase):
         test = plane.vector3_from_coords((r,theta,z))
         self.assertTrue(np.all(np.abs(test.vals - obs) < 1.e-15))
 
+        #-------------------
         # Ring intercepts
+        #-------------------
         los = np.random.rand(2,4,3,3)
         obs[...,2] =  np.abs(obs[...,2])
         los[...,2] = -np.abs(los[...,2])
@@ -339,14 +449,18 @@ class Test_RingPlane(unittest.TestCase):
         self.assertTrue((angles.sep(los) > -1.e-12).all())
         self.assertTrue((angles.sep(los) <  1.e-12).all())
 
+        #--------------------------------------------------
         # Intercepts that point away from the ring plane
+        #--------------------------------------------------
         self.assertTrue(np.all(factors.vals > 0.))
 
         ########################################################################
         # Test of radial modes
         ########################################################################
 
+        #-----------------------------------
         # Coordinate/vector conversions
+        #-----------------------------------
         refplane = RingPlane(Path.SSB, Frame.J2000)
 
         plane = RingPlane(Path.SSB, Frame.J2000,
@@ -373,11 +487,15 @@ class Test_RingPlane(unittest.TestCase):
         test = plane.vector3_from_coords((a,theta,z), time=100.)
         self.assertTrue(np.all(np.abs(test.vals - obs) < 1.e-11))
 
+        #-----------------------------------------
         # longitudes are the same in both maps
+        #-----------------------------------------
         (a0,theta0,z0) = refplane.coords_from_vector3(obs, time=0., axes=3)
         self.assertEqual(theta0, theta)
 
+        #-------------------------------------------------
         # radial offsets are out of phase when time=50.
+        #-------------------------------------------------
         diff1 = a - a0
         (a,theta,z) = plane.coords_from_vector3(obs, time=50., axes=3)
         diff2 = a - a0
@@ -390,20 +508,26 @@ class Test_RingPlane(unittest.TestCase):
         pos = 10.e3 * np.random.rand(200,3)
         pos[...,2] = 0.     # set Z-coordinate to zero
 
+        #--------------------------
         # No gravity, no modes
+        #--------------------------
         refplane = RingPlane(Path.SSB, Frame.J2000)
 
         vels = refplane.velocity(obs)
         self.assertEqual(vels, (0.,0.,0.))
 
+        #--------------------------------
         # No gravity, motionless mode
+        #--------------------------------
         plane = RingPlane(Path.SSB, Frame.J2000,
                           modes=[(10, 1000., 0., 0.)], epoch=0.)
 
         vels = plane.velocity(obs)
         self.assertEqual(vels, (0.,0.,0.))
 
+        #----------------------
         # No gravity, modes
+        #----------------------
         plane = RingPlane(Path.SSB, Frame.J2000,
                           modes=[(10, 1000., 0., 2.*np.pi/100.)], epoch=0.)
 
@@ -425,7 +549,9 @@ class Test_RingPlane(unittest.TestCase):
         diff = (speed2 - speed1) / abs(speed1).max()
         self.assertTrue(abs(diff).max() < 3.e-4)
 
+        #----------------------
         # Gravity, no modes
+        #----------------------
         plane = RingPlane(Path.SSB, Frame.J2000, gravity=gravity.SATURN)
 
         (a, theta) = plane.coords_from_vector3(pos)
@@ -445,6 +571,12 @@ class Test_RingPlane(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

@@ -116,14 +116,21 @@ SATURN_ALIASES = [
 
 ALIASES = JUPITER_ALIASES + SATURN_ALIASES
 
+#--------------------------
 # Define within cspyce
+#--------------------------
 for (codes, names) in ALIASES:
     cspyce.define_body_aliases(*(names + codes))
 
 ################################################################################
 
+#*******************************************************************************
+# Body class
+#*******************************************************************************
 class Body(object):
-    """Defines the properties and relationships of solar system bodies.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Defines the properties and relationships of solar system bodies.
 
     Bodies include planets, dwarf planets, satellites and rings. Each body has
     these attributes:
@@ -172,14 +179,20 @@ class Body(object):
                         Body object should appear on the list of the children of
                         its parent and also the children of its barycenter.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     BODY_REGISTRY = {}          # global dictionary of body objects
     STANDARD_BODIES = set()     # Bodies that always have the same definition
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, name, path, frame, parent=None, barycenter=None,
                  spice_name=None):
-        """Constructor for a Body object."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Body object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if not isinstance(name, str):
             raise TypeError('Body name must be a string: ' + str(name))
 
@@ -228,7 +241,9 @@ class Body(object):
 
         self.children = []
 
+        #-----------------------------------------------
         # Append this to the appropriate child lists
+        #-----------------------------------------------
         if self.parent is not None:
             if self not in self.parent.children:
                 self.parent.children.append(self)
@@ -237,14 +252,31 @@ class Body(object):
             if self not in self.barycenter.children:
                 self.barycenter.children.append(self)
 
+        #-----------------------------------------------
         # Save it in the Solar System dictionary
+        #-----------------------------------------------
         Body.BODY_REGISTRY[self.name] = self
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __str__
+    #===========================================================================
     def __str__(self):
         return 'Body(' + self.name + ')'
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __repr__
+    #===========================================================================
     def __repr__(self):
         return self.__str__()
+    #===========================================================================
+
+
 
     ############################################################################
     # For serialization, standard bodies are uniquely identified by name
@@ -255,12 +287,21 @@ class Body(object):
                   'ring_epoch', 'ring_is_retrograde', 'ring_pole',
                   'ring_body', 'gravity']
 
+    #===========================================================================
+    # PACKRAT__args__
+    #===========================================================================
     def PACKRAT__args__(self):
         if self.name in Body.STANDARD_BODIES:
             return ['name'] + Body.EXTRA_ARGS
 
         return Body.INIT_ARGS + Body.EXTRA_ARGS
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # PACKRAT__init__
+    #===========================================================================
     @staticmethod
     def PACKRAT__init__(cls, **args):
 
@@ -272,7 +313,9 @@ class Body(object):
                                       args['parent'], args['barycenter'],
                                       args['spice_name'])
 
+        #-----------------------------------------------
         # Override parameters that might change
+        #-----------------------------------------------
         obj.apply_surface(args['surface'], args['radius'], args['inner_radius'])
 
         obj.apply_ring_frame(args['ring_epoch'], args['ring_is_retrograde'],
@@ -281,22 +324,43 @@ class Body(object):
         obj.apply_gravity(args['gravity'])
 
         return obj
+    #===========================================================================
+
+
 
     ############################################################################
 
+    #===========================================================================
+    # apply_surface
+    #===========================================================================
     def apply_surface(self, surface, radius, inner_radius=0.):
-        """Add the surface attribute to a Body."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Add the surface attribute to a Body.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.surface = surface
         self.radius = radius
         self.inner_radius = inner_radius
         # assert self.surface.origin == self.path
         # This assertion is not strictly necessary
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # apply_ring_frame
+    #===========================================================================
     def apply_ring_frame(self, epoch=None, retrograde=False, pole=None):
-        """Add the ring and ring_frame attributes to a Body."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Add the ring and ring_frame attributes to a Body.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------------------
         # On a repeat call, make sure the frames match
+        #-----------------------------------------------
         if type(self.ring_frame) == RingFrame and pole is None:
             assert self.ring_frame.epoch == epoch
             assert self.ring_frame.retrograde == retrograde
@@ -331,30 +395,57 @@ class Body(object):
             self.ring_pole = xform.matrix.row_vector(2, Vector3)
             if self.invariable_frame is self.ring_frame:
                 self.invariable_pole = self.ring_pole
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # apply_gravity
+    #===========================================================================
     def apply_gravity(self, gravity):
-        """Add the gravity attribute to a Body."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Add the gravity attribute to a Body.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.gravity = gravity
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # add_keywords
+    #===========================================================================
     def add_keywords(self, keywords):
-        """Add one or more keywords to the list associated with this Body."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Add one or more keywords to the list associated with this Body.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(keywords) == type(""): keywords = [keywords]
 
         for keyword in keywords:
             # Avoid duplicates...
             if keyword not in self.keywords:
                 self.keywords.append(keyword)
+    #===========================================================================
+
+
 
     ############################################################################
     # Tools for selecting the children of a body
     ############################################################################
 
+    #===========================================================================
+    # select_children
+    #===========================================================================
     def select_children(self, include_all=None, include_any=None,
                               exclude=None, radius=None, recursive=False):
-        """Return a list of body objects based on keywords and size."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a list of body objects based on keywords and size.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if recursive:
             bodies = []
             self._recursive_children(bodies)
@@ -378,18 +469,33 @@ class Body(object):
             bodies = Body.radius_in_range(bodies, radius[0], radius[1])
 
         return bodies
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _recursive_children
+    #===========================================================================
     def _recursive_children(self, list):
 
         for child in self.children:
             if child not in list:
                 list.append(child)
             child._recursive_children(list)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # name_in
+    #===========================================================================
     @staticmethod
     def name_in(bodies, names):
-        """Retain bodies if their names ARE found in the list provided."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies if their names ARE found in the list provided.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(names) == type(""): names = [names]
 
         list = []
@@ -397,11 +503,20 @@ class Body(object):
             if body.name in names and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # name_not_in
+    #===========================================================================
     @staticmethod
     def name_not_in(bodies, names):
-        """Retain bodies only if their names are NOT in the list provided."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies only if their names are NOT in the list provided.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(names) == type(""): names = [names]
 
         list = []
@@ -409,34 +524,61 @@ class Body(object):
             if body.name not in names and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # radius_in_range
+    #===========================================================================
     @staticmethod
     def radius_in_range(bodies, min, max=np.inf):
-        """Retain bodies if their radii fall INSIDE the range (min,max)."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies if their radii fall INSIDE the range (min,max).
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         list = []
         for body in bodies:
             if body.radius >= min and body.radius <= max and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # radius_not_in_range
+    #===========================================================================
     @staticmethod
     def radius_not_in_range(bodies, min, max=np.inf):
-        """Retain bodies if their radii fall OUTSIDE the range (min,max)."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies if their radii fall OUTSIDE the range (min,max).
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         list = []
         for body in bodies:
             if body.radius < min or body.radius > max and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # surface_class_in
+    #===========================================================================
     @staticmethod
     def surface_class_in(bodies, class_names):
-        """Retain bodies if the their surface class IS found in the list.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies if the their surface class IS found in the list.
 
         Note that the name of the surface class is "NoneType" for cases where
-        the surface has not been specified."""
-
+        the surface has not been specified.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(class_names) == type(""): class_names = [class_names]
 
         list = []
@@ -445,14 +587,23 @@ class Body(object):
             if name in class_names and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # surface_class_not_in
+    #===========================================================================
     @staticmethod
     def surface_class_not_in(bodies, class_names):
-        """Retain bodies if their surface class is NOT found in the list.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies if their surface class is NOT found in the list.
 
         Note that the name of the surface class is "NoneType" for cases where
-        the surface has not been specified."""
-
+        the surface has not been specified.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(class_names) == type(""): class_names = [class_names]
 
         list = []
@@ -461,51 +612,96 @@ class Body(object):
             if name not in class_names and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # has_gravity
+    #===========================================================================
     @staticmethod
     def has_gravity(bodies):
-        """Retain bodies on the list if they HAVE a defined gravity."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies on the list if they HAVE a defined gravity.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         list = []
         for body in bodies:
             if body.gm is not None and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # has_no_gravity
+    #===========================================================================
     @staticmethod
     def has_no_gravity(bodies):
-        """Retain bodies on the list if they have NO gravity."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies on the list if they have NO gravity.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         list = []
         for body in bodies:
             if body.gm is None and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # has_children
+    #===========================================================================
     @staticmethod
     def has_children(bodies):
-        """Retain bodies on the list if they HAVE children."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies on the list if they HAVE children.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         list = []
         for body in bodies:
             if body.children != [] and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # has_no_children
+    #===========================================================================
     @staticmethod
     def has_no_children(bodies):
-        """Retain bodies on the list if they have NO children."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies on the list if they have NO children.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         list = []
         for body in bodies:
             if body.children == [] and body not in list:
                 list.append(body)
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # keywords_include_any
+    #===========================================================================
     @staticmethod
     def keywords_include_any(bodies, keywords):
-        """Retain bodies that have at least one of the specified keywords."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies that have at least one of the specified keywords.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(keywords) == type(""): keywords = [keywords]
 
         list = []
@@ -515,11 +711,20 @@ class Body(object):
                     list.append(body)
                     break
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # keywords_include_all
+    #===========================================================================
     @staticmethod
     def keywords_include_all(bodies, keywords):
-        """Retain bodies if they have all of the specified keywords."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies if they have all of the specified keywords.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(keywords) == type(""): keywords = [keywords]
 
         list = []
@@ -534,11 +739,20 @@ class Body(object):
                 list.append(body)
 
         return list
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # keywords_do_not_include
+    #===========================================================================
     @staticmethod
     def keywords_do_not_include(bodies, keywords):
-        """Retain bodies if they DO NOT have any of the specified keywords."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Retain bodies if they DO NOT have any of the specified keywords.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(keywords) == type(""): keywords = [keywords]
 
         list = []
@@ -553,83 +767,157 @@ class Body(object):
                 list.append(body)
 
         return list
+    #===========================================================================
+
+
 
     ########################################
 
+    #===========================================================================
+    # define_multipath
+    #===========================================================================
     @staticmethod
     def define_multipath(bodies, origin="SSB", frame="J2000", id=None):
-        """Construct a multipath for the centers of the given list of bodies.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Construct a multipath for the centers of the given list of bodies.
 
         The default ID of the path returned is the name of the first body with
-        a "+" appended."""
-
+        a "+" appended.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         paths = []
         for body in bodies:
             paths.append(body.path)
 
         return MultiPath(paths, origin, frame, id)
+    #===========================================================================
+
+
 
     ############################################################################
     # Body registry
     ############################################################################
 
+    #===========================================================================
+    # lookup
+    #===========================================================================
     @staticmethod
     def lookup(key):
-        """Return a body from the registry given its name."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a body from the registry given its name.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Body.BODY_REGISTRY[key.upper()]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # exists
+    #===========================================================================
     @staticmethod
     def exists(key):
-        """Return True if the body's name exists in the registry."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return True if the body's name exists in the registry.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return key.upper() in Body.BODY_REGISTRY
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_body
+    #===========================================================================
     @staticmethod
     def as_body(body):
-        """Return a body object given the registered name or the object itself.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
 
+        Return a body object given the registered name or the object itself.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if isinstance(body, Body):
             return body
 
         return Body.lookup(body)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_body_name
+    #===========================================================================
     @staticmethod
     def as_body_name(body):
-        """Return a body name given the registered name or the object itself."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a body name given the registered name or the object itself.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if isinstance(body, Body):
             return body.name
 
         return body
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # reset_registry
+    #===========================================================================
     @staticmethod
     def reset_registry():
-        """Initialize the registry.
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Initialize the registry.
+    
         It is not generally necessary to call this function, but it can be used
         to reset the registry for purposes of debugging.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Body.BODY_REGISTRY.clear()
 
         spice_support.initialize()
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_path
+    #===========================================================================
     def as_path(self):
-        """Path object for this body."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Path object for this body.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Path.as_primary_path(self.path)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # General function to load Solar System components
 ################################################################################
 
+#===============================================================================
+# define_solar_system
+#===============================================================================
 def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
-    """Construct bodies, paths and frames for planets and their moons.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Construct bodies, paths and frames for planets and their moons.
 
     Each planet is defined relative to the SSB. Each moon is defined relative to
     its planet. Names are as defined within the SPICE toolkit. Body associations
@@ -657,10 +945,12 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
 
     Return              an ordered list of SPICE kernel names
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     names = []
 
+    #-------------------------------------
     # Interpret the keyword args
+    #-------------------------------------
     irregulars = args.get('irregulars', True)
 
     planets = args.get('planets', None)
@@ -671,13 +961,17 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
 
     mst_pck = args.get('mst_pck', True)
 
+    #-------------------------------------
     # Load the necessary SPICE kernels
+    #-------------------------------------
     spicedb.open_db()
 
     names += spicedb.furnish_lsk(asof=asof)
     names += spicedb.furnish_pck(name='NAIF-PCK', asof=asof)
 
+    #-------------------------------------
     # Special handling for Saturn
+    #-------------------------------------
     if 6 in planets:
         names += spicedb.furnish_pck(name='CAS-FK-ROCKS', asof=asof)
         names += spicedb.furnish_pck(name='CAS-PCK', asof=asof)
@@ -688,21 +982,31 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
 
     names += spicedb.furnish_spk(planets, time=(start_time, stop_time), asof=asof)
 
+    #-------------------------------------
     # Define B1950 in addition to J2000
+    #-------------------------------------
     ignore = SpiceFrame("B1950", "J2000")
 
+    #--------------------------------
     # SSB and Sun
+    #--------------------------------
     define_bodies(["SSB"], None, None, ["SUN", "BARYCENTER"])
     define_bodies(["SUN"], None, None, ["SUN"])
 
+    #--------------------------------------
     # Mercury, Venus, Earth orbit the Sun
+    #--------------------------------------
     define_bodies([199, 299, 399], "SUN", "SUN", ["PLANET"])
 
+    #--------------------------------
     # Add Earth's Moon
+    #--------------------------------
     define_bodies([301], "EARTH", "EARTH",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
 
+    #--------------------------------
     # Define planetary systems
+    #--------------------------------
     if 4 in planets:
         names += _define_mars(start_time, stop_time, asof)
     if 5 in planets:
@@ -718,14 +1022,19 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
 
     spicedb.close_db()
 
+    #-------------------------------------------------------------------------
     # Also define the solar disk as a light source. The import of the
     # LightSource class is local to this function because a file-level import
     # would result in recursive imports.
+    #-------------------------------------------------------------------------
 
     from oops.lightsource import DiskSource
     _ = DiskSource('SOLAR_DISK', SpicePath(10), 695990., 11)
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Mars System
@@ -734,9 +1043,15 @@ def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
 MARS_ALL_MOONS = range(401,403)
 MARS_MOONS_LOADED = []
 
+#===============================================================================
+# _define_mars
+#===============================================================================
 def _define_mars(start_time, stop_time, asof=None):
-    """Define components of the Mars system."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define components of the Mars system.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global MARS_MOONS_LOADED
 
     MARS_MOONS_LOADED += MARS_ALL_MOONS
@@ -744,15 +1059,21 @@ def _define_mars(start_time, stop_time, asof=None):
                                 time=(start_time, stop_time),
                                 asof=asof)
 
+    #----------------------------------------------------
     # Mars and the Mars barycenter orbit the Sun
+    #----------------------------------------------------
     define_bodies([499], "SUN", "SUN", ["PLANET"])
     define_bodies([4], "SUN", "SUN", ["BARYCENTER"])
 
+    #------------------
     # Moons of Mars
+    #------------------
     define_bodies(MARS_ALL_MOONS, "MARS", "MARS",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
 
+    #------------------------
     # Rings of Mars
+    #------------------------
     ring = define_ring("MARS", "MARS_RING_PLANE", None, [])
     ring.backplane_id = 'MARS:RING'
     ring.backplane_limits = None
@@ -761,6 +1082,9 @@ def _define_mars(start_time, stop_time, asof=None):
     Body.BODY_REGISTRY['MARS'].ring_body = ring
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Jupiter System
@@ -778,12 +1102,20 @@ JUPITER_MOONS_LOADED = []
 
 JUPITER_MAIN_RING_LIMIT = 128940.
 
+#===============================================================================
+# _define_jupiter
+#===============================================================================
 def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
-    """Define components of the Jupiter system."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define components of the Jupiter system.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global JUPITER_MOONS_LOADED
 
+    #------------------------------
     # Load Jupiter system SPKs
+    #------------------------------
     JUPITER_MOONS_LOADED += JUPITER_CLASSICAL + JUPITER_REGULAR
     if irregulars:
         JUPITER_MOONS_LOADED += JUPITER_IRREGULAR
@@ -792,11 +1124,15 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
                                 time=(start_time, stop_time),
                                 asof=asof)
 
+    #----------------------------------------------------
     # Jupiter and the Jupiter barycenter orbit the Sun
+    #----------------------------------------------------
     define_bodies([599], "SUN", "SUN", ["PLANET"])
     define_bodies([5], "SUN", "SUN", ["BARYCENTER"])
 
+    #-------------------------------------------------
     # Moons and rings of Jupiter
+    #-------------------------------------------------
     define_bodies(JUPITER_CLASSICAL, "JUPITER", "JUPITER",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(JUPITER_REGULAR, "JUPITER", "JUPITER",
@@ -824,6 +1160,9 @@ def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
     ring.unbounded_surface = unbounded_ring
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Saturn System
@@ -847,12 +1186,20 @@ SATURN_F_RING_LIMIT = 140612.
 SATURN_RINGS        = (SATURN_MAIN_RINGS[0], SATURN_F_RING_LIMIT)
 SATURN_AB_RINGS     = (SATURN_B_RING[0], SATURN_A_RING[1])
 
+#===============================================================================
+# _define_saturn
+#===============================================================================
 def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
-    """Define components of the Saturn system."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define components of the Saturn system.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global SATURN_MOONS_LOADED
 
+    #-------------------------------------------------
     # Load Saturn system SPKs
+    #-------------------------------------------------
     SATURN_MOONS_LOADED += (SATURN_CLASSICAL_INNER + SATURN_CLASSICAL_OUTER +
                             SATURN_CLASSICAL_IRREG + SATURN_REGULAR)
     if irregulars:
@@ -862,11 +1209,15 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
                                 time=(start_time, stop_time),
                                 asof=asof)
 
+    #-------------------------------------------------
     # Saturn and the Saturn barycenter orbit the SSB
+    #-------------------------------------------------
     define_bodies([699], "SUN", "SSB", ["PLANET"])
     define_bodies([6], "SUN", "SSB", ["BARYCENTER"])
 
+    #-------------------------------------------------
     # Moons and rings of Saturn
+    #-------------------------------------------------
     define_bodies(SATURN_CLASSICAL_INNER, "SATURN", "SATURN",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(SATURN_CLASSICAL_OUTER, "SATURN", "SATURN BARYCENTER",
@@ -923,6 +1274,9 @@ def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
     ring.unbounded_surface = unbounded_ring
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Uranus System
@@ -937,10 +1291,15 @@ URANUS_EPSILON_LIMIT = 51604.
 URANUS_MU_LIMIT = [97700. - 17000./2, 97700. + 17700./2]
 URANUS_NU_LIMIT = [67300. -  3800./2, 67300. +  3800./2]
 
+#----------------------------------------------------------
 # Special definitions of Uranian eccentric/inclined rings
+#----------------------------------------------------------
 URANUS_OLD_GRAVITY = OblateGravity(5793939., [3.34343e-3, -2.885e-5], 26200.)
 
 # Local function used to adapt the tabulated elements from French et al. 1991.
+#===============================================================================
+# _uranus_ring_elements
+#===============================================================================
 def _uranus_ring_elements(a, e, peri, i, node, da):
     n = URANUS_OLD_GRAVITY.n(a)
     prec = URANUS_OLD_GRAVITY.combo(a, (1,-1, 0))
@@ -972,12 +1331,20 @@ URANUS_LAMBDA_ELEMENTS = _uranus_ring_elements(
 URANUS_EPSILON_ELEMENTS = _uranus_ring_elements(
                         51149.32, 7.936e-3, 214.97, 0.0000,   0.00, 58.1+37.6)
 
+#===============================================================================
+# _define_uranus
+#===============================================================================
 def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
-    """Define components of the Uranus system."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define components of the Uranus system.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global URANUS_MOONS_LOADED
 
+    #-------------------------------------------------
     # Load Uranus system SPKs
+    #-------------------------------------------------
     URANUS_MOONS_LOADED += URANUS_CLASSICAL + URANUS_INNER
     if irregulars:
         URANUS_MOONS_LOADED += URANUS_IRREGULAR
@@ -986,11 +1353,15 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
                                 time=(start_time, stop_time),
                                 asof=asof)
 
+    #-------------------------------------------------
     # Uranus and the Uranus barycenter orbit the SSB
+    #-------------------------------------------------
     define_bodies([799], "SUN", "SSB", ["PLANET"])
     define_bodies([7], "SUN", "SSB", ["BARYCENTER"])
 
+    #----------------------------------
     # Moons and rings of Uranus
+    #----------------------------------
     define_bodies(URANUS_CLASSICAL, "URANUS", "URANUS",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(URANUS_INNER, "URANUS", "URANUS",
@@ -1054,6 +1425,9 @@ def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
                            URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Neptune System
@@ -1072,12 +1446,20 @@ NEPTUNE_ADAMS_LIMIT = 62940.
 NEPTUNE_INVARIABLE_RA = 299.46086 * np.pi/180.
 NEPTUNE_INVARIABLE_DEC = 43.40481 * np.pi/180.
 
+#===============================================================================
+# _define_neptune
+#===============================================================================
 def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
-    """Define components of the Neptune system."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define components of the Neptune system.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global NEPTUNE_MOONS_LOADED
 
+    #----------------------------------
     # Load Neptune system SPKs
+    #----------------------------------
     NEPTUNE_MOONS_LOADED += (NEPTUNE_CLASSICAL_INNER + NEPTUNE_CLASSICAL_OUTER +
                              NEPTUNE_REGULAR)
     if irregulars:
@@ -1091,7 +1473,9 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
     define_bodies([899], "SUN", "SSB", ["PLANET"])
     define_bodies([8], "SUN", "SSB", ["BARYCENTER"])
 
+    #----------------------------------
     # Moons and rings of Neptune
+    #----------------------------------
     define_bodies(NEPTUNE_CLASSICAL_INNER, "NEPTUNE", "NEPTUNE",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(NEPTUNE_CLASSICAL_OUTER, "NEPTUNE", "NEPTUNE BARYCENTER",
@@ -1126,6 +1510,9 @@ def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
     ring.unbounded_surface = unbounded_ring
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Pluto System
@@ -1139,9 +1526,15 @@ PLUTO_RADIUS = 19591.
 CHARON_RADIUS = 606.
 PLUTO_CHARON_DISTANCE = 19591.
 
+#===============================================================================
+# _define_pluto
+#===============================================================================
 def _define_pluto(start_time, stop_time, asof=None):
-    """Define components of the Pluto system."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define components of the Pluto system.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     global PLUTO_MOONS_LOADED
 
     PLUTO_MOONS_LOADED += CHARON + PLUTO_REGULAR
@@ -1149,11 +1542,15 @@ def _define_pluto(start_time, stop_time, asof=None):
                                 time=(start_time, stop_time),
                                 asof=asof)
 
+    #----------------------------------------------------------
     # Pluto and the Pluto barycenter orbit the SSB
+    #----------------------------------------------------------
     define_bodies([999], "SUN", "SSB", ["PLANET"])
     define_bodies([9], "SUN", "SSB", ["BARYCENTER"])
 
+    #----------------------------------
     # Moons and rings of Pluto
+    #----------------------------------
     define_bodies(CHARON, "PLUTO", "PLUTO",
                   ["SATELLITE", "CLASSICAL", "REGULAR"])
     define_bodies(PLUTO_REGULAR, "PLUTO", "PLUTO BARYCENTER",
@@ -1175,29 +1572,46 @@ def _define_pluto(start_time, stop_time, asof=None):
     barycenter.ring_frame = Body.BODY_REGISTRY["PLUTO"].ring_frame
 
     return names
+#===============================================================================
+
+
 
 ################################################################################
 # Define bodies and rings...
 ################################################################################
 
+#===============================================================================
+# define_bodies
+#===============================================================================
 def define_bodies(spice_ids, parent, barycenter, keywords):
-    """Define the path, frame, surface for bodies by name or SPICE ID.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define the path, frame, surface for bodies by name or SPICE ID.
 
-    All must share a common parent and barycenter."""
-
+    All must share a common parent and barycenter.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     for spice_id in spice_ids:
 
+        #----------------------------------------------------------
         # Define the body's path
+        #----------------------------------------------------------
         path = SpicePath(spice_id, "SSB")
 
+        #----------------------------------------------------------
         # The name of the path is the name of the body
+        #----------------------------------------------------------
         name = path.path_id
 
+        #----------------------------------------------------------
         # If the body already exists, skip it
+        #----------------------------------------------------------
         if name in Body.BODY_REGISTRY: continue
 
+        #----------------------------------------------------------------------
         # Sometimes a frame is undefined for a new moon; in this case assume it
         # is synchronous
+        #----------------------------------------------------------------------
         try:
             frame = SpiceFrame(spice_id)
         except LookupError:
@@ -1206,20 +1620,26 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
             else:
                 frame = Synchronous(path, parent, id='SYNCHRONOUS_' + name)
 
+        #----------------------------------------------------------------------
         # Define the planet's body
         # Note that this will overwrite any registered body of the same name
+        #----------------------------------------------------------------------
         body = Body(name, name, frame.frame_id, parent, barycenter)
         body.add_keywords(keywords)
 
+        #----------------------------------------------------------
         # Add the gravity object if it exists
+        #----------------------------------------------------------
         try:
             body.apply_gravity(Gravity.lookup(name))
         except KeyError: pass
 
+        #----------------------------------------------------------------------
         # Add the surface object if shape information is available
         # RuntimeError was raised by old version of cspyce;
         # KeyError is raised during a name lookup if the body name is unknown;
         # ValueError is raised during a SPICE ID lookup if the ID is unknown.
+        #----------------------------------------------------------------------
         try:
             shape = spice_shape(spice_id, frame.frame_id, (1.,1.,1.))
         except (RuntimeError, ValueError, KeyError):
@@ -1230,21 +1650,34 @@ def define_bodies(spice_ids, parent, barycenter, keywords):
             body.apply_surface(shape, shape.req, shape.rpol)
             shape.body = body
 
+        #----------------------------------------------------------
         # Add a planet name to any satellite or barycenter
+        #----------------------------------------------------------
         if "SATELLITE" in body.keywords and parent is not None:
             body.add_keywords(parent)
 
         if "BARYCENTER" in body.keywords and parent is not None:
             body.add_keywords(parent)
 
+        #----------------------------------------------------------
         # Save solar system bodies as standard for serialization
+        #----------------------------------------------------------
         Body.STANDARD_BODIES.add(body.name)
         Path.STANDARD_PATHS.add(body.path.path_id)
         Frame.STANDARD_FRAMES.add(body.frame.frame_id)
 
+#===============================================================================
+
+
+
+#===============================================================================
+# define_ring
+#===============================================================================
 def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                 barycenter_name=None, pole=None):
-    """Define and return the body object associate with a ring around another
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define and return the body object associate with a ring around another
     body.
 
     A single radius value is used to define the outer limit of rings. Note that
@@ -1270,11 +1703,16 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                         It will be used to define the ring_frame as a
                         PoleFrame instead of a RingFrame.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #------------------------------------------
     # If the ring body already exists, skip it
+    #------------------------------------------
     if ring_name in Body.BODY_REGISTRY: return Body.BODY_REGISTRY[ring_name]
 
+    #-----------------------------
     # Identify the parent
+    #-----------------------------
     parent = Body.lookup(parent_name)
     parent.apply_ring_frame(retrograde=retrograde, pole=pole)
 
@@ -1283,7 +1721,9 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     else:
         barycenter = Body.lookup(barycenter_name)
 
+    #-----------------------------
     # Interpret the radii
+    #-----------------------------
     try:
         rmax = radii[1]
     except IndexError:
@@ -1296,8 +1736,10 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
             rmax = radii
             radii = None
 
+    #--------------------------------------------------------------------
     # Create the ring body
     # Note that this will overwrite any registered ring of the same name
+    #--------------------------------------------------------------------
     body = Body(ring_name, barycenter.path, parent.ring_frame, parent)
     body.apply_gravity(barycenter.gravity)
     body.apply_ring_frame(retrograde=retrograde, pole=pole)
@@ -1313,13 +1755,20 @@ def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
     body.add_keywords(keywords)
 
     return body
+#===============================================================================
 
+
+
+#===============================================================================
+# define_orbit
+#===============================================================================
 def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """Define the path, frame, surface and body for ring given orbital elements.
 
     The ring can be inclined or eccentric.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     parent = Body.lookup(parent_name)
 
     orbit = OrbitPlane(elements, epoch, parent.path, reference, id=ring_name)
@@ -1331,28 +1780,48 @@ def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
 
     body.add_keywords([parent, "RING", "ORBIT", ring_name])
     body.add_keywords(keywords)
+#===============================================================================
 
+
+
+#===============================================================================
+# define_small_body
+#===============================================================================
 def define_small_body(spice_id, name=None, spk=None, keywords=[],
                                 parent='SUN', barycenter='SSB'):
-    """Define the path, frame, surface for a body by SPICE ID.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Define the path, frame, surface for a body by SPICE ID.
 
-    This body treats the Sun as its parent body and barycenter."""
+    This body treats the Sun as its parent body and barycenter.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #------------------------------------------------------------
     # Load the SPK if necessary
+    #------------------------------------------------------------
     if spk:
         cspyce.furnsh(spk)
 
+    #------------------------------------------------------------
     # Define the body's path
+    #------------------------------------------------------------
     path = SpicePath(spice_id, "SSB", id=name)
 
+    #------------------------------------------------------------
     # The name of the path is the name of the body
+    #------------------------------------------------------------
     name = name or path.path_id
 
+    #------------------------------------------------------------
     # If the body already exists, skip it
+    #------------------------------------------------------------
     if name in Body.BODY_REGISTRY: return
 
+    #------------------------------------------------------------
     # Sometimes a frame is undefined for a new moon; in this case assume it
     # is synchronous
+    #------------------------------------------------------------
     try:
         frame = SpiceFrame(spice_id)
     except LookupError:
@@ -1361,20 +1830,26 @@ def define_small_body(spice_id, name=None, spk=None, keywords=[],
         else:
             frame = Synchronous(path, parent, id='SYNCHRONOUS_' + name)
 
+    #------------------------------------------------------------
     # Define the planet's body
     # Note that this will overwrite any registered body of the same name
+    #------------------------------------------------------------
     body = Body(name, path.path_id, frame.frame_id,
                       parent=Body.lookup(parent),
                       barycenter=Body.lookup(barycenter))
     body.add_keywords(keywords)
 
+    #------------------------------------------------------------
     # Add the gravity object if it exists
+    #------------------------------------------------------------
     try:
         body.apply_gravity(Gravity.lookup(name))
     except KeyError:
         pass
 
+    #------------------------------------------------------------
     # Add the surface object if shape information is available
+    #------------------------------------------------------------
     try:
         shape = spice_shape(spice_id, frame.frame_id, (1.,1.,1.))
         body.apply_surface(shape, shape.req, shape.rpol)
@@ -1384,6 +1859,8 @@ def define_small_body(spice_id, name=None, spk=None, keywords=[],
     except LookupError:
         shape = NullSurface(path, frame)
         body.apply_surface(shape, 0., 0.)
+#===============================================================================
+
 
 ################################################################################
 # UNIT TESTS
@@ -1448,6 +1925,9 @@ class Test_Body(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
         Body.reset_registry()
+
+
+
 
 ########################################
 if __name__ == '__main__':

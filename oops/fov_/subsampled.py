@@ -7,12 +7,26 @@ from polymath import *
 
 from oops.fov_.fov import FOV
 
+#*******************************************************************************
+# Subsampled class
+#*******************************************************************************
 class Subsampled(FOV):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Subsampled is a subclass of FOV in which the pixels of a given base FOV
+    class are rescaled.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     PACKRAT_ARGS = ['fov', 'rescale']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, fov, rescale):
-        """Constructor for a Subsampled FOV.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Subsampled FOV.
         
         Returns a new FOV object in which the pixel size has been modified.
         The origin and the optic axis are unchanged.
@@ -24,7 +38,7 @@ class Subsampled(FOV):
             rescale     a single value, tuple or Pair defining the sizes of the
                         new pixels relative to the sizes of the originals.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.fov = fov
         self.rescale  = Pair.as_pair(rescale)
 
@@ -42,9 +56,17 @@ class Subsampled(FOV):
         self.uv_shape = (self.fov.uv_shape.element_div(self.rescale)).as_int()
 
         assert self.rescale.element_mul(self.uv_shape) == self.fov.uv_shape
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # xy_from_uv
+    #===========================================================================
     def xy_from_uv(self, uv_pair, derivs=False, **keywords):
-        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         If derivs is True, then any derivatives in (x,y) get propagated into
         the (u,v) returned.
@@ -52,13 +74,21 @@ class Subsampled(FOV):
         Additional parameters that might affect the transform can be included
         as keyword arguments.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         return self.fov.xy_from_uv(self.rescale.element_mul(uv_pair),
                                    derivs=derivs, **keywords)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_from_xy
+    #===========================================================================
     def uv_from_xy(self, xy_pair, derivs=False, **keywords):
-        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
@@ -66,12 +96,18 @@ class Subsampled(FOV):
         Additional parameters that might affect the transform can be included
         as keyword arguments.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         uv_pair = self.fov.uv_from_xy(xy_pair, derivs=derivs, **keywords)
         uv_new = uv_pair.element_div(self.rescale)
 
         return uv_new
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS

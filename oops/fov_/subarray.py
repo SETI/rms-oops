@@ -7,15 +7,26 @@ from polymath import *
 
 from oops.fov_.fov import FOV
 
+#*******************************************************************************
+# Subarray class
+#*******************************************************************************
 class Subarray(FOV):
-    """Subarray is a subclass of FOV that describes a rectangular region of a
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Subarray is a subclass of FOV that describes a rectangular region of a
     larger FOV.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     PACKRAT_ARGS = ['fov', 'new_los', 'uv_shape', 'uv_los']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, fov, new_los, uv_shape, uv_los=None):
-        """Constructor for a Subarray.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Subarray.
 
         In the returned FOV object, the ICS origin and/or the optic axis have
         been modified.
@@ -34,7 +45,7 @@ class Subarray(FOV):
                         coordinates of the new line of sight. By default,
                         this is the midpoint of the rectangle, i.e, uv_shape/2.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.fov = fov
         self.new_los_in_old_uv  = Pair.as_pair(new_los).as_float()
         self.new_los_wrt_old_xy = fov.xy_from_uv(self.new_los_in_old_uv)
@@ -56,9 +67,17 @@ class Subarray(FOV):
         # Required fields
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # xy_from_uv
+    #===========================================================================
     def xy_from_uv(self, uv_pair, derivs=False, **keywords):
-        """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         If derivs is True, then any derivatives in (x,y) get propagated into
         the (u,v) returned.
@@ -66,13 +85,21 @@ class Subarray(FOV):
         Additional parameters that might affect the transform can be included
         as keyword arguments.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         old_xy = self.fov.xy_from_uv(self.new_origin_in_old_uv + uv_pair,
                                      derivs, **keywords)
         return old_xy - self.new_los_wrt_old_xy
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_from_xy
+    #===========================================================================
     def uv_from_xy(self, xy_pair, derivs=False, **keywords):
-        """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         If derivs is True, then any derivatives in (u,v) get propagated into
         the (x,y) returned.
@@ -80,10 +107,16 @@ class Subarray(FOV):
         Additional parameters that might affect the transform can be included
         as keyword arguments.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         old_uv = self.fov.uv_from_xy(self.new_los_wrt_old_xy + xy_pair,
                                      derivs, **keywords)
         return old_uv - self.new_origin_in_old_uv
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS

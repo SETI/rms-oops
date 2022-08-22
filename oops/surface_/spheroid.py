@@ -13,8 +13,13 @@ from oops.frame_.frame     import Frame
 from oops.config           import SURFACE_PHOTONS, LOGGING
 from oops.constants        import *
 
+#*******************************************************************************
+# Spheroid
+#*******************************************************************************
 class Spheroid(Surface):
-    """Spheroid defines a spheroidal surface centered on the given path and
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Spheroid defines a spheroidal surface centered on the given path and
     fixed with respect to the given frame. The short radius of the spheroid is
     oriented along the Z-axis of the frame.
 
@@ -31,7 +36,7 @@ class Spheroid(Surface):
     that with this definition, the gradient of the elevation value is not
     exactly normal to the surface.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "spherical"
     IS_VIRTUAL = False
 
@@ -39,8 +44,13 @@ class Spheroid(Surface):
 
     PACKRAT_ARGS = ['origin', 'frame', 'radii', 'exclusion']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, origin, frame, radii, exclusion=0.95):
-        """Constructor for a Spheroid surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Spheroid surface.
 
         Input:
             origin      the Path object or ID defining the center of the
@@ -55,11 +65,13 @@ class Spheroid(Surface):
                         Values of less than 0.9 are not recommended because
                         the problem becomes numerically unstable.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.origin = Path.as_waypoint(origin)
         self.frame  = Frame.as_wayframe(frame)
 
+        #-------------------------------------------
         # Allow either two or three radius values
+        #-------------------------------------------
         if len(radii) == 2:
             self.radii = np.array((radii[0], radii[0], radii[1]))
         else:
@@ -83,15 +95,24 @@ class Spheroid(Surface):
                                       [0,1,0],
                                       [0,0,self.unsquash_z**2]))
 
+        #-----------------------------------------------------------------------
         # This is the exclusion zone radius, within which calculations of
         # intercept_normal_to() are automatically masked due to the ill-defined
         # geometry.
-
+        #-----------------------------------------------------------------------
         self.exclusion = exclusion * self.rpol
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -105,7 +126,7 @@ class Spheroid(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos = Vector3.as_vector3(pos, derivs)
 
         unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
@@ -119,9 +140,17 @@ class Spheroid(Surface):
             return (lon, lat)
         else:
             return (lon, lat, r - self.req)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the
@@ -138,8 +167,11 @@ class Spheroid(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------
         # Convert to Scalars
+        #-----------------------
         lon = Scalar.as_scalar(coords[0], derivs)
         lat = Scalar.as_scalar(coords[1], derivs)
 
@@ -154,9 +186,17 @@ class Spheroid(Surface):
         z = r * lat.sin() * self.squash_z
 
         return Vector3.from_scalars(x,y,z)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -172,19 +212,23 @@ class Spheroid(Surface):
             t           a Scalar such that:
                             intercept = obs + t * los
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------------------------
         # Convert to Vector3 and un-squash
+        #-------------------------------------
         obs = Vector3.as_vector3(obs, derivs)
         los = Vector3.as_vector3(los, derivs)
 
         obs_unsquashed = obs.element_mul(self.unsquash)
         los_unsquashed = los.element_mul(self.unsquash)
 
+        #----------------------------------------------------------------------
         # Solve for the intercept distance, masking lines of sight that miss
-
+        #
         # Use the quadratic formula...
         # The use of b.sign() below always selects the closer intercept point
-
+        #
         # a = los_unsquashed.dot(los_unsquashed)
         # b = los_unsquashed.dot(obs_unsquashed) * 2.
         # c = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
@@ -192,10 +236,10 @@ class Spheroid(Surface):
         #
         # t = (-b + b.sign() * d.sqrt()) / (2*a)
         # pos = obs + t*los
-
+        #
         # This is the same algorithm as is commented out above, but avoids a
         # few unnecessary math operations
-
+        #----------------------------------------------------------------------
         a      = los_unsquashed.dot(los_unsquashed)
         b_div2 = los_unsquashed.dot(obs_unsquashed)
         c      = obs_unsquashed.dot(obs_unsquashed) - self.req_sq
@@ -207,9 +251,17 @@ class Spheroid(Surface):
 
         pos = obs + t*los
         return (pos, t)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -220,13 +272,21 @@ class Spheroid(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos = Vector3.as_vector3(pos, derivs)
         return pos.element_mul(self.unsquash_sq)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # intercept_with_normal
+    #===========================================================================
     def intercept_with_normal(self, normal, time=None, derivs=False,
                                     guess=None):
-        """Intercept point where the normal vector parallels the given vector.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Intercept point where the normal vector parallels the given vector.
 
         Input:
             normal      a Vector3 of normal vectors.
@@ -246,12 +306,20 @@ class Spheroid(Surface):
                         that 
                             pos = intercept + p * normal(intercept).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         normal = Vector3.as_vector3(normal, derivs)
         return normal.element_mul(self.squash).unit().element_mul(self.radii)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # intercept_normal_to
+    #===========================================================================
     def intercept_normal_to(self, pos, time=None, derivs=False, guess=None):
-        """Intercept point whose normal vector passes through a given position.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Intercept point whose normal vector passes through a given position.
 
         Input:
             pos         a Vector3 of positions near the surface.
@@ -274,12 +342,13 @@ class Spheroid(Surface):
                         If groundtrack is True, the associated point on the
                         surface is also returned.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pos_with_derivs = Vector3.as_vector3(pos, derivs)
         pos_with_derivs = self._apply_exclusion(pos_with_derivs)
 
         pos = pos_with_derivs.wod
 
+        #------------------------------------------------------------------
         # The intercept point satisfies:
         #   cept + p * perp(cept) = pos
         # where
@@ -320,15 +389,20 @@ class Spheroid(Surface):
         # f(p) = (pos * scale) dot (pos * scale) - req_sq
         #
         # df/dp = -2 (pos * scale) dot (pos * scale * unsquash_sq/denom)
+        #------------------------------------------------------------------
 
+        #---------------------------------------------
         # Make an initial guess at p, if necessary
+        #---------------------------------------------
         if guess in (None, False):
             cept = pos.element_mul(self.unsquash).unit().element_mul(self.radii)
             p = (pos - cept).norm() / self.normal(cept).norm()
         else:
             p = guess.copy(readonly=False, recursive=False)
 
+        #---------------------------------------------------------------------
         # Terminate when accuracy stops improving by at least a factor of 2
+        #---------------------------------------------------------------------
         max_dp = 1.e99
         for iter in range(SURFACE_PHOTONS.max_iterations):
             denom = Vector3.ONES + p * self.unsquash_sq
@@ -357,6 +431,7 @@ class Spheroid(Surface):
         cept = pos.element_div(denom)
 
         if derivs:
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # First, we need dp/dpos
             #
             # pos_x**2 / (1 + p)**2 +
@@ -391,11 +466,12 @@ class Spheroid(Surface):
             # dp/dpos_x * denom1 = pos_x  / (1+p)**2
             # dp/dpos_y * denom1 = pos_y  / (1+p)**2
             # dp/dpos_z * denom1 = pos_z  * C2 / (1 + C2 p)**2
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             stretch = self.unsquash_sq.element_div(denom.element_mul(denom))
             dp_dpos = pos.element_mul(stretch) / df_dp_div_neg2
             dp_dpos = dp_dpos.swap_items([Scalar])
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Now we can proceed with dcept/dpos
             #
             # cept + perp(cept) * p = pos
@@ -405,7 +481,7 @@ class Spheroid(Surface):
             # (I + p dperp/dcept) dcept/dpos = I - perp(cept) dp/dpos
             #
             # dcept/dpos = (I + p dperp/dcept)**(-1) * (I - perp dp/dpos)
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             cept_with_derivs = cept.with_deriv('cept', Vector3.IDENTITY)
             perp = self.normal(cept_with_derivs, derivs=True)
 
@@ -417,16 +493,26 @@ class Spheroid(Surface):
                 cept.insert_deriv(key, dcept_dpos.chain(deriv), override=True)
                 p.insert_deriv(key, dp_dpos.chain(deriv), override=True)
 
+        #--------------------
         # Mask as needed
+        #--------------------
         self._apply_exclusion(cept)
 
         if guess is None:
             return cept
         else:
             return (cept, p)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # _apply_exclusion
+    #===========================================================================
     def _apply_exclusion(self, pos):
-        """This internal method is used by intercept_normal_to() to exclude any
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        This internal method is used by intercept_normal_to() to exclude any
         positions that fall too close to the center of the surface. The math
         is poorly-behaved in this region.
 
@@ -435,35 +521,49 @@ class Spheroid(Surface):
             exclusion zone, in order to avoid runtime errors in the math
             libraries.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         replacement = Vector3((0.,0.,self.exclusion/2.))
 
+        #--------------------------
         # Replace NaNs and zeros
+        #--------------------------
         nans = np.any(np.isnan(pos.vals), axis=-1)
         zeros = np.all(pos.vals == 0, axis=-1)
         pos = pos.mask_where(nans | zeros, replace=replacement)
 
+        #-------------------------------------------------------
         # Define the exclusion zone as a NumPy boolean array
+        #-------------------------------------------------------
         pos_unsquashed = pos.element_mul(self.unsquash)
         pos_sq_vals = pos_unsquashed.dot(pos_unsquashed).vals
         mask = (pos_sq_vals <= self.exclusion**2)
 
         if not np.any(mask): return pos
 
+        #--------------------------------------------------------
         # Scale all masked vectors out to the exclusion radius
+        #--------------------------------------------------------
         if mask is True:
             return pos * self.exclusion / np.sqrt(pos_sq_vals)
         else:
             factor = np.ones(pos.shape)
             factor[mask] = self.exclusion / np.sqrt(pos_sq_vals[mask])
             return pos * Scalar(factor, mask)
+    #===========================================================================
+
+    
 
     ############################################################################
     # Longitude conversions
     ############################################################################
 
+    #===========================================================================
+    # lon_to_centric
+    #===========================================================================
     def lon_to_centric(self, lon, derivs=False):
-        """Convert longitude in internal coordinates to planetocentric.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert longitude in internal coordinates to planetocentric.
 
         This is a null operation for spheroids. The method is provided for
         compatibility with Ellipsoids.
@@ -474,11 +574,19 @@ class Spheroid(Surface):
 
         Return          planetocentric longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lon, derivs)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # lon_from_centric
+    #===========================================================================
     def lon_from_centric(self, lon, derivs=False):
-        """Convert planetocentric longitude to internal coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetocentric longitude to internal coordinates.
 
         This is a null operation for spheroids. The method is provided for
         compatibility with Ellipsoids.
@@ -489,11 +597,19 @@ class Spheroid(Surface):
 
         Return          squashed longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lon, derivs)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # lon_to_graphic
+    #===========================================================================
     def lon_to_graphic(self, lon, derivs=False):
-        """Convert longitude in internal coordinates to planetographic.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert longitude in internal coordinates to planetographic.
 
         This is a null operation for spheroids. The method is provided for
         compatibility with Ellipsoids.
@@ -504,11 +620,19 @@ class Spheroid(Surface):
 
         Return          planetographic longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lon, derivs)
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # lon_from_graphic
+    #===========================================================================
     def lon_from_graphic(self, lon, derivs=False):
-        """Convert planetographic longitude to internal coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetographic longitude to internal coordinates.
 
         This is a null operation for spheroids. The method is provided for
         compatibility with Ellipsoids.
@@ -519,15 +643,23 @@ class Spheroid(Surface):
 
         Return          squashed longitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Scalar.as_scalar(lon, derivs)
+    #===========================================================================
+
+    
 
     ############################################################################
     # Latitude conversions
     ############################################################################
 
+    #===========================================================================
+    # lat_to_centric
+    #===========================================================================
     def lat_to_centric(self, lat, lon=None, derivs=False):
-        """Convert latitude in internal coordinates to planetocentric.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert latitude in internal coordinates to planetocentric.
 
         Input:
             lat         squashed latitide, radians.
@@ -536,12 +668,20 @@ class Spheroid(Surface):
 
         Return          planetocentric latitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.squash_z).arctan()
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # lat_from_centric
+    #===========================================================================
     def lat_from_centric(self, lat, lon=None, derivs=False):
-        """Convert planetocentric latitude to internal coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert planetocentric latitude to internal coordinates.
 
         Input:
             lat         planetocentric latitide, radians.
@@ -550,12 +690,20 @@ class Spheroid(Surface):
 
         Return          squashed latitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.unsquash_z).arctan()
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # lat_to_graphic
+    #===========================================================================
     def lat_to_graphic(self, lat, lon=None, derivs=False):
-        """Convert latitude in internal coordinates to planetographic.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert latitude in internal coordinates to planetographic.
 
         Input:
             lat         squashed latitide, radians.
@@ -564,12 +712,20 @@ class Spheroid(Surface):
 
         Return          planetographic latitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.unsquash_z).arctan()
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # lat_from_graphic
+    #===========================================================================
     def lat_from_graphic(self, lat, lon=None, derivs=False):
-        """Convertsa planetographic latitude to internal spheroid latitude.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Converts a planetographic latitude to internal spheroid latitude.
 
         Input:
             lat         planetographic latitide, radians.
@@ -578,9 +734,16 @@ class Spheroid(Surface):
 
         Return          squashed latitude.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lat = Scalar.as_scalar(lat)
         return (lat.tan(derivs) * self.squash_z).arctan()
+    #===========================================================================
+
+    
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -588,8 +751,14 @@ class Spheroid(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_Spheroid
+#*******************************************************************************
 class Test_Spheroid(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.frame_.frame import Frame
@@ -600,7 +769,9 @@ class Test_Spheroid(unittest.TestCase):
         RPOL = 50000.
         planet = Spheroid("SSB", "J2000", (REQ, RPOL))
 
+        #----------------------------------
         # Coordinate/vector conversions
+        #----------------------------------
         NPTS = 10000
         pos = (2 * np.random.rand(NPTS,3) - 1.) * REQ   # range is -REQ to REQ
 
@@ -608,7 +779,9 @@ class Test_Spheroid(unittest.TestCase):
         test = planet.vector3_from_coords((lon,lat,elev))
         self.assertTrue(abs(test - pos).max() < 1.e-8)
 
+        #--------------------------------
         # Spheroid intercepts & normals
+        #--------------------------------
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
         los = -np.random.rand(NPTS,3)                   # range is -1 to 0
 
@@ -627,13 +800,14 @@ class Test_Spheroid(unittest.TestCase):
         normals.vals[...,2] *= RPOL/REQ
         self.assertTrue(abs(normals.unit() - pts.unit()).max() < 1.e-14)
 
+        #-----------------------------------------------------------------------
         # Intercept derivatives
-
+        #
         # Lines of sight with grazing incidence can have large numerical errors,
         # but this is not to be considered an error in the analytic calculation.
         # As a unit test, we ignore the largest 3% of the errors, but require
         # that the rest of the errors be very small.
-
+        #-----------------------------------------------------------------------
         obs = REQ * (np.random.rand(NPTS,3) + 1.)       # range is REQ to 2*REQ
         los = -np.random.rand(NPTS,3)                   # range is -1 to 0
 
@@ -691,7 +865,9 @@ class Test_Spheroid(unittest.TestCase):
             selected_error = sorted[int(sorted.size * frac)]
             self.assertTrue(selected_error < 1.e-5)
 
+        #------------------
         # Test normal()
+        #------------------
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
         perp = planet.normal(cept)
         test1 = cept.element_mul(planet.unsquash).unit()
@@ -712,13 +888,17 @@ class Test_Spheroid(unittest.TestCase):
 
         self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 1.e-8)
 
+        #---------------------------------
         # Test intercept_with_normal()
+        #---------------------------------
         vector = Vector3(np.random.random((100,3)))
         cept = planet.intercept_with_normal(vector)
         sep = vector.sep(planet.normal(cept))
         self.assertTrue(sep.max() < 1.e-14)
 
+        #------------------------------
         # Test intercept_normal_to()
+        #------------------------------
         pos = Vector3(np.random.random((100,3)) * 4.*REQ + REQ)
         cept = planet.intercept_normal_to(pos)
         sep = (pos - cept).sep(planet.normal(cept))
@@ -726,7 +906,9 @@ class Test_Spheroid(unittest.TestCase):
         self.assertTrue(abs(cept.element_mul(planet.unsquash).norm() -
                             planet.req).max() < 1.e-6)
 
+        #----------------------------
         # Test normal() derivative
+        #----------------------------
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
         cept.insert_deriv('pos', Vector3.IDENTITY, override=True)
         perp = planet.normal(cept, derivs=True)
@@ -739,7 +921,9 @@ class Test_Spheroid(unittest.TestCase):
             ref = Vector3(perp.d_dpos.vals[...,i,:], perp.d_dpos.mask)
             self.assertTrue(abs(dperp_dpos - ref).max() < 1.e-4)
 
+        #-----------------------------------------
         # Test intercept_normal_to() derivative
+        #-----------------------------------------
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
         (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=False)
@@ -766,6 +950,12 @@ class Test_Spheroid(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+    
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

@@ -8,11 +8,19 @@ import unittest
 
 from polymath import Qube, Matrix3, Matrix
 
+#*******************************************************************************
+# Test_Matrix_unitary
+#*******************************************************************************
 class Test_Matrix_unitary(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Matrices 10% perturbed from unitary
+    #----------------------------------------
+    # Matrices 10% perturbed from unitary     
+    #----------------------------------------
     N = 100
     SCALE = 0.1
     euler = (np.random.rand(N) * 2.*np.pi,
@@ -24,7 +32,9 @@ class Test_Matrix_unitary(unittest.TestCase):
     b = a.unitary()
     self.assertEqual(b.masked(), 0)
 
-    # Matrices 30% perturbed from unitary
+    #----------------------------------------
+    # Matrices 30% perturbed from unitary     
+    #----------------------------------------
     N = 100
     SCALE = 0.3
     euler = (np.random.rand(N) * 2.*np.pi,
@@ -35,6 +45,13 @@ class Test_Matrix_unitary(unittest.TestCase):
     a += SCALE * Matrix(np.random.randn(N,3,3))
     b = a.unitary()
     self.assertTrue(b.masked() <= 30)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

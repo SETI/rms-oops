@@ -8,12 +8,19 @@ import unittest
 
 from polymath import *
 
+#*******************************************************************************
+# Test_Qube_as_this_type
+#*******************************************************************************
 class Test_Qube_as_this_type(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
+    #------------------
     # Scalar, int
-
+    #------------------
     a = Scalar((1,2,3))
 
     b = a.as_this_type(7)
@@ -81,8 +88,9 @@ class Test_Qube_as_this_type(unittest.TestCase):
     self.assertTrue(type(bb), Scalar)
     self.assertTrue(bb.is_int())
 
+    #--------------------
     # Scalar, float
-
+    #--------------------
     a = Scalar(1.)
 
     b = a.as_this_type(7., coerce=True)
@@ -150,8 +158,9 @@ class Test_Qube_as_this_type(unittest.TestCase):
     self.assertTrue(type(bb), Scalar)
     self.assertTrue(bb.is_float())
 
+    #---------------------
     # Scalar, derivs
-
+    #---------------------
     a = Scalar(1.)
 
     b = Scalar(7)
@@ -184,8 +193,9 @@ class Test_Qube_as_this_type(unittest.TestCase):
     self.assertTrue(bb.is_int())
     self.assertTrue(bb.d_dt.is_float())
 
+    #-----------------
     # Boolean
-
+    #-----------------
     a = Boolean((True,False))
 
     b = a.as_this_type(7)
@@ -211,8 +221,9 @@ class Test_Qube_as_this_type(unittest.TestCase):
     self.assertEqual(b, [True,False])
     self.assertTrue(type(b), Boolean)
 
+    #---------------
     # Vector
-
+    #---------------
     a = Vector((1.,2.,3.))
 
     self.assertRaises(ValueError, a.as_this_type, 7)
@@ -235,8 +246,9 @@ class Test_Qube_as_this_type(unittest.TestCase):
     bb = a.as_this_type(b)
     self.assertEqual(type(bb), Vector)
 
+    #--------------
     # Vector3
-
+    #--------------
     a = Vector3((1.,2.,3.))
 
     self.assertRaises(ValueError, a.as_this_type, 7)
@@ -274,8 +286,9 @@ class Test_Qube_as_this_type(unittest.TestCase):
     self.assertTrue(type(b), Vector3)
     self.assertTrue(type(b.d_dt), Vector3)
 
+    #-----------------------
     # read-only status
-
+    #-----------------------
     a = Scalar(1.)
 
     b = Scalar((1,2,3))
@@ -304,6 +317,13 @@ class Test_Qube_as_this_type(unittest.TestCase):
     bb = a.as_this_type(b, coerce=True)
     self.assertTrue(b is not bb)
     self.assertTrue(not bb.readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ############################################
 if __name__ == '__main__':

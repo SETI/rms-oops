@@ -11,15 +11,25 @@ from oops.frame_.frame import Frame
 from oops.path_.spicepath import SpicePath
 import oops.constants as constants
 
+#*******************************************************************************
+# LightSource
+#*******************************************************************************
 class LightSource(object):
-    """Defines a source of illumination, such as the Sun, a star, or a radio
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Defines a source of illumination, such as the Sun, a star, or a radio
     transmitter on the Earth or a spacecraft.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['name', 'source', 'weight']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, name, source, weight=None):
-        """Constructor for a LightSource. It can be specified as:
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a LightSource. It can be specified as:
             - a path.
             - a Pair representing J2000 right ascension and declination values
               in degrees.
@@ -38,8 +48,11 @@ class LightSource(object):
         share the same name space as the Body class. This is necessary so they
         can be used as keys in Backplanes.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #--------------------------------
         # Check and validate the name
+        #--------------------------------
         if not isinstance(name, str):
             raise TypeError('LightSource name must be a string: ' + str(name))
 
@@ -51,7 +64,9 @@ class LightSource(object):
                 raise ValueError('LightSource name is also a Body name: ' +
                                  self.name)
 
+        #---------------------------------
         # Interpret source as (ra,dec)
+        #---------------------------------
         self.source = None
         try:
             pair = Pair.as_pair(source)
@@ -63,7 +78,9 @@ class LightSource(object):
                                                      recursive=False)
             self.source_is_moving = False
 
+        #--------------------------------------
         # Interpret the source as a Vector3
+        #--------------------------------------
         if self.source is None:
             try:
                 self.source = Vector3.as_vector3(source).unit()
@@ -71,14 +88,18 @@ class LightSource(object):
             except ValueError:
                 pass
 
+        #----------------------------------
         # Interpret the source as a path
+        #----------------------------------
         if self.source is None:
             self.source = Path.as_primary_path(source)
             self.source_is_moving = True
 
         self.shape = self.source.shape
 
+        #--------------------------
         # Interpret the weights
+        #--------------------------
         if weight:
             weight = Scalar.as_scalar(weight).broadcast_into_shape(self.shape)
         else:
@@ -88,12 +109,22 @@ class LightSource(object):
                                                remask=True)
         self.weight /= self.weight.sum()
 
+        #------------------------
         # Register as a Body
+        #------------------------
         Body.BODY_REGISTRY[self.name] = self
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # photon_to_event
+    #===========================================================================
     def photon_to_event(self, event, derivs=False, guess=None,
                               antimask=None, quick={}, converge={}):
-        """Solve for a photon arrival event from this lightsource.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Solve for a photon arrival event from this lightsource.
 
         Input parameters are identical to the Path method of the same name, but
         only the arrival event is returned.
@@ -144,7 +175,7 @@ class LightSource(object):
                         larger than this limit are clipped. This prevents the
                         divergence of the solution in some cases.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.source_is_moving:
             return self.source.solve_photon(event, -1, derivs, guess, antimask,
                                                        quick, converge)[1]
@@ -156,19 +187,47 @@ class LightSource(object):
 
         new_event.neg_arr_j2000 = self.source
         return new_event
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # as_path
+    #===========================================================================
     def as_path(self):
-        """This LightSource's path object if it has one; otherwise, None."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        This LightSource's path object if it has one; otherwise, None.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (self.source if self.source_is_moving else None)
+    #===========================================================================
 
+    
+
+#*******************************************************************************
+
+
+
+
+#*******************************************************************************
+# DiskSource
+#*******************************************************************************
 class DiskSource(LightSource):
-    """DiskSource is a subclass of LightSource that defines an extended,
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    DiskSource is a subclass of LightSource that defines an extended,
     circular disk with uniform illumination.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, name, source, radius, size=11):
-        """Constructor for a DiskSource. This is a 2-D array respresenting a
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a DiskSource. This is a 2-D array respresenting a
         uniform, lit circular light source.
 
         Inputs:
@@ -183,23 +242,32 @@ class DiskSource(LightSource):
                         number to ensure that the central pixel corresponds to
                         the center of the source.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------
         # Start with the default LightSource
+        #---------------------------------------
         lightsource = LightSource(name, source)
 
+        #-----------------------------------
         # Make sure this one is un-shaped
+        #-----------------------------------
         if lightsource.shape != ():
             del Body.BODY_REGISTRY[lightsource.name]
             raise ValueError('DiskSource source must have shape (): ' +
                              str(lightsource.shape))
 
+        #-------------------------------------------------------------------
         # At this point, the LightSource internals are filled in and valid
+        #-------------------------------------------------------------------
         self.name = lightsource.name
         self.source = lightsource.source
         self.source_is_moving = lightsource.source_is_moving
 
+        #---------------------------------------------------------------------
         # Create a masked, circular array of vectors in the X/Y plane, inside
         # unit radius
+        #---------------------------------------------------------------------
         array = np.zeros((size,size,3))
         xy = (np.arange(size) - (size-1)/2.) / (size/2.)
         array[:,:,0] = xy[np.newaxis]
@@ -210,22 +278,36 @@ class DiskSource(LightSource):
         self.shape = self.xy_grid.shape
         self.radius = radius
 
+        #----------------------------------------------------------------
         # For a fixed line of sight, rotate and scale the vectors now
+        #----------------------------------------------------------------
         if not self.source_is_moving:
             self.radius *= constants.RPS
             matrix = Matrix3.twovec(lightsource.source, 2, Vector3.YAXIS, 1)
             self.xy_grid = matrix * (Vector.ZAXIS + self.radius * self.xy_grid)
 
+        #-----------------------
         # Define the weights
+        #-----------------------
         self.weights = (1. - np.asfarray(mask))
         self.weights /= np.sum(self.weights)
 
+        #-------------------------
         # Re-register as a Body
+        #-------------------------
         Body.BODY_REGISTRY[self.name] = self
+    #===========================================================================
 
+    
+
+    #===========================================================================
+    # photon_to_event
+    #===========================================================================
     def photon_to_event(self, event, derivs=False, guess=None,
                               antimask=None, quick={}, converge={}):
-        """Solve for a photon arrival event from this lightsource.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Solve for a photon arrival event from this lightsource.
 
         Input parameters are identical to the Path method of the same name, but
         only the arrival event is returned.
@@ -276,7 +358,7 @@ class DiskSource(LightSource):
                         larger than this limit are clipped. This prevents the
                         divergence of the solution in some cases.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.source_is_moving:
             arrival = self.source.solve_photon(event, -1, derivs, guess,
                                                antimask, quick, converge)[1]
@@ -296,6 +378,12 @@ class DiskSource(LightSource):
 
         new_event.neg_arr_j2000 = self.source
         return arrival
+    #===========================================================================
+
+    
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -303,10 +391,16 @@ class DiskSource(LightSource):
 
 import unittest
 
+#*******************************************************************************
+# Test_LightSource
+#*******************************************************************************
 class Test_LightSource(unittest.TestCase):
 
     #### TBD
     pass
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

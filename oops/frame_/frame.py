@@ -12,12 +12,18 @@ from oops.config     import QUICK, LOGGING
 from oops.transform  import Transform
 import oops.utils    as utils
 
+#*******************************************************************************
+# Frame
+#*******************************************************************************
 class Frame(object):
-    """A Frame is an abstract class that returns a Transform (rotation matrix
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A Frame is an abstract class that returns a Transform (rotation matrix
     and spin vector) given a Scalar time. A Transform converts from a reference
     coordinate frame to a target coordinate frame, either of which could be
-    non-inertial. All coordinate frame are ultimately referenced to J2000."""
-
+    non-inertial. All coordinate frame are ultimately referenced to J2000.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     J2000 = None
     WAYFRAME_REGISTRY = {}
     FRAME_CACHE = {}
@@ -29,8 +35,13 @@ class Frame(object):
     # Each subclass must override...
     ############################################################################
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self):
-        """Constructor for a Frame object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Frame object.
 
         Every frame must have these attributes:
 
@@ -67,11 +78,19 @@ class Frame(object):
             wrt_j2000   a definition of the same frame relative to the J2000
                         coordinate frame.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
-        """Transform that rotates coordinates from the reference to this frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates must be given relative to
         the center of rotation.
@@ -90,11 +109,19 @@ class Frame(object):
         Note that the time and the Frame object are not required to have the
         same shape; standard rules of broadcasting apply.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time_if_possible
+    #===========================================================================
     def transform_at_time_if_possible(self, time, quick={}):
-        """Transform that rotates coordinates from the reference to this frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates must be given relative to
         the center of rotation.
@@ -119,35 +146,74 @@ class Frame(object):
             transform       the corresponding Tranform applicable at the new
                             time(s).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time)
         return (time, self.transform_at_time(time, quick=quick))
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # reference_id
+    #===========================================================================
     @property
     def reference_id(self): return self.reference.frame_id
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # origin_id
+    #===========================================================================
     @property
     def origin_id(self):
         if self.origin is None: return None
         return self.origin.path_id
+    #===========================================================================
 
+
+
+    ############################
     # string operations
+    ############################
+
+    #===========================================================================
+    # __str__
+    #===========================================================================
     def __str__(self):
         return (type(self).__name__ + '(' + self.frame_id + '/' +
                                             self.reference_id + ')')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __repr__
+    #===========================================================================
     def __repr__(self): return self.__str__()
+    #===========================================================================
+
+
 
     ############################################################################
     # For serialization, standard frames are uniquely identified by ID
     ############################################################################
 
+    #===========================================================================
+    # PACKRAT__args__
+    #===========================================================================
     def PACKRAT__args__(self):
         if self.frame_id in Frame.STANDARD_FRAMES:
             return ['frame_id']
 
         return Frame.as_primary_frame(self)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # PACKRAT__init__
+    #===========================================================================
     @staticmethod
     def PACKRAT__init__(cls, **args):
         try:
@@ -158,63 +224,95 @@ class Frame(object):
             pass
 
         return None
+    #===========================================================================
+
+
 
     ############################################################################
     # Registry Management
-    ############################################################################
-
-    # A frame can be registered by an ID string. Any frame so registered can be
-    # retrieved afterward from the registry using the string. However, it is not
-    # necessary to register a frame; just set the attribute 'wayframe' to self
-    # instead.
     #
-    # When an ID is registered for the first time, a Wayframe is constructed and
-    # added to the WAYFRAME_REGISTRY, which is a dictionary that returns the
-    # Wayframe associated with any ID.
+    #  A frame can be registered by an ID string. Any frame so registered can be
+    #  retrieved afterward from the registry using the string. However, it is not
+    #  necessary to register a frame; just set the attribute 'wayframe' to self
+    #  instead.
     #
-    # If a frame is redefined, a new Wayframe is created and replaces the old
-    # one in the registry. This enables us to identify objects that are no
-    # longer using an up-to-date version of a frame.
+    #  When an ID is registered for the first time, a Wayframe is constructed and
+    #  added to the WAYFRAME_REGISTRY, which is a dictionary that returns the
+    #  Wayframe associated with any ID.
     #
-    # The FRAME_CACHE contains every calculated version of a Frame object. This
-    # saves us the effort of re-connecting a frame (wayframe, reference, origin)
-    # each time is is needed. The FRAME_CACHE is keyed as follows:
+    #  If a frame is redefined, a new Wayframe is created and replaces the old
+    #  one in the registry. This enables us to identify objects that are no
+    #  longer using an up-to-date version of a frame.
+    #
+    #  The FRAME_CACHE contains every calculated version of a Frame object. This
+    #  saves us the effort of re-connecting a frame (wayframe, reference, origin)
+    #  each time is is needed. The FRAME_CACHE is keyed as follows:
     #       wayframe
     #       (wayframe, reference_wayframe)
     #
-    # If the key is not a tuple, then this constitutes the primary definition of
-    # the frame. The reference wayframe must already be in the cache, and the
-    # new wayframe cannot be in the cache.
+    #  If the key is not a tuple, then this constitutes the primary definition of
+    #  the frame. The reference wayframe must already be in the cache, and the
+    #  new wayframe cannot be in the cache.
+    ############################################################################
 
+    #===========================================================================
+    # initialize_registry
+    #===========================================================================
     @staticmethod
     def initialize_registry():
-        """Initialize the frame registry.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Initialize the frame registry.
 
-        It is not generally necessary to call this function directly."""
+        It is not generally necessary to call this function directly.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------------------------
         # After first call, return
+        #----------------------------------------------------------------------
         if Frame.WAYFRAME_REGISTRY: return
 
+        #----------------------------------------------------------------------
         # Initialize the WAYFRAME_REGISTRY
+        #----------------------------------------------------------------------
         Frame.WAYFRAME_REGISTRY[None] = Frame.J2000
         Frame.WAYFRAME_REGISTRY['J2000'] = Frame.J2000
 
+        #----------------------------------------------------------------------
         # Initialize the FRAME_CACHE
+        #----------------------------------------------------------------------
         Frame.J2000.keys = {Frame.J2000, (Frame.J2000, Frame.J2000)}
         for key in Frame.J2000.keys:
             Frame.FRAME_CACHE[key] = Frame.J2000
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # reset_registry
+    #===========================================================================
     @staticmethod
     def reset_registry():
-        """Reset the registry to its initial state. Mainly useful for debugging.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Reset the registry to its initial state. Mainly useful for debugging.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Frame.WAYFRAME_REGISTRY.clear()
         Frame.FRAME_CACHE.clear()
         Frame.initialize_registry()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # register
+    #===========================================================================
     def register(self, shortcut=None):
-        """Register a Frame's definition.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Register a Frame's definition.
 
         A shortcut makes it possible to calculate one SPICE frame relative to
         another without calculating all the intermediate frames. If a shortcut
@@ -225,8 +323,11 @@ class Frame(object):
         If the frame ID is None, blank, or begins with '.', it is treated as a
         temporary path and is not registered.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------------------------
         # Make sure the registry is initialized
+        #----------------------------------------------------------------------
         if Frame.J2000 is None: Frame.initialize_registry()
 
         WAYFRAME_REG = Frame.WAYFRAME_REGISTRY
@@ -234,7 +335,9 @@ class Frame(object):
 
         id = self.frame_id
 
+        #----------------------------------------------------------------------
         # Handle a shortcut
+        #----------------------------------------------------------------------
         if shortcut is not None:
             if shortcut in FRAME_CACHE: FRAME_CACHE[shortcut].keys -= {shortcut}
             FRAME_CACHE[shortcut] = self
@@ -247,18 +350,24 @@ class Frame(object):
 
             return
 
+        #----------------------------------------------------------------------
         # Fill in a temporary name if needed; don't register
+        #----------------------------------------------------------------------
         if self.frame_id in (None, '', '.'):
             self.frame_id = Frame.temporary_frame_id()
             self.wayframe = self
             return
 
+        #----------------------------------------------------------------------
         # Don't register a name beginning with dot
+        #----------------------------------------------------------------------
         if self.frame_id.startswith('.'):
             self.wayframe = self
             return
 
+        #----------------------------------------------------------------------
         # Make sure the reference frame is registered; otherwise raise KeyError
+        #----------------------------------------------------------------------
         try:
             test = WAYFRAME_REG[self.reference.frame_id]
         except KeyError:
@@ -268,29 +377,41 @@ class Frame(object):
 
         test = FRAME_CACHE[self.reference]
 
+        #----------------------------------------------------------------------
         # If the ID is not registered, insert this as the primary definition
+        #----------------------------------------------------------------------
         if id not in WAYFRAME_REG:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Fill in the ancestry
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             reference = Frame.as_primary_frame(self.reference)
             self.ancestry = [reference] + reference.ancestry
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Register the Wayframe
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             wayframe = Wayframe(id, self.origin, self.shape)
             self.wayframe = wayframe
             WAYFRAME_REG[id] = wayframe
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Cache the frame under two keys
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             self.keys = {wayframe, (wayframe, self.reference)}
             for key in self.keys:
                 FRAME_CACHE[key] = self
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Cache the wayframe
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             wayframe.keys = {(wayframe, wayframe)}
             for key in wayframe.keys:
                 FRAME_CACHE[key] = wayframe
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Also define the frame with respect to J2000
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.reference == Frame.J2000:
                 self.wrt_j2000 = self
             else:
@@ -300,102 +421,173 @@ class Frame(object):
                 self.wrt_j2000.keys = {key}
                 FRAME_CACHE[key] = self.wrt_j2000
 
+        #----------------------------------------------------------------------
         # Otherwise, just insert a secondary definition
+        #----------------------------------------------------------------------
         else:
             if not hasattr(self, 'wayframe') or self.wayframe is None:
                 self.wayframe = WAYFRAME_REG[id]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Cache (self.wayframe, self.reference); overwrite if necessary
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             key = (self.wayframe, self.reference)
             if key in FRAME_CACHE:          # remove an old version
                 FRAME_CACHE[key].keys -= {key}
 
             FRAME_CACHE[key] = self
             self.keys |= {key}
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_frame
+    #===========================================================================
     @staticmethod
     def as_frame(frame):
-        """Return a Frame object given the registered name or the object itself.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Return a Frame object given the registered name or the object itself.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if frame is None: return None
 
         if isinstance(frame, Frame): return frame
 
         return Frame.WAYFRAME_REGISTRY[frame]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_primary_frame
+    #===========================================================================
     @staticmethod
     def as_primary_frame(frame):
-        """Return the primary definition of a Frame object."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the primary definition of a Frame object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if frame is None: return None
 
         if not isinstance(frame, Frame):
             frame = Frame.WAYFRAME_REGISTRY[frame]
 
         return Frame.FRAME_CACHE[frame.wayframe]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_wayframe
+    #===========================================================================
     @staticmethod
     def as_wayframe(frame):
-        """Return the wayframe given a Frame or ID."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the wayframe given a Frame or ID.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if frame is None: return None
 
         if isinstance(frame, Frame):
             return frame.wayframe
 
         return Frame.WAYFRAME_REGISTRY[frame]
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_frame_id
+    #===========================================================================
     @staticmethod
     def as_frame_id(frame):
-        """Return a frame ID given the object or a registered ID."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a frame ID given the object or a registered ID.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if frame is None: return None
 
         if isinstance(frame, Frame):
             return frame.frame_id
 
         return frame
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # temporary_frame_id
+    #===========================================================================
     @staticmethod
     def temporary_frame_id():
-        """Return a temporary frame ID. This is assigned once and never re-used.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Return a temporary frame ID. This is assigned once and never re-used.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         while True:
             Frame.TEMPORARY_FRAME_ID += 1
             frame_id = 'TEMPORARY_' + str(Frame.TEMPORARY_FRAME_ID)
 
             if frame_id not in Frame.WAYFRAME_REGISTRY:
                 return frame_id
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # is_registered
+    #===========================================================================
     def is_registered(self):
-        """True if this frame is registered."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        True if this frame is registered.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (self.frame_id in Frame.WAYFRAME_REGISTRY)
+    #===========================================================================
+
+
 
     ############################################################################
     # Frame Generators
     ############################################################################
 
+    #===========================================================================
+    # wrt
+    #===========================================================================
     # Can be overridden by some classes such as SpiceFrame, where it is easier
     # to make connections between frames.
     def wrt(self, reference):
-        """Construct a Frame that transforms from a reference frame to this one.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Construct a Frame that transforms from a reference frame to this one.
 
         Input:
             reference   a reference Frame object or its wayframe or ID.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------------------------
         # Convert a Wayframe to its registered version
         # Sorry for the ugly use of 'self'!
+        #----------------------------------------------------------------------
         if isinstance(self, Wayframe):
             self = Frame.WAYFRAME_REGISTRY[self.frame_id]
 
+        #----------------------------------------------------------------------
         # Convert the reference to a frame
+        #----------------------------------------------------------------------
         reference = Frame.as_frame(reference)
 
+        #----------------------------------------------------------------------
         # Deal with an unregistered frame
+        #----------------------------------------------------------------------
         if not self.is_registered():
             if self.reference == reference.wayframe:
                 return self
@@ -405,40 +597,60 @@ class Frame(object):
 
             return LinkedFrame(self, self.reference.wrt(reference))
 
+        #----------------------------------------------------------------------
         # Use the cache if possible
+        #----------------------------------------------------------------------
         key = (self.wayframe, reference.wayframe)
         if key in Frame.FRAME_CACHE:
             return Frame.FRAME_CACHE[key]
 
+        #----------------------------------------------------------------------
         # Look up the primary target definition
+        #----------------------------------------------------------------------
         try:
             target = Frame.FRAME_CACHE[self.wayframe]
         except KeyError:
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             # On failure, link from the reference frame
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             return LinkedFrame(self, self.reference.wrt(reference))
 
+        #----------------------------------------------------------------------
         # Look up the primary reference definition
+        #----------------------------------------------------------------------
         try:
             reference = Frame.FRAME_CACHE[reference.wayframe]
         except KeyError:
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             # On failure, link through the reference's reference
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             return RelativeFrame(target.wrt(reference.reference),
                                  reference)
 
+        #----------------------------------------------------------------------
         # If the target is an ancestor of the reference, reverse the direction
         # and try again
+        #----------------------------------------------------------------------
         if target in reference.ancestry:
             newframe = reference.wrt(target)
             return ReversedFrame(newframe)
 
+        #----------------------------------------------------------------------
         # Otherwise, search from the parent frame and then link
+        #----------------------------------------------------------------------
         newframe = target.ancestry[0].wrt(reference)
         return LinkedFrame(target, newframe)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # quick_frame
+    #===========================================================================
     def quick_frame(self, time, quick={}):
-        """A QuickFrame that approximates this frame within given time limits.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A QuickFrame that approximates this frame within given time limits.
 
         A QuickFrame operates by sampling the given frame and then setting up an
         interpolation grid to evaluate in its place. It can substantially speed
@@ -453,20 +665,26 @@ class Frame(object):
                         values in the default dictionary QUICK.dictionary, and
                         the merged dictionary is used.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         OVERHEAD = 500      # Assume it takes the equivalent time of this many
                             # evaluations just to set up the QuickFrame.
         SPEEDUP = 5.        # Assume that evaluations are this much faster once
                             # the QuickFrame is set up.
         SAVINGS = 0.2       # Require at least a 20% savings in evaluation time.
 
+        #----------------------------------------------------------------------
         # Make sure a QuickFrame has been requested
+        #----------------------------------------------------------------------
         if type(quick) != dict: return self
 
+        #----------------------------------------------------------------------
         # These subclasses do not require QuickFrames
+        #----------------------------------------------------------------------
         if type(self) in (QuickFrame, Wayframe, AliasFrame): return self
 
+        #----------------------------------------------------------------------
         # Obtain the local QuickFrame dictionary
+        #----------------------------------------------------------------------
         quickdict = QUICK.dictionary
         if len(quick) > 0:
             quickdict = quickdict.copy()
@@ -474,7 +692,9 @@ class Frame(object):
 
         if not quickdict['use_quickframes']: return self
 
+        #----------------------------------------------------------------------
         # Determine the time interval
+        #----------------------------------------------------------------------
         if type(time) in (list,tuple):
             (tmin, tmax, count) = time
         else:
@@ -489,11 +709,15 @@ class Frame(object):
             tmin = tmin.values
             tmax = tmax.values
 
+        #----------------------------------------------------------------------
         # If QuickFrames already exists...
+        #----------------------------------------------------------------------
         if not hasattr(self, 'quickframes'):
             self.quickframes = []
 
+        #----------------------------------------------------------------------
         # If the whole time range is already covered, just return this one
+        #----------------------------------------------------------------------
         for quickframe in self.quickframes:
             if tmin >= quickframe.t0 and tmax <= quickframe.t1:
 
@@ -503,26 +727,38 @@ class Frame(object):
 
                 return quickframe
 
+        #----------------------------------------------------------------------
         # See if the overhead would make any work justified
+        #----------------------------------------------------------------------
         if count < OVERHEAD: return self
 
+        #----------------------------------------------------------------------
         # Get dictionary parameters
+        #----------------------------------------------------------------------
         extension = quickdict['frame_time_extension']
         dt = quickdict['frame_time_step']
         extras = quickdict['frame_extra_steps']
 
+        #----------------------------------------------------------------------
         # Extend the time domain
+        #----------------------------------------------------------------------
         tmin -= extension
         tmax += extension
 
+        #----------------------------------------------------------------------
         # See if any QuickFrame can be efficiently extended
+        #----------------------------------------------------------------------
         for quickframe in self.quickframes:
 
+            #- - - - - - - - - - - - - - - - - - - - 
             # If there's no overlap, skip it
+            #- - - - - - - - - - - - - - - - - - - - 
             if (quickframe.t0 > tmax + dt) or (quickframe.t1 < tmin - dt):
                 continue
 
+            #- - - - - - - - - - - - - - - - - - - - 
             # Otherwise, check the effort involved
+            #- - - - - - - - - - - - - - - - - - - - 
             duration = (max(tmax, quickframe.t1) - min(tmin, quickframe.t0))
             steps = int(duration // dt) - quickframe.steps
 
@@ -535,7 +771,9 @@ class Frame(object):
                 quickframe.extend((tmin,tmax))
                 return quickframe
 
+        #----------------------------------------------------------------------
         # Evaluate the effort using a QuickFrame compared to the effort without
+        #----------------------------------------------------------------------
         steps = int((tmax - tmin) // dt) + 2*extras
         effort_using_quickframe = OVERHEAD + steps + count/SPEEDUP
         if count < (1. + SAVINGS) * effort_using_quickframe:
@@ -553,103 +791,185 @@ class Frame(object):
             self.quickframes = [result] + self.quickframes
 
         return result
+    #===========================================================================
+
+
 
 ################################################################################
 # Required Subclasses
 ################################################################################
 
+#*******************************************************************************
+# Wayframe
+#*******************************************************************************
 class Wayframe(Frame):
-    """Wayframe is used to identify a Frame ID in the registry.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Wayframe is used to identify a Frame ID in the registry.
 
     When evaluated, it always returns a null transform. A Wayframe cannot be
-    registered by the user."""
-
+    registered by the user.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['frame_id', 'origin', 'shape']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, frame_id, origin=None, shape=()):
-        """Constructor for a Wayframe.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Wayframe.
 
         Input:
             frame_id    the frame ID to use for both the target and reference.
             origin      the waypoint of this frame's origin.
             shape       shape of the path.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+        #----------------------------------------------------------------------
         # Required attributes
+        #----------------------------------------------------------------------
         self.wayframe  = self
         self.frame_id  = frame_id
         self.reference = self
         self.origin    = origin
         self.shape     = shape
         self.keys      = set()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
         return Transform(Matrix3.IDENTITY, Vector3.ZERO, self, self,
                                                          self.origin)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # register
+    #===========================================================================
     def register(self): return      # does nothing
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # __str__
+    #===========================================================================
     def __str__(self): return 'Wayframe(' + self.frame_id + ')'
+    #===========================================================================
 
-################################################################################
 
+#*******************************************************************************
+
+
+
+#*******************************************************************************
+# AliasFrame
+#*******************************************************************************
 class AliasFrame(Frame):
-    """An AliasFrame takes on the properties of the frame it is given.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    An AliasFrame takes on the properties of the frame it is given.
 
     Used to create a quick, temporary frame that transforms from an arbitrary
     frame to this one. An AliasFrame cannot be registered.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['alias']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, frame):
 
         self.alias = Frame.as_frame(frame)
 
+        #----------------------------------------------------------------------
         # Required attributes
+        #----------------------------------------------------------------------
         self.wayframe  = self.alias.wayframe
         self.frame_id  = self.alias.frame_id
         self.reference = self.alias.reference
         self.origin    = self.alias.origin
         self.shape     = ()
         self.keys      = set()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # register
+    #===========================================================================
     def register(self):
         raise TypeError('an AliasFrame cannot be registered')
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
         return self.alias.transform_at_time(time, quick=quick)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time_if_possible
+    #===========================================================================
     def transform_at_time_if_possible(self, time, quick={}):
         return self.alias.transform_at_time_if_possible(time, quick=quick)
+    #===========================================================================
 
-################################################################################
 
+#*******************************************************************************
+
+
+
+#*******************************************************************************
+# LinkedFrame
+#*******************************************************************************
 class LinkedFrame(Frame):
-    """A LinkedFrame applies one frame's transform to another.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A LinkedFrame applies one frame's transform to another.
 
     The new frame describes coordinates in one frame relative to the reference
     of the second frame.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['frame', 'parent']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, frame, parent):
-        """Constructor for a LinkedFrame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a LinkedFrame.
 
         Input:
             frame       a frame, which must be define relative to the given
                         parent.
             parent      a frame to which the above will be linked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.frame  = Frame.as_frame(frame)
         self.parent = Frame.as_frame(parent)
 
         assert self.frame.reference == self.parent.wayframe
 
+        #----------------------------------------------------------------------
         # Required attributes
+        #----------------------------------------------------------------------
         self.wayframe  = self.frame.wayframe
         self.frame_id  = self.wayframe.frame_id
         self.reference = self.parent.reference
@@ -667,14 +987,26 @@ class LinkedFrame(Frame):
 
         if frame.is_registered() and parent.is_registered():
             self.register()     # save for later use
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
 
         parent = self.parent.transform_at_time(time, quick=quick)
         xform = self.frame.transform_at_time(time, quick=quick)
 
         return xform.rotate_transform(parent)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time_if_possible
+    #===========================================================================
     def transform_at_time_if_possible(self, time, quick={}):
 
         (time1, parent) = self.parent.transform_at_time_if_possible(time)
@@ -684,16 +1016,29 @@ class LinkedFrame(Frame):
             parent = self.parent.transform_at_time(time2)
 
         return (time2, xform.rotate_transform(parent))
+    #===========================================================================
 
-################################################################################
 
+#*******************************************************************************
+
+
+
+#*******************************************************************************
+# RelativeFrame
+#*******************************************************************************
 class RelativeFrame(Frame):
-    """A Frame that returns the one frame times the inverse of another. The
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A Frame that returns the one frame times the inverse of another. The
     two frames must have a common reference. The combined frame converts
-    coordinates from the second frame to the first."""
-
+    coordinates from the second frame to the first.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['frame1', 'frame2']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, frame1, frame2):
 
         self.frame1 = frame1
@@ -701,14 +1046,18 @@ class RelativeFrame(Frame):
 
         assert self.frame1.reference == self.frame2.reference
 
+        #----------------------------------------------------------------------
         # Required attributes
+        #----------------------------------------------------------------------
         self.wayframe  = self.frame1.wayframe
         self.frame_id  = self.wayframe.frame_id
         self.reference = self.frame2.wayframe
         self.shape     = Qube.broadcasted_shape(self.frame1, self.frame2)
         self.keys      = set()
 
+        #----------------------------------------------------------------------
         # Identify the origin; confirm compatibility
+        #----------------------------------------------------------------------
         self.origin = frame1.origin
         if self.origin is None:
             self.origin = frame2.origin
@@ -718,14 +1067,26 @@ class RelativeFrame(Frame):
 
         if frame1.is_registered() and frame2.is_registered():
             self.register()     # save for later use
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
 
         xform1 = self.frame1.transform_at_time(time)
         xform2 = self.frame2.transform_at_time(time)
 
         return xform1.rotate_transform(xform2.invert())
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time_if_possible
+    #===========================================================================
     def transform_at_time_if_possible(self, time, quick=None):
 
         (time1, xform1) = self.frame1.transform_at_time_if_possible(time)
@@ -735,20 +1096,34 @@ class RelativeFrame(Frame):
             xform1 = self.frame1.transform_at_time(time2)
 
         return (time2, xform1.rotate_transform(xform2.invert()))
+    #===========================================================================
 
-################################################################################
 
+#*******************************************************************************
+
+
+
+#*******************************************************************************
+# ReversedFrame
+#*******************************************************************************
 class ReversedFrame(Frame):
-    """A Frame that generates the inverse Transform of a given Frame.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-
+    A Frame that generates the inverse Transform of a given Frame.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['frame']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, frame):
 
         self.oldframe = frame
 
+        #----------------------------------------------------------------------
         # Required attributes
+        #----------------------------------------------------------------------
         self.wayframe  = frame.reference
         self.frame_id  = frame.reference.frame_id
         self.reference = frame.wayframe
@@ -758,26 +1133,54 @@ class ReversedFrame(Frame):
 
         if frame.is_registered() and frame.reference.is_registered():
             self.register()         # save for later use
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick={}):
 
         return self.oldframe.transform_at_time(time).invert()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time_if_possible
+    #===========================================================================
     def transform_at_time_if_possible(self, time, quick={}):
 
         (time, xform) = self.oldframe.transform_at_time_if_possible(time)
         return (time, xform.invert())
+    #===========================================================================
 
-################################################################################
 
+#*******************************************************************************
+
+
+
+#*******************************************************************************
+# QuickFrame
+#*******************************************************************************
 class QuickFrame(Frame):
-    """QuickFrame is a Frame subclass that returns Transform objects based on
-    interpolation of another Frame within a specified time window."""
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    QuickFrame is a Frame subclass that returns Transform objects based on
+    interpolation of another Frame within a specified time window.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # PACKRAT_ARGS is undefined; save every attribute to keep this up to date
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, frame, interval, quickdict):
-        """Constructor for a QuickFrame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a QuickFrame.
 
         Input:
             frame           the Frame object that this Frame will emulate.
@@ -786,7 +1189,7 @@ class QuickFrame(Frame):
             quickdict       a dictionary containing all the QuickFrame
                             parameters.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if frame.shape != ():
             raise ValueError('shape of QuickFrame must be ()')
 
@@ -828,7 +1231,9 @@ class QuickFrame(Frame):
             self._spline_setup()
             self.interpolation_func = self._interpolate_matrix_omega
 
+        #----------------------------------------------------------------------
         # Test the precision
+        #----------------------------------------------------------------------
         precision_self_check = quickdict['frame_self_check']
         if precision_self_check is not None:
             t = self.times[:-1] + self.dt/2.        # Halfway points
@@ -847,29 +1252,53 @@ class QuickFrame(Frame):
                 raise ValueError('precision tolerance not achieved: ' +
                                   str(error) + ' > ' +
                                   str(precision_self_check))
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # transform_at_time
+    #===========================================================================
     def transform_at_time(self, time, quick=False):
         (matrix, omega) = self.interpolation_func(time)
         return Transform(matrix, omega, self, self.reference, self.origin)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # transform_at_time_if_possible
+    #===========================================================================
     def transform_at_time_if_possible(self, time, quick=False):
         xform = self.transform_at_time(time, quick=False)
         return (time, xform)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # register
+    #===========================================================================
     def register(self):
         raise TypeError('a QuickFrame cannot be registered')
+    #===========================================================================
+
+
 
     ####################################
     # This new version uses quaternions.
     ####################################
 
+    #===========================================================================
+    # _spline_setup
+    #===========================================================================
     def _spline_setup(self):
 
         KIND = 3
 
+        #----------------------------------------------------------------------
         # Create splines for all four components of the quaternion
+        #----------------------------------------------------------------------
         quaternions = Quaternion.as_quaternion(self.transforms.matrix)
         self.quat_splines = np.empty((4,), dtype='object')
         for i in range(4):
@@ -877,19 +1306,25 @@ class QuickFrame(Frame):
                                     quaternions.vals[...,i],
                                     k=KIND)
 
+        #----------------------------------------------------------------------
         # Don't interpolate omega if frame is inertial
+        #----------------------------------------------------------------------
         if self.omega_zero or self.omega_fixed:
           self.omega_splines = None
           self.qdot_splines = None
 
+        #----------------------------------------------------------------------
         # Create derivative splines if omega solution is numerical
+        #----------------------------------------------------------------------
         elif self.omega_numerical:
           self.omega_splines = None
           self.qdot_splines = np.empty((4,), dtype='object')
           for i in range(4):
             self.qdot_splines[i] = self.quat_splines[i].derivative(1)
 
+        #----------------------------------------------------------------------
         # Otherwise, create splines for the vector components of omega
+        #----------------------------------------------------------------------
         else:
           self.omega_splines = np.empty((3,), dtype='object')
           self.qdot_splines = None
@@ -897,14 +1332,22 @@ class QuickFrame(Frame):
             self.omega_splines[i] = InterpolatedUnivariateSpline(self.times,
                                         self.transforms.omega.vals[...,i],
                                         k=KIND)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _interpolate_matrix_omega
+    #===========================================================================
     def _interpolate_matrix_omega(self, time, collapse_threshold=None):
 
         if collapse_threshold is None:
             collapse_threshold = self.quickdict[
                                     'quickframe_linear_interpolation_threshold']
 
+        #----------------------------------------------------------------------
         # time can only be a 1-D array in the splines
+        #----------------------------------------------------------------------
         time = Scalar.as_scalar(time)
         tflat = time.flatten()
         if np.size(tflat.vals) == 0:
@@ -920,7 +1363,9 @@ class QuickFrame(Frame):
         tflat_min = np.min(tflat.vals)
         time_diff = tflat_max - tflat_min
 
+        #----------------------------------------------------------------------
         # Case 1: A single time
+        #----------------------------------------------------------------------
         if time_diff == 0.:
             quat = np.empty((4,))
             quat[0] = self.quat_splines[0](tflat_max)
@@ -962,11 +1407,15 @@ class QuickFrame(Frame):
             else:
                 omega = self.transforms.omega
 
+        #----------------------------------------------------------------------
         # Case 2: Use linear interpolation for a brief enough time span
+        #----------------------------------------------------------------------
         elif time_diff < collapse_threshold:
             frac = (tflat.vals - tflat_min) / time_diff
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create a time scalar just containing the end points
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             tflat2 = Scalar([tflat_min, tflat_max])
 
             quat = np.empty((2,4))
@@ -1006,7 +1455,9 @@ class QuickFrame(Frame):
             else:
                 omega = self.transforms.omega
 
+        #----------------------------------------------------------------------
         # Case 3: Use spline evaluation
+        #----------------------------------------------------------------------
         else:
             quat = np.empty(tflat.shape + (4,))
             quat[...,0] = self.quat_splines[0](tflat.vals)
@@ -1041,20 +1492,28 @@ class QuickFrame(Frame):
             else:
                 omega = self.transforms.omega
 
+        #----------------------------------------------------------------------
         # Return the matrices and rotation vectors
+        #----------------------------------------------------------------------
         matrix = matrix.reshape(time.shape)
 
         if omega.shape != ():
             omega = omega.reshape(time.shape)
 
         return (matrix, omega)
+    #===========================================================================
 
-    ####################################
+
+
+    ##############################################################################
     # This superseded code performs interpolation using matrix elements and
     # omega vector components. It has been superseded by a new version that uses
     # quaternions.
-    ####################################
+    ##############################################################################
 
+    #===========================================================================
+    # _spline_setup_old
+    #===========================================================================
     def _spline_setup_old(self):
 
         KIND = 3
@@ -1066,7 +1525,9 @@ class QuickFrame(Frame):
                                         self.transforms.matrix.vals[...,i,j],
                                         k=KIND)
 
+        #----------------------------------------------------------------------
         # Don't interpolate omega if frame is inertial
+        #----------------------------------------------------------------------
         if self.transforms.omega == Vector3.ZERO:
             self.omega_splines = None
         else:
@@ -1075,14 +1536,22 @@ class QuickFrame(Frame):
                 self.omega_splines[i] = InterpolatedUnivariateSpline(self.times,
                                             self.transforms.omega.vals[...,i],
                                             k=KIND)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _interpolate_matrix_omega_old
+    #===========================================================================
     def _interpolate_matrix_omega_old(self, time, collapse_threshold=None):
 
         if collapse_threshold is None:
             collapse_threshold = \
                 QUICK.dictionary['quickframe_linear_interpolation_threshold']
 
+        #----------------------------------------------------------------------
         # time can only be a 1-D array in the splines
+        #----------------------------------------------------------------------
         tflat = Scalar.as_scalar(time).flatten()
         tflat_max = np.max(tflat.vals)
         tflat_min = np.min(tflat.vals)
@@ -1091,8 +1560,10 @@ class QuickFrame(Frame):
         omega  = np.zeros(list(tflat.shape) + [3])
 
         if time_diff < collapse_threshold:
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If all time values are basically the same, we only need to do
             # linear interpolation.
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             tflat_diff = tflat.vals - tflat_min
             tflat2 = Scalar([tflat_min, tflat_max])
             matrix00 = self.matrix_splines[0,0](tflat2.vals)
@@ -1139,7 +1610,9 @@ class QuickFrame(Frame):
                                     tflat_diff + omega2[0])
 
         else:
+            #- - - - - - - - - - - - - - - - - - - - - -   
             # Evaluate the matrix and rotation vector
+            #- - - - - - - - - - - - - - - - - - - - - -   
             matrix[...,0,0] = self.matrix_splines[0,0](tflat.vals)
             matrix[...,0,1] = self.matrix_splines[0,1](tflat.vals)
             matrix[...,0,2] = self.matrix_splines[0,2](tflat.vals)
@@ -1155,25 +1628,40 @@ class QuickFrame(Frame):
                 omega[...,1] = self.omega_splines[1](tflat.vals)
                 omega[...,2] = self.omega_splines[2](tflat.vals)
 
+        #----------------------------------------------------------------------
         # Normalize the matrix
+        #----------------------------------------------------------------------
         matrix[...,2,:] = utils.ucross3d(matrix[...,0,:], matrix[...,1,:])
         matrix[...,0,:] = utils.ucross3d(matrix[...,1,:], matrix[...,2,:])
         matrix[...,1,:] = utils.unit(matrix[...,1,:])
 
+        #----------------------------------------------------------------------
         # Return the matrices and rotation vectors
+        #----------------------------------------------------------------------
         return (Matrix3(matrix).reshape(time.shape),
                 Vector3(omega).reshape(time.shape))
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # extend
+    #===========================================================================
     def extend(self, interval):
-        """Modify the given QuickFrame to accommodate the given time interval.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
+        Modify the given QuickFrame to accommodate the given time interval.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------------------------
         # If the interval fits inside already, we're done
+        #----------------------------------------------------------------------
         if interval[0] >= self.t0 and interval[1] <= self.t1: return
 
+        #----------------------------------------------------------------------
         # Extend the interval
+        #----------------------------------------------------------------------
         if interval[0] < self.t0:
             count0 = int((self.t0 - interval[0]) // self.dt) + 1 + self.extras
             times0 = np.arange(count0) * self.dt + self.t0 - count0 * self.dt
@@ -1196,7 +1684,9 @@ class QuickFrame(Frame):
 
         if count0 + count1 == 0: return
 
+        #----------------------------------------------------------------------
         # Allocate the new arrays
+        #----------------------------------------------------------------------
         old_size = self.times.size
         new_size = old_size + count0 + count1
 
@@ -1208,7 +1698,9 @@ class QuickFrame(Frame):
         else:
             omega_vals = np.empty((new_size,3))
 
+        #----------------------------------------------------------------------
         # Copy the new arrays
+        #----------------------------------------------------------------------
         if count0 > 0:
             times[0:count0] = times0.vals
             matrix_vals[0:count0,:,:] = transform0.matrix.vals
@@ -1226,7 +1718,9 @@ class QuickFrame(Frame):
             if not self.omega_fixed:
                 omega_vals[count0+old_size:,:] = transform1.omega.vals
 
+        #----------------------------------------------------------------------
         # Generate the new transforms
+        #----------------------------------------------------------------------
         self.times = times
         self.t0 = self.times[0]
         self.t1 = self.times[-1]
@@ -1238,8 +1732,15 @@ class QuickFrame(Frame):
                                    self.transforms.reference)
         self.transforms = new_transforms
 
+        #----------------------------------------------------------------------
         # Update the splines
+        #----------------------------------------------------------------------
         self._spline_setup()
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # Initialization at load time...
@@ -1260,14 +1761,24 @@ Frame.STANDARD_FRAMES.add(Frame.J2000)
 
 import unittest
 
+#*******************************************************************************
+# Test_Frame
+#*******************************************************************************
 class Test_Frame(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
+        #----------------------------------------------------------------------
         # Re-import here to so modules all come from the oops tree
+        #----------------------------------------------------------------------
         from oops.frame_.frame import Frame, QuickFrame, ReversedFrame
 
+        #----------------------------------------------------------------------
         # More imports are here to avoid conflicts
+        #----------------------------------------------------------------------
         import os
         import cspyce
         from oops.frame_.rotation import Rotation
@@ -1281,8 +1792,9 @@ class Test_Frame(unittest.TestCase):
 
         Frame.reset_registry()
 
+        #----------------------------------------------------------------------
         # QuickFrame tests
-
+        #----------------------------------------------------------------------
         ignore = SpicePath('EARTH', 'SSB')
         ignore = SpicePath('MOON', 'SSB')
         ignore = SpiceFrame('IAU_EARTH', 'J2000')
@@ -1290,14 +1802,18 @@ class Test_Frame(unittest.TestCase):
         quick = QuickFrame(moon, (-5.,5.),
                         dict(QUICK.dictionary, **{'frame_self_check':3.e-14}))
 
+        #----------------------------------------------------------------------
         # Perfect precision is impossible
+        #----------------------------------------------------------------------
         try:
             quick = QuickFrame(moon, (-5.,5.),
                         dict(QUICK.dictionary, **{'frame_self_check':0.}))
             self.assertTrue(False, 'No ValueError raised for PRECISION = 0.')
         except ValueError: pass
 
+        #----------------------------------------------------------------------
         # Timing tests...
+        #----------------------------------------------------------------------
         test = np.zeros(200000)
         # ignore = moon.transform_at_time(test, quick=False)  # takes about 10 sec
         ignore = quick.transform_at_time(test) # takes way less than 1 sec
@@ -1354,10 +1870,14 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[1,2], 0)
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
+        #----------------------------------------------------------------------
         # Attempt to register a frame defined relative to an unregistered frame
+        #----------------------------------------------------------------------
         self.assertRaises(ValueError, Rotation, -np.pi, 2, rot_neg60, 'NEG180')
 
+        #----------------------------------------------------------------------
         # Link unregistered frame to registered frame
+        #----------------------------------------------------------------------
         identity = rot_neg120.wrt('J2000')
 
         xform = identity.transform_at_time(0.)
@@ -1371,7 +1891,9 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[1,2], 0)
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
+        #----------------------------------------------------------------------
         # Link registered frame to unregistered frame
+        #----------------------------------------------------------------------
         identity = Frame.J2000.wrt(rot_neg120)
 
         xform = identity.transform_at_time(0.)
@@ -1385,7 +1907,9 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[1,2], 0)
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
+        #----------------------------------------------------------------------
         # Link unregistered frame to registered frame
+        #----------------------------------------------------------------------
         identity = rot_neg120.wrt(rot_180)
 
         xform = identity.transform_at_time(0.)
@@ -1398,6 +1922,11 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[0,2], 0)
         self.assertEqual(xform.matrix.vals[1,2], 0)
         self.assertEqual(xform.matrix.vals[2,2], 1)
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

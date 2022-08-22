@@ -11,8 +11,12 @@ from .qube   import Qube
 from .scalar import Scalar
 from .units  import Units
 
+#*******************************************************************************
+# Vector subclass
+#*******************************************************************************
 class Vector(Qube):
-    """A PolyMath subclass containing 1-D vectors of arbitrary length.
+    """
+    A PolyMath subclass containing 1-D vectors of arbitrary length.
     """
 
     NRANK = 1           # the number of numerator axes.
@@ -25,26 +29,40 @@ class Vector(Qube):
     UNITS_OK = True     # True to allow units; False to disallow them.
     DERIVS_OK = True    # True to disallow derivatives; False to allow them.
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, arg, mask=False, derivs={}, units=None,
                        nrank=None, drank=None, example=None, default=None):
-        """Tweak the default constructor to convert a Python scalar to an array
-        of shape (1,)."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Tweak the default constructor to convert a Python scalar to an array
+        of shape (1,).
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if isinstance(arg, (float,int)):
             arg = np.array([arg])
 
         super(Vector,self).__init__(arg, mask=mask, derivs=derivs, units=units,
                                     nrank=nrank, drank=drank, example=example,
                                     default=default)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_vector
+    #===========================================================================
     @staticmethod
     def as_vector(arg, recursive=True):
-        """The argument converted to Scalar if possible.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The argument converted to Scalar if possible.
 
         If recursive is True, derivatives will also be converted. However, note
         that derivatives are not necessarily removed when recursive is False.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if type(arg) == Vector:
             if recursive:
                 return arg
@@ -52,15 +70,21 @@ class Vector(Qube):
 
         if isinstance(arg, Qube):
 
+            #--------------------------------
             # Convert any 1-D object
+            #--------------------------------
             if arg.nrank == 1:
                 return arg.flatten_numer(Vector, recursive)
 
+            #------------------------------------------------------
             # Collapse a 1xN or Nx1 MatrixN down to a Vector
+            #------------------------------------------------------
             if arg.nrank == 2 and (arg.numer[0] == 1 or arg.numer[1] == 1):
                 return arg.flatten_numer(Vector, recursive)
 
+            #----------------------------------
             # Convert Scalar to shape (1,)
+            #----------------------------------
             if arg.nrank == 0:
                 if np.shape(arg.values) == ():
                     new_values = np.array([arg.values])
@@ -76,7 +100,9 @@ class Vector(Qube):
                         result.insert_deriv(key, Vector.as_vector(value, False))
                 return result
 
+            #-------------------------------------------------------------
             # For any other Qube, move numerator items to the denominator
+            #-------------------------------------------------------------
             if arg.rank > 1:
                 return arg.split_items(1, Vector)
 
@@ -86,37 +112,61 @@ class Vector(Qube):
             return arg.wod
 
         return Vector(arg)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # to_scalar
+    #===========================================================================
     def to_scalar(self, indx, recursive=True):
-        """One of the components of a Vector as a Scalar.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        One of the components of a Vector as a Scalar.
 
         Input:
             indx        index of the vector component.
             recursive   True to extract the derivatives as well.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.extract_numer(0, indx, Scalar, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # to_scalars
+    #===========================================================================
     def to_scalars(self, recursive=True):
-        """All the components of a Vector as a tuple of Scalars.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        All the components of a Vector as a tuple of Scalars.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         results = []
         for i in range(self.numer[0]):
             results.append(self.extract_numer(0, i, Scalar, recursive))
 
         return tuple(results)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # to_pair
+    #===========================================================================
     def to_pair(self, axes=(0,1), recursive=True):
-        """A Pair containing two selected components of a Vector.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A Pair containing two selected components of a Vector.
 
         Overrides the default method to include an 'axes' argument, which can
         extract any two components of a Vector very efficiently.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         i0 = axes[0]
         di = axes[1] - axes[0]
         if di < 0:
@@ -132,10 +182,18 @@ class Vector(Qube):
                 result.insert_deriv(key, deriv.to_pair(axes,False))
 
         return result
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # from_scalars
+    #===========================================================================
     @staticmethod
     def from_scalars(*args, **keywords):
-        """A Vector constructed by combining scalars.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A Vector constructed by combining scalars.
 
         Inputs:
             x, y, z     Three Scalars defining the vector's x, y and z
@@ -151,11 +209,19 @@ class Vector(Qube):
             readonly    True to return a read-only object; False (the default)
                         to return something potentially writable.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Qube.from_scalars(*args, classes=[Vector], **keywords)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_index
+    #===========================================================================
     def as_index(self, masked=None):
-        """This object made suitable for indexing an N-dimensional NumPy array.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        This object made suitable for indexing an N-dimensional NumPy array.
 
         The returned object is a tuple of NumPy arrays, each of the same shape.
         Each array contains indices along the corresponding axis of the array
@@ -167,12 +233,20 @@ class Vector(Qube):
                         contains masked elements, the array will be flattened
                         and masked elements will be skipped over.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         (index, mask) = self.as_index_and_mask((masked is None), masked)
         return index
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_index_and_mask
+    #===========================================================================
     def as_index_and_mask(self, purge=False, masked=None):
-        """This object made suitable for indexing and masking an N-dimensional
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        This object made suitable for indexing and masking an N-dimensional
         array.
 
         Input:
@@ -185,19 +259,23 @@ class Vector(Qube):
                             in the index will retain their unmasked values when
                             the index is applied.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.is_float():
             raise IndexError('floating-point indexing is not permitted')
 
         if (self.drank > 0):
             raise ValueError('an indexing object cannot have a denominator')
 
+        #--------------------------------------
         # If nothing is masked, this is easy
+        #--------------------------------------
         if not np.any(self.mask):
             return (tuple(np.rollaxis(self.values.astype(np.intp), -1, 0)),
                     False)
 
+        #------------------
         # If purging...
+        #------------------
         if purge:
             # If all masked...
             if Qube.is_one_true(self.mask):
@@ -208,53 +286,91 @@ class Vector(Qube):
             return (tuple(np.rollaxis(new_values.astype(np.intp), -1, 0)),
                     False)
 
+        #-----------------------------
         # Without a replacement...
+        #-----------------------------
         if masked is None:
             new_values = self.values.astype(np.intp)
 
+        #-----------------------
         # If all masked...
+        #-----------------------
         elif Qube.is_one_true(self.mask):
             new_values = np.empty(self.values.shape, dtype=np.intp)
             new_values[...] = masked
 
+        #---------------------------
         # If partially masked...
+        #---------------------------
         else:
             new_values = self.values.copy().astype(np.intp)
             new_values[self.mask] = masked
 
         return (tuple(np.rollaxis(new_values, -1, 0)), self.mask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_column
+    #===========================================================================
     def as_column(self, recursive=True):
-        """Convert the Vector to an Nx1 column matrix.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert the Vector to an Nx1 column matrix.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.reshape_numer(self.numer + (1,), Qube.MATRIX_CLASS,
                                   recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_row
+    #===========================================================================
     def as_row(self, recursive=True):
-        """Convert the Vector to a 1xN row matrix.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert the Vector to a 1xN row matrix.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.reshape_numer((1,) + self.numer, Qube.MATRIX_CLASS,
                                   recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_diagonal
+    #===========================================================================
     def as_diagonal(self, recursive=True):
-        """Convert the vector to a diagonal matrix.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert the vector to a diagonal matrix.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Qube.as_diagonal(self, 0, Qube.MATRIX_CLASS, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # sum
+    #===========================================================================
     def sum(self, axis=None, recursive=True):
-        """The sum of this vector across the specified axes.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The sum of this vector across the specified axes.
 
         Input:
             axis        an integer axis or a tuple of axes. The mean is
@@ -263,12 +379,20 @@ class Vector(Qube):
                         mean is performed across all axes if the vector.
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Qube._mean_or_sum(self, axis, recursive=recursive,
                                    _combine_as_mean=False)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # mean
+    #===========================================================================
     def mean(self, axis=None, recursive=True):
-        """The mean of this vector across the specified axes.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The mean of this vector across the specified axes.
 
         Input:
             axis        an integer axis or a tuple of axes. The mean is
@@ -277,84 +401,140 @@ class Vector(Qube):
                         mean is performed across all axes if the vector.
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Qube._mean_or_sum(self, axis, recursive=recursive,
                                  _combine_as_mean=True)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # dot
+    #===========================================================================
     def dot(self, arg, recursive=True):
-        """The dot product of this vector and another as a Scalar.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The dot product of this vector and another as a Scalar.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         arg = self.as_this_type(arg, recursive, coerce=False)
         return Qube.dot(self, arg, 0, 0, Scalar, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # norm
+    #===========================================================================
     def norm(self, recursive=True):
-        """The length of this Vector as a Scalar.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The length of this Vector as a Scalar.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Qube.norm(self, 0, Scalar, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # norm_sq
+    #===========================================================================
     def norm_sq(self, recursive=True):
-        """The squared length of this Vector as a Scalar.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The squared length of this Vector as a Scalar.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Qube.norm_sq(self, 0, Scalar, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # unit
+    #===========================================================================
     def unit(self, recursive=True):
-        """This vector converted to unit length.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        This vector converted to unit length.
 
         The returned object is an instance of the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if recursive:
             return self / self.norm(True)
         else:
             return self.wod / self.norm(False)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # with_norm
+    #===========================================================================
     def with_norm(self, norm=1., recursive=True):
-        """This vector scaled to the specified length.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        This vector scaled to the specified length.
 
         The returned object is an instance of the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         norm = Scalar.as_scalar(norm, recursive)
 
         if recursive:
             return self * (norm / self.norm(True))
         else:
             return self.wod * (norm / self.norm(False))
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # cross
+    #===========================================================================
     def cross(self, arg, recursive=True):
-        """The cross product of this vector with another.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The cross product of this vector with another.
 
         The returned object is an instance of the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         arg = self.as_this_type(arg, recursive, coerce=False)
 
         # type(self) is for 3-vectors, Scalar is for 2-vectors...
         return Qube.cross(self, arg, 0, 0, (type(self), Scalar), recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # ucross
+    #===========================================================================
     def ucross(self, arg, recursive=True):
-        """The unit vector in the direction of the cross product.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The unit vector in the direction of the cross product.
 
         Works only for vectors of length 3. The returned object is an instance
         of the same subclass as this object.
@@ -362,53 +542,95 @@ class Vector(Qube):
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.cross(arg, recursive).unit(recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # outer
+    #===========================================================================
     def outer(self, arg, recursive=True):
-        """The outer multiply of two Vectors, returning a Matrix.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The outer multiply of two Vectors, returning a Matrix.
 
         Input:
             recursive   True to include the derivatives.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         arg = Vector.as_vector(arg, recursive)
         return Qube.outer(self, arg, Qube.MATRIX_CLASS, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # perp
+    #===========================================================================
     def perp(self, arg, recursive=True):
-        """The component of this vector perpendicular to another.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The component of this vector perpendicular to another.
 
         The returned object is an instance of the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------
         # Convert arg to a unit vector
+        #----------------------------------
         arg = self.as_this_type(arg, recursive, coerce=False).unit()
         if not recursive:
             self = self.wod
 
+        #----------------------------------------------------------------
         # Return the component of this vector perpendicular to the arg
+        #----------------------------------------------------------------
         return self - arg * self.dot(arg, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # proj
+    #===========================================================================
     def proj(self, arg, recursive=True):
-        """The component of this Vector projected into another Vector.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The component of this Vector projected into another Vector.
 
         The returned object is an instance of the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------
         # Convert arg to a unit vector
+        #----------------------------------
         arg = self.as_this_type(arg, recursive, coerce=False).unit()
 
+        #-------------------------------------------------------------
         # Return the component of this vector projected into the arg
+        #-------------------------------------------------------------
         return arg * self.dot(arg, recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # sep
+    #===========================================================================
     def sep(self, arg, recursive=True):
-        """The separation angle between this vector and another.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The separation angle between this vector and another.
 
         The returned object is an instance of the same subclass as this object.
         Works for vectors of length 2 or 3.
@@ -416,18 +638,22 @@ class Vector(Qube):
         Input:
             recursive   True to include the derivatives.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         # Translated from the SPICE source code for VSEP().
 
+        #----------------------------------------------------------------------
         # Convert to unit vectors a and b. These define an isoceles triangle.
+        #----------------------------------------------------------------------
         a = self.unit(recursive)
         b = self.as_this_type(arg, recursive, coerce=False).unit()
 
+        #----------------------------------------------------------------------
         # This is the separation angle:
         #   angle = 2 * arcsin(|a-b| / 2)
         # However, this formula becomes less accurate for angles near pi. For
         # these angles, we reverse b and calculate the supplementary angle.
-
+        #----------------------------------------------------------------------
         sign = a.dot(b).sign().mask_where_eq(0, 1, remask=False)
         b = b * sign
 
@@ -435,27 +661,39 @@ class Vector(Qube):
         angle = 2. * sign * arg.arcsin() + (sign < 0.) * np.pi
 
         return angle
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # cross_product_as_matrix
+    #===========================================================================
     def cross_product_as_matrix(self, recursive=True):
-        """The Matrix whose multiply equals a cross product with this object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The Matrix whose multiply equals a cross product with this object.
 
         This object must have length 3.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.numer != (3,):
             raise ValueError('shape must be (3,)')
 
         if self.denom != ():
             raise NotImplementedError('method not implemented for derivatives')
 
+        #------------------------------------------------------
         # Roll the numerator axis to the end if necessary
+        #------------------------------------------------------
         if self.drank == 0:
             old_values = self.values
         else:
             old_values = np.rollaxis(self.values, -self.drank-1,
                                      len(self.values.shape))
 
+        #-----------------------------------
         # Fill in the matrix elements
+        #-----------------------------------
         new_values = np.zeros(self.shape + self.denom + (3,3),
                               dtype = self.values.dtype)
         new_values[...,0,1] = -old_values[...,2]
@@ -465,7 +703,9 @@ class Vector(Qube):
         new_values[...,2,0] = -old_values[...,1]
         new_values[...,2,1] =  old_values[...,0]
 
+        #-----------------------------------------------
         # Roll the denominator axes back to the end
+        #-----------------------------------------------
         for i in range(self.drank):
             new_values = np.rollaxis(new_values, -3, len(new_values.shape))
 
@@ -476,25 +716,40 @@ class Vector(Qube):
                 obj.insert_deriv(key, deriv.cross_product_as_matrix(False))
 
         return obj
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # element_mul
+    #===========================================================================
     def element_mul(self, arg, recursive=True):
-        """The element-by-element multiply of two vectors.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The element-by-element multiply of two vectors.
 
         The returned object is an instance of the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------
         # Convert to this class if necessary
+        #----------------------------------------
         original_arg = arg
         arg = self.as_this_type(arg, recursive, coerce=False)
 
+        #--------------------------------------------------------------
         # If it had no units originally, it should not have units now
+        #--------------------------------------------------------------
         if not isinstance(original_arg, Qube):
             arg = arg.without_units()
 
+        #-------------
         # Validate
+        #-------------
         if arg.numer != self.numer:
             raise ValueError(("incompatible numerator shapes: " +
                               "%s, %s") % (str(self.numer), str(arg.numer)))
@@ -503,7 +758,9 @@ class Vector(Qube):
             raise ValueError(("dual operand denominators for element_mul(): " +
                               "%s, %s") % (str(self.denom), str(arg.denom)))
 
+        #------------------------------------
         # Reshape value arrays as needed
+        #------------------------------------
         if arg.drank:
             self_values = self.values.reshape(self.values.shape +
                                               arg.drank * (1,))
@@ -516,7 +773,9 @@ class Vector(Qube):
         else:
             arg_values = arg.values
 
+        #---------------------------
         # Construct the object
+        #---------------------------
         obj = Qube.__new__(type(self))
         obj.__init__(self_values * arg_values,
                      self.mask | arg.mask,
@@ -525,7 +784,9 @@ class Vector(Qube):
                      drank = self.drank + arg.drank,
                      example=self)
 
+        #--------------------------------------
         # Insert derivatives if necessary
+        #--------------------------------------
         if recursive:
             new_derivs = {}
             for (key, self_deriv) in self.derivs.items():
@@ -541,22 +802,35 @@ class Vector(Qube):
             obj.insert_derivs(new_derivs)
 
         return obj
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # element_div
+    #===========================================================================
     def element_div(self, arg, recursive=True):
-        """The element-by-element division of two vectors.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The element-by-element division of two vectors.
 
         The returned object is an instance of the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------
         # Convert to this class if necessary
+        #---------------------------------------
         if not isinstance(arg, Qube):
             arg = self.as_this_type(arg, recursive, coerce=False)
             arg = arg.without_units()
 
+        #-------------
         # Validate
+        #-------------
         if arg.numer != self.numer:
             raise ValueError(("incompatible numerator shapes: " +
                               "%s, %s") % (str(self.numer), str(arg.numer)))
@@ -565,7 +839,9 @@ class Vector(Qube):
             raise ValueError(("right operand denominator for element_div(): " +
                               "%s") % str(arg.denom))
 
+        #-------------------------------
         # Mask out zeros in divisor
+        #-------------------------------
         zero_mask = (arg.values == 0.)
 
         if np.any(zero_mask):
@@ -577,23 +853,31 @@ class Vector(Qube):
         else:
             divisor = arg.values
 
+        #-----------------------------
         # Update the divisor mask
+        #-----------------------------
         for r in range(self.rank):  # if any element is zero, mask the vector
             zero_mask = np.any(zero_mask, axis=-1)
 
         divisor_mask = arg.mask | zero_mask
 
+        #---------------------------------------------------------------------
         # Re-shape the divisor array if necessary to match the dividend shape
+        #---------------------------------------------------------------------
         if self.drank:
             divisor = divisor.reshape(divisor.shape + self.drank * (1,))
 
+        #--------------------------------
         # Construct the ratio object
+        #--------------------------------
         obj = Qube.__new__(type(self))
         obj.__init__(self.values / divisor,
                      self.mask | divisor_mask,
                      units = Units.div_units(self.units, arg.units))
 
+        #----------------------------------------
         # Insert the derivatives if necessary
+        #----------------------------------------
         if recursive:
             new_derivs = {}
 
@@ -622,9 +906,17 @@ class Vector(Qube):
             obj.insert_derivs(new_derivs)
 
         return obj
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector_scale
+    #===========================================================================
     def vector_scale(self, factor, recursive=True):
-        """Stretch this Vector along a direction defined by a given scaling
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Stretch this Vector along a direction defined by a given scaling
         vector and and by an amount equal to the magnitude of this vector.
 
         Components of the vector perpendicular to the scaling vector are
@@ -638,16 +930,24 @@ class Vector(Qube):
         Return:         a copy of this Vector scaled according to the scaling
                         vector
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         projected = self.proj(factor, recursive=recursive)
 
         if recursive:
             return self + (projected.norm() - 1) * projected
         else:
             return self.wod + (projected.norm() - 1) * projected
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector_unscale
+    #===========================================================================
     def vector_unscale(self, factor, recursive=True):
-        """Un-stretch this Vector along a direction defined by a given scaling
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Un-stretch this Vector along a direction defined by a given scaling
         vector and and by an amount equal to the magnitude of this vector.
 
         Components of the vector perpendicular to the scaling vector are
@@ -661,19 +961,27 @@ class Vector(Qube):
         Return:         a copy of this Vector scaled according to the scaling
                         vector
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.vector_scale(factor/factor.norm_sq(recursive), recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # combos
+    #===========================================================================
     @classmethod
     def combos(cls, *args):
-        """A vector with every combination of components of given scalars.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A vector with every combination of components of given scalars.
 
         Masks are also combined in the analogous manner.
 
         The returned object will have a shape defined by concatenating the
         shapes of all the arguments. Units and derivatives are ignored.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         scalars = []
         newshape = []
         dtype = np.int_
@@ -705,9 +1013,17 @@ class Vector(Qube):
             after -= rank
 
         return cls(data, mask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # mask_where_component_le
+    #===========================================================================
     def mask_where_component_le(self, axis, limit, replace=None, remask=True):
-        """A copy of this object where values of a specified component <= a
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A copy of this object where values of a specified component <= a
         limit value are masked.
 
         Instead of or in addition to masking the items, the values can be
@@ -724,12 +1040,20 @@ class Vector(Qube):
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         scalar = self.to_scalar(axis)
         return self.mask_where(scalar <= limit, replace, remask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # mask_where_component_ge
+    #===========================================================================
     def mask_where_component_ge(self, axis, limit, replace=None, remask=True):
-        """A copy of this object where values of a specified component >= a
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A copy of this object where values of a specified component >= a
         limit value are masked.
 
         Instead of or in addition to masking the items, the values can be
@@ -746,12 +1070,20 @@ class Vector(Qube):
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         scalar = self.to_scalar(axis)
         return self.mask_where(scalar >= limit, replace, remask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # mask_where_component_lt
+    #===========================================================================
     def mask_where_component_lt(self, axis, limit, replace=None, remask=True):
-        """A copy of this object where values of a specified component < a
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A copy of this object where values of a specified component < a
         limit value are masked.
 
         Instead of or in addition to masking the items, the values can be
@@ -768,12 +1100,20 @@ class Vector(Qube):
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         scalar = self.to_scalar(axis)
         return self.mask_where(scalar < limit, replace, remask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # mask_where_component_gt
+    #===========================================================================
     def mask_where_component_gt(self, axis, limit, replace=None, remask=True):
-        """A copy of this object where values of a specified component > a
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A copy of this object where values of a specified component > a
         limit value are masked.
 
         Instead of or in addition to masking the items, the values can be
@@ -790,12 +1130,20 @@ class Vector(Qube):
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         scalar = self.to_scalar(axis)
         return self.mask_where(scalar > limit, replace, remask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # clip_component
+    #===========================================================================
     def clip_component(self, axis, lower, upper, remask=False):
-        """A copy of this object where values of a specified component outside
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        A copy of this object where values of a specified component outside
         a given range are shifted to the closest in-range value.
 
         Optionally, the clipped items can also be masked.
@@ -811,7 +1159,7 @@ class Vector(Qube):
             remask          True to include the new mask into the object's mask;
                             False to replace the values but leave them unmasked.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         scalars = list(self.to_scalars(recursive=True))
         scalar = scalars[axis]
 
@@ -826,20 +1174,41 @@ class Vector(Qube):
 
         result = Vector.from_scalars(*scalars, recursive=True)
         return result
+    #===========================================================================
+
+
 
     ############################################################################
     # Overrides of superclass operators
     ############################################################################
 
+    #===========================================================================
+    # __abs__
+    #===========================================================================
     def __abs__(self, recursive=True):
         return self.norm(recursive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # identity
+    #===========================================================================
     def identity(self):
         Qube._raise_unsupported_op('identity()', self)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # reciprocal
+    #===========================================================================
     def reciprocal(self, recursive=True, nozeros=False):
-        """Treat a Vector subclass with drank=1 as a Matrix inversion."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Treat a Vector subclass with drank=1 as a Matrix inversion.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.drank != 1:
             Qube._raise_unsupported_op('reciprocal()', self)
 
@@ -847,8 +1216,16 @@ class Vector(Qube):
         inverse = matrix.reciprocal()
 
         return inverse.split_items(1, [type(self)])
+    #===========================================================================
 
+
+#*******************************************************************************
+
+
+
+#=========================================
 # A set of useful class constants
+#=========================================
 Vector.ZERO3   = Vector((0.,0.,0.)).as_readonly()
 Vector.XAXIS3  = Vector((1.,0.,0.)).as_readonly()
 Vector.YAXIS3  = Vector((0.,1.,0.)).as_readonly()

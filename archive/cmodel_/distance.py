@@ -7,13 +7,24 @@ import numpy as np
 from oops.cmodel_.cmodel import CoordinateModel
 from polymath import Units
 
+#*******************************************************************************
+# Distance
+#*******************************************************************************
 class Distance(CoordinateModel):
-    """Distance is a subclass of CoordinateModel used to describe one component
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Distance is a subclass of CoordinateModel used to describe one component
     of a position vector, typically in rectangular coordinates.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, units=None, reference=0., downward=False):
-        """The constructor for a Distance coordinate model.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The constructor for a Distance coordinate model.
 
         Input:
             units       the Units object used by the coordinate.
@@ -24,7 +35,7 @@ class Distance(CoordinateModel):
                         position, i.e., in a direction opposite to the direction
                         of increase of the standard coordinate value.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if units is None: units = Units.KM
 
         CoordinateModel.__init__(self, name, abbrev, units, format,
@@ -38,6 +49,14 @@ class Distance(CoordinateModel):
             raise ValueError("illegal units for a Distance coordinate model: " +
                              str(unit))
 
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
+
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -46,9 +65,14 @@ import unittest
 
 class Test_Distance(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         pass
+    #===========================================================================
+
 
 #########################################
 if __name__ == '__main__':

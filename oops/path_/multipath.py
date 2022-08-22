@@ -9,13 +9,24 @@ from oops.event        import Event
 from oops.path_.path   import Path
 from oops.frame_.frame import Frame
 
+#*******************************************************************************
+# MultiPath
+#*******************************************************************************
 class MultiPath(Path):
-    """Gathers a set of paths into a single 1-D Path object."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Gathers a set of paths into a single 1-D Path object.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['paths', 'origin', 'frame', 'path_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, paths, origin=None, frame=None, id='+'):
-        """Constructor for a MultiPath Path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a MultiPath Path.
 
         Input:
             paths       a tuple, list or 1-D ndarray of paths or path IDs.
@@ -27,8 +38,11 @@ class MultiPath(Path):
                         A single '+' is changed to the ID of the first path with
                         a '+' appended. None to leave the path unregistered.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------
         # Interpret the inputs
+        #---------------------------
         self.origin = Path.as_waypoint(origin) or Path.SSB
         self.frame  = Frame.as_wayframe(frame) or self.origin.frame
 
@@ -39,27 +53,41 @@ class MultiPath(Path):
         for (index, path) in np.ndenumerate(self.paths):
             self.paths[index] = Path.as_path(path).wrt(self.origin, self.frame)
 
+        #-------------------------
         # Fill in the path_id
+        #-------------------------
         self.path_id = id
 
         if self.path_id == '+':
             self.path_id = self.paths[0].path_id + '+others'
 
+        #-------------------------------------------------------------
         # Update waypoint and path_id; register only if necessary
+        #-------------------------------------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # __getitem__
+    #===========================================================================
     def __getitem__(self, i):
         slice = self.paths[i]
         if np.shape(slice) == ():
             return slice
         return MultiPath(slice, self.origin, self.frame, id=None)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # event_at_time
+    #===========================================================================
     def event_at_time(self, time, quick={}):
-        """Returns an Event object corresponding to a specified Scalar time on
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns an Event object corresponding to a specified Scalar time on
         this path. The times are broadcasted across the shape of the MultiPath.
 
         Input:
@@ -70,11 +98,16 @@ class MultiPath(Path):
         Return:         an Event object containing the time, position and
                         velocity of the paths.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------------------------------
         # Broadcast everything to the same shape
+        #-------------------------------------------
         time = Qube.broadcast(Scalar.as_scalar(time), self.shape)[0]
 
+        #----------------------------
         # Create the event object
+        #----------------------------
         pos = np.empty(time.shape + (3,))
         vel = np.empty(time.shape + (3,))
         mask = np.empty(time.shape, dtype='bool')
@@ -93,11 +126,17 @@ class MultiPath(Path):
 
         return Event(Scalar(time.values, mask), (pos,vel),
                             self.origin, self.frame)
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # quick_path
+    #===========================================================================
     def quick_path(self, time, quick={}):
-        """Override of the default quick_path method to return a MultiPath of
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Override of the default quick_path method to return a MultiPath of
         quick_paths.
 
         A QuickPath operates by sampling the given path and then setting up an
@@ -114,13 +153,20 @@ class MultiPath(Path):
                         provided override the values in the default dictionary
                         QUICK.dictionary, and the merged dictionary is used.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         new_paths = []
         for path in self.paths:
             new_path = path.quick_path(time, quick=quick)
             new_paths.append(new_path)
 
         return MultiPath(new_paths, self.origin, self.frame)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -128,8 +174,14 @@ class MultiPath(Path):
 
 import unittest
 
+#*******************************************************************************
+# Test_MultiPath
+#*******************************************************************************
 class Test_MultiPath(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         import cspyce
@@ -154,11 +206,15 @@ class Test_MultiPath(unittest.TestCase):
         self.assertEqual(test.path_id, "SUN+others")
         self.assertEqual(test.shape, (3,))
 
+        #--------------------
         # Single time
+        #--------------------
         event0 = test.event_at_time(0.)
         self.assertEqual(event0.shape, (3,))
 
+        #----------------------------------
         # Triple of times, shape = [3]
+        #----------------------------------
         event012 = test.event_at_time((0., 1.e5, 2.e5))
         self.assertEqual(event012.shape, (3,))
 
@@ -169,7 +225,9 @@ class Test_MultiPath(unittest.TestCase):
         self.assertTrue(event012.pos[2] != event0.pos[2])
         self.assertTrue(event012.vel[2] != event0.vel[2])
 
+        #------------------------
         # Times shaped [2,1]
+        #------------------------
         event01x = test.event_at_time([[0.], [1.e5]])
         self.assertEqual(event01x.shape, (2,3))
 
@@ -185,7 +243,9 @@ class Test_MultiPath(unittest.TestCase):
         self.assertTrue(event01x.pos[1,2] != event012.pos[2])
         self.assertTrue(event01x.vel[1,2] != event012.pos[2])
 
+        #------------------------------------------------
         # Triple of times, at all times, shape [3,1]
+        #------------------------------------------------
         event012a = test.event_at_time([[0.], [1.e5], [2.e5]])
         self.assertEqual(event012a.shape, (3,3))
 
@@ -204,6 +264,11 @@ class Test_MultiPath(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

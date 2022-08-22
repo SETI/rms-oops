@@ -7,13 +7,24 @@ import numpy as np
 from oops.cmodel_.cmodel import CoordinateModel
 from polymath import Units
 
+#*******************************************************************************
+# Longitude
+#*******************************************************************************
 class Longitude(CoordinateModel):
-    """Longitude is a subclass of CoordinateModel used to describe a rotation
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Longitude is a subclass of CoordinateModel used to describe a rotation
     angle that cycles through 360 degrees.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, units=None, minimum=0., reference=0., retrograde=False):
-        """The constructor for a Longitude coordinate model.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The constructor for a Longitude coordinate model.
 
         Input:
             units       the Units object used by the coordinate.
@@ -25,7 +36,7 @@ class Longitude(CoordinateModel):
             retrograde  if True, longitudes are measured in the reverse
                         direction; default is False
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if units is None: units = Units.DEG
 
         modulus = Scalar(360., Units.DEG).convert(units).vals
@@ -39,6 +50,10 @@ class Longitude(CoordinateModel):
         if self.units.exponents != (0,0,1):
           raise ValueError("illegal units for a Longitude coordinate model: " +
                            unit.name)
+    #===========================================================================
+
+
+#*******************************************************************************
 
 ################################################################################
 # UNIT TESTS
@@ -46,11 +61,21 @@ class Longitude(CoordinateModel):
 
 import unittest
 
+#*******************************************************************************
+# Test_Longitude
+#*******************************************************************************
 class Test_Longitude(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
 
 #########################################
 if __name__ == '__main__':

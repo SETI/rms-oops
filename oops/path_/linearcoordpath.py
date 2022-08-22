@@ -9,15 +9,25 @@ from oops.event        import Event
 from oops.path_.path   import Path
 from oops.frame_.frame import Frame
 
+#*******************************************************************************
+# LinearCoordPath
+#*******************************************************************************
 class LinearCoordPath(Path):
-    """A path defined by coordinates changing linearly on a specified Surface.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-
+    A path defined by coordinates changing linearly on a specified Surface.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['surface', 'coords', 'coords_dot', 'epoch', 'obs_path',
                     'path_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, surface, coords, coords_dot, epoch, obs=None, id=None):
-        """Constructor for a CoordPath.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a CoordPath.
 
         Input:
             surface     a surface.
@@ -30,27 +40,37 @@ class LinearCoordPath(Path):
             id          the name under which to register the new path; None to
                         leave the path unregistered.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.surface = surface
         self.coords = coords
         self.coords_dot = coords_dot
         self.epoch  = epoch
         self.obs_path = obs
 
+        #------------------------
         # Required attributes
+        #------------------------
         self.path_id = id
         self.origin  = self.surface.origin
         self.frame   = self.origin.frame
         self.keys    = set()
         self.shape   = Qube.broadcasted_shape(*coords)
 
+        #----------------------------------------------------------
         # Update waypoint and path_id; register only if necessary
+        #----------------------------------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # event_at_time
+    #===========================================================================
     def event_at_time(self, time, quick={}):
-        """Return an Event corresponding to a specified time on this path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return an Event corresponding to a specified time on this path.
 
         Input:
             time        a time Scalar at which to evaluate the path.
@@ -58,7 +78,7 @@ class LinearCoordPath(Path):
         Return:         an Event object containing (at least) the time, position
                         and velocity on the path.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         new_coords = []
         for i in range(len(self.coords)):
             coord = self.coords[i] + self.coords_dot[i] * (time - self.epoch)
@@ -75,6 +95,13 @@ class LinearCoordPath(Path):
         pos = self.surface.vector3_from_coords(new_coords, obs, derivs=True)
 
         return Event(time, pos, self.origin, self.frame)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -82,12 +109,24 @@ class LinearCoordPath(Path):
 
 import unittest
 
+#*******************************************************************************
+# Test_LinearCoordPath
+#*******************************************************************************
 class Test_LinearCoordPath(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # TBD
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

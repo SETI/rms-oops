@@ -7,12 +7,22 @@ import numpy as np
 from polymath             import *
 from oops.nav_.navigation import Navigation
 
+#*******************************************************************************
+# Repointing
+#*******************************************************************************
 class Repointing(Navigation):
-    """A Repointing is a Navigation subclass that describes a pointing
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A Repointing is a Navigation subclass that describes a pointing
     correction to an observation via a set of two or three rotation angles.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, angles):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Constructor for a Navigation object.
 
         Input:
@@ -23,7 +33,7 @@ class Repointing(Navigation):
                         about the x-axis.
                 theta   an optional rotation about the z-axis.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         angles = np.array(angles)
         assert len(angles.shape) == 1
 
@@ -36,14 +46,25 @@ class Repointing(Navigation):
             self.axes = (2,0,1)
 
         self.set_params(angles)
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # set_params
+    #===========================================================================
     def set_params(self, angles):
-        """Part of the Fittable interface. Re-defines the navigation given a
-        new set of parameters."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Part of the Fittable interface. Re-defines the navigation given a
+        new set of parameters.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        #---------------------------------------------------------
 
         # Internal method for a rotation matrix about one axis
+        #---------------------------------------------------------
         def rotation_matrix(axis, angle):
             axis2 = axis
             axis0 = (axis2 + 1) % 3
@@ -89,30 +110,51 @@ class Repointing(Navigation):
         self.dmatrix_dparams = MatrixN(dmatrix_dparams)
         # dmatrix_dparams.shape = [N], item = [3,3]
 
+        #--------------------------------
         # For the inverse rotation...
+        #--------------------------------
         self.matrixT = self.matrix.T()
         self.dmatrixT_dparams = self.dmatrix_dparams.T()
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # get_params
+    #===========================================================================
     def get_params(self):
-        """Part of the Fittable interface. Returns the current parameters.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-
+        Part of the Fittable interface. Returns the current parameters.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.angles
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # copy
+    #===========================================================================
     def copy(self):
-        """Part of the Fittable interface. Returns a deep copy of the object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
+        Part of the Fittable interface. Returns a deep copy of the object.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         return Repointing(self.get_params().copy())
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # distort
+    #===========================================================================
     def distort(self, los, t=None, partials=False):
-        """Applies the distortion to line-of-sight vectors. This should be
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Applies the distortion to line-of-sight vectors. This should be
         applied to a vector in the instrument's coordinate frame, before it is
         converted to FOV (u,v) coordinates.
 
@@ -130,11 +172,16 @@ class Repointing(Navigation):
                         has a subfield "d_dt", this is also distorted and
                         returned as a subfield.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-------------------------------------------------------------
         # Rotate the line of sight, with optional time-derivatives
+        #-------------------------------------------------------------
         distorted_los = self.matrix * los
 
+        #------------------------------------------------------------------
         # Fill in the partial derivatives if needed
+        #------------------------------------------------------------------
         if partials:
             los_reshaped = los.append_axes(1)   # so [...,1] * [nparams] works
             dlos_swapped = self.dmatrix_dparams * los_reshaped
@@ -142,11 +189,17 @@ class Repointing(Navigation):
             distorted_los.insert_subfield("d_dnav", dlos_dparams)
 
         return distorted_los
+    #===========================================================================
 
-    ####################################
 
+
+    #===========================================================================
+    # undistort
+    #===========================================================================
     def undistort(self, los, t=None, partials=False):
-        """Removes the distortion from the line-of-sight vectors. This should
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Removes the distortion from the line-of-sight vectors. This should
         be applied to a vector derived from FOV (u,v) coordinates, before
         conversion out of the instrument's coordinate frame.
 
@@ -164,11 +217,16 @@ class Repointing(Navigation):
                         has a subfield "d_dt", this is also un-distorted and
                         returned as a subfield.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------------------------
         # Un-distort the line of sight, with optional time-derivatives
+        #---------------------------------------------------------------
         undistorted_los = self.matrixT * los
 
+        #----------------------------------------------
         # Fill in the partial derivatives if needed
+        #----------------------------------------------
         if partials:
             los_reshaped = los.append_axes(1)   # so [...,1] * [nparams] works
             dlos_swapped = self.dmatrixT_dparams * los_reshaped
@@ -176,6 +234,9 @@ class Repointing(Navigation):
             undistorted_los.insert_subfield("d_dnav", dlos_dparams)
 
         return undistorted_los
+    #===========================================================================
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -184,14 +245,21 @@ class Repointing(Navigation):
 import unittest
 import numpy.random as random
 
+#*******************************************************************************
+# Test_Repointing
+#*******************************************************************************
 class Test_Repointing(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         los = Vector3(random.randn(200,10,3))
 
+        #--------------------------
         # 2-axis navigation
-
+        #--------------------------
         angles = np.array((-0.15,0.25))
         nav = Repointing(angles)
         distorted_los = nav.distort(los)
@@ -202,8 +270,9 @@ class Test_Repointing(unittest.TestCase):
         test_los = nav.distort(undistorted_los)
         self.assertTrue(abs(test_los - los) < 1.e-14)
 
+        #--------------------------
         # 3-axis navigation
-
+        #--------------------------
         angles = np.array((0.1,0.2,0.3))
         nav = Repointing(angles)
         distorted_los = nav.distort(los)
@@ -214,8 +283,9 @@ class Test_Repointing(unittest.TestCase):
         test_los = nav.distort(undistorted_los)
         self.assertTrue(abs(test_los - los) < 1.e-14)
 
+        #--------------------------
         # 2-axis derivatives
-
+        #--------------------------
         DELTA = 1.e-7
         angles = np.array((-0.15,0.35))
         nav = Repointing(angles)
@@ -246,8 +316,9 @@ class Test_Repointing(unittest.TestCase):
             diff = d_los_d_param - Vector3(undistorted_los.d_dnav.vals[...,i])
             self.assertTrue(abs(diff) < 1.e-7)
 
+        #--------------------------
         # 3-axis derivatives
-
+        #--------------------------
         DELTA = 1.e-7
         angles = np.array((-0.25,0.4,-0.1))
         nav = Repointing(angles)
@@ -277,6 +348,13 @@ class Test_Repointing(unittest.TestCase):
             d_los_d_param = (undistorted_hi - undistorted_lo) / (2*DELTA)
             diff = d_los_d_param - Vector3(undistorted_los.d_dnav.vals[...,i])
             self.assertTrue(abs(diff) < 1.e-7)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 #########################################
 if __name__ == '__main__':

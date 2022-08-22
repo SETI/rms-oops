@@ -8,17 +8,37 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_median
+#*******************************************************************************
 class Test_Scalar_median(unittest.TestCase):
 
+  #=============================================================================
+  # setUp
+  #=============================================================================
   def setUp(self):
     Qube.PREFER_BUILTIN_TYPES = True
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # tearDown
+  #=============================================================================
   def tearDown(self):
     Qube.PREFER_BUILTIN_TYPES = False
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #------------------------
+    # Individual values       
+    #------------------------
     self.assertEqual(Scalar(0.3).median(), 0.3)
     self.assertEqual(type(Scalar(0.3).median()), float)
 
@@ -28,7 +48,9 @@ class Test_Scalar_median(unittest.TestCase):
     self.assertTrue(Scalar(4, mask=True).median().mask)
     self.assertEqual(type(Scalar(4, mask=True).median()), Scalar)
 
-    # Multiple values
+    #---------------------
+    # Multiple values      
+    #---------------------
     self.assertTrue(Scalar((1,2,3)).median() == 2)
     self.assertEqual(type(Scalar((1,2,3)).median()), float)
 
@@ -38,12 +60,16 @@ class Test_Scalar_median(unittest.TestCase):
     self.assertTrue(Scalar((1.,2.,3.)).median() == 2.)
     self.assertEqual(type(Scalar((1.,2,3)).median()), float)
 
-    # Arrays
+    #-------------
+    # Arrays      
+    #-------------
     N = 400
     x = Scalar(np.random.randn(N).reshape((2,4,5,10)))
     self.assertEqual(x.median(), np.median(x.values))
 
-    # Test units
+    #---------------
+    # Test units    
+    #---------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
     self.assertEqual(random.median().units, Units.KM)
@@ -56,7 +82,9 @@ class Test_Scalar_median(unittest.TestCase):
     random = Scalar(values, units=None)
     self.assertEqual(type(random.median()), float)
 
-    # Masks
+    #-------------
+    # Masks      
+    #-------------
     N = 1000
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
 
@@ -66,7 +94,9 @@ class Test_Scalar_median(unittest.TestCase):
     self.assertTrue(masked.median().mask)
     self.assertTrue(type(masked.median()), Scalar)
 
-    # Means over axes
+    #----------------------
+    # Means over axes       
+    #----------------------
     x = Scalar(np.arange(30).reshape(2,3,5))
     m0 = x.median(axis=0)
     m01 = x.median(axis=(0,1))
@@ -88,7 +118,9 @@ class Test_Scalar_median(unittest.TestCase):
     self.assertEqual(type(m012), float)
     self.assertEqual(m012, np.sum(np.arange(30))/30.)
 
-    # Means with masks
+    #-------------------------
+    # Means with masks          
+    #-------------------------
     mask = np.zeros((2,3,5), dtype='bool')
     mask[0,0,0] = True
     mask[1,1,1] = True
@@ -139,6 +171,13 @@ class Test_Scalar_median(unittest.TestCase):
     for k in range(5):
         self.assertEqual(m0[j,k], Scalar.MASKED)
         self.assertTrue(np.all(m0[j,k].values == np.median(x.values[:,j,k])))
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

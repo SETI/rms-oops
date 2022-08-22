@@ -8,11 +8,19 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_int
+#*******************************************************************************
 class Test_Scalar_int(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #-----------------------
+    # Individual values     
+    #-----------------------
     self.assertEqual(Scalar( 1.2).int(),  1)
     self.assertEqual(Scalar(-1.2).int(), -2)
     self.assertEqual(Scalar( 1).int(),  1)
@@ -21,14 +29,18 @@ class Test_Scalar_int(unittest.TestCase):
     self.assertEqual(Scalar(1.2,True).int(), Scalar(0.).masked_single())
     self.assertEqual(Scalar(1,  True).int(), Scalar(0.).masked_single())
 
-    # Multiple values
+    #--------------------
+    # Multiple values     
+    #--------------------
     self.assertEqual(Scalar((1.2, -1.2)).int(), (1,-2))
     self.assertFalse(Scalar((1.2, -1.2)).int().is_float())
 
     self.assertEqual(Scalar((1, -1)).int(), (1,-1))
     self.assertFalse(Scalar((1.2, -1.2)).int().is_float())
 
-    # Arrays
+    #-------------
+    # Arrays      
+    #-------------
     N = 1000
     values = np.random.randn(N) * 10.
     random = Scalar(values)
@@ -39,7 +51,9 @@ class Test_Scalar_int(unittest.TestCase):
     for i in range(N-1):
         self.assertEqual(random[i:i+2].int(), np.floor(values[i:i+2]))
 
-    # Units should be disallowed
+    #--------------------------------
+    # Units should be disallowed      
+    #--------------------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
     self.assertRaises(ValueError, Scalar.int, random)
@@ -50,14 +64,18 @@ class Test_Scalar_int(unittest.TestCase):
     random = Scalar(3.14, units=Units.UNITLESS)
     self.assertEqual(random.int(), 3)
 
-    # Masks
+    #-------------
+    # Masks      
+    #-------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     y = x.int()
     self.assertTrue(np.all(y.mask[x.mask]))
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
-    # Derivatives should be stripped
+    #------------------------------------
+    # Derivatives should be stripped     
+    #------------------------------------
     N = 10
     random = Scalar(np.random.randn(N) * 10.)
     random.insert_deriv('t', Scalar(np.random.randn(N) * 10.))
@@ -90,7 +108,9 @@ class Test_Scalar_int(unittest.TestCase):
     self.assertFalse(hasattr(random.int(), 'd_dt'))
     self.assertFalse(hasattr(random.int(), 'd_dvec'))
 
-    # Read-only status should NOT be preserved
+    #---------------------------------------------
+    # Read-only status should NOT be preserved      
+    #---------------------------------------------
     N = 10
     random = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(random.readonly)
@@ -98,10 +118,19 @@ class Test_Scalar_int(unittest.TestCase):
     self.assertTrue(random.as_readonly().readonly)
     self.assertFalse(random.as_readonly().int().readonly)
 
+    #-----------------------------------------
     # But int objects are returned as is
+    #-----------------------------------------
     a = Scalar(np.arange(10)).as_readonly()
     self.assertTrue(a.readonly)
     self.assertTrue(a.int().readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

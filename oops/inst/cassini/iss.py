@@ -14,9 +14,14 @@ from oops.inst.cassini.cassini_ import Cassini
 # Standard class methods
 ################################################################################
 
+#===============================================================================
+# from_file
+#===============================================================================
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, **parameters):
-    """A general, static method to return a Snapshot object based on a given
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A general, static method to return a Snapshot object based on a given
     Cassini ISS image file.
 
     Inputs:
@@ -27,15 +32,19 @@ def from_file(filespec, fast_distortion=True,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     ISS.initialize()    # Define everything the first time through; use defaults
                         # unless initialize() is called explicitly.
 
+    #------------------------------------------------
     # Load the VICAR file
+    #------------------------------------------------
     vic = vicar.VicarImage.from_file(filespec)
     vicar_dict = vic.as_dict()
 
+    #------------------------------------------------
     # Get key information from the header
+    #------------------------------------------------
     tstart = julian.tdb_from_tai(julian.tai_from_iso(vic["START_TIME"]))
     texp = max(1.e-3, vicar_dict["EXPOSURE_DURATION"]) / 1000.
     mode = vicar_dict["INSTRUMENT_MODE_ID"]
@@ -59,11 +68,15 @@ def from_file(filespec, fast_distortion=True,
     elif vicar_dict["GAIN_MODE_ID"][:2] == "12":
         gain_mode = 3
 
+    #------------------------------------------------
     # Make sure the SPICE kernels are loaded
+    #------------------------------------------------
     Cassini.load_cks( tstart, tstart + texp)
     Cassini.load_spks(tstart, tstart + texp)
 
+    #------------------------------------------------
     # Create a Snapshot
+    #------------------------------------------------
     result = oops.obs.Snapshot(("v","u"), tstart, texp,
                                ISS.fovs[camera,mode, fast_distortion],
                                "CASSINI", "CASSINI_ISS_" + camera,
@@ -83,23 +96,33 @@ def from_file(filespec, fast_distortion=True,
     result.insert_subfield('basename', os.path.basename(filespec))
 
     return result
+#===============================================================================
 
-################################################################################
 
+
+#===============================================================================
+# from_index
+#===============================================================================
 def from_index(filespec, **parameters):
-    """A static method to return a list of Snapshot objects, one for each row
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A static method to return a list of Snapshot objects, one for each row
     in an ISS index file. The filespec refers to the label of the index file.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     ISS.initialize()    # Define everything the first time through
 
+    #------------------------------------------------
     # Read the index file
+    #------------------------------------------------
     COLUMNS = []        # Return all columns
     TIMES = ["START_TIME"]
     table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
+    #------------------------------------------------
     # Create a list of Snapshot objects
+    #------------------------------------------------
     snapshots = []
     for row_dict in row_dicts:
 
@@ -130,7 +153,9 @@ def from_index(filespec, **parameters):
 
         snapshots.append(item)
 
+    #------------------------------------------------
     # Make sure all the SPICE kernels are loaded
+    #------------------------------------------------
     tdb0 = row_dicts[ 0]["START_TIME"]
     tdb1 = row_dicts[-1]["START_TIME"]
 
@@ -138,13 +163,19 @@ def from_index(filespec, **parameters):
     Cassini.load_spks(tdb0, tdb1)
 
     return snapshots
+#===============================================================================
 
-################################################################################
 
+
+#===============================================================================
+# initialize
+#===============================================================================
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
-    """Initialize key information about the ISS instrument.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Initialize key information about the ISS instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
@@ -165,24 +196,33 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     ISS.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
+#===============================================================================
 
-################################################################################
 
+
+#*******************************************************************************
+# ISS class
+#*******************************************************************************
 class ISS(object):
-    """A instance-free class to hold Cassini ISS instrument parameters."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A instance-free class to hold Cassini ISS instrument parameters.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     instrument_kernel = None
     fovs = {}
     initialized = False
 
+    #--------------------------------------------------------------------------
     # Create a master version of the NAC and WAC distortion models from
     #   Owen Jr., W.M., 2003. Cassini ISS Geometric Calibration of April 2003.
     #   JPL IOM 312.E-2003.
     # These polynomials convert from X,Y (radians) to U,V (pixels).
+    #--------------------------------------------------------------------------
 
     NAC_F = 2002.703    # mm
     NAC_E2 = 8.28e-6    # / mm2
@@ -224,7 +264,9 @@ class ISS(object):
     WAC_COEFF[0,2,1] = WAC_KY*WAC_E5 * WAC_F**2
     WAC_COEFF[1,1,1] = WAC_KY*WAC_E6 * WAC_F**2
 
+    #---------------------------------------------------------------------
     # For testing the numerical inverse fitting
+    #---------------------------------------------------------------------
 #    WAC_COEFF = np.zeros((4,4,2))
 #    WAC_COEFF[0,1,0] = 1.5
 #    WAC_COEFF[1,0,0] = 0.5
@@ -234,6 +276,7 @@ class ISS(object):
     DISTORTION_COEFF_XY_TO_UV = {'NAC': NAC_COEFF,
                                  'WAC': WAC_COEFF}
 
+    #---------------------------------------------------------------------
     # Create a master version of the inverse distortion model.
     # These coefficients were computed by numerically solving the above
     # polynomials.
@@ -250,6 +293,7 @@ class ISS(object):
     #   Y DIFF MIN MAX -3.92109405705e-07 3.98905653939e-07
     #   U DIFF MIN MAX -0.0535697887647 0.000916852346108
     #   V DIFF MIN MAX -0.0182888189072 0.0187174796013
+    #---------------------------------------------------------------------
 
     NAC_INV_COEFF = np.zeros((4,4,2))
     NAC_INV_COEFF[:,:,0] = [[ -1.14799845e-10,  7.80494024e-14,  1.73312704e-15, -5.95242349e-19],
@@ -271,7 +315,9 @@ class ISS(object):
                             [  1.35389219e-14, -5.11900149e-13,  0.00000000e+00,  0.00000000e+00],
                             [  7.39668979e-19,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
 
+    #---------------------------------------------
     # For testing the numerical inverse fitting
+    #---------------------------------------------
 #    WAC_INV_COEFF[:,:,0] = [[  1.14377216e-09,  5.71428571e-01, -5.17435487e-16,  1.39385624e-17],
 #                            [ -2.85714286e-01, -3.18326095e-14, -1.04402502e-17,  0.00000000e+00],
 #                            [ -6.02467295e-14, -1.36440914e-16,  0.00000000e+00,  0.00000000e+00],
@@ -284,15 +330,17 @@ class ISS(object):
     DISTORTION_COEFF_UV_TO_XY = {'NAC': NAC_INV_COEFF,
                                  'WAC': WAC_INV_COEFF}
 
-    ######################################################################
 
-
-
+    #===========================================================================
+    # initialize
+    #===========================================================================
     @staticmethod
     def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
-        """Initialize key information about the ISS instrument; fill in key
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Initialize key information about the ISS instrument; fill in key
         information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
@@ -315,8 +363,11 @@ class ISS(object):
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #-----------------------------------
         # Quick exit after first call
+        #-----------------------------------
         if ISS.initialized: return
 
         Cassini.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
@@ -324,14 +375,20 @@ class ISS(object):
                            mst_pck=mst_pck, irregulars=irregulars)
         Cassini.load_instruments(asof=asof)
 
+        #-----------------------------------
         # Load the instrument kernel
+        #-----------------------------------
         ISS.instrument_kernel = Cassini.spice_instrument_kernel("ISS")[0]
 
+        #--------------------------------------------
         # Construct a Polynomial FOV for each camera
+        #--------------------------------------------
         for detector in ["NAC", "WAC"]:
             info = ISS.instrument_kernel["INS"]["CASSINI_ISS_" + detector]
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Full field of view
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             lines = info["PIXEL_LINES"]
             samples = info["PIXEL_SAMPLES"]
 
@@ -342,7 +399,9 @@ class ISS(object):
             uscale = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
             vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Display directions: [u,v] = [right,down]
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             full_fov = oops.fov.Polynomial((samples,lines),
                                            coefft_uv_from_xy=
                                    ISS.DISTORTION_COEFF_XY_TO_UV[detector],
@@ -354,7 +413,9 @@ class ISS(object):
                                    ISS.DISTORTION_COEFF_UV_TO_XY[detector])
             full_fov_none = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Load the dictionary, include the subsampling modes
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - -
             ISS.fovs[detector, "FULL", False] = full_fov
             ISS.fovs[detector, "SUM2", False] = oops.fov.Subsampled(full_fov, 2)
             ISS.fovs[detector, "SUM4", False] = oops.fov.Subsampled(full_fov, 4)
@@ -369,9 +430,11 @@ class ISS(object):
             ISS.fovs[detector, "SUM2"] = oops.fov.Subsampled(full_fov_none, 2)
             ISS.fovs[detector, "SUM4"] = oops.fov.Subsampled(full_fov_none, 4)
 
+        #---------------------------------------------------
         # Construct a SpiceFrame for each camera
-        # Deal with the fact that the instrument's internal coordinate system is
-        # rotated 180 degrees
+        # Deal with the fact that the instrument's internal
+        # coordinate  system is rotated 180 degrees
+        #---------------------------------------------------
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
         nac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
                                             id="CASSINI_ISS_NAC_FLIPPED")
@@ -381,7 +444,9 @@ class ISS(object):
                                        id="CASSINI_ISS_NAC")
 
         if offset_wac:
+            #- - - - - - - - - - - - - - - - - - - - -
             # Apply offset for WAC relative to NAC
+            #- - - - - - - - - - - - - - - - - - - - -
             info = ISS.instrument_kernel["INS"]["CASSINI_ISS_NAC"]
             xfov = info["FOV_REF_ANGLE"]
             yfov = info["FOV_CROSS_ANGLE"]
@@ -391,7 +456,9 @@ class ISS(object):
             xpixel = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
             ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # This is Rob's determination of WAC - NAC in units of NAC pixels
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             xshift = -7. * xpixel
             yshift = 4.4 * ypixel
             wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
@@ -403,17 +470,30 @@ class ISS(object):
                                            id="CASSINI_ISS_WAC")
 
         ISS.initialized = True
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # reset
+    #===========================================================================
     @staticmethod
     def reset():
-        """Resets the internal Cassini ISS parameters. Can be useful for
-        debugging."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Resets the internal Cassini ISS parameters. Can be useful for
+        debugging.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         ISS.instrument_kernel = None
         ISS.fovs = {}
         ISS.initialized = False
 
         Cassini.reset()
+    #===========================================================================
+
+
+#*******************************************************************************
 
 ################################################################################
 # UNIT TESTS

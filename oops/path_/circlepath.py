@@ -9,18 +9,28 @@ from oops.event        import Event
 from oops.path_.path   import Path
 from oops.frame_.frame import Frame
 
+#*******************************************************************************
+# CirclePath
+#*******************************************************************************
 class CirclePath(Path):
-    """A path describing uniform circular motion about another path.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A path describing uniform circular motion about another path.
 
     The orientation of the circle is defined by the z-axis of the given
     frame.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['radius', 'lon', 'rate', 'epoch', 'origin', 'frame',
                     'path_id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, radius, lon, rate, epoch, origin, frame=None, id=None):
-        """Constructor for a CirclePath.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a CirclePath.
 
         Input:
             radius      radius of the path, km.
@@ -40,14 +50,19 @@ class CirclePath(Path):
         Note: The shape of the Path object returned is defined by broadcasting
         together the shapes of all the orbital elements plus the epoch.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------
         # Interpret the elements
+        #----------------------------
         self.epoch  = Scalar.as_scalar(epoch)
         self.radius = Scalar.as_scalar(radius)
         self.lon    = Scalar.as_scalar(lon)
         self.rate   = Scalar.as_scalar(rate)
 
+        #-------------------------
         # Required attributes
+        #-------------------------
         self.path_id = id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
@@ -57,13 +72,21 @@ class CirclePath(Path):
                                               self.origin.shape,
                                               self.frame.shape)
 
+        #------------------------------------------------------------
         # Update waypoint and path_id; register only if necessary
+        #------------------------------------------------------------
         self.register()
+    #===========================================================================
 
-    ########################################
 
+
+    #===========================================================================
+    # event_at_time
+    #===========================================================================
     def event_at_time(self, time, quick=False):
-        """Return an Event corresponding to a specified time on this path.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return an Event corresponding to a specified time on this path.
 
         Input:
             time    a time Scalar at which to evaluate the path.
@@ -71,7 +94,7 @@ class CirclePath(Path):
         Return:     an Event object containing (at least) the time, position
                     and velocity on the path.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lon = self.lon + self.rate * (Scalar.as_scalar(time) - self.epoch)
         r_cos_lon = self.radius * lon.cos()
         r_sin_lon = self.radius * lon.sin()
@@ -81,6 +104,12 @@ class CirclePath(Path):
                                     r_cos_lon * self.rate, 0.)
 
         return Event(time, (pos,vel), self.origin, self.frame)
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
 
 ################################################################################
 # UNIT TESTS
@@ -88,13 +117,24 @@ class CirclePath(Path):
 
 import unittest
 
+#*******************************************************************************
+# Test_CirclePath
+#*******************************************************************************
 class Test_CirclePath(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         # Note: Unit testing is performed in surface/orbitplane.py
 
         pass
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

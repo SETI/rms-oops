@@ -8,22 +8,34 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_sign
+#*******************************************************************************
 class Test_Scalar_sign(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #-------------------------
+    # Individual values           
+    #-------------------------
     self.assertEqual(Scalar(1.25).sign(), 1.)
     self.assertEqual(type(Scalar(1.25).sign()), Scalar)
 
     self.assertEqual(Scalar(1).sign(), np.sign(1.))
     self.assertEqual(Scalar(0).sign(), 0.)
 
-    # Multiple values
+    #---------------------
+    # Multiple values      
+    #---------------------
     self.assertEqual(Scalar((-1,0,1)).sign(), np.sign((-1,0,1)))
     self.assertEqual(type(Scalar((-1,0,1)).sign()), Scalar)
 
-    # Arrays
+    #--------------
+    # Arrays       
+    #--------------
     N = 1000
     x = Scalar(np.random.randn(N))
     y = x.sign()
@@ -33,7 +45,9 @@ class Test_Scalar_sign(unittest.TestCase):
     for i in range(N-1):
         self.assertEqual(y[i:i+2], np.sign(x.values[i:i+2]))
 
-    # Test valid units
+    #-----------------------
+    # Test valid units    
+    #-----------------------
     values = np.random.randn(10)
     x = Scalar(values, units=Units.KM)
     self.assertEqual(x.sign(), np.sign(values))
@@ -50,19 +64,25 @@ class Test_Scalar_sign(unittest.TestCase):
     x = Scalar(values, units=Units.UNITLESS)
     self.assertEqual(x.sign(), np.sign(values))
 
-    # Units should be removed
+    #-----------------------------
+    # Units should be removed      
+    #-----------------------------
     values = np.random.randn(10)
     x = Scalar(values, units=Units.CM)
     self.assertTrue(x.sign().units is None)
 
-    # Masks
+    #-----------
+    # Masks    
+    #-----------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     y = x.sign()
     self.assertTrue(np.all(y.mask[x.mask]))
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
-    # Derivatives are removed
+    #------------------------------
+    # Derivatives are removed       
+    #------------------------------
     N = 100
     x = Scalar(np.random.randn(N))
     x.insert_deriv('t', Scalar(np.random.randn(N) * 10.))
@@ -78,13 +98,22 @@ class Test_Scalar_sign(unittest.TestCase):
     self.assertFalse(hasattr(x.sign(), 'd_dt'))
     self.assertFalse(hasattr(x.sign(), 'd_dvec'))
 
-    # Read-only status should NOT be preserved
+    #-----------------------------------------------
+    # Read-only status should NOT be preserved    
+    #-----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N))
     self.assertFalse(x.readonly)
     self.assertFalse(x.sign().readonly)
     self.assertTrue(x.as_readonly().readonly)
     self.assertFalse(x.as_readonly().sign().readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

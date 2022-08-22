@@ -8,22 +8,34 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
+#*******************************************************************************
+# Test_Scalar_cos
+#*******************************************************************************
 class Test_Scalar_cos(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
-    # Individual values
+    #-----------------------
+    # Individual values     
+    #-----------------------
     self.assertEqual(Scalar(1.25).cos(), np.cos(1.25))
     self.assertEqual(type(Scalar(1.25).cos()), Scalar)
 
     self.assertEqual(Scalar(1).cos(), np.cos(1.))
     self.assertEqual(Scalar(0).cos(), 1.)
 
-    # Multiple values
+    #---------------------
+    # Multiple values      
+    #---------------------
     self.assertEqual(Scalar((-1,0,1)).cos(), np.cos((-1,0,1)))
     self.assertEqual(type(Scalar((-1,0,1)).cos()), Scalar)
 
-    # Arrays
+    #---------------
+    # Arrays    
+    #---------------
     N = 1000
     values = np.random.randn(N) * 10.
     angles = Scalar(values)
@@ -34,7 +46,9 @@ class Test_Scalar_cos(unittest.TestCase):
     for i in range(N-1):
         self.assertEqual(funcvals[i:i+2], np.cos(values[i:i+2]))
 
-    # Test valid units
+    #---------------------
+    # Test valid units      
+    #---------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
     self.assertRaises(ValueError, Scalar.cos, random)
@@ -54,19 +68,25 @@ class Test_Scalar_cos(unittest.TestCase):
     angle = Scalar(3.25, units=Units.UNITLESS)
     self.assertEqual(angle.cos(), np.cos(angle.values)) # units should be OK
 
-    # Units should be removed
+    #-----------------------------
+    # Units should be removed      
+    #-----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.cos().units is None)
 
-    # Masks
+    #----------------
+    # Masks      
+    #----------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     y = x.cos()
     self.assertTrue(np.all(y.mask[x.mask]))
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
-    # Derivatives
+    #----------------
+    # Derivatives     
+    #----------------
     N = 100
     x = Scalar(np.random.randn(N) * 10.)
     x.insert_deriv('t', Scalar(np.random.randn(N) * 10.))
@@ -96,20 +116,31 @@ class Test_Scalar_cos(unittest.TestCase):
             self.assertAlmostEqual(dy_dx[i] * x.d_dvec[i].values[k],
                                    dy_dvec[i].values[k], delta=1.e-5)
 
+    #---------------------------------------------
     # Derivatives should be removed if necessary
+    #---------------------------------------------
     self.assertEqual(x.cos(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertTrue(hasattr(x, 'd_dvec'))
     self.assertFalse(hasattr(x.cos(recursive=False), 'd_dt'))
     self.assertFalse(hasattr(x.cos(recursive=False), 'd_dvec'))
 
+    #---------------------------------------------
     # Read-only status should NOT be preserved
+    #---------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(x.readonly)
     self.assertFalse(x.cos().readonly)
     self.assertTrue(x.as_readonly().readonly)
     self.assertFalse(x.as_readonly().cos().readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

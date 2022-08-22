@@ -4,12 +4,23 @@
 
 from oops.format_.format import Format
 
+#*******************************************************************************
+# HMS
+#*******************************************************************************
 class HMS(Format):
-    """A Format object that handles a numeric value in hour-minute-second format.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
+    A Format object that handles a numeric value in hour-minute-second format.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, hchar="h ", mchar="m ", schar="s", digits=0, pos=" "):
-        """The constructor for an HmsFormat object.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The constructor for an HmsFormat object.
 
         Input:
             hchar       the character or characters that trails the hour/degree
@@ -23,15 +34,23 @@ class HMS(Format):
                         sign of the value is positive. A value of "-" always
                         leads if the value is negative.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.hchar = hchar
         self.mchar = mchar
         self.schar = schar
         self.digits = digits
         self.pos = pos
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # str
+    #===========================================================================
     def str(self, value):
-        """Returns a character string indicating the value of a numeric quantity
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns a character string indicating the value of a numeric quantity
         such as a coordinate.
 
         Example: The default HmsFormat for a value (1 + 2/60. + 3/3600.) is:
@@ -45,7 +64,7 @@ class HMS(Format):
         3.45678/3600. would be:
             "-01:02:03.457"
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         hours = int(value)
         fminutes = (value - hours) * 60.
         minutes = int(fminutes)
@@ -60,9 +79,17 @@ class HMS(Format):
                                      self.mchar, seconds_pad, fseconds,
                                      self.schar)
         return f
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # parse
+    #===========================================================================
     def parse(self, string):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Returns a numeric value derived by parsing a character string."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         hs = string.split(self.hchar)
         hours = int(hs[0])
@@ -85,13 +112,28 @@ class HMS(Format):
         seconds = float(ss)
         time = hours + minutes / 60. + seconds / 3600.
         return time
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # int_from_component
+    #===========================================================================
     def int_from_component(self, component):
-        """Returns an int for the string, dealing with leading zeroes properly."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Returns an int for the string, dealing with leading zeroes properly.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         s = component
         if len(component) > 1 and component[0] == '0':
             s = component[1:]
         return int(s)
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 # Random note: Be very careful about the leading sign. The most common error in
 # such a routine is to lose the sign if the hours value is zero.
@@ -102,8 +144,14 @@ class HMS(Format):
 
 import unittest
 
+#*******************************************************************************
+# Test_HMS
+#*******************************************************************************
 class Test_HMS(unittest.TestCase):
     
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
         
         t1 = 2.384141
@@ -118,6 +166,11 @@ class Test_HMS(unittest.TestCase):
         self.assertEqual(s2, "  2h 23m 02.907600s")
         t2a = fmt.parse(s2)
         self.assertTrue(t1 == t2a)
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ########################################
 if __name__ == '__main__':

@@ -6,23 +6,33 @@ import numpy as np
 from polymath import *
 from oops.cadence_.cadence import Cadence
 
+#*******************************************************************************
+# ReshapedCadence
+#*******************************************************************************
 class ReshapedCadence(Cadence):
-    """ReshapedCadence is a Cadence that has been reshaped.
-    
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    ReshapedCadence is a Cadence that has been reshaped.
+
     The time steps are defined by another cadence with a different shape.
     This can be used, for example, to convert a 1-D cadence into an N-D cadence.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['cadence', 'shape']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, cadence, shape):
-        """Constructor for a ReshapedCadence.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a ReshapedCadence.
 
         Input:
             cadence     the cadence to re-shape.
             shape       a tuple defining the new shape of the cadence.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.cadence = cadence
         self.shape = tuple(shape)
         self.rank = len(self.shape)
@@ -41,12 +51,21 @@ class ReshapedCadence(Cadence):
         self.oldstride = np.cumproduct((self.oldshape + (1,))[::-1])[-2::-1]
 
         return
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _reshape_tstep
+    #===========================================================================
     @staticmethod
     def _reshape_tstep(tstep, oldshape, oldstride, oldrank,
                               newshape, newstride, newrank):
-        """Perform translations between new and old shapes of the cadence."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Perform translations between new and old shapes of the cadence.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if oldrank == 1:
             tstep = Scalar.as_scalar(tstep)
         else:
@@ -93,24 +112,50 @@ class ReshapedCadence(Cadence):
             returned_tstep.vals[...,-1] += frac
 
         return returned_tstep
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _old_tstep_from_new
+    #===========================================================================
     def _old_tstep_from_new(self, tstep):
-        """Convert tsteps in the new stride to the original stride."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert tsteps in the new stride to the original stride.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return ReshapedCadence._reshape_tstep(tstep,
                                    self.shape, self.stride, self.rank,
                                    self.oldshape, self.oldstride, self.oldrank)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # _new_tstep_from_old
+    #===========================================================================
     def _new_tstep_from_old(self, tstep):
-        """Convert tsteps in the original stride the new stride."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert tsteps in the original stride the new stride.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return ReshapedCadence._reshape_tstep(tstep,
                                    self.oldshape, self.oldstride, self.oldrank,
                                    self.shape, self.stride, self.rank)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_at_tstep
+    #===========================================================================
     def time_at_tstep(self, tstep, mask=True):
-        """Return the time(s) associated with the given time step(s).
-        
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the time(s) associated with the given time step(s).
+
         This method supports non-integer step values.
 
         Input:
@@ -119,14 +164,22 @@ class ReshapedCadence(Cadence):
 
         Return:         a Scalar of times in seconds TDB.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.cadence.time_at_tstep(self._old_tstep_from_new(tstep), mask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_range_at_tstep
+    #===========================================================================
     def time_range_at_tstep(self, tstep, mask=True):
-        """Return the range of time(s) for the given integer time step(s).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -134,12 +187,20 @@ class ReshapedCadence(Cadence):
                         index. It is given in seconds TDB.
             time_max    a Scalar defining the maximum time value.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.cadence.time_range_at_tstep(self._old_tstep_from_new(tstep),
                                                 mask)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # tstep_at_time
+    #===========================================================================
     def tstep_at_time(self, time, mask=True):
-        """Return the time step(s) for given time(s).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the time step(s) for given time(s).
 
         This method supports non-integer time values.
 
@@ -149,11 +210,19 @@ class ReshapedCadence(Cadence):
 
         Return:         a Scalar or Pair of time step indices.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self._new_tstep_from_old(self.cadence.tstep_at_time(time, mask))
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_is_inside
+    #===========================================================================
     def time_is_inside(self, time, inclusive=True):
-        """Return which time(s) fall inside the cadence.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
@@ -164,9 +233,15 @@ class ReshapedCadence(Cadence):
                         sampled by the cadence. A masked time results in a
                         value of False, not a masked Boolean.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.cadence.time_is_inside(time, inclusive)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_shift
+    #===========================================================================
     def time_shift(self, secs):
         """Return a duplicate with all times shifted by given amount."
 
@@ -175,15 +250,27 @@ class ReshapedCadence(Cadence):
         """
 
         return ReshapedCadence(self.cadence.time_shift(secs), self.shape)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_continuous
+    #===========================================================================
     def as_continuous(self):
         """Return a shallow copy forced to be continuous.
-        
+
         For Sequence this is accomplished by forcing the exposure times to
         be equal to the stride for each step.
         """
 
         return ReshapedCadence(self.cadence.as_continuous(), self.shape)
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -191,8 +278,14 @@ class ReshapedCadence(Cadence):
 
 import unittest
 
+#*******************************************************************************
+# Test_ReshapedCadence
+#*******************************************************************************
 class Test_ReshapedCadence(unittest.TestCase):
 
+    #===========================================================================
+    # TEST
+    #===========================================================================
     # A complete test there-and-back of _reshape_tstep()
     def TEST(self, oldshape, newshape, arg):
 
@@ -216,11 +309,17 @@ class Test_ReshapedCadence(unittest.TestCase):
             self.assertTrue(arg2.is_int())
         else:
             self.assertTrue(arg2.is_float())
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.cadence_.metronome import Metronome
-    
+
         self.TEST((10,), (10,), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1))
         self.TEST((10,), (2,5), Scalar(1.5))
@@ -262,7 +361,12 @@ class Test_ReshapedCadence(unittest.TestCase):
         self.assertEqual(new_cadence.time_at_tstep((1,0)), 160.)
         self.assertEqual(new_cadence.time_at_tstep((1,1)), 175.)
         self.assertEqual(new_cadence.time_at_tstep((1,1.5)), 182.5)
-        
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 ########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

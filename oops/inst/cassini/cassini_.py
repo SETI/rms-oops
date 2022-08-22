@@ -39,9 +39,15 @@ oops.spice.load_leap_seconds()
 
 ################################################################################
 
+#*******************************************************************************
+# Cassini class
+#*******************************************************************************
 class Cassini(object):
-    """A instance-free class to hold Cassini-specific parameters."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A instance-free class to hold Cassini-specific parameters.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     START_TIME = "1997-10-01"
     STOP_TIME  = "2017-10-01"
     MONTHS = 240        # 20 years * 12 months/year
@@ -66,11 +72,16 @@ class Cassini(object):
 
     ############################################################################
 
+    #===========================================================================
+    # initialize
+    #===========================================================================
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
-        """Intialize the Cassini mission internals.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Intialize the Cassini mission internals.
 
         After the first call, later calls to this function are ignored.
 
@@ -89,10 +100,12 @@ class Cassini(object):
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if Cassini.initialized: return
 
+        #---------------------------------------------------------
         # Define some important paths and frames
+        #---------------------------------------------------------
         oops.define_solar_system(Cassini.START_TIME, Cassini.STOP_TIME,
                                  asof=asof,
                                  planets=planets,
@@ -105,7 +118,9 @@ class Cassini(object):
 
         spk = spk.upper()
         if spk == 'NONE':
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             # This means no SPK will ever be loaded; handling is manual
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             Cassini.initialize_kernels([], Cassini.SPK_LIST)
             Cassini.SPK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
         else:
@@ -117,7 +132,9 @@ class Cassini(object):
 
         ck = ck.upper()
         if ck == 'NONE':
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             # This means no CK will ever be loaded; handling is manual
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
             Cassini.initialize_kernels([], Cassini.CK_LIST)
             Cassini.CK_LOADED = np.ones(Cassini.MONTHS, dtype="bool")
         else:
@@ -127,18 +144,29 @@ class Cassini(object):
                                              asof=asof)
             Cassini.initialize_kernels(kernels, Cassini.CK_LIST)
 
+        #---------------------------------------------------------
         # Load extra kernels if necessary
+        #---------------------------------------------------------
         if gapfill and ck not in ('PREDICTED', 'NONE'):
             _ = spicedb.furnish_ck(-82, name="CAS-CK-GAPFILL")
 
         spicedb.close_db()
 
         initialized = True
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # reset
+    #===========================================================================
     @staticmethod
     def reset():
-        """Resets the internal parameters. Can be useful for debugging."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Resets the internal parameters. Can be useful for debugging.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Cassini.loaded_instruments = []
 
         Cassini.CK_LOADED = np.zeros(Cassini.MONTHS, dtype="bool")
@@ -150,53 +178,96 @@ class Cassini(object):
         Cassini.SPK_DICT = {}
 
         Cassini.initialized = False
+    #===========================================================================
 
-    ############################################################################
 
+
+    #===========================================================================
+    # load_ck
+    #===========================================================================
     @staticmethod
     def load_ck(t):
-        """Ensure that the C kernels applicable at or near the given time have
-        been furnished. The time can be tai or tdb."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that the C kernels applicable at or near the given time have
+        been furnished. The time can be tai or tdb.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Cassini.load_kernels(t, t, Cassini.CK_LOADED, Cassini.CK_LIST,
                                    Cassini.CK_DICT)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # load_cks
+    #===========================================================================
     @staticmethod
     def load_cks(t0, t1):
-        """Ensure that all the C kernels applicable near or within the time
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that all the C kernels applicable near or within the time
         interval tdb0 to tdb1 have been furnished. The time can be tai or tdb.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Cassini.load_kernels(t0, t1, Cassini.CK_LOADED, Cassini.CK_LIST,
                                      Cassini.CK_DICT)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # load_spk
+    #===========================================================================
     @staticmethod
     def load_spk(t):
-        """Ensure that the SPK kernels applicable at or near the given time have
-        been furnished. The time can be tai or tdb."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that the SPK kernels applicable at or near the given time have
+        been furnished. The time can be tai or tdb.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                    Cassini.SPK_DICT)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # load_spks
+    #===========================================================================
     @staticmethod
     def load_spks(t0, t1):
-        """Ensure that all the SPK kernels applicable near or within the time
-        interval tdb0 to tdb1 have been furnished. The time can be tai or tdb."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Ensure that all the SPK kernels applicable near or within the time
+        interval tdb0 to tdb1 have been furnished. The time can be tai or tdb.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                      Cassini.SPK_DICT)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # load_kernels
+    #===========================================================================
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
 
+        #---------------------------------------------------------
         # Find the range of months needed
+        #---------------------------------------------------------
         m1 = int((t0 - Cassini.TDB0) // Cassini.DTDB)
         m2 = int((t1 - Cassini.TDB0) // Cassini.DTDB) + 1
 
         m1 = max(m1, 0)         # ignore time limits outside mission duration
         m2 = min(m2, Cassini.MONTHS - 1)
 
+        #---------------------------------------------------------
         # Load any months not already loaded
+        #---------------------------------------------------------
         for m in range(m1, m2+1):
           if not loaded[m]:
             for kernel in lists[m]:
@@ -205,22 +276,34 @@ class Cassini(object):
                     spicedb.furnish_kernels([kernel])
                     kernel_dict[filespec] = kernel
                 loaded[m] = True
+    #===========================================================================
+
+
 
     ########################################
     # Initialize the kernel lists
     ########################################
 
+    #===========================================================================
+    # initialize_kernels
+    #===========================================================================
     @staticmethod
     def initialize_kernels(kernels, lists):
-        """After initialization, lists[m] is a the KernelInfo objects needed
-        within the specified month."""
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        After initialization, lists[m] is a the KernelInfo objects needed
+        within the specified month.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         for i in range(Cassini.MONTHS):
             lists[i] = []
 
         for kernel in kernels:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Find the range of months applicable, extended by 12 hours
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             t0 = cspyce.str2et(kernel.start_time) - Cassini.SLOP
             t1 = cspyce.str2et(kernel.stop_time)  + Cassini.SLOP
 
@@ -230,17 +313,27 @@ class Cassini(object):
             m1 = max(m1, 0)     # ignore time limits outside mission duration
             m2 = min(m2, Cassini.MONTHS - 1)
 
+            #- - - - - - - - - - - - - - - - - - - -
             # Add this kernel to each month's list
+            #- - - - - - - - - - - - - - - - - - - -
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
+    #===========================================================================
+
+
 
     ############################################################################
     # Routines for managing the loading other kernels
     ############################################################################
 
+    #===========================================================================
+    # load_instruments
+    #===========================================================================
     @staticmethod
     def load_instruments(instruments=[], asof=None):
-        """Loads the SPICE kernels and defines the basic paths and frames for
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Loads the SPICE kernels and defines the basic paths and frames for
         the Cassini mission. It is generally only be called once.
 
         Input:
@@ -253,31 +346,48 @@ class Cassini(object):
                         are used. Otherwise, the most recent versions are always
                         loaded.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #---------------------------------------------------------
         # Load the default instruments on the first pass
+        #---------------------------------------------------------
         if Cassini.loaded_instruments == []:
             instruments += ["ISS", "VIMS", "CIRS", "UVIS"]
 
+        #---------------------------------------------------------
         # On later calls, return quickly if there's nothing to do
+        #---------------------------------------------------------
         if instruments == []: return
 
+        #---------------------------------------------------------
         # Check the formatting of the "as of" date
+        #---------------------------------------------------------
         if asof is not None:
             (day, sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
+        #---------------------------------------------------------
         # Furnish instruments and frames
+        #---------------------------------------------------------
         spicedb.open_db()
         _ = spicedb.furnish_inst(-82, inst=instruments, asof=asof)
         spicedb.close_db()
+    #===========================================================================
+
+
 
     ############################################################################
     # Routines for managing text kernel information
     ############################################################################
 
+    #===========================================================================
+    # spice_instrument_kernel
+    #===========================================================================
     @staticmethod
     def spice_instrument_kernel(inst, asof=None):
-        """Return a dictionary containing the Instrument Kernel information.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a dictionary containing the Instrument Kernel information.
 
         Also furnishes it for use by the SPICE tools.
 
@@ -292,7 +402,7 @@ class Cassini(object):
                             the dictionary generated by textkernel.from_file()
                             the name of the kernel.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
@@ -303,12 +413,18 @@ class Cassini(object):
         spicedb.close_db()
 
         return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
+    #===========================================================================
 
-    ############################################################################
 
+
+    #===========================================================================
+    # spice_frames_kernel
+    #===========================================================================
     @staticmethod
     def spice_frames_kernel(asof=None):
-        """Return a dictionary containing the Cassini Frames Kernel information.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a dictionary containing the Cassini Frames Kernel information.
 
         Also furnishes the kernels for use by the SPICE tools.
 
@@ -322,7 +438,7 @@ class Cassini(object):
                             the dictionary generated by textkernel.from_file()
                             an ordered list of the names of the kernels
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
@@ -333,14 +449,21 @@ class Cassini(object):
         spicedb.close_db()
 
         return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))
+    #===========================================================================
 
-    ############################################################################
 
+
+    #===========================================================================
+    # used_kernels
+    #===========================================================================
     @staticmethod
     def used_kernels(time, inst, return_all_planets=False):
-        """Return the list of kernels associated with a Cassini observation at
-        a selected range of times."""
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the list of kernels associated with a Cassini observation at
+        a selected range of times.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if return_all_planets:
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,
                       7, 799, 8, 899]
@@ -356,5 +479,10 @@ class Cassini(object):
 
         return spicedb.used_basenames(time=time, inst=inst, sc=-82,
                                       bodies=bodies)
+    #===========================================================================
+
+
+#*******************************************************************************
+
 
 ################################################################################

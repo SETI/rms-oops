@@ -2997,8 +2997,13 @@ FLUX_DENSITY_STIS = tab.Tabulation(STIS_WAVELENGTH_MICRON,
 SOLAR_FLUX_MODELS = {"COLINA": FLUX_DENSITY_COLINA,
                      "STIS": FLUX_DENSITY_STIS}
 
+#===============================================================================
+# flux_density
+#===============================================================================
 def flux_density(model="STIS"):
-    """Returns the solar flux density at 1 AU in units of Watts per square meter
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Returns the solar flux density at 1 AU in units of Watts per square meter
     per micron of wavelength.
 
     Input:
@@ -3008,15 +3013,23 @@ def flux_density(model="STIS"):
     Return:             a Tabulation of flux density (W/m^2/micron) vs.
                         wavelength (micron) at 1 AU.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     return SOLAR_FLUX_MODELS[model]
+#===============================================================================
+
+
 
 ################################################################################
 # Means over filter bandpasses
 ################################################################################
 
+#===============================================================================
+# bandpass_flux_density
+#===============================================================================
 def bandpass_flux_density(bandpass, sun_range=1., model="STIS"):
-    """Returns the solar flux density averaged over a filter bandpass.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Returns the solar flux density averaged over a filter bandpass.
 
     Input:
         bandpass        a Tabulation of a filter bandpass.
@@ -3028,19 +3041,34 @@ def bandpass_flux_density(bandpass, sun_range=1., model="STIS"):
     Return:             the mean solar flux density within the filter bandpass,
                         in units of W/m^2/micron.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #-----------------------------------------------
     # Multiply the bandpass and the solar spectrum
+    #-----------------------------------------------
     product = bandpass * flux_density(model)
 
+    #--------------------------------------------------------------------
     # Resample the bandpass at the same wavelengths for a more reliable
     # normalization
+    #--------------------------------------------------------------------
     bandpass = bandpass.resample(product.x)
 
+    #-----------------------------------
     # Return the ratio of integrals
+    #-----------------------------------
     return product.integral() / (bandpass.integral() * sun_range**2)
+#===============================================================================
 
+
+
+#===============================================================================
+# mean_flux_density
+#===============================================================================
 def mean_flux_density(center, width, sun_range=1., model="STIS"):
-    """Returns the solar flux density averaged over the bandpass of a "boxcar"
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Returns the solar flux density averaged over the bandpass of a "boxcar"
     filter, given its center and full width.
 
     Input:
@@ -3054,15 +3082,28 @@ def mean_flux_density(center, width, sun_range=1., model="STIS"):
     Return:             the mean solar flux density within the filter bandpass,
                         in units of W/m^2/micron.
     """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    #-------------------------------------
     # Create a boxcar filter Tabulation
+    #-------------------------------------
     bandpass = tab.Tabulation((center - width/2., center + width/2.), (1.,1.))
 
+    #-----------------------------------
     # Return the mean over the filter
+    #-----------------------------------
     return bandpass_flux_density(bandpass, sun_range, model)
+#===============================================================================
 
+
+
+#===============================================================================
+# bandpass_f
+#===============================================================================
 def bandpass_f(bandpass, sun_range=1., model="STIS"):
-    """Returns the solar F averaged over a filter bandpass. F is defined such
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Returns the solar F averaged over a filter bandpass. F is defined such
     that pi*F is the solar flux density.
 
     Input:
@@ -3077,11 +3118,19 @@ def bandpass_f(bandpass, sun_range=1., model="STIS"):
     Return:             the mean solar flux density within the filter bandpass,
                         in units of W/m^2/micron.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     return bandpass_flux_density(bandpass, sun_range, model) / np.pi
+#===============================================================================
 
+
+
+#===============================================================================
+# mean_f
+#===============================================================================
 def mean_f(center, width, sun_range=1., model="STIS"):
-    """Returns the solar F averaged over the bandpass of a "boxcar" filter,
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    Returns the solar F averaged over the bandpass of a "boxcar" filter,
     given its center and full width. F is defined such that pi*F is the solar
     flux density.
 
@@ -3096,7 +3145,8 @@ def mean_f(center, width, sun_range=1., model="STIS"):
     Return:             the mean solar flux density within the filter bandpass,
                         in units of W/m^2/micron.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     return mean_flux_density(center, width, sun_range, model) / np.pi
+#===============================================================================
 
 ################################################################################

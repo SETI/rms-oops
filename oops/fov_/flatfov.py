@@ -7,14 +7,22 @@ from polymath import *
 
 from oops.fov_.fov import FOV
 
+#*******************************************************************************
+# FlatFOV FOV class
+#*******************************************************************************
 class FlatFOV(FOV):
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """Flat is a subclass of FOV that describes a field of view that is free of
     distortion, implementing an exact pinhole camera model.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['uv_scale', 'uv_shape', 'uv_los', 'uv_area']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, uv_scale, uv_shape, uv_los=None, uv_area=None):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Constructor for a FlatFOV.
 
         The U-axis is assumed to align with X and the V-axis aligns with Y.
@@ -41,7 +49,7 @@ class FlatFOV(FOV):
                         of a pixel. If not provided, the area is calculated
                         based on the area of the central pixel.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.uv_scale = Pair.as_pair(uv_scale).as_float().as_readonly()
         self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
 
@@ -61,26 +69,58 @@ class FlatFOV(FOV):
                              [0.,   scale.vals[1]]], drank=1).as_readonly()
         self.duv_dxy = Pair([[1/scale.vals[0], 0.],
                              [0., 1/scale.vals[1]]], drank=1).as_readonly()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_from_xy
+    #===========================================================================
     def uv_from_xy(self, xy_pair, derivs=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (x,y) camera frame coordinates given FOV coordinates (u,v).
-
-        If derivs is True, then any derivatives in (u,v) get propagated into
-        the (x,y) returned.
+        
+        Input:
+            uv       Pairs of arbitrary shape to be transformed from FOV
+                     coordinates.
+            derivs   If True, any derivatives in (u,v) get propagated into
+                     the returned (x,y).
+    
+        Return:      xy
+            xy       Pairs of same shape as uv giving the transformed
+                     FOV coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         return xy_pair.element_div(self.uv_scale) + self.uv_los
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # xy_from_uv
+    #===========================================================================
     def xy_from_uv(self, uv_pair, derivs=False):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Return (u,v) FOV coordinates given (x,y) camera frame coordinates.
-
-        If derivs is True, then any derivatives in (x,y) get propagated into
-        the (u,v) returned.
+        
+        Input:
+            xy       Pairs of arbitrary shape to be transformed to FOV
+                     coordinates.
+            derivs   If True, any derivatives in (x,y) get propagated into
+                     the returned (u,v).
+    
+        Return:      uv
+            uv       Pairs of same shape as xy giving the computed
+                     FOV coordinates.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         return (uv_pair - self.uv_los).element_mul(self.uv_scale)
+    #===========================================================================
+
+
+#*******************************************************************************
 
 ################################################################################
 # UNIT TESTS

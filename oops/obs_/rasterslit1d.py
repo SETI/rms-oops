@@ -5,62 +5,95 @@
 import numpy as np
 from polymath import *
 
-from oops.obs_.observation import Observation
-from oops.path_.path       import Path
-from oops.frame_.frame     import Frame
-from oops.event            import Event
+from oops.obs_.observation   import Observation
+from oops.cadence_.cadence   import Cadence
+from oops.path_.path         import Path
+from oops.frame_.frame       import Frame
+from oops.event              import Event
 
+#*******************************************************************************
+# RasterSlit1D
+#*******************************************************************************
 class RasterSlit1D(Observation):
-    """A RasterSlit1D is subclass of Observation consisting of a 1-D observation
-    in which the one dimension is constructed by sweeping a single pixel along a
-    slit. The FOV describes the single pixel; the slit is simulated by rotating
-    the camera.
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-
+    A RasterSlit1D is subclass of Observation consisting of a 1-D observation
+    in which the one dimension is constructed by sweeping a single pixel along a
+    slit. The FOV describes the slit.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['axes', 'det_size', 'cadence', 'fov', 'path', 'frame',
                     '**subfields']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, axes, det_size, cadence, fov, path, frame, **subfields):
-        """Constructor for a RasterSlit observation.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a RasterSlit observation.
 
         Input:
+
             axes        a list or tuple of strings, with one value for each axis
                         in the associated data array. A value of 'ut' should
                         appear at the location of the array's u-axis if any;
                         'vt' should appear at the location of the array's v-axis
                         if any. Only one of 'ut' or 'vt' can appear.
+
             det_size    the size of the detector in FOV units parallel to the
                         slit. It will be < 1 if there are gaps between the
                         samples, or > 1 if the detector moves by less than its
                         full size within the fast time step.
 
-            cadence     a 1-D Cadence object defining the timing of each
-                        consecutive measurement along the slit.
+            cadence     a 1-D Cadence object defining the start time and
+                        duration of each consecutive measurement. Alternatively,
+                        a tuple or dictionary providing the input arguments to
+                        the constructor Metronome.for_array1d() (except for the
+                        number of steps, which is defined by the FOV):
+                            (tstart, texp, [interstep_delay])
+
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
                         between spatial coordinates (u,v) and instrument
                         coordinates (x,y). For a RasterSlit object, one of the
                         axes of the FOV must have length 1.
+
             path        the path waypoint co-located with the instrument.
+
             frame       the wayframe of a coordinate frame fixed to the optics
                         of the instrument. This frame should have its Z-axis
                         pointing outward near the center of the line of sight,
                         with the X-axis pointing rightward and the y-axis
                         pointing downward.
+
             subfields   a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        self.cadence = cadence
-        self.fov = fov
+        #--------------------------------------------------
+        # Basic properties
+        #--------------------------------------------------
         self.path = Path.as_waypoint(path)
         self.frame = Frame.as_wayframe(frame)
 
-        assert len(self.cadence.shape) == 1
+        #--------------------------------------------------
+        # FOV
+        #--------------------------------------------------
+        self.fov = fov
+        fov_uv_shape = tuple(self.fov.uv_shape.vals)
 
+        self.det_size = det_size
+        self._slit_is_discontinuous = (self.det_size < 1)
+
+        #--------------------------------------------------
+        # Axes / Shape / Size
+        #--------------------------------------------------
         self.axes = list(axes)
         assert (('ut' in self.axes and 'vt' not in self.axes) or
                 ('vt' in self.axes and 'ut' not in self.axes))
+        assert 't' not in self.axes
 
         self.shape = len(axes) * [0]
 
@@ -68,43 +101,62 @@ class RasterSlit1D(Observation):
             self.u_axis = self.axes.index('ut')
             self.v_axis = -1
             self.t_axis = self.u_axis
-            self.along_slit_uv_index = 0
-            self.cross_slit_uv_index = 1
-            self.shape[self.u_axis] = self.fov.uv_shape.vals[0]
-            self.along_slit_shape = self.shape[self.u_axis]
+            self.shape[self.u_axis] = fov_uv_shape[0]
+            self.uv_shape = (fov_uv_shape[0], 1)
+            self._along_slit_uv_index = 0
+            self._cross_slit_uv_index = 1
         else:
             self.u_axis = -1
             self.v_axis = self.axes.index('vt')
             self.t_axis = self.v_axis
-            self.along_slit_uv_index = 1
-            self.cross_slit_uv_index = 0
-            self.shape[self.v_axis] = self.fov.uv_shape.vals[1]
-            self.along_slit_shape = self.shape[self.v_axis]
+            self.shape[self.v_axis] = fov_uv_shape[1]
+            self.uv_shape = (1, fov_uv_shape[1])
+            self._along_slit_uv_index = 1
+            self._cross_slit_uv_index = 0
 
         self.swap_uv = False
 
-        self.det_size = det_size
-        self.slit_is_discontinuous = (self.det_size != 1)
+        self._along_slit_size = fov_uv_shape[self._along_slit_uv_index]
+        assert fov_uv_shape[self._cross_slit_uv_index] == 1
 
-        self.uv_shape = self.fov.uv_shape.vals
-        assert self.fov.uv_shape.vals[self.cross_slit_uv_index] == 1
+        #--------------------------------------------------
+        # Cadence
+        #--------------------------------------------------
+        samples = self._along_slit_size
 
+        if isinstance(cadence, (tuple, list)):
+            self.cadence = Metronome.for_array1d(samples, *cadence)
+        elif isinstance(cadence, dict):
+            self.cadence = Metronome.for_array1d(samples, **cadence)
+        elif isinstance(cadence, Cadence):
+            self.cadence = cadence
+            assert self.cadence.shape == (samples,)
+        else:
+            raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
+
+        #--------------------------------------------------
+        # Timing
+        #--------------------------------------------------
         self.time = self.cadence.time
         self.midtime = self.cadence.midtime
 
-        self.scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
-        self.scalar_midtime = Scalar(self.midtime)
-
-        duv_dt_basis_vals = np.zeros(2)
-        duv_dt_basis_vals[self.along_slit_uv_index] = 1.
-        self.duv_dt_basis = Pair(duv_dt_basis_vals)
-
+        #--------------------------------------------------
+        # Optional subfields
+        #--------------------------------------------------
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uvt
+    #===========================================================================
     def uvt(self, indices, fovmask=False):
-        """Return coordinates (u,v) and time t for indices into the data array.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return coordinates (u,v) and time t for indices into the data array.
 
         This method supports non-integer index values.
 
@@ -118,36 +170,50 @@ class RasterSlit1D(Observation):
             time        a Scalar defining the time in seconds TDB associated
                         with the array indices.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         indices = Vector.as_vector(indices)
         slit_coord = indices.to_scalar(self.t_axis)
 
+        #-----------------------------------
         # Handle discontinuous detectors
-        if self.slit_is_discontinuous:
+        #-----------------------------------
+        if self._slit_is_discontinuous:
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Identify indices at exact upper limit; treat these as inside
-            at_upper_limit = (slit_coord == self.along_slit_shape)
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            at_upper_limit = (slit_coord == self._along_slit_size)
 
+            #- - - - - - - - - - - - - - - - - - - - - - - -
             # Map continuous index to discontinuous (u,v)
+            #- - - - - - - - - - - - - - - - - - - - - - - -
             slit_int = slit_coord.int()
             slit_coord = slit_int + (slit_coord - slit_int) * self.det_size
 
+            #- - - - - - - - - - - - - - - - -
             # Adjust values at upper limit
+            #- - - - - - - - - - - - - - - - -
             slit_coord = slit_coord.mask_where(at_upper_limit,
-                            replace = self.along_slit_shape + self.det_size - 1,
+                            replace = self._along_slit_size + self.det_size - 1,
                             remask = False)
 
+        #----------------------
         # Create (u,v) Pair
+        #----------------------
         uv_vals = np.empty(indices.shape + (2,))
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_index] = 0.5
+        uv_vals[..., self._along_slit_uv_index] = slit_coord.vals
+        uv_vals[..., self._cross_slit_uv_index] = 0.5
         uv = Pair(uv_vals, indices.mask)
 
+        #-----------------------
         # Create time Scalar
+        #-----------------------
         tstep = indices.to_scalar(self.t_axis)
         time = self.cadence.time_at_tstep(tstep, mask=fovmask)
 
+        #-----------------------------
         # Apply mask if necessary
+        #-----------------------------
         if fovmask:
             is_outside = self.uv_is_outside(uv, inclusive=True)
             if np.any(is_outside):
@@ -155,9 +221,17 @@ class RasterSlit1D(Observation):
                 time = time.mask_where(is_outside)
 
         return (uv, time)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uvt_range
+    #===========================================================================
     def uvt_range(self, indices, fovmask=False):
-        """Return ranges of coordinates and time for integer array indices.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return ranges of coordinates and time for integer array indices.
 
         Input:
             indices     a Vector (or subclass) of integer array indices.
@@ -171,13 +245,13 @@ class RasterSlit1D(Observation):
                         pixel. It is given in seconds TDB.
             time_max    a Scalar defining the maximum time value.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         indices = Vector.as_vector(indices).as_int()
         slit_coord = indices.to_scalar(self.t_axis)
 
         uv_vals = np.empty(indices.shape + (2,), dtype='int')
-        uv_vals[..., self.along_slit_uv_index] = slit_coord.vals
-        uv_vals[..., self.cross_slit_uv_index] = 0
+        uv_vals[..., self._along_slit_uv_index] = slit_coord.vals
+        uv_vals[..., self._cross_slit_uv_index] = 0
         uv_min = Pair(uv_vals, indices.mask)
         uv_max = uv_min + Pair.ONES
 
@@ -194,9 +268,17 @@ class RasterSlit1D(Observation):
                 time_max = time_max.mask_where(is_outside)
 
         return (uv_min, uv_max, time_min, time_max)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # uv_range_at_tstep
+    #===========================================================================
     def uv_range_at_tstep(self, *tstep):
-        """Return a tuple defining the range of (u,v) coordinates active at a
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a tuple defining the range of (u,v) coordinates active at a
         particular time step.
 
         Input:
@@ -209,11 +291,19 @@ class RasterSlit1D(Observation):
             uv_min      a Pair defining the maximum values of (u,v) coordinates
                         active at this time step (exclusive).
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return (Pair.ZEROS, Pair.ONES)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # times_at_uv
+    #===========================================================================
     def times_at_uv(self, uv_pair, fovmask=False):
-        """Return start and stop times of the specified spatial pixel (u,v).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return start and stop times of the specified spatial pixel (u,v).
 
         Input:
             uv_pair     a Pair of spatial (u,v) coordinates in and observation's
@@ -224,29 +314,22 @@ class RasterSlit1D(Observation):
         Return:         a tuple containing Scalars of the start time and stop
                         time of each (u,v) pair, as seconds TDB.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         uv_pair = Pair.as_pair(uv_pair).as_int()
-        tstep = uv_pair.to_scalar(self.along_slit_uv_index)
+        tstep = uv_pair.to_scalar(self._along_slit_uv_index)
 
         return self.cadence.time_range_at_tstep(tstep, mask=fovmask)
+    #===========================================================================
 
-    def sweep_duv_dt(self, uv_pair):
-        """Return the mean local sweep speed of the instrument along (u,v) axes.
 
-        Input:
-            uv_pair     a Pair of spatial indices (u,v).
 
-        Return:         a Pair containing the local sweep speed in units of
-                        pixels per second in the (u,v) directions.
-        """
-
-        uv_pair = Pair.as_pair(uv_pair)
-        tstep = uv_pair.to_scalar(self.along_slit_uv_index)
-
-        return self.duv_dt_basis / self.cadence.tstride_at_tstep(tstep)
-
+    #===========================================================================
+    # time_shift
+    #===========================================================================
     def time_shift(self, dtime):
-        """Return a copy of the observation object with a time-shift.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a copy of the observation object with a time-shift.
 
         Input:
             dtime       the time offset to apply to the observation, in units of
@@ -254,7 +337,7 @@ class RasterSlit1D(Observation):
 
         Return:         a (shallow) copy of the object with a new time.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         obs = RasterSlit1D(self.axes, self.det_size,
                            self.cadence.time_shift(dtime),
                            self.fov, self.path, self.frame)
@@ -263,6 +346,12 @@ class RasterSlit1D(Observation):
             obs.insert_subfield(key, self.subfields[key])
 
         return obs
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -270,8 +359,14 @@ class RasterSlit1D(Observation):
 
 import unittest
 
+#*******************************************************************************
+# Test_RasterSlit1D
+#*******************************************************************************
 class Test_RasterSlit1D(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         from oops.cadence_.metronome import Metronome
@@ -284,7 +379,9 @@ class Test_RasterSlit1D(unittest.TestCase):
 
         indices = Pair([(0,0),(10,0),(11,0)])
 
+        #-------------------------------
         # uvt() with fovmask == False
+        #-------------------------------
         (uv, time) = obs.uvt(indices)
 
         self.assertFalse(np.any(uv.mask))
@@ -293,7 +390,9 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertEqual(uv.to_scalar(0), indices.to_scalar(0))
         self.assertEqual(uv.to_scalar(1), 0.5)
 
+        #------------------------------
         # uvt() with fovmask == True
+        #------------------------------
         (uv, time) = obs.uvt(indices, fovmask=True)
 
         self.assertTrue(np.all(uv.mask == np.array(2*[False] + [True])))
@@ -302,13 +401,17 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertEqual(uv[:2].to_scalar(0), indices[:2].to_scalar(0))
         self.assertEqual(uv[:2].to_scalar(1), 0.5)
 
+        #------------------------------------------
         # uvt() with fovmask == True, new indices
+        #------------------------------------------
         (uv, time) = obs.uvt(indices+(0.2,0.9), fovmask=True)
 
         self.assertTrue(np.all(uv.mask == np.array([False] + 2*[True])))
         self.assertTrue(np.all(time.mask == uv.mask))
 
+        #-------------------------------------
         # uvt_range() with fovmask == False
+        #-------------------------------------
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
         self.assertFalse(np.any(uv_min.mask))
@@ -323,7 +426,9 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertEqual(time_min, cadence.tstride * indices.to_scalar(0))
         self.assertEqual(time_max, time_min + 10.)
 
+        #------------------------------------
         # uvt_range() with fovmask == True
+        #------------------------------------
         (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices,
                                                              fovmask=True)
 
@@ -339,7 +444,9 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertEqual(time_min[:1], cadence.tstride*indices.to_scalar(0)[:1])
         self.assertEqual(time_max[:1], time_min[:1] + cadence.texp)
 
+        #--------------------------------------
         # times_at_uv() with fovmask == False
+        #--------------------------------------
         uv = Pair([(0,0),(0,20),(10,0),(10,20),(11,21)])
 
         (time0, time1) = obs.times_at_uv(uv)
@@ -347,7 +454,9 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertEqual(time0, cadence.tstride * uv.to_scalar(0))
         self.assertEqual(time1, time0 + cadence.texp)
 
+        #--------------------------------------
         # times_at_uv() with fovmask == True
+        #--------------------------------------
         (time0, time1) = obs.times_at_uv(uv, fovmask=True)
 
         self.assertTrue(np.all(time0.mask == 4*[False] + [True]))
@@ -356,7 +465,11 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertEqual(time1[:4], time0[:4] + cadence.texp)
 
         ####################################
+
+
+        #----------------------------------------------
         # Alternative axis order ('uslow','vfast')
+        #----------------------------------------------
 
         fov = FlatFOV((0.001,0.001), (1,10))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
@@ -386,7 +499,11 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertEqual(time1, time0 + cadence.texp)
 
         ####################################
+
+
+        #-----------------------------------------------------------
         # Alternative det_size and texp for discontinuous indices
+        #-----------------------------------------------------------
 
         fov = FlatFOV((0.001,0.001), (10,1))
         cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
@@ -419,6 +536,12 @@ class Test_RasterSlit1D(unittest.TestCase):
 
         (uv,t) = obs.uvt(indices, fovmask=True)
         self.assertTrue(np.all(t.mask == np.array(2*[False] + [True])))
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':

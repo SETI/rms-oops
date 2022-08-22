@@ -8,17 +8,37 @@ import unittest
 
 from polymath import Qube, Scalar, Boolean, Units
 
+#*******************************************************************************
+# Test_Qube_all
+#*******************************************************************************
 class Test_Qube_all(unittest.TestCase):
 
+  #=============================================================================
+  # setUp
+  #=============================================================================
   def setUp(self):
     Qube.PREFER_BUILTIN_TYPES = True
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # tearDown
+  #=============================================================================
   def tearDown(self):
     Qube.PREFER_BUILTIN_TYPES = False
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
+    #------------------------
     # Individual values
+    #------------------------
     self.assertEqual(Scalar(0.3).all(), True)
     self.assertEqual(type(Scalar(0.3).all()), bool)
 
@@ -28,7 +48,9 @@ class Test_Qube_all(unittest.TestCase):
     self.assertEqual(Scalar(4, mask=True).all(), Boolean.MASKED)
     self.assertEqual(type(Scalar(4, mask=True).all()), Boolean)
 
-    # Multiple values
+    #------------------------
+    # Multiple values      
+    #------------------------
     self.assertTrue(Scalar((1,2,3)).all() == True)
     self.assertEqual(type(Scalar((1,2,3)).all()), bool)
 
@@ -38,12 +60,16 @@ class Test_Qube_all(unittest.TestCase):
     self.assertEqual(Scalar((1.,2.,3.), True).all(), Boolean.MASKED)
     self.assertEqual(type(Scalar((1.,2.,3.), True).all()), Boolean)
 
-    # Arrays
+    #-------------------------
+    # Arrays          
+    #-------------------------
     N = 400
     x = Scalar(np.random.randn(N).reshape((2,4,5,10)))
     self.assertEqual(x.all(), np.all(x.values))
 
-    # Test units
+    #-------------------------
+    # Test units          
+    #-------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
     self.assertEqual(type(random.all()), bool)
@@ -58,14 +84,18 @@ class Test_Qube_all(unittest.TestCase):
     self.assertEqual(random.all().units, None)
     self.assertEqual(type(random.all()), Boolean)
 
-    # Test derivs
+    #-----------------------
+    # Test derivs    
+    #-----------------------
     values = np.random.randn(10)
     d_dt = Scalar(np.random.randn(10))
     random = Scalar(values)
     random.insert_deriv('t', d_dt)
     self.assertEqual(type(random.all()), bool)
 
-    # Masks
+    #----------------------
+    # Masks       
+    #----------------------
     x = Scalar([0,1,2,3])
     self.assertFalse(x.all())
 
@@ -94,7 +124,9 @@ class Test_Qube_all(unittest.TestCase):
     self.assertEqual(type(m012), bool)
     self.assertEqual(m012, 0)
 
-    # Maxes with masks
+    #-----------------------
+    # Maxes with masks    
+    #-----------------------
     values = np.arange(30).reshape(2,3,5) % 16
     mask = np.zeros((2,3,5), dtype='bool')
     mask[0,0,0] = True
@@ -148,10 +180,9 @@ class Test_Qube_all(unittest.TestCase):
 
     self.assertEqual(m012, Boolean.MASKED)
 
-    ############################################################################
-    # Qube.tvl_all() tests
-    ############################################################################
-
+    #---------------------------
+    # Qube.tvl_all() tests    
+    #---------------------------
     x = Boolean([True, True, True, True])
     self.assertEqual(x.all(), True)
     self.assertEqual(x.tvl_all(), True)
@@ -179,6 +210,13 @@ class Test_Qube_all(unittest.TestCase):
     x = Boolean([False, True, True], [True, False, True])
     self.assertEqual(x.all(), True)
     self.assertEqual(x.tvl_all(), Boolean.MASKED)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

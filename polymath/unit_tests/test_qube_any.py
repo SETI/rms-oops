@@ -8,17 +8,37 @@ import unittest
 
 from polymath import Qube, Scalar, Boolean, Units
 
+#*******************************************************************************
+# Test_Qube_any
+#*******************************************************************************
 class Test_Qube_any(unittest.TestCase):
 
+  #=============================================================================
+  # setUp
+  #=============================================================================
   def setUp(self):
     Qube.PREFER_BUILTIN_TYPES = True
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # tearDown
+  #=============================================================================
   def tearDown(self):
     Qube.PREFER_BUILTIN_TYPES = False
+  #=============================================================================
 
+
+
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
+    #------------------------
     # Individual values
+    #------------------------
     self.assertEqual(Scalar(0.3).any(), True)
     self.assertEqual(type(Scalar(0.3).any()), bool)
 
@@ -28,19 +48,25 @@ class Test_Qube_any(unittest.TestCase):
     self.assertEqual(Scalar(4, mask=True).any(), Boolean.MASKED)
     self.assertEqual(type(Scalar(4, mask=True).any()), Boolean)
 
+    #----------------------
     # Multiple values
+    #----------------------
     self.assertTrue(Scalar((0,0,1)).any() == True)
     self.assertEqual(type(Scalar((0,0,1)).any()), bool)
 
     self.assertEqual(Scalar((1.,2.,3.), True).any(), Boolean.MASKED)
     self.assertEqual(type(Scalar((1.,2.,3.), True).any()), Boolean)
 
+    #---------------------
     # Arrays
+    #---------------------
     N = 400
     x = Scalar(np.random.randn(N).reshape((2,4,5,10)))
     self.assertEqual(x.any(), np.any(x.values))
 
+    #----------------------
     # Test units
+    #----------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.KM)
     self.assertEqual(type(random.any()), bool)
@@ -55,14 +81,18 @@ class Test_Qube_any(unittest.TestCase):
     self.assertEqual(random.any().units, None)
     self.assertEqual(type(random.any()), Boolean)
 
+    #------------------------
     # Test derivs
+    #------------------------
     values = np.random.randn(10)
     d_dt = Scalar(np.random.randn(10))
     random = Scalar(values)
     random.insert_deriv('t', d_dt)
     self.assertEqual(type(random.any()), bool)
 
+    #----------------------
     # Masks
+    #----------------------
     x = Scalar([0,1,2,3])
     self.assertTrue(x.any())
 
@@ -72,7 +102,9 @@ class Test_Qube_any(unittest.TestCase):
     x = Scalar(x.values, mask=[True,True,True,True])
     self.assertEqual(x.any(), Boolean.MASKED)
 
+    #-----------------------
     # Any() over axes
+    #-----------------------
     values = np.zeros(30).reshape(2,3,5) % 16
     values[0,0,0] = 1
     values[1,1,1] = 1
@@ -94,7 +126,9 @@ class Test_Qube_any(unittest.TestCase):
     self.assertEqual(type(m012), bool)
     self.assertEqual(m012, True)
 
+    #-----------------------
     # Any() with masks
+    #-----------------------
     mask = np.zeros((2,3,5), dtype='bool')
     mask[0,0,0] = True
 
@@ -145,10 +179,9 @@ class Test_Qube_any(unittest.TestCase):
 
     self.assertEqual(m012, Boolean.MASKED)
 
-    ############################################################################
+    #--------------------------
     # Qube.tvl_any() tests
-    ############################################################################
-
+    #--------------------------
     x = Boolean([True, True, True, True])
     self.assertEqual(x.any(), True)
     self.assertEqual(x.tvl_any(), True)
@@ -176,6 +209,13 @@ class Test_Qube_any(unittest.TestCase):
     x = Boolean([False, True, True], [True, True, True])
     self.assertEqual(x.any(), Boolean.MASKED)
     self.assertEqual(x.tvl_any(), Boolean.MASKED)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

@@ -8,13 +8,21 @@ import unittest
 
 from polymath import Qube, Matrix, Scalar, Units
 
+#*******************************************************************************
+# Test_Matrix_inverse
+#*******************************************************************************
 class Test_Matrix_inverse(unittest.TestCase):
 
+  #=============================================================================
+  # runTest
+  #=============================================================================
   def runTest(self):
 
     DEL = 2.e-11
 
+    #----------------------------------------------
     # Make sure 3x3 matrix inversion is successful
+    #----------------------------------------------
     a = Matrix(np.random.randn(3,3))
     b =a.inverse()
 
@@ -39,7 +47,9 @@ class Test_Matrix_inverse(unittest.TestCase):
         for k in range(3):
             self.assertAlmostEqual(axb.values[i,j,k], int(j==k), delta=DEL)
 
+    #----------------------------------------------
     # Make sure 2x2 matrix inversion is successful
+    #----------------------------------------------
     a = Matrix(np.random.randn(2,2))
     b = a.inverse()
 
@@ -65,7 +75,9 @@ class Test_Matrix_inverse(unittest.TestCase):
             self.assertAlmostEqual(axb.values[i,j,k], int(j==k), delta=DEL)
             self.assertAlmostEqual(bxa.values[i,j,k], int(j==k), delta=DEL)
 
+    #--------------------------------------------------
     # Make sure larger matrix inversion is successful
+    #--------------------------------------------------
     a = Matrix(np.random.randn(N,N,5,5))
     b = a.inverse()
 
@@ -99,7 +111,9 @@ class Test_Matrix_inverse(unittest.TestCase):
             self.assertAlmostEqual(axb.values[i,j,k], int(j==k), delta=DEL)
             self.assertAlmostEqual(bxa.values[i,j,k], int(j==k), delta=DEL)
 
+    #----------------------------------------------
     # Invert 3x3, with first matrix uninvertible
+    #----------------------------------------------
     N = 30
     values = np.random.randn(N,3,3)
     values[0,0,0] = 0.
@@ -120,7 +134,9 @@ class Test_Matrix_inverse(unittest.TestCase):
             self.assertAlmostEqual(axb.values[i,j,k], int(j==k), delta=DEL)
             self.assertAlmostEqual(bxa.values[i,j,k], int(j==k), delta=DEL)
 
+    #----------------------------------------------
     # Invert 5,5, with first matrix uninvertible
+    #----------------------------------------------
     N = 30
     size = 5
     values = np.random.randn(N,size,size)
@@ -144,20 +160,26 @@ class Test_Matrix_inverse(unittest.TestCase):
             self.assertAlmostEqual(axb.values[i,j,k], int(j==k), delta=DEL)
             self.assertAlmostEqual(bxa.values[i,j,k], int(j==k), delta=DEL)
 
-    # Anything else raises an error
+    #----------------------------------
+    # Anything else raises an error        
+    #----------------------------------
     a = Matrix(np.random.randn(N,3,4))
     self.assertRaises(ValueError, a.inverse)
 
     a = Matrix(np.random.randn(N,3,3,2,4), drank=2)
     self.assertRaises(ValueError, a.inverse)
 
-    # Test units
+    #---------------
+    # Test units    
+    #---------------
     N = 5
     a = Matrix(np.random.randn(N,3,3), units=Units.CM**2/Units.S)
     b = a.inverse()
     self.assertEqual(b.units, Units.S/Units.CM**2)
 
-    # Derivatives, 3x3
+    #--------------------
+    # Derivatives, 3x3     
+    #--------------------
     N = 30
     a = Matrix(np.random.randn(N,3,3))
     a.insert_deriv('t', Matrix(np.random.randn(N,3,3)))
@@ -216,7 +238,9 @@ class Test_Matrix_inverse(unittest.TestCase):
                                    b.d_dv.values[i,j,k,1],
                                    delta = DEL * max(1., vscale[i,1]))
 
+    #--------------------------------------------
     # Read-only status should NOT be preserved
+    #--------------------------------------------
     N = 10
     a = Matrix(np.random.randn(N,3,3))
     b = a.inverse()
@@ -225,6 +249,13 @@ class Test_Matrix_inverse(unittest.TestCase):
     self.assertFalse(a.inverse().readonly)
     self.assertTrue(a.as_readonly().readonly)
     self.assertFalse(a.as_readonly().inverse().readonly)
+  #=============================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # Execute from command line...

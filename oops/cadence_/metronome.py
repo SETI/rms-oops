@@ -5,13 +5,24 @@
 from polymath import *
 from oops.cadence_.cadence import Cadence
 
+#*****************************************************************************
+# Metronome
+#*****************************************************************************
 class Metronome(Cadence):
-    """A Cadence subclass where time steps occur at uniform intervals."""
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    A Cadence subclass where time steps occur at uniform intervals.
+    """
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     PACKRAT_ARGS = ['tstart', 'tstride', 'texp', 'steps']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, tstart, tstride, texp, steps):
-        """Constructor for a Metronome.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for a Metronome.
 
         Input:
             tstart      the start time of the observation in seconds TDB.
@@ -22,7 +33,7 @@ class Metronome(Cadence):
                         etc.
             steps       the number of time steps.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         self.tstart = float(tstart)
         self.tstride = float(tstride)
         self.texp = float(texp)
@@ -38,10 +49,18 @@ class Metronome(Cadence):
         self.shape = (self.steps,)
 
         return
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_at_tstep
+    #===========================================================================
     def time_at_tstep(self, tstep, mask=True):
-        """Return the time(s) associated with the given time step(s).
-        
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the min time(s) associated with the given time step(s).
+
         This method supports non-integer step values.
 
         Input:
@@ -50,7 +69,7 @@ class Metronome(Cadence):
 
         Return:         a Scalar of times in seconds TDB.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         tstep = Scalar.as_scalar(tstep)
 
         if self.is_continuous:
@@ -67,12 +86,20 @@ class Metronome(Cadence):
             time = time.mask_where((tstep < 0) | (tstep > self.steps))
 
         return time
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_range_at_tstep
+    #===========================================================================
     def time_range_at_tstep(self, tstep, mask=True):
-        """Return the range of time(s) for the given integer time step(s).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the range of time(s) for the given integer time step(s).
 
         Input:
-            indices     a Scalar time step index or a Pair of indices.
+            tstep       a Scalar time step index or a Pair of indices.
             mask        True to mask values outside the time limits.
 
         Return:         (time_min, time_max)
@@ -80,9 +107,9 @@ class Metronome(Cadence):
                         index. It is given in seconds TDB.
             time_max    a Scalar defining the maximum time value.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         tstep_int = Scalar.as_scalar(tstep).int()
-        
+
         time_min = self.time[0] + tstep_int * self.tstride
         time_max = time_min + self.texp
 
@@ -92,9 +119,17 @@ class Metronome(Cadence):
             time_max = time_max.mask_where(is_outside)
 
         return (time_min, time_max)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # tstep_at_time
+    #===========================================================================
     def tstep_at_time(self, time, mask=True):
-        """Return the time step(s) for given time(s).
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return the time step(s) for given time(s).
 
         This method supports non-integer time values.
 
@@ -104,7 +139,7 @@ class Metronome(Cadence):
 
         Return:         a Scalar or Pair of time step indices.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time)
 
         tstep = (time - self.time[0]) / self.tstride
@@ -122,9 +157,17 @@ class Metronome(Cadence):
             tstep = tstep.mask_where_outside(0, self.steps)
 
         return tstep
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_is_inside
+    #===========================================================================
     def time_is_inside(self, time, inclusive=True):
-        """Return which time(s) fall inside the cadence.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return which time(s) fall inside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
@@ -135,7 +178,7 @@ class Metronome(Cadence):
                         sampled by the cadence. A masked time results in a
                         value of False, not a masked Boolean.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         time = Scalar.as_scalar(time)
 
         if self.is_continuous:
@@ -151,25 +194,89 @@ class Metronome(Cadence):
                 return ((time_mod_vals < self.texp) &
                         (time >= self.time[0]) &
                         (time <  self.time[1]))
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # time_shift
+    #===========================================================================
     def time_shift(self, secs):
-        """Return a duplicate with all times shifted by given amount."
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a duplicate with all times shifted by given amount."
 
         Input:
             secs        the number of seconds to shift the time later.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Metronome(self.tstart + secs,
                          self.tstride, self.texp, self.steps)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # as_continuous
+    #===========================================================================
     def as_continuous(self):
-        """Return a shallow copy forced to be continuous.
-        
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Return a shallow copy forced to be continuous.
+
         For Metronome this is accomplished by forcing the exposure times to
         be equal to the stride.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return Metronome(self.tstart, self.tstride, self.tstride, self.steps)
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # for_array1d
+    #===========================================================================
+    @staticmethod
+    def for_array1d(steps, tstart, texp, interstep_delay=0.):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Alternative constructor.
+
+        Input:
+            steps               number of time steps.
+            tstart              start time in seconds TDB.
+            texp                exposure duration in second for each sample.
+            interstep_delay     time delay in seconds between the end of one
+                                integration and the beginning of the next, in
+                                seconds. Default is 0.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        return Metronome(tstart, texp + interstep_delay, texp, steps)
+    #===========================================================================
+
+
+
+    #===========================================================================
+    # for_array0d
+    #===========================================================================
+    @staticmethod
+    def for_array0d(tstart, texp):
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Alternative constructor for a product with no time-axis.
+
+        Input:
+            tstart              start time in seconds TDB.
+            texp                exposure duration in seconds.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        return Metronome(tstart, texp, texp, 1)
+    #===========================================================================
+
+
+#*****************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -177,8 +284,14 @@ class Metronome(Cadence):
 
 import unittest
 
+#*****************************************************************************
+# Test_Metronome
+#*****************************************************************************
 class Test_Metronome(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
         import numpy.random as random
@@ -190,7 +303,9 @@ class Test_Metronome(unittest.TestCase):
         cadence = Metronome(100., 10., 10., 4)
         self.assertTrue(cadence.is_continuous)
 
+        #---------------------
         # time_at_tstep()
+        #---------------------
         self.assertEqual(cadence.time_at_tstep(0), 100.)
         self.assertEqual(cadence.time_at_tstep(0, mask=False), 100.)
         self.assertEqual(cadence.time_at_tstep(1), 110.)
@@ -208,7 +323,7 @@ class Test_Metronome(unittest.TestCase):
         self.assertEqual(Boolean(cadence.time_at_tstep(Scalar((0.,1.,2.),
                                             [False,True,False])).mask),
                          [False,True,False])
-        
+
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,140])
         self.assertEqual(cadence.time_at_tstep(tstep), time)
@@ -220,8 +335,10 @@ class Test_Metronome(unittest.TestCase):
         test = cadence.time_at_tstep(tstep)
         self.assertTrue(Boolean(test.mask) ==
                         [[True,False],[False,False],[True,True]])
-                        
+
+        #---------------------
         # time_is_inside()
+        #---------------------
         time  = ([99,100],[120,140],[145,150])
         self.assertTrue(Boolean(cadence.time_is_inside(time)) ==
                          [[False,True],[True,True],[False,False]])
@@ -231,7 +348,9 @@ class Test_Metronome(unittest.TestCase):
                                                        [False,True,False])),
                          [True,False,True])
 
+        #---------------------
         # tstep_at_time()
+        #---------------------
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
         self.assertEqual(cadence.tstep_at_time(100., mask=False), 0.)
         self.assertEqual(cadence.tstep_at_time(105.), 0.5)
@@ -246,7 +365,9 @@ class Test_Metronome(unittest.TestCase):
                                             [False,True,False])).mask),
                          [False,True,False])
 
+        #-----------------------------------------------
         # Conversion and back (and tstride_at_tstep)
+        #-----------------------------------------------
         random.seed(0)
         tstep = Scalar(7*random.rand(100,100) - 1.)
         time = cadence.time_at_tstep(tstep, mask=False)
@@ -254,17 +375,17 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue((abs(tstep - test) < 1.e-14).all())
         self.assertEqual(time.masked(), 0)
         self.assertEqual(test.masked(), 0)
-        
+
         mask = (tstep < 0) | (tstep > cadence.steps)
         mask1 = (tstep < 0) | (tstep > cadence.steps-1)
-        
+
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep, mask=False) - 10.) <
                          1.e-13).all())
         self.assertEqual(cadence.tstride_at_tstep(tstep, mask=False).masked(), 0)
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep) -
                              10.).mvals < 1.e-13).all())
         self.assertTrue(Boolean(cadence.tstride_at_tstep(tstep).mask) == mask1)
-        
+
         test = cadence.time_at_tstep(tstep)
         self.assertTrue((abs(time - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask)
@@ -282,8 +403,10 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue((abs(tstep - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask2)
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
-        
+
+        #--------------------------
         # time_range_at_tstep()
+        #--------------------------
         self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
                                             [False,True,False]))[0].mask),
                          [False,True,False])
@@ -310,8 +433,10 @@ class Test_Metronome(unittest.TestCase):
         (time0, time1) = cadence.time_range_at_tstep(tstep)
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
-        
+
+        #------------------
         # time_shift()
+        #------------------
         shifted = cadence.time_shift(1.)
         time_shifted = shifted.time_at_tstep(tstep, mask=False)
 
@@ -321,12 +446,14 @@ class Test_Metronome(unittest.TestCase):
         # Discontinuous case
         # 100-108, 110-118, 120-128, 130-138
         ####################################
-        
+
         texp = 8.
         cadence = Metronome(100., 10., texp, 4)
         self.assertFalse(cadence.is_continuous)
 
+        #---------------------
         # time_at_tstep()
+        #---------------------
         self.assertEqual(cadence.time_at_tstep(0), 100.)
         self.assertEqual(cadence.time_at_tstep(0, mask=False), 100.)
         self.assertEqual(cadence.time_at_tstep(1), 110.)
@@ -344,7 +471,7 @@ class Test_Metronome(unittest.TestCase):
         self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),
                                             [False,True,False])).mask),
                          [False,True,False])
-        
+
         tstep = ([0,1],[2,3],[3,4])
         time  = ([100,110],[120,130],[130,138])
         self.assertEqual(cadence.time_at_tstep(tstep), time)
@@ -357,7 +484,9 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue(Boolean(test.mask) ==
                         [[True,False],[False,False],[True,True]])
 
+        #--------------------
         # time_is_inside()
+        #--------------------
         time  = ([99,100],[120,138],[145,150])
         self.assertTrue(Boolean(cadence.time_is_inside(time)) ==
                         [[False,True],[True,True],[False,False]])
@@ -367,7 +496,9 @@ class Test_Metronome(unittest.TestCase):
                                                        [False,True,False])),
                          [True,False,True])
 
+        #--------------------
         # tstep_at_time()
+        #--------------------
         self.assertEqual(cadence.tstep_at_time(100.), 0.)
         self.assertEqual(cadence.tstep_at_time(100., mask=False), 0.)
         self.assertEqual(cadence.tstep_at_time(105.), 0.625)
@@ -384,7 +515,9 @@ class Test_Metronome(unittest.TestCase):
                                             [False,True,False])).mask),
                          [False,True,False])
 
+        #----------------------------------------------
         # Conversion and back (and tstride_at_tstep)
+        #----------------------------------------------
         random.seed(0)
         tstep = Scalar(7*random.rand(100,100) - 1.)
         time = cadence.time_at_tstep(tstep, mask=False)
@@ -392,24 +525,26 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue((abs(tstep - test) < 1.e-14).all())
         self.assertEqual(time.masked(), 0)
         self.assertEqual(test.masked(), 0)
-        
+
         mask = (tstep < 0) | (tstep > cadence.steps)
         test = cadence.time_at_tstep(tstep)
         self.assertTrue((abs(time - test).mvals < 1.e-14).all())
         self.assertTrue(Boolean(test.mask) == mask)
         self.assertTrue(cadence.time_is_inside(time) == ~mask)
         mask1 = (tstep < 0) | (tstep > cadence.steps-1)
-        
+
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep, mask=False) - 10.) <
                          1.e-13).all())
         self.assertEqual(cadence.tstride_at_tstep(tstep, mask=False).masked(), 0)
         self.assertTrue((abs(cadence.tstride_at_tstep(tstep) -
                              10.).mvals < 1.e-13).all())
         self.assertTrue(Boolean(cadence.tstride_at_tstep(tstep).mask) == mask1)
-        
 
+
+        #------------------------------------------------------------------
         # We can't recompute "time" for the discontinuous case because not
         # all times are valid
+        #------------------------------------------------------------------
         tstep = cadence.tstep_at_time(time, mask=False)
         test = cadence.time_at_tstep(tstep, mask=False)
         self.assertTrue((abs(time - test) < 1.e-14).all())
@@ -422,7 +557,9 @@ class Test_Metronome(unittest.TestCase):
         self.assertTrue(Boolean(test.mask) == mask2)
         self.assertTrue(cadence.time_is_inside(time) == ~mask2)
 
+        #---------------------------
         # time_range_at_tstep()
+        #---------------------------
         self.assertEqual(Boolean(cadence.time_range_at_tstep(Scalar((0.,1.,2.),
                                             [False,True,False]))[0].mask),
                          [False,True,False])
@@ -452,8 +589,10 @@ class Test_Metronome(unittest.TestCase):
         (time0, time1) = cadence.time_range_at_tstep(tstep)
         self.assertTrue(Boolean(time0.mask) == mask)
         self.assertTrue(Boolean(time1.mask) == mask)
-        
+
+        #------------------
         # time_shift()
+        #------------------
         shifted = cadence.time_shift(1.)
         time_shifted = shifted.time_at_tstep(tstep, mask=False)
 
@@ -464,11 +603,13 @@ class Test_Metronome(unittest.TestCase):
         # Converted-to-continuous case
         # We just do spot-checking here
         ####################################
-        
+
         cadence = cadence.as_continuous()
         self.assertTrue(cadence.is_continuous)
 
+        #---------------------
         # time_at_tstep()
+        #---------------------
         self.assertEqual(cadence.time_at_tstep(0), 100.)
         self.assertEqual(cadence.time_at_tstep(1), 110.)
         self.assertEqual(cadence.time_at_tstep(4), 140.)
@@ -485,6 +626,10 @@ class Test_Metronome(unittest.TestCase):
 
         self.assertEqual(cadence.time_at_tstep(0.5), 105.)
         self.assertEqual(cadence.time_at_tstep(3.5), 135.)
+    #===========================================================================
+
+#*****************************************************************************
+
 
 
 ########################################

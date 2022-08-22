@@ -15,8 +15,13 @@ from oops.frame_.inclinedframe import InclinedFrame
 from oops.frame_.spinframe     import SpinFrame
 from oops.constants            import *
 
+#*******************************************************************************
+# OrbitPlane
+#*******************************************************************************
 class OrbitPlane(Surface):
-    """OrbitPlane is a subclass of the Surface class describing a flat surface
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """
+    OrbitPlane is a subclass of the Surface class describing a flat surface
     sharing its geometric center and tilt with a body on an eccentric and/or
     inclined orbit. The orbit is described as circle offset from the center of
     the planet by a distance ae; this approximation is only accurate to first
@@ -29,14 +34,19 @@ class OrbitPlane(Surface):
     The system is masked outside the semimajor axis, but unmasked inside.
     However, coordinates and intercepts are calculated at all locations.
     """
-
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = False
 
     PACKRAT_ARGS = ['elements', 'epoch', 'origin', 'frame', 'id']
 
+    #===========================================================================
+    # __init__
+    #===========================================================================
     def __init__(self, elements, epoch, origin, frame, id=None):
-        """Constructor for an OrbitPlane surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Constructor for an OrbitPlane surface.
 
             elements    a tuple containing three, six or nine orbital elements:
                 a           mean radius of orbit, km.
@@ -68,30 +78,45 @@ class OrbitPlane(Surface):
         Note that the origin and frame used by the returned OrbitPlane object
         will differ from those used to define it here.
         """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+        #----------------------------------------------------------------------
         # Save the initial center path and frame. The frame should be inertial.
+        #----------------------------------------------------------------------
         self.defined_origin = Path.as_waypoint(origin)
         self.defined_frame = Frame.as_wayframe(frame)
         assert self.defined_frame.origin is None    # assert inertial
 
+        #----------------------------------------------------------------
         # We will update the surface's actual path and frame as needed
+        #----------------------------------------------------------------
         self.internal_origin = self.defined_origin
         self.internal_frame = self.defined_frame
 
+        #------------------------------
         # Save the orbital elements
+        #------------------------------
         self.a   = elements[0]
         self.lon = elements[1]
         self.n   = elements[2]
 
         self.epoch = Scalar.as_scalar(epoch)
 
+        #------------------------------
         # Interpret the inclination
+        #------------------------------
         self.has_inclination = (len(elements) >= 9)
         if self.has_inclination:
             self.i = elements[6]
             self.has_inclination = (self.i != 0)
 
+        #----------------------------------------------------------------------
         # If the orbit is inclined, define a special-purpose inclined frame
+        #
+        # The inclined frame changes its tilt relative to the equatorial plane,
+        # accounting for nodal regression, but does not change the reference
+        # longitude from that used by the initial frame.
+        #----------------------------------------------------------------------
         if self.has_inclination:
             if id is None:
                 frame_id = None
@@ -109,18 +134,19 @@ class OrbitPlane(Surface):
         else:
             self.inclined_frame = None
 
-        # The inclined frame changes its tilt relative to the equatorial plane,
-        # accounting for nodal regression, but does not change the reference
-        # longitude from that used by the initial frame.
 
+        #------------------------------
         # Interpret the eccentricity
+        #------------------------------
         self.has_eccentricity = (len(elements) >= 6)
         if self.has_eccentricity:
             self.e = elements[3]
             self.has_eccentricity = (self.e != 0)
 
+        #----------------------------------------------------------------------
         # If the orbit is eccentric, construct a special-purpose path defining
         # the center of the displaced ring
+        #----------------------------------------------------------------------
         if self.has_eccentricity:
             self.ae = self.a * self.e
             self.lon_sub_peri = self.lon - elements[4]
@@ -140,9 +166,10 @@ class OrbitPlane(Surface):
                                         id = path_id)
             self.internal_origin = self.peri_path
 
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # The peri_path circulates around the initial origin but does not
             # rotate.
-
+            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if id is None:
                 frame_id = None
             else:
@@ -168,13 +195,23 @@ class OrbitPlane(Surface):
                                   self.defined_frame, 
                                   radii=(0,self.a), gravity=None, elevation=0.)
 
+        #----------------------------------------------
         # The primary origin and frame for the orbit
+        #----------------------------------------------
         self.origin = self.internal_origin.waypoint
         self.frame = self.internal_frame.wayframe
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # coords_from_vector3
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert positions in the internal frame to surface coordinates.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -189,12 +226,20 @@ class OrbitPlane(Surface):
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.coords_from_vector3(pos, obs, axes=axes,
                                                        derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # vector3_from_coords
+    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        Convert surface coordinates to positions in the internal frame.
 
         Input:
             coords      a tuple of two or three Scalars defining the
@@ -211,11 +256,19 @@ class OrbitPlane(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.vector3_from_coords(coords, obs, derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # intercept
+    #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The position where a specified line of sight intercepts the surface.
 
         Input:
             obs         observer position as a Vector3.
@@ -230,11 +283,19 @@ class OrbitPlane(Surface):
             t           a Scalar such that:
                             position = obs + t * los
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.intercept(obs, los, derivs=derivs, guess=guess)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # normal
+    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The normal vector at a position at or near a surface.
 
         Input:
             pos         a Vector3 of positions at or near the surface.
@@ -245,11 +306,19 @@ class OrbitPlane(Surface):
         Return:         a Vector3 containing directions normal to the surface
                         that pass through the position. Lengths are arbitrary.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return self.ringplane.normal(pos, derivs=derivs)
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # velocity
+    #===========================================================================
     def velocity(self, pos, time=None):
-        """The local velocity vector at a point within the surface.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The local velocity vector at a point within the surface.
 
         This can be used to describe the orbital motion of ring particles or
         local wind speeds on a planet.
@@ -260,8 +329,9 @@ class OrbitPlane(Surface):
 
         Return:         a Vector3 of velocities, in units of km/s.
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if self.has_eccentricity:
+            #-------------------------------------------------------------------
             # For purposes of a first-order velocity calculation, we can assume
             # that the difference between mean longitude and true longitude, in
             # a planet-centered frame, is small.
@@ -284,7 +354,7 @@ class OrbitPlane(Surface):
             #
             # dx/dt = dr/dt * cos(lon) - r sin(lon) dlon/dt
             # dy/dy = dr/dt * sin(lon) + r cos(lon) dlon/dt
-
+            #-------------------------------------------------------------------
             (x,y,z) = pos.to_scalars()
             x = x + self.ae         # shift origin to center of planet
 
@@ -302,34 +372,52 @@ class OrbitPlane(Surface):
 
         else:
             return self.n * Vector3.ZAXIS.cross(pos)
+    #===========================================================================
+
+
 
     ############################################################################
     # Longitude-anomaly conversions
     ############################################################################
 
+    #===========================================================================
+    # from_mean_anomaly
+    #===========================================================================
     def from_mean_anomaly(self, anom):
-        """The longitude in this frame based on the mean anomaly.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The longitude in this frame based on the mean anomaly.
 
-        Accurate to first order in eccentricity."""
-
+        Accurate to first order in eccentricity.
+        """
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         anom = Scalar.as_scalar(anom)
 
         if not self.has_eccentricity:
             return anom
         else:
             return anom + (2*self.ae) * anom.sin()
+    #===========================================================================
 
+
+
+    #===========================================================================
+    # to_mean_anomaly
+    #===========================================================================
     def to_mean_anomaly(self, lon):
-        """The mean anomaly given an orbital longitude.
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """
+        The mean anomaly given an orbital longitude.
 
         Accurate to first order in eccentricity. Iteration is performed using
         Newton's method to ensure that this function is an exact inverse of
         from_mean_anomaly().
         """
-
+        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         lon = Scalar.as_scalar(lon)
         if not self.has_eccentricity: return lon
 
+        #----------------------------------------
         # Solve lon = x + 2ae sin(x)
         #
         # Let
@@ -339,11 +427,13 @@ class OrbitPlane(Surface):
         #
         # For x[n] as a guess at n,
         #   x[n+1] = x[n] - y(x[n]) / dy/dx
-
+        #----------------------------------------
         ae_x2 = 2 * self.ae
         x = lon - ae_x2 * lon.sin()
 
+        #--------------------------------------------------------------
         # Iterate until all improvement ceases. Should not take long
+        #--------------------------------------------------------------
         prev_max_abs_dx = TWOPI
         max_abs_dx = PI
         while (max_abs_dx < prev_max_abs_dx):
@@ -354,6 +444,13 @@ class OrbitPlane(Surface):
             max_abs_dx = abs(dx).max()
 
         return x
+    #===========================================================================
+
+
+
+#*******************************************************************************
+
+
 
 ################################################################################
 # UNIT TESTS
@@ -361,13 +458,23 @@ class OrbitPlane(Surface):
 
 import unittest
 
+#*******************************************************************************
+# Test_OrbitPlane
+#*******************************************************************************
 class Test_OrbitPlane(unittest.TestCase):
 
+    #===========================================================================
+    # runTest
+    #===========================================================================
     def runTest(self):
 
-        # elements = (a, lon, n)
+        ###############################
+        # elements = (a, lon, n)...
+        ###############################
 
+        #--------------------------------------------
         # Circular orbit, no derivatives, forward
+        #--------------------------------------------
         elements = (1, 0, 1)
         epoch = 0
         orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
@@ -383,12 +490,16 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(l - l_true).max() < 1.e-12)
         self.assertTrue(abs(z - z_true).max() < 1.e-12)
 
+        #-------------------------------------------
         # Circular orbit, no derivatives, reverse
+        #-------------------------------------------
         pos2 = orbit.vector3_from_coords((r, l, z), None, derivs=False)
 
         self.assertTrue((pos - pos2).norm().max() < 1.e-10)
 
+        #----------------------------------------------
         # Circular orbit, with derivatives, forward
+        #----------------------------------------------
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
         eps = 1.e-6
@@ -407,7 +518,9 @@ class Test_OrbitPlane(unittest.TestCase):
             self.assertTrue(abs(l - l_test).max() < delta)
             self.assertTrue(abs(z - z_test).max() < delta)
 
+        #-----------------------------------------------
         # Circular orbit, with derivatives, reverse
+        #-----------------------------------------------
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
         (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
         eps = 1.e-6
@@ -430,9 +543,13 @@ class Test_OrbitPlane(unittest.TestCase):
         pos1_test = pos0 + eps * pos0.d_dz
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
-        # elements = (a, lon, n, e, peri, prec)
+        ###########################################
+        # elements = (a, lon, n, e, peri, prec)...
+        ###########################################
 
+        #----------------------------------------------
         # Eccentric orbit, no derivatives, forward
+        #----------------------------------------------
         ae = 0.1
         prec = 0.1
         elements = (1, 0, 1, ae, 0, prec)
@@ -453,12 +570,16 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(l - l_true).max() < delta)
         self.assertTrue(abs(z - z_true).max() < delta)
 
+        #----------------------------------------------
         # Eccentric orbit, no derivatives, reverse
+        #----------------------------------------------
         event2 = orbit.event_at_coords(event.time, (r,l,z))
         self.assertTrue((pos - event.pos).norm().max() < 1.e-10)
         self.assertTrue((event.vel).norm().max() < 1.e-10)
 
+        #-----------------------------------------------
         # Eccentric orbit, with derivatives, forward
+        #-----------------------------------------------
         ae = 0.1
         prec = 0.1
         elements = (1, 0, 1, ae, 0, prec)
@@ -486,7 +607,9 @@ class Test_OrbitPlane(unittest.TestCase):
             d_dl_dt = ((l.d_dt*eps - dl_dt_test*eps + PI) % TWOPI - PI) / eps
             self.assertTrue(abs(d_dl_dt).max() < delta)
 
+        #-----------------------------------------------
         # Eccentric orbit, with derivatives, reverse
+        #-----------------------------------------------
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
         (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
         eps = 1.e-6
@@ -509,9 +632,13 @@ class Test_OrbitPlane(unittest.TestCase):
         pos1_test = pos0 + eps * pos0.d_dz
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
-        # elements = (a, lon, n, e, peri, prec, i, node, regr)
+        ##########################################################
+        # elements = (a, lon, n, e, peri, prec, i, node, regr)...
+        ##########################################################
 
+        #------------------------------------------------------------
         # Inclined orbit, no eccentricity, no derivatives, forward
+        #------------------------------------------------------------
         inc = 0.1
         regr = -0.1
         node = -HALFPI
@@ -537,12 +664,16 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(l - l_true).max() < delta)
         self.assertTrue(abs(z - z_true).max() < delta)
 
+        #--------------------------------------------
         # Inclined orbit, no derivatives, reverse
+        #--------------------------------------------
         event2 = orbit.event_at_coords(event.time, (r,l,z))
         self.assertTrue((pos - event.pos).norm().max() < 1.e-10)
         self.assertTrue(event.vel.norm().max() < 1.e-10)
 
+        #---------------------------------------------
         # Inclined orbit, with derivatives, forward
+        #---------------------------------------------
         inc = 0.1
         regr = -0.1
         node = -HALFPI
@@ -573,7 +704,9 @@ class Test_OrbitPlane(unittest.TestCase):
             self.assertTrue(abs(l.d_dt - dl_dt_test).max() < delta)
             self.assertTrue(abs(z.d_dt - dz_dt_test).max() < delta)
 
+        #---------------------------------------------
         # Inclined orbit, with derivatives, reverse
+        #---------------------------------------------
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
         (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
         eps = 1.e-6
@@ -596,7 +729,9 @@ class Test_OrbitPlane(unittest.TestCase):
         pos1_test = pos0 + eps * pos0.d_dz
         self.assertTrue((pos1_test - pos1).norm().max() < delta)
 
+        #----------------------------
         # From/to mean anomaly
+        #----------------------------
         elements = (1, 0, 1, 0.1, 0, 0.1)
         epoch = 0
         orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
@@ -606,6 +741,12 @@ class Test_OrbitPlane(unittest.TestCase):
 
         lons = orbit.from_mean_anomaly(anoms)
         self.assertTrue(abs(lons - l).max() < 1.e-15)
+    #===========================================================================
+
+
+#*******************************************************************************
+
+
 
 ########################################
 if __name__ == '__main__':
