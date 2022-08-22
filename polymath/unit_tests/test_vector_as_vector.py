@@ -28,7 +28,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #----------------------
-    # Matrix case, Nx1       
+    # Matrix case, Nx1
     #----------------------
     a = Matrix(np.random.randn(N,7,1), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,7,1,6), drank=1)
@@ -52,7 +52,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #----------------------
-    # Matrix case, 1xN       
+    # Matrix case, 1xN
     #----------------------
     a = Matrix(np.random.randn(N,1,7), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,1,7,6), drank=1)
@@ -76,7 +76,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #-----------------
-    # Scalar case         
+    # Scalar case
     #-----------------
     a = Scalar(np.random.randn(N), units=Units.UNITLESS)
     da_dt = Scalar(np.random.randn(N,6), drank=1)
@@ -99,7 +99,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #----------------
-    # Pair case       
+    # Pair case
     #----------------
     a = Pair(np.random.randn(N,2), units=Units.DEG)
     da_dt = Pair(np.random.randn(N,2,6), drank=1)
@@ -121,7 +121,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #------------------
-    # Other cases          
+    # Other cases
     #------------------
     b = Vector.as_vector((1,2,3))
     self.assertTrue(type(b), Vector)

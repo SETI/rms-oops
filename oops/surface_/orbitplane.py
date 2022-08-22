@@ -166,10 +166,8 @@ class OrbitPlane(Surface):
                                         id = path_id)
             self.internal_origin = self.peri_path
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # The peri_path circulates around the initial origin but does not
             # rotate.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if id is None:
                 frame_id = None
             else:
@@ -192,7 +190,7 @@ class OrbitPlane(Surface):
                                    radii=(0,self.a), gravity=None, elevation=0.)
 
         self.refplane = RingPlane(self.defined_origin,
-                                  self.defined_frame, 
+                                  self.defined_frame,
                                   radii=(0,self.a), gravity=None, elevation=0.)
 
         #----------------------------------------------

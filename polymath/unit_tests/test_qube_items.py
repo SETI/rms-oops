@@ -4,7 +4,7 @@
 #   transpose_numer(self, axis1=0, axis2=1, recursive=True)
 #   reshape_numer(self, shape, classes=(), recursive=True)
 #   flatten_numer(self, classes=(), recursive=True)
-# 
+#
 #   transpose_denom(self, axis1=0, axis2=1)
 #   reshape_denom(self, shape)
 #   flatten_denom(self)

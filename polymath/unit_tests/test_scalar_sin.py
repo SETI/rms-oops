@@ -19,7 +19,7 @@ class Test_Scalar_sin(unittest.TestCase):
   def runTest(self):
 
     #-----------------------
-    # Individual values     
+    # Individual values
     #-----------------------
     self.assertEqual(Scalar(1.25).sin(), np.sin(1.25))
     self.assertEqual(type(Scalar(1.25).sin()), Scalar)
@@ -28,13 +28,13 @@ class Test_Scalar_sin(unittest.TestCase):
     self.assertEqual(Scalar(0).sin(), 0.)
 
     #---------------------
-    # Multiple values      
+    # Multiple values
     #---------------------
     self.assertEqual(Scalar((-1,0,1)).sin(), np.sin((-1,0,1)))
     self.assertEqual(type(Scalar((-1,0,1)).sin()), Scalar)
 
     #---------------
-    # Arrays    
+    # Arrays
     #---------------
     N = 1000
     values = np.random.randn(N) * 10.
@@ -47,7 +47,7 @@ class Test_Scalar_sin(unittest.TestCase):
         self.assertEqual(funcvals[i:i+2], np.sin(values[i:i+2]))
 
     #----------------------
-    # Test valid units       
+    # Test valid units
     #----------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
@@ -69,14 +69,14 @@ class Test_Scalar_sin(unittest.TestCase):
     self.assertEqual(angle.sin(), np.sin(angle.values)) # units should be OK
 
     #----------------------------
-    # Units should be removed     
+    # Units should be removed
     #----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.sin().units is None)
 
     #--------------
-    # Masks       
+    # Masks
     #--------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -85,7 +85,7 @@ class Test_Scalar_sin(unittest.TestCase):
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
     #----------------
-    # Derivatives     
+    # Derivatives
     #----------------
     N = 100
     x = Scalar(np.random.randn(N) * 10.)
@@ -117,7 +117,7 @@ class Test_Scalar_sin(unittest.TestCase):
                                    dy_dvec[i].values[k], delta=1.e-5)
 
     #-----------------------------------------------
-    # Derivatives should be removed if necessary    
+    # Derivatives should be removed if necessary
     #-----------------------------------------------
     self.assertEqual(x.sin(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
@@ -126,7 +126,7 @@ class Test_Scalar_sin(unittest.TestCase):
     self.assertFalse(hasattr(x.sin(recursive=False), 'd_dvec'))
 
     #----------------------------------------------
-    # Read-only status should NOT be preserved       
+    # Read-only status should NOT be preserved
     #----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N) * 10.)

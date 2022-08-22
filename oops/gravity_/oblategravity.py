@@ -381,7 +381,7 @@ class OblateGravity(Gravity):
         # we get still higher-order cancellation. We employ another trick. The
         # expression becomes
         #   -factors[1] (2 omega - kappa - nu)
-        # 
+        #
         # Note that
         #   (2 omega - kappa - nu) (omega + kappa)
         #       = 2 omega^2 + omega kappa - omega nu - kappa^2 - kappa nu
@@ -482,11 +482,10 @@ class OblateGravity(Gravity):
         #---------------------------------
         da_prev_max = 1.e99
         for iter in range(20):
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # a step in Newton's method: x(i+1) = x(i) - f(xi) / fp(xi)
             # our f(x) = self.combo() - freq
             #     fp(x) = self.dcombo()
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             da = ((self.combo(a, factors, e, sin_i) - freq) / \
                    self.dcombo_da(a, factors, e, sin_i))
             da_max = np.max(np.abs(da))
@@ -494,9 +493,7 @@ class OblateGravity(Gravity):
 
             a -= da
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If Newton's method stops converging, return what we've got
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if iter > 4 and da_max >= da_prev_max:
                 break
 
@@ -575,7 +572,7 @@ class OblateGravity(Gravity):
     def d_dmean_dt_da(self, a, e=0., sin_i=0.):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Returns the radial derivative of the mean motion at semimajor axis a. 
+        Returns the radial derivative of the mean motion at semimajor axis a.
         Identical to domega_da(a).
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -700,9 +697,9 @@ class OblateGravity(Gravity):
         es = e*sx
         ec = e*cx
         f = x - es  - mean_anomaly
-        fp = 1. - ec 
-        fpp = es 
-        fppp = ec 
+        fp = 1. - ec
+        fpp = es
+        fppp = ec
         dx = -f/fp
         dx = -f/(fp + dx*fpp/2.)
         dx = -f/(fp + dx*fpp/2. + dx*dx*fppp/6.)
@@ -772,7 +769,7 @@ class OblateGravity(Gravity):
         # Warning: This only works with elliptical orbits!
         #------------------------------------------------------
         gmsum = self.gm + body_gm
-    
+
         #-------------------------------------------------------------------
         # Compute the angular momentum H, and thereby the inclination INC.
         #-------------------------------------------------------------------
@@ -801,8 +798,8 @@ class OblateGravity(Gravity):
         else:
             sin_inc[sin_inc == 0.] = 1.
 
-        u = np.where(fac < tiny, tmp, Gravity._pos_arctan2(z/sin_inc, 
-                                                           x*np.cos(long_node) + 
+        u = np.where(fac < tiny, tmp, Gravity._pos_arctan2(z/sin_inc,
+                                                           x*np.cos(long_node) +
                                                            y*np.sin(long_node)))
 
         #------------------------------------------------------------
@@ -860,7 +857,7 @@ class OblateGravity(Gravity):
         (a, e, i, mean longitude, longitude of pericenter,
          longitude of ascending node).
 
-        Adapted from Renner & Sicardy (2006) EQ 2-13 by Rob French. 
+        Adapted from Renner & Sicardy (2006) EQ 2-13 by Rob French.
 
         Take the geometric osculating elements and convert to X,Y,Z,VX,VY,VZ
         Returns x, y, z, vx, vy, vz
@@ -886,32 +883,32 @@ class OblateGravity(Gravity):
         #------------------------------
         # Convert to cylindrical
         #------------------------------
-        r = a*(1. - e*np.cos(lam-long_peri) + 
+        r = a*(1. - e*np.cos(lam-long_peri) +
                e**2*(3./2. * eta2/kappa2 - 1. -
                       eta2/2./kappa2 * np.cos(2.*(lam-long_peri))) +
                inc**2*(3./4.*chi2/kappa2 - 1. +
                         chi2/4./alphasq * np.cos(2.*(lam-long_node))))
 
-        L = (lam + 2.*e*n/kappa*np.sin(lam-long_peri) + 
+        L = (lam + 2.*e*n/kappa*np.sin(lam-long_peri) +
              e**2*(3./4. + nu2/2./kappa2)*n/kappa * np.sin(2.*(lam-long_peri)) -
              inc**2*chi2/4./alphasq*n/nu*np.sin(2.*(lam-long_node)))
 
-        z = a * inc * (np.sin(lam-long_node) + 
+        z = a * inc * (np.sin(lam-long_node) +
                        e*chi2/2./kappa/alpha1*np.sin(2.*lam-long_peri-long_node) -
                        e*3./2.*chi2/kappa/alpha2*np.sin(long_peri-long_node))
 
-        rdot = a * kappa * (e*np.sin(lam-long_peri) + 
+        rdot = a * kappa * (e*np.sin(lam-long_peri) +
                             e**2*eta2/kappa2*np.sin(2.*(lam-long_peri)) -
                             inc**2*chi2/2./alphasq*nu/kappa*
                             np.sin(2.*(lam-long_node)))
 
         Ldot = n*(1. + 2.*e*np.cos(lam-long_peri) +
-                  e**2 * (7./2. - 3.*eta2/kappa2 - kappa2/2./n2 + 
+                  e**2 * (7./2. - 3.*eta2/kappa2 - kappa2/2./n2 +
                            (3./2.+eta2/kappa2)*np.cos(2.*(lam-long_peri))) +
-                  inc**2 * (2. - kappa2/2./n2 - 3./2.*chi2/kappa2 - 
+                  inc**2 * (2. - kappa2/2./n2 - 3./2.*chi2/kappa2 -
                              chi2/2./alphasq*np.cos(2.*(lam-long_node))))
 
-        vz = a*inc*nu*(np.cos(lam-long_node) + 
+        vz = a*inc*nu*(np.cos(lam-long_node) +
                        e*chi2*(kappa+nu)/2./kappa/alpha1/nu *
                        np.cos(2*lam-long_peri-long_node) +
            e*3./2.*chi2*(kappa-nu)/kappa/alpha2/nu*np.cos(long_peri-long_node))
@@ -987,13 +984,13 @@ class OblateGravity(Gravity):
         idx_to_use = np.where(x!=-1e38,True,False) # All True
         announced = False
         while True:
-            (n, kappa, nu, eta2, chi2, 
+            (n, kappa, nu, eta2, chi2,
              alpha1, alpha2, alphasq) = self._geom_to_freq(a, e, inc, body_gm)
-            ret = Gravity._freq_to_geom(r, L, z, rdot, Ldot, vz, rc, Lc, zc, rdotc, 
+            ret = Gravity._freq_to_geom(r, L, z, rdot, Ldot, vz, rc, Lc, zc, rdotc,
                                    Ldotc, zdotc, n, kappa, nu, eta2, chi2,
                                    alpha1, alpha2, alphasq)
             old_a = a
-            (a, e, inc, long_peri, long_node, lam, 
+            (a, e, inc, long_peri, long_node, lam,
              rc, Lc, zc, rdotc, Ldotc, zdotc) = ret
             diff = np.abs(a-old_a)
             diffmax = np.max(diff[idx_to_use])
@@ -1084,7 +1081,7 @@ class OblateGravity(Gravity):
     # _freq_to_geom
     #===========================================================================
     @staticmethod
-    def _freq_to_geom(r, L, z, rdot, Ldot, zdot, rc, Lc, zc, rdotc, Ldotc, 
+    def _freq_to_geom(r, L, z, rdot, Ldot, zdot, rc, Lc, zc, rdotc, Ldotc,
                       zdotc, n, kappa, nu, eta2, chi2, alpha1, alpha2, alphasq):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
@@ -1115,42 +1112,42 @@ class OblateGravity(Gravity):
         #--------------
         # EQ 36-41
         #--------------
-        rc = (a * e**2 * (3./2.*eta2/kappa2 - 1. - 
+        rc = (a * e**2 * (3./2.*eta2/kappa2 - 1. -
                            eta2/2./kappa2*np.cos(2.*(lam-long_peri))) +
-              a * inc**2 * (3./4.*chi2/kappa2 - 1. + 
+              a * inc**2 * (3./4.*chi2/kappa2 - 1. +
                              chi2/4./alphasq*np.cos(2.*(lam-long_node))))
 
-        Lc = (e**2*(3./4. + eta2/2./kappa2)*n/kappa*np.sin(2.*(lam-long_peri)) - 
+        Lc = (e**2*(3./4. + eta2/2./kappa2)*n/kappa*np.sin(2.*(lam-long_peri)) -
               inc**2*chi2/4./alphasq*n/nu*np.sin(2.*(lam-long_node)))
 
-        zc = a*inc*e*(chi2/2./kappa/alpha1*np.sin(2*lam-long_peri-long_node) - 
+        zc = a*inc*e*(chi2/2./kappa/alpha1*np.sin(2*lam-long_peri-long_node) -
                       3./2.*chi2/kappa/alpha2*np.sin(long_peri-long_node))
 
-        rdotc = (a*e**2*eta2/kappa*np.sin(2.*(lam-long_peri)) - 
+        rdotc = (a*e**2*eta2/kappa*np.sin(2.*(lam-long_peri)) -
                  a*inc**2*chi2/2./alphasq*nu*np.sin(2.*(lam-long_node)))
 
-        Ldotc = (e**2*n*(7./2. - 3.*eta2/kappa2 - kappa2/2./n2 + 
+        Ldotc = (e**2*n*(7./2. - 3.*eta2/kappa2 - kappa2/2./n2 +
                           (3./2. + eta2/kappa2)*np.cos(2.*(lam-long_peri))) +
-                 inc**2*n*(2. - kappa2/2./n2 - 3./2.*chi2/kappa2 - 
+                 inc**2*n*(2. - kappa2/2./n2 - 3./2.*chi2/kappa2 -
                             chi2/2./alphasq*np.cos(2.*(lam-long_node))))
 
         zdotc = a*inc*e*(chi2*(kappa+nu)/2./kappa/
-                            alpha1*np.cos(2*lam-long_peri-long_node) + 
+                            alpha1*np.cos(2*lam-long_peri-long_node) +
                  3./2.*chi2*(kappa-nu)/kappa/alpha2*np.cos(long_peri-long_node))
 
         #--------------
         # EQ 30-35
         #--------------
     #    r = a*(1. - e*np.cos(lam-long_peri)) + rc
-    #    
+    #
     #    L = lam + 2*e*n/kappa*np.sin(lam-long_peri) + Lc
-    #    
+    #
     #    z = a*inc*np.sin(lam-long_node) + zc
-    #    
+    #
     #    rdot = a*e*kappa*np.sin(lam-long_peri) + rdotc
-    #    
+    #
     #    Ldot = n*(1. + 2.*e*np.cos(lam-long_peri)) + Ldotc
-    #    
+    #
     #    zdot = a*inc*nu*np.cos(lam-long_node) + zdotc
 
         return (a, e, inc, long_peri, long_node, lam,
@@ -1165,7 +1162,7 @@ class OblateGravity(Gravity):
     # A nicer version of arctan2
     @staticmethod
     def _pos_arctan2(y, x):
-        return np.arctan2(y, x) % TWOPI 
+        return np.arctan2(y, x) % TWOPI
     #===========================================================================
 
 

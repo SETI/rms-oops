@@ -122,37 +122,28 @@ def from_file(filespec, fast=False, **parameters):
 
         label = fast_dict(lines)
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Allow label["SPECTRAL_QUBE"] to work properly below
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         label["SPECTRAL_QUBE"] = label
 
     #---------------------------------------
     # Otherwise, use the standard parser
     #---------------------------------------
     else:
-        #- - - - - - - - - - - - - - - - - - - - -
+
         # Load the VIMS file or the PDS label
-        #- - - - - - - - - - - - - - - - - - - - -
         lines = pdsparser.PdsLabel.load_file(filespec)
 
-        #- - - - - - - - - - - - - - -
         # Fix known syntax errors
-        #- - - - - - - - - - - - - - -
         for i in range(len(lines)):
             line = lines[i]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # In GAIN_MODE_ID and BACKGROUND_SAMPLING_MODE_ID, sometimes N/A is
             # not properly quoted
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if line[:4] in ("GAIN", "BACK"):
                 lines[i] = line.replace('(N/A',  '("N/A"')
                 lines[i] = line.replace('N/A)',  '"N/A")')
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Sometimes a comment begins on one line and and ends on the next
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if line.strip().endswith("*/") and "/*" not in line:
                 lines[i] = "\n"
 

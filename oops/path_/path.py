@@ -112,7 +112,7 @@ class Path(object):
     def origin_id(self): return self.origin.path_id
 
     #===========================================================================
-    # 
+    #
     #===========================================================================
     @property
     def frame_id(self): return self.frame.frame_id
@@ -341,40 +341,30 @@ class Path(object):
         #---------------------------------------------------------------------
         if id not in WAYPOINT_REG or override:
 
-            #- - - - - - - - - - - - - 
             # Fill in the ancestry
-            #- - - - - - - - - - - - - 
             origin = Path.as_primary_path(self.origin)
             self.ancestry = [origin] + origin.ancestry
 
-            #- - - - - - - - - - - - - - 
             # Register the Waypoint
-            #- - - - - - - - - - - - - - 
             waypoint = Waypoint(id, self.frame, self.shape)
             self.waypoint = waypoint
             WAYPOINT_REG[id] = waypoint
 
-            #- - - - - - - - - - - - - - - - - - -
             # Cache the path under three keys
-            #- - - - - - - - - - - - - - - - - - -
             self.keys = {waypoint,
                          (waypoint, self.origin),
                          (waypoint, self.origin, self.frame)}
             for key in self.keys:
                 PATH_CACHE[key] = self
 
-            #- - - - - - - - - - - - - - - - - - - - - - - 
             # Cache the waypoint under two or three keys
-            #- - - - - - - - - - - - - - - - - - - - - - - 
             waypoint.keys = {(waypoint, waypoint),
                              (waypoint, waypoint, self.frame),
                              (waypoint, waypoint, Frame.J2000)}
             for key in waypoint.keys:
                 PATH_CACHE[key] = waypoint
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Also define the path with respect to the SSB
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             if self.origin == Path.SSB and self.frame == Frame.J2000:
                 self.wrt_ssb = self
             else:
@@ -394,9 +384,7 @@ class Path(object):
             if not hasattr(self, 'waypoint') or self.waypoint is None:
                 self.waypoint = WAYPOINT_REG[id]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Cache (self.waypoint, self.origin); overwrite if necessary
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             key = (self.waypoint, self.origin)
             if key in PATH_CACHE:           # remove an old version
                 PATH_CACHE[key].keys -= {key}
@@ -404,9 +392,7 @@ class Path(object):
             PATH_CACHE[key] = self
             self.keys |= {key}
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             # Cache (self.waypoint, self.origin, self.frame)
-            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             key = (self.waypoint, self.origin, self.frame)
             if key in PATH_CACHE:           # remove an old version
                 PATH_CACHE[key].keys -= {key}
@@ -821,7 +807,6 @@ class Path(object):
             quick['path_time_extension'] = limit
             quick['frame_time_extension'] = limit
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Iterate to a solution for the light travel time "lt". Define
         #   y = separation_distance(time + lt) - sign * c * lt
         # where lt is negative for earlier linking events and positive for later
@@ -839,7 +824,6 @@ class Path(object):
         #
         # The function y is shown above. Its derivative is
         #   dy_dlt = outward_speed - sign * c
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         #-----------------------
         # Interpret the sign
@@ -920,15 +904,11 @@ class Path(object):
         prev_lt = None
         for iter in range(iters):
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Quicken the path and frame evaluations on first iteration
             # Hereafter, we specify quick=False because it's already quick.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=quick)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Evaluate the photon's current SSB position based on time
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=False)
             delta_pos_ssb = path_event_ssb.pos.wod - link_pos_ssb
             delta_vel_ssb = path_event_ssb.vel.wod - link_vel_ssb
@@ -941,14 +921,10 @@ class Path(object):
             prev_lt = lt
             lt = new_lt
 
-            #- - - - - - - - - - - - - -
             # Re-evaluate the path time
-            #- - - - - - - - - - - - - -
             path_time = link_time + lt
 
-            #- - - - - - - - - - - - - -
             # Test for convergence
-            #- - - - - - - - - - - - - -
             prev_max_dlt = max_dlt
             max_dlt = abs(dlt).max()
 
@@ -1255,15 +1231,11 @@ class Path(object):
         #--------------------------------------------------
         for quickpath in self.quickpaths:
 
-            #- - - - - - - - - - - - - - - - - -
             # If there's no overlap, skip it
-            #- - - - - - - - - - - - - - - - - -
             if (quickpath.t0 > tmax + dt) or (quickpath.t1 < tmin - dt):
                 continue
 
-            #- - - - - - - - - - - - - - - - - - - - - 
             # Otherwise, check the effort involved
-            #- - - - - - - - - - - - - - - - - - - - - 
             duration = (max(tmax, quickpath.t1) - min(tmin, quickpath.t0))
             steps = int(duration//dt) - quickpath.times.size
 
@@ -1862,10 +1834,9 @@ class QuickPath(Path):
         vel = np.empty(tflat.shape + (3,))
 
         if time_diff < collapse_threshold:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # If all time values are basically the same, we only need to do
             # linear interpolation.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             tflat_diff = tflat.vals - tflat_min
             tflat2 = Scalar([tflat_min, tflat_max])
             pos_x = self.pos_x(tflat2.vals)
@@ -1896,10 +1867,9 @@ class QuickPath(Path):
                 vel[...,2] = ((vel_z[1]-vel_z[0])/time_diff * tflat_diff +
                               vel_z[0])
 
-        else:            
-            #- - - - - - - - - - - - - - - - - - - - - -
+        else:
+
             # Evaluate the positions and velocities
-            #- - - - - - - - - - - - - - - - - - - - - -
             pos[...,0] = self.pos_x(tflat.vals)
             pos[...,1] = self.pos_y(tflat.vals)
             pos[...,2] = self.pos_z(tflat.vals)

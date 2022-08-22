@@ -28,7 +28,7 @@ class Test_Scalar_as_scalar(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #-----------------
-    # Units case          
+    # Units case
     #-----------------
     a = Units.CM
     b = Scalar.as_scalar(a)
@@ -39,13 +39,13 @@ class Test_Scalar_as_scalar(unittest.TestCase):
     self.assertEqual(b.values, 1.e-5)
 
     #--------------------------
-    # Vector case is invalid       
+    # Vector case is invalid
     #--------------------------
     a = Vector(np.random.randn(N,3))
     self.assertRaises(ValueError, Scalar.as_scalar, a)
 
     #------------------
-    # Boolean case         
+    # Boolean case
     #------------------
     a = Boolean(np.random.randn(N) < 0.)
     b = Scalar.as_scalar(a)
@@ -63,7 +63,7 @@ class Test_Scalar_as_scalar(unittest.TestCase):
     self.assertEqual(b.values, 1)
 
     #-------------------
-    # Other cases    
+    # Other cases
     #-------------------
     b = Scalar.as_scalar(3.14159)
     self.assertTrue(type(b), Scalar)

@@ -481,11 +481,9 @@ class Test_Sequence(unittest.TestCase):
         self.assertEqual(cadence.time_at_tstep(3.5), 134.)
         self.assertEqual(cadence.time_at_tstep(3.5, mask=False), 134.)
 
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # These cases are different than Metronome because we don't have a
         # regular stride to rely on - the last entry is texp long instead
         # of tstride
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.assertEqual(cadence.time_at_tstep(-0.5, mask=False), 96.) # out of range
         self.assertEqual(cadence.time_at_tstep(4.5, mask=False), 142.) # out of range
         self.assertEqual(Boolean(cadence.tstep_at_time(Scalar((100.,110.,120.),

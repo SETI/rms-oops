@@ -29,7 +29,7 @@ class Test_Vector_dot(unittest.TestCase):
     self.assertEqual(a.dot(b), np.sum(a.values * b.values, axis=-1))
 
     #----------------
-    # Test units      
+    # Test units
     #----------------
     omega = Vector(np.random.randn(3), units=Units.KM)
     omega_as_matrix = omega.cross_product_as_matrix()
@@ -43,7 +43,7 @@ class Test_Vector_dot(unittest.TestCase):
     self.assertEqual(cross2.units, Units.KM/Units.SECONDS)
 
     #-----------------
-    # Derivatives         
+    # Derivatives
     #-----------------
     N = 100
     x = Vector(np.random.randn(N,3))
@@ -120,7 +120,7 @@ class Test_Vector_dot(unittest.TestCase):
         self.assertAlmostEqual(z.d_dh.values[i], dz_dh.values[i], delta=EPS)
 
     #-----------------------------------------------
-    # Derivatives should be removed if necessary    
+    # Derivatives should be removed if necessary
     #-----------------------------------------------
     self.assertEqual(y.dot(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
@@ -132,7 +132,7 @@ class Test_Vector_dot(unittest.TestCase):
     self.assertFalse(hasattr(y.dot(x, recursive=False), 'd_dh'))
 
     #----------------------------------------------
-    # Read-only status should NOT be preserved       
+    # Read-only status should NOT be preserved
     #----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,7))

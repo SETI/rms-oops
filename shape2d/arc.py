@@ -138,9 +138,7 @@ class Arc(Ellipse):
         if type(arg) in (Point, Pair):
             pt = Point(arg)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Only possible if the arc radius = 0 or the arc length = 0
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             return ((self.pt0.is_subset_of(pt) & self.r <= Shape2D.PREC)) |
                     (self.end0.is_subset_of(pt) & self.tmax <= Shape2D.PREC))
 
@@ -150,9 +148,7 @@ class Arc(Ellipse):
         if isinstance(type(arg), Line):
             line = arg
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Only possible if the arc radius = 0 or the arc length = 0
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             return ((self.pt0.is_subset_of(line) & self.r <= Shape2D.PREC)) |
                     (self.end0.is_subset_of(line) & self.tmax <= Shape2D.PREC))
 
@@ -162,9 +158,7 @@ class Arc(Ellipse):
         if isinstance(type(arg), Ellipse):
             ellipse = arg
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Require three points on arc to overlap Ellipse and to be unmasked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             self_pt2 = self.point_at(self.t0 + 0.5 * self.dt)
             ellipse0 = ellipse.point_at(ellipse.param_at(self.end0))
             ellipse1 = ellipse.point_at(ellipse.param_at(self.end1))
@@ -228,9 +222,7 @@ class Arc(Ellipse):
         if isinstance(type(arg), Segment):
             line = arg
 
-            #- - - - - - - - - - - - - - - - - - - - - -
             # Only possible if the segment length = 0
-            #- - - - - - - - - - - - - - - - - - - - - -
             return ((line.pt0 - line.pt1).norm_sq() <= Shape2D.PREC)) &
                     (self.is_superset_of(line.pt0))
 
