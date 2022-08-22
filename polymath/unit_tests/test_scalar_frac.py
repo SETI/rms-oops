@@ -19,7 +19,7 @@ class Test_Scalar_frac(unittest.TestCase):
   def runTest(self):
 
     #----------------------
-    # Individual values        
+    # Individual values
     #----------------------
     self.assertEqual(Scalar( 1.25).frac(), 0.25)
     self.assertEqual(Scalar(-1.25).frac(), 0.75)
@@ -27,7 +27,7 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertEqual(Scalar(-1).frac(), 0.)
 
     #--------------------
-    # Multiple values     
+    # Multiple values
     #--------------------
     self.assertEqual(Scalar((1.25, -1.25)).frac(), (0.25, 0.75))
     self.assertTrue(Scalar((1.25, -1.25)).frac().is_float())
@@ -36,7 +36,7 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertTrue(Scalar((1.2, -1.2)).frac().is_float())
 
     #-------------
-    # Arrays      
+    # Arrays
     #-------------
     N = 1000
     values = np.random.randn(N) * 10.
@@ -49,7 +49,7 @@ class Test_Scalar_frac(unittest.TestCase):
         self.assertEqual(random[i:i+2].frac(), values[i:i+2] % 1.)
 
     #--------------------------------
-    # Units should be disallowed      
+    # Units should be disallowed
     #--------------------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
@@ -62,7 +62,7 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertEqual(random.frac(), 0.25)
 
     #------------
-    # Masks     
+    # Masks
     #------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -71,7 +71,7 @@ class Test_Scalar_frac(unittest.TestCase):
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
     #-------------------------------------
-    # Derivatives should be preserved      
+    # Derivatives should be preserved
     #-------------------------------------
     N = 10
     random = Scalar(np.random.randn(N) * 10.)

@@ -31,7 +31,7 @@ class Qube(object):
     according to PolyMath. Standard NumPy rules of broadcasting apply, but only
     on the array dimensions, not on the item dimensions. In other words, you can
     multiply a (2,2) array of 3x3 matrices by a (5,1,2) array of 3-vectors,
-    yielding a (5,2,2) array of 3-vectors. 
+    yielding a (5,2,2) array of 3-vectors.
 
     PolyMath objects are designed as lightweight wrappers on NumPy ndarrays.
     All standard mathematical operators and indexing/slicing options are
@@ -254,7 +254,7 @@ class Qube(object):
         """
         Default constructor.
 
-        arg         an object to define the numeric value(s) of the returned 
+        arg         an object to define the numeric value(s) of the returned
                     object. It could be another PolyMath object, a number, a
                     Numpy ndarray, a NumPy MaskedArray, or anything array-like.
                     If this object is read-only, then the returned object will
@@ -732,7 +732,7 @@ class Qube(object):
         # unmasked values were saved
         #--------------------------------------------------------------------
         except KeyError:
-    
+
             values = np.empty(shape + item, dtype=dtype)
             repeater = (Ellipsis,) + len(item) * (slice(None),)
             values[repeater] = default
@@ -1539,9 +1539,7 @@ A slice object based on corners specified as a tuple of indices.
         #------------------------------------------------------
         if preserve:
 
-            #- - - - - - - - - - - - - - - - - - - - - 
             # Delete derivatives not on the list
-            #- - - - - - - - - - - - - - - - - - - - - 
             for key in self.__derivs_.keys():
                 if key not in preserve:
                     self.delete_deriv(key, override)
@@ -1589,14 +1587,10 @@ A slice object based on corners specified as a tuple of indices.
             if not any([p for p in preserve if p in self.__derivs_]):
                 return self.wod
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create a fast copy with derivatives
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obj = self.clone(recursive=True)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Delete derivatives not on the list
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             deletions = []
             for key in obj.__derivs_:
                 if key not in preserve:
@@ -2098,7 +2092,7 @@ A slice object based on corners specified as a tuple of indices.
     def __copy__(self):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Python-standard copy function: A deep copy of this object unless 
+        Python-standard copy function: A deep copy of this object unless
         it is read-only.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2433,7 +2427,7 @@ A slice object based on corners specified as a tuple of indices.
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         True if arg is of a Python numeric or NumPy numeric type.
-        """ 
+        """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         return isinstance(arg, (numbers.Real, np.number))
     #===========================================================================
@@ -2620,23 +2614,17 @@ A slice object based on corners specified as a tuple of indices.
         #------------------------------------------------------
         for cls in classes:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If this is already the class of this object, return it as is
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if cls is type(self):
                 return self
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Exclude the class if it is incompatible
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if cls.NUMER is not None and cls.NUMER != self.__numer_:
                 continue
             if cls.NRANK is not None and cls.NRANK != self.__nrank_:
                 continue
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Construct the new object
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obj = Qube.__new__(cls)
             obj.__init__(self.__values_, self.__mask_, derivs=self.__derivs_,
                          example=self)
@@ -2746,9 +2734,7 @@ A slice object based on corners specified as a tuple of indices.
             new_values = self.__values_.copy()
             new_values[mask] = replace.__values_[mask]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the mask if replacement values are masked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if Qube.is_one_true(new_mask):
                 pass
             elif Qube.is_one_false(replace.__mask_):
@@ -2769,9 +2755,7 @@ A slice object based on corners specified as a tuple of indices.
             new_values = self.__values_.copy()
             new_values[mask] = replace.__values_
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the mask if replacement values are masked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if replace.__mask_:
                 if np.shape(new_mask):
                     new_mask[mask] = True
@@ -3520,7 +3504,7 @@ A slice object based on corners specified as a tuple of indices.
 
 
     #===========================================================================
-    # 
+    #
     # If this global is set to True, the shrink/unshrink methods are disabled.
     # Calculations done with and without shrinking should always produce the
     # same results, although they may be slower with shrinking disabled. Used
@@ -3892,7 +3876,7 @@ A slice object based on corners specified as a tuple of indices.
     #===========================================================================
 
 
-    
+
     ############################################################################
     # Numerator slicing operations
     ############################################################################
@@ -4823,10 +4807,8 @@ A slice object based on corners specified as a tuple of indices.
         if arg.__nrank_ == 0:
             try:
                 return self._mul_by_scalar(arg, recursive)
- 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # Revise the exception if the arg was modified
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             except:
                 if arg is not original_arg:
                     Qube._raise_unsupported_op('*', self, original_arg)
@@ -4914,17 +4896,13 @@ A slice object based on corners specified as a tuple of indices.
         #------------------------------------------------------
         if arg.__rank_ == 0:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Align axes
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             arg_values = arg.__values_
             if self.__rank_ and np.shape(arg_values):
                 arg_values = arg_values.reshape(np.shape(arg_values) +
                                                 self.__rank_ * (1,))
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Multiply...
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.is_int() and not arg.is_int():
                 raise TypeError('"*=" operation returns non-integer result')
 
@@ -5116,10 +5094,8 @@ A slice object based on corners specified as a tuple of indices.
         if arg.__nrank_ == 0:
             try:
                 return self._div_by_scalar(arg, recursive)
- 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # Revise the exception if the arg was modified
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             except:
                 if arg is not original_arg:
                     Qube._raise_unsupported_op('/', self, original_arg)
@@ -5332,7 +5308,7 @@ A slice object based on corners specified as a tuple of indices.
     def __floordiv__(self, arg):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Generic left floor division: Cases of divide-by-zero become masked. 
+        Generic left floor division: Cases of divide-by-zero become masked.
         Derivatives are ignored.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -5521,8 +5497,8 @@ A slice object based on corners specified as a tuple of indices.
     def __mod__(self, arg, recursive=True):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Generic left modulus: Cases of divide-by-zero become masked. 
-        Derivatives in the numerator are supported, but not in the 
+        Generic left modulus: Cases of divide-by-zero become masked.
+        Derivatives in the numerator are supported, but not in the
         denominator.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -5620,9 +5596,7 @@ A slice object based on corners specified as a tuple of indices.
             divisor = arg.mask_where_eq(0, 1)
             div_values = divisor.__values_
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Align axes
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.__rank_:
                 div_values = np.reshape(div_values, np.shape(div_values) +
                                                     self.__rank_ * (1,))
@@ -5757,10 +5731,8 @@ A slice object based on corners specified as a tuple of indices.
         #----------------------------------------------------------
         else:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Without this step, negative int exponents on int values truncate
             # to 0.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if expo.is_int():
                 if expo.__shape_:
                     if (expo < 0).any():
@@ -5768,11 +5740,9 @@ A slice object based on corners specified as a tuple of indices.
                 elif expo < 0:
                     expo = expo.as_float()
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Plow forward with the results blindly, then mask nan and inf.
             # Zero to a negative power creates a RuntTimeWarning, which needs to
             # be suppressed.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 new_values = self.__values_ ** expo.__values_
@@ -5783,9 +5753,7 @@ A slice object based on corners specified as a tuple of indices.
                         | np.isinf(new_values))
             new_values[new_mask] = 1
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Check units and exponent
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if Units.is_unitless(self.__units_):
                 new_units = None
             elif np.isscalar(expo.__values_):
@@ -6252,9 +6220,8 @@ A slice object based on corners specified as a tuple of indices.
                                             self.__values_[self.antimask]))
 
         else:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # Create new array
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.__values_.dtype == np.bool_:
                 new_values = self.__values_.copy()
             else:
@@ -6263,9 +6230,7 @@ A slice object based on corners specified as a tuple of indices.
             new_values[self.__mask_] = False
             new_values = np.any(new_values, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create new mask
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask = Qube.as_one_bool(self.__mask_)
             if np.shape(new_mask):
                 new_mask = np.all(self.__mask_, axis=axis)
@@ -6324,9 +6289,8 @@ A slice object based on corners specified as a tuple of indices.
                                             mask=False)
 
         else:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # Create new array
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.__values_.dtype == np.dtype(np.bool_):
                 new_values = self.__values_.copy()
             else:
@@ -6335,9 +6299,7 @@ A slice object based on corners specified as a tuple of indices.
             new_values[self.__mask_] = True
             new_values = np.all(new_values, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create new mask
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask = Qube.as_one_bool(self.__mask_)
             if np.shape(new_mask):
                 new_mask = np.all(self.__mask_, axis=axis)
@@ -6496,9 +6458,7 @@ A slice object based on corners specified as a tuple of indices.
 
         else:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create new array
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.__values_.dtype == np.dtype(np.bool_):
                 new_values = self.__values_.copy()
             else:
@@ -6507,20 +6467,14 @@ A slice object based on corners specified as a tuple of indices.
             new_values[self.__mask_] = True
             new_values = np.any(new_values, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create new mask
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask = Qube.as_one_bool(self.__mask_)
             if np.shape(new_mask):
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # False values are masked if any value is True or masked
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 new_mask = np.any(self.__values_ | self.__mask_, axis=axis)
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # True values are unmasked if any value is True and unmasked
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 true_is_unmasked = np.any(self.__values_ & self.antimask,
                                           axis=axis)
                 new_mask[true_is_unmasked] = False
@@ -6591,9 +6545,7 @@ A slice object based on corners specified as a tuple of indices.
 
         else:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create new array
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.__values_.dtype == np.dtype(np.bool_):
                 new_values = self.__values_.copy()
             else:
@@ -6602,20 +6554,14 @@ A slice object based on corners specified as a tuple of indices.
             new_values[self.__mask_] = False
             new_values = np.all(new_values, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Create new mask
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask = Qube.as_one_bool(self.__mask_)
             if np.shape(new_mask):
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # False values are masked if every value is True or masked
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 new_mask = np.all(self.__values_ | self.__mask_, axis=axis)
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # True values are unmasked if every value is True and unmasked
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 true_is_unmasked = np.all(self.__values_ & self.antimask,
                                           axis=axis)
                 new_mask[true_is_unmasked] = False
@@ -6998,9 +6944,7 @@ A slice object based on corners specified as a tuple of indices.
 
         else:                               # post-mask is an array
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # antimask is False wherever the index is masked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             antimask = np.logical_not(post_mask)
 
             selection = self.__values_[vals_index]
@@ -7126,7 +7070,7 @@ A slice object based on corners specified as a tuple of indices.
                 inloc += 1
 
         #------------------------------------------------------
-        # Each value in inlocs is the 
+        # Each value in inlocs is the
         #------------------------------------------------------
         has_ellipsis = ellipsis_k >= 0
         if has_ellipsis:        # if ellipsis found
@@ -7153,43 +7097,33 @@ A slice object based on corners specified as a tuple of indices.
         for k,item in enumerate(expanded):
             inloc = inlocs[k]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # None consumes to input axis
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if item is None:
                 pre_index += [item]
                 continue
 
             axis_length = self.__shape_[inloc]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Handle Qube subclasses
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if isinstance(item, Qube):
 
               if item.is_float():
                     raise IndexError('floating-point indexing is not permitted')
 
-              #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
               # A Boolean index collapses one or more axes down to one, where
               # the new number of elements is equal to the number of elements
               # True or masked. After the index is applied, the entries
               # corresponding to masked index values will be masked. If no
               # values are True or masked, the axis collapses down to size zero.
-              #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
               if item.is_bool():
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Boolean array
                 # Consumes one index for each array dimension; returns one axis
                 # with length equal to the number of occurrences of True or
                 # masked; masked items leave masked elements.
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 if item.__shape_:
 
-                    #- - - - - - - - - - - - - - - - - - -
                     # Validate shape
-                    #- - - - - - - - - - - - - - - - - - -
                     item_shape = item.__shape_
                     for k,item_length in enumerate(item_shape):
                       if self.__shape_[inloc + k] != item_length:
@@ -7199,9 +7133,7 @@ A slice object based on corners specified as a tuple of indices.
                             'boolean dimension is %d') % (inloc + k,
                                 self.__shape_[inloc + k], item_length))
 
-                    #- - - - - - - - - - - - - - - - - - -
                     # Update index and mask
-                    #- - - - - - - - - - - - - - - - - - -
                     index = item.__values_ | item.__mask_   # True or masked
                     pre_index += [index]
 
@@ -7215,48 +7147,34 @@ A slice object based on corners specified as a tuple of indices.
                     array_lengths += list(item_shape)
                     array_shapes += [(np.sum(index),)]
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # One boolean item
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 else:
 
-                    #- - - - - - - - - - - - -
                     # One masked item
-                    #- - - - - - - - - - - - -
                     if item.__mask_:
                         pre_index += [slice(0,1)]   # unit-sized axis
                         post_mask = True
 
-                    #- - - - - - - - - - - - -
                     # One True item
-                    #- - - - - - - - - - - - -
                     elif item.__values_:
                         pre_index += [slice(None)]
 
-                    #- - - - - - - - - - - - -
                     # One False item
-                    #- - - - - - - - - - - - -
                     else:
                         pre_index += [slice(0,0)]   # zero-sized axis
 
-              #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
               # Scalar index behaves like a NumPy ndarray index, except masked
               # index values yield masked array values
-              #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
               elif item.__rank_ == 0:
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # Scalar array
                 # Consumes one axis; returns the number of axes in this array;
                 # masked items leave masked elements.
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 if item.__shape_:
                     index_vals = item.__values_
                     mask_vals = item.__mask_
 
-                    #- - - - - - - - - - - - - - - - -
                     # Find indices out of bounds
-                    #- - - - - - - - - - - - - - - - -
                     out_of_bounds_mask = ((index_vals >= axis_length) |
                                           (index_vals < -axis_length))
                     any_out_of_bounds = np.any(out_of_bounds_mask)
@@ -7266,9 +7184,7 @@ A slice object based on corners specified as a tuple of indices.
                     else:
                         any_masked = np.any(mask_vals)
 
-                    #- - - - - - - - - - - - - - - - -
                     # Find an unused index value, if any
-                    #- - - - - - - - - - - - - - - - -
                     index_vals = index_vals % axis_length
                     if np.shape(mask_vals):
                         antimask = np.logical_not(mask_vals)
@@ -7285,9 +7201,7 @@ A slice object based on corners specified as a tuple of indices.
                     else:
                         unused_index_value = -1     # -1 = no unused element
 
-                    #- - - - - - - - - - - - - - - - -
                     # Apply mask to index; update masked values
-                    #- - - - - - - - - - - - - - - - -
                     if any_masked:
                         index_vals = index_vals.copy()
                         index_vals[mask_vals] = unused_index_value
@@ -7303,14 +7217,10 @@ A slice object based on corners specified as a tuple of indices.
                     array_lengths += [axis_length]
                     array_shapes += [item.__shape_]
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # One scalar item
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 else:
 
-                    #- - - - - - - - - - - - - - - - -
                     # Compare to allowed range
-                    #- - - - - - - - - - - - - - - - -
                     index_val = item.__values_
                     mask_val = item.__mask_
 
@@ -7321,23 +7231,17 @@ A slice object based on corners specified as a tuple of indices.
                         if index_val < 0 or index_val >= axis_length:
                             mask_val = True
 
-                    #- - - - - - - - - - - - - - - - -
                     # One masked item
                     # Remove this axis and mark everything masked
-                    #- - - - - - - - - - - - - - - - -
                     if mask_val:
                         pre_index += [0]    # use 0 on a masked axis
                         post_mask = True
 
-                    #- - - - - - - - - - - - - - - - -
                     # One unmasked item
-                    #- - - - - - - - - - - - - - - - -
                     else:
                         pre_index += [index_val % axis_length]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Handle any other index element the NumPy way, with no masking
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             elif isinstance(item, (slice, type(Ellipsis))):
                 pre_index += [item]
 
@@ -7489,29 +7393,22 @@ A slice object based on corners specified as a tuple of indices.
         # unmasked value.
         #------------------------------------------------------
         else:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # Set masked items to zero, then sum across axes
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_values = arg.__values_.copy()
             new_values[arg.__mask_] = 0
             new_values = np.sum(new_values, axis=new_axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Count the numbers of unmasked items, summed across axes
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             count = np.sum(arg.antimask, axis=new_axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Convert to a mask and a mean
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_mask = (count == 0)
             if _combine_as_mean:
                 count_reshaped = count.reshape(count.shape + arg.__rank_ * (1,))
                 new_values = new_values / np.maximum(count_reshaped, 1)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Fill in masked values with the default
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if np.any(new_mask):
                 new_values[(new_mask,) +
                            arg.__rank_ * (slice(None),)] = arg.__default_
@@ -8007,7 +7904,7 @@ A slice object based on corners specified as a tuple of indices.
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #----------------------------------------------------------------
-        # At most one object can have a denominator. This is sufficient 
+        # At most one object can have a denominator. This is sufficient
         # to track first derivatives
         #----------------------------------------------------------------
         if arg1.__drank_ and arg2.__drank_:
@@ -8235,9 +8132,7 @@ A slice object based on corners specified as a tuple of indices.
             if len(scalar.__derivs_):
                 has_derivs = True
 
-            #- - - - - - - - - - - - - - - - - -
             # Remember any floats encountered
-            #- - - - - - - - - - - - - - - - - -
             if scalar.is_float():
                 dtype = np.float_
 
@@ -8600,40 +8495,33 @@ A slice object based on corners specified as a tuple of indices.
             else:
                 new_mask = bool(self.__mask_)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Construct the new object
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obj = Qube.__new__(type(self))
             obj.__init__(new_values, new_mask, example=self)
 
         else:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # Broadcast the values array
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if np.isscalar(self.__values_):
                 self_values = np.array([self.__values_])
             else:
                 self_values = self.__values_
-                
+
                 # An array must be read-only upon broadcast
                 self.as_readonly(recursive=False)
 
             new_values = np.broadcast_to(self_values, shape + self.__item_)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Broadcast the mask if necessary
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if np.isscalar(self.__mask_):
                 new_mask = self.__mask_
             else:
                 new_mask = np.broadcast_to(self.__mask_, shape)
-                
+
                 # An array must be read-only upon broadcast
                 self.as_readonly(recursive=False)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Construct the new object
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obj = Qube.__new__(type(self))
             obj.__init__(new_values, new_mask, example=self)
             obj.as_readonly(recursive=False)
@@ -8708,16 +8596,14 @@ A slice object based on corners specified as a tuple of indices.
         #------------------------------------------------------
         new_shape = []
         len_broadcast = 0
-        
+
         #------------------------------------------------------
         # Loop through the arrays...
         #------------------------------------------------------
         for shape in shapes:
             shape = list(shape)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Expand the shapes to the same rank
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             len_shape = len(shape)
 
             if len_shape > len_broadcast:
@@ -8728,9 +8614,7 @@ A slice object based on corners specified as a tuple of indices.
                 shape = (len_broadcast - len_shape) * [1] + shape
                 len_shape = len_broadcast
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Update the broadcast shape and check for compatibility
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             for i in range(len_shape):
                 if new_shape[i] == 1:
                     new_shape[i] = shape[i]

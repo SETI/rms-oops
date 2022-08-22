@@ -37,18 +37,18 @@ def from_file(filespec, fast_distortion=True,
                             Jupiter or Saturn.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    JUNOCAM.initialize()    # Define everything the first time through; use 
+    JUNOCAM.initialize()    # Define everything the first time through; use
                             # defaults unless initialize() is called explicitly.
 
     #-----------------------
-    # Load the PDS label 
+    # Load the PDS label
     #-----------------------
     lbl_filespec = filespec.replace(".img", ".LBL")
     recs = pdsparser.PdsLabel.load_file(lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     #---------------------------------
-    # Get composite image metadata 
+    # Get composite image metadata
     #---------------------------------
     meta = Metadata(label)
 
@@ -58,7 +58,7 @@ def from_file(filespec, fast_distortion=True,
     (framelets, flabels) = _load_data(filespec, label, meta)
 
     #--------------------------------
-    # Load time-dependent kernels 
+    # Load time-dependent kernels
     #--------------------------------
     Juno.load_cks(meta.tstart0, meta.tstart0 + 3600.)
     Juno.load_spks(meta.tstart0, meta.tstart0 + 3600.)
@@ -75,22 +75,22 @@ def from_file(filespec, fast_distortion=True,
         fmeta = Metadata(flabels[i])
 
         if snap:
-            item = (oops.obs.Snapshot(("v","u"), 
+            item = (oops.obs.Snapshot(("v","u"),
                                  (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM", 
+                                 "JUNO", "JUNO_JUNOCAM",
                                  instrument = "JUNOCAM",
-                                 filter = fmeta.filter, 
+                                 filter = fmeta.filter,
                                  data = framelets[:,:,i]))
 
 
 
         if not snap:
-            item = (oops.obs.Pushframe(("vt","u"), 
-                                (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages), 
+            item = (oops.obs.Pushframe(("vt","u"),
+                                (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
                                  fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM", 
+                                 "JUNO", "JUNO_JUNOCAM",
                                  instrument = "JUNOCAM",
-                                 filter = fmeta.filter, 
+                                 filter = fmeta.filter,
                                  data = framelets[:,:,i]))
 
 
@@ -152,7 +152,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
 def _load_data(filespec, label, meta):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
-    Loads the data array from the file and splits into individual framelets. 
+    Loads the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -160,14 +160,14 @@ def _load_data(filespec, label, meta):
         meta            Image Metadata object.
 
     Return:             (framelets, framelet_labels)
-        framelets       A Numpy array containing the individual frames in 
+        framelets       A Numpy array containing the individual frames in
                         axis order (line, sample, framelet #).
         framelet_labels List of labels for each framelet.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    
+
     #----------------
-    # Read data 
+    # Read data
     #----------------
     # seems like this should be handled in a readpds-style function somewhere
     bits = label['IMAGE']['SAMPLE_BITS']
@@ -182,7 +182,7 @@ def _load_data(filespec, label, meta):
     nf = len(meta.filter)
     framelets = np.empty([meta.frlines,meta.nsamples,meta.nframelets])
     framelet_labels = []
-    
+
     for i in range(meta.nframelets):
         framelets[:,:,i] = data[meta.frlines*i:meta.frlines*(i+1),:]
 
@@ -201,15 +201,15 @@ def _load_data(filespec, label, meta):
         label['LINE_SAMPLES'] = meta.nsamples
 
         framelet_labels.append(framelet_label)
-        
-        
+
+
     return (framelets, framelet_labels)
 #===============================================================================
 
 
 
 #*******************************************************************************
-# Metadata 
+# Metadata
 #*******************************************************************************
 class Metadata(object):
 
@@ -224,13 +224,13 @@ class Metadata(object):
         Input:
             label           The label dictionary.
 
-        Attributes:         
+        Attributes:
             nlines          A Numpy array containing the data in axis order
                             (line, sample).
-            nsamples        The time sampling array in (line, sample) axis 
-                            order, or None if no time backplane is found in 
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
                             the file.
-            nframelets         
+            nframelets
 
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -253,7 +253,7 @@ class Metadata(object):
         # Filters
         #-------------
         self.filter = label['FILTER_NAME']
- 
+
         #--------------------------------------------
         # Default timing for unprocessed frame
         #--------------------------------------------
@@ -262,15 +262,15 @@ class Metadata(object):
 
         self.tstart = julian.tdb_from_tai(
                         julian.tai_from_iso(label['START_TIME']))
-        self.tstart0 = self.tstart        
+        self.tstart0 = self.tstart
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
 
 
-        self.tdi_stages = label['JNO:TDI_STAGES_COUNT']        
+        self.tdi_stages = label['JNO:TDI_STAGES_COUNT']
         self.tdi_texp = self.exposure/self.tdi_stages
         if self.exposure < self.tdi_texp: self.tdi_texp = self.exposure
-      
+
         #-------------
         # target
         #-------------
@@ -281,28 +281,22 @@ class Metadata(object):
         #----------------------------------------------
         if 'FRAMELET' in label.keys():
             frn = label['FRAMELET']['FRAME_NUMBER']
-            
-            #- - - - - - - - - - - - - - - - - - - - 
+
             # Filter
-            #- - - - - - - - - - - - - - - - - - - - 
             self.filter = label['FRAMELET']['FRAMELET_FILTER']
 
-            #- - - - - - - - - - - - - - - - - - - - 
             # Filter-specific instrument id
-            #- - - - - - - - - - - - - - - - - - - - 
             if self.filter == 'RED': self.instc = -61503
             if self.filter == 'GREEN': self.instc = -61502
             if self.filter == 'BLUE': self.instc = -61501
             if self.filter == 'METHANE': self.instc = -61504
             sinstc = str(self.instc)
 
-            #- - - - - - - - - - - - - - - - - - - - - 
             # Timing
-            #- - - - - - - - - - - - - - - - - - - - - 
             prefix = 'INS' + sinstc
             delta_var = prefix + '_INTERFRAME_DELTA'
             bias_var = prefix + '_START_TIME_BIAS'
-            
+
             self.delta = cspyce.gdpool(delta_var, 0)[0]
             self.bias = cspyce.gdpool(bias_var, 0)[0]
 
@@ -310,10 +304,8 @@ class Metadata(object):
             self.tstart = self.tstart0 + self.bias + frn*self.tinter
 
             self.tstop = self.tstart + self.exposure
-            
-            #- - - - - - - 
+
             # FOV
-            #- - - - - - - 
             k1_var = 'INS' + sinstc + '_DISTORTION_K1'
             k2_var = 'INS' + sinstc + '_DISTORTION_K2'
             cx_var = 'INS' + sinstc + '_DISTORTION_X'
@@ -328,21 +320,17 @@ class Metadata(object):
             fo = cspyce.gdpool(fo_var, 0)[0]
             px = cspyce.gdpool(px_var, 0)[0]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # Check RATIONALE_DESC in label for modification to methane 
+            # Check RATIONALE_DESC in label for modification to methane
             # DISTORTION_Y
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if self.filter== 'METHANE': cy = self.update_cy(label, cy)
 
-            #- - - - - - - - - - - -
             # Construct FOV
-            #- - - - - - - - - - - -
             scale = px/fo
             distortion_coeff = [1,0,k1,0,k2]
 
-            self.fov = oops.fov.RadialFOV(scale, 
+            self.fov = oops.fov.RadialFOV(scale,
                                             (self.nsamples, self.frlines),
-                                            coefft_uv_from_xy=distortion_coeff, 
+                                            coefft_uv_from_xy=distortion_coeff,
                                             uv_los=(cx, cy))
 
         return
@@ -363,7 +351,7 @@ class Metadata(object):
             label           The label dictionary.
             cy              Uncorrected cy value.
 
-        Output:         
+        Output:
             cy              Corrected cy value.
 
         """
@@ -379,7 +367,7 @@ class Metadata(object):
 
 
 #*******************************************************************************
-# JUNOCAM 
+# JUNOCAM
 #*******************************************************************************
 class JUNOCAM(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

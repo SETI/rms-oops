@@ -68,7 +68,7 @@ class Test_Matrix_column_vectors(unittest.TestCase):
     self.assertEqual(a[0].values[0,1], 22.)
 
     #-----------------------
-    # check derivatives     
+    # check derivatives
     #-----------------------
     N = 100
     a = Matrix(np.random.randn(N,3,4), mask=(np.random.randn(N) < -0.5))
@@ -123,7 +123,7 @@ class Test_Matrix_column_vectors(unittest.TestCase):
     self.assertTrue(np.all(a.d_dv.values[...,3,:] == c.d_dv.values))
 
     #---------------------
-    # read-only status      
+    # read-only status
     #---------------------
     N = 10
     a = Matrix(np.random.randn(N,4,4), mask=(np.random.randn(N) < -0.5))

@@ -182,13 +182,13 @@ class LaplaceFrame(Frame):
 
         #-----------------------------------------------------------------------
         # We still have to be very careful to match up the orbital longitude.
-        # 
+        #
         # Angles are measured...
         # 1. From the reference direction in the orbit's reference frame.
         # 2. Along the equator plane of the orbit's reference frame to the
         #    ascending node of the Laplace plane
         # 3. Then along the Laplace plane
-        # 
+        #
         # This vector is at the intersection of the reference plane and the
         # Laplace plane
         # common_node = orbit_ref_z_axis.cross(laplace_pole)
@@ -234,18 +234,14 @@ class LaplaceFrame(Frame):
         #-------------------------------------
         if time.shape == () and self.given_cache_size > 0:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Trim the cache, removing the values used least recently
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if len(self.cache) >= self.cache_size:
                 all_keys = self.cache.values()
                 all_keys.sort()
                 for (_, old_key, _) in all_keys[:self.trim_size]:
                     del self.cache[old_key]
 
-            #- - - - - - - - - - - - -
             # Insert into the cache
-            #- - - - - - - - - - - - -
             key = time.values
             self.cache_counter += 1
             count = np.array([self.cache_counter])

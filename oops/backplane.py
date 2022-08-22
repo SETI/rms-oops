@@ -383,9 +383,7 @@ class Backplane(object):
             try:
                 body_dict = self.inventory[body_name]
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # If it is not already in the inventory, try to make a new entry
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             except KeyError:
               body_dict = None
               if self.obs.INVENTORY_IMPLEMENTED:
@@ -414,9 +412,7 @@ class Backplane(object):
             antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
             antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
 
-            #- - - - - - - - - - - - - -
             # Swap axes if necessary
-            #- - - - - - - - - - - - - -
             for c in self.obs.axes:
                 if c[0] == 'v':
                     new_mask = antimask.swapaxes(0,1)
@@ -459,7 +455,7 @@ class Backplane(object):
         surface = self.get_surface(event_key)
 
         #--------------------------------------------------------------
-        # Calculate derivatives for the first step from the observer, 
+        # Calculate derivatives for the first step from the observer,
         # if allowed
         #--------------------------------------------------------------
         if len(event_key) == 1 and surface.intercept_DERIVS_ARE_IMPLEMENTED:
@@ -575,9 +571,7 @@ class Backplane(object):
             self.surface_events_w_derivs[event_key[0]] = event
             self.surface_events[event_key[0]] = event_wo_derivs
 
-            #- - - - - - - - - - - - -
             # Also save the antimask
-            #- - - - - - - - - - - - -
             self.antimasks[event_key[0]] = event.antimask
 
         return event
@@ -807,7 +801,7 @@ class Backplane(object):
                 backplane = Scalar(vals, backplane.mask)
 
         #------------------------------------------------------------------
-        # For reference, we add the key as an attribute of each backplane 
+        # For reference, we add the key as an attribute of each backplane
         # object
         #------------------------------------------------------------------
         backplane = backplane.wod
@@ -1418,20 +1412,14 @@ class Backplane(object):
             event = self.get_surface_event_with_arr(event_key)
             incidence = event.incidence_angle()
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Ring incidence angles are always 0-90 degrees
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             if event.surface.COORDINATE_TYPE == 'polar':
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # flip is True wherever incidence angle has to be changed
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
                 self.register_backplane(('ring_flip', event_key), flip)
 
-                #- - - - - - - - - - - - - - - - - - - - - - - 
                 # Now flip incidence angles where necessary
-                #- - - - - - - - - - - - - - - - - - - - - - - 
                 incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
 
             self.register_backplane(key, incidence)
@@ -1458,20 +1446,14 @@ class Backplane(object):
             event = self.get_surface_event(event_key)
             emission = event.emission_angle()
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Ring emission angles are always measured from the lit side normal
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if event.surface.COORDINATE_TYPE == 'polar':
 
-                #- - - - - - - - - - -
                 # Get the flip flag
-                #- - - - - - - - - - -
                 ignore = self.incidence_angle(event_key)
                 flip = self.backplanes[('ring_flip', event_key)]
 
-                #- - - - - - - - - - - - - - - - - - - - -
                 # Flip emission angles where necessary
-                #- - - - - - - - - - - - - - - - - - - - -
                 emission = Scalar.PI * flip + (1. - 2.*flip) * emission
 
             self.register_backplane(key, emission)
@@ -1635,28 +1617,20 @@ class Backplane(object):
         if key not in self.backplanes:
             event = self.get_gridless_event_with_arr(event_key)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Sign on event.arr is negative because photon is incoming
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             latitude = (event.neg_arr_ap.to_scalar(2) /
                         event.arr_ap.norm()).arcsin()
             incidence = Scalar.HALFPI - latitude
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Ring incidence angles are always 0-90 degrees
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             if event.surface.COORDINATE_TYPE == 'polar':
 
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 # The flip is True wherever incidence angle has to be changed
-                #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
                 self.register_gridless_backplane(('ring_center_flip',
                                                   event_key), flip)
 
-                #- - - - - - - - - - - - - - - - - - - - - - -
                 # Now flip incidence angles where necessary
-                #- - - - - - - - - - - - - - - - - - - - - - -
                 if flip.any():
                     incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
 
@@ -1689,20 +1663,14 @@ class Backplane(object):
                         event.dep_ap.norm()).arcsin()
             emission = Scalar.HALFPI - latitude
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Ring emission angles are always measured from the lit side normal
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if event.surface.COORDINATE_TYPE == 'polar':
 
-                #- - - - - - - - - - -  
                 # Get the flip flag
-                #- - - - - - - - - - -  
                 ignore = self.center_incidence_angle(event_key)
                 flip = self.backplanes[('ring_center_flip', event_key)]
 
-                #- - - - - - - - - - - - - - - - - - - - - 
                 # Flip emission angles where necessary
-                #- - - - - - - - - - - - - - - - - - - - - 
                 if flip.any():
                     emission = Scalar.PI * flip + (1. - 2.*flip) * emission
 
@@ -1809,7 +1777,7 @@ class Backplane(object):
 
         #------------------------------------------------------------------
         # If it is not found with default keys, fill in those backplanes
-        # Note that longitudes default to eastward for right-handed 
+        # Note that longitudes default to eastward for right-handed
         # coordinates
         #------------------------------------------------------------------
         key_default = key0 + ('iau', 'east', 0, 'squashed')
@@ -2281,35 +2249,25 @@ class Backplane(object):
         if key not in self.backplanes:
             event = self.get_gridless_event(event_key)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Get the body frame's Z-axis in J2000 coordinates
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - 
             frame = Frame.J2000.wrt(event.frame)
             xform = frame.transform_at_time(event.time)
             pole_j2000 = xform.rotate(Vector3.ZAXIS)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Define the vector to the observer in the J2000 frame
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             dep_j2000 = event.wrt_ssb().apparent_dep()
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Construct a rotation matrix from J2000 to a frame in which the
             # Z-axis points along -dep and the J2000 pole is in the X-Z plane.
             # As it appears to the observer, the Z-axis points toward the body,
             # the X-axis points toward celestial north as projected on the sky,
             # and the Y-axis points toward celestial west (not east!).
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             rotmat = Matrix3.twovec(-dep_j2000, 2, Vector3.ZAXIS, 0)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             # Rotate the body frame's Z-axis to this frame.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - 
             pole = rotmat * pole_j2000
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Convert the X and Y components of the rotated pole into an angle
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             coords = pole.to_scalars()
             clock_angle = coords[1].arctan2(coords[0]) % constants.TWOPI
 
@@ -2501,9 +2459,7 @@ class Backplane(object):
         #----------------------------------
         if remask:
 
-            #- - - - - - - - - - - - - - - - - - - - - 
             # Apply the upper limit to the event
-            #- - - - - - - - - - - - - - - - - - - - - 
             altitude = event.coord3
             self.apply_mask_to_event(event_key, altitude > limit)
             event = self.get_surface_event(event_key)
@@ -3054,9 +3010,7 @@ class Backplane(object):
         key_prograde = key[:-1] + ('prograde',)
         if key_prograde not in self.backplanes:
 
-            #- - - - - - - - - - - - - - - - - - - - - -
             # Un-flip incidence angles where necessary
-            #- - - - - - - - - - - - - - - - - - - - - -
             incidence = self.incidence_angle(event_key)
             flip = self.backplanes[('ring_flip', event_key)]
             incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
@@ -3130,9 +3084,7 @@ class Backplane(object):
         key_prograde = key[:-1] + ('prograde',)
         if key_prograde not in self.backplanes:
 
-            #- - - - - - - - - - - - - - - - - - - - - -
             # Un-flip incidence angles where necessary
-            #- - - - - - - - - - - - - - - - - - - - - -
             emission = self.emission_angle(event_key)
             flip = self.backplanes[('ring_flip', event_key)]
             emission = Scalar.PI * flip + (1. - 2.*flip) * emission
@@ -3339,9 +3291,7 @@ class Backplane(object):
         else:
             event = self.get_gridless_event_with_arr(event_key)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Sign on event.arr_ap is negative because photon is incoming
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             latitude = (event.neg_arr_ap.to_scalar(2) /
                         event.arr_ap.norm()).arcsin()
             incidence = Scalar.HALFPI - latitude
@@ -3881,7 +3831,7 @@ class Backplane(object):
             return self.backplanes[key]
 
         #--------------------------------------------------------------------
-        # At each intercept time, determine the incoming direction from the 
+        # At each intercept time, determine the incoming direction from the
         # Sun to the center of the planet
         #--------------------------------------------------------------------
         event = self.get_surface_event(event_key)
@@ -4458,9 +4408,7 @@ class Backplane(object):
         if key not in self.backplanes:
             backplane = self.evaluate(backplane_key)
 
-            #- - - - - - - - - - - - - - - - - - - - - - 
             # Reverse the backplane if value is False
-            #- - - - - - - - - - - - - - - - - - - - - - 
             if not value:
                 backplane = ~backplane
 

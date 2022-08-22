@@ -31,7 +31,7 @@ def from_file(filespec, **parameters):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     #--------------------------------
-    # Open the file if necessary      
+    # Open the file if necessary
     #--------------------------------
     if type(filespec) == str:
         hst_file = pyfits.open(filespec)
@@ -39,24 +39,24 @@ def from_file(filespec, **parameters):
         hst_file = filespec
 
     #---------------------------------------
-    # Make an instance of the WFC class     
+    # Make an instance of the WFC class
     #---------------------------------------
     this = WFC()
 
     #---------------------------------------
-    # Confirm that the telescope is HST     
+    # Confirm that the telescope is HST
     #---------------------------------------
     if this.telescope_name(hst_file) != "HST":
         raise IOError("not an HST file: " + this.filespec(hst_file))
 
     #----------------------------------------
-    # Confirm that the instrument is ACS      
+    # Confirm that the instrument is ACS
     #----------------------------------------
     if this.instrument_name(hst_file) != "ACS":
         raise IOError("not an HST/ACS file: " + this.filespec(hst_file))
 
     #--------------------------------------
-    # Confirm that the detector is WFC       
+    # Confirm that the detector is WFC
     #--------------------------------------
     if this.detector_name(hst_file) != "WFC":
         raise IOError("not an HST/ACS/WFC file: " + this.filespec(hst_file))
@@ -99,19 +99,19 @@ class WFC(ACS):
         global IDC_DICT
 
         #---------------------------------------------------------
-        # Load the dictionary of IDC parameters if necessary    
+        # Load the dictionary of IDC parameters if necessary
         #---------------------------------------------------------
         if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("DETCHIP", "FILTER1",
                                                                 "FILTER2"))
 
         #-------------------------------------------------
-        # Determine the layer of the FITS file to read    
+        # Determine the layer of the FITS file to read
         #-------------------------------------------------
         layer = parameters["layer"]
 
         #----------------------------------------
-        # Define the key into the dictionary  
+        # Define the key into the dictionary
         #----------------------------------------
         idc_key = (hst_file[layer].header["CCDCHIP"],
                    hst_file[0].header["FILTER1"],
@@ -140,7 +140,7 @@ class WFC(ACS):
         global GENERAL_SYN_FILES, CCD_SYN_FILE_PARTS, FILTER_SYN_FILE_PARTS
 
         #-------------------------------------
-        # Copy all the standard file names            
+        # Copy all the standard file names
         #-------------------------------------
         syn_filenames = []
         for filename in GENERAL_SYN_FILES:
@@ -164,12 +164,12 @@ class WFC(ACS):
                                      FILTER_SYN_FILE_PARTS[1])
 
         #-------------------------------------------------
-        # Determine the layer of the FITS file to read    
+        # Determine the layer of the FITS file to read
         #-------------------------------------------------
         layer = parameters["layer"]
 
         #---------------------------
-        # Add the CCD file name         
+        # Add the CCD file name
         #---------------------------
         syn_filenames.append(CCD_SYN_FILE_PARTS[0] +
                              str(hst_file[layer].header["CCDCHIP"]) +
@@ -212,12 +212,12 @@ class WFC(ACS):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         #----------------------------------------
-        # Make an instance of the WFC class  
+        # Make an instance of the WFC class
         #----------------------------------------
         this = WFC()
 
         #----------------------------------------------------------------
-        # Figure out the layer and CCD; make sure they are compatible  
+        # Figure out the layer and CCD; make sure they are compatible
         #----------------------------------------------------------------
         if 'layer' in parameters:
             given_layer = parameters['layer']
@@ -267,7 +267,7 @@ class WFC(ACS):
         obs = this.construct_snapshot(hst_file, **parameters)
 
         #--------------------------------------------
-        # Insert subfields common to all images           
+        # Insert subfields common to all images
         #--------------------------------------------
         obs.insert_subfield("layer", layer)
         obs.insert_subfield("chip", ccd)

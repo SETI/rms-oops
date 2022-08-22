@@ -24,23 +24,23 @@ def from_file(filespec, **parameters):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     #------------------
-    # Open the file        
+    # Open the file
     #------------------
     hst_file = pyfits.open(filespec)
 
     #----------------------------------------
-    # Make an instance of the UVIS class      
+    # Make an instance of the UVIS class
     #----------------------------------------
     this = UVIS()
 
     #--------------------------------------
-    # Confirm that the telescope is HST        
+    # Confirm that the telescope is HST
     #--------------------------------------
     if this.telescope_name(hst_file) != "HST":
         raise IOError("not an HST file: " + this.filespec(hst_file))
 
     #----------------------------------------
-    # Confirm that the instrument is ACS      
+    # Confirm that the instrument is ACS
     #----------------------------------------
     if this.instrument_name(hst_file) != "WFC3":
         raise IOError("not an HST/WFC3 file: " + this.filespec(hst_file))
@@ -98,13 +98,13 @@ class UVIS(WFC3):
         global IDC_DICT
 
         #--------------------------------------------------------
-        # Load the dictionary of IDC parameters if necessary  
+        # Load the dictionary of IDC parameters if necessary
         #--------------------------------------------------------
         if IDC_DICT is None:
             IDC_DICT = self.load_idc_dict(hst_file, ("DETCHIP", "FILTER"))
 
         #-----------------------------------------
-        # Define the key into the dictionary    
+        # Define the key into the dictionary
         #-----------------------------------------
         idc_key = (hst_file[1].header["CCDCHIP"],hst_file[0].header["FILTER"])
 
@@ -133,21 +133,21 @@ class UVIS(WFC3):
         global GENERAL_SYN_FILES, CCD_SYN_FILE_PARTS, FILTER_SYN_FILE_PARTS
 
         #--------------------------------------
-        # Copy all the standard file names             
+        # Copy all the standard file names
         #--------------------------------------
         syn_filenames = []
         for filename in GENERAL_SYN_FILES:
             syn_filenames.append(filename)
 
         #------------------------------
-        # Add the filter file name             
+        # Add the filter file name
         #------------------------------
         syn_filenames.append(FILTER_SYN_FILE_PARTS[0] +
                              hst_file[0].header["FILTER"].lower() +
                              FILTER_SYN_FILE_PARTS[1])
 
         #--------------------------------------------------
-        # Determine the layer of the FITS file to read      
+        # Determine the layer of the FITS file to read
         #--------------------------------------------------
         try:
             layer = parameters["layer"]
@@ -156,7 +156,7 @@ class UVIS(WFC3):
             layer = 1
 
         #----------------------------
-        # Add the CCD file name           
+        # Add the CCD file name
         #----------------------------
         syn_filenames.append(CCD_SYN_FILE_PARTS[0] +
                              str(hst_file[layer].header["CCDCHIP"]) +
@@ -174,10 +174,10 @@ class UVIS(WFC3):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Returns a factor that converts a pixel value to DN per second.
-        
+
         Input:
-            hst_file        the object returned by pyfits.open()            
-        
+            hst_file        the object returned by pyfits.open()
+
         Return              the factor to multiply a pixel value by to get DN/sec
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

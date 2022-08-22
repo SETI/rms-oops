@@ -239,7 +239,7 @@ class Test_Pair_misc(unittest.TestCase):
 #         self.assertEqual(pair.shape, [10,5])
 #         self.assertTrue(np.all(pair.vals[9,:,0] == 9))
 #         self.assertTrue(np.all(pair.vals[:,4,1] == 4))
-# 
+#
 #         pair = Pair.cross_scalars(np.arange(12).reshape(3,4), np.arange(5))
 #         self.assertEqual(pair.shape, [3,4,5])
 #         self.assertTrue(np.all(pair.vals[2,3,:,0] == 11))

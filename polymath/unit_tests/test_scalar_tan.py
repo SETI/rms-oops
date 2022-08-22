@@ -19,7 +19,7 @@ class Test_Scalar_tan(unittest.TestCase):
   def runTest(self):
 
     #----------------------
-    # Individual values        
+    # Individual values
     #----------------------
     self.assertEqual(Scalar(1.25).tan(), np.tan(1.25))
     self.assertEqual(type(Scalar(1.25).tan()), Scalar)
@@ -28,13 +28,13 @@ class Test_Scalar_tan(unittest.TestCase):
     self.assertEqual(Scalar(0).tan(), 0.)
 
     #---------------------
-    # Multiple values      
+    # Multiple values
     #---------------------
     self.assertEqual(Scalar((-1,0,1)).tan(), np.tan((-1,0,1)))
     self.assertEqual(type(Scalar((-1,0,1)).tan()), Scalar)
 
     #-------------
-    # Arrays      
+    # Arrays
     #-------------
     N = 1000
     values = np.random.randn(N) * 10.
@@ -46,7 +46,7 @@ class Test_Scalar_tan(unittest.TestCase):
         self.assertEqual(angles.tan()[i:i+2], np.tan(values[i:i+2]))
 
     #---------------------
-    # Test valid units      
+    # Test valid units
     #---------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
@@ -68,14 +68,14 @@ class Test_Scalar_tan(unittest.TestCase):
     self.assertEqual(angle.tan(), np.tan(angle.values)) # units should be OK
 
     #-----------------------------
-    # Units should be removed      
+    # Units should be removed
     #-----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.tan().units is None)
 
     #-------------
-    # Masks      
+    # Masks
     #-------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -84,7 +84,7 @@ class Test_Scalar_tan(unittest.TestCase):
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
     #----------------
-    # Derivatives     
+    # Derivatives
     #----------------
     N = 100
     x = Scalar(np.random.randn(N) * 10.)
@@ -120,7 +120,7 @@ class Test_Scalar_tan(unittest.TestCase):
                                    delta = DEL * abs(dy_dvec[i].values[k]))
 
     #----------------------------------------------
-    # Read-only status should NOT be preserved       
+    # Read-only status should NOT be preserved
     #----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N) * 10.)

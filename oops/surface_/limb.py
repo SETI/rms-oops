@@ -458,7 +458,7 @@ class Limb(Surface):
                                      groundtrack=False):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Return z and clock values at an intercept point. 
+        Return z and clock values at an intercept point.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         if derivs:
@@ -598,7 +598,7 @@ class Limb(Surface):
             max_abs_dv = abs(dv).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print(LOGGING.prefix, "Limb.groundtrack_from_clock", 
+                print(LOGGING.prefix, "Limb.groundtrack_from_clock",
                                       iter, max_abs_dv)
 
             if max_abs_dv <= DV_CUTOFF: break

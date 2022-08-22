@@ -34,7 +34,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertEqual(type(c[0]), Scalar)
 
     #---------------------------
-    # check units and masks    
+    # check units and masks
     #---------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5),
@@ -52,7 +52,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertEqual(a[0].values[1], 22.)
 
     #------------------------
-    # check derivatives       
+    # check derivatives
     #------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
@@ -107,7 +107,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(a.d_dv.values[...,3,:] == c.d_dv.values))
 
     #-------------------------
-    # read-only status          
+    # read-only status
     #-------------------------
     N = 10
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
@@ -130,7 +130,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(c.readonly)     # because of memory overlap
 
     #-------------------------
-    # from_scalars(*args)         
+    # from_scalars(*args)
     #-------------------------
     a = 1.
     b = Scalar((2,3,4), mask=(True,False,False))
@@ -150,7 +150,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertEqual(test.readonly, False)
 
     #------------------------------------------
-    # from_scalars(*args), with derivatives        
+    # from_scalars(*args), with derivatives
     #------------------------------------------
     a = 1.
     b = Scalar([2,3,4], mask=(True,False,False))
@@ -173,7 +173,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(test.d_dt.values[...,2] == 0))
 
     #---------------------------------------------------------
-    # from_scalars(*args), with derivatives, denominators         
+    # from_scalars(*args), with derivatives, denominators
     #---------------------------------------------------------
     a = 1.
 
@@ -186,7 +186,7 @@ class Test_Vector_scalars(unittest.TestCase):
                                                     # shape=(4,3), item=()
 
     #-------------------------
-    # c.mask is random 4x3        
+    # c.mask is random 4x3
     #-------------------------
     dc_dt = Scalar(np.random.randn(4,3,2,2), drank=2, mask=c.mask)
     c.insert_deriv('t', dc_dt)

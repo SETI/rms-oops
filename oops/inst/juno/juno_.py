@@ -39,7 +39,7 @@ oops.spice.load_leap_seconds()
 ################################################################################
 
 #*******************************************************************************
-# Juno 
+# Juno
 #*******************************************************************************
 class Juno(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -104,7 +104,7 @@ class Juno(object):
 
         if Juno.initialized: return
 
-        
+
         (ck, spk) = ('NONE', 'NONE')
 
         #-----------------------------------------
@@ -117,14 +117,13 @@ class Juno(object):
                                  irregulars=irregulars)
 
         ignore = oops.path.SpicePath("JUNO", "JUPITER")
-        
+
         spicedb.open_db()
 
         spk = spk.upper()
         if spk == 'NONE':
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # This means no SPK will ever be loaded; handling is manual
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             Juno.initialize_kernels([], Juno.SPK_LIST)
             Juno.SPK_LOADED = np.ones(Juno.MONTHS, dtype="bool")
         else:
@@ -136,9 +135,8 @@ class Juno(object):
 
         ck = ck.upper()
         if ck == 'NONE':
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # This means no CK will ever be loaded; handling is manual
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             Juno.initialize_kernels([], Juno.CK_LIST)
             Juno.CK_LOADED = np.ones(Juno.MONTHS, dtype="bool")
         else:
@@ -262,45 +260,45 @@ class Juno(object):
 
         kdir = "/home/spitale/ominas_data/trs/juno/kernels/"
 
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_131006_131012_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_131006_131012_v01.bc")
         cspyce.furnsh(kdir + "spk/spk_rec_131005_131014_131101.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_161211_161217_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_161211_161217_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_161115_170106_170113.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_170702_170708_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_170702_170708_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_170608_170728_170803.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_171023_171025_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_171023_171025_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_170918_171121_171127.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_171215_171217_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_171215_171217_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_171121_180113_180117.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_180523_180524_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_180523_180524_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_180429_180621_180626.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_180906_180907_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_180906_180907_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_180812_181004_181011.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_190405_190406_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_190405_190406_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_190312_190504_190509.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_190911_190912_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_190911_190912_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_190817_191010_191022.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_200405_200411_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_200405_200411_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_200316_200508_200512.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_200719_200725_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_200719_200725_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_200629_200822_200826.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_201108_201114_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_201108_201114_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_201014_201205_201208.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_201227_210102_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_201227_210102_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_201205_210127_210210.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_210221_210227_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_210221_210227_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_210127_210321_210329.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_210221_210227_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_210221_210227_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_210127_210321_210329.bsp")
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_190528_190529_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_190528_190529_v01.bc")
         cspyce.furnsh(kdir + "spk/juno_rec_190504_190626_190627.bsp")
-   
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_160710_160716_v01.bc") 
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_160717_160723_v01.bc") 
+
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_160710_160716_v01.bc")
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_160717_160723_v01.bc")
         cspyce.furnsh(kdir + "spk/spk_rec_160522_160729_160909.bsp")
 
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_170827_170902_v01.bc") 
-        cspyce.furnsh(kdir + "ck/juno_sc_rec_170903_170909_v01.bc") 
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_170827_170902_v01.bc")
+        cspyce.furnsh(kdir + "ck/juno_sc_rec_170903_170909_v01.bc")
         cspyce.furnsh(kdir + "spk/spk_rec_170728_170918_170922.bsp")
 
         cspyce.furnsh(kdir + "ck/juno_sc_rec_180715_180716_v01.bc")
@@ -318,7 +316,7 @@ class Juno(object):
         return
 
 
-## TODO: 
+## TODO:
         #-----------------------------------------
         # Find the range of months needed
         #-----------------------------------------
@@ -362,9 +360,7 @@ class Juno(object):
 
         for kernel in kernels:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Find the range of months applicable, extended by 12 hours
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             t0 = cspyce.str2et(kernel.start_time) - Juno.SLOP
             t1 = cspyce.str2et(kernel.stop_time)  + Juno.SLOP
 
@@ -374,9 +370,7 @@ class Juno(object):
             m1 = max(m1, 0)     # ignore time limits outside mission duration
             m2 = min(m2, Juno.MONTHS - 1)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Add this kernel to each month's list
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
     #===========================================================================

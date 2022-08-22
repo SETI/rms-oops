@@ -142,7 +142,7 @@ class RingFrame(Frame):
         time = Scalar.as_scalar(time)
 
         #-----------------------------------------
-        # Check cache first if time is a Scalar     
+        # Check cache first if time is a Scalar
         #-----------------------------------------
         if time.shape == ():
             key = time.values
@@ -157,7 +157,7 @@ class RingFrame(Frame):
         self.cached_value_returned = False
 
         #------------------------------------------------
-        # Otherwise, calculate it for the current time  
+        # Otherwise, calculate it for the current time
         #------------------------------------------------
         xform = self.planet_frame.transform_at_time(time, quick=quick)
 
@@ -197,18 +197,14 @@ class RingFrame(Frame):
         #------------------------------------
         if time.shape == () and self.given_cache_size > 0:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Trim the cache, removing the values used least recently
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if len(self.cache) >= self.cache_size:
                 all_keys = self.cache.values()
                 all_keys.sort()
                 for (_, old_key, _) in all_keys[:self.trim_size]:
                     del self.cache[old_key]
 
-            #- - - - - - - - - - - - -
             # Insert into the cache
-            #- - - - - - - - - - - - -
             key = time.values
             self.cache_counter += 1
             count = np.array([self.cache_counter])

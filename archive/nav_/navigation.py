@@ -25,7 +25,7 @@ class Navigation(Fittable):
     def __init__(self, params):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
-        Constructor for an abstract Navigation object. 
+        Constructor for an abstract Navigation object.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         pass

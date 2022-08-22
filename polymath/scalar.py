@@ -177,15 +177,12 @@ class Scalar(Qube):
         # If purging...
         #--------------------
         if purge:
-            #- - - - - - - - - - - 
+
             # If all masked...
-            #- - - - - - - - - - - 
             if Qube.is_one_true(self.mask):
                 return ((), False)
 
-            #- - - - - - - - - - - - - 
             # If partially masked...
-            #- - - - - - - - - - - - - 
             return (self.values[self.antimask].astype(np.intp), False)
 
         #-----------------------------
@@ -844,25 +841,19 @@ class Scalar(Qube):
 
         else:
 
-            #- - - - - - - - - - - 
             # Create new array
-            #- - - - - - - - - - - 
             minval = self._minval()
 
             new_values = self.values.copy()
             new_values[self.mask] = minval
             new_values = np.max(new_values, axis=axis)
 
-            #- - - - - - - - - - 
             # Create new mask
-            #- - - - - - - - - - 
             new_mask = Qube.as_one_bool(self.mask)
             if np.shape(new_mask):
                 new_mask = np.all(self.mask, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Use the max of the unmasked values if all are masked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             if np.all(new_mask):
                 unmasked_maxes = np.max(self.values, axis=axis)
                 new_values = unmasked_maxes
@@ -932,25 +923,20 @@ class Scalar(Qube):
                                 mask=False, derivs={}, units=self.units)
 
         else:
-            #- - - - - - - - - - -
+
             # Create new array
-            #- - - - - - - - - - -
             maxval = self._maxval()
 
             new_values = self.values.copy()
             new_values[self.mask] = maxval
             new_values = np.min(new_values, axis=axis)
 
-            #- - - - - - - - - - - 
             # Create new mask
-            #- - - - - - - - - - - 
             new_mask = Qube.as_one_bool(self.mask)
             if np.shape(new_mask):
                 new_mask = np.all(self.mask, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Use the min of the unmasked values if all are masked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             if np.all(new_mask):
                 unmasked_mins = np.min(self.values, axis=axis)
                 new_values = unmasked_mins
@@ -1020,24 +1006,18 @@ class Scalar(Qube):
 
         else:
 
-            #- - - - - - - - - - - -
             # Create new array
-            #- - - - - - - - - - - -
             minval = self._minval()
             new_values = self.values.copy()
             new_values[self.mask] = minval
             argmaxes = np.argmax(new_values, axis=axis)
 
-            #- - - - - - - - - - 
             # Create new mask
-            #- - - - - - - - - - 
             new_mask = Qube.as_one_bool(self.mask)
             if np.shape(new_mask):
                 new_mask = np.all(self.mask, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Use the argmax of the unmasked values if all are masked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             if np.all(new_mask):
                 unmasked_argmaxes = np.argmax(self.values, axis=axis)
                 argmaxes = unmasked_argmaxes
@@ -1107,24 +1087,18 @@ class Scalar(Qube):
 
         else:
 
-            #- - - - - - - - - - - 
             # Create new array
-            #- - - - - - - - - - - 
             maxval = self._maxval()
             new_values = self.values.copy()
             new_values[self.mask] = maxval
             argmins = np.argmin(new_values, axis=axis)
 
-            #- - - - - - - - - - 
             # Create new mask
-            #- - - - - - - - - - 
             new_mask = Qube.as_one_bool(self.mask)
             if np.shape(new_mask):
                 new_mask = np.all(self.mask, axis=axis)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             # Use the argmin of the unmasked values if all are masked
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             if np.all(new_mask):
                 unmasked_argmins = np.argmin(self.values, axis=axis)
                 argmins = unmasked_argmins
@@ -1382,9 +1356,8 @@ class Scalar(Qube):
                                 mask=False, units=self.units)
 
         else:
-            #- - - - - - - - - - - - - - - - - -
+
             # Interpret the axis selection
-            #- - - - - - - - - - - - - - - - - -
             len_shape = len(self.shape)
             if isinstance(axis, int):
                 axis = (axis,)
@@ -1394,11 +1367,9 @@ class Scalar(Qube):
             axes = list(set(axes))
             axes.sort(reverse=True)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Reorganize so that the leading axis is a flattened version of all
             # the axes over which the median is to be performed. Remaining axes
             # stay in their original order.
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             new_scalar = self.roll_axis(axes[0], 0, recursive=False)
             for k in axes[1:]:
                 new_scalar.roll_axis(k+1, 0)
@@ -1406,18 +1377,14 @@ class Scalar(Qube):
                 new_scalar = new_scalar.reshape((shape[0] * shape[1],) +
                                                 shape[2:])
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Sort along the leading axis, with masked values at the top
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             maxval = self._maxval()
 
             new_values = new_scalar.values.copy()
             new_values[new_scalar.mask] = maxval
             new_values = np.sort(new_values, axis=0)
 
-            #- - - - - - - - - - - - - - - - - - - - 
             # Count the number of unmasked values
-            #- - - - - - - - - - - - - - - - - - - - 
             bool_mask = Qube.as_one_bool(new_scalar.mask)
             if bool_mask is True:
                 count = 0
@@ -1426,24 +1393,18 @@ class Scalar(Qube):
             else:
                 count = np.sum(new_scalar.mask == False, axis=0)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Define the indices of the middle one or two
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             klo = np.maximum((count - 1) // 2, 0)
             khi = count // 2
             indices = tuple(np.indices(new_values.shape[1:]))
             values_lo = new_values[(klo,) + indices]
             values_hi = new_values[(khi,) + indices]
 
-            #- - - - - - - - - - - -
             # Derive the median
-            #- - - - - - - - - - - -
             new_values = 0.5 * (values_lo + values_hi)
             new_mask = (count == 0)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - 
             # Fill in masked items using unmasked medians
-            #- - - - - - - - - - - - - - - - - - - - - - - - 
             if np.any(new_mask):
                 if np.shape(new_values):
                     new_values[new_mask] = np.median(self.values,
@@ -1495,23 +1456,17 @@ class Scalar(Qube):
             new_values[self.mask] = maxval
             new_values = np.sort(new_values, axis=axis)
 
-            #- - - - - - - - - - - - -
             # Create the new mask
-            #- - - - - - - - - - - - -
             if np.shape(self.mask) == ():
                 new_mask = self.mask
             else:
                 new_mask = self.mask.copy()
                 new_mask = np.sort(new_mask, axis=axis)
 
-            #- - - - - - - - - - - - -
             # Construct the result
-            #- - - - - - - - - - - - -
             result = Scalar(new_values, new_mask, units=self.units)
 
-            #- - - - - - - - - - - - - - - - - - - - - 
             # Replace the masked values by the max
-            #- - - - - - - - - - - - - - - - - - - - - 
             new_values[new_mask] = result.max()
 
         return result.wod

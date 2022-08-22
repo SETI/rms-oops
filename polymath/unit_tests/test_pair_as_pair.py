@@ -28,7 +28,7 @@ class Test_Pair_as_pair(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #----------------------
-    # Matrix case, 2x1       
+    # Matrix case, 2x1
     #----------------------
     a = Matrix(np.random.randn(N,2,1), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,2,1,6), drank=1)
@@ -52,7 +52,7 @@ class Test_Pair_as_pair(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #---------------------
-    # Matrix case, 1x2      
+    # Matrix case, 1x2
     #---------------------
     a = Matrix(np.random.randn(N,1,2), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,1,2,6), drank=1)
@@ -76,7 +76,7 @@ class Test_Pair_as_pair(unittest.TestCase):
     self.assertFalse(hasattr(b, 'd_dt'))
 
     #--------------------
-    # Other cases     
+    # Other cases
     #--------------------
     b = Pair.as_pair((1,2))
     self.assertTrue(type(b), Pair)

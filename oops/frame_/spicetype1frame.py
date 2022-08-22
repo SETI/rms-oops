@@ -108,9 +108,8 @@ class SpiceType1Frame(Frame):
         try:
             self.origin = Path.as_waypoint(self.spice_origin_id)
         except KeyError:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             # If the origin path was never defined, define it now
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - -
             origin_path = SpicePath(self.spice_origin_id)
             self.origin = origin_path.waypoint
 
@@ -210,7 +209,7 @@ class SpiceType1Frame(Frame):
             self.cached_transform = Transform(matrix, omega,
                                               self.frame_id, self.reference_id)
             return self.cached_transform
-        
+
         #-------------------------------------------
         # Otherwise, iterate through the array...
         #-------------------------------------------

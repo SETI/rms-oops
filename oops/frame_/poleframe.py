@@ -82,10 +82,9 @@ class PoleFrame(Frame):
 
         self.aries = aries
         if self.aries:
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # The ascending node of the invariable plane falls 90 degrees 
+
+            # The ascending node of the invariable plane falls 90 degrees
             # ahead pole's RA
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             self.invariable_node_lon = ra + np.pi/2.
         else:
             self.invariable_node_lon = 0.
@@ -212,18 +211,14 @@ class PoleFrame(Frame):
         #-------------------------------------
         if time.shape == () and self.given_cache_size > 0:
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Trim the cache, removing the values used least recently
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if len(self.cache) >= self.cache_size:
                 all_keys = list(self.cache.values())
                 all_keys.sort()
                 for (_, old_key, _) in all_keys[:self.trim_size]:
                     del self.cache[old_key]
 
-            #- - - - - - - - - - - - - -
             # Insert into the cache
-            #- - - - - - - - - - - - - -
             key = time.values
             self.cache_counter += 1
             count = np.array([self.cache_counter])
@@ -315,7 +310,7 @@ class Test_PoleFrame(unittest.TestCase):
         self.assertEqual(Frame.as_wayframe('IAU_MARS'), planet.wayframe)
 
         #------------------------------------------------------------------
-        # This invariable pole is aligned with the planet's pole, so this 
+        # This invariable pole is aligned with the planet's pole, so this
         # should behave just like a RingFrame
         #------------------------------------------------------------------
         for aries in (False, True):
@@ -335,22 +330,16 @@ class Test_PoleFrame(unittest.TestCase):
             rotated = event.wrt_frame('IAU_MARS')
             fixed   = event.wrt_frame(poleframe)
 
-            #- - - - - - - - - - - - - - - - - - - - - -
             # Confirm Z axis is tied to planet's pole
-            #- - - - - - - - - - - - - - - - - - - - - -
             diffs = Scalar(rotated.pos.vals[...,2]) - Scalar(fixed.pos.vals[...,2])
             self.assertTrue(diffs.abs().max() < 1.e-15)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - 
             # Confirm X-axis is tied to the J2000 equator
-            #- - - - - - - - - - - - - - - - - - - - - - - 
             xaxis = Event(0., Vector3.XAXIS, 'SSB', poleframe)
             test = xaxis.wrt_frame('J2000').pos
             self.assertTrue(abs(test.values[2]) < 1.e-15)
 
-            #- - - - - - - - - - - - - - - - - - 
             # Confirm it's the ascending node
-            #- - - - - - - - - - - - - - - - - - 
             xaxis = Event(0., (1,1.e-8,0), 'SSB', poleframe)
             test = xaxis.wrt_frame('J2000').pos
             self.assertTrue(test.values[2] > 0.)
@@ -389,7 +378,7 @@ class Test_PoleFrame(unittest.TestCase):
         planet = SpiceFrame('IAU_NEPTUNE', 'J2000')
 
         #------------------------------------------------------------------
-        # This invariable pole is aligned with the planet's pole, so this 
+        # This invariable pole is aligned with the planet's pole, so this
         # should behave just like a RingFrame
         #------------------------------------------------------------------
         for aries in (False, True):
@@ -409,22 +398,16 @@ class Test_PoleFrame(unittest.TestCase):
             rotated = event.wrt_frame('IAU_NEPTUNE')
             fixed   = event.wrt_frame(poleframe)
 
-            #- - - - - - - - - - - - - - - - - - - - - - 
             # Confirm Z axis is tied to planet's pole
-            #- - - - - - - - - - - - - - - - - - - - - - 
             diffs = Scalar(rotated.pos.vals[...,2]) - Scalar(fixed.pos.vals[...,2])
             self.assertTrue(diffs.abs().max() < 1.e-15)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - -
             # Confirm X-axis is tied to the J2000 equator
-            #- - - - - - - - - - - - - - - - - - - - - - - -
             xaxis = Event(0., Vector3.XAXIS, 'SSB', poleframe)
             test = xaxis.wrt_frame('J2000').pos
             self.assertTrue(abs(test.values[2]) < 1.e-15)
 
-            #- - - - - - - - - - - - - - - - - -
             # Confirm it's the ascending node
-            #- - - - - - - - - - - - - - - - - -
             xaxis = Event(0., (1,1.e-8,0), 'SSB', poleframe)
             test = xaxis.wrt_frame('J2000').pos
             self.assertTrue(test.values[2] > 0.)
@@ -466,24 +449,18 @@ class Test_PoleFrame(unittest.TestCase):
             pole = Vector3.from_ra_dec_length(ra,dec)
             poleframe = PoleFrame(planet, pole, cache_size=0, aries=aries)
 
-            #- - - - - - - - - - - - - - - - - - - - -
             # Make sure Z-axis tracks Neptune pole
-            #- - - - - - - - - - - - - - - - - - - - -
             pole_vecs = poleframe.transform_at_time(times).unrotate(Vector3.ZAXIS)
             test_vecs = planet.transform_at_time(times).unrotate(Vector3.ZAXIS)
             diffs = pole_vecs - test_vecs
             self.assertTrue(diffs.norm().max() < 1.e-15)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Make sure Z-axis circles the pole at uniform distance
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             seps = pole_vecs.sep(pole)
             sep_mean = seps.mean()
             self.assertTrue((seps - sep_mean).abs().max() < 3.e-5)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             # Make sure the X-axis stays close to the ecliptic
-            #- - - - - - - - - - - - - - - - - - - - - - - - - -
             if not aries:
                 node_vecs = poleframe.transform_at_time(times).unrotate(Vector3.XAXIS)
                 min_node_z = np.min(node_vecs.values[:,2])
@@ -492,9 +469,7 @@ class Test_PoleFrame(unittest.TestCase):
                 self.assertTrue(max_node_z <  0.0062)
                 self.assertTrue(abs(min_node_z + max_node_z) < 1.e-8)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # Make sure the X-axis stays in a generally fixed direction
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             diffs = node_vecs - node_vecs[0]
             self.assertTrue(diffs.norm().max() < 0.02)
 

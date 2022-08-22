@@ -36,11 +36,11 @@ def from_file(filespec,
                             Jupiter or Saturn.
     """
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    JIRAM.initialize()    # Define everything the first time through; use 
+    JIRAM.initialize()    # Define everything the first time through; use
                           # defaults unless initialize() is called explicitly.
 
     #-----------------------
-    # Load the PDS label 
+    # Load the PDS label
     #-----------------------
     base = os.path.splitext(filespec)[0]
     lbl_filespec = base + '.LBL'
@@ -48,44 +48,40 @@ def from_file(filespec,
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     #---------------------------------
-    # Get common metadata 
+    # Get common metadata
     #---------------------------------
     meta = Metadata(label)
 
     #--------------------------------
-    # Load time-dependent kernels 
+    # Load time-dependent kernels
     #--------------------------------
     Juno.load_cks(meta.tstart, meta.tstart + 3600.)
     Juno.load_spks(meta.tstart, meta.tstart + 3600.)
 
     #----------------------------------------------------
-    # Determine which observation type and load data 
+    # Determine which observation type and load data
     #----------------------------------------------------
     ext = os.path.splitext(filespec)[1]
 
-    #- - - - - - - - - - - -
     # Image
-    #- - - - - - - - - - - -
-    if ext.upper() == '.IMG': 
+    if ext.upper() == '.IMG':
         import oops.inst.juno.jiram.img as img
-        return(img.from_file(filespec, label, 
+        return(img.from_file(filespec, label,
                                      return_all_planets=False, **parameters))
 
-    #- - - - - - - - - - - -
     # Spectrum
-    #- - - - - - - - - - - -
-    if ext.upper() == '.DAT': 
+    if ext.upper() == '.DAT':
         import oops.inst.juno.jiram.spe as spe
-        return(spe.from_file(filespec, label, 
+        return(spe.from_file(filespec, label,
                                      return_all_planets=False, **parameters))
-                                     
-    return(None)      
+
+    return(None)
 #===============================================================================
 
 
 
 #*******************************************************************************
-# Metadata 
+# Metadata
 #*******************************************************************************
 class Metadata(object):
 
@@ -100,13 +96,13 @@ class Metadata(object):
         Input:
             label           The label dictionary.
 
-        Attributes:         
+        Attributes:
             nlines          A Numpy array containing the data in axis order
                             (line, sample).
-            nsamples        The time sampling array in (line, sample) axis 
-                            order, or None if no time backplane is found in 
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
                             the file.
-            nframelets         
+            nframelets
 
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -127,7 +123,7 @@ class Metadata(object):
 
 
 #*******************************************************************************
-# JIRAM 
+# JIRAM
 #*******************************************************************************
 class JIRAM(object):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -225,7 +221,7 @@ class JIRAM(object):
         jiram_raw_j2000 = \
                 oops.frame.Cmatrix(xform.matrix, id=spice_frame+"_RAW_J2000")
         jiram_frame = oops.frame.Cmatrix(rot, jiram_raw_j2000, id=spice_frame)
-        
+
     #===========================================================================
 
 

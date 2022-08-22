@@ -779,14 +779,14 @@ class Quaternion(Vector):
 #
 # A triple of Euler angles can be applied/interpreted in 24 ways, which can
 # be specified using a 4 character string or encoded 4-tuple:
-# 
+#
 #   *Axes 4-string*: e.g. 'sxyz' or 'ryxy'
-# 
+#
 #   - first character : rotations are applied to 's'tatic or 'r'otating frame
 #   - remaining characters : successive rotation axis 'x', 'y', or 'z'
-# 
+#
 #   *Axes 4-tuple*: e.g. (0, 0, 0, 0) or (1, 1, 1, 1)
-# 
+#
 #   - inner axis: code of axis ('x':0, 'y':1, 'z':2) of rightmost matrix.
 #   - parity : even (0) if inner axis 'x' is followed by 'y', 'y' is followed
 #     by 'z', or 'z' is followed by 'x'. Otherwise odd (1).

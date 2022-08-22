@@ -64,15 +64,11 @@ class Pair(Vector):
         #-------------------------------------------------
         if isinstance(arg, Qube):
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             # Collapse a 1x2 or 2x1 Matrix down to a Pair
-            #- - - - - - - - - - - - - - - - - - - - - - - - -
             if arg.numer in ((1,2), (2,1)):
                 return arg.flatten_numer(Pair, recursive)
 
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # For any suitable Qube, move numerator items to the denominator
-            #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if arg.rank > 1 and arg.numer[0] == 2:
                 arg = arg.split_items(1, Pair)
 

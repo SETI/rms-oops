@@ -22,9 +22,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     # Quaternion to Matrix3 and back
     #-------------------------------------------------------------------------
 
-    #- - - - - - - - - - 
-    # One quaternion     
-    #- - - - - - - - - - 
+    # One quaternion
     a = Quaternion(np.random.rand(4)).unit()
     mat = a.to_matrix3()
     b = Quaternion.from_matrix3(mat)
@@ -42,9 +40,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
 
     self.assertFalse(b.readonly)
 
-    #- - - - - - - - - -
-    # N Quaternions    
-    #- - - - - - - - - -
+    # N Quaternions
     N = 100
     a = Quaternion(np.random.rand(N,4)).unit()
     mat = a.to_matrix3()
@@ -68,9 +64,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     # Quaternion to Euler angles and back
     #-------------------------------------------------------------------------
 
-    #- - - - - - - - - - - - - - - -
     # N Quaternions, without unit()
-    #- - - - - - - - - - - - - - - -
     N = 100
     a = Quaternion(np.random.rand(N,4))
     mat = a.to_matrix3()
@@ -85,9 +79,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     self.assertFalse(aa.readonly)
     self.assertFalse(b.readonly)
 
-    #- - - - - - - - - - - - - - -
     # N Quaternions, with unit()
-    #- - - - - - - - - - - - - - -
     N = 100
     a = Quaternion(np.random.rand(N,4)).unit()
     mat = a.to_matrix3()
