@@ -1,14 +1,14 @@
 ################################################################################
-# oops/cadence_/tdicadence.py: TdiCadence subclass of class Cadence
+# oops/cadence_/tdicadence.py: TDICadence subclass of class Cadence
 ################################################################################
 
 from polymath import *
 from oops.cadence_.cadence import Cadence
 
 #*****************************************************************************
-# TdiCadence
+# TDICadence
 #*****************************************************************************
-class TdiCadence(Cadence):
+class TDICadence(Cadence):
     #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A Cadence subclass defining the integration intervals of lines in a TDI
@@ -23,7 +23,7 @@ class TdiCadence(Cadence):
     #===========================================================================
     def __init__(self, lines, tstart, tdi_texp, tdi_stages, tdi_sign=-1):
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """Constructor for a TdiCadence.
+        """Constructor for a TDICadence.
 
         Input:
             lines       the number of lines in the detector.
@@ -87,9 +87,44 @@ class TdiCadence(Cadence):
         tstep_int = Scalar.as_scalar(tstep).as_int()
         (time_min, time_max) = self.time_range_at_tstep(tstep_int, mask=mask)
 
+        # something is wrong here, as tfrac is not defined...
         time = time_min + tfrac * (time_max - time_min)
         return time
     #===========================================================================
+
+
+
+#    #===========================================================================
+#    # time_range_at_tstep
+#    #===========================================================================
+#    def time_range_at_tstep(self, tstep, mask=True):
+#        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#        """
+#        Return the range of time(s) for the given integer time step(s).
+#
+#        Input:
+#            tstep       a Scalar time step index or a Pair of indices. For this
+#                        class
+#            mask        True to mask values outside the time limits.
+#
+#        Return:         (time_min, time_max)
+#            time_min    a Scalar defining the minimum time associated with the
+#                        index. It is given in seconds TDB.
+#            time_max    a Scalar defining the maximum time value.
+#        """
+#        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#        tstep_int = Scalar.as_scalar(tstep).as_int()
+#        tstep_int = tstep_int.clip(0, self.lines, remask=mask)
+
+#        if self._tdi_upward:
+#            offset = tstep_int + 1
+#        else:
+#            offset = Scalar.minimum(self.lines - tstep_int, 1)
+#
+#        time0 = Scalar.maximum(self.time[0],
+#                               self.time[1] - offset * self.tdi_texp)
+#        return (time0, self.time[1])
+#    #===========================================================================
 
 
 
@@ -116,12 +151,12 @@ class TdiCadence(Cadence):
         tstep_int = tstep_int.clip(0, self.lines, remask=mask)
 
         if self._tdi_upward:
-            offset = tstep_int + 1
+            offset = Scalar.minimum(tstep_int + 1, self.tdi_stages)
         else:
-            offset = Scalar.minimum(self.lines - tstep_int, 1)
+            offset = Scalar.minimum(self.lines - tstep_int, self.tdi_stages)
 
-        time0 = Scalar.maximum(self.time[0],
-                               self.time[1] - offset * self.tdi_texp)
+        time0 = self.time[1] - offset * self.tdi_texp
+
         return (time0, self.time[1])
     #===========================================================================
 
@@ -164,7 +199,7 @@ class TdiCadence(Cadence):
             secs        the number of seconds to shift the time later.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        return TdiCadence(self.tstart + secs, self.tdi_texp, self.tdi_stages,
+        return TDICadence(self.tstart + secs, self.tdi_texp, self.tdi_stages,
                           self.tdi_sign, self.lines)
     #===========================================================================
 
@@ -188,7 +223,7 @@ class TdiCadence(Cadence):
 
 import unittest
 
-class Test_TdiCadence(unittest.TestCase):
+class Test_TDICadence(unittest.TestCase):
 
     def runTest(self):
 

@@ -10,6 +10,6 @@ from oops.cadence_.instant    import Instant
 from oops.cadence_.metronome  import Metronome
 from oops.cadence_.reshaped   import ReshapedCadence
 from oops.cadence_.sequence   import Sequence
-from oops.cadence_.tdicadence import TdiCadence
+from oops.cadence_.tdicadence import TDICadence
 
 ################################################################################

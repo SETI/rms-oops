@@ -10,7 +10,7 @@ from oops.cadence_.instant    import Test_Instant
 from oops.cadence_.metronome  import Test_Metronome
 from oops.cadence_.reshaped   import Test_ReshapedCadence
 from oops.cadence_.sequence   import Test_Sequence
-from oops.cadence_.tdicadence import Test_TdiCadence
+from oops.cadence_.tdicadence import Test_TDICadence
 
 ########################################
 if __name__ == '__main__':

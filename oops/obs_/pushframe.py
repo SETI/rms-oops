@@ -5,14 +5,14 @@
 import numpy as np
 from polymath import *
 
-from oops.obs_.observation   import Observation
-from oops.obs_.snapshot      import Snapshot
-from oops.cadence_.cadence   import Cadence
-from oops.cadence_.metronome import Metronome
-from oops.path_.path         import Path
-from oops.frame_.frame       import Frame
-from oops.body               import Body
-from oops.event              import Event
+from oops.obs_.observation    import Observation
+from oops.obs_.snapshot       import Snapshot
+from oops.cadence_.cadence    import Cadence
+from oops.cadence_.tdicadence import TDICadence
+from oops.path_.path          import Path
+from oops.frame_.frame        import Frame
+from oops.body                import Body
+from oops.event               import Event
 
 #*******************************************************************************
 # Pushframe
@@ -47,10 +47,10 @@ class Pushframe(Observation):
                         v-axis. The 't' suffix is used for the one of these axes
                         that is swept by the time-delayed integration.
 
-            cadence     a TdiCadence object defining the start time and duration
+            cadence     a TDICadence object defining the start time and duration
                         of each consecutive line of the detector. Alternatively,
                         a tuple or dictionary providing input arguments to the
-                        TdiCadence constructor (after the number of lines, which
+                        TDICadence constructor (after the number of lines, which
                         is defined by the FOV):
                             (tstart, tdi_texp, tdi_stages[, tdi_sign])
 
@@ -117,10 +117,10 @@ class Pushframe(Observation):
         lines = self.uv_shape[self._tdi_uv_index]
 
         if isinstance(cadence, (tuple,list)):
-            self.cadence = TdiCadence(lines, *cadence)
+            self.cadence = TDICadence(lines, *cadence)
         elif isinstance(cadence, dict):
-            self.cadence = TdiCadence(lines, **cadence)
-        elif isinstance(cadence, TdiCadence):
+            self.cadence = TDICadence(lines, **cadence)
+        elif isinstance(cadence, TDICadence):
             self.cadence = cadence
             assert self.cadence.shape == (lines,)
         else:
