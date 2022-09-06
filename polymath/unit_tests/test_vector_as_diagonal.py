@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Matrix, Vector, Scalar, Units
 
-#*******************************************************************************
-# Test_Vector_as_diagonal
-#*******************************************************************************
 class Test_Vector_as_diagonal(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #----------------------
     # Check one matrix
-    #----------------------
     a = Vector(np.arange(6))
     b = a.as_diagonal()
     for i in range(6):
@@ -30,9 +23,7 @@ class Test_Vector_as_diagonal(unittest.TestCase):
             else:
                 self.assertEqual(b.values[i,j], 0.)
 
-    #---------------------------------------------
     # Check an array of matrices, some masked
-    #---------------------------------------------
     N = 10
     a = Vector(np.random.randn(100,4), mask= np.random.rand(100) < -0.05)
     b = a.as_diagonal()
@@ -49,16 +40,12 @@ class Test_Vector_as_diagonal(unittest.TestCase):
 
     self.assertTrue(np.all(a.mask == b.mask))
 
-    #----------------
     # Test units
-    #----------------
     a = Vector(np.random.randn(4), units=Units.KM)
 
     self.assertEqual(a.as_diagonal().units, Units.KM)
 
-    #------------------
     # Derivatives
-    #------------------
     N = 100
     x = Vector(np.random.randn(N,3))
 
@@ -110,31 +97,20 @@ class Test_Vector_as_diagonal(unittest.TestCase):
             self.assertAlmostEqual(dy_dv.values[i,j,k,1],
                                    y.d_dv.values[i,j,k,1], delta=DEL)
 
-    #-----------------------------------------------
     # Derivatives should be removed if necessary
-    #-----------------------------------------------
     self.assertEqual(x.as_diagonal(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertTrue(hasattr(x, 'd_dv'))
     self.assertFalse(hasattr(x.as_diagonal(recursive=False), 'd_dt'))
     self.assertFalse(hasattr(x.as_diagonal(recursive=False), 'd_dv'))
 
-    #-----------------------------------------------
     # Read-only status should NOT be preserved
-    #-----------------------------------------------
     N = 10
     x = Vector(np.random.randn(N,7))
 
     self.assertFalse(x.readonly)
     self.assertFalse(x.as_diagonal().readonly)
     self.assertFalse(x.as_readonly().as_diagonal().readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

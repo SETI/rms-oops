@@ -8,14 +8,8 @@ import unittest
 
 from polymath import Qube, Boolean, Scalar, Vector, Units
 
-#*******************************************************************************
-# Test_Boolean
-#*******************************************************************************
 class Test_Boolean(unittest.TestCase):
 
-  #=============================================================================
-  # runTest
-  #=============================================================================
   def runTest(self):
 
     ############################################################################
@@ -620,7 +614,7 @@ class Test_Boolean(unittest.TestCase):
     self.assertTrue((a[mask] == True).all())
 
     mask = a.as_mask_where_zero()
-    self.assertTrue(not a[mask].all())
+    self.assertTrue(not a[mask].any())
     self.assertTrue((a[mask] == False).all())
 
     mask = a.as_mask_where_nonzero_or_masked()
@@ -628,12 +622,6 @@ class Test_Boolean(unittest.TestCase):
 
     mask = a.as_mask_where_zero_or_masked()
     self.assertTrue(not (a[mask] == True).any())
-  #=============================================================================
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

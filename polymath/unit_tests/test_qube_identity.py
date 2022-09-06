@@ -8,14 +8,9 @@ import unittest
 
 from polymath import *
 
-#*******************************************************************************
-# Test_Qube_identity
-#*******************************************************************************
 class Test_Qube_identity(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     a = Scalar((1,2,3))
@@ -71,13 +66,6 @@ class Test_Qube_identity(unittest.TestCase):
     self.assertEqual(type(a.identity()), Matrix3)
     self.assertEqual(a.identity().values.dtype, np.dtype('float'))  # coerced
     self.assertEqual(a.identity().shape, ())
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ############################################
 if __name__ == '__main__':

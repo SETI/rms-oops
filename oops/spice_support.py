@@ -4,8 +4,9 @@
 
 import spicedb, cspyce, julian
 import os
+import numbers
 
-from oops.path_.path import Path
+from oops.path import Path
 
 # Maintain dictionaries that translates names in SPICE toolkit into their
 # corresponding names in the Frame and Path registries.
@@ -19,48 +20,33 @@ PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
 
 LSK_LOADED = False
 
-#===============================================================================
-# load_leap_seconds
-#===============================================================================
 def load_leap_seconds():
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """Load the most recent leap seconds kernel if it was not already loaded.
     """
-    Load the most recent leap seconds kernel if it was not already loaded.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     global LSK_LOADED
 
-    if LSK_LOADED: return
+    if LSK_LOADED:
+        return
 
-    #-------------------------------------------
     # Furnish the LSK to the SPICE toolkit
-    #-------------------------------------------
     spicedb.open_db()
     lsk = spicedb.furnish_lsk(fast=True)
     spicedb.close_db()
 
     LSK_LOADED = True
-#===============================================================================
 
+########################################
 
-
-#===============================================================================
-# body_id_and_name
-#===============================================================================
 def body_id_and_name(arg):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """Intepret the argument as the name or ID of a SPICE body or SPICE body.
     """
-    Intepret the argument as the name or ID of a SPICE body or SPICE body.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #------------------------------------------------
     # First see if the path is already registered
-    #------------------------------------------------
     try:
         path = Path.as_primary_path(PATH_TRANSLATION[arg])
-        if path.path_id == 'SSB': return (0, 'SSB')
+        if path.path_id == 'SSB':
+            return (0, 'SSB')
 
         if type(path).__name__ != 'SpicePath':
             raise TypeError('a SpicePath cannot originate from a ' +
@@ -69,22 +55,17 @@ def body_id_and_name(arg):
         return (path.spice_target_id, path.spice_target_name)
     except KeyError: pass
 
-    #---------------------------------------------
     # Interpret the argument given as a string
-    #---------------------------------------------
-    if type(arg) == str:
+    if isinstance(arg, str):
         id = cspyce.bodn2c(arg)     # raises LookupError if not found
         name = cspyce.bodc2n(id)
         return (id, name)
 
-    #----------------------------------------------------------
     # Otherwise, interpret the argument given as an integer
-    #----------------------------------------------------------
     elif type(arg) == int:
         try:
             name = cspyce.bodc2n(arg)
         except LookupError:
-
             # In rare cases, a body has no name; use the ID instead
             name = str(arg)
 
@@ -92,24 +73,14 @@ def body_id_and_name(arg):
 
     else:
         raise LookupError('invalid SPICE body: %s' % str(arg))
-#===============================================================================
 
+########################################
 
-
-#===============================================================================
-# frame_id_and_name
-#===============================================================================
 def frame_id_and_name(arg):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Return the spice_id and spice_name of a name/ID/SPICE frame.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """The spice_id and spice_name of a name/ID/SPICE frame."""
 
-    #--------------------------------------------
     # Interpret the SPICE frame ID as an int
-    #--------------------------------------------
-    if type(arg) == type(0):
+    if isinstance(arg, numbers.Integral):
         try:
             name = cspyce.frmnam(arg)   # does not raise an error; I may fix
         except ValueError:
@@ -118,7 +89,8 @@ def frame_id_and_name(arg):
             name = ''
 
         # If the int is recognized as a frame ID, return it
-        if name != '': return (arg, name)
+        if name != '':
+            return (arg, name)
 
         # Make sure the body's frame is defined
         if not cspyce.bodfnd(arg, 'POLE_RA'):
@@ -127,10 +99,8 @@ def frame_id_and_name(arg):
         # Otherwise, perhaps it is a body ID
         return cspyce.cidfrm(arg) # LookupError if not found
 
-    #---------------------------------------------
     # Interpret the argument given as a string
-    #---------------------------------------------
-    if type(arg) == type(""):
+    if isinstance(arg, str):
 
         # Validate this as the name of a frame
         try:
@@ -160,20 +130,14 @@ def frame_id_and_name(arg):
 
         # If this is a body, return the name of the associated frame
         return cspyce.cidfrm(body_id)
-#===============================================================================
 
+########################################
 
-
-#===============================================================================
-# initialize
-#===============================================================================
 def initialize():
     global FRAME_TRANSLATION, PATH_TRANSLATION
 
     FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}
     PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
-#===============================================================================
-
 
 ################################################################################
 # UNIT TESTS
@@ -181,23 +145,12 @@ def initialize():
 
 import unittest
 
-#*******************************************************************************
-# Test_tools
-#*******************************************************************************
 class Test_tools(unittest.TestCase):
 
-    #===========================================================================
-    # runTest
-    #===========================================================================
     def runTest(self):
 
         # TBD
         pass
-    #===========================================================================
-
-
-#*******************************************************************************
-
 
 ########################################
 if __name__ == '__main__':

@@ -8,14 +8,9 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Units
 
-#*******************************************************************************
-# Test_Vector_dot
-#*******************************************************************************
 class Test_Vector_dot(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     a = Vector(np.random.randn(10,5))
@@ -28,9 +23,7 @@ class Test_Vector_dot(unittest.TestCase):
 
     self.assertEqual(a.dot(b), np.sum(a.values * b.values, axis=-1))
 
-    #----------------
     # Test units
-    #----------------
     omega = Vector(np.random.randn(3), units=Units.KM)
     omega_as_matrix = omega.cross_product_as_matrix()
 
@@ -42,9 +35,7 @@ class Test_Vector_dot(unittest.TestCase):
     self.assertEqual(cross1.units, Units.KM/Units.SECONDS)
     self.assertEqual(cross2.units, Units.KM/Units.SECONDS)
 
-    #-----------------
     # Derivatives
-    #-----------------
     N = 100
     x = Vector(np.random.randn(N,3))
     y = Vector(np.random.randn(N,3))
@@ -119,9 +110,7 @@ class Test_Vector_dot(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i], dz_dg.values[i], delta=EPS)
         self.assertAlmostEqual(z.d_dh.values[i], dz_dh.values[i], delta=EPS)
 
-    #-----------------------------------------------
     # Derivatives should be removed if necessary
-    #-----------------------------------------------
     self.assertEqual(y.dot(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
     self.assertTrue(hasattr(x, 'd_dh'))
@@ -131,9 +120,7 @@ class Test_Vector_dot(unittest.TestCase):
     self.assertFalse(hasattr(y.dot(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.dot(x, recursive=False), 'd_dh'))
 
-    #----------------------------------------------
     # Read-only status should NOT be preserved
-    #----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,7))
     x = Vector(np.random.randn(N,7))
@@ -148,13 +135,6 @@ class Test_Vector_dot(unittest.TestCase):
 
     self.assertFalse(y.as_readonly().dot(x).readonly)
     self.assertFalse(y.dot(x.as_readonly()).readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

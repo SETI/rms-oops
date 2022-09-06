@@ -1,7 +1,5 @@
 ################################################################################
 # polymath/matrix.py: Matrix subclass ofse PolyMath base class
-#
-# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division, print_function
@@ -14,19 +12,8 @@ from .vector  import Vector
 from .vector3 import Vector3
 from .units   import Units
 
-################################################################################
-# Matrix Subclass...
-################################################################################
-
-#*******************************************************************************
-# Matrix class
-#*******************************************************************************
 class Matrix(Qube):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    A Qube of arbitrary 2-D matrices.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """A Qube of arbitrary 2-D matrices."""
 
     NRANK = 2           # the number of numerator axes.
     NUMER = None        # shape of the numerator.
@@ -42,15 +29,10 @@ class Matrix(Qube):
     DELTA = np.finfo(float).eps * 3     # Cutoff used in unary()
 
     #===========================================================================
-    # as_matrix
-    #===========================================================================
     @staticmethod
     def as_matrix(arg, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The argument converted to Matrix if possible.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The argument converted to Matrix if possible."""
+
         if type(arg) == Matrix:
             if recursive:
                 return arg
@@ -62,23 +44,16 @@ class Matrix(Qube):
             if isinstance(arg, Vector) and arg.drank == 1:
                 return arg.join_items([Matrix])
 
-            arg = Matrix(arg.values, arg.mask, example=arg)
+            arg = Matrix(arg._values_, arg._mask_, example=arg)
             if recursive:
                 return arg
             return arg.wod
 
         return Matrix(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # row_vector
     #===========================================================================
     def row_vector(self, row, recursive=True, classes=(Vector3,Vector)):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The selected row of a Matrix as a Vector.
+        """The selected row of a Matrix as a Vector.
 
         If the Matrix is M x N, then this will return a Vector of length N. By
         default, if N == 3, it will return a Vector3 object instead.
@@ -90,19 +65,12 @@ class Matrix(Qube):
                         class is returned. Default is to return a Vector3 if
                         the length is 3, otherwise a Vector.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.extract_numer(0, row, classes, recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # row_vectors
     #===========================================================================
     def row_vectors(self, recursive=True, classes=(Vector3,Vector)):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A tuple of Vector objects, one for each row of this Matrix.
+        """A tuple of Vector objects, one for each row of this Matrix.
 
         If the Matrix is M x N, then this will return M Vectors of length N. By
         default, if N == 3, it will return Vector3 objects instead.
@@ -113,23 +81,16 @@ class Matrix(Qube):
                         class are returned. Default is to return Vector3 objects
                         if the length is 3, otherwise a Vector.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        list = []
+
+        vectors = []
         for row in range(self.numer[0]):
-            list.append(self.extract_numer(0, row, classes, recursive))
+            vectors.append(self.extract_numer(0, row, classes, recursive))
 
-        return tuple(list)
-    #===========================================================================
+        return tuple(vectors)
 
-
-
-    #===========================================================================
-    # column_vector
     #===========================================================================
     def column_vector(self, column, recursive=True, classes=(Vector3,Vector)):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The selected column of a Matrix as a Vector.
+        """The selected column of a Matrix as a Vector.
 
         If the Matrix is M x N, then this will return a Vector of length M. By
         default, if M == 3, it will return a Vector3 object instead.
@@ -141,19 +102,12 @@ class Matrix(Qube):
                         class is returned. Default is to return a Vector3 if
                         the length is 3, otherwise a Vector.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.extract_numer(1, column, classes, recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # column_vectors
     #===========================================================================
     def column_vectors(self, recursive=True, classes=(Vector3,Vector)):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A tuple of Vector objects, one for each column of this Matrix.
+        """A tuple of Vector objects, one for each column of this Matrix.
 
         If the Matrix is M x N, then this will return N Vectors of length M. By
         default, if M == 3, it will return Vector3 objects instead.
@@ -164,23 +118,16 @@ class Matrix(Qube):
                         class are returned. Default is to return Vector3 objects
                         if the length is 3, otherwise a Vector.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        list = []
+
+        vectors = []
         for col in range(self.numer[1]):
-            list.append(self.extract_numer(1, col, classes, recursive))
+            vectors.append(self.extract_numer(1, col, classes, recursive))
 
-        return tuple(list)
-    #===========================================================================
+        return tuple(vectors)
 
-
-
-    #===========================================================================
-    # to_vector
     #===========================================================================
     def to_vector(self, axis, indx, classes=[], recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        One of the components of a Matrix as a Vector.
+        """One of the components of a Matrix as a Vector.
 
         Input:
             axis        axis index from which to extract vector.
@@ -189,41 +136,27 @@ class Matrix(Qube):
                         valid one will be used. Default is Vector.
             recursive   True to extract the derivatives as well.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.extract_numer(axis, indx, list(classes) + [Vector],
                                   recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # to_scalar
     #===========================================================================
     def to_scalar(self, indx0, indx1, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        One of the elements of a Matrix as a Scalar.
+        """One of the elements of a Matrix as a Scalar.
 
         Input:
             indx0       index along the first matrix axis.
             indx1       index along the second matrix axis.
             recursive   True to extract the derivatives as well.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         vector = self.extract_numer(0, axis0, Vector, recursive)
         return   self.extract_numer(0, axis1, Scalar, recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_scalars
     #===========================================================================
     @staticmethod
     def from_scalars(*args, **keywords):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A Matrix or subclass constructed by combining scalars.
+        """A Matrix or subclass constructed by combining scalars.
 
         Inputs:
             args        any number of Scalars or arguments that can be casted
@@ -247,12 +180,9 @@ class Matrix(Qube):
         Note that the 'recursive' and 'classes' inputs are handled as keyword
         arguments in order to distinguish them from the scalar inputs.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #-----------------------------------------------------
         # Search for keyword "shape" and "classes"
         # Pass "recursive" to the next function
-        #-----------------------------------------------------
         item = None
         if 'shape' in keywords:
             item = keywords['shape']
@@ -263,20 +193,14 @@ class Matrix(Qube):
             classes = keywords['classes']
             del keywords['classes']
 
-        #-----------------------------------------------------
         # Create the Vector object
-        #-----------------------------------------------------
         vector = Vector.from_scalars(*args, **keywords)
 
-        #-----------------------------------------------------
         # Int matrices are disallowed
-        #-----------------------------------------------------
         if vector.is_int():
             raise TypeError('Matrix objects must be of type float')
 
-        #-----------------------------------------------------
         # Determine the shape
-        #-----------------------------------------------------
         if item is not None:
             if len(item) != 2:
                 raise ValueError('invalid Matrix shape %s' % str(item))
@@ -297,17 +221,10 @@ class Matrix(Qube):
 
         result = vector.reshape_numer(item, list(classes) + [Matrix],
                                             recursive=True)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # is_diagonal
     #===========================================================================
     def is_diagonal(self, delta=0.):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A Boolean equal to True where the matrix is diagonal.
+        """A Boolean equal to True where the matrix is diagonal.
 
         Masked matrices return True.
 
@@ -318,7 +235,7 @@ class Matrix(Qube):
                             matrix.
 
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         size = self.item[0]
         if size != self.item[1]:
             raise ValueError('a diagonal matrix must be square')
@@ -327,43 +244,28 @@ class Matrix(Qube):
             raise ValueError('diagonal matrix test is not supported for a '
                              'Matrix with a denominator')
 
-        #-----------------------------------------------------
         # If necessary, calculate the matrix RMS
-        #-----------------------------------------------------
         if delta != 0.:
-
             # rms, scaled to be unity for an identity matrix
-            rms = (np.sqrt(np.sum(np.sum(self.values**2, axis=-1), axis=-1)) /
+            rms = (np.sqrt(np.sum(np.sum(self._values_**2, axis=-1), axis=-1)) /
                                                                         size)
 
-        #-----------------------------------------------------
         # Flatten the value array
-        #-----------------------------------------------------
-        values = self.values.reshape(self.shape + (size*size,))
+        values = self._values_.reshape(self.shape + (size*size,))
 
-        #-----------------------------------------------------
         # Slice away the last element
-        #-----------------------------------------------------
         sliced = values[...,:-1]
 
-        #-----------------------------------------------------
         # Reshape so that only elemenents in the first column can be nonzero
-        #-----------------------------------------------------
         reshaped = sliced.reshape(self.shape + (size-1, size+1))
 
-        #-----------------------------------------------------
         # Slice away the first column
-        #-----------------------------------------------------
         sliced = reshaped[...,1:]
 
-        #-----------------------------------------------------
         # Convert back to 1-D items
-        #-----------------------------------------------------
         reshaped = sliced.reshape(self.shape + ((size-1) * size,))
 
-        #-----------------------------------------------------
         # Compare
-        #-----------------------------------------------------
         if delta == 0:
             compare = (reshaped == 0.)
         else:
@@ -371,75 +273,47 @@ class Matrix(Qube):
 
         compare = np.all(compare, axis=-1)
 
-        #-----------------------------------------------------
         # Apply mask
-        #-----------------------------------------------------
         if np.shape(compare) == ():
-            if self.mask:
+            if self._mask_:
                 compare = True
-        elif np.shape(self.mask) == ():
-            if self.mask:
+        elif np.shape(self._mask_) == ():
+            if self._mask_:
                 compare.fill(True)
         else:
-            compare[self.mask] = True
+            compare[self._mask_] = True
 
         return Boolean(compare)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # transpose
     #===========================================================================
     def transpose(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Transpose of this matrix.
+        """Transpose of this matrix.
 
         Input:
             recursive   True to include the transposed derivatives; False to
                         return an object without derivatives.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.transpose_numer(0, 1, recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # T
     #===========================================================================
     @property
     def T(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Shorthand notation for the transpose of a rotation matrix.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Shorthand notation for the transpose of a rotation matrix."""
 
         return self.transpose_numer(0, 1, recursive=True)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # inverse
     #===========================================================================
     def inverse(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Inverse of this matrix.
+        """Inverse of this matrix.
 
         The returned object will have the same subclass as this object.
 
         Input:
             recursive   True to include the derivatives of the inverse.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #-----------------------------------------------------
         # Validate array
-        #-----------------------------------------------------
         if self.numer[0] != self.numer[1]:
             raise ValueError("only square matrices can be inverted: shape is " +
                              str(self.numer))
@@ -447,35 +321,25 @@ class Matrix(Qube):
         if self.drank:
             raise ValueError("a matrix with denominators cannot be inverted")
 
-        #-----------------------------------------------------
         # Check determinant
-        #-----------------------------------------------------
-        det = np.linalg.det(self.values)
+        det = np.linalg.det(self._values_)
 
-        #-----------------------------------------------------------------------
         # Mask out univertible matrices and replace with diagonal matrix values
-        #-----------------------------------------------------------------------
         mask = (det == 0.)
         if np.any(mask):
-            self.values[mask] = np.diag(np.ones(self.numer[0]))
-            new_mask = self.mask | mask
+            self._values_[mask] = np.diag(np.ones(self.numer[0]))
+            new_mask = self._mask_ | mask
         else:
-            new_mask = self.mask
+            new_mask = self._mask_
 
-        #-----------------------------------------------------
         # Invert the arrray
-        #-----------------------------------------------------
-        new_values = np.linalg.inv(self.values)
+        new_values = np.linalg.inv(self._values_)
 
-        #-----------------------------------------------------
         # Construct the result
-        #-----------------------------------------------------
         obj = Matrix(new_values, new_mask,
                      units = Units.units_power(self.units,-1))
 
-        #-----------------------------------------------------
         # Fill in derivatives
-        #-----------------------------------------------------
         if recursive and self.derivs:
             new_derivs = {}
 
@@ -486,24 +350,13 @@ class Matrix(Qube):
             obj.insert_derivs(new_derivs)
 
         return obj
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # unitary
     #===========================================================================
     def unitary(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The nearest unitary matrix as a Matrix3.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The nearest unitary matrix as a Matrix3."""
 
-        #-------------------------------------------------------------------
         # Algorithm from
         #    wikipedia.org/wiki/Orthogonal_matrix#Nearest_orthogonal_matrix
-        #-------------------------------------------------------------------
 
         MAX_ITERS = 10      # Adequate iterations unless convergence is failing
 
@@ -514,9 +367,7 @@ class Matrix(Qube):
         if m0.numer != (3,3):
             raise ValueError('matrix shape must be 3x3 for unitary()')
 
-        #-----------------------------------------------------
         # Iterate...
-        #-----------------------------------------------------
         next_m = m0
         for i in range(MAX_ITERS):
             m = next_m
@@ -524,29 +375,19 @@ class Matrix(Qube):
             rms = Qube.rms(next_m * next_m.T - Matrix.IDENTITY3)
 
             if Matrix.DEBUG:
-                sorted = np.sort(rms.values.ravel())
+                sorted = np.sort(rms._values_.ravel())
                 print(i, sorted[-4:])
 
             if rms.max() <= Matrix.DELTA:
                 break
 
-        new_mask = (rms.values > Matrix.DELTA)
-        return Qube.MATRIX3_CLASS(next_m.values, self.mask | new_mask)
-    #===========================================================================
+        new_mask = (rms._values_ > Matrix.DELTA)
+        return Qube.MATRIX3_CLASS(next_m._values_, self._mask_ | new_mask)
 
-
-
-    #===========================================================================
-    # solve
-    # Algorithm has been validated but code has not been tested
-    #===========================================================================
+# Algorithm has been validated but code has not been tested
 #     def solve(self, values, recursive=True):
-#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#         """
-#         Solve for the Vector X that satisfies A X = B, for this square matrix
-#         A and a Vector B of results.
-#         """
-#         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#         """Solve for the Vector X that satisfies A X = B, for this square matrix
+#         A and a Vector B of results."""
 #
 #         b = Vector.as_vector(values, recursive=True)
 #
@@ -561,9 +402,7 @@ class Matrix(Qube):
 #         if size != b.item[0]:
 #             raise ValueError('Matrix and Vector have incompatible sizes')
 #
-#         #-----------------------------------------------------
 #         # Easy cases: X = A-1 B
-#         #-----------------------------------------------------
 #         if size <= 3:
 #             if recursive:
 #                 return self.inverse(True) * b
@@ -572,31 +411,23 @@ class Matrix(Qube):
 #
 #         new_shape = Qube.broadcasted_shape(self.shape, b.shape)
 #
-#         #-------------------------------------------------------------
 #         # Algorithm is simpler with matrix indices rolled to front
-#         # Also, Vector b's elements are placed after the elements of
-#         # Matrix a
-#         #-------------------------------------------------------------
+#         # Also, Vector b's elements are placed after the elements of Matrix a
 #
 #         ab_vals = np.empty((size,size+1) + new_shape)
-#         rolled = np.rollaxis(self.values, -1, 0)
+#         rolled = np.rollaxis(self._values_, -1, 0)
 #         rolled = np.rollaxis(rolled, -1, 0)
 #
 #         ab_vals[:,:-1] = rolled
-#         ab_vals[:,-1] = b.values
+#         ab_vals[:,-1] = b._values_
 #
 #         for k in range(size-1):
-#             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#             # Zero out the leading coefficients from each row at each
-#             # iteration
-#             #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#             # Zero out the leading coefficients from each row at each iteration
 #             ab_saved = ab_vals[k+1:,k:k+1]
 #             ab_vals[k+1:,k:] *= ab_vals[k,k:k+1]
 #             ab_vals[k+1:,k:] -= ab_vals[k,k:] * ab_saved
 #
-#         #----------------------------------------------------------
 #         # Now work backward solving for values, replacing Vector b
-#         #----------------------------------------------------------
 #         for k in range(size,0):
 #             ab_vals[ k,-1] /= ab_vals[k,k]
 #             ab_vals[:k,-1] -= ab_vals[k,-1] * ab_vals[:k,k]
@@ -605,15 +436,13 @@ class Matrix(Qube):
 #
 #         x = np.rollaxis(ab_vals[:,-1], 0, len(shape))
 #
-#         x = Vector(x, self.mask | b.mask, derivs={},
+#         x = Vector(x, self._mask_ | b._mask_, derivs={},
 #                       units=Units.units_div(self.units, b.units))
 #
-#         #-----------------------------------------------------
 #         # Deal with derivatives if necessary
 #         # A x = B
 #         # A dx/dt + dA/dt x = dB/dt
 #         # A dx/dt = dB/dt - dA/dt x
-#         #-----------------------------------------------------
 #
 #         if recursive and (self.derivs or b.derivs):
 #             derivs = {}
@@ -632,84 +461,34 @@ class Matrix(Qube):
 #             self.insert_derivs(derivs)
 #
 #         return x
-    #===========================================================================
-
-
 
     ############################################################################
     # Overrides of superclass operators
     ############################################################################
 
-    #===========================================================================
-    # __abs__
-    #===========================================================================
     def __abs__(self):
         Qube._raise_unsupported_op('abs()', self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __floordiv__
-    #===========================================================================
     def __floordiv__(self, arg):
         Qube._raise_unsupported_op('//', self, arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rfloordiv__
-    #===========================================================================
     def __rfloordiv__(self, arg):
         Qube._raise_unsupported_op('//', arg, self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __ifloordiv__
-    #===========================================================================
     def __ifloordiv__(self, arg):
         Qube._raise_unsupported_op('//=', self, arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __mod__
-    #===========================================================================
     def __mod__(self, arg):
         Qube._raise_unsupported_op('%', self, arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rmod__
-    #===========================================================================
     def __rmod__(self, arg):
         Qube._raise_unsupported_op('%', arg, self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __imod__
-    #===========================================================================
     def __imod__(self, arg):
         Qube._raise_unsupported_op('%=', self, arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # identity
-    #===========================================================================
     def identity(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """An identity matrix of the same size and subclass as this."""
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         size = self.numer[0]
 
@@ -724,21 +503,13 @@ class Matrix(Qube):
         obj.__init__(values)
 
         return obj.as_readonly()
-    #===========================================================================
-
-
 
     ############################################################################
     # Overrides of arithmetic operators
     ############################################################################
 
-    #===========================================================================
-    # reciprocal
-    #===========================================================================
     def reciprocal(self, recursive=True, nozeros=False):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        An object equivalent to the reciprocal of this object.
+        """An object equivalent to the reciprocal of this object.
 
         Input:
             recursive   True to return the derivatives of the reciprocal too;
@@ -748,14 +519,8 @@ class Matrix(Qube):
                         know in advance that this object has no zero-valued
                         items.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.inverse(recursive=recursive)
-    #===========================================================================
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Useful class constants

@@ -16,14 +16,9 @@ from packrat_arrays import encode_array, decode_array, \
 from packrat_entities import ENTITIES, UNENTITIES
 
 #===============================================================================
-# clean_attr
-#===============================================================================
 def clean_attr(attr_name):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Function to strip away '_Type__attr_', leaving 'attr'.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """Function to strip away '_Type__attr_', leaving 'attr'."""
+
     if attr_name[0] != '_' or attr_name[-1] != '_':
         return attr_name
 
@@ -32,17 +27,11 @@ def clean_attr(attr_name):
         return attr_name[j+2:-1]
     except ValueError:
         return attr_name
+
 #===============================================================================
-
-
-
-#*******************************************************************************
-# Packrat
-#*******************************************************************************
+#===============================================================================
 class Packrat(object):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    A class that supports the reading and writing of objects and their
+    """A class that supports the reading and writing of objects and their
     attributes.
 
     Attributes and their values are saved in a readable, reasonably compact XML
@@ -125,23 +114,16 @@ class Packrat(object):
     and then all of its attributes are defined. This is not a recommended way to
     construct an object, but it often works.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     UNLINKABLE_TYPENAMES = {'int', 'bool', 'float', 'str', 'None', 'Decimal'}
     MUTABLE_TYPENAMES = {'list', 'dict', 'set', 'np.ndarray'}
 
     VERSION = '1.0'
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __init__
     #===========================================================================
     def __init__(self, filename, access='w', indent=2, savings=(1.e3,1.e4),
                        crlf=None, compress=False):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Create a Packrat object for write or append.
+        """Create a Packrat object for write or append.
 
         It opens a new file of the given name. Use the close() method when
         finished. An associated .npz file is opened only if it is needed.
@@ -170,7 +152,7 @@ class Packrat(object):
             compress    True to use zip compression on the npz file objects;
                         False to leave them uncompressed.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if not filename.lower().endswith('.xml'):
             raise ValueError('filename does not end in ".xml": ' + filename)
 
@@ -182,9 +164,7 @@ class Packrat(object):
         self.access = access
         self._version = Packrat.VERSION
 
-        #----------------------------------
         # Attributes used for write...
-        #----------------------------------
         self.write_index = 0
 
         try:
@@ -216,18 +196,14 @@ class Packrat(object):
         self.object_by_python_id = {}   # Dictionary of objects in XML file
                                         # keyed by Python id()
 
-        #----------------------------------
         # Attributes used for read...
-        #----------------------------------
         self.objects = []
         self.object_names = []
         self.object_no = 0              # To emulate sequential read operations
 
         self.object_by_xml_id = {}
 
-        #-----------------------------------------------
         # Handle the existing npz file if necessary
-        #-----------------------------------------------
         if os.path.exists(self.npz_filename):
             if access == 'r':
                 npz_dict = np.load(self.npz_filename)
@@ -239,9 +215,7 @@ class Packrat(object):
             else:
                 os.remove(self.npz_filename)
 
-        #---------------------------------------------------------
         # When opening for read, load the whole file initially
-        #---------------------------------------------------------
         if access == 'r':
             self.file = None
             tree = ET.parse(filename)
@@ -267,9 +241,7 @@ class Packrat(object):
 
             return
 
-        #-------------------------------------------------
         # When opening for write, initialize the file
-        #-------------------------------------------------
         self.file = open(filename, 'wb')
 
         self.file.write('<?xml version="1.0" encoding="ASCII"?>')
@@ -278,19 +250,12 @@ class Packrat(object):
         self.file.write('<packrat version="%s">' % Packrat.VERSION)
         self.file.write(self.linesep)
         self.begun = ['packrat']
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # open
     #===========================================================================
     @staticmethod
     def open(filename, access='r', indent=2, savings=(1.e3,1.e4), crlf=None,
                        compress=False):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Open a Packrat object for read or write.
+        """Open a Packrat object for read or write.
 
         This is an alternative to calling the constructor directly.
 
@@ -320,25 +285,14 @@ class Packrat(object):
             compress    True to use zip compression on the npz file objects;
                         False to leave them uncompressed.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return Packrat(filename, access, indent, savings, crlf, compress)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # close
     #===========================================================================
     def close(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Close this Packrat file.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Close this Packrat file."""
 
-        #-------------------------------------------
         # Close a file open for write or append
-        #-------------------------------------------
         if self.file is not None:
 
             # Terminate anything already begun
@@ -356,30 +310,20 @@ class Packrat(object):
               else:
                 np.savez(self.npz_filename, *tuple(self.npz_list))
 
-        #--------------------------------
         # Close a file open for read
-        #--------------------------------
         else:
             self.tuples = ()
             self.tuple_no = 0
 
             self.npz_list = []
             self.npz_no = 0
-    #===========================================================================
-
-
 
     ############################################################################
     # Write methods
     ############################################################################
 
-    #===========================================================================
-    # write
-    #===========================================================================
     def write(self, obj, name=None, **params):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Write an object into a Packrat file, top-level version.
+        """Write an object into a Packrat file, top-level version.
 
         The object is appended to the end of file.
 
@@ -389,20 +333,13 @@ class Packrat(object):
             params      additional parameters, e.g., for defining the
                         compression to use on float arrays.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         self._write(obj, name, self.write_index, level=0, **params)
         self.write_index += 1
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # _write
     #===========================================================================
     def _write(self, obj, name=None, index=None, level=0, **params):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Write an object into a Packrat file, recursive version
+        """Write an object into a Packrat file, recursive version
 
         The object is appended to the end of file.
 
@@ -415,11 +352,8 @@ class Packrat(object):
             params      additional parameters, e.g., for defining the
                         compression to use on float arrays.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------
         # Determine the type name
-        #------------------------------
         if isinstance(obj, decimal.Decimal):
             typename = 'Decimal'
         elif isinstance(obj, (bool, np.bool_)):
@@ -447,9 +381,7 @@ class Packrat(object):
         else:
             typename = 'object'
 
-        #------------------------------------------
         # Get the parameter name and dictionary
-        #------------------------------------------
         if name is not None:
             name = name.lstrip('*').lstrip('+')
             brace = name.find('{')
@@ -460,9 +392,7 @@ class Packrat(object):
                     params[key] = value
                 name = name[:brace]
 
-        #----------------------------------------------------------------------
         # Determine the Python id; None for elementary objects and if len == 0
-        #----------------------------------------------------------------------
         python_id = None
         if typename not in self.UNLINKABLE_TYPENAMES:
             try:
@@ -471,9 +401,7 @@ class Packrat(object):
             except (TypeError, AttributeError):
                 python_id = id(obj)
 
-        #----------------------------------------------------------------------
         # Be careful when tracking mutable objects; test link before using
-        #----------------------------------------------------------------------
         object_to_cache = obj
         if typename in ('set', 'list', 'dict', 'array'):
             if python_id in self.object_by_python_id:
@@ -493,9 +421,7 @@ class Packrat(object):
             else:
                 object_to_cache = obj.copy()
 
-        #----------------------------------------------------------------------
         # Look for object in cache; define XML id and link status; update cache
-        #----------------------------------------------------------------------
         if python_id:
             try:
                 xml_id = self.xml_id_by_python_id[python_id]
@@ -512,18 +438,14 @@ class Packrat(object):
             xml_id = None
             xml_link = False
 
-        #----------------------------------------------------------------------
         # Initialize the XML attributes
-        #----------------------------------------------------------------------
         xml_attr = []
         if xml_link:
             xml_attr += [('link', str(xml_id))]
         elif xml_id is not None:
             xml_attr += [('id', str(xml_id))]
 
-        #----------------------------------------------------------------------
         # Write a standard Python class without caching
-        #----------------------------------------------------------------------
 
         # float, int, bool, decimal, str, None
         if typename in ('int', 'float', 'bool'):
@@ -549,9 +471,7 @@ class Packrat(object):
             self._end_node(typename, level, indent=False)
             return
 
-        #----------------------------------------------------------------------
         # Write a Python class with caching
-        #----------------------------------------------------------------------
 
         # tuple, list, set
         if typename in ('tuple', 'list', 'set', 'frozenset'):
@@ -559,7 +479,8 @@ class Packrat(object):
             xml_attr += [('len', str(lenval))]
             slash = self._start_node(typename, level, name, index, xml_attr,
                                      slash=(lenval==0), terminate=True)
-            if slash: return
+            if slash:
+                return
 
             if typename in ('set', 'frozenset'):
                 obj = list(obj)
@@ -577,7 +498,8 @@ class Packrat(object):
             xml_attr += [('len', str(lenval))]
             slash = self._start_node(typename, level, name, index, xml_attr,
                                      slash=(lenval==0), terminate=True)
-            if slash: return
+            if slash:
+                return
 
             keys = obj.keys()
             keys.sort()
@@ -603,6 +525,7 @@ class Packrat(object):
             return
 
         # Write a NumPy ndarray
+
         if typename == 'array':
             if xml_link:
                 xml_attr += [('shape', str(obj.shape).replace(' ','')),
@@ -625,15 +548,14 @@ class Packrat(object):
                 self.npz_no += 1
                 return
 
-            if slash: return
+            if slash:
+                return
 
             self.file.write(xml_text)
             self._end_node(typename, level, indent=False)
             return
 
-        #-------------------------------
         # Otherwise write an object
-        #-------------------------------
 
         # Use the special attribute list if available
         obj_attr = None
@@ -649,7 +571,8 @@ class Packrat(object):
                      ('class', type(obj).__name__)]
         slash = self._start_node(typename, level, name, index, xml_attr,
                                  terminate=True)
-        if slash: return
+        if slash:
+            return
 
         # Use the class attribute list if available
         if obj_attr is None:
@@ -673,19 +596,12 @@ class Packrat(object):
 
         # End this object
         self._end_node(typename, level)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # _start_node
     #===========================================================================
     def _start_node(self, typename, level, name=None, index=None, attr=[],
                           slash='', terminate=False):
 
-        #--------------------------------------------
         # Determine if a trailing slash is needed
-        #--------------------------------------------
         if slash:
             slash = '/'
 
@@ -695,90 +611,59 @@ class Packrat(object):
                     slash = '/'
                     break
 
-        #---------------
         # Determine
-        #---------------
         if slash:
             terminate = True
 
-        #-------------
         # Indent
-        #-------------
         self.file.write(self.indent * (len(self.begun) + level) * ' ')
 
-        #---------------------
         # Write node type
-        #---------------------
         self.file.write('<%s' % typename)
 
-        #----------------------------------------------------------------------
         # Include name and/or index for list items, object attributes, etc.
-        #----------------------------------------------------------------------
         if name:
             self.file.write(' name="%s"' % name)
         if index is not None:
             self.file.write(' index="%d"' % index)
 
-        #------------------------------------
         # Write the additional attributes
-        #------------------------------------
         for (attr_name, value) in attr:
             self.file.write(' %s="%s"' % (attr_name, escape(value, ENTITIES)))
 
-        #------------------------------------
         # Write trailing slash if needed
-        #------------------------------------
         if slash:
             self.file.write('/>')
         else:
             self.file.write('>')
 
-        #--------------------------------------------------------
         # Terminate if necessary and report termination state
-        #--------------------------------------------------------
         if terminate:
             self.file.write(self.linesep)
 
         return slash
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # _end_node
     #===========================================================================
     def _end_node(self, typename, level, indent=True):
 
-        #-----------
         # Indent
-        #-----------
         if indent:
             self.file.write(self.indent * (len(self.begun) + level) * ' ')
 
-        #--------------------
         # Terminate node
-        #--------------------
         self.file.write('</%s>' % typename + self.linesep)
-    #===========================================================================
-
-
 
     ############################################################################
     # Read methods
     ############################################################################
 
-    #===========================================================================
-    # read
-    #===========================================================================
     def read(self, key=None, index=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Read the next item from the file.
+        """Read the next item from the file.
 
         The read process is actually emulated, because all of the objects are
         read by the constructor when access is 'r'
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if key is not None:
             self.object_no = self.object_names.index(key)
 
@@ -791,39 +676,25 @@ class Packrat(object):
         obj = self.objects[self.object_no]
         self.object_no += 1
         return obj
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # read_as_list
     #===========================================================================
     def read_as_list(self, key=None, index=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Read the next item from the file.
+        """Read the next item from the file.
 
         The read process is actually emulated, because all of the objects are
         read by the constructor when access is 'r'
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.objects
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # read_as_dict
     #===========================================================================
     def read_as_dict(self, key=None, index=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Read the next item from the file.
+        """Read the next item from the file.
 
         The read process is actually emulated, because all of the objects are
         read by the constructor when access is 'r'
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         result = {k:self.objects[k] for k in range(len(self.objects))}
 
         for (k,key) in enumerate(self.object_names):
@@ -831,24 +702,14 @@ class Packrat(object):
                 result[key] = self.objects[k]
 
         return result
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # _read_node
     #===========================================================================
     def _read_node(self, node):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Interprets one node of the XML tree, recursively.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Interprets one node of the XML tree, recursively."""
+
         node_type = node.tag
 
-        #----------------------------------------------------------------------
         # Return the value if this node is a link
-        #----------------------------------------------------------------------
         key = None
         try:
             key = int(node.attrib['link'])
@@ -961,9 +822,7 @@ class Packrat(object):
         else:
             raise TypeError('unrecognized Packrat element type: ' + node_type)
 
-        #----------------------------------------------------------------------
         # Save in dictionary
-        #----------------------------------------------------------------------
         try:
             key = int(node.attrib['id'])
             self.object_by_xml_id[key] = obj
@@ -971,14 +830,6 @@ class Packrat(object):
             pass
 
         return obj
-    #===========================================================================
-
-
-
-#*******************************************************************************
-
-
-
 
 ################################################################################
 # Unit tests
@@ -986,51 +837,21 @@ class Packrat(object):
 
 import unittest
 
-#*******************************************************************************
-# Foo
-#*******************************************************************************
 class Foo(object):
-    #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, a, b):
         self.ints = a
         self.floats = b
         self.sum = a + b
-    #===========================================================================
 
-#*******************************************************************************
-
-
-
-
-#*******************************************************************************
-# Bar
-#*******************************************************************************
 class Bar(object):
     PACKRAT_ARGS = ['ints', 'floats']
-    #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, a, b):
         self.ints = a
         self.floats = b
         self.sum = a + b
-    #===========================================================================
 
-
-#*******************************************************************************
-
-
-
-#*******************************************************************************
-# Test_Packrat
-#*******************************************************************************
 class Test_Packrat(unittest.TestCase):
 
-  #=============================================================================
-  # runTest
-  #=============================================================================
   def runTest(self):
 
     random = np.random.randn(20).reshape(2,2,5)
@@ -1277,9 +1098,8 @@ class Test_Packrat(unittest.TestCase):
 
         f.close()
 
-    #--------------------------------
     # Test all line terminators
-    #--------------------------------
+
     f = open(prefix + 'native.xml', 'rb')
     native_lines = f.readlines()
     f.close()
@@ -1304,9 +1124,6 @@ class Test_Packrat(unittest.TestCase):
             native_rec += 1
 
     f.close()
-  #===========================================================================
-
-
 
 ################################################################################
 # Perform unit testing if executed from the command line

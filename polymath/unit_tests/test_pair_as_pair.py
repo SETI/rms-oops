@@ -8,14 +8,9 @@ import unittest
 
 from polymath import Qube, Matrix, Pair, Scalar, Pair, Units
 
-#*******************************************************************************
-# Test_Pair_as_pair
-#*******************************************************************************
 class Test_Pair_as_pair(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     N = 10
@@ -27,9 +22,7 @@ class Test_Pair_as_pair(unittest.TestCase):
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #----------------------
     # Matrix case, 2x1
-    #----------------------
     a = Matrix(np.random.randn(N,2,1), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,2,1,6), drank=1)
     a.insert_deriv('t', da_dt)
@@ -51,9 +44,7 @@ class Test_Pair_as_pair(unittest.TestCase):
     b = Pair.as_pair(a, recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #---------------------
     # Matrix case, 1x2
-    #---------------------
     a = Matrix(np.random.randn(N,1,2), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,1,2,6), drank=1)
     a.insert_deriv('t', da_dt)
@@ -75,9 +66,7 @@ class Test_Pair_as_pair(unittest.TestCase):
     b = Pair.as_pair(a, recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #--------------------
     # Other cases
-    #--------------------
     b = Pair.as_pair((1,2))
     self.assertTrue(type(b), Pair)
     self.assertTrue(b.units is None)
@@ -92,13 +81,6 @@ class Test_Pair_as_pair(unittest.TestCase):
     self.assertEqual(b.shape, (5,4,3))
     self.assertEqual(b.numer, (2,))
     self.assertEqual(b, a)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

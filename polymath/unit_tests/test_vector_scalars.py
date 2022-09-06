@@ -8,14 +8,9 @@ import unittest
 
 from polymath import Qube, Matrix, Vector, Scalar, Pair, Units
 
-#*******************************************************************************
-# Test_Vector_scalars
-#*******************************************************************************
 class Test_Vector_scalars(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     N = 100
@@ -33,9 +28,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertEqual(b, c[0])
     self.assertEqual(type(c[0]), Scalar)
 
-    #---------------------------
     # check units and masks
-    #---------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5),
                units=Units.RAD)
@@ -51,9 +44,7 @@ class Test_Vector_scalars(unittest.TestCase):
     b[0] = 22.
     self.assertEqual(a[0].values[1], 22.)
 
-    #------------------------
     # check derivatives
-    #------------------------
     N = 100
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
     da_dt = Vector(np.random.randn(N,4))
@@ -106,9 +97,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(a.d_dt.values[...,3] == c.d_dt.values))
     self.assertTrue(np.all(a.d_dv.values[...,3,:] == c.d_dv.values))
 
-    #-------------------------
     # read-only status
-    #-------------------------
     N = 10
     a = Vector(np.random.randn(N,4), mask=(np.random.randn(N) < -0.5))
     self.assertFalse(a.readonly)
@@ -129,9 +118,7 @@ class Test_Vector_scalars(unittest.TestCase):
     c = a.to_scalars()[3]
     self.assertTrue(c.readonly)     # because of memory overlap
 
-    #-------------------------
     # from_scalars(*args)
-    #-------------------------
     a = 1.
     b = Scalar((2,3,4), mask=(True,False,False))
     c = np.random.randn(4,3)
@@ -149,9 +136,7 @@ class Test_Vector_scalars(unittest.TestCase):
     test = Vector.from_scalars(a,b,c)
     self.assertEqual(test.readonly, False)
 
-    #------------------------------------------
     # from_scalars(*args), with derivatives
-    #------------------------------------------
     a = 1.
     b = Scalar([2,3,4], mask=(True,False,False))
     c = np.random.randn(4,3)
@@ -172,9 +157,7 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(test.d_dt.values[...,1] == (3,4,5)))
     self.assertTrue(np.all(test.d_dt.values[...,2] == 0))
 
-    #---------------------------------------------------------
     # from_scalars(*args), with derivatives, denominators
-    #---------------------------------------------------------
     a = 1.
 
     b = Scalar((2,3,4), mask=(True,False,False))    # shape=(3,), item=()
@@ -185,17 +168,13 @@ class Test_Vector_scalars(unittest.TestCase):
     c = Scalar(np.random.randn(4,3), mask=(np.random.rand(4,3) < 0.3))
                                                     # shape=(4,3), item=()
 
-    #-------------------------
     # c.mask is random 4x3
-    #-------------------------
     dc_dt = Scalar(np.random.randn(4,3,2,2), drank=2, mask=c.mask)
     c.insert_deriv('t', dc_dt)
 
     abc = Vector.from_scalars(a, b, c, recursive=True) # shape=(4,3), item=(3,)
 
-    #--------------------------------------------
     # abc inherits c.mask, or'ed with  b.mask
-    #--------------------------------------------
     self.assertTrue(np.all(abc.values[...,0] == 1))
     self.assertTrue(np.all(abc.values[...,1] == (2,3,4)))
     self.assertTrue(np.all(abc.values[...,2] == c.values))
@@ -211,12 +190,6 @@ class Test_Vector_scalars(unittest.TestCase):
     self.assertTrue(np.all(abc.d_dt.values[...,2,:,:] == c.d_dt.values))
 
     self.assertTrue(np.all(abc.d_dt.mask == (db_dt.mask | dc_dt.mask)))
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
 
 ################################################################################
 # Execute from command line...

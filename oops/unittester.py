@@ -4,18 +4,18 @@
 
 import oops
 
-from oops.cadence_.unittester import *
-from oops.calib_.unittester   import *
-from oops.fov_.unittester     import *
-from oops.frame_.unittester   import *
-from oops.obs_.unittester     import *
-from oops.path_.unittester    import *
-from oops.surface_.unittester import *
-
-from oops.backplane  import Test_Backplane
-from oops.body       import Test_Body
-from oops.event      import Test_Event
-from oops.transform  import Test_Transform
+from oops.cadence.unittester     import *
+from oops.calibration.unittester import *
+from oops.fov.unittester         import *
+from oops.frame.unittester       import *
+from oops.observation.unittester import *
+from oops.path.unittester        import *
+from oops.surface.unittester     import *
+from oops.backplane   import Test_Backplane
+from oops.body        import Test_Body
+from oops.event       import Test_Event
+from oops.lightsource import Test_LightSource
+from oops.transform   import Test_Transform
 
 ################################################################################
 # To run all unittests...

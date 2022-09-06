@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Scalar, Vector3, Boolean
 
-#*******************************************************************************
-# Test_Qube_shrink
-#*******************************************************************************
 class Test_Qube_shrink(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #--------------
     # corners
-    #--------------
     values = np.ones((100,200))
     a = Scalar(values)
     self.assertEqual(a.corners, ((0,0), (100,200)))
@@ -67,25 +60,23 @@ class Test_Qube_shrink(unittest.TestCase):
     a = Vector3(values, mask)
     self.assertEqual(a.corners, ((1,1), (100,200)))
 
-    #-----------------
-    # slicer
-    #-----------------
+    # _slicer
     values = np.ones((100,200))
     mask = np.zeros((100,200), dtype='bool')
     mask[0] = True
     mask[:,0] = True
 
     a = Scalar(values, mask)
-    self.assertEqual(a.slicer, (slice(1, 100, None), slice(1, 200, None)))
-    self.assertEqual(a[a.slicer].shape, (99,199))
+    self.assertEqual(a._slicer, (slice(1, 100, None), slice(1, 200, None)))
+    self.assertEqual(a[a._slicer].shape, (99,199))
 
     a = Scalar(values, mask=True)
-    self.assertEqual(a.slicer, (slice(0, 0, None), slice(0, 0, None)))
-    self.assertEqual(a[a.slicer].shape, (0,0))
+    self.assertEqual(a._slicer, (slice(0, 0, None), slice(0, 0, None)))
+    self.assertEqual(a[a._slicer].shape, (0,0))
 
     a = Scalar(values, mask=False)
-    self.assertEqual(a.slicer, (slice(0, 100, None), slice(0, 200, None)))
-    self.assertEqual(a[a.slicer].shape, (100,200))
+    self.assertEqual(a._slicer, (slice(0, 100, None), slice(0, 200, None)))
+    self.assertEqual(a[a._slicer].shape, (100,200))
 
     values = np.ones((100,200,3))
     mask = np.zeros((100,200), dtype='bool')
@@ -93,20 +84,18 @@ class Test_Qube_shrink(unittest.TestCase):
     mask[:,0] = True
 
     a = Vector3(values, mask)
-    self.assertEqual(a.slicer, (slice(1, 100, None), slice(1, 200, None)))
-    self.assertEqual(a[a.slicer].shape, (99,199))
+    self.assertEqual(a._slicer, (slice(1, 100, None), slice(1, 200, None)))
+    self.assertEqual(a[a._slicer].shape, (99,199))
 
     a = Vector3(values, mask=True)
-    self.assertEqual(a.slicer, (slice(0, 0, None), slice(0, 0, None)))
-    self.assertEqual(a[a.slicer].shape, (0,0))
+    self.assertEqual(a._slicer, (slice(0, 0, None), slice(0, 0, None)))
+    self.assertEqual(a[a._slicer].shape, (0,0))
 
     a = Vector3(values, mask=False)
-    self.assertEqual(a.slicer, (slice(0, 100, None), slice(0, 200, None)))
-    self.assertEqual(a[a.slicer].shape, (100,200))
+    self.assertEqual(a._slicer, (slice(0, 100, None), slice(0, 200, None)))
+    self.assertEqual(a[a._slicer].shape, (100,200))
 
-    #--------------------
     # antimask
-    #--------------------
     values = np.ones((100,200))
     mask = np.zeros((100,200), dtype='bool')
     mask[0] = True
@@ -138,9 +127,7 @@ class Test_Qube_shrink(unittest.TestCase):
     self.assertTrue(np.all(a.mask ^ a.antimask))
     self.assertEqual(a[a.antimask].shape, (np.sum(a.antimask),200))
 
-    #--------------------------------------------------------------
     # Test unshrink with and without _IGNORE_UNSHRUNK_AS_CACHED
-    #--------------------------------------------------------------
     for ignore in (False, True):
 
         Qube._IGNORE_UNSHRUNK_AS_CACHED = ignore
@@ -162,6 +149,7 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertTrue(np.all(b.values == np.arange(200)))
 
         c = b.unshrink(antimask)
+        print(12121, ignore, a.shape, b.shape, c.shape)
         self.assertEqual(a.shape, c.shape)
         self.assertEqual(a[0], c[0])
         self.assertTrue(np.all(c.mask[1:]))
@@ -383,13 +371,6 @@ class Test_Qube_shrink(unittest.TestCase):
                     self.assertTrue((value1[test_mask] == value3).all())
                 else:
                     self.assertTrue((value1[test_mask] == value3[test_mask]).all())
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

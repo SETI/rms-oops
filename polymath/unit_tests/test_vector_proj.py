@@ -8,28 +8,19 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Units
 
-#*******************************************************************************
-# Test_Vector_proj
-#*******************************************************************************
 class Test_Vector_proj(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #--------------------
     # Single values
-    #--------------------
     self.assertEqual(Vector((2,3,0)).proj((0,7,0)), (0,3,0))
     self.assertEqual(Vector((2,3,0)).proj((-1,0,0)), (2,0,0))
     self.assertTrue(Vector((2,3,0),True).proj((-1,0,0)).mask)
     self.assertTrue(Vector((2,3,0)).proj((0,0,0)).mask)
     self.assertEqual(Vector((0,0,0)).proj((1,1,1)).norm(), 0.)
 
-    #-----------------------
     # Arrays and masks
-    #-----------------------
     N = 100
     x = Vector(np.random.randn(N,3))
     y = Vector(np.random.randn(N,3))
@@ -50,9 +41,7 @@ class Test_Vector_proj(unittest.TestCase):
 
     self.assertTrue(np.all(z.mask == (x.mask | y.mask | zero_mask)))
 
-    #-----------------------------
     # Test the unmasked items
-    #-----------------------------
     xx = x[~z.mask]
     yy = y[~z.mask]
     zz = z[~z.mask]
@@ -60,9 +49,7 @@ class Test_Vector_proj(unittest.TestCase):
         self.assertAlmostEqual(zz[i].cross(xx[i]).norm(), 0., delta=1.e-14)
         self.assertAlmostEqual((yy[i] - zz[i]).dot(xx[i]), 0., delta=1.e-14)
 
-    #--------------------
     # Test units
-    #--------------------
     N = 100
     x = Vector(np.random.randn(N,3), units=Units.KM)
     y = Vector(np.random.randn(N,3), units=Units.SECONDS**(-1))
@@ -70,9 +57,7 @@ class Test_Vector_proj(unittest.TestCase):
 
     self.assertEqual(z.units, Units.SECONDS**(-1))
 
-    #-----------------------------
     # Derivatives, denom = ()
-    #-----------------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape(N,3))
     y = Vector(np.random.randn(N*3).reshape(N,3))
@@ -149,9 +134,7 @@ class Test_Vector_proj(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k], dz_dg.values[i,k], delta=DEL)
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=DEL)
 
-    #-------------------------------
     # Derivatives, denom = (2,)
-    #-------------------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape(N,3))
     y = Vector(np.random.randn(N*3).reshape(N,3))
@@ -244,9 +227,7 @@ class Test_Vector_proj(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k,1], dz_dg1.values[i,k], delta=DEL)
         self.assertAlmostEqual(z.d_dh.values[i,k,1], dz_dh1.values[i,k], delta=DEL)
 
-    #----------------------------------------------
     # Derivatives should be removed if necessary
-    #----------------------------------------------
     self.assertEqual(y.proj(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
     self.assertTrue(hasattr(x, 'd_dh'))
@@ -256,9 +237,7 @@ class Test_Vector_proj(unittest.TestCase):
     self.assertFalse(hasattr(y.proj(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.proj(x, recursive=False), 'd_dh'))
 
-    #----------------------------------------------
     # Read-only status should NOT be preserved
-    #----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -273,13 +252,6 @@ class Test_Vector_proj(unittest.TestCase):
 
     self.assertFalse(y.as_readonly().proj(x).readonly)
     self.assertFalse(y.proj(x.as_readonly()).readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

@@ -1,7 +1,5 @@
 ################################################################################
 # polymath/units.py: Units class
-#
-# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -9,45 +7,32 @@ from __future__ import division
 import numpy as np
 import numbers
 
+#===============================================================================
 # Definition of the gcd function is under the fractions module in Python 2 but
 # under the math module in Python 3. Rather than deal with the inconsistency,
 # we simply define it again here.
 
-#===============================================================================
-# gcd
-#===============================================================================
 def gcd(a, b):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """Calculate the Greatest Common Divisor of a and b.
 
     Unless b==0, the result will have the same sign as b (so that when
     b is divided by it, the result comes out positive).
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     while b:
         a, b = b, a%b
     return a
+
 #===============================================================================
-
-
-
-#*******************************************************************************
-# Units
-#*******************************************************************************
+#===============================================================================
 class Units(object):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Units is a class defining units names and the methods for converting
+    """Units is a class defining units names and the methods for converting
     between values that include units.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     PACKRAT_ARGS = ['exponents', 'triple', 'name']
 
-    #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, exponents, triple, name=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Constructor for a Units object.
 
         Input:
@@ -67,19 +52,15 @@ class Units(object):
         For example, units of degrees would have a triple (1,180,1). This
         defines a factor pi/180, which converts from degrees to radians.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         self.exponents = tuple(exponents)
 
-        #------------------------------------------------------------------
         # Convert to coefficients to ints with lowest common denominator
         # if possible
-        #------------------------------------------------------------------
         (numer, denom) = triple[:2]
 
-        #------------------------------------------------------------------------
         # Scale by 256 to compensate for possible floats that can be represented
         # exactly
-        #------------------------------------------------------------------------
         numer = int(triple[0] * 256)
         denom = int(triple[1] * 256)
 
@@ -95,57 +76,31 @@ class Units(object):
 
         self.triple = (numer, denom, pi_expo)
 
-        #--------------------------------------------------------
         # Factor to convert from these units to standard units
-        #--------------------------------------------------------
         self.factor = (numer / denom) * np.pi**pi_expo
 
-        #--------------------------------------------------------
         # Factor to convert from standard units to these units
-        #--------------------------------------------------------
         self.factor_inv = (denom / numer) / np.pi**pi_expo
 
-        #------------------------
         # Fill in the name
-        #------------------------
         self.name = name
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_units_factor
-    #===========================================================================
     @property
     def from_units_factor(self):
         return self.factor
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # into_units_factor
-    #===========================================================================
     @property
     def into_units_factor(self):
         return self.factor_inv
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # as_units
-    #===========================================================================
     @staticmethod
     def as_units(arg):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert the given argument to a Unit object.
+        """Convert the given argument to a Unit object.
 
         The argument can be an object of class Unit or one of the standard unit
         names. An argument of None returns None.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if arg is None:
             return None
         elif isinstance(arg, str):
@@ -154,227 +109,119 @@ class Units(object):
             return arg
         else:
             raise ValueError("not a recognized unit: " + str(arg))
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # can_match
-    #===========================================================================
     @staticmethod
     def can_match(first, second):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        True if the units can match, meaning that either they have the same
+        """True if the units can match, meaning that either they have the same
         exponents or one or both are None.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if first is None or second is None:
             return True
+
         return first.exponents == second.exponents
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # require_compatible
-    #===========================================================================
     @staticmethod
     def require_compatible(first, second):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Raise a ValueError if the arguments are not compatible units.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Raise a ValueError if the arguments are not compatible units."""
+
         if not Units.can_match(first, second):
             raise ValueError('units are not compatible')
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # do_match
-    #===========================================================================
     @staticmethod
     def do_match(first, second):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """True if the units match, meaning that they have the same exponents.
+
+        Values of None are treated as equivalent to unitless.
         """
-        True if the units match, meaning that they have the same exponents.
-        Values of None are treated as equivalent to nnitless.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if first is None:
             first = Units.UNITLESS
         if second is None:
             second = Units.UNITLESS
 
         return first.exponents == second.exponents
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # require_match
-    #===========================================================================
     @staticmethod
     def require_match(first, second):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Raise a ValueError if the units are not the same.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Raise a ValueError if the units are not the same."""
+
         if not Units.do_match(first, second):
             raise ValueError('units are not compatible')
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # is_angle
-    #===========================================================================
     @staticmethod
     def is_angle(arg):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        True if the argument could be used as an angle.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """True if the argument could be used as an angle."""
+
         if arg is None:
             return True
         return (arg.exponents in ((0,0,0), (0,0,1)))
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # require_angle
-    #===========================================================================
     @staticmethod
     def require_angle(arg):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Raise a ValueError if the argument could be used as an angle.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Raise a ValueError if the argument could be used as an angle."""
+
         if not Units.is_angle(arg):
             raise ValueError('units are incompatible with an angle')
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # is_unitless
-    #===========================================================================
     @staticmethod
     def is_unitless(arg):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        True if the argument is unitless.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """True if the argument is unitless."""
+
         if arg is None:
             return True
         return (arg.exponents == (0,0,0))
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # require_unitless
-    #===========================================================================
     @staticmethod
     def require_unitless(arg):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Raise a ValueError if the argument is not unitless.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Raise a ValueError if the argument is not unitless."""
+
         if not Units.is_unitless(arg):
             raise ValueError('units are not permitted')
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_this
-    #===========================================================================
     def from_this(self, value):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert a scalar or numpy array in these units to one in standard
+        """Convert a scalar or numpy array in these units to one in standard
         units of km, seconds and radians.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.factor * value
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # into_this
-    #===========================================================================
     def into_this(self, value):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert a scalar or numpy array given in standard units to one in
+        """Convert a scalar or numpy array given in standard units to one in
         these units.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.factor_inv * value
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_units
-    #===========================================================================
     @staticmethod
     def from_units(units, value):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert a scalar or numpy array in the given units to one in
+        """Convert a scalar or numpy array in the given units to one in
         standard units of km, seconds and radians.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if units is None:
             return value
 
         return units.factor * value
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # into_units
-    #===========================================================================
     @staticmethod
     def into_units(units, value):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert a scalar or numpy array in standard units to one in the
+        """Convert a scalar or numpy array in standard units to one in the
         given units.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if units is None:
             return value
 
         return units.factor_inv * value
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # convert
-    #===========================================================================
     def convert(self, value, units):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert the units of a scalar or NumPy array.
+        """Convert the units of a scalar or NumPy array.
 
         The value is assumed to be in these units, and it is returned in the
         new units specified. Conversions are exact whenever possible.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if units is None:
             units = Units.UNITLESS
 
@@ -382,9 +229,7 @@ class Units(object):
             raise ValueError("cannot convert units " + self.get_name() +
                              " to " + units.get_name())
 
-        #------------------------------------------------------------------
         # If the factor is unity, return the value without modification
-        #------------------------------------------------------------------
         if (self.triple[2] == units.triple[2] and
             self.triple[0]*units.triple[1] == self.triple[1]*units.triple[0]):
                 return value
@@ -392,17 +237,11 @@ class Units(object):
         return ((self.triple[0] * units.triple[1]) * value /
                 (self.triple[1] * units.triple[0]) *
                 np.pi**(self.triple[2] - units.triple[2]))
-    #===========================================================================
-
-
 
     ############################################################################
     # Arithmetic operators
     ############################################################################
 
-    #===========================================================================
-    # __mul__
-    #===========================================================================
     def __mul__(self, arg):
         if isinstance(arg, Units):
             return Units((self.exponents[0] + arg.exponents[0],
@@ -420,40 +259,16 @@ class Units(object):
             return self * (Units((0,0,0), (arg,1,0)))
 
         return  NotImplemented
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rmul__
-    #===========================================================================
     def __rmul__(self, arg):
         return self.__mul__(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __div__
-    #===========================================================================
     def __div__(self, arg):
         return self.__truediv__(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rdiv__
-    #===========================================================================
     def __rdiv__(self, arg):
         return self.__rtruediv__(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __truediv__
-    #===========================================================================
     def __truediv__(self, arg):
         if isinstance(arg, Units):
             return Units((self.exponents[0] - arg.exponents[0],
@@ -471,13 +286,7 @@ class Units(object):
             return self * (Units((0,0,0), (1,arg,0)))
 
         return NotImplemented
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rtruediv__
-    #===========================================================================
     def __rtruediv__(self, arg):
         if arg is None:
             arg = 1.
@@ -486,13 +295,7 @@ class Units(object):
             return (self / arg)**(-1)
 
         return NotImplemented
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __pow__
-    #===========================================================================
     def __pow__(self, power):
         ipower = int(power)
         if power != ipower:
@@ -520,19 +323,10 @@ class Units(object):
                           self.triple[0]**(-power),
                           power * self.triple[2]),
                          Units.name_power(self.name, power))
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # sqrt
-    #===========================================================================
     def sqrt(self, name=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The square root of a unit if this is possible.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The square root of a unit if this is possible."""
+
         if (self.exponents[0] % 2 != 0 or
             self.exponents[1] % 2 != 0 or
             self.exponents[2] % 2 != 0):
@@ -559,23 +353,15 @@ class Units(object):
             name = Units.name_power(self.name, 0.5)
 
         return Units(exponents, (numer, denom, pi_expo), name)
-    #===========================================================================
-
 
     #####################################################
     # Static versions of arithmetic operations
     #####################################################
 
-    #===========================================================================
-    # mul_units
-    #===========================================================================
     @staticmethod
     def mul_units(arg1, arg2, name=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Static version of multiply operator.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Static version of multiply operator."""
+
         if arg2 is None:
             result = arg1
         elif arg1 is None:
@@ -587,20 +373,11 @@ class Units(object):
             result.name = name
 
         return result
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # div_units
-    #===========================================================================
     @staticmethod
     def div_units(arg1, arg2, name=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Static version of divide operator.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Static version of divide operator."""
+
         if arg2 is None:
             result = arg1
         elif arg1 is None:
@@ -612,124 +389,74 @@ class Units(object):
             result.name = name
 
         return result
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # sqrt_units
-    #===========================================================================
     @staticmethod
     def sqrt_units(units, name=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A Units object constructed as the square root of the given units.
+        """A Units object constructed as the square root of the given units.
+
         The given units can be None.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if units is None:
             return None
+
         return units.sqrt(name)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # units_power
-    #===========================================================================
     @staticmethod
     def units_power(units, power, name=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A Units object constructed as the given units raised to a power.
+        """A Units object constructed as the given units raised to a power.
+
         The given units can be None.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if units is None:
             return None
 
         result = units**power
         result.set_name(name)
         return result
-    #===========================================================================
-
-
 
     ############################################################################
     # Comparison operators
     ############################################################################
 
-    #===========================================================================
-    # __eq__
-    #===========================================================================
     def __eq__(self, arg):
+
         if not isinstance(arg, Units):
             return False
+
         return (self.exponents == arg.exponents and self.factor == arg.factor)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __ne__
-    #===========================================================================
     def __ne__(self, arg):
+
         if not isinstance(arg, Units):
             return True
+
         return (self.exponents != arg.exponents or self.factor != arg.factor)
-    #===========================================================================
-
-
 
     ############################################################################
     # Copy operations
     ############################################################################
 
-    #===========================================================================
-    # __copy__
-    #===========================================================================
     def __copy__(self):
         return Units(self.exponents, self.triple, self.name)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # copy
-    #===========================================================================
     def copy(self):
         return self.__copy__()
-    #===========================================================================
-
-
 
     ############################################################################
     # String operations
     ############################################################################
 
-    #===========================================================================
-    # __str__
-    #===========================================================================
     def __str__(self):
         return "Units(" + self.get_name() + ")"
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __repr__
-    #===========================================================================
     def __repr__(self):
         return str(self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # mul_names
-    #===========================================================================
     @staticmethod
     def mul_names(name1, name2):
+
         if name1 is None or name2 is None:
             return None
 
@@ -747,15 +474,10 @@ class Units(object):
                 new_name[key] = expo
 
         return new_name
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # div_names
-    #===========================================================================
     @staticmethod
     def div_names(name1, name2):
+
         if name1 is None or name2 is None:
             return None
 
@@ -773,13 +495,7 @@ class Units(object):
                 new_name[key] = -expo
 
         return new_name
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # name_power
-    #===========================================================================
     @staticmethod
     def name_power(name, power):
 
@@ -807,20 +523,12 @@ class Units(object):
             new_name[key] = int_power
 
         return new_name
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # name_to_dict
-    #===========================================================================
     @staticmethod
     def name_to_dict(name):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Interpret a string as powers of named units, returning a dictionary.
         """
-        Interpret a string as powers of named units, returning a dictionary.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         BIGNUM = 99999
 
         if isinstance(name, dict):
@@ -833,24 +541,18 @@ class Units(object):
         if name == '':
             return {}
 
-        #-------------------------------
         # Return a named unit
-        #-------------------------------
         if name.isalpha():
             return {name: 1}
 
-        #-------------------------------
         # Return an integer exponent
-        #-------------------------------
         try:
             return int(name)
         except ValueError:
             pass
 
-        #------------------------------------------------------------------
         # If the name starts with a left parenthensis, find the end of the
         # expression and process the interior
-        #------------------------------------------------------------------
         if name[0] == '(':
             depth = 0
             for (i,c) in enumerate(name):
@@ -864,9 +566,7 @@ class Units(object):
             left = name[1:i]
             right = name[i+1:].lstrip()
 
-        #----------------------------------------------
         # Otherwise, jump to the first operator
-        #----------------------------------------------
         else:
             imul = name.find('*') % BIGNUM
             idiv = name.find('/') % BIGNUM
@@ -877,9 +577,7 @@ class Units(object):
             left = name[:first]
             right = name[first:].lstrip()
 
-        #----------------------------------------------
         # Handle the operator if it is an exponent
-        #----------------------------------------------
         if right.startswith('**'):
             right = right[2:].lstrip()
 
@@ -908,41 +606,21 @@ class Units(object):
             return Units.mul_names(left, right)
         else:
             return Units.div_names(left, right)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # name_to_str
-    #===========================================================================
     @staticmethod
     def name_to_str(namedict):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A string representing the contents of a name dictionary.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """A string representing the contents of a name dictionary."""
 
-        #=======================================================================
-        # order_keys
-        #=======================================================================
         def order_keys(namelist):
-            #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            """
-            Internal method to order the units sensibly.
-            """
-            #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            """Internal method to order the units sensibly."""
+
             sorted = []
 
-            #---------------------------
             # Coefficient first
-            #---------------------------
             if '' in namelist:
                 sorted.append('')
 
-            #---------------------------
             # Distances first
-            #---------------------------
             templist = []
             for key in namelist:
                 if key in Units.NAME_TO_UNIT:
@@ -952,9 +630,7 @@ class Units(object):
             templist.sort()
             sorted += templist
 
-            #---------------------
             # Angles second
-            #---------------------
             templist = []
             for key in namelist:
                 if key in Units.NAME_TO_UNIT:
@@ -964,9 +640,7 @@ class Units(object):
             templist.sort()
             sorted += templist
 
-            #---------------------
             # Time units next
-            #---------------------
             templist = []
             for key in namelist:
                 if key in Units.NAME_TO_UNIT:
@@ -976,9 +650,7 @@ class Units(object):
             templist.sort()
             sorted += templist
 
-            #----------------------------
             # Unrecognized units last
-            #----------------------------
             templist = []
             for key in namelist:
                 if key not in sorted:
@@ -987,19 +659,10 @@ class Units(object):
             sorted += templist
 
             return sorted
-        #=======================================================================
 
-
-
-        #=======================================================================
-        # cat_units
-        #=======================================================================
         def cat_units(namelist, negate=False):
-            #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            """
-            Make a string of names and exponents.
-            """
-            #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            """A string of names and exponents."""
+
             unitlist = []
             for key in namelist:
                 expo = namedict[key]
@@ -1018,17 +681,12 @@ class Units(object):
                     unitlist.append(key + '**(' + str(expo) + ')')
 
             return '*'.join(unitlist)
-        #=======================================================================
 
-        #------------------------------------------------------------------
         # Return a string immediately
-        #------------------------------------------------------------------
         if isinstance(namedict, str):
             return namedict
 
-        #-------------------------------------------------
         # Make list of numerator and denominator units
-        #-------------------------------------------------
         numers = []
         denoms = []
         for (key,expo) in namedict.items():
@@ -1039,9 +697,7 @@ class Units(object):
             elif expo < 0:
                 denoms.append(key)
 
-        #-------------------------
         # Sort the units
-        #-------------------------
         numers = order_keys(numers)
         denoms = order_keys(denoms)
 
@@ -1055,29 +711,15 @@ class Units(object):
                 return cat_units(denoms, negate=False)
             else:
                 return ''
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # create_name
-    #===========================================================================
     def create_name(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Attempt to create a name dictionary if one is missing.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Attempt to create a name dictionary if one is missing."""
 
-        #------------------------------------------
         # Return the internal name, if defined
-        #------------------------------------------
         if self.name is not None:
             return self.name
 
-        #--------------------------------------------------
         # Return the name from the dictionary, if found
-        #--------------------------------------------------
         try:
             name = Units.TUPLES_TO_UNIT[(self.exponents, self.triple)].name
             if name is not None:
@@ -1087,9 +729,7 @@ class Units(object):
 
         expo = self.exponents
 
-        #---------------------------------------------
         # Search for combinations that might work
-        #---------------------------------------------
         options = [[], [], []]
         for i in range(3):
             target_power = self.exponents[i]
@@ -1111,10 +751,8 @@ class Units(object):
             else:
                 options[i].append((Units.UNITS_BY_EXPO[i][0], 0, (1,1,0)))
 
-        #----------------------------------------------------------------------
         # Check every possible combination for the one that yields the correct
         # coefficient
-        #----------------------------------------------------------------------
         successes = []
         for (d, d_option) in enumerate(options[0]):
             (d_unit, d_power, d_triple) = d_option
@@ -1141,9 +779,7 @@ class Units(object):
                                           t_unit.name: t_power,
                                           a_unit.name: a_power})
 
-        #----------------------------------------------
         # Return the success with the fewest keys
-        #----------------------------------------------
         if successes:
             lengths = [len(k) for k in successes]
             best = min(lengths)
@@ -1151,9 +787,7 @@ class Units(object):
                 if length == best:
                     return successes[k]
 
-        #------------------------------------------------------------------
         # Failing that, use standard units and define the coefficient too
-        #------------------------------------------------------------------
         (numer, denom, pi_expo) = self.triple
         if denom == 1 and pi_expo == 0:
             coefft = numer
@@ -1166,43 +800,19 @@ class Units(object):
                     'rad': self.exponents[2]}
 
         return new_dict
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # get_name
-    #===========================================================================
     def get_name(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The name of a Unit object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The name of a Unit object."""
 
         name = self.name or self.create_name()
         return Units.name_to_str(name)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # set_name
-    #===========================================================================
     def set_name(self, name):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Set the name of a Unit object.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Set the name of a Unit object."""
+
         self.name = name
 
         return self
-    #===========================================================================
-
-
-#*******************************************************************************
-
 
 ################################################################################
 # Define the most common units and their names

@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Scalar, Vector, Boolean, Units
 
-#*******************************************************************************
-# Test_Scalar_ops
-#*******************************************************************************
 class Test_Scalar_ops(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #----------------------
     # Unary plus
-    #----------------------
     a = Scalar(1)
     b = +a
     self.assertEqual(b, 1)
@@ -96,9 +89,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertRaises(ValueError, a.__iadd__, 1)
     self.assertRaises(ValueError, b.__iadd__, 1)
 
-    #--------------------
     # Unary minus
-    #--------------------
     a = Scalar(1)
     b = -a
     self.assertEqual(b, -1)
@@ -172,9 +163,7 @@ class Test_Scalar_ops(unittest.TestCase):
     #self.assertRaises(ValueError, b.__isub__, 1)
     b -= 1
 
-    #------------------
     # abs()
-    #------------------
     a = abs(Scalar(1))
     b = abs(a)
     self.assertEqual(b, 1)
@@ -252,9 +241,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse(b.readonly)
     self.assertFalse(b.d_dt.readonly)
 
-    #-------------------
     # Addition
-    #-------------------
     expr = Scalar(1) + 1
     self.assertEqual(expr, 2)
     self.assertEqual(type(expr), Scalar)
@@ -478,9 +465,7 @@ class Test_Scalar_ops(unittest.TestCase):
             test = a + b
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
-    #--------------------
     # Subtraction
-    #--------------------
     expr = Scalar(3) - 1
     self.assertEqual(expr, 2)
     self.assertEqual(type(expr), Scalar)
@@ -705,9 +690,7 @@ class Test_Scalar_ops(unittest.TestCase):
             test = a - b
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
-    #-----------------------
     # Multiplication
-    #-----------------------
     expr = Scalar(1) * 2
     self.assertEqual(expr, 2)
     self.assertEqual(type(expr), Scalar)
@@ -932,9 +915,7 @@ class Test_Scalar_ops(unittest.TestCase):
             test = a * v
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
-    #---------------
     # Division
-    #---------------
     expr = Scalar(4) / 2
     self.assertEqual(expr, 2)
     self.assertEqual(type(expr), Scalar)
@@ -1112,9 +1093,7 @@ class Test_Scalar_ops(unittest.TestCase):
             test = v / a
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
-    #---------------------
     # Floor division
-    #---------------------
     expr = Scalar(5) // 2
     self.assertEqual(expr, 2)
     self.assertEqual(type(expr), Scalar)
@@ -1267,9 +1246,7 @@ class Test_Scalar_ops(unittest.TestCase):
             test = a // b
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
-    #--------------
     # Modulus
-    #--------------
     expr = Scalar(5) % 3
     self.assertEqual(expr, 2)
     self.assertEqual(type(expr), Scalar)
@@ -1424,9 +1401,7 @@ class Test_Scalar_ops(unittest.TestCase):
             test = a % b
             self.assertIn(np.shape(test.mask), ((), np.shape(test)))
 
-    #-----------
     # Power
-    #-----------
     a = Scalar(2)
     b = a**1
     self.assertEqual(b, 2)
@@ -1553,9 +1528,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse((b**(-0.5)).readonly)
     self.assertFalse((b**(-1)).readonly)
 
-    #------------------------------------
     # Power, multiple exponents, etc.
-    #------------------------------------
     a = Scalar(2)
     b = a**(-0,1,2,3,4)
     self.assertEqual(b, (1,2,4,8,16))
@@ -1630,9 +1603,7 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertEqual(b.d_dt[1], (0,1,2))
     self.assertEqual(b.d_dt[2], (0,1,4))
 
-    #-----------------
     # Reciprocal
-    #-----------------
     a = Scalar((1,-1))
     b = a.reciprocal()
     self.assertEqual(b, (1,-1))
@@ -1680,9 +1651,7 @@ class Test_Scalar_ops(unittest.TestCase):
     a = Scalar((1,-1,0))
     self.assertRaises(ValueError, a.reciprocal, nozeros=True)
 
-    #-------------------------
     # Comparisons
-    #-------------------------
 
     # Individual values
     self.assertTrue(Scalar(-0.3) <= -0.3)
@@ -1700,15 +1669,15 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(Scalar(-0.3) <  -0.2)
     self.assertTrue(Scalar(-0.3) >  -0.4)
 
-    self.assertFalse(Scalar(1,True) <  2)
-    self.assertFalse(Scalar(1,True) <= 2)
-    self.assertFalse(Scalar(1,True) >  0)
-    self.assertFalse(Scalar(1,True) >= 0)
+    self.assertFalse(Scalar(2,True) <  2)
+    self.assertFalse(Scalar(2,True) <= 2)
+    self.assertFalse(Scalar(0,True) >  0)
+    self.assertFalse(Scalar(0,True) >= 0)
 
     self.assertFalse(Scalar(1,True) <  Scalar(2,True))
-    self.assertTrue (Scalar(1,True) <= Scalar(0,True))
+    self.assertFalse(Scalar(1,True) <= Scalar(0,True))
     self.assertFalse(Scalar(1,True) >  Scalar(0,True))
-    self.assertTrue (Scalar(1,True) >= Scalar(2,True))
+    self.assertFalse(Scalar(1,True) >= Scalar(2,True))
 
     # Comparisons: Multiple values
     self.assertTrue((Scalar((-0.1,0.,0.1)) <= (-0.1,0.,0.1)).all())
@@ -1728,14 +1697,12 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue( (Scalar((1,2,3)) >= (0,2,3)).all())
     self.assertFalse((Scalar((1,2,3)) >= (2,2,3)).all())
 
-    self.assertTrue((Scalar((1,2),(True,False)) <=
-                     Scalar((0,2),(True,False))).all())
-    self.assertTrue((Scalar((1,2),(True,False)) >=
-                     Scalar((0,2),(True,False))).all())
-    self.assertFalse((Scalar((1,2),(True,False)) <
-                      Scalar((2,3),(True,False))).all())
-    self.assertFalse((Scalar((1,2),(True,False)) >
-                      Scalar((0,1),(True,False))).all())
+    self.assertFalse((Scalar((1,2,3),[False,False,True]) <= (1,2,3)).all())
+    self.assertFalse( (Scalar((1,2,3),3*[True]) >= (1,2,3)).all())
+    self.assertEqual(Scalar((1,2,3),[False,False,True]) <= (1,2,3), [True,True,False])
+    self.assertEqual(Scalar((1,2,3),[False,False,True]) >= (1,2,3), [True,True,False])
+    self.assertEqual(Scalar((0,1,2),[False,False,True]) < (1,2,3), [True,True,False])
+    self.assertEqual(Scalar((1,2,3),[False,False,True]) > (0,1,2), [True,True,False])
 
     # Arrays
     N = 100
@@ -1822,8 +1789,8 @@ class Test_Scalar_ops(unittest.TestCase):
                 self.assertTrue(x[i] < y[i])
                 self.assertTrue(x[i] <= y[i])
         elif x.mask[i] and y.mask[i]:
-            self.assertTrue(x[i] >= y[i])
-            self.assertTrue(x[i] <= y[i])
+            self.assertFalse(x[i] >= y[i])
+            self.assertFalse(x[i] <= y[i])
             self.assertFalse(x[i] > y[i])
             self.assertFalse(x[i] < y[i])
         else:
@@ -1859,13 +1826,6 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertFalse((x.as_readonly() >  y.as_readonly()).readonly)
     self.assertFalse((x.as_readonly() <= y.as_readonly()).readonly)
     self.assertFalse((x.as_readonly() >= y.as_readonly()).readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

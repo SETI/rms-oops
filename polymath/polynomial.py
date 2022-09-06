@@ -1,7 +1,5 @@
 ################################################################################
 # polymath/polynomial.py: Polynomial subclass of Vector
-#
-# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -12,29 +10,20 @@ from .scalar import Scalar
 from .vector import Vector
 from .units  import Units
 
-#*******************************************************************************
-# Polynomial subclass
-#*******************************************************************************
 class Polynomial(Vector):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    This is a Vector subclass in which the elements are interpreted as the
+    """This is a Vector subclass in which the elements are interpreted as the
     coefficients of a polynomial in a single variable x. Coefficients appear
     in order of decreasing exponent. Mathematical operations, polynomial
     root-solving are supported. Coefficients can have derivatives and these can
     be used to determine derivatives of the values or roots.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     INTS_OK = False     # Only floating-point coefficients are allowed
     UNIT_OK = False     # Units are disallowed
 
     #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, *args, **keywords):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Constructor for a Polynomial.
+        """Constructor for a Polynomial.
 
         If a single argument is a subclass of Vector, it is quickly converted to
         class Polynomial.
@@ -42,11 +31,8 @@ class Polynomial(Vector):
         Otherwise, the constructor takes the same inputs as the constructor for
         class Vector.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
         # For a subclass of Vector, transfer all attributes
-        #------------------------------------------------------
         if (len(args) == 1 and len(keywords) == 0 and
             isinstance(args[0], Vector)):
 
@@ -61,44 +47,27 @@ class Polynomial(Vector):
 
                     self.derivs = derivs
 
-        #------------------------------------------------------
         # Otherwise use the Vector class constructor
-        #------------------------------------------------------
         else:
             super(Polynomial, self).__init__(*args, **keywords)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # order
     #===========================================================================
     @property
     def order(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The order of the polynomial, i.e., the largest exponent.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The order of the polynomial, i.e., the largest exponent."""
+
         return self.item[-self.drank-1] - 1
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # as_polynomial
     #===========================================================================
     @staticmethod
     def as_polynomial(arg, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The object converted to class Polynomial.
+        """The object converted to class Polynomial.
 
         Input:
             arg         object to convert to Polynomial.
             recursive   True to include derivatives in the conversion.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if isinstance(arg, Vector):
             if not recursive:
                 arg = arg.wod
@@ -110,19 +79,12 @@ class Polynomial(Vector):
             return Polynomial(vector)
         else:
             return Polynomial(vector.wod)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # as_vector
     #===========================================================================
     def as_vector(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """This object converted to class Vector.
         """
-        This object converted to class Vector.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         obj = Qube.__new__(Vector)
 
         for (key, value) in self.__dict__.items():
@@ -135,24 +97,17 @@ class Polynomial(Vector):
 
         obj.insert_derivs(derivs)
         return obj
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # at_least_order
     #===========================================================================
     def at_least_order(self, order, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A shallow copy of this object with at least this minimum order.
+        """A shallow copy of this object with at least this minimum order.
         Extra leading polynomial coefficients are filled with zeros.
 
         Input:
             order       minimum order of the Polynomial.
             recursive   True to include derivatives in the conversion.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if self.order >= order:
             if recursive:
                 return self
@@ -160,9 +115,9 @@ class Polynomial(Vector):
                 return self.wod
 
         new_values = np.zeros(self.shape + (order+1,))
-        new_values[...,-self.order-1:] = self.values
+        new_values[...,-self.order-1:] = self._values_
 
-        result = Polynomial(new_values, self.mask, derivs={}, example=self)
+        result = Polynomial(new_values, self._mask_, derivs={}, example=self)
 
         if recursive and self.derivs:
             for (key, value) in self.derivs.items():
@@ -170,17 +125,10 @@ class Polynomial(Vector):
                                                               recursive=False))
 
         return result
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # set_order
     #===========================================================================
     def set_order(self, order, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        This Polynomial expressed with exactly this order. Extra polynomial
+        """This Polynomial expressed with exactly this order. Extra polynomial
         coefficients are filled with zeros. If this Polynomial exceeds this
         order requested, raise an exception.
 
@@ -188,25 +136,17 @@ class Polynomial(Vector):
             order       minimum number of the Polynomial.
             recursive   True to include derivatives in the conversion.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if self.order > order:
             raise ValueError('Polynomial of order %d ' % self.order +
                              'exceeds intended order %d' % order)
 
         return self.at_least_order(order, recursive=recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # invert_line
     #===========================================================================
     def invert_line(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The inversion of this linear polynomial.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The inversion of this linear polynomial."""
+
         assert self.order == 1, 'invert_line requires a first-order polynomial'
 
         # y = a x + b
@@ -217,97 +157,46 @@ class Polynomial(Vector):
 
         a_inv = 1./a
         return Polynomial(Vector.from_scalars(a_inv, -b * a_inv), recursive)
-    #===========================================================================
-
-
 
     ############################################################################
     # Math operations
     ############################################################################
 
-    #===========================================================================
-    # __neg__
-    #===========================================================================
     def __neg__(self):
         return Polynomial(-self.as_vector())
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __add__
-    #===========================================================================
     def __add__(self, arg):
-
         arg  = Polynomial.as_polynomial(arg ).at_least_order(self.order)
         self = Polynomial.as_polynomial(self).at_least_order(arg.order)
         return Polynomial(self.as_vector() + arg.as_vector())
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __radd__
-    #===========================================================================
     def __radd__(self, arg):
         return self.__add__(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __iadd__
-    #===========================================================================
     def __iadd__(self, arg):
         arg = Polynomial.as_polynomial(arg).set_order(self.order)
         super(Polynomial,self).__iadd__(arg.as_vector())
         return Polynomial(self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __sub__
-    #===========================================================================
     def __sub__(self, arg):
         arg  = Polynomial.as_polynomial(arg ).at_least_order(self.order)
         self = Polynomial.as_polynomial(self).at_least_order(arg.order)
         return Polynomial(self.as_vector() - arg.as_vector())
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rsub__
-    #===========================================================================
     def __rsub__(self, arg):
         arg  = Polynomial.as_polynomial(arg ).at_least_order(self.order)
         self = Polynomial.as_polynomial(self).at_least_order(arg.order)
         return Polynomial(arg.as_vector() - self.as_vector())
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __isub__
-    #===========================================================================
     def __isub__(self, arg):
         arg = Polynomial.as_polynomial(arg).set_order(self.order)
         super(Polynomial,self).__isub__(arg.as_vector())
         return Polynomial(self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __mul__
-    #===========================================================================
     def __mul__(self, arg):
 
-        #------------------------------------------------------
         # Support for Polynomial multiplication
-        #------------------------------------------------------
-        if type(arg) == Polynomial:
+        if isinstance(arg, Polynomial):
             if self.drank != arg.drank:
                 raise ValueError('incompatible denominators for multiply')
 
@@ -315,21 +204,21 @@ class Polynomial(Vector):
             new_shape = Qube.broadcasted_shape(self.shape, arg.shape)
             new_values = np.zeros(new_shape + (new_order+1,))
 
-            if np.shape(self.mask) or np.shape(arg.mask):
+            if np.shape(self._mask_) or np.shape(arg._mask_):
                 new_mask = np.empty(new_shape)
-                new_mask[...] = self.mask | arg.mask
+                new_mask[...] = self._mask_ | arg._mask_
             else:
-                new_mask = self.mask | arg.mask
+                new_mask = self._mask_ | arg._mask_
 
             # It's simpler to work in order of increasing powers
             tail_indx = self.drank * (slice(None),)
             indx = (Ellipsis, slice(None,None,-1)) + tail_indx
-            self_values = self.values[indx]
-            arg_values  = arg.values[indx]
+            self_values = self._values_[indx]
+            arg_values  = arg._values_[indx]
 
             # Perform the multiplication
-            kstop = arg.values.shape[-self.drank-1]
-            dk    = self.values.shape[-self.drank-1]
+            kstop = arg._values_.shape[-self.drank-1]
+            dk    = self._values_.shape[-self.drank-1]
             for k in range(kstop):
                 new_indx = (Ellipsis, slice(k,k+dk)) + tail_indx
                 arg_indx = (Ellipsis, slice(k,k+1))  + tail_indx
@@ -354,72 +243,36 @@ class Polynomial(Vector):
             return result
 
         return Polynomial(self.as_vector() * arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rmul__
-    #===========================================================================
     def __rmul__(self, arg):
         return self.__mul__(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __imul__
-    #===========================================================================
     def __imul__(self, arg):
 
-        #------------------------------------------------------
         # Multiplying by a zero-order Polynomial is valid
-        #------------------------------------------------------
         if isinstance(arg, Vector) and arg.item == (1,):
             arg = arg.to_scalar(0)
 
         super(Polynomial,self).__imul__(arg)
         return Polynomial(self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __truediv__
-    #===========================================================================
     def __truediv__(self, arg):
 
-        #------------------------------------------------------
         # Dividing by a zero-order Polynomial is valid
-        #------------------------------------------------------
         if isinstance(arg, Vector) and arg.item == (1,):
             arg = arg.to_scalar(0)
 
         return Polynomial(self.as_vector() / arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __itruediv__
-    #===========================================================================
     def __itruediv__(self, arg):
 
-        #------------------------------------------------------
         # Dividing by a zero-order Polynomial is valid
-        #------------------------------------------------------
         if isinstance(arg, Vector) and arg.item == (1,):
             arg = arg.to_scalar(0)
 
         super(Polynomial,self).__itruediv__(arg)
         return Polynomial(self)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __pow__
-    #===========================================================================
     def __pow__(self, arg):
         if arg < 0 or arg != int(arg):
             raise ValueError('Polynomial exponents must be non-negative ' +
@@ -436,70 +289,42 @@ class Polynomial(Vector):
             result = result * self
 
         return result
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __eq__
-    #===========================================================================
     def __eq__(self, arg):
         arg  = Polynomial.as_polynomial(arg ).at_least_order(self.order)
         self = Polynomial.as_polynomial(self).at_least_order(arg.order)
         return arg.as_vector() == self.as_vector()
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __ne__
-    #===========================================================================
     def __ne__(self, arg):
         arg  = Polynomial.as_polynomial(arg ).at_least_order(self.order)
         self = Polynomial.as_polynomial(self).at_least_order(arg.order)
         return arg.as_vector() != self.as_vector()
-    #===========================================================================
-
-
 
     ############################################################################
     # Special Polynomial operations
     ############################################################################
 
-    #===========================================================================
-    # deriv
-    #===========================================================================
     def deriv(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The first derivative of this Polynomial.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if self.order <= 0:
-            new_values = np.zeros(self.values.shape)
-        else:
-            indx1 = (Ellipsis, slice(0,-1)) + self.drank * (slice(None,None),)
-            indx2 = (Ellipsis,)             + self.drank * (np.newaxis,)
-            new_values = self.values[indx1] * np.arange(self.order,0,-1)[indx2]
+        """The first derivative of this Polynomial."""
 
-        result = Polynomial(new_values, self.mask, derivs={}, example=self)
+        if self.order <= 0:
+            new_values = np.zeros(self._values_.shape)
+        else:
+           indx1 = (Ellipsis, slice(0,-1)) + self.drank * (slice(None,None),)
+           indx2 = (Ellipsis,)             + self.drank * (np.newaxis,)
+           new_values = self._values_[indx1] * np.arange(self.order,0,-1)[indx2]
+
+        result = Polynomial(new_values, self._mask_, derivs={}, example=self)
 
         if recursive and self.derivs:
             for (key,value) in self.derivs.items():
                 result.insert_deriv(key, value.deriv(recursive=False))
 
         return result
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # eval
     #===========================================================================
     def eval(self, x, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Evaluate the polynomial at x.
+        """Evaluate the polynomial at x.
 
         Inputs:
             x           Scalar at which to evaluate the Polynomial.
@@ -508,7 +333,7 @@ class Polynomial(Vector):
         Return:         A Scalar of values. Note that the shapes of self and x
                         are broadcasted together.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if self.order == 0:
             if recursive:
                 return Scalar(example=self)
@@ -525,17 +350,10 @@ class Polynomial(Vector):
         x_powers = Vector.from_scalars(*(x_powers[::-1]))
 
         result = Qube.dot(self, x_powers, 0, 0, (Scalar,), recursive=recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # roots
     #===========================================================================
     def roots(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Find the roots of the polynomial.
+        """Find the roots of the polynomial.
 
         Inputs:
             recursive   True to evaluate derivatives at the roots as well.
@@ -547,27 +365,20 @@ class Polynomial(Vector):
                         without any duplicates. If fewer real roots exist, the
                         set of roots is padded at the end with masked values.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------
         # Constant case is easy
-        #------------------------------------------------------
         if self.order == 0:
             # a = 0
             raise ValueError('no roots of a order-zero Polynomial')
 
-        #------------------------------------------------------
         # Linear case is easy
-        #------------------------------------------------------
         if self.order == 1:
             # a x + b = 0
             (a,b) = self.to_scalars(recursive=recursive)
             result = -b/a
             return result.reshape((1,) + result.shape)
 
-        #------------------------------------------------------
         # Quadratic case is easy
-        #------------------------------------------------------
         if self.order == 2:
             # a x^2 + b x + c = 0
             (a,b,c) = self.to_scalars(recursive=recursive)
@@ -575,34 +386,28 @@ class Polynomial(Vector):
             x1 = x1.mask_where(x1 == x0)        # mask duplicated solutions
             return Qube.stack(x0,x1).sort(axis=0)
 
-        #------------------------------------------------------------------
         # Method for higher-order polynomials stolen from np.roots; see:
-        #
         #    https://github.com/numpy/numpy
         #               /blob/v1.14.0/numpy/lib/polynomial.py#L153-L235
-        #
         #     p[0] * x**n + p[1] * x**(n-1) + ... + p[n-1]*x + p[n]
-        #------------------------------------------------------------------
 
-        #------------------------------------------------------
         # Copy polynomial coefficients
-        #------------------------------------------------------
-        coefficients = self.values.copy()
+        coefficients = self._values_.copy()
 
-        #------------------------------------------------------
         # Convert the mask to an array
-        #------------------------------------------------------
-        if np.shape(self.mask) == ():
-            if self.mask:
+        if np.shape(self._mask_) == ():
+            if self._mask_:
                 poly_mask = np.ones(self.shape, dtype='bool')
             else:
                 poly_mask = np.zeros(self.shape, dtype='bool')
         else:
-            poly_mask = self.mask.copy()
+            poly_mask = self._mask_.copy()
 
-        #------------------------------------------------------
+    # Method stolen from np.roots; see
+    # https://github.com/numpy/numpy/blob/v1.14.0/numpy/lib/polynomial.py#L153-L235
+    #     p[0] * x**n + p[1] * x**(n-1) + ... + p[n-1]*x + p[n]
+
         # Mask out any cases where all coefficients are zero
-        #------------------------------------------------------
         all_zeros = np.all(coefficients == 0., axis=-1)
         if np.any(all_zeros):
 
@@ -612,18 +417,14 @@ class Polynomial(Vector):
 
 #     N = len(p)
 #     if N > 1:
-#         #------------------------------------------------------
 #         # build companion matrix and find its eigenvalues (the roots)
-#         #------------------------------------------------------
 #         A = diag(np.ones((N-2,), p.dtype), -1)
 #         A[0,:] = -p[1:] / p[0]
 #         roots = np.linalg.eigvals(A)
 #     else:
 #         roots = np.array([])
 
-        #------------------------------------------------------
         # Shift coefficients till the leading coefficient is nonzero
-        #------------------------------------------------------
         shifts = (coefficients[...,0] == 0.)
         total_shifts = np.zeros(shifts.shape, dtype='int')
         while np.any(shifts):
@@ -632,26 +433,20 @@ class Polynomial(Vector):
             total_shifts += shifts
             shifts = (coefficients[...,0] == 0.)
 
-        #------------------------------------------------------
         # Implement the NumPy solution, array-based
-        #------------------------------------------------------
         matrix = np.empty(self.shape + (self.order,self.order))
         matrix[...,:,:] = np.diag(np.ones((self.order-1,)), -1)
         matrix[...,0,:] = -coefficients[...,1:] / coefficients[...,0:1]
         roots = np.linalg.eigvals(matrix)
         roots = np.rollaxis(roots,-1,0)
 
-        #------------------------------------------------------
         # Convert the roots to a real Scalar
-        #------------------------------------------------------
         is_complex = np.imag(roots) != 0.
         root_values = np.real(roots)
         root_mask = poly_mask[np.newaxis,...] | is_complex
 
-        #-------------------------------------------------------------
         # Mask extraneous zeros
         # Handily, they always show up first in the array of roots
-        #--------------------------------------------------------------
         max_shifts = total_shifts.max()
         for k in range(max_shifts):
             root_mask[total_shifts > k, k] = True
@@ -659,13 +454,11 @@ class Polynomial(Vector):
         roots = Scalar(root_values, root_mask)
         roots = roots.sort(axis=0)
 
-        #------------------------------------------------------
         # Mask duplicated values
-        #------------------------------------------------------
         mask_changed = False
         for k in range(1,self.order):
-            mask = ((roots.values[k,...] == roots.values[k-1,...]) &
-                     ~roots.mask[k,...])
+            mask = ((roots._values_[k,...] == roots._values_[k-1,...]) &
+                     ~roots._mask_[k,...])
             if np.any(mask):
                 root_mask[k,...] |= mask
                 mask_changed = True
@@ -674,7 +467,6 @@ class Polynomial(Vector):
             roots = Scalar(root_values, root_mask)
             roots = roots.sort(axis=0)
 
-        #------------------------------------------------------
         # Deal with derivatives if necessary
         #
         # Sum_j c[j] x**j = 0
@@ -682,7 +474,7 @@ class Polynomial(Vector):
         # Sum_j dc[j]/dt x**j + Sum_j c[j] j x**(j-1) dx/dt = 0
         #
         # dx/dt = -Sum_j dc[j]/dt x**j / Sum_j c[j] j x**(j-1)
-        #------------------------------------------------------
+
         if recursive:
             for (key, value) in self.derivs.items():
                 deriv = (-value.eval(roots, recursive=False) /
@@ -690,8 +482,5 @@ class Polynomial(Vector):
                 roots.insert_deriv(key, deriv)
 
         return roots
-    #===========================================================================
-
-#*******************************************************************************
 
 ################################################################################

@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Scalar, Vector, Boolean, Units
 
-#*******************************************************************************
-# Test_Scalar_misc
-#*******************************************************************************
 class Test_Scalar_misc(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #----------------------------
     # Arithmetic operations
-    #----------------------------
     ints = Scalar((1,2,3))
     test = Scalar(np.array([1,2,3]))
     self.assertEqual(ints, test)
@@ -66,9 +59,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(ValueError, ints.__div__, Scalar((4,5)))
     self.assertRaises(ValueError, ints.__mod__, Scalar((4,5)))
 
-    #------------------
     # Integer ops
-    #------------------
     ints = Scalar((1,2,3))
     ints += 1
     self.assertEqual(ints, [2,3,4])
@@ -124,9 +115,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(TypeError, ints.__idiv__, (4,5))
     self.assertRaises(TypeError, ints.__idiv__, Scalar((4,5)))
 
-    #---------------
     # Float ops
-    #---------------
     floats = Scalar((1.,2.,3.))
     floats += 1
     self.assertEqual(floats, [2,3,4])
@@ -181,9 +170,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertRaises(ValueError, floats.__imod__, Scalar((4,5)))
     self.assertRaises(ValueError, floats.__ifloordiv__, Scalar((4,5)))
 
-    #------------------------
     # Generic operations
-    #------------------------
     self.assertEqual(ints[0], 1)
 
     floats = ints.as_float()
@@ -230,9 +217,7 @@ class Test_Scalar_misc(unittest.TestCase):
                            [[3, 8], [ 9,16]],
                            [[5,12], [15,24]]])
 
-    #-----------------
     # Mask tests
-    #-----------------
     test = Scalar(list(range(6)))
     self.assertEqual(str(test), "Scalar(0 1 2 3 4 5)")
 
@@ -265,7 +250,6 @@ class Test_Scalar_misc(unittest.TestCase):
 
     temp = Scalar(6*[1], 5*[False] + [True])
     self.assertEqual(str(temp), "Scalar(1 1 1 1 1 --; mask)")
-
 
     self.assertEqual(str(test + temp), "Scalar(-- -- -- 4 5 --; mask)")
 
@@ -310,9 +294,7 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertEqual(type(mvals), np.ma.MaskedArray)
     self.assertEqual(str(mvals), "[-- -- -- -- -- --]")
 
-    #--------------------
     # Test of units
-    #--------------------
     test = Scalar(list(range(6)))
     self.assertEqual(test, np.arange(6))
     eps = 1.e-7
@@ -326,13 +308,6 @@ class Test_Scalar_misc(unittest.TestCase):
     self.assertTrue(np.all(np.abs(km.values - cm.values/1.e5) < 1.e5*EPS))
 
     self.assertRaises(ValueError, cm.set_units, Units.SECONDS)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

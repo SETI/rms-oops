@@ -1,7 +1,5 @@
 ################################################################################
 # polymath/vector3.py: Vector3 subclass of PolyMath Vector
-#
-# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -15,15 +13,9 @@ from .units  import Units
 
 TWOPI = 2. * np.pi
 
-#*******************************************************************************
-# Vector3 class
-#*******************************************************************************
 class Vector3(Vector):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    A vector with a fixed length of three.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """A vector with a fixed length of three."""
+
     NRANK = 1           # the number of numerator axes.
     NUMER = (3,)        # shape of the numerator.
 
@@ -37,47 +29,36 @@ class Vector3(Vector):
     DEFAULT_VALUE = np.array([1.,1.,1.])
 
     #===========================================================================
-    # as_vector3
-    #===========================================================================
     @staticmethod
     def as_vector3(arg, recursive=True):
-        if type(arg) == Vector3:
+
+        if isinstance(arg, Vector3):
             if recursive:
                 return arg
             return arg.wod
 
         if isinstance(arg, Qube):
 
-            #----------------------------------------------------------------
             # Collapse a 1x3 or 3x1 Matrix down to a Vector
-            #----------------------------------------------------------------
             if arg.numer in ((1,3), (3,1)):
                 return arg.flatten_numer(Vector3, recursive)
 
-            #----------------------------------------------------------------
             # For any suitable Qube, move numerator items to the denominator
-            #----------------------------------------------------------------
             if arg.rank > 1 and arg.numer[0] == 3:
                 arg = arg.split_items(1, Vector3)
 
             arg = Vector3(arg)
             if recursive:
                 return arg
+
             return arg.wod
 
         return Vector3(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_scalars
     #===========================================================================
     @staticmethod
     def from_scalars(x, y, z, recursive=True, readonly=False):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A Vector3 constructed by combining three scalars.
+        """A Vector3 constructed by combining three scalars.
 
         Inputs:
             x, y, z     Three Scalars defining the vector's x, y and z
@@ -93,22 +74,15 @@ class Vector3(Vector):
             readonly    True to return a read-only object; False (the default)
                         to return something potentially writable.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return Qube.from_scalars(x, y, z, recursive=recursive,
                                           readonly=readonly,
                                           classes=[Vector3])
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_ra_dec_length
     #===========================================================================
     @staticmethod
     def from_ra_dec_length(ra, dec, length=1., recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Vector3 from right ascension, declination and optional length.
+        """Vector3 from right ascension, declination and optional length.
 
         Inputs:
             ra, dec     Scalars of right ascension and declination, in radians.
@@ -121,7 +95,7 @@ class Vector3(Vector):
                         will have derivatives representing the union of all the
                         derivatives in ra, dec and length. Default is True.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         ra  = Scalar.as_scalar(ra, recursive)
         dec = Scalar.as_scalar(dec, recursive)
 
@@ -136,22 +110,15 @@ class Vector3(Vector):
             return result
         else:
             return Scalar.as_scalar(length, recursive) * result
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # to_ra_dec_length
     #===========================================================================
     def to_ra_dec_length(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A tuple (ra, dec, length) from this Vector3.
+        """A tuple (ra, dec, length) from this Vector3.
 
         Inputs:
             recursive   True to include the derivatives. Default is True.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         (x,y,z) = self.to_scalars(recursive)
         length = self.norm(recursive)
 
@@ -159,18 +126,11 @@ class Vector3(Vector):
         dec = (z/length).arcsin()
 
         return (ra, dec, length)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_cylindrical
     #===========================================================================
     @staticmethod
     def from_cylindrical(radius, longitude, z=0., recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Vector3 from cylindrical coordinates.
+        """Vector3 from cylindrical coordinates.
 
         Inputs:
             radius      Scalar radius, distance from the cylindrical axis.
@@ -181,7 +141,7 @@ class Vector3(Vector):
                         will have derivatives representing the union of all the
                         derivatives in radius, longitude and z. Default is True.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         radius  = Scalar.as_scalar(radius, recursive)
         longitude = Scalar.as_scalar(longitude, recursive)
         z = Scalar.as_scalar(z, recursive)
@@ -190,31 +150,21 @@ class Vector3(Vector):
         y = radius * longitude.sin(recursive)
 
         return Vector3.from_scalars(x, y, z, recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # to_cylindrical
     #===========================================================================
     def to_cylindrical(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A tuple (radius, longitude, z) from this Vector3.
+        """A tuple (radius, longitude, z) from this Vector3.
 
         Inputs:
             recursive   True to include the derivatives. Default is True.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         (x,y,z) = self.to_scalars(recursive)
         radius = (x**2 + y**2).sqrt(recursive)
 
         longitude = y.arctan2(x,recursive) % TWOPI
 
         return (radius, longitude, z)
-    #===========================================================================
-
-
 
     ### Most operations are inherited from Vector. These include:
     #     def extract_scalar(self, axis, recursive=True)
@@ -236,19 +186,13 @@ class Vector3(Vector):
     #     def element_div(self, arg, recursive=True):
     #     def __abs__(self)
 
-
-
-    #===========================================================================
-    # spin
     #===========================================================================
     def spin(self, pole, angle=None, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The result of rotating this Vector3 around the given pole vector by
+        """The result of rotating this Vector3 around the given pole vector by
         the given angle. If angle is None, then the rotation angle is
         pole.norm().arcsin().
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         pole = Vector3.as_vector3(pole)
         if not recursive:
             pole = pole.wod
@@ -276,15 +220,11 @@ class Vector3(Vector):
         xaxis = perp.unit()
         yaxis = zaxis.cross(xaxis)
         return r * (angle.cos() * xaxis + angle.sin() * yaxis) + z * zaxis
-    #===========================================================================
 
-
-#*******************************************************************************
-
-
-#=========================================
+################################################################################
 # A set of useful class constants
-#=========================================
+################################################################################
+
 Vector3.ZERO   = Vector3((0.,0.,0.)).as_readonly()
 Vector3.ONES   = Vector3((1.,1.,1.)).as_readonly()
 Vector3.XAXIS  = Vector3((1.,0.,0.)).as_readonly()

@@ -8,14 +8,9 @@ import unittest
 
 from polymath import Qube, Quaternion, Matrix3, Scalar
 
-#*******************************************************************************
-# Test_Quaternion_parts
-#*******************************************************************************
 class Test_Quaternion_parts(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     a = Quaternion.from_parts(1., [(1,0,0),(0,1,0),(0,0,1)])
@@ -95,13 +90,6 @@ class Test_Quaternion_parts(unittest.TestCase):
     self.assertEqual(q.d_dt.readonly, True)
     self.assertEqual(s.d_dt.readonly, True)
     self.assertEqual(v.d_dt.readonly, True)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

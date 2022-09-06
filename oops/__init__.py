@@ -23,32 +23,36 @@ import cspyce.aliases
 cspyce.use_errors()
 cspyce.use_aliases()
 
-import oops.cadence_.all as cadence
-import oops.calib_.all   as calib
-import oops.fov_.all     as fov
-import oops.gravity_.all as gravity
-import oops.frame_.all   as frame
-import oops.obs_.all     as obs
-import oops.path_.all    as path
-import oops.surface_.all as surface
+import oops.cadence.all     as cadence
+import oops.calibration.all as calib
+import oops.fov.all         as fov
+import oops.gravity.all     as gravity
+import oops.frame.all       as frame
+import oops.observation.all as obs
+import oops.path.all        as path
+import oops.surface.all     as surface
 
-from oops.backplane   import *
-from oops.body        import *
-from oops.constants   import *
-from oops.event       import *
-from oops.fittable    import *
-from oops.meshgrid    import *
-from oops.transform   import *
+from oops.backplane import Backplane
+from oops.body      import Body
+from oops.event     import Event
+from oops.fittable  import Fittable
+from oops.meshgrid  import Meshgrid
+from oops.transform import Transform
 
+import oops.constants     as constants
 import oops.spice_support as spice
 import oops.config        as config
-import oops.utils as utils
+import oops.utils         as utils
+
+from oops.constants import C, C_INVERSE, RPD, DPR, SPR, RPS, SPD, AU, \
+                           PI, TWOPI, HALFPI
+
+from polymath import Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, \
+                     Units, Vector, Vector3
 
 ################################################################################
 # Class cross-references and other class attributes to be defined after startup
 ################################################################################
-
-from polymath import Vector3, Matrix3
 
 Transform.FRAME_CLASS = frame.Frame
 Transform.IDENTITY = Transform(Matrix3.IDENTITY,

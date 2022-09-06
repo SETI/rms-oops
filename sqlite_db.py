@@ -3,10 +3,6 @@ import unittest
 
 ################################################################################
 # Low-level database IO using SQLite 3
-#
-# Deukkwon Yoon & Mark Showalter
-# PDS Rings Node, SETI Institute
-# December 2011
 ################################################################################
 
 global CONNECTION, CURSOR
@@ -14,51 +10,31 @@ CONNECTION = None
 CURSOR = None
 
 #===============================================================================
-# open
-#===============================================================================
 def open(filepath):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Opens the database.
+    """Opens the database.
 
     Input:
         filepath        The file path and name of the database file.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     global CONNECTION, CURSOR
 
     CONNECTION = sqlite3.connect(filepath)
     CURSOR = CONNECTION.cursor()
 
 #===============================================================================
-
-
-
-#===============================================================================
-# close
-#===============================================================================
 def close():
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Closes the database.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """Closes the database."""
+
     global CONNECTION, CURSOR
 
     CURSOR.close()
     CONNECTION = None
     CURSOR = None
-#===============================================================================
 
-
-
-#===============================================================================
-# query
 #===============================================================================
 def query(sql_string):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Executes a SQL query.
+    """Executes a SQL query.
 
     Input:
         sql_string      A string containing the complete SQL query.
@@ -67,28 +43,21 @@ def query(sql_string):
         table           A list of lists containing the rows and columns of
                         results returned by the query.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     if CURSOR is None:
         raise RuntimeError("open database file first")
 
-    #------------------------------------
     # Execute and return the results
-    #------------------------------------
     CURSOR.execute(sql_string)
 
-    #-----------------------------------------------
     # Convert to a list of KernelInfo objects...
-    #-----------------------------------------------
     table = []
     for row in CURSOR:
         columns = []
         for item in row:
 
             # convert items to Python type if necessary
-            if type(item) == type(0):               # Item is an integer
-                value = item
-
-            elif type(item) == type(0.0):           # Item is a float
+            if isinstance(item, (int, float)):      # Item is an int or float
                 value = item
 
             elif type(item) == type(u"unicode"):    # Item is an unicode
@@ -105,22 +74,13 @@ def query(sql_string):
         table.append(columns)
 
     return table
-#===============================================================================
 
-
-
-########################################
+################################################################################
 # UNIT TESTS
-########################################
+################################################################################
 
-#*******************************************************************************
-# test_sqlite_db
-#*******************************************************************************
 class test_sqlite_db(unittest.TestCase):
 
-    #===========================================================================
-    # runTest
-    #===========================================================================
     def runTest(self):
 
         self.assertTrue(CONNECTION is None)
@@ -148,12 +108,6 @@ class test_sqlite_db(unittest.TestCase):
 
         self.assertTrue(CONNECTION is None)
         self.assertTrue(CURSOR is None)
-    #===========================================================================
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Perform unit testing if executed from the command line

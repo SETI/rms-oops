@@ -8,14 +8,9 @@ import unittest
 
 from polymath import Qube, Scalar
 
-#*******************************************************************************
-# Test_Scalar_maximum
-#*******************************************************************************
 class Test_Scalar_maximum(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     self.assertRaises(ValueError, Scalar.maximum)
@@ -39,19 +34,17 @@ class Test_Scalar_maximum(unittest.TestCase):
     for i in range(4):
       for j in range(10):
         for k in range(10):
-            if a.mask[j,0]:
-                self.assertEqual(ab[i,j,k], b[i,0,k])
+            if a.mask[j,0] and b.mask[i,0,k]:
+                self.assertTrue(ab[i,j,k].mask)
+            elif a.mask[j,0]:
+                self.assertEqual(ab[i,j,k].vals, b[i,0,k].vals)
+                self.assertFalse(ab[i,j,k].mask)
             elif b.mask[i,0,k]:
-                self.assertEqual(ab[i,j,k], a[j,0])
+                self.assertEqual(ab[i,j,k].vals, a[j,0].vals)
+                self.assertFalse(ab[i,j,k].mask)
             else:
                 self.assertEqual(ab[i,j,k], max(a[j,0],b[i,0,k]))
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
+                self.assertFalse(ab[i,j,k].mask)
 
 ################################################################################
 # Execute from command line...

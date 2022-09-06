@@ -8,16 +8,10 @@ import unittest
 
 from polymath import Qube, Quaternion, Matrix3
 
-#*******************************************************************************
-# Test_Quaternion_ops
-#*******************************************************************************
 class Test_Quaternion_ops(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
-
 
     N = 3
     M = 2
@@ -33,15 +27,11 @@ class Test_Quaternion_ops(unittest.TestCase):
     self.assertEqual(a, a + Quaternion.ZERO)
     self.assertEqual(a, a - Quaternion.ZERO)
 
-    #---------------------
     # Multiply...
-    #---------------------
     (sa,va) = a.to_parts()
     (sb,vb) = b.to_parts()
 
-    #-------------------------------------------------------
     # Formula from http://en.wikipedia.org/wiki/Quaternion
-    #-------------------------------------------------------
     sab = sa * sb - va.dot(vb)
     vab = sa * vb + sb * va + va.cross(vb)
 
@@ -53,9 +43,7 @@ class Test_Quaternion_ops(unittest.TestCase):
     dab_dt = a.wod * b.d_dt + a.d_dt * b.wod
     self.assertTrue((dab_dt - (a*b).d_dt).rms().max() < DEL)
 
-    #--------------
     # Divide...
-    #--------------
     test = ab / b
     self.assertTrue((test - a).rms().max() < DEL)
 
@@ -65,13 +53,6 @@ class Test_Quaternion_ops(unittest.TestCase):
 
     dtest_dt = ab.d_dt * b_inv.wod + ab.wod * b_inv.d_dt
     self.assertTrue((dtest_dt - a.d_dt).rms().max() < DEL)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Matrix, Vector, Scalar, Units
 
-#*******************************************************************************
-# Test_Vector_element_mul
-#*******************************************************************************
 class Test_Vector_element_mul(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #---------------------------------------------------------------
     # Single values
-    #---------------------------------------------------------------
     self.assertEqual(Vector((2,3,0)).element_mul((0,7,0)), (0,21,0))
     self.assertEqual(Vector((2,3,4)).element_mul((-1,3,3)), (-2,9,12))
     self.assertTrue(Vector((2,3,0),True).element_mul((-1,0,0)).mask)
@@ -33,9 +26,7 @@ class Test_Vector_element_mul(unittest.TestCase):
     b = a.element_mul((1,2,3))
     self.assertEqual(b, ((1,4,9),(2,6,12),(3,8,15)))
 
-    #---------------------------------------------------------------
     # Arrays and masks
-    #---------------------------------------------------------------
     N = 100
     x = Vector(np.random.randn(N,5))
     y = Vector(np.random.randn(N,5))
@@ -51,9 +42,7 @@ class Test_Vector_element_mul(unittest.TestCase):
     self.assertTrue(np.all(z.mask == (x.mask | y.mask)))
     self.assertTrue(np.all(z.values == x.values * y.values))
 
-    #---------------------------------------------------------------
     # Test units
-    #---------------------------------------------------------------
     N = 100
     x = Vector(np.random.randn(N,3), units=Units.KM)
     y = Vector(np.random.randn(N,3), units=Units.SECONDS**(-1))
@@ -61,9 +50,7 @@ class Test_Vector_element_mul(unittest.TestCase):
 
     self.assertEqual(z.units, Units.KM/Units.SECONDS)
 
-    #---------------------------------------------------------------
     # Derivatives, denom = ()
-    #---------------------------------------------------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape((N,3)))
     y = Vector(np.random.randn(N*3).reshape((N,3)))
@@ -96,9 +83,7 @@ class Test_Vector_element_mul(unittest.TestCase):
     self.assertIn('h', z.derivs)
     self.assertTrue(hasattr(z, 'd_dh'))
 
-    #---------------------------------------------------------------
     # Construct the numerical derivative dz/dx
-    #---------------------------------------------------------------
     EPS = 1.e-6
     z1 = y.element_mul(x + (EPS,0,0))
     z0 = y.element_mul(x - (EPS,0,0))
@@ -119,9 +104,7 @@ class Test_Vector_element_mul(unittest.TestCase):
 
     dz_dx = Vector(new_values, drank=1)
 
-    #---------------------------------------------------------------
     # Construct the numerical derivative dz/dy
-    #---------------------------------------------------------------
     z1 = (y + (EPS,0,0)).element_mul(x)
     z0 = (y - (EPS,0,0)).element_mul(x)
     dz_dy0 = 0.5 * (z1 - z0) / EPS
@@ -152,9 +135,7 @@ class Test_Vector_element_mul(unittest.TestCase):
         self.assertAlmostEqual(z.d_dg.values[i,k], dz_dg.values[i,k], delta=DEL)
         self.assertAlmostEqual(z.d_dh.values[i,k], dz_dh.values[i,k], delta=DEL)
 
-    #---------------------------------------------------------------
     # Derivatives, denom = (2,)
-    #---------------------------------------------------------------
     N = 100
     x = Vector(np.random.randn(N*3).reshape(N,3))
     y = Vector(np.random.randn(N*3).reshape(N,3))
@@ -253,9 +234,7 @@ class Test_Vector_element_mul(unittest.TestCase):
         self.assertAlmostEqual(z.d_dh.values[i,k,1], dz_dh1.values[i,k],
                                delta=DEL)
 
-    #---------------------------------------------------------------
     # Derivatives should be removed if necessary
-    #---------------------------------------------------------------
     self.assertEqual(y.element_mul(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
     self.assertTrue(hasattr(x, 'd_dh'))
@@ -265,9 +244,7 @@ class Test_Vector_element_mul(unittest.TestCase):
     self.assertFalse(hasattr(y.element_mul(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.element_mul(x, recursive=False), 'd_dh'))
 
-    #---------------------------------------------------------------
     # Read-only status should NOT be preserved
-    #---------------------------------------------------------------
     N = 10
     y = Vector(np.random.randn(N*3).reshape(N,3))
     x = Vector(np.random.randn(N*3).reshape(N,3))
@@ -282,13 +259,6 @@ class Test_Vector_element_mul(unittest.TestCase):
 
     self.assertFalse(y.as_readonly().element_mul(x).readonly)
     self.assertFalse(y.element_mul(x.as_readonly()).readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

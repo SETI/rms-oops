@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Boolean, Units
 
-#*******************************************************************************
-# Test_Vector_ops
-#*******************************************************************************
 class Test_Vector_ops(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #------------------
     # Unary plus
-    #------------------
     a = Vector((1,2,3))
     b = +a
     self.assertEqual(b, (1,2,3))
@@ -97,9 +90,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertRaises(ValueError, a.__iadd__, 1)
     self.assertRaises(ValueError, b.__iadd__, 1)
 
-    #---------------------
     # Unary minus
-    #---------------------
     a = Vector((1,2,3))
     b = -a
     self.assertEqual(b, (-1,-2,-3))
@@ -173,9 +164,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertRaises(TypeError, b.__isub__, 1)                 # class is wrong
     self.assertRaises(ValueError, a.__isub__, Vector([1,2]))    # read-only
 
-    #---------------
     # abs()
-    #---------------
 
     # Single values
     x = Vector((-1.,))
@@ -273,9 +262,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertFalse(abs(x).readonly)
     self.assertFalse(x.as_readonly().norm().readonly)
 
-    #-------------------
     # Addition
-    #-------------------
     a = Vector((1,2,3))
     self.assertRaises(TypeError, a.__add__, 1)      # rank mismatch
 
@@ -454,9 +441,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a, (4,6))
     self.assertEqual(a.d_dt, ((5,5),(5,5)))
 
-    #--------------------
     # Subtraction
-    #--------------------
     a = Vector((1,2,3))
     self.assertRaises(TypeError, a.__add__, 1)  # rank mismatch
 
@@ -635,9 +620,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a, (-2,-2))
     self.assertEqual(a.d_dt, ((-3,-1),(1,3)))
 
-    #----------------------
     # Multiplication
-    #----------------------
     expr = Vector((1,2,3)) * 2
     self.assertEqual(expr, (2,4,6))
     self.assertEqual(type(expr), Vector)
@@ -811,9 +794,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a, (6,8))
     self.assertEqual(a.d_dt, (7,6))
 
-    #----------------
     # Division
-    #----------------
     expr = Vector((2,4,6)) / 2
     self.assertEqual(expr, (1,2,3))
     self.assertEqual(type(expr), Vector)
@@ -930,9 +911,7 @@ class Test_Vector_ops(unittest.TestCase):
     a /= 0
     self.assertTrue(a.mask)
 
-    #-----------------------
     # Floor division
-    #-----------------------
     expr = Vector((2,4,7)) // 2
     self.assertEqual(expr, (1,2,3))
     self.assertEqual(type(expr), Vector)
@@ -1023,9 +1002,7 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a[0].mask, False)
     self.assertEqual(a[1].mask, True)
 
-    #----------------
     # Modulus
-    #----------------
     expr = Vector((2,4,7)) % 2
     self.assertEqual(expr, (0,0,1))
     self.assertEqual(type(expr), Vector)
@@ -1116,18 +1093,9 @@ class Test_Vector_ops(unittest.TestCase):
     self.assertEqual(a[0].mask, False)
     self.assertEqual(a[1].mask, True)
 
-    #-----------------
     # Reciprocal
-    #-----------------
     a = Vector((2,4,7))
     self.assertRaises(TypeError, a.reciprocal)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

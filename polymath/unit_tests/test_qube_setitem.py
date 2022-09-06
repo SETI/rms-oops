@@ -8,14 +8,9 @@ import unittest
 
 from polymath import *
 
-#*******************************************************************************
-# Test_Qube_setitem
-#*******************************************************************************
 class Test_Qube_setitem(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     ############################################################################
@@ -762,8 +757,10 @@ class Test_Qube_setitem(unittest.TestCase):
     self.assertEqual(aa[:,0,:,3], 99.)
     for i in range(6):
       for j in range(4):
-        if (i,j) == (2,1): continue
-        if (i,j) == (0,3): continue
+        if (i,j) == (2,1):
+            continue
+        if (i,j) == (0,3):
+            continue
         self.assertTrue(aa[:,i,:,j] != 99.)
         self.assertTrue(aa[:,i,:,j] == a[:,i,:,j])
 
@@ -775,17 +772,12 @@ class Test_Qube_setitem(unittest.TestCase):
     self.assertEqual(aa[:,0,:,3], 99.)
     for i in range(6):
       for j in range(4):
-        if (i,j) == (2,1): continue
-        if (i,j) == (0,3): continue
+        if (i,j) == (2,1):
+            continue
+        if (i,j) == (0,3):
+            continue
         self.assertTrue(aa[:,i,:,j] != 99.)
         self.assertTrue(aa[:,i,:,j] == a[:,i,:,j])
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ############################################
 if __name__ == '__main__':
