@@ -11,7 +11,7 @@ from oops.frame.unittester       import *
 from oops.observation.unittester import *
 from oops.path.unittester        import *
 from oops.surface.unittester     import *
-from oops.backplane   import Test_Backplane
+from oops.backplane_unittests    import Test_Backplane
 from oops.body        import Test_Body
 from oops.event       import Test_Event
 from oops.lightsource import Test_LightSource
