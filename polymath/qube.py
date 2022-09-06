@@ -526,11 +526,11 @@ class Qube(object):
         if derivs:
             self.insert_derivs(derivs)
 
-        self.__is_deriv_ = False    # gets changed by insert_derivs()
+        self._is_deriv_ = False    # gets changed by insert_derivs()
 
         # Used only for if clauses
-        self.__truth_if_any_ = False
-        self.__truth_if_all_ = False
+        self._truth_if_any_ = False
+        self._truth_if_all_ = False
 
         return
 
@@ -807,7 +807,7 @@ class Qube(object):
 
     @property
     def is_deriv(self):
-        return self.__is_deriv_
+        return self._is_deriv_
 
     @property
     def wod(self):
@@ -877,10 +877,10 @@ class Qube(object):
             self._corners_ = self.corners
             args.append('_Qube__corners_')
 
-            self.__sliced_mask_ = self._mask_[self._slicer]
+            self._sliced_mask_ = self._mask_[self._slicer]
             args.append('_Qube__sliced_mask_')
 
-            self.__unmasked_values_ = self._values_[self.antimask]
+            self._unmasked_values_ = self._values_[self.antimask]
             args.append('_Qube__unmasked_values_')
 
         # Include derivatives and units as needed
@@ -1094,7 +1094,7 @@ class Qube(object):
         self._derivs_[key] = deriv
         setattr(self, 'd_d' + key, deriv)
 
-        deriv.__is_deriv_ = True
+        deriv._is_deriv_ = True
 
         self._cache_.clear()
         return self
@@ -2814,7 +2814,7 @@ class Qube(object):
             return self.masked_single()
 
         # If this object is shapeless, return it as is
-        if not self._denom_:
+        if not self._shape_:
             return self
 
         # If we found a cached value, return it
@@ -4341,7 +4341,7 @@ class Qube(object):
             compare[both_masked] = True
 
         result = Qube.BOOLEAN_CLASS(compare)
-        result.__truth_if_all_ = True
+        result._truth_if_all_ = True
         return result
 
     #===========================================================================
@@ -4384,7 +4384,7 @@ class Qube(object):
                 compare.fill(False)
 
         result = Qube.BOOLEAN_CLASS(compare)
-        result.__truth_if_any_ = True
+        result._truth_if_any_ = True
         return result
 
     #===========================================================================
@@ -4420,10 +4420,10 @@ class Qube(object):
         all() or any().
         """
 
-        if self.__truth_if_all_:
+        if self._truth_if_all_:
             return bool(np.all(self.as_mask_where_nonzero()))
 
-        if self.__truth_if_any_:
+        if self._truth_if_any_:
             return bool(np.any(self.as_mask_where_nonzero()))
 
         if self._shape_:

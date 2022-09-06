@@ -149,7 +149,6 @@ class Test_Qube_shrink(unittest.TestCase):
         self.assertTrue(np.all(b.values == np.arange(200)))
 
         c = b.unshrink(antimask)
-        print(12121, ignore, a.shape, b.shape, c.shape)
         self.assertEqual(a.shape, c.shape)
         self.assertEqual(a[0], c[0])
         self.assertTrue(np.all(c.mask[1:]))
