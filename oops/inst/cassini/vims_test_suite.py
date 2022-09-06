@@ -337,7 +337,7 @@ def vims_test_suite(filespec, derivs, info, display):
     #-------------------------------------------------------------------
     # Get the radius and inertial longitude; track radial derivatives
     #-------------------------------------------------------------------
-   (ring_radius,
+    (ring_radius,
      ring_longitude) = ring_body.surface.event_as_coords(ring_event,
                                                          axes=2, derivs=derivs)
 

@@ -451,6 +451,8 @@ class Observation(object):
         #-----------------------------------
         # Construct the 1-D index arrays
         #-----------------------------------
+#        from IPython import embed
+#        embed()
         step = undersample/oversample
         limit = limit + step * 1.e-10   # Allow a little slop at the upper end
 
