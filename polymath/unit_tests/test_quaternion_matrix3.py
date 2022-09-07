@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Quaternion, Matrix3, Matrix
 
-#*******************************************************************************
-# Test_Quaternion_matrix3
-#*******************************************************************************
 class Test_Quaternion_matrix3(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #-------------------------------------------------------------------------
     # Quaternion to Matrix3 and back
-    #-------------------------------------------------------------------------
 
     # One quaternion
     a = Quaternion(np.random.rand(4)).unit()
@@ -60,9 +53,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
 
     self.assertFalse(b.readonly)
 
-    #-------------------------------------------------------------------------
     # Quaternion to Euler angles and back
-    #-------------------------------------------------------------------------
 
     # N Quaternions, without unit()
     N = 100
@@ -94,9 +85,7 @@ class Test_Quaternion_matrix3(unittest.TestCase):
     self.assertFalse(aa.readonly)
     self.assertFalse(b.readonly)
 
-    #-------------------------------------------------------------------------
     # Quaternion to Matrix3, with derivatives
-    #-------------------------------------------------------------------------
     N = 100
     x = Quaternion(np.random.rand(N,4))
     x.insert_deriv('t', Quaternion((np.random.rand(N,4))))
@@ -130,13 +119,6 @@ class Test_Quaternion_matrix3(unittest.TestCase):
         for k in range(3):
             self.assertAlmostEqual(dy_dt.values[i,j,k], y.d_dt.values[i,j,k],
                                    delta=DEL)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

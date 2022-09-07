@@ -8,14 +8,9 @@ import unittest
 
 from polymath import Qube, Matrix, Vector, Scalar, Pair, Units
 
-#*******************************************************************************
-# Test_Vector_as_vector
-#*******************************************************************************
 class Test_Vector_as_vector(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     N = 10
@@ -27,9 +22,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     self.assertTrue(hasattr(a, 'd_dt'))
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #----------------------
     # Matrix case, Nx1
-    #----------------------
     a = Matrix(np.random.randn(N,7,1), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,7,1,6), drank=1)
     a.insert_deriv('t', da_dt)
@@ -51,9 +44,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     b = Vector.as_vector(a, recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #----------------------
     # Matrix case, 1xN
-    #----------------------
     a = Matrix(np.random.randn(N,1,7), units=Units.REV)
     da_dt = Matrix(np.random.randn(N,1,7,6), drank=1)
     a.insert_deriv('t', da_dt)
@@ -75,9 +66,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     b = Vector.as_vector(a, recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #-----------------
     # Scalar case
-    #-----------------
     a = Scalar(np.random.randn(N), units=Units.UNITLESS)
     da_dt = Scalar(np.random.randn(N,6), drank=1)
     a.insert_deriv('t', da_dt)
@@ -98,9 +87,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     b = Vector.as_vector(a, recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #----------------
     # Pair case
-    #----------------
     a = Pair(np.random.randn(N,2), units=Units.DEG)
     da_dt = Pair(np.random.randn(N,2,6), drank=1)
     a.insert_deriv('t', da_dt)
@@ -120,9 +107,7 @@ class Test_Vector_as_vector(unittest.TestCase):
     b = Vector.as_vector(a, recursive=False)
     self.assertFalse(hasattr(b, 'd_dt'))
 
-    #------------------
     # Other cases
-    #------------------
     b = Vector.as_vector((1,2,3))
     self.assertTrue(type(b), Vector)
     self.assertTrue(b.units is None)
@@ -137,13 +122,6 @@ class Test_Vector_as_vector(unittest.TestCase):
     self.assertEqual(b.shape, (2,4,3))
     self.assertEqual(b.numer, (5,))
     self.assertEqual(b, a)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

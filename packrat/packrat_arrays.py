@@ -36,13 +36,8 @@ UINT64_ENC = NATIVE_BYTEORDER_ENC + 'u8'
 # Top-level functions
 ################################################################################
 
-#===============================================================================
-# encode_array
-#===============================================================================
 def encode_array(values, b64_savings=1000, npz_savings=10000, **params):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Encode an array; generate the attribute list.
+    """Encode an array; generate the attribute list.
 
     Input:
         value       the NumPy ndarray to encode.
@@ -72,7 +67,7 @@ def encode_array(values, b64_savings=1000, npz_savings=10000, **params):
         attr_list   a list of attributes (name,value), where the value is always
                     a string. Quotes and apostrophes have been escaped.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     dtype = values.dtype
     kind = dtype.kind
 
@@ -86,17 +81,10 @@ def encode_array(values, b64_savings=1000, npz_savings=10000, **params):
         return encode_string_array(values, b64_savings, npz_savings)
     else:
         raise ValueError('unsupported encoding for array dtype "%s"' % dtype)
-#===============================================================================
 
-
-
-#===============================================================================
-# decode_array
 #===============================================================================
 def decode_array(value, attr):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Decode an array.
+    """Decode an array.
 
     Inputs:
         value       the is the XML value string if one is present in the file;
@@ -106,7 +94,7 @@ def decode_array(value, attr):
 
     Return:         the decoded array.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     dtype = decode_dtype(attr['dtype'])
     kind = dtype.kind
 
@@ -120,85 +108,57 @@ def decode_array(value, attr):
         return decode_string_array(value, attr)
     else:
         raise ValueError('unsupported decoding for array dtype "%s"' % dtype)
-#===============================================================================
-
-
 
 ################################################################################
 # Attribute list
 ################################################################################
 
-#===============================================================================
-# first_attributes
-#===============================================================================
 def first_attributes(values):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Start a list of attributes for a NumPy array.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """Start a list of attributes for a NumPy array."""
 
-    #--------------------------------
     # Start with shape and dtype
-    #--------------------------------
     dtype = values.dtype
     kind = dtype.kind
 
     attr_list = [('shape', str(values.shape).replace(' ','')),
                  ('dtype', encode_dtype(values.dtype))]
 
-    #----------------------------------------------------
     # Include first, second and third for validation
-    #----------------------------------------------------
     raveled = values.ravel()
 
     NAMES = ['first', 'second', 'third']
     for k in range(len(NAMES)):
-        if k >= len(raveled): break
+        if k >= len(raveled):
+            break
 
         if kind in 'Sc':
             attr_list.append((NAMES[k], escape(raveled[k], ENTITIES)))
         else:
             attr_list.append((NAMES[k], repr(raveled[k])))
 
-    #----------------------------------------------------------------
     # For numbers, include the min and max for further validation
-    #----------------------------------------------------------------
     if kind not in 'Scb' and raveled.size:
         attr_list.append(('min', repr(np.min(raveled))))
         attr_list.append(('max', repr(np.max(raveled))))
 
     return attr_list
-#===============================================================================
-
-
 
 ################################################################################
 # Routines to maniupulate dtypes
 ################################################################################
 
-#===============================================================================
-# convert_dtype
-#===============================================================================
 def convert_dtype(dtype, dtype2):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Return the name of an another dtype, retaining the byteorder.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """The name of an another dtype, retaining the byteorder."""
+
     dtype = np.dtype(dtype)
     dtype2 = np.dtype(dtype2)
 
-    #------------------------------------------------------------
     # Always express dtype using byteorder + kind + itemsize
-    #------------------------------------------------------------
     byteorder = dtype.byteorder
     if byteorder == '=':
         byteorder = NATIVE_BYTEORDER
 
-    #----------------------------------------------------------
     # Convert dtype name if necessary, preserving byteorder
-    #----------------------------------------------------------
     kind = dtype2.kind
     itemsize = dtype2.itemsize
 
@@ -209,115 +169,70 @@ def convert_dtype(dtype, dtype2):
         byteorder = NATIVE_BYTEORDER
 
     return byteorder + kind + str(itemsize)
-#===============================================================================
 
-
-
-#===============================================================================
-# matches_dtype
 #===============================================================================
 def matches_dtype(dtype, dtype2):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Returns true if the dtypes are equivalent exept for byte order.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """Returns true if the dtypes are equivalent exept for byte order."""
+
     dtype = np.dtype(dtype)
     dtype2 = np.dtype(dtype2)
 
     return dtype.kind == dtype2.kind and dtype.itemsize == dtype2.itemsize
-#===============================================================================
-
-
 
 ################################################################################
 # Routines to make dtype strings more XML-friendly
 ################################################################################
 
-#===============================================================================
-# encode_dtype
-#===============================================================================
 def encode_dtype(dtype):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Encode dtype for use in the XML file.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """Encode dtype for use in the XML file."""
+
     dtype = np.dtype(dtype)
 
-    #-----------------------------------------------------------
     # Always express dtype using byteorder + kind + itemsize
-    #-----------------------------------------------------------
     byteorder = dtype.byteorder
     if byteorder == '=':
         byteorder = NATIVE_BYTEORDER
 
     dtype = byteorder + dtype.kind + str(dtype.itemsize)
 
-    #---------------------------------------------------------------------------
     # Within the XML, use [] to improve readability, because <> must be escaped
-    #---------------------------------------------------------------------------
     return dtype.replace('<','[').replace('>',']')
-#===============================================================================
 
-
-
-#===============================================================================
-# decode_dtype
 #===============================================================================
 def decode_dtype(dtype_str):
     return np.dtype(dtype_str.replace('[','<').replace(']','>'))
-#===============================================================================
-
-
 
 ################################################################################
 # Integer array encoding/decoding
 ################################################################################
 
-#===============================================================================
-# encode_int_array
-#===============================================================================
 def encode_int_array(values, b64_savings, npz_savings):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Encode an integer array; generate the attribute list.
+    """Encode an integer array; generate the attribute list.
 
     Return a tuple(text_value, npz_value, attribute_list).
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #----------------------------------------
     # Generate the default attribute list
-    #----------------------------------------
     attr_list = first_attributes(values)
 
     values = values.ravel()
 
-    #-----------------------------
     # Handle zero-size object
-    #-----------------------------
     if values.size == 0:
         attr_list.append(('encoding', 'text'))
         return ('', None, attr_list)
 
-    #-------------------------------------
     # Check sizes of encoding options
-    #-------------------------------------
     byte_size = values.itemsize * values.size
     xml_bytes = values.size * (len(str(np.median(values))) + 1)
 
-    #----------------------------------------------------
     # Find optimal binary encoding and optional offset
-    #----------------------------------------------------
     (compressed, offset) = shrink_int_array(values)
     npz_bytes = 0.7 * compressed.size * compressed.itemsize
             # 0.7 assumes zip compression
     b64_bytes = 1.3 * compressed.size * compressed.itemsize
 
-    #------------------------------------------------------------------
     # Hold the data for the npz file if the savings is large enough
-    #------------------------------------------------------------------
     if min(xml_bytes, b64_bytes) > npz_bytes + npz_savings:
         if offset:
             attr_list.append(('offset', str(offset)))
@@ -326,17 +241,13 @@ def encode_int_array(values, b64_savings, npz_savings):
 
         return ('', compressed, attr_list)
 
-    #---------------------------------------
     # For something short, return text
-    #---------------------------------------
     if xml_bytes < b64_bytes + b64_savings:
         attr_list.append(('encoding', 'text'))
         string = ','.join([repr(v) for v in values])
         return (string, None, attr_list)
 
-    #------------------------------
     # Otherwise, base64 encode
-    #------------------------------
     if offset:
         attr_list.append(('offset', offset))
 
@@ -344,22 +255,15 @@ def encode_int_array(values, b64_savings, npz_savings):
                   ('encoding', 'base64')]
 
     return (base64.b64encode(compressed.tobytes()), None, attr_list)
-#===============================================================================
 
-
-
-#===============================================================================
-# decode_int_array
 #===============================================================================
 def decode_int_array(value, attr):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Decode an integer array.
+    """Decode an integer array.
 
     Input parameter 'value' is either the string value of this node or else the
     array extracted from the npz file.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     encoding = attr['encoding']
     shape  = eval(attr['shape'])
     offset = eval(attr.get('offset', '0'))
@@ -376,29 +280,25 @@ def decode_int_array(value, attr):
         decoded = np.fromstring(decoded,
                                 dtype=decode_dtype(attr['storage_dtype']))
         decoded = decoded.astype(dtype)
-        if offset: decoded += offset
+        if offset:
+            decoded += offset
 
     else:
         decoded = value.astype(dtype)
-        if offset: decoded += offset
+        if offset:
+            decoded += offset
 
     return decoded.reshape(shape)
-#===============================================================================
 
-
-
-#===============================================================================
-# shrink_int_array
 #===============================================================================
 def shrink_int_array(values):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Encode an integer array into the smallest space possible
+    """Encode an integer array into the smallest space possible
 
     Return a tuple(compressed_array, offset).
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    if values.size == 0: return (values, 0)
+
+    if values.size == 0:
+        return (values, 0)
 
     values = values.ravel()
     dtype = values.dtype
@@ -448,49 +348,32 @@ def shrink_int_array(values):
         compressed = values
 
     return (compressed, offset)
-#===============================================================================
-
-
 
 ################################################################################
 # Boolean array encoding/decoding
 ################################################################################
 
-#===============================================================================
-# encode_bool_array
-#===============================================================================
 def encode_bool_array(values, b64_savings, npz_savings):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Encode an boolean array; generate the attribute list.
+    """Encode an boolean array; generate the attribute list.
 
     Return a tuple(text_value, npz_value, attribute_list).
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #-----------------------------------------
     # Generate the default attribute list
-    #-----------------------------------------
     attr_list = first_attributes(values)
 
     values = values.ravel()
 
-    #----------------------------
     # Handle zero-size object
-    #----------------------------
     if values.size == 0:
         attr_list.append(('encoding', 'text'))
         return ('', None, attr_list)
 
-    #-------------------------------------
     # Check sizes of encoding options
-    #-------------------------------------
     byte_size = values.itemsize * values.size
     text_bytes = values.size
 
-    #---------------------------------
     # Find optimal binary encoding
-    #---------------------------------
 
     # Count the number of True and False values
     total_items = len(values)
@@ -586,22 +469,15 @@ def encode_bool_array(values, b64_savings, npz_savings):
 
     attr_list += [('encoding', 'base64')]
     return (base64.b64encode(compressed.tobytes()), None, attr_list)
-#===============================================================================
 
-
-
-#===============================================================================
-# decode_bool_array
 #===============================================================================
 def decode_bool_array(value, attr):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Decode a boolean array.
+    """Decode a boolean array.
 
     Input parameter 'value' is either the string value of this node or else the
     array extracted from the npz file.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     shape = eval(attr['shape'])
     size = np.prod(shape)
 
@@ -611,72 +487,50 @@ def decode_bool_array(value, attr):
     encoding = attr['encoding']
     method = attr['method']
 
-    #---------------------------
     # Hande all_equal case
-    #---------------------------
     if attr['method'] == 'all_equal':
         if value == 'True':
             return np.ones(shape, dtype='bool')
         else:
             return np.zeros(shape, dtype='bool')
 
-    #-----------------------------
     # Handle TF text encoding
-    #-----------------------------
     if method == 'TF':
         return np.array([(tf == 'T') for tf in value]).reshape(shape)
 
-    #--------------------------
     # Convert text to array
-    #--------------------------
     if encoding == 'text':
         value = np.array(eval(value))
 
-    #-----------------------------
     # Convert base64 to array
-    #-----------------------------
     elif encoding == 'base64':
         decoded = base64.b64decode(value)
         dtype = decode_dtype(attr.get('index_dtype', UINT8))
         value = np.fromstring(decoded, dtype=dtype)
 
-    #--------------------
     # Handle packbits
-    #--------------------
     if method == 'packbits':
         decoded = np.unpackbits(value).astype('bool')[:size]
 
-    #----------------------
     # Handle list_false
-    #----------------------
     elif method == 'list_false':
         decoded = np.ones(shape, dtype='bool').ravel()
         decoded[(value,)] = False
 
-    #--------------------
     # Handle list_true
-    #--------------------
     else:
         decoded = np.zeros(shape, dtype='bool').ravel()
         decoded[(value,)] = True
 
     return decoded.reshape(shape)
-#===============================================================================
-
-
 
 ################################################################################
 # Float array encoding/decoding
 ################################################################################
 
-#===============================================================================
-# encode_float_array
-#===============================================================================
 def encode_float_array(values, b64_savings, npz_savings, single=False,
                        absolute=None, relative=None, worstcase=True, **ignore):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Encode a float array; generate the attribute list.
+    """Encode a float array; generate the attribute list.
 
     Return a tuple(text_value, npz_value, attribute_list).
 
@@ -692,26 +546,19 @@ def encode_float_array(values, b64_savings, npz_savings, single=False,
 
     Return a tuple(text_value, npz_value, attribute_list).
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #------------------------------------------
     # Generate the default attribute list
-    #------------------------------------------
     attr_list = first_attributes(values)
 
     values = values.ravel()
     dtype = values.dtype
 
-    #-----------------------------
     # Handle zero-size object
-    #-----------------------------
     if values.size == 0:
         attr_list.append(('encoding', 'text'))
         return ('', None, attr_list)
 
-    #-----------------------------
     # Study the dynamic range
-    #-----------------------------
     amin = np.min(values)
     amax = np.max(values)
 
@@ -722,16 +569,12 @@ def encode_float_array(values, b64_savings, npz_savings, single=False,
     storage_dtype = values.dtype
     storage_bytes = values.dtype.itemsize
 
-    #---------------------------------------------
     # Convert to single precision if warranted
-    #---------------------------------------------
     if single:
         storage_dtype = convert_dtype(dtype, FLOAT32)
         storage_bytes = 4
 
-    #-----------------------------------------
     # Investigate integer encoding options
-    #-----------------------------------------
     absolute_dominates = False
     if relative is None:
         if absolute is None:
@@ -761,17 +604,13 @@ def encode_float_array(values, b64_savings, npz_savings, single=False,
             storage_dtype = convert_dtype(dtype, UINT32)
             storage_bytes = 4
 
-    #--------------------------------
     # Investigate float32 option
-    #--------------------------------
     if storage_bytes >= 4 and relative and not absolute_dominates:
         if relative >= 2.**(-24):
             storage_dtype = convert_dtype(dtype, FLOAT32)
             storage_bytes = 4
 
-    #-------------------------------------
     # Check sizes of encoding options
-    #-------------------------------------
     npz_bytes = 0.8 * values.size * storage_bytes
     b64_bytes = 1.3 * values.size * storage_bytes
 
@@ -780,18 +619,14 @@ def encode_float_array(values, b64_savings, npz_savings, single=False,
     else:
         text_bytes = values.size * 16
 
-    #---------------------------
     # Update the attributes
-    #---------------------------
     encoding_list = [('storage_dtype', encode_dtype(storage_dtype))]
     if absolute is not None:
         encoding_list += [('absolute_precision', str(absolute))]
     if relative is not None:
         encoding_list += [('relative_precision', str(relative))]
 
-    #------------------------------------------------------------------
     # Hold the data for the npz file if the savings is large enough
-    #------------------------------------------------------------------
     if min(text_bytes, b64_bytes) > npz_bytes + npz_savings:
         attr_list += encoding_list + [('encoding', 'npz')]
 
@@ -806,9 +641,7 @@ def encode_float_array(values, b64_savings, npz_savings, single=False,
 
         return ('', storage_values, attr_list)
 
-    #--------------------------------------
     # For something short, return text
-    #--------------------------------------
     if text_bytes < b64_bytes + b64_savings:
         if not matches_dtype(storage_dtype, FLOAT64):
             storage_dtype = convert_dtype(storage_dtype, FLOAT32)
@@ -819,9 +652,7 @@ def encode_float_array(values, b64_savings, npz_savings, single=False,
 
         return (string, None, attr_list)
 
-    #------------------------------
     # Otherwise, base64 encode
-    #------------------------------
     attr_list += encoding_list + [('encoding', 'base64')]
 
     if matches_dtype(storage_dtype, FLOAT64):
@@ -834,22 +665,15 @@ def encode_float_array(values, b64_savings, npz_savings, single=False,
                           (2.**(8*storage_bytes) - 1)).astype(storage_dtype)
 
     return (base64.b64encode(storage_values.tobytes()), None, attr_list)
-#===============================================================================
 
-
-
-#===============================================================================
-# decode_float_array
 #===============================================================================
 def decode_float_array(value, attr):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Decode a float array.
+    """Decode a float array.
 
     Input parameter 'value' is either the string value of this node or else the
     array extracted from the npz file.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     encoding = attr['encoding']
     shape    = eval(attr['shape'])
     dtype    = decode_dtype(attr['dtype'])
@@ -877,43 +701,28 @@ def decode_float_array(value, attr):
         decoded = amin + (amax - amin) * decoded/steps
 
     return decoded.reshape(shape)
-#===============================================================================
-
-
 
 ################################################################################
 # Character and string array encoding/decoding
 ################################################################################
 
-#===============================================================================
-# encode_string_array
-#===============================================================================
 def encode_string_array(values, b64_savings, npz_savings):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Encode a string and character array; generate the attribute list.
+    """Encode a string and character array; generate the attribute list.
 
     Return a tuple(text_value, npz_value, attribute_list).
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #-----------------------------------------
     # Generate the default attribute list
-    #-----------------------------------------
     attr_list = first_attributes(values)
 
     values = values.ravel()
 
-    #----------------------------
     # Handle zero-size object
-    #----------------------------
     if values.size == 0:
         attr_list.append(('encoding', 'text'))
         return ('', None, attr_list)
 
-    #--------------------
     # Estimate sizes
-    #--------------------
     kind = values.dtype.kind
     if values.itemsize == 1:
         raw_bytes = values.size
@@ -926,16 +735,12 @@ def encode_string_array(values, b64_savings, npz_savings):
         b64_bytes = 1.3 * raw_bytes
         npz_bytes = 0.7 * raw_bytes
 
-    #------------------------------------------------------------------
     # Hold the data for the npz file if the savings is large enough
-    #------------------------------------------------------------------
     if min(xml_bytes, b64_bytes) > npz_bytes + npz_savings:
         attr_list.append(('encoding', 'npz'))
         return ('', values, attr_list)
 
-    #-------------------------------------
     # For something short, return text
-    #-------------------------------------
     if xml_bytes < b64_bytes + b64_savings:
         attr_list.append(('encoding', 'text'))
 
@@ -946,27 +751,18 @@ def encode_string_array(values, b64_savings, npz_savings):
 
         return (content, None, attr_list)
 
-    #------------------------------------------------------------------------
     # Otherwise, base64 encode
-    #------------------------------------------------------------------------
     attr_list += encoding_list + [('encoding', 'base64')]
     return (base64.b64encode(values.tobytes()), None, attr_list)
-#===============================================================================
 
-
-
-#===============================================================================
-# decode_string_array
 #===============================================================================
 def decode_string_array(value, attr):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    Decode a string or character array.
+    """Decode a string or character array.
 
     Input parameter 'value' is either the string value of this node or else the
     array extracted from the npz file.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
     encoding = attr['encoding']
     shape  = eval(attr['shape'])
     dtype  = decode_dtype(attr['dtype'])
@@ -994,9 +790,6 @@ def decode_string_array(value, attr):
         decoded = value
 
     return decoded.reshape(shape)
-#===============================================================================
-
-
 
 ################################################################################
 # Unit tests
@@ -1004,23 +797,12 @@ def decode_string_array(value, attr):
 
 import unittest
 
-#*******************************************************************************
-# Test_Packrat_arrays
-#*******************************************************************************
 class Test_Packrat_arrays(unittest.TestCase):
 
-  #=============================================================================
-  # runTest
-  #=============================================================================
   def runTest(self):
 
-    #-------------------------
-    # Integer array tests
-    #-------------------------
+    #### Integer array tests
 
-    #===========================================================================
-    # test_int_array
-    #===========================================================================
     def test_int_array(ints, b64_savings, npz_savings):
         ints = np.array(ints)
         (string, values, attr) = encode_int_array(ints, b64_savings,
@@ -1053,9 +835,6 @@ class Test_Packrat_arrays(unittest.TestCase):
         self.assertTrue(np.all(test == ints))
 
         return attr
-    #===========================================================================
-
-
 
     attr = test_int_array(np.arange(0) - 5, 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
@@ -1115,13 +894,8 @@ class Test_Packrat_arrays(unittest.TestCase):
     attr = test_int_array(np.arange(1), 1000, 1000)
     attr = test_int_array(np.arange(2), 1000, 1000)
 
-    #------------------------
-    # Boolean array tests
-    #------------------------
+    #### Boolean array tests
 
-    #===========================================================================
-    # test_bool_array
-    #===========================================================================
     def test_bool_array(bools, b64_savings, npz_savings):
         bools = np.array(bools).astype('bool')
         (string, values, attr) = encode_bool_array(bools, b64_savings,
@@ -1150,9 +924,6 @@ class Test_Packrat_arrays(unittest.TestCase):
         self.assertTrue(np.all(test == bools))
 
         return attr
-    #===========================================================================
-
-
 
     attr = test_bool_array([], 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
@@ -1268,13 +1039,8 @@ class Test_Packrat_arrays(unittest.TestCase):
     self.assertEqual(attr['encoding'], 'npz')
     self.assertEqual(attr['method'], 'packbits')
 
-    #-----------------------
-    # Float array tests
-    #-----------------------
+    #### Float array tests
 
-    #===========================================================================
-    # test_float_array
-    #===========================================================================
     def test_float_array(floats, b64_savings, npz_savings, single=False,
                                  absolute=None, relative=None, worstcase=True):
         floats = np.array(floats)
@@ -1331,9 +1097,6 @@ class Test_Packrat_arrays(unittest.TestCase):
                 self.assertTrue(np.all(diffs <= np.maximum(relative*abs_floats,
                                                            absolute)))
         return attr
-    #===========================================================================
-
-
 
     randoms = np.random.randn(1000)
     cleaned = randoms[np.abs(randoms) > 1.e-3] # exclude values too close to 0
@@ -1444,9 +1207,7 @@ class Test_Packrat_arrays(unittest.TestCase):
     attr = test_float_array(cleaned[:100].clip(-2,2), 0, 1000, relative=0.0001, absolute=1, worstcase=True)
     self.assertEqual(attr['storage_dtype'], FLOAT32_ENC)
 
-    #------------------------------------------
-    # Test byte ordering in base64 encoding
-    #------------------------------------------
+    #### Test byte ordering in base64 encoding
     before = randoms.astype('<f8')
     (string, values, attr) = encode_float_array(before, 0, 1.e9)
     after = decode_array(string, dict(attr))
@@ -1458,15 +1219,10 @@ class Test_Packrat_arrays(unittest.TestCase):
     self.assertEqual(after.dtype, np.dtype('>f8'))
     self.assertTrue(np.all(before == after))
 
-    #-----------------------
-    # Character tests
-    #-----------------------
+    #### Character tests
 
-    #===========================================================================
-    # test_char_array
-    #===========================================================================
     def test_char_array(chars, b64_savings, npz_savings):
-        if type(chars) == str:
+        if isinstance(chars, str):
             chars = list(chars)
 
         chars = np.array(chars).astype('c')
@@ -1496,8 +1252,6 @@ class Test_Packrat_arrays(unittest.TestCase):
         self.assertTrue(np.all(test == chars))
 
         return attr
-    #===========================================================================
-
 
     attr = test_char_array([], 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
@@ -1517,13 +1271,8 @@ class Test_Packrat_arrays(unittest.TestCase):
     attr = test_char_array('a\'b\"\c', 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
 
-    #------------------
-    # String tests
-    #------------------
+    #### String tests
 
-    #===========================================================================
-    # test_string_array
-    #===========================================================================
     def test_string_array(strs, b64_savings, npz_savings):
         strs = np.array(strs)
         (string, values, attr) = encode_string_array(strs, b64_savings,
@@ -1552,8 +1301,6 @@ class Test_Packrat_arrays(unittest.TestCase):
         self.assertTrue(np.all(test == strs))
 
         return attr
-    #===========================================================================
-
 
     attr = test_string_array([], 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
@@ -1572,10 +1319,6 @@ class Test_Packrat_arrays(unittest.TestCase):
 
     attr = test_string_array(3*['abc\'\'def\"\"ghi'], 1000, 1000)
     self.assertEqual(attr['encoding'], 'text')
-  #=============================================================================
-
-#*******************************************************************************
-
 
 ################################################################################
 # Perform unit testing if executed from the command line

@@ -14,19 +14,12 @@ import unittest
 
 from polymath import *
 
-#*******************************************************************************
-# Test_qube_reshaping
-#*******************************************************************************
 class Test_qube_reshaping(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #-----------------------------------------
     # reshape(self, shape, recursive=True)
-    #-----------------------------------------
     a = Vector(np.random.randn(3,4,5,2))
     b = a.reshape((3,4,5))
     self.assertEqual(a.shape, (3,4,5))
@@ -142,9 +135,7 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 3.e-15)
 
-    #-----------------------------------
     # flatten(self, recursive=True)
-    #-----------------------------------
     a = Vector(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.flatten()
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -227,9 +218,7 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 3.e-15)
 
-    #--------------------------------------------------
     # swap_axes(self, axis1, axis2, recursive=True)
-    #--------------------------------------------------
     a = Vector(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.swap_axes(0,1)
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -339,9 +328,7 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 1.e-14)
 
-    #------------------------------------------------------------
     # roll_axis(self, axis, start, recursive=True, rank=None)
-    #------------------------------------------------------------
     a = Vector(np.random.randn(2,3,4,5,6,3,2), drank=1)
     b = a.roll_axis(1)
     self.assertEqual(a.shape, (2,3,4,5,6))
@@ -505,9 +492,7 @@ class Test_qube_reshaping(unittest.TestCase):
 
     self.assertTrue(abs(a.sum() - b.sum()) < 5.e-15)
 
-    #----------------------------------------------------------------------
     # broadcast_into_shape(self, shape, recursive=True, sample_array=None)
-    #----------------------------------------------------------------------
     a = Matrix(np.random.randn(3,1,4,3,2), drank=1)
     self.assertEqual(a.shape, (3,1))
     b = a.broadcast_into_shape((4,3,2))
@@ -544,9 +529,7 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertTrue(b.readonly)
     self.assertTrue(b.d_dt.readonly)
 
-    #------------------------------------------
     # broadcasted_shape(*objects, item=())
-    #------------------------------------------
     a = Scalar(np.random.randn(2,1,4,1,3,1,3, 2,2), drank=2)
     b = Vector(np.random.randn(  7,4,1,3,7,3, 3))
     c = Matrix(np.random.randn(      4,1,1,1, 3,3,5), drank=1)
@@ -570,9 +553,7 @@ class Test_qube_reshaping(unittest.TestCase):
     self.assertEqual(Qube.broadcasted_shape(a,b,c,(),None,(3,),item=(2,2)),
                                             (2,7,4,4,3,7,3,2,2))
 
-    #----------------------------------------
     # broadcast(*objects, recursive=True)
-    #----------------------------------------
     a = Scalar(np.random.randn(2,1,1,3, 2,2), drank=2)
     b = Pair(np.random.randn(    3,1,1, 2))
     c = Matrix(np.random.randn(    4,1, 3,3))
@@ -600,13 +581,6 @@ class Test_qube_reshaping(unittest.TestCase):
     (aa,bb,cc,ee,ff) = Qube.broadcast(a,b,c,e,f,recursive=True)
     self.assertEqual(bb.d_dt.shape, (2,3,4,3))
     self.assertTrue(bb.d_dt.readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ############################################
 if __name__ == '__main__':

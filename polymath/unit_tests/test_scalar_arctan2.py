@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
-#*******************************************************************************
-# Test_Scalar_arctan2
-#*******************************************************************************
 class Test_Scalar_arctan2(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #-----------------------
     # Individual values
-    #-----------------------
     self.assertEqual(Scalar(1.).arctan2(1.), np.arctan2(1,1))
     self.assertEqual(type(Scalar(1.).arctan2(1.)), Scalar)
 
@@ -35,9 +28,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertAlmostEqual(Scalar(-1.).arctan2( 0.), -0.5  * np.pi, 1.e-15)
     self.assertAlmostEqual(Scalar(-1.).arctan2( 1.), -0.25 * np.pi, 1.e-15)
 
-    #---------------------
     # Multiple values
-    #---------------------
     self.assertTrue(abs(4/np.pi * Scalar(1.).arctan2((1,0,-1)) -
                      (1,2,3)).max() < 1.e-15)
 
@@ -50,9 +41,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertTrue(abs(4/np.pi * Scalar((1,0,-1)).arctan2((1.,)) -
                      (1,0,-1)).max() < 1.e-15)
 
-    #----------------
     # Arrays
-    #----------------
     N = 1000
     y = Scalar(np.random.randn(N))
     x = Scalar(np.random.randn(N))
@@ -64,9 +53,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
         self.assertEqual(angle[i:i+2], np.arctan2(y.values[i:i+2],
                                                   x.values[i:i+2]))
 
-    #----------------------
     # Test valid units
-    #----------------------
     values = np.random.randn(10)
     y = Scalar(values, units=Units.KM)
     x = Scalar(values, units=Units.CM)
@@ -87,17 +74,13 @@ class Test_Scalar_arctan2(unittest.TestCase):
     x = Scalar(values, units=Units.UNITLESS)
     self.assertRaises(ValueError, y.arctan2, x)
 
-    #-----------------------------
     # Units should be removed
-    #-----------------------------
     values = np.random.randn(10)
     y = Scalar(values, units=Units.KM)
     x = Scalar(values, units=Units.CM)
     self.assertTrue(y.arctan2(x).units is None)
 
-    #----------------------------
     # Units should be removed
-    #----------------------------
     N = 100
     y = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
@@ -106,9 +89,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertTrue(np.all(z.mask[y.mask]))
     self.assertTrue(not np.any(z.mask[~x.mask & ~y.mask]))
 
-    #-------------------
     # Derivatives
-    #-------------------
     N = 20
     y = Scalar(np.random.randn(N))
     x = Scalar(np.random.randn(N))
@@ -158,9 +139,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
         self.assertAlmostEqual(dz_dx[i]*x.d_dh[i] + dz_dy[i]*y.d_dh[i],
                                z.d_dh[i], delta=EPS)
 
-    #-----------------------------------------------
     # Derivatives should be removed if necessary
-    #-----------------------------------------------
     self.assertEqual(y.arctan2(x, recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_df'))
     self.assertTrue(hasattr(x, 'd_dh'))
@@ -170,9 +149,7 @@ class Test_Scalar_arctan2(unittest.TestCase):
     self.assertFalse(hasattr(y.arctan2(x, recursive=False), 'd_dg'))
     self.assertFalse(hasattr(y.arctan2(x, recursive=False), 'd_dh'))
 
-    #------------------------------------------
     # Read-only status should be preserved
-    #------------------------------------------
     N = 10
     y = Scalar(np.random.randn(N))
     x = Scalar(np.random.randn(N))
@@ -187,13 +164,6 @@ class Test_Scalar_arctan2(unittest.TestCase):
 
     self.assertFalse(y.as_readonly().arctan2(x).readonly)
     self.assertFalse(y.arctan2(x.as_readonly()).readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

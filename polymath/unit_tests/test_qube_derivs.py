@@ -13,32 +13,21 @@ import unittest
 
 from polymath import *
 
-#*******************************************************************************
-# Test_Qube_derivs
-#*******************************************************************************
 class Test_Qube_derivs(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     a = Scalar((1,2,3))
     self.assertEqual(a.derivs, {})
 
-    #----------------------------------
     # shape mismatch raises error
-    #----------------------------------
     self.assertRaises(ValueError, a.insert_deriv, 't', Scalar((1,2,3,4)))
 
-    #------------------------------------
     # numerator mismatch raises error
-    #------------------------------------
     self.assertRaises(ValueError, a.insert_deriv, 't', Vector((1,2,3)))
 
-    #-----------------------------------
     # no derivatives of derivatives
-    #-----------------------------------
     a = Scalar((1,2,3))
     b = Scalar((2,3,4))
     c = Scalar((3,4,5))
@@ -49,9 +38,7 @@ class Test_Qube_derivs(unittest.TestCase):
     self.assertEqual(hasattr(b, 'd_dt'), True)
     self.assertEqual(hasattr(a.d_dt, 'd_dt'), False)
 
-    #----------------------------
     # deleting one derivative
-    #----------------------------
     a = Scalar((1,2,3), derivs={'t': Scalar((4,5,6)), 'x': Scalar((5,6,7))})
     self.assertEqual(hasattr(a, 'd_dt'), True)
     self.assertEqual(hasattr(a, 'd_dx'), True)
@@ -61,9 +48,7 @@ class Test_Qube_derivs(unittest.TestCase):
     self.assertIn('x', a.derivs)
     self.assertNotIn('t', a.derivs)
 
-    #-----------------------------
     # deleting all derivatives
-    #-----------------------------
     a = Scalar((1,2,3), derivs={'t': Scalar((4,5,6)), 'x': Scalar((5,6,7))})
     self.assertEqual(hasattr(a, 'd_dt'), True)
     self.assertEqual(hasattr(a, 'd_dx'), True)
@@ -71,9 +56,7 @@ class Test_Qube_derivs(unittest.TestCase):
     self.assertEqual(hasattr(a, 'd_dt'), False)
     self.assertEqual(hasattr(a, 'd_dx'), False)
 
-    #-----------------------------------
     # changing derivatives, readonly
-    #-----------------------------------
     a = Scalar((1,2,3), derivs={'t': Scalar((4,5,6)), 'x': Scalar((5,6,7))})
     self.assertEqual(a.d_dx.readonly, False)
 
@@ -111,9 +94,7 @@ class Test_Qube_derivs(unittest.TestCase):
 
     self.assertRaises(ValueError, a.insert_derivs, {'a': Scalar((7,8,9))})
 
-    #--------------------
     # without_derivs
-    #--------------------
     a = Scalar((1,2,3))
     a.insert_derivs({'a': Scalar((7,8,9)),
                      'b': Scalar((8,9,0)),
@@ -147,13 +128,6 @@ class Test_Qube_derivs(unittest.TestCase):
     b = a.without_derivs()
 
     self.assertTrue(b.readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ############################################
 if __name__ == '__main__':

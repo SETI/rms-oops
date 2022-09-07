@@ -8,34 +8,23 @@ import unittest
 
 from polymath import Qube, Scalar, Units
 
-#*******************************************************************************
-# Test_Scalar_sin
-#*******************************************************************************
 class Test_Scalar_sin(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #-----------------------
     # Individual values
-    #-----------------------
     self.assertEqual(Scalar(1.25).sin(), np.sin(1.25))
     self.assertEqual(type(Scalar(1.25).sin()), Scalar)
 
     self.assertEqual(Scalar(1).sin(), np.sin(1.))
     self.assertEqual(Scalar(0).sin(), 0.)
 
-    #---------------------
     # Multiple values
-    #---------------------
     self.assertEqual(Scalar((-1,0,1)).sin(), np.sin((-1,0,1)))
     self.assertEqual(type(Scalar((-1,0,1)).sin()), Scalar)
 
-    #---------------
     # Arrays
-    #---------------
     N = 1000
     values = np.random.randn(N) * 10.
     angles = Scalar(values)
@@ -46,9 +35,7 @@ class Test_Scalar_sin(unittest.TestCase):
     for i in range(N-1):
         self.assertEqual(funcvals[i:i+2], np.sin(values[i:i+2]))
 
-    #----------------------
     # Test valid units
-    #----------------------
     values = np.random.randn(10) * 10.
     random = Scalar(values, units=Units.KM)
     self.assertRaises(ValueError, Scalar.sin, random)
@@ -68,25 +55,19 @@ class Test_Scalar_sin(unittest.TestCase):
     angle = Scalar(3.25, units=Units.UNITLESS)
     self.assertEqual(angle.sin(), np.sin(angle.values)) # units should be OK
 
-    #----------------------------
     # Units should be removed
-    #----------------------------
     values = np.random.randn(10)
     random = Scalar(values, units=Units.DEG)
     self.assertTrue(random.sin().units is None)
 
-    #--------------
     # Masks
-    #--------------
     N = 100
     x = Scalar(np.random.randn(N), mask=(np.random.randn(N) < -1.))
     y = x.sin()
     self.assertTrue(np.all(y.mask[x.mask]))
     self.assertTrue(not np.any(y.mask[~x.mask]))
 
-    #----------------
     # Derivatives
-    #----------------
     N = 100
     x = Scalar(np.random.randn(N) * 10.)
     x.insert_deriv('t', Scalar(np.random.randn(N) * 10.))
@@ -116,31 +97,20 @@ class Test_Scalar_sin(unittest.TestCase):
             self.assertAlmostEqual(dy_dx[i] * x.d_dvec[i].values[k],
                                    dy_dvec[i].values[k], delta=1.e-5)
 
-    #-----------------------------------------------
     # Derivatives should be removed if necessary
-    #-----------------------------------------------
     self.assertEqual(x.sin(recursive=False).derivs, {})
     self.assertTrue(hasattr(x, 'd_dt'))
     self.assertTrue(hasattr(x, 'd_dvec'))
     self.assertFalse(hasattr(x.sin(recursive=False), 'd_dt'))
     self.assertFalse(hasattr(x.sin(recursive=False), 'd_dvec'))
 
-    #----------------------------------------------
     # Read-only status should NOT be preserved
-    #----------------------------------------------
     N = 10
     x = Scalar(np.random.randn(N) * 10.)
     self.assertFalse(x.readonly)
     self.assertFalse(x.sin().readonly)
     self.assertTrue(x.as_readonly().readonly)
     self.assertFalse(x.as_readonly().sin().readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

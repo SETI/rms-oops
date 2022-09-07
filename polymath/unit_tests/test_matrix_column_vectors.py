@@ -8,14 +8,9 @@ import unittest
 
 from polymath import Qube, Matrix, Vector, Vector3, Scalar, Units
 
-#*******************************************************************************
-# Test_Matrix_column_vectors
-#*******************************************************************************
 class Test_Matrix_column_vectors(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
     N = 100
@@ -48,9 +43,7 @@ class Test_Matrix_column_vectors(unittest.TestCase):
     self.assertEqual(b, c[0])
     self.assertEqual(type(c[0]), Vector3)
 
-    #----------------------------
     # check units and masks
-    #----------------------------
     N = 100
     a = Matrix(np.random.randn(N,4,4), mask=(np.random.randn(N) < -0.5),
                units=Units.RAD)
@@ -67,9 +60,7 @@ class Test_Matrix_column_vectors(unittest.TestCase):
     b[0].values[0] = 22.
     self.assertEqual(a[0].values[0,1], 22.)
 
-    #-----------------------
     # check derivatives
-    #-----------------------
     N = 100
     a = Matrix(np.random.randn(N,3,4), mask=(np.random.randn(N) < -0.5))
     da_dt = Matrix(np.random.randn(N,3,4))
@@ -122,9 +113,7 @@ class Test_Matrix_column_vectors(unittest.TestCase):
     self.assertTrue(np.all(a.d_dt.values[...,3] == c.d_dt.values))
     self.assertTrue(np.all(a.d_dv.values[...,3,:] == c.d_dv.values))
 
-    #---------------------
     # read-only status
-    #---------------------
     N = 10
     a = Matrix(np.random.randn(N,4,4), mask=(np.random.randn(N) < -0.5))
     self.assertFalse(a.readonly)
@@ -144,13 +133,6 @@ class Test_Matrix_column_vectors(unittest.TestCase):
 
     c = a.column_vectors()[3]
     self.assertTrue(c.readonly) # preserved because of overlapping memory
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

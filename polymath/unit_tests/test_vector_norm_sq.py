@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Vector, Scalar, Units
 
-#*******************************************************************************
-# Test_Vector_norm_sq
-#*******************************************************************************
 class Test_Vector_norm_sq(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #-------------------
     # Single values
-    #-------------------
     x = Vector((-1.,))
     self.assertAlmostEqual(x.norm_sq(), 1.)
 
@@ -30,9 +23,7 @@ class Test_Vector_norm_sq(unittest.TestCase):
     x = Vector((1.,2.,4.,8.), mask=True)
     self.assertTrue(x.norm_sq().mask is True)
 
-    #----------------------
     # Arrays and masks
-    #----------------------
     x = Vector(np.random.randn(3,7))
     n = x.norm_sq()
     self.assertTrue(not np.any(n.mask))
@@ -42,18 +33,14 @@ class Test_Vector_norm_sq(unittest.TestCase):
                mask=(np.random.randn(N) < -0.3))    # Mask out a fraction
     n = x.norm_sq()
 
-    #------------------------------
     # Test the unmasked items
-    #------------------------------
     nn = n[~n.mask]
     xx = x[~n.mask]
     for i in range(len(nn)):
         self.assertAlmostEqual(nn[i], np.sum(xx.values[i]**2), delta=1.e-14)
         self.assertEqual(nn[i].mask, xx[i].mask)
 
-    #------------------------------
     # Derivatives, denom = ()
-    #------------------------------
     N = 100
     x = Vector(np.random.randn(N,3))
 
@@ -113,9 +100,7 @@ class Test_Vector_norm_sq(unittest.TestCase):
         self.assertAlmostEqual(y.d_dv.values[i,1], dy_dv1.values[i], delta=EPS)
         self.assertAlmostEqual(y.d_dv.values[i,2], dy_dv2.values[i], delta=EPS)
 
-    #-----------------------------------------------
     # Read-only status should NOT be preserved
-    #-----------------------------------------------
     N = 10
     y = Vector(np.random.randn(N,3))
     x = Vector(np.random.randn(N,3))
@@ -123,13 +108,6 @@ class Test_Vector_norm_sq(unittest.TestCase):
     self.assertFalse(x.readonly)
     self.assertFalse(x.norm_sq().readonly)
     self.assertFalse(x.as_readonly().norm_sq().readonly)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

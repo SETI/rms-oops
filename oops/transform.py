@@ -4,15 +4,12 @@
 
 import sys
 import numpy as np
-from polymath import *
 
-#*******************************************************************************
-# Transform
-#*******************************************************************************
+from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Vector3, Matrix3, Quaternion
+
 class Transform(object):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    An object describing a coordinate transformation, defined by a rotation
+    """An object describing a coordinate transformation, defined by a rotation
     matrix plus an optional angular rotation vector indicating how that frame is
     rotating. The components are interpreted as follows:
         matrix          rotates coordinates from the reference coordinate frame
@@ -55,7 +52,6 @@ class Transform(object):
     This is a static property, generated only if needed
         shape           the intrinsic shape of the transform.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     ############################################################################
     # Note:
@@ -72,12 +68,8 @@ class Transform(object):
                     '+filled_inverse_with_deriv']
 
     #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, matrix, omega, frame, reference, origin=None):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Constructor for a Transform object.
+        """Constructor for a Transform object.
 
         Input:
             matrix      the Matrix3 object that is used to rotate coordinates
@@ -89,7 +81,7 @@ class Transform(object):
             origin      the path or path ID of the center of rotation. If None,
                         it is derived from the reference frame.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         self.matrix = Matrix3.as_matrix3(matrix)
         self.omega  = Vector3.as_vector3(omega)
 
@@ -110,63 +102,40 @@ class Transform(object):
         self.filled_matrix_with_deriv = None
         self.filled_inverse_matrix = None
         self.filled_inverse_with_deriv = None
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # shape
     #===========================================================================
     @property
     def shape(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return the intrinsic shape of the Transform.
+        """The intrinsic shape of the Transform.
 
         This is a bit expensive to generate and used rarely, so it is
         implemented as a property rather than an attribute.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if self.filled_shape is None:
             self.filled_shape =  Qube.broadcasted_shape(self.matrix,
                                                         self.omega,
                                                         self.frame,
                                                         self.reference)
         return self.filled_shape
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # omega1
     #===========================================================================
     @property
     def omega1(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The negative rotation matrix transformed into the target frame.
+        """The negative rotation matrix transformed into the target frame.
 
         Used for the inverse transform.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if self.filled_omega1 is None:
             self.filled_omega1 = -self.matrix * self.omega
 
         return self.filled_omega1
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # matrix_with_deriv
     #===========================================================================
     @property
     def matrix_with_deriv(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The rotation matrix with its time-derivative filled in.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The rotation matrix with its time-derivative filled in."""
 
         if self.filled_matrix_with_deriv is None:
             self.filled_matrix_with_deriv = self.matrix.clone()
@@ -175,97 +144,51 @@ class Transform(object):
             self.filled_matrix_with_deriv.insert_deriv('t', d_dt, override=True)
 
         return self.filled_matrix_with_deriv
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # inverse_matrix
     #===========================================================================
     @property
     def inverse_matrix(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The inverse rotation matrix.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The inverse rotation matrix."""
+
         if self.filled_inverse_matrix is None:
             self.filled_inverse_matrix = self.matrix.transpose()
 
         return self.filled_inverse_matrix
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # inverse_with_deriv
     #===========================================================================
     @property
     def inverse_with_deriv(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The inverse rotation matrix with its time-derivative filled in.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The inverse rotation matrix with its time-derivative filled in."""
 
         if self.filled_inverse_with_deriv is None:
             inverse = self.matrix_with_deriv.inverse(recursive=True)
             self.filled_inverse_with_deriv = inverse
 
         return self.filled_inverse_with_deriv
-    #===========================================================================
 
-
-
-    ########################
-    # string operations
-    ########################
-
-    #===========================================================================
-    # __str__
     #===========================================================================
     def __str__(self):
         return ('Transform(shape=' +
                 repr(self.shape).replace(' ', '') + '/' +
                 repr(self.frame.frame_id) + ')')
-    #===========================================================================
-
-
 
     #===========================================================================
-    # __repr__
-    #===========================================================================
-    def __repr__(self): return self.__str__()
-    #===========================================================================
+    def __repr__(self):
+        return self.__str__()
 
-
-
-    #===========================================================================
-    # identity
     #===========================================================================
     @staticmethod
     def identity(frame):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        An identity transform from a frame to itself.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """An identity transform from a frame to itself."""
+
         return Transform(Matrix3.IDENTITY, Vector3.ZERO, frame, frame)
-    #===========================================================================
-
-
 
     ############################################################################
     # Vector operations
     ############################################################################
 
-    #===========================================================================
-    # rotate
-    #===========================================================================
     def rotate(self, pos, derivs=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Rotate the coordinates of a position or matrix.
+        """Rotate the coordinates of a position or matrix.
 
         Optionally, it also rotates any derivatives.
 
@@ -282,8 +205,9 @@ class Transform(object):
                         If derivs is True, then the returned position has a
                         time derivative.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if pos is None: return None
+
+        if pos is None:
+            return None
 
         if not isinstance(pos, Qube):
             pos = Vector3.as_vector3(pos)
@@ -292,17 +216,10 @@ class Transform(object):
             return self.matrix_with_deriv * pos
         else:
             return self.matrix * pos.wod
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # rotate_pos_vel
     #===========================================================================
     def rotate_pos_vel(self, pos, vel):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Rotate the coordinates of a position and velocity.
+        """Rotate the coordinates of a position and velocity.
 
         This function ignores derivatives. It does correctly allow for the
         artificial component of the velocity for a position off the origin in a
@@ -316,7 +233,7 @@ class Transform(object):
         Return:         a tuple containing the same Vector3 position and
                         velocity transformed into the target frame.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         pos = Vector3.as_vector3(pos)
         vel = Vector3.as_vector3(vel)
 
@@ -332,17 +249,10 @@ class Transform(object):
             vel_target = self.matrix * (vel - self.omega.cross(pos))
 
         return (pos_target, vel_target)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # unrotate
     #===========================================================================
     def unrotate(self, pos, derivs=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Un-rotate the coordinates of a position into the reference frame.
+        """Un-rotate the coordinates of a position into the reference frame.
 
         Input:
             pos         a Vector3, VectorN or Matrix object. The size of the
@@ -359,8 +269,9 @@ class Transform(object):
                         subfield "d_dt", a Vector3 representing the partial
                         derivatives with respect to time.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if pos is None: return None
+
+        if pos is None:
+            return None
 
         if not isinstance(pos, Qube):
             pos = Vector3.as_vector3(pos)
@@ -369,17 +280,10 @@ class Transform(object):
             return self.inverse_with_deriv * pos
         else:
             return self.inverse_matrix * pos.wod
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # unrotate_pos_vel
     #===========================================================================
     def unrotate_pos_vel(self, pos, vel):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Un-rotates the coordinates of a position and velocity.
+        """Un-rotates the coordinates of a position and velocity.
 
         Derivatives are not supported.
 
@@ -391,7 +295,7 @@ class Transform(object):
         Return:         a tuple containing the same Vector3 position and
                         velocity transformed back into the reference frame.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         pos = Vector3.as_vector3(pos)
         vel = Vector3.as_vector3(vel)
 
@@ -407,44 +311,26 @@ class Transform(object):
             vel_ref = self.matrix.unrotate(vel) + self.omega.cross(pos_ref)
 
         return (pos_ref, vel_ref)
-    #===========================================================================
-
-
 
     ############################################################################
     # Operations on Transforms
     ############################################################################
 
-    #===========================================================================
-    # invert
-    #===========================================================================
     def invert(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Returns the inverse transformation.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The inverse transformation."""
+
         return Transform(self.matrix.reciprocal(), self.omega1,
                          self.reference, self.frame, self.origin)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # rotate_transform
     #===========================================================================
     def rotate_transform(self, arg):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Apply this transform to another, as a left-multiply.
+        """Apply this transform to another, as a left-multiply.
 
         The result is a single transform that converts coordinates in the
         reference frame of the argument transform into the frame of this
         transform.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------------------------------------
         # Two tranforms
         #   P1 = M P0; V1 = M (V0 - omega x P0)
         #   P2 = N P1; V2 = N (V1 - kappa x P1)
@@ -458,7 +344,7 @@ class Transform(object):
         #      = N M [(V0 - omega x P0) - MT ([M MT kappa] x M P0)]
         #      = N M [(V0 - omega x P0) - MT M ([MT kappa] x P0)]
         #      = N M [(V0 - [omega + MT kappa] x P0)]
-        #------------------------------------------------------------------
+
         assert self.reference == arg.frame
 
         if self.origin is None:
@@ -472,32 +358,18 @@ class Transform(object):
         return Transform(self.matrix.rotate(arg.matrix),
                          arg.matrix.unrotate(self.omega) + arg.omega,
                          self.frame, arg.reference, origin)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # unrotate_transform
     #===========================================================================
     def unrotate_transform(self, arg):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Apply the inverse of this transform to another, as a left-multiply.
+        """Apply the inverse of this transform to another, as a left-multiply.
 
         The result is a single transform that applies the convert coordinates
         in the parent frame of the argument transform into the parent frame of
         this transform. I.e., if arg rotates A to B and self rotates C to B,
         then the result rotates A to C.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.invert().rotate_transform(arg)
-    #===========================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # UNIT TESTS
@@ -505,25 +377,15 @@ class Transform(object):
 
 import unittest
 
-#*******************************************************************************
-# Test_Transform
-#*******************************************************************************
 class Test_Transform(unittest.TestCase):
 
-    #===========================================================================
-    # runTest
-    #===========================================================================
     def runTest(self):
 
-        #------------------------------------------
         # Additional imports needed for testing
-        #------------------------------------------
-        from oops.frame_.frame import Frame, Wayframe
-        from oops.frame_.spinframe import SpinFrame
+        from oops.frame import Frame, Wayframe
+        from oops.frame.spinframe import SpinFrame
 
-        #------------------------------------------------------------------
         # Fake out the FRAME REGISTRY with something that has .shape = ()
-        #------------------------------------------------------------------
         Frame.WAYFRAME_REGISTRY["TEST"] = Wayframe("J2000")
         Frame.WAYFRAME_REGISTRY["SPIN"] = Wayframe("J2000")
 
@@ -589,13 +451,6 @@ class Test_Transform(unittest.TestCase):
         self.assertTrue(np.all(diff.vals <  eps))
 
         # Transform derivatives are unit tested as part of the SpinFrame tests
-    #===========================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ########################################
 if __name__ == '__main__':

@@ -8,25 +8,15 @@ import unittest
 
 from polymath import Qube, Scalar, Vector, Vector3, Matrix, Units
 
-#*******************************************************************************
-# Test_Vector3
-#*******************************************************************************
 class Test_Vector3(unittest.TestCase):
 
-    #===========================================================================
-    # runTest
-    #===========================================================================
     def runTest(self):
 
-        #--------------------------------------------
         # arrays of wrong shape raise ValueError
-        #--------------------------------------------
         self.assertRaises(ValueError, Vector3, np.random.randn(3,4,5))
         self.assertRaises(ValueError, Vector3, 1.)
 
-        #------------------------------------
         # automatic coercion of booleans
-        #------------------------------------
         self.assertEqual(Vector3([True,True,False]), (1.,1.,0.))
 
         #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -51,9 +41,7 @@ class Test_Vector3(unittest.TestCase):
         #     def __abs__(self)
         #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-        #---------------------------------------------
         # Make sure proper objects are returned...
-        #---------------------------------------------
         a = Vector3(np.random.randn(4,1,5,3))
         b = Vector3(np.random.randn(8,5,3))
 
@@ -86,13 +74,6 @@ class Test_Vector3(unittest.TestCase):
 
         self.assertEqual(type(a.element_mul(b)), Vector3)
         self.assertEqual(type(a.element_div(b)), Vector3)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ########################################
 if __name__ == '__main__':

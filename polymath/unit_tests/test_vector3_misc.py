@@ -8,23 +8,16 @@ import unittest
 
 from polymath import Qube, Boolean, Scalar, Vector, Vector3, Pair, Units
 
-#*******************************************************************************
-# Test_Vector3_misc
-#*******************************************************************************
 class Test_Vector3_misc(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
     def runTest(self):
 
         eps = 3.e-16
         lo = 1. - eps
         hi = 1. + eps
 
-        #------------------------------------
         # Basic comparisons and indexing
-        #------------------------------------
         vecs = Vector3([[1,2,3],[3,4,5],[5,6,7]])
         self.assertEqual(vecs.numer, (3,))
         self.assertEqual(vecs.shape, (3,))
@@ -153,9 +146,7 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertRaises(TypeError, test.__idiv__, Pair((1,2)))
         self.assertRaises(ValueError, test.__idiv__, (1,2,3,4))
 
-        #------------------------
         # Other functions...
-        #------------------------
 
         # to_scalar()
         self.assertEqual(vecs.to_scalar(0),  Scalar((1,3,5)))
@@ -233,9 +224,7 @@ class Test_Vector3_misc(unittest.TestCase):
         # Note: the sep(reverse=True) option is not tested here
         #* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-        #-------------------------------
         # New tests 2/1/12 (MRS)
-        #-------------------------------
         test = Vector3(np.arange(6).reshape(2,3))
         str_test = str(test).replace('  ', ' ').replace('[ ','[')
         self.assertEqual(str_test, "Vector3([0. 1. 2.]\n [3. 4. 5.])")
@@ -267,13 +256,6 @@ class Test_Vector3_misc(unittest.TestCase):
                 "Vector3([-- -- --]; mask)")
         self.assertEqual(str(test[1:2]).replace('[ ','[').replace('  ',' '),
                 "Vector3([3. 4. 5.])")
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ########################################
 if __name__ == '__main__':

@@ -8,19 +8,12 @@ import unittest
 
 from polymath import Qube, Matrix, Vector, Scalar, Boolean, Units
 
-#*******************************************************************************
-# Test_Matrix_ops
-#*******************************************************************************
 class Test_Matrix_ops(unittest.TestCase):
 
-  #=============================================================================
   # runTest
-  #=============================================================================
   def runTest(self):
 
-    #-------------------------
     # Unary plus
-    #-------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
     b = +a
@@ -53,9 +46,7 @@ class Test_Matrix_ops(unittest.TestCase):
 
     self.assertRaises(ValueError, a.__iadd__, [(1,0),(1,1)]) # because readonly
 
-    #-------------------------
     # Unary minus
-    #-------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
     b = -a
@@ -89,16 +80,12 @@ class Test_Matrix_ops(unittest.TestCase):
 
     self.assertRaises(ValueError, a.__isub__, [(1,0),(1,1)]) # because readonly
 
-    #-------------------------
     # abs()
-    #-------------------------
 
     a = Matrix([(1,0,0),(0,0,1),(0,-1,0)])
     self.assertRaises(TypeError, a.__abs__)
 
-    #--------------------------
     # Addition
-    #--------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
     b = a + [(1,1,1),(0,0,0)]
@@ -173,9 +160,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertEqual(a, [(2,3),(3,4)])
     self.assertEqual(a.d_dt, ((5,5),(5,5)))
 
-    #----------------------------
     # Subtraction
-    #----------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
     b = a - [(1,1,1),(0,0,0)]
@@ -250,9 +235,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertEqual(a, [(0,1),(3,4)])
     self.assertEqual(a.d_dt, ((-3,-1),(1,3)))
 
-    #------------------------------
     # Multiplication
-    #------------------------------
 
     a = Matrix([(1,2,3),(3,4,5)])
     b = a * 2
@@ -361,9 +344,7 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertEqual(a, [(2,4),(6,8)])
     self.assertEqual(a.d_dt, [(1,-2),(-3,-2)])
 
-    #--------------------------------
     # Division
-    #--------------------------------
 
     a = Matrix([(2,4,6),(6,8,10)])
     b = a / 2
@@ -468,26 +449,15 @@ class Test_Matrix_ops(unittest.TestCase):
     self.assertEqual(a, [(1,2),(3,4)])
     self.assertEqual(a.d_dt, da_dt)
 
-    #-------------------------------
     # Floor division
-    #-------------------------------
 
     self.assertRaises(TypeError, Matrix([(2,4),(6,8)]).__floordiv__, 1)
     self.assertRaises(TypeError, Matrix([(2,4),(6,8)]).__ifloordiv__, 1)
 
-    #--------------------------------
     # Modulus
-    #--------------------------------
 
     self.assertRaises(TypeError, Matrix([(2,4),(6,8)]).__mod__, 1)
     self.assertRaises(TypeError, Matrix([(2,4),(6,8)]).__imod__, 1)
-  #=============================================================================
-
-
-
-#*******************************************************************************
-
-
 
 ################################################################################
 # Execute from command line...

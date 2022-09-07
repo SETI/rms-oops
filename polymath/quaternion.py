@@ -1,7 +1,5 @@
 ################################################################################
 # polymath/quaternion.py: Quaternion subclass of PolyMath base class
-#
-# Mark Showalter, PDS Ring-Moon Systems Node, SETI Institute
 ################################################################################
 
 from __future__ import division
@@ -15,16 +13,10 @@ from .matrix  import Matrix
 from .matrix3 import Matrix3
 from .units   import Units
 
-#*******************************************************************************
-# Quaternion class
-#*******************************************************************************
 class Quaternion(Vector):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    """
-    A PolyMath subclass containing quaternions and supporting conversions
-    between quaternion, rotation matrices and sets of Euler angles.
-    """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    """A PolyMath subclass containing quaternions and supporting conversions
+    between quaternion, rotation matrices and sets of Euler angles."""
+
     NRANK = 1           # the number of numerator axes.
     NUMER = (4,)        # shape of the numerator.
 
@@ -38,21 +30,16 @@ class Quaternion(Vector):
     DEFAULT_VALUE = np.array([1.,0.,0.,0.])
 
     #===========================================================================
-    # as_quaternion
-    #===========================================================================
     @staticmethod
     def as_quaternion(arg, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        This object converted to a Quaternion.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        if type(arg) == Quaternion:
+        """This object converted to a Quaternion."""
+
+        if isinstance(arg, Quaternion):
             if recursive:
                 return arg
             return arg.wod
 
-        if type(arg) == Matrix3:
+        if isinstance(arg, Matrix3):
             return Quaternion.from_matrix3(arg, recursive)
 
         if isinstance(arg, Qube):
@@ -60,59 +47,43 @@ class Quaternion(Vector):
             if arg.numer == (3,):
                 return from_parts(0., arg, recursive)
 
-            arg = Quaternion(arg, arg.mask, example=arg)
+            arg = Quaternion(arg, arg._mask_, example=arg)
             if recursive:
                 return arg
             return arg.wod
 
         return Quaternion(arg)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_parts
     #===========================================================================
     @staticmethod
     def from_parts(scalar, vector, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Construct a Quaternion from separate scalar and vector components.
+        """Construct a Quaternion from separate scalar and vector components.
 
         If either argument is None, the associated components are filled with
         zeros.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #----------------------------
         # Fill in missing values
-        #----------------------------
         if scalar is None:
             scalar = Scalar(np.zeros(vector.denom), drank=vector.drank)
 
         if vector is None:
             vector = Vector3(np.zeros((3,) + scalar.denom), drank=scalar.drank)
 
-        #---------------------
         # Broadcast shapes
-        #---------------------
         scalar = Scalar.as_scalar(scalar)
         vector = Vector3.as_vector3(vector)
 
         (scalar, vector) = Qube.broadcast(scalar, vector)
 
-        #--------------------------
         # Validate denominators
-        #--------------------------
         if scalar.denom != vector.denom:
             raise ValueError('denominator shapes are incompatible: %s, %s' %
                              (str(scalar.denom), str(vector.denom)))
 
-        #--------------
         # Align axes
-        #--------------
-        s_values = scalar.values
-        v_values = vector.values
+        s_values = scalar._values_
+        v_values = vector._values_
         drank = scalar.drank
 
         before = len(scalar.shape) * (slice(None),)
@@ -122,17 +93,13 @@ class Quaternion(Vector):
         v_slice = before + (slice(1,4),) + after
 
         values = np.empty(scalar.shape + (4,) + scalar.denom)
-        values[s_slice] = scalar.values
-        values[v_slice] = vector.values
+        values[s_slice] = scalar._values_
+        values[v_slice] = vector._values_
 
-        #-----------------------
         # Construct object
-        #-----------------------
-        obj = Quaternion(values, scalar.mask | vector.mask, drank=drank)
+        obj = Quaternion(values, scalar._mask_ | vector._mask_, drank=drank)
 
-        #-------------------------------------
         # Fill in derivatives if necessary
-        #-------------------------------------
         if recursive:
             new_derivs = {}
 
@@ -149,35 +116,20 @@ class Quaternion(Vector):
             obj.insert_derivs(new_derivs)
 
         return obj
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # to_parts
     #===========================================================================
     def to_parts(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        The Scalar and Vector components of a Quaternion.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The Scalar and Vector components of a Quaternion."""
+
         return (self.extract_numer(0, 0, Scalar, recursive),
                 self.slice_numer(0, 1, 4, Vector3, recursive))
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_rotation
     #===========================================================================
     @staticmethod
     def from_rotation(angle, vector, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Construct a Quaternion for an angular rotation about an axis vector.
         """
-        Construct a Quaternion for an angular rotation about an axis vector.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         angle = Scalar.as_scalar(angle)
         vector = Vector3.as_vector3(vector)
 
@@ -191,38 +143,23 @@ class Quaternion(Vector):
         scalar = half_angle.cos()
         vector = (half_angle.sin() / vector.norm()) * vector
         return Quaternion.from_parts(scalar, vector)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # to_rotation
     #===========================================================================
     def to_rotation(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """The rotation angle and unit vector defined by a Quaternion.
         """
-        The rotation angle and unit vector defined by a Quaternion.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         (cos_half_angle, vector) = self.to_parts(recursive)
         sin_half_angle = vector.norm(recursive)
         angle = 2. * sin_half_angle.arctan2(cos_half_angle, recursive)
 
         return (angle, vector/sin_half_angle)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # conj
     #===========================================================================
     def conj(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Complex conjugate of this quaternion.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        new_values = self.values.copy()
+        """Complex conjugate of this quaternion."""
+
+        new_values = self._values_.copy()
 
         if self.drank > 0:
             lshape = len(new_values.shape)
@@ -233,24 +170,17 @@ class Quaternion(Vector):
         if self.drank > 0:
             new_values = np.rollaxis(new_values, -1, -self.drank-1)
 
-        obj = Quaternion(new_values, self.mask, example=self)
+        obj = Quaternion(new_values, self._mask_, example=self)
 
         if recursive and self.derivs:
             for (key, deriv) in self.derivs.items():
                 obj.insert_deriv(key, deriv.conj(recursive=False))
 
         return obj
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # to_matrix3
     #===========================================================================
     def to_matrix3(self, recursive=True, partials=False):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert this Quaternion to a Matrix3.
+        """Convert this Quaternion to a Matrix3.
 
         Input:
             recursive   if True, the returned Matrix3 contains representations
@@ -263,16 +193,14 @@ class Quaternion(Vector):
                         derivatives with respect to the components of the
                         quaternion.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if self.drank:
             raise ValueError('unsupported denominator for to_matrix(): %s' %
                              str(self.denom))
 
-        #----------------------------------------------------------------
         # From http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
-        #----------------------------------------------------------------
-        pvals = self.values
-        pmask = self.mask
+        pvals = self._values_
+        pmask = self._mask_
         pnorm = np.sqrt(np.sum(pvals**2, axis=-1))
 
         zero_mask = (pnorm == 0.)
@@ -284,9 +212,7 @@ class Quaternion(Vector):
                 pnorm[zero_mask] = 1.
                 pmask = pmask | zero_mask
 
-        #----------------------------------------------------------------
         # Scale by sqrt(2) to eliminate need to keep multiplying by 2
-        #----------------------------------------------------------------
         qvals = np.sqrt(2) / pnorm[...,np.newaxis] * pvals
         s = qvals[...,0]
         x = qvals[...,1]
@@ -392,18 +318,11 @@ class Quaternion(Vector):
             return (obj, dm_dp)
 
         return obj
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_matrix3
     #===========================================================================
     @staticmethod
     def from_matrix3(matrix, recursive=False):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Convert a Matrix3 to a Quaternion.
+        """Convert a Matrix3 to a Quaternion.
 
         Input:
             recursive   if True, the returned Matrix3 contains representations
@@ -412,12 +331,11 @@ class Quaternion(Vector):
                         because they are not unitary. THIS FEATURE IS NOT
                         CURRENTLY IMPLEMENTED.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         if recursive and len(matrix.derivs):
             raise NotImplementedError('derivatives are not implemented for ' +
                                       'from_matrix3()')
 
-        #----------------------------------------------------------------
         # From http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
         #
         # Suppose Qxx is the largest diagonal entry in the matrix
@@ -440,26 +358,19 @@ class Quaternion(Vector):
         # x_over_s = 0.5*r / s = 0.5*r / (0.5/r) = r_sq
         # y_over_s = Qxy + Qyx
         # z_over_s = Qzx + Qxz
-        #----------------------------------------------------------------
 
         matrix = Matrix3.as_matrix3(matrix)
-        Q = matrix.values[np.newaxis]       # add front axis so indexing works
+        Q = matrix._values_[np.newaxis]       # add front axis so indexing works
 
-        #--------------------------
         # Select the diagonals
-        #--------------------------
         diags = Q.reshape(Q.shape[:-2] + (9,))
         diags = diags[...,::4]              # tricky way to select diagonals
 
-        #------------------------
         # Calculate the trace
-        #------------------------
         trace = np.sum(diags, axis=-1)
 
-        #----------------------------------------------------------------
         # Designate i as the index of the largest entry on the diagonal
         # j and k follow in sequence
-        #----------------------------------------------------------------
         argmax = np.argmax(diags, axis=-1)
         max_diags = np.max(diags, axis=-1)
 
@@ -491,7 +402,7 @@ class Quaternion(Vector):
             quat_over_s[mask,j+1] = Q[mask,i,j] + Q[mask,j,i]
             quat_over_s[mask,k+1] = Q[mask,i,k] + Q[mask,k,i]
 
-        obj = Quaternion((quat_over_s * s[...,np.newaxis])[0], matrix.mask)
+        obj = Quaternion((quat_over_s * s[...,np.newaxis])[0], matrix._mask_)
 
         # The following code does not work, perhaps because of the vague meaning
         # of partial derivatives when the components of a Matrix3 are so closely
@@ -500,7 +411,6 @@ class Quaternion(Vector):
 
         if recursive and matrix.derivs:
 
-            #--------------------------------------------------------------
             # Take derivatives using the symmetric (but possibly unstable)
             # algorithm
             # t = Qxx + Qyy + Qzz
@@ -534,7 +444,7 @@ class Quaternion(Vector):
             #       = s * [Mzy] - 2*s**3 * (Qzy - Qyz) [I]
             # dy/dQ = s * [Mxz] - 2*s**3 * (Qxz - Qzx) [I]
             # dz/dQ = s * [Myx] - 2*s**3 * (Qyx - Qxy) [I]
-            #--------------------------------------------------------------
+
             neg2_s3 = -2 * s * s * s
 
             new_values = np.zeros(matrix.shape + (4,3,3))
@@ -548,57 +458,41 @@ class Quaternion(Vector):
 
             new_values[...,2,2] = new_values[...,1,1] = new_values[...,0,0]
 
-            dq_dQ = Quaternion(new_values, matrix.mask, drank=2)
+            dq_dQ = Quaternion(new_values, matrix._mask_, drank=2)
 
             for (key, deriv) in matrix.derivs.items():
                 obj.insert_deriv(key, dq_dQ.chain(deriv))
 
         return obj
-    #===========================================================================
-
-
 
     ############################################################################
     # Overrides of arithmetic operators
     ############################################################################
 
-    #===========================================================================
-    # __mul__
-    #===========================================================================
     def __mul__(self, arg, recursive=True):
 
-        #----------------------------------------------------------
         # Use default operator for anything but a Qube subclass
-        #----------------------------------------------------------
         if not isinstance(arg, Qube):
             return Qube.__mul__(self, arg, recursive)
 
-        #------------------------------------------
         # Convert any 3-vector to a Quaternion
-        #------------------------------------------
         if arg.numer == (3,):
             arg = Quaternion.from_parts(0., arg, recursive)
 
-        #-------------------------------------------------
         # Send any other object to the default operator
-        #-------------------------------------------------
         if type(arg) != Quaternion:
             return Qube.__mul__(self, arg, recursive)
 
-        #-----------------------
         # Check denominators
-        #-----------------------
         if self.drank and arg.drank:
             raise ValueError("dual operand denominators for '*': %s, %s" %
                              (str(self.denom), str(arg.denom)))
 
-        #---------------
         # Align axes
-        #---------------
         a = self
         b = arg
-        a_values = a.values
-        b_values = b.values
+        a_values = a._values_
+        b_values = b._values_
 
         if a.drank:
             a_values = np.rollaxis(a_values, -a.drank-1, len(a_values.shape))
@@ -613,15 +507,11 @@ class Quaternion(Vector):
         if a.drank or b.drank:
             new_values = np.rollaxis(new_values, -1, -(a.drank + b.drank + 1))
 
-        #---------------------
         # Construct object
-        #---------------------
         obj = Qube.__new__(type(self))
-        obj.__init__(new_values, a.mask | b.mask, drank = a.drank + b.drank)
+        obj.__init__(new_values, a._mask_ | b._mask_, drank = a.drank + b.drank)
 
-        #------------------------------------------
         # Construct the derivatives if necessary
-        #------------------------------------------
         if recursive:
             new_derivs = {}
 
@@ -639,24 +529,13 @@ class Quaternion(Vector):
             obj.insert_derivs(new_derivs)
 
         return obj
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # mul_values
     #===========================================================================
     @staticmethod
     def mul_values(a, b):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Internal method to multiply two quaternions.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Internal method to multiply two quaternions."""
 
-        #-------------------------------------
         # Construct the new value array
-        #-------------------------------------
         (a, b) = np.broadcast_arrays(a, b)
         new_values = np.empty(a.shape)
 
@@ -681,68 +560,39 @@ class Quaternion(Vector):
                              + a[...,3] * b[...,0])
 
         return new_values
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __rmul__
     #===========================================================================
     def __rmul__(self, arg, recursive=True):
 
-        #------------------------------------------------------
         # Convert any 3-vector to a Quaternion and try again
-        #------------------------------------------------------
         if isinstance(arg, Qube) and arg.numer == (3,):
             arg = Quaternion.from_parts(0., arg, recursive)
             return arg.__mul__(self, recursive)
 
-        #-------------------------------------------------
         # Send any other object to the default operator
-        #-------------------------------------------------
         return Qube.__mul__(self, arg, recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # __truediv__
     #===========================================================================
     def __truediv__(self, arg, recursive=True):
 
-        #----------------------------------------------------------
         # Use default operator for anything but a Qube subclass
-        #----------------------------------------------------------
         if not isinstance(arg, Qube):
             return Qube.__truediv__(self, arg, recursive)
 
-        #-----------------------------------------
         # Convert any 3-vector to a Quaternion
-        #-----------------------------------------
         if arg.numer == (3,):
             arg = Quaternion.from_parts(0., arg, recursive)
 
-        #---------------------------------------------------
         # Send any other subclass to the default operator
-        #---------------------------------------------------
         if type(arg) != Quaternion:
             return Qube.__truediv__(self, arg, recursive)
 
-        #------------------------------
         # Multiply by the reciprocal
-        #------------------------------
         return self.__mul__(arg.reciprocal(recursive), recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # reciprocal
     #===========================================================================
     def reciprocal(self, recursive=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        A object equivalent to the reciprocal of this object.
+        """A object equivalent to the reciprocal of this object.
 
         Input:
             recursive   True to return the derivatives of the reciprocal too;
@@ -752,56 +602,42 @@ class Quaternion(Vector):
                         know in advance that this object has no zero-valued
                         items.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         return self.conj(recursive) / self.norm_sq(recursive)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # identity
     #===========================================================================
     def identity(self):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Return an identity-valued Quaternion.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Return an identity-valued Quaternion."""
+
         return Quaternion(np.array([1.,0.,0.,0.])).as_readonly()
-    #===========================================================================
 
+    ############################################################################
+    # Decomposition into rotations
+    #
+    # From: http://www.lfd.uci.edu/~gohlke/code/transformations.py.html
+    #
+    # A triple of Euler angles can be applied/interpreted in 24 ways, which can
+    # be specified using a 4 character string or encoded 4-tuple:
+    #
+    #   *Axes 4-string*: e.g. 'sxyz' or 'ryxy'
+    #
+    #   - first character : rotations are applied to 's'tatic or 'r'otating
+    #     frame
+    #   - remaining characters : successive rotation axis 'x', 'y', or 'z'
+    #
+    #   *Axes 4-tuple*: e.g. (0, 0, 0, 0) or (1, 1, 1, 1)
+    #
+    #   - inner axis: code of axis ('x':0, 'y':1, 'z':2) of rightmost matrix.
+    #   - parity : even (0) if inner axis 'x' is followed by 'y', 'y' is
+    #     followed by 'z', or 'z' is followed by 'x'. Otherwise odd (1).
+    #   - repetition : first and last axis are same (1) or different (0).
+    #   - frame : rotations are applied to static (0) or rotating (1) frame.
+    ############################################################################
 
-
-################################################################################
-# Decomposition into rotations
-#
-# From: http://www.lfd.uci.edu/~gohlke/code/transformations.py.html
-#
-# A triple of Euler angles can be applied/interpreted in 24 ways, which can
-# be specified using a 4 character string or encoded 4-tuple:
-#
-#   *Axes 4-string*: e.g. 'sxyz' or 'ryxy'
-#
-#   - first character : rotations are applied to 's'tatic or 'r'otating frame
-#   - remaining characters : successive rotation axis 'x', 'y', or 'z'
-#
-#   *Axes 4-tuple*: e.g. (0, 0, 0, 0) or (1, 1, 1, 1)
-#
-#   - inner axis: code of axis ('x':0, 'y':1, 'z':2) of rightmost matrix.
-#   - parity : even (0) if inner axis 'x' is followed by 'y', 'y' is followed
-#     by 'z', or 'z' is followed by 'x'. Otherwise odd (1).
-#   - repetition : first and last axis are same (1) or different (0).
-#   - frame : rotations are applied to static (0) or rotating (1) frame.
-################################################################################
-
-    #------------------------------------
     # axis sequences for Euler angles
-    #------------------------------------
     _NEXT_AXIS = [1, 2, 0, 1]
 
-    #--------------------------------------------------------------------------
     # map axes strings to/from tuples of inner axis, parity, repetition, frame
-    #--------------------------------------------------------------------------
     _AXES2TUPLE = {
         'sxyz': (0, 0, 0, 0), 'sxyx': (0, 0, 1, 0), 'sxzy': (0, 1, 0, 0),
         'sxzx': (0, 1, 1, 0), 'syzx': (1, 0, 0, 0), 'syzy': (1, 0, 1, 0),
@@ -815,13 +651,9 @@ class Quaternion(Vector):
     _TUPLE2AXES = dict((v, k) for k, v in _AXES2TUPLE.items())
 
     #===========================================================================
-    # from_euler
-    #===========================================================================
     @staticmethod
     def from_euler(ai, aj, ak, axes='rzxz'):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Creates a Quaternion from three Scalars of Euler angles plus an axis
+        """Creates a Quaternion from three Scalars of Euler angles plus an axis
         sequence.
 
         ai, aj, ak : Euler's roll, pitch and yaw angles
@@ -831,7 +663,7 @@ class Quaternion(Vector):
         >>> numpy.allclose(q, [0.435953, 0.310622, -0.718287, 0.444435])
         True
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
         ai = Scalar.as_scalar(ai)
         aj = Scalar.as_scalar(aj)
         ak = Scalar.as_scalar(ak)
@@ -861,12 +693,12 @@ class Quaternion(Vector):
         half_aj = 0.5 * aj
         half_ak = 0.5 * ak
 
-        ci = half_ai.cos().values
-        si = half_ai.sin().values
-        cj = half_aj.cos().values
-        sj = half_aj.sin().values
-        ck = half_ak.cos().values
-        sk = half_ak.sin().values
+        ci = half_ai.cos()._values_
+        si = half_ai.sin()._values_
+        cj = half_aj.cos()._values_
+        sj = half_aj.sin()._values_
+        ck = half_ak.cos()._values_
+        sk = half_ak.sin()._values_
 
         cc = ci * ck
         cs = ci * sk
@@ -890,40 +722,23 @@ class Quaternion(Vector):
 
         q *= np.sign(q[...,0])[...,np.newaxis]
 
-        return Quaternion(q, ai.mask | aj.mask | ak.mask)
-    #===========================================================================
+        return Quaternion(q, ai._mask_ | aj._mask_ | ak._mask_)
 
-
-
-    #===========================================================================
-    # to_euler
     #===========================================================================
     def to_euler(self, axes='rzxz'):
         return self.to_matrix3().to_euler(axes)
-    #===========================================================================
 
-
-
-    #===========================================================================
-    # from_euler_via_matrix
     #===========================================================================
     @staticmethod
     def from_euler_via_matrix(ai, aj, ak, axes='rzxz'):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Just for testing and validation.
-        """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        """Just for testing and validation."""
+
         m = Matrix3.from_euler(ai, aj, ak, axes)
         return Quaternion.from_matrixs(m)
-    #===========================================================================
 
-
-#*******************************************************************************
-
-
-
+################################################################################
 # Useful class constants
+################################################################################
 
 Quaternion.ZERO     = Quaternion((0,0,0,0)).as_readonly()
 Quaternion.XAXIS    = Quaternion((0,1,0,0)).as_readonly()
