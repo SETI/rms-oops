@@ -28,8 +28,6 @@ class Ansa(Surface):
     COORDINATE_TYPE = "cylindrical"
     IS_VIRTUAL = True
 
-    PACKRAT_ARGS = ['origin', 'frame', 'gravity', 'ringplane']
-
     #===========================================================================
     def __init__(self, origin, frame, gravity=None, ringplane=None):
         """Constructor for an Ansa Surface.
@@ -53,11 +51,18 @@ class Ansa(Surface):
         self.frame   = Frame.as_wayframe(frame)
         self.gravity = gravity
 
+        self._state_ringplane = ringplane
         if ringplane is None:
             self.ringplane = RingPlane(self.origin, self.frame,
                                        gravity=self.gravity)
         else:
             self.ringplane = ringplane
+
+    def __getstate__(self):
+        return (self.origin, self.frame, self.gravity, self._state_ringplane)
+
+    def __setstate__(self, state):
+        rself.__init__(*state)
 
     #===========================================================================
     @staticmethod

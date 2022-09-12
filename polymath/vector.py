@@ -277,8 +277,7 @@ class Vector(Qube):
             recursive   True to include the derivatives.
         """
 
-        return Qube._mean_or_sum(self, axis, recursive=recursive,
-                                   _combine_as_mean=False)
+        return Qube._sum(self, axis, recursive=recursive)
 
     #===========================================================================
     def mean(self, axis=None, recursive=True):
@@ -292,8 +291,7 @@ class Vector(Qube):
             recursive   True to include the derivatives.
         """
 
-        return Qube._mean_or_sum(self, axis, recursive=recursive,
-                                 _combine_as_mean=True)
+        return Qube._mean(self, axis, recursive=recursive)
 
     #===========================================================================
     def dot(self, arg, recursive=True):

@@ -11,8 +11,6 @@ from . import FOV
 class Subarray(FOV):
     """Subclass of FOV that describes a rectangular region of a larger FOV."""
 
-    PACKRAT_ARGS = ['fov', 'new_los', 'uv_shape', 'uv_los']
-
     #===========================================================================
     def __init__(self, fov, new_los, uv_shape, uv_los=None):
         """Constructor for a Subarray.
@@ -56,6 +54,12 @@ class Subarray(FOV):
         # Required fields
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
+
+    def __getstate__(self):
+        return (self.fov, self.new_los, self.uv_shape, self.uv_los)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,

@@ -12,8 +12,6 @@ class OblateGravity(Gravity):
     expansion in gravity moments J2, J4, etc.
     """
 
-    PACKRAT_ARGS = ['gm', 'jn', 'rp'] # used inside OOPS
-
     #===========================================================================
     def __init__(self, gm, jlist=[], radius=1.):
         """The constructor for a OblateGravity object.
@@ -61,6 +59,12 @@ class OblateGravity(Gravity):
         self.domega_jn = np.array(domega_jn)
         self.dkappa_jn = np.array(dkappa_jn)
         self.dnu_jn    = np.array(dnu_jn)
+
+    def __getstate__(self):
+        return (self.gm, self.jn, self.rp)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     @staticmethod

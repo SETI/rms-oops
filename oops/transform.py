@@ -60,14 +60,6 @@ class Transform(object):
     #   Transform.IDENTITY
     ############################################################################
 
-    PACKRAT_ARGS = ['matrix', 'omega', 'frame', 'reference', 'origin',
-                    '+filled_shape',
-                    '+filled_omega1',
-                    '+filled_matrix_with_deriv',
-                    '+filled_inverse_matrix',
-                    '+filled_inverse_with_deriv']
-
-    #===========================================================================
     def __init__(self, matrix, omega, frame, reference, origin=None):
         """Constructor for a Transform object.
 
@@ -102,6 +94,13 @@ class Transform(object):
         self.filled_matrix_with_deriv = None
         self.filled_inverse_matrix = None
         self.filled_inverse_with_deriv = None
+
+    def __getstate__(self):
+        return (self.matrix, self.omega, self.frame, self.reference,
+                self.origin)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     @property

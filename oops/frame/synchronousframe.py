@@ -15,17 +15,17 @@ class SynchronousFrame(Frame):
     toward a central planet and the y-axis in the negative direction of motion.
     """
 
-    PACKRAT_ARGS = ['body_path', 'planet_path', 'frame_id']
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
 
     #===========================================================================
-    def __init__(self, body_path, planet_path, id=None):
+    def __init__(self, body_path, planet_path, frame_id=None, unpickled=False):
         """Constructor for a SynchronousFrame.
 
         Input:
             body_path       the path or path ID followed by the body.
             planet_path     the path or path ID followed by the central planet.
-            eccentricity
-            id          the ID to use; None to leave the frame unregistered.
+            frame_id        the ID to use; None to leave the frame unregistered.
+            unpickled       True if this frame has been read from a pickle file.
         """
 
         self.body_path = Path.as_path(body_path)
@@ -34,14 +34,37 @@ class SynchronousFrame(Frame):
 
         assert self.planet_path.shape == ()
 
-        self.frame_id  = id
+        self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(self.planet_path.frame)
         self.origin    = self.planet_path.origin
-        self.shape     = self.body_path.shape
+        self.shape     = Qube.broadcasted_shape(self.body_path,
+                                                self.planet_path)
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
-        self.register()
+        self.register(unpickled=unpickled)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.body_path.path_id, self.planet_path.path_id)
+                SynchronousFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.body_path, self.planet_path, self.shape)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (body_path, planet_path, shape) = state
+        if shape == ():
+            key = (body_path.path_id, planet_path.path_id)
+            frame_id = SynchronousFrame.FRAME_IDS.get(key, None)
+        else:
+            frame_id = None
+
+        self.__init__(body_path, planet_path, frame_id=frame_id,
+                      unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick=False):
@@ -76,7 +99,7 @@ class Test_SynchronousFrame(unittest.TestCase):
 
         # Path of Saturn relative to Enceladus
         inward = Path.as_path('SATURN').wrt('ENCELADUS')
-        synchro = SynchronousFrame('ENCELADUS', 'SATURN', id='SYNCHRO')
+        synchro = SynchronousFrame('ENCELADUS', 'SATURN', frame_id='SYNCHRO')
 
         time = Scalar(np.arange(1000.) * 86400.)
 

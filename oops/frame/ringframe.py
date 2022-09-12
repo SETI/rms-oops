@@ -16,12 +16,11 @@ class RingFrame(Frame):
     node of the equator within the reference frame.
     """
 
-    PACKRAT_ARGS = ['planet_frame', 'epoch', 'retrograde', 'aries', 'frame_id',
-                    'given_cache_size']
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
 
     #===========================================================================
     def __init__(self, frame, epoch=None, retrograde=False, aries=False,
-                       id='+', cache_size=1000):
+                       frame_id='+', cache_size=1000, unpickled=False):
         """Constructor for a RingFrame Frame.
 
         Input:
@@ -46,7 +45,7 @@ class RingFrame(Frame):
                         situations, using Aries as a reference will reduce the
                         uncertainties related to the pole orientation.
 
-            id          the ID under which the frame will be registered. None to
+            frame_id    the ID under which the frame will be registered. None to
                         leave the frame unregistered. If the value is "+", then
                         the registered name is the planet frame's name with the
                         suffix "_DESPUN" if epoch is None, or "_INERTIAL" if an
@@ -55,16 +54,18 @@ class RingFrame(Frame):
             cache_size  number of transforms to cache. This can be useful
                         because it avoids unnecessary SPICE calls when the frame
                         is being used repeatedly at a finite set of times.
+
+            unpickled   True if this frame has been read from a pickle file.
         """
 
         self.planet_frame = Frame.as_frame(frame).wrt(Frame.J2000)
         self.reference = Frame.J2000
-        self.epoch = epoch
-        self.retrograde = retrograde
-        self.shape = frame.shape
+        self.epoch = None if epoch is None else Scalar.as_scalar(epoch)
+        self.retrograde = bool(retrograde)
+        self.shape = Qube.broadcasted_shape(self.planet_frame, self.epoch)
         self.keys = set()
 
-        self.aries = aries
+        self.aries = bool(aries)
 
         # The frame might not be exactly inertial due to polar precession, but
         # it is good enough
@@ -79,27 +80,50 @@ class RingFrame(Frame):
         self.cached_value_returned = False          # Just used for debugging
 
         # Fill in the frame ID
-        if id is None:
+        if frame_id is None:
             self.frame_id = Frame.temporary_frame_id()
-        elif id == '+':
+        elif frame_id == '+':
             if self.epoch is None:
                 self.frame_id = self.planet_frame.frame_id + "_DESPUN"
             else:
                 self.frame_id = self.planet_frame.frame_id + "_INERTIAL"
         else:
-            self.frame_id = id
+            self.frame_id = frame_id
 
         # Register if necessary
-        if id:
-            self.register()
-        else:
-            self.wayframe = self
+        self.register(unpickled=unpickled)
 
         # For a fixed epoch, derive the inertial tranform now
         self.transform = None
-
         if self.epoch is not None:
             self.transform = self.transform_at_time(self.epoch)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.planet_frame.frame_id,
+                       None if self.epoch is None else self.epoch.vals,
+                       self.retrograde, self.aries)
+                RingFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.planet_frame, self.epoch, self.retrograde, self.aries,
+                self.given_cache_size, self.shape)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (frame, epoch, retrograde, aries, cache_size, shape) = state
+        if shape == ():
+            key = (frame.frame_id,
+                   None if epoch is None else epoch.vals,
+                   retrograde, aries)
+            frame_id = RingFrame.FRAME_IDS.get(key, None)
+        else:
+            frame_id = None
+
+        self.__init__(frame, epoch, retrograde, aries, frame_id=frame_id,
+                      cache_size=cache_size, unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):

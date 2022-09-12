@@ -13,10 +13,11 @@ from ..frame import Frame
 class LinearPath(Path):
     """A path defining linear motion relative to another path and frame."""
 
-    PACKRAT_ARGS = ['pos', 'epoch', 'origin', 'frame', 'path_id']
+    # Note: LinearPaths are not generally re-used, so their IDs are expendable.
+    # Their IDs are not preserved during pickling.
 
     #===========================================================================
-    def __init__(self, pos, epoch, origin, frame=None, id=None):
+    def __init__(self, pos, epoch, origin, frame=None, path_id=None):
         """Constructor for a LinearPath.
 
         Input:
@@ -29,7 +30,7 @@ class LinearPath(Path):
             origin      the path or path ID of the reference point.
             frame       the frame or frame ID of the coordinate system; None for
                         the frame used by the origin path.
-            id          the name under which to register the new path; None to
+            path_id     the name under which to register the new path; None to
                         leave the path unregistered.
         """
 
@@ -50,17 +51,23 @@ class LinearPath(Path):
         self.epoch = Scalar.as_scalar(epoch)
 
         # Required attributes
-        self.path_id = id
+        self.path_id = path_id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
         self.keys    = set()
         self.shape   = Qube.broadcasted_shape(self.pos, self.vel,
                                               self.epoch,
-                                              self.origin.shape,
-                                              self.frame.shape)
+                                              self.origin, self.frame)
 
         # Update waypoint and path_id; register only if necessary
         self.register()
+
+    # Unpickled paths will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.pos, self.epoch, self.origin, self.frame)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def event_at_time(self, time, quick=None):

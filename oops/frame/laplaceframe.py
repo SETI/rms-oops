@@ -26,10 +26,11 @@ class LaplaceFrame(Frame):
     node is the descending node for the orbits of the inner moons.
     """
 
-    PACKRAT_ARGS = ['orbit', 'tilt', 'frame_id', 'given_cache_size']
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
 
     #===========================================================================
-    def __init__(self, orbit, tilt=0., id='+', cache_size=1000):
+    def __init__(self, orbit, tilt=0., frame_id='+', cache_size=1000,
+                       unpickled=False):
         """Constructor for a LaplaceFrame.
 
         Input:
@@ -38,7 +39,7 @@ class LaplaceFrame(Frame):
             tilt        The tilt of the Laplace Plane's pole from the planet's
                         pole toward or beyond the invariable pole.
 
-            id          the ID under which the frame will be registered. None to
+            frame_id    the ID under which the frame will be registered. None to
                         leave the frame unregistered. If the value is "+", then
                         the registered name is the name of the planet's
                         ring_frame with the suffix "_LAPLACE". Note that this
@@ -48,6 +49,8 @@ class LaplaceFrame(Frame):
             cache_size  number of transforms to cache. This can be useful
                         because it avoids unnecessary SPICE calls when the frame
                         is being used repeatedly at a finite set of times.
+
+            unpickled   True if this frame has been read from a pickle file.
         """
 
         self.orbit = orbit
@@ -62,7 +65,7 @@ class LaplaceFrame(Frame):
 
         self.reference = Frame.J2000
         self.origin = self.orbit.origin
-        self.shape = Qube.broadcasted_shape(orbit.shape, self.tilt)
+        self.shape = Qube.broadcasted_shape(self.orbit.shape, self.tilt)
         self.keys = set()
 
         # Define cache
@@ -74,20 +77,40 @@ class LaplaceFrame(Frame):
         self.cached_value_returned = False          # Just used for debugging
 
         # Fill in the frame ID
-        if id is None:
+        if frame_id is None:
             self.frame_id = Frame.temporary_frame_id()
-        elif id == '+':
+        elif frame_id == '+':
             self.frame_id = self.orbit.planet.ring_frame.frame_id + '_LAPLACE'
-        elif id.startswith('+'):
-            self.frame_id = self.orbit.planet.ring_frame.frame_id + '_' + id[1:]
+        elif frame_id.startswith('+'):
+            self.frame_id = (self.orbit.planet.ring_frame.frame_id + '_'
+                             + frame_id[1:])
         else:
-            self.frame_id = id
+            self.frame_id = frame_id
 
         # Register if necessary
-        if id:
-            self.register()
+        self.register(unpickled=unpickled)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.orbit.path_id, self.tilt.vals)
+                LaplaceFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.orbit, self.tilt, self.given_cache_size, self.shape)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (orbit, tilt, cache_size, shape) = state
+        if shape == ():
+            key = (orbit.path_id, tilt.vals)
+            frame_id = PoleFrame.FRAME_IDS.get(key, None)
         else:
-            self.wayframe = self
+            frame_id = None
+
+        self.__init__(orbit, tilt, frame_id=frame_id,
+                      cache_size=cache_size, unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):

@@ -10,7 +10,7 @@ import scipy.interpolate as interp
 from polymath import Qube, Boolean, Scalar, Pair, Vector
 from polymath import Vector3, Matrix3, Quaternion
 
-from ..config   import QUICK, PATH_PHOTONS, LOGGING
+from ..config   import QUICK, PATH_PHOTONS, LOGGING, PICKLE_CONFIG
 from ..event    import Event
 from ..frame    import Frame, Wayframe
 import oops.constants as constants
@@ -25,8 +25,6 @@ class Path(object):
     WAYPOINT_REGISTRY = {}
     PATH_CACHE = {}
     TEMPORARY_PATH_ID = 10000
-
-    STANDARD_PATHS = set()     # Paths that always have the same definition
 
     ############################################################################
     # Each subclass must override...
@@ -105,28 +103,6 @@ class Path(object):
         return self.__str__()
 
     ############################################################################
-    # For serialization, standard paths are uniquely identified by ID
-    ############################################################################
-
-    def PACKRAT__args__(self):
-        if self.path_id in Path.STANDARD_PATHS:
-            return ['path_id']
-
-        return Path.as_primary_path(self)
-
-    @staticmethod
-    def PACKRAT__init__(cls, **args):
-        try:
-            path_id = args['path_id']
-            if path_id in Path.STANDARD_PATHS:
-                return Path.as_path(path_id)
-
-        except KeyError:
-            pass
-
-        return None
-
-    ############################################################################
     # Registry Management
     ############################################################################
 
@@ -191,7 +167,7 @@ class Path(object):
         Path.initialize_registry()
 
     #===========================================================================
-    def register(self, shortcut=None, override=False):
+    def register(self, shortcut=None, override=False, unpickled=False):
         """Register a Path's definition.
 
         A shortcut makes it possible to calculate the state of one SPICE body
@@ -200,9 +176,13 @@ class Path(object):
         treated as a shortcut definition. The path is cached under the shortcut
         name and also under the tuple (waypoint, origin_waypoint, wayframe).
 
-        If override is True, then this path will override the definition of any
-        previous path with the same name. The old path might still exist but it
-        will not be available from the registry.
+        If override is True, then this path will override the current primary
+        definition of any previous path with the same name. The old path might
+        still exist, but it will not be available from the registry.
+
+        If unpickled is True and a path with the same ID is already in the
+        registry, then this path is not registered. Instead, its waypoint will
+        be defined by the path with the same name that is already registered.
 
         If the path ID is None, blank, or begins with '.', it is treated as a
         temporary path and is not registered.
@@ -212,26 +192,23 @@ class Path(object):
         if Path.SSB is None:
             Path.initialize_registry()
 
-        WAYPOINT_REG = Path.WAYPOINT_REGISTRY
-        PATH_CACHE = Path.PATH_CACHE
-
-        id = self.path_id
+        path_id = self.path_id
 
         # Handle a shortcut
         if shortcut is not None:
-            if shortcut in PATH_CACHE:
-                PATH_CACHE[shortcut].keys -= {shortcut}
-            PATH_CACHE[shortcut] = self
+            if shortcut in Path.PATH_CACHE:
+                Path.PATH_CACHE[shortcut].keys -= {shortcut}
+            Path.PATH_CACHE[shortcut] = self
             self.keys |= {shortcut}
 
-            key = (WAYPOINT_REG[id], self.origin, self.frame)
-            if key in PATH_CACHE:
-                PATH_CACHE[key].keys -= {key}
-            PATH_CACHE[key] = self
+            key = (Path.WAYPOINT_REGISTRY[path_id], self.origin, self.frame)
+            if key in Path.PATH_CACHE:
+                Path.PATH_CACHE[key].keys -= {key}
+            Path.PATH_CACHE[key] = self
             self.keys |= {key}
 
             if not hasattr(self, 'waypoint') or self.waypoint is None:
-                self.waypoint = WAYPOINT_REG[id]
+                self.waypoint = Path.WAYPOINT_REGISTRY[path_id]
 
             return
 
@@ -247,34 +224,34 @@ class Path(object):
             return
 
         # Make sure the origin path is registered; raise a KeyError otherwise
-        test = WAYPOINT_REG[self.origin.path_id]
-        test = PATH_CACHE[self.origin]
+        test = Path.WAYPOINT_REGISTRY[self.origin.path_id]
+        test = Path.PATH_CACHE[self.origin]
 
         # If the ID is unregistered, insert this as a primary definition
-        if id not in WAYPOINT_REG or override:
+        if (path_id not in Path.WAYPOINT_REGISTRY) or override:
 
             # Fill in the ancestry
             origin = Path.as_primary_path(self.origin)
             self.ancestry = [origin] + origin.ancestry
 
             # Register the Waypoint
-            waypoint = Waypoint(id, self.frame, self.shape)
+            waypoint = Waypoint(path_id, self.frame, self.shape)
             self.waypoint = waypoint
-            WAYPOINT_REG[id] = waypoint
+            Path.WAYPOINT_REGISTRY[path_id] = waypoint
 
             # Cache the path under three keys
             self.keys = {waypoint,
                          (waypoint, self.origin),
                          (waypoint, self.origin, self.frame)}
             for key in self.keys:
-                PATH_CACHE[key] = self
+                Path.PATH_CACHE[key] = self
 
             # Cache the waypoint under two or three keys
             waypoint.keys = {(waypoint, waypoint),
                              (waypoint, waypoint, self.frame),
                              (waypoint, waypoint, Frame.J2000)}
             for key in waypoint.keys:
-                PATH_CACHE[key] = waypoint
+                Path.PATH_CACHE[key] = waypoint
 
             # Also define the path with respect to the SSB
             if self.origin == Path.SSB and self.frame == Frame.J2000:
@@ -287,28 +264,31 @@ class Path(object):
                     self.wrt_ssb.keys |= {(waypoint, Path.SSB)}
 
                 for key in self.wrt_ssb.keys:
-                    PATH_CACHE[key] = self.wrt_ssb
+                    Path.PATH_CACHE[key] = self.wrt_ssb
 
         # Otherwise, just insert secondary definitions
         else:
             if not hasattr(self, 'waypoint') or self.waypoint is None:
-                self.waypoint = WAYPOINT_REG[id]
+                self.waypoint = Path.WAYPOINT_REGISTRY[path_id]
 
-            # Cache (self.waypoint, self.origin); overwrite if necessary
-            key = (self.waypoint, self.origin)
-            if key in PATH_CACHE:           # remove an old version
-                PATH_CACHE[key].keys -= {key}
+            # If this is not an unpickled path, make it the path returned by
+            # any of the standard keys.
+            if not unpickled:
+                # Cache (self.waypoint, self.origin); overwrite if necessary
+                key = (self.waypoint, self.origin)
+                if key in Path.PATH_CACHE:          # remove an old version
+                    Path.PATH_CACHE[key].keys -= {key}
 
-            PATH_CACHE[key] = self
-            self.keys |= {key}
+                Path.PATH_CACHE[key] = self
+                self.keys |= {key}
 
-            # Cache (self.waypoint, self.origin, self.frame)
-            key = (self.waypoint, self.origin, self.frame)
-            if key in PATH_CACHE:           # remove an old version
-                PATH_CACHE[key].keys -= {key}
+                # Cache (self.waypoint, self.origin, self.frame)
+                key = (self.waypoint, self.origin, self.frame)
+                if key in Path.PATH_CACHE:          # remove an old version
+                    Path.PATH_CACHE[key].keys -= {key}
 
-            PATH_CACHE[key] = self
-            self.keys |= {key}
+                Path.PATH_CACHE[key] = self
+                self.keys |= {key}
 
     #===========================================================================
     @staticmethod
@@ -994,8 +974,6 @@ class Waypoint(Path):
     Waypoint cannot be registered by the user.
     """
 
-    PACKRAT_ARGS = ['path_id', 'frame', 'shape']
-
     def __init__(self, path_id, frame=None, shape=()):
         """Constructor for a Waypoint.
 
@@ -1012,6 +990,20 @@ class Waypoint(Path):
         self.path_id  = path_id
         self.shape    = shape
         self.keys     = set()
+
+    def __getstate__(self):
+        # A path might not get assigned the same ID on the next run of OOPS, so
+        # saving the name alone is not meaningful. Instead, we save the current
+        # primary definition, which has the same path_id, frame, and shape.
+        return (self.as_primary_path(),)
+
+    def __setstate__(self, state):
+        (primary_path,) = state
+
+        # As a side-effect, we have just un-pickled the primary path that this
+        # waypoint previously represented.
+        self.__init__(primary_path.path_id, primary_path.frame,
+                      primary_path.shape)
 
     def event_at_time(self, time, quick=False):
         return Event(time, Vector3.ZERO, self.origin, self.frame)
@@ -1031,8 +1023,6 @@ class AliasPath(Path):
     Used to create a quick, temporary path that returns events relative to a
     particular path and frame. An AliasPath cannot be registered.
     """
-
-    PACKRAT_ARGS = ['path', 'frame']
 
     def __init__(self, path, frame=None):
         """Constructor for an AliasPath.
@@ -1064,6 +1054,12 @@ class AliasPath(Path):
                                                self.frame.shape)
         self.keys     = set()
 
+    def __getstate__(self):
+        return (self.path, self.frame)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def register(self):
         raise TypeError('an AliasPath cannot be registered')
 
@@ -1083,8 +1079,6 @@ class LinkedPath(Path):
     The new path returns positions and velocities as offsets from the origin of
     the parent and in the parent's frame.
     """
-
-    PACKRAT_ARGS = ['path', 'parent']
 
     def __init__(self, path, parent):
         """Constructor for a Linked Path.
@@ -1116,6 +1110,12 @@ class LinkedPath(Path):
         if path.is_registered() and parent.is_registered():
             self.register()     # save for later use
 
+    def __getstate__(self):
+        return (self.path, self.parent)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
 
@@ -1132,8 +1132,6 @@ class RelativePath(Path):
 
     The new path uses the coordinate frame of the origin path.
     """
-
-    PACKRAT_ARGS = ['path', 'origin']
 
     def __init__(self, path, origin):
         """Constructor for a RelativePath.
@@ -1166,6 +1164,12 @@ class RelativePath(Path):
         if path.is_registered() and origin.is_registered():
             self.register()     # save for later use
 
+    def __getstate__(self):
+        return (self.path, self.new_origin)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
 
@@ -1180,8 +1184,6 @@ class RelativePath(Path):
 class ReversedPath(Path):
     """ReversedPath generates the reversed Events from that of a given Path.
     """
-
-    PACKRAT_ARGS = ['path']
 
     def __init__(self, path):
         """Constructor for a ReversedPath.
@@ -1203,6 +1205,12 @@ class ReversedPath(Path):
         if path.is_registered():
             self.register()     # save for later use
 
+    def __getstate__(self):
+        return (self.path)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
         return Event(event.time, -event.state, self.origin, self.frame)
@@ -1212,8 +1220,6 @@ class ReversedPath(Path):
 class RotatedPath(Path):
     """RotatedPath returns event objects rotated to another coordinate frame.
     """
-
-    PACKRAT_ARGS = ['path', 'frame']
 
     def __init__(self, path, frame):
         """Constructor for a RotatedPath.
@@ -1238,6 +1244,12 @@ class RotatedPath(Path):
         if path.is_registered():
             self.register()     # save for later use
 
+    def __getstate__(self):
+        return (self.path, self.rotation)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
         return event.rotate_by_frame(self.rotation, derivs=False, quick=quick)
@@ -1247,8 +1259,6 @@ class RotatedPath(Path):
 class QuickPath(Path):
     """QuickPath returns positions and velocities by interpolating another path.
     """
-
-    # PACKRAT_ARGS is undefined; save every attribute to keep this up to date
 
     def __init__(self, path, interval, quickdict):
         """Constructor for a QuickPath.
@@ -1265,9 +1275,8 @@ class QuickPath(Path):
             raise ValueError('shape of QuickPath must be ()')
 
         self.slowpath = path
-
         self.waypoint = path.waypoint
-        self.path_id =  path.path_id
+        self.path_id  =  path.path_id
         self.origin   = path.origin
         self.frame    = path.frame
         self.shape    = ()
@@ -1288,8 +1297,8 @@ class QuickPath(Path):
         self._spline_setup()
 
         # Test the precision
-        precision_self_check = quickdict['path_self_check']
-        if precision_self_check is not None:
+        self.precision_self_check = quickdict['path_self_check']
+        if self.precision_self_check is not None:
             t = self.times[:-1] + self.dt/2.        # Halfway points
 
             true_event = self.slowpath.event_at_time(t, quick=False)
@@ -1298,10 +1307,28 @@ class QuickPath(Path):
             dpos = (true_event.pos - pos).norm() / (true_event.pos).norm()
             dvel = (true_event.vel - vel).norm() / (true_event.vel).norm()
             error = max(np.max(dpos.vals), np.max(dvel.vals))
-            if error > precision_self_check:
+            if error > self.precision_self_check:
                 raise ValueError('precision tolerance not achieved: ' +
                                  str(error) + ' > ' +
-                                 str(precision_self_check))
+                                 str(self.precision_self_check))
+
+    def __getstate__(self):
+        if PICKLE_CONFIG.quickpath_details:
+            return self.__dict__
+        else:
+            interval = (self.t0, self.t1)
+            quickdict = {
+                'path_time_step'  : self.dt,
+                'path_extra_steps': self.extras,
+                'path_self_check' : self.precision_self_check,
+            }
+            return (self.slowpath, interval, quickdict)
+
+    def __setstate__(self, state):
+        if isinstance(state, tuple):
+            self.__init__(*state)
+        else:
+            self.__dict__ = state
 
     #===========================================================================
     def event_at_time(self, time, quick=False):
@@ -1467,7 +1494,6 @@ Path.SSB.wrt_ssb = Path.SSB
 
 # Initialize the registry
 Path.initialize_registry()
-Path.STANDARD_PATHS.add(Path.SSB)
 
 ###############################################################################
 # UNIT TESTS

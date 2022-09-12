@@ -10,8 +10,6 @@ class DualCadence(Cadence):
     """A Cadence subclass in which time steps are defined by a pair of cadences.
     """
 
-    PACKRAT_ARGS = ['long', 'short']
-
     #===========================================================================
     def __init__(self, long, short):
         """Constructor for a DualCadence.
@@ -53,6 +51,12 @@ class DualCadence(Cadence):
                                self.short.max_tstride)
 
         self._max_long_tstep = self.long.shape[0] - 1
+
+    def __getstate__(self):
+        return (self.long, self.short)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):

@@ -10,8 +10,6 @@ from . import Cadence
 class Sequence(Cadence):
     """Cadence subclass in which time steps are defined by a list."""
 
-    PACKRAT_ARGS = ['tlist', 'texp']
-
     #===========================================================================
     def __init__(self, tlist, texp):
         """Constructor for a Sequence.
@@ -48,6 +46,8 @@ class Sequence(Cadence):
         assert tlist.size > 1
 
         tstrides = np.diff(tlist)
+
+        self._state_texp = texp
 
         # Interpret texp
         if np.shape(texp):          # texp is an array
@@ -104,6 +104,12 @@ class Sequence(Cadence):
         self.shape = self.tlist.shape
 
         return
+
+    def __getstate__(self):
+        return (self.tlist, self._state_texp)
+
+    def __setstate__(self):
+        self.__init__(*state)
 
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):

@@ -229,7 +229,7 @@ class Frame(object):
         Frame.initialize_registry()
 
     #===========================================================================
-    def register(self, shortcut=None):
+    def register(self, shortcut=None, unpickled=False):
         """Register a Frame's definition.
 
         A shortcut makes it possible to calculate one SPICE frame relative to
@@ -237,6 +237,10 @@ class Frame(object):
         name is given, then this frame is treated as a shortcut definition. The
         frame is cached under the shortcut name and also under the tuple
         (wayframe, reference_wayframe).
+
+        If unpickled is True and a frame with the same ID is already in the
+        registry, then this frame is not registered. Instead, its wayframe will
+        be defined by the frame with the same name that is already registered.
 
         If the frame ID is None, blank, or begins with '.', it is treated as a
         temporary path and is not registered.
@@ -246,22 +250,19 @@ class Frame(object):
         if Frame.J2000 is None:
             Frame.initialize_registry()
 
-        WAYFRAME_REG = Frame.WAYFRAME_REGISTRY
-        FRAME_CACHE = Frame.FRAME_CACHE
-
-        id = self.frame_id
+        frame_id = self.frame_id
 
         # Handle a shortcut
         if shortcut is not None:
-            if shortcut in FRAME_CACHE:
-                FRAME_CACHE[shortcut].keys -= {shortcut}
-            FRAME_CACHE[shortcut] = self
+            if shortcut in Frame.FRAME_CACHE:
+                Frame.FRAME_CACHE[shortcut].keys -= {shortcut}
+            Frame.FRAME_CACHE[shortcut] = self
             self.keys |= {shortcut}
 
-            key = (FRAME_CACHE[id], self.reference)
-            if key in FRAME_CACHE:
-                FRAME_CACHE[key].keys -= {key}
-            FRAME_CACHE[key] = self
+            key = (Frame.FRAME_CACHE[frame_id], self.reference)
+            if key in Frame.FRAME_CACHE:
+                Frame.FRAME_CACHE[key].keys -= {key}
+            Frame.FRAME_CACHE[key] = self
             self.keys |= {key}
 
             return
@@ -279,35 +280,35 @@ class Frame(object):
 
         # Make sure the reference frame is registered; otherwise raise KeyError
         try:
-            test = WAYFRAME_REG[self.reference.frame_id]
+            test = Frame.WAYFRAME_REGISTRY[self.reference.frame_id]
         except KeyError:
             raise ValueError('frame ' + self.frame_id +
                              ' cannot be registered because it connects to ' +
                              'unregistered frame ' + self.reference.frame_id)
 
-        test = FRAME_CACHE[self.reference]
+        test = Frame.FRAME_CACHE[self.reference]
 
         # If the ID is not registered, insert this as the primary definition
-        if id not in WAYFRAME_REG:
+        if frame_id not in Frame.WAYFRAME_REGISTRY:
 
             # Fill in the ancestry
             reference = Frame.as_primary_frame(self.reference)
             self.ancestry = [reference] + reference.ancestry
 
             # Register the Wayframe
-            wayframe = Wayframe(id, self.origin, self.shape)
+            wayframe = Wayframe(frame_id, self.origin, self.shape)
             self.wayframe = wayframe
-            WAYFRAME_REG[id] = wayframe
+            Frame.WAYFRAME_REGISTRY[frame_id] = wayframe
 
             # Cache the frame under two keys
             self.keys = {wayframe, (wayframe, self.reference)}
             for key in self.keys:
-                FRAME_CACHE[key] = self
+                Frame.FRAME_CACHE[key] = self
 
             # Cache the wayframe
             wayframe.keys = {(wayframe, wayframe)}
             for key in wayframe.keys:
-                FRAME_CACHE[key] = wayframe
+                Frame.FRAME_CACHE[key] = wayframe
 
             # Also define the frame with respect to J2000
             if self.reference == Frame.J2000:
@@ -317,20 +318,23 @@ class Frame(object):
 
                 key = (wayframe, Frame.J2000)
                 self.wrt_j2000.keys = {key}
-                FRAME_CACHE[key] = self.wrt_j2000
+                Frame.FRAME_CACHE[key] = self.wrt_j2000
 
         # Otherwise, just insert a secondary definition
         else:
             if not hasattr(self, 'wayframe') or self.wayframe is None:
-                self.wayframe = WAYFRAME_REG[id]
+                self.wayframe = Frame.WAYFRAME_REGISTRY[frame_id]
 
-            # Cache (self.wayframe, self.reference); overwrite if necessary
-            key = (self.wayframe, self.reference)
-            if key in FRAME_CACHE:          # remove an old version
-                FRAME_CACHE[key].keys -= {key}
+            # If this is not an unpickled frame, make it the frame returned by
+            # any of the standard keys.
+            if not unpickled:
+                # Cache (self.wayframe, self.reference); overwrite if necessary
+                key = (self.wayframe, self.reference)
+                if key in Frame.FRAME_CACHE:        # remove an old version
+                    Frame.FRAME_CACHE[key].keys -= {key}
 
-            FRAME_CACHE[key] = self
-            self.keys |= {key}
+                Frame.FRAME_CACHE[key] = self
+                self.keys |= {key}
 
     #===========================================================================
     @staticmethod
@@ -615,6 +619,20 @@ class Wayframe(Frame):
         self.shape     = shape
         self.keys      = set()
 
+    def __getstate__(self):
+        # A frame might not get assigned the same ID on the next run of OOPS, so
+        # saving the name alone is not meaningful. Instead, we save the current
+        # primary definition, which has the same frame_id, origin, and shape.
+        return (self.as_primary_frame(),)
+
+    def __setstate__(self, state):
+        (primary_frame,) = state
+
+        # As a side-effect, we have just un-pickled the primary frame that this
+        # waypoint previously represented.
+        self.__init__(primary_frame.frame_id, primary_frame.origin,
+                      primary_frame.shape)
+
     def transform_at_time(self, time, quick={}):
         return Transform(Matrix3.IDENTITY, Vector3.ZERO, self, self,
                                                          self.origin)
@@ -634,8 +652,6 @@ class AliasFrame(Frame):
     frame to this one. An AliasFrame cannot be registered.
     """
 
-    PACKRAT_ARGS = ['alias']
-
     def __init__(self, frame):
 
         self.alias = Frame.as_frame(frame)
@@ -647,6 +663,12 @@ class AliasFrame(Frame):
         self.origin    = self.alias.origin
         self.shape     = ()
         self.keys      = set()
+
+    def __getstate__(self):
+        return (self.alias,)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     def register(self):
         raise TypeError('an AliasFrame cannot be registered')
@@ -665,8 +687,6 @@ class LinkedFrame(Frame):
     The new frame describes coordinates in one frame relative to the reference
     of the second frame.
     """
-
-    PACKRAT_ARGS = ['frame', 'parent']
 
     def __init__(self, frame, parent):
         """Constructor for a LinkedFrame.
@@ -701,6 +721,12 @@ class LinkedFrame(Frame):
         if frame.is_registered() and parent.is_registered():
             self.register()     # save for later use
 
+    def __getstate__(self):
+        return (self.frame, self.parent)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def transform_at_time(self, time, quick={}):
 
         parent = self.parent.transform_at_time(time, quick=quick)
@@ -726,12 +752,10 @@ class RelativeFrame(Frame):
     coordinates from the second frame to the first.
     """
 
-    PACKRAT_ARGS = ['frame1', 'frame2']
-
     def __init__(self, frame1, frame2):
 
-        self.frame1 = frame1
-        self.frame2 = frame2
+        self.frame1 = Frame.as_frame(frame1)
+        self.frame2 = Frame.as_frame(frame2)
 
         assert self.frame1.reference == self.frame2.reference
 
@@ -753,6 +777,12 @@ class RelativeFrame(Frame):
         if frame1.is_registered() and frame2.is_registered():
             self.register()     # save for later use
 
+    def __getstate__(self):
+        return (self.frame1, self.frame2)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     def transform_at_time(self, time, quick={}):
 
         xform1 = self.frame1.transform_at_time(time)
@@ -773,14 +803,11 @@ class RelativeFrame(Frame):
 ################################################################################
 
 class ReversedFrame(Frame):
-    """A Frame that generates the inverse Transform of a given Frame.
-    """
-
-    PACKRAT_ARGS = ['frame']
+    """A Frame that generates the inverse Transform of a given Frame."""
 
     def __init__(self, frame):
 
-        self.oldframe = frame
+        self.oldframe = Frame.as_frame(frame)
 
         # Required attributes
         self.wayframe  = frame.reference
@@ -793,12 +820,17 @@ class ReversedFrame(Frame):
         if frame.is_registered() and frame.reference.is_registered():
             self.register()         # save for later use
 
-    def transform_at_time(self, time, quick={}):
 
+    def __getstate__(self):
+        return (self.oldframe)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
+    def transform_at_time(self, time, quick={}):
         return self.oldframe.transform_at_time(time).invert()
 
     def transform_at_time_if_possible(self, time, quick={}):
-
         (time, xform) = self.oldframe.transform_at_time_if_possible(time)
         return (time, xform.invert())
 
@@ -864,8 +896,8 @@ class QuickFrame(Frame):
             self.interpolation_func = self._interpolate_matrix_omega
 
         # Test the precision
-        precision_self_check = quickdict['frame_self_check']
-        if precision_self_check is not None:
+        self.precision_self_check = quickdict['frame_self_check']
+        if self.precision_self_check is not None:
             t = self.times[:-1] + self.dt/2.        # Halfway points
 
             true_transform = self.slowframe.transform_at_time(t)
@@ -878,10 +910,31 @@ class QuickFrame(Frame):
                 domega /= true_transform.omega.rms()
 
             error = max(np.max(dmatrix.vals), np.max(domega.vals))
-            if error > precision_self_check:
+            if error > self.precision_self_check:
                 raise ValueError('precision tolerance not achieved: ' +
                                   str(error) + ' > ' +
-                                  str(precision_self_check))
+                                  str(self.precision_self_check))
+
+    def __getstate__(self):
+        if PICKLE_CONFIG.quickframe_details:
+            return self.__dict__
+        else:
+            interval = (self.t0, self.t1)
+            quickdict = {
+                'frame_time_step'           : self.dt,
+                'frame_extra_steps'         : self.extras,
+                'quickframe_numerical_omega': self.omega_numerical,
+                'ignore_quickframe_omega'   : self.omega_zero,
+                'use_superseded_quickframes': self.superseded,
+                'frame_self_check'          : self.precision_self_check,
+            }
+            return (self.slowpath, interval, quickdict)
+
+    def __setstate__(self, state):
+        if isinstance(state, tuple):
+            self.__init__(*state)
+        else:
+            self.__dict__ = state
 
     ####################################
 

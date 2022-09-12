@@ -8,7 +8,7 @@ import numbers
 
 from oops.path import Path
 
-# Maintain dictionaries that translates names in SPICE toolkit into their
+# Maintain dictionaries that translate names in the SPICE toolkit into their
 # corresponding names in the Frame and Path registries.
 
 FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}
@@ -39,8 +39,7 @@ def load_leap_seconds():
 ########################################
 
 def body_id_and_name(arg):
-    """Intepret the argument as the name or ID of a SPICE body or SPICE body.
-    """
+    """Interpret the argument as the name or ID of a SPICE body."""
 
     # First see if the path is already registered
     try:

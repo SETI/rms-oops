@@ -22,9 +22,6 @@ class PolynomialFOV(FOV):
 
     DEBUG = False       # True to print(convergence steps on xy_from_uv())
 
-    PACKRAT_ARGS = ['uv_shape', 'coefft_xy_from_uv', 'coefft_uv_from_xy',
-                    'uv_los', 'uv_area', 'iters']
-
     #===========================================================================
     def __init__(self, uv_shape, coefft_xy_from_uv=None,
                  coefft_uv_from_xy=None, uv_los=None, uv_area=None,
@@ -99,6 +96,13 @@ class PolynomialFOV(FOV):
             self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
         else:
             self.uv_area = uv_area
+
+    def __getstate__(self):
+        return (self.uv_shape, self.coefft_xy_from_uv, self.coefft_uv_from_xy,
+                self.uv_los, self.uv_area, self.iters)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv, tfrac=0.5, time=None, derivs=False, fast=False):

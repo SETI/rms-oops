@@ -128,12 +128,22 @@ class LOGGING(object):
         LOGGING.prefix = prefix
 
 ################################################################################
+# Serialization parameters
+################################################################################
+
+class PICKLE_CONFIG(object):
+    quickpath_details = True    # Save the internals of a QuickPath
+    quickframe_details = True   # Save the internals of a QuickFrame
+    backplane_events = True     # Save the events dictionary inside backplanes
+
+################################################################################
 # Aberration method (for backward compatibility)
 ################################################################################
 
 class ABERRATION(object):
     old = False                 # Change to True for previous, incorrect
-                                # interpretation of the C matrices.
+                                # interpretation of the C matrices. Only for
+                                # backward compatibility
 
 ################################################################################
 

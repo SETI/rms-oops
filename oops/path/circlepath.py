@@ -17,11 +17,11 @@ class CirclePath(Path):
     frame.
     """
 
-    PACKRAT_ARGS = ['radius', 'lon', 'rate', 'epoch', 'origin', 'frame',
-                    'path_id']
+    PATH_IDS = {}   # path_id to use if a path already exists upon un-pickling
 
     #===========================================================================
-    def __init__(self, radius, lon, rate, epoch, origin, frame=None, id=None):
+    def __init__(self, radius, lon, rate, epoch, origin, frame=None,
+                       path_id=None, unpickled=False):
         """Constructor for a CirclePath.
 
         Input:
@@ -36,8 +36,9 @@ class CirclePath(Path):
             frame       the frame or ID of the frame in which the circular
                         motion is defined; None to use the default frame of the
                         origin path.
-            id          the name under which to register the new path; None to
+            path_id     the name under which to register the new path; None to
                         leave the path unregistered.
+            unpickled   True if this path has been read from a pickle file.
 
         Note: The shape of the Path object returned is defined by broadcasting
         together the shapes of all the orbital elements plus the epoch.
@@ -50,7 +51,7 @@ class CirclePath(Path):
         self.rate   = Scalar.as_scalar(rate)
 
         # Required attributes
-        self.path_id = id
+        self.path_id = path_id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
         self.keys    = set()
@@ -60,7 +61,31 @@ class CirclePath(Path):
                                               self.frame.shape)
 
         # Update waypoint and path_id; register only if necessary
-        self.register()
+        self.register(unpickled=unpickled)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.path_id in Path.WAYPOINT_REGISTRY):
+                key = (self.radius.vals, self.lon.vals, self.rate.vals,
+                       self.epoch.vals, origin.path_id, frame.frame_id)
+                CirclePath.PATH_IDS[key] = self.path_id
+
+    def __getstate__(self):
+        return (self.radius, self.lon, self.rate, self.epoch, self.origin,
+                self.frame, self.shape)
+
+    def __setstate__(self, state):
+        # If this path matches a pre-existing path, re-use its ID
+        (radius, lon, rate, epoch, origin, frame, shape) = state
+        if shape == ():
+            key = (radius.vals, lon.vals, rate.vals, epoch.vals, origin.path_id,
+                   frame.frame_id)
+            path_id = CirclePath.PATH_IDS.get(key, None)
+        else:
+            path_id = None
+
+        self.__init__(radius, lon, rate, epoch, origin, frame, path_id=path_id,
+                      unpickled=True)
 
     #===========================================================================
     def event_at_time(self, time, quick=False):
@@ -95,7 +120,21 @@ class Test_CirclePath(unittest.TestCase):
 
         # Note: Unit testing is performed in surface/orbitplane.py
 
-        pass
+        ####################################
+        # __getstate__/__setstate__
+
+        radius = 100000.
+        lon = 5 * np.random.randn()
+        rate = 0.001 * np.random.randn()
+        epoch = 10. * 365. * 86400. * np.random.randn()
+        origin = Path.SSB
+        frame = Frame.J2000
+        path = CirclePath(radius, lon, rate, epoch, origin, frame)
+        state = path.__getstate__()
+
+        copied = Path.__new__(CirclePath)
+        copied.__setstate__(state)
+        self.assertEqual(copied.__getstate__(), state)
 
 ########################################
 if __name__ == '__main__':

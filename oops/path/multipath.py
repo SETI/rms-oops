@@ -13,10 +13,11 @@ from ..frame import Frame
 class MultiPath(Path):
     """Gathers a set of paths into a single 1-D Path object."""
 
-    PACKRAT_ARGS = ['paths', 'origin', 'frame', 'path_id']
+    PATH_IDS = {}
 
     #===========================================================================
-    def __init__(self, paths, origin=None, frame=None, id='+'):
+    def __init__(self, paths, origin=None, frame=None, path_id='+',
+                       unpickled=False):
         """Constructor for a MultiPath Path.
 
         Input:
@@ -25,9 +26,10 @@ class MultiPath(Path):
                         paths. None to use the SSB.
             frame       a frame or frame ID identifying the reference frame.
                         None to use the default frame of the origin path.
-            id          the name or ID under which this path will be registered.
+            path_id     the name or ID under which this path will be registered.
                         A single '+' is changed to the ID of the first path with
                         a '+' appended. None to leave the path unregistered.
+            unpickled   True if this path has been read from a pickle file.
         """
 
         # Interpret the inputs
@@ -42,20 +44,36 @@ class MultiPath(Path):
             self.paths[index] = Path.as_path(path).wrt(self.origin, self.frame)
 
         # Fill in the path_id
-        self.path_id = id
+        self.path_id = path_id
 
         if self.path_id == '+':
             self.path_id = self.paths[0].path_id + '+others'
 
         # Update waypoint and path_id; register only if necessary
-        self.register()
+        self.register(unpickled=unpickled)
+
+        # Save in internal dict for name lookup upon serialization
+        if not unpickled and self.path_id in Path.WAYPOINT_REGISTRY:
+            key = tuple([path.path_id for path in self.paths])
+            MultiPath.PATH_IDS[key] = self.path_id
+
+    # Unpickled paths will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.paths, self.origin, self.frame)
+
+    def __setstate__(self, state):
+        # If this path matches a pre-existing path, re-use its ID
+        (paths, origin, frame) = state
+        key = tuple([path.path_id for path in paths])
+        path_id = MultiPath.PATH_IDS.get(key, None)
+        self.__init__(paths, origin, frame, path_id=path_id, unpickled=True)
 
     #===========================================================================
     def __getitem__(self, i):
         slice = self.paths[i]
         if np.shape(slice) == ():
             return slice
-        return MultiPath(slice, self.origin, self.frame, id=None)
+        return MultiPath(slice, self.origin, self.frame, path_id=None)
 
     #===========================================================================
     def event_at_time(self, time, quick={}):

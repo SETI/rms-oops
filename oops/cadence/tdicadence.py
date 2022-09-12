@@ -11,9 +11,6 @@ class TDICadence(Cadence):
     ("Time Delay and Integration") camera.
     """
 
-    PACKRAT_ARGS = ['lines', 'tstart', 'tdi_texp', 'tdi_stages', 'tdi_sign']
-
-    #===========================================================================
     def __init__(self, lines, tstart, tdi_texp, tdi_stages, tdi_sign=-1):
         """Constructor for a TDICadence.
 
@@ -50,6 +47,13 @@ class TDICadence(Cadence):
         self.lasttime = None            # has no meaningful definition
         self.shape = (self.lines,)
         self.is_continuous = True
+
+    def __getstate__(self):
+        return (self.lines, self.tstart, self.tdi_texp, self.tdi_stages,
+                self.tdi_sign)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     ############################################################################
     # Methods unique to this class

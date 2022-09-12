@@ -9,8 +9,6 @@ from . import Cadence
 class Metronome(Cadence):
     """A Cadence subclass where time steps occur at uniform intervals."""
 
-    PACKRAT_ARGS = ['tstart', 'tstride', 'texp', 'steps']
-
     #===========================================================================
     def __init__(self, tstart, tstride, texp, steps):
         """Constructor for a Metronome.
@@ -42,6 +40,12 @@ class Metronome(Cadence):
 
         self._gapless = (self.texp == self.tstride)
         self._tscale = self.tstride / self.texp
+
+    def __getstate__(self):
+        return (self.tstart, self.tstride, self.texp, self.steps)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):

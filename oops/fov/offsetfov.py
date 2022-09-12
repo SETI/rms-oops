@@ -15,8 +15,6 @@ class OffsetFOV(FOV, Fittable):
     corrections.
     """
 
-    PACKRAT_ARGS = ['fov', 'uv_offset', 'xy_offset']
-
     #===========================================================================
     def __init__(self, fov, uv_offset=None, xy_offset=None):
         """Constructor for an OffsetFOV.
@@ -66,6 +64,12 @@ class OffsetFOV(FOV, Fittable):
         self.nparams = 2
         self.param_name = 'uv_offset'
         self.cache = {}     # not used
+
+    def __getstate__(self):
+        return (self.fov, self.uv_offset, self.xy_offset)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,

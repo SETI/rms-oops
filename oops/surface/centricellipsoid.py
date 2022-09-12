@@ -18,8 +18,6 @@ class CentricEllipsoid(Surface):
     COORDINATE_TYPE = "spherical"
     IS_VIRTUAL = False
 
-    PACKRAT_ARGS = ['origin', 'frame', 'radii', 'exclusion']
-
     #===========================================================================
     def __init__(self, origin, frame, radii, exclusion=0.95):
         """Constructor for a CentricEllipsoid object.
@@ -52,6 +50,12 @@ class CentricEllipsoid(Surface):
         self.unsquash_y_sq = self.ellipsoid.unsquash_y**2
 
         self.radii = self.ellipsoid.radii
+
+    def __getstate__(self):
+        return (self.origin, self.frame, self.radii, self.exclusion)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

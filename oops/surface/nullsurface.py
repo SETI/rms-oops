@@ -17,8 +17,6 @@ class NullSurface(Surface):
 
     COORDINATE_TYPE = "rectangular"
 
-    PACKRAT_ARGS = ['origin', 'frame']
-
     #===========================================================================
     def __init__(self, origin, frame):
         """Constructor for a NullSurface surface.
@@ -33,6 +31,12 @@ class NullSurface(Surface):
 
         self.origin = Path.as_waypoint(origin)
         self.frame  = Frame.as_wayframe(frame)
+
+    def __getstate__(self):
+        return (self.origin, self.frame)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

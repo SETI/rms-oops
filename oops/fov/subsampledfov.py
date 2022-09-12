@@ -13,8 +13,6 @@ class SubsampledFOV(FOV):
     re-scaled.
     """
 
-    PACKRAT_ARGS = ['fov', 'rescale']
-
     #===========================================================================
     def __init__(self, fov, rescale):
         """Constructor for a SubsampledFOV.
@@ -42,6 +40,12 @@ class SubsampledFOV(FOV):
         self.uv_shape = (self.fov.uv_shape.element_div(self.rescale)).as_int()
 
         assert self.rescale.element_mul(self.uv_shape) == self.fov.uv_shape
+
+    def __getstate__(self):
+        return (self.fov, self.rescale)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,

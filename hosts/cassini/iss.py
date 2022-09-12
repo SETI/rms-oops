@@ -371,11 +371,11 @@ class ISS(object):
         # coordinate  system is rotated 180 degrees
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
         nac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
-                                            id="CASSINI_ISS_NAC_FLIPPED")
+                                            frame_id="CASSINI_ISS_NAC_FLIPPED")
         wac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
-                                            id="CASSINI_ISS_WAC_FLIPPED")
+                                            frame_id="CASSINI_ISS_WAC_FLIPPED")
         nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
-                                       id="CASSINI_ISS_NAC")
+                                       frame_id="CASSINI_ISS_NAC")
 
         if offset_wac:
 
@@ -393,12 +393,12 @@ class ISS(object):
             xshift = -7. * xpixel
             yshift = 4.4 * ypixel
             wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
-                                           id="CASSINI_ISS_WAC-NO_OFFSET")
+                                           frame_id="CASSINI_ISS_WAC-NO_OFFSET")
             wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
-                                              id="CASSINI_ISS_WAC")
+                                              frame_id="CASSINI_ISS_WAC")
         else:
             wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
-                                           id="CASSINI_ISS_WAC")
+                                           frame_id="CASSINI_ISS_WAC")
 
         ISS.initialized = True
 

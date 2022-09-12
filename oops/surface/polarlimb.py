@@ -32,8 +32,6 @@ class PolarLimb(Surface):
     intercept_DERIVS_ARE_IMPLEMENTED = False
     normal_DERIVS_ARE_IMPLEMENTED = False
 
-    PACKRAT_ARGS = ['ground', 'limits']
-
     #===========================================================================
     def __init__(self, ground, limits=None):
         """Constructor for a Limb surface.
@@ -58,6 +56,12 @@ class PolarLimb(Surface):
             self.limits = None
         else:
             self.limits = (limits[0], limits[1])
+
+    def __getstate__(self):
+        return (self.ground, self.limits)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

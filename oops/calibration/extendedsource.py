@@ -13,8 +13,6 @@ class ExtendedSource(Calibration):
     use for extended sources.
     """
 
-    PACKRAT_ARGS = ['name', 'factor']
-
     ############################################################################
     # Methods to be defined for each Calibration subclass
     ############################################################################
@@ -31,6 +29,8 @@ class ExtendedSource(Calibration):
 
         self.name = name
         self.factor = Scalar.as_scalar(factor)
+
+    #### __getstate__ and __setstate__ not needed; default behavior is fine.
 
     #===========================================================================
     def value_from_dn(self, dn, uv_pair=None):

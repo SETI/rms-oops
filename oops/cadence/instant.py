@@ -32,6 +32,12 @@ class Instant(Cadence):
         self.lasttime = self.tdb.max()
         self.is_continuous = False
 
+    def __getstate__(self):
+        return (self.tdb)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.

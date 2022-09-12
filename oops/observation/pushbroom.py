@@ -30,8 +30,6 @@ class Pushbroom(Observation):
 
     INVENTORY_IMPLEMENTED = True
 
-    PACKRAT_ARGS = ['axes', 'cadence', 'fov', 'path', 'frame', '**subfields']
-
     #===========================================================================
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
         """Constructor for a Pushbroom observation.
@@ -143,6 +141,13 @@ class Pushbroom(Observation):
 
         self.snapshot = Snapshot(snapshot_axes, snapshot_tstart, snapshot_texp,
                                  self.fov, self.path, self.frame, **subfields)
+
+    def __getstate__(self):
+        return (self.axes, self.cadence, self.fov, self.path, self.frame,
+                self.subfields)
+
+    def __setstate__(self, state):
+        self.__init__(*state[:-1], **state[-1])
 
     #===========================================================================
     def uvt(self, indices, remask=False):

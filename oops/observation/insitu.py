@@ -24,8 +24,6 @@ class InSitu(Observation):
     do not require directional information.
     """
 
-    PACKRAT_ARGS = ['cadence', 'path', 'subfields']
-
     #===========================================================================
     def __init__(self, cadence, path, **subfields):
         """Constructor for an InSitu observation.
@@ -83,7 +81,11 @@ class InSitu(Observation):
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
-        return
+    def __getstate__(self):
+        return (self.cadence, self.path, self.subfields)
+
+    def __setstate__(self, state):
+        self.__init__(*state[:-1], **state[-1])
 
 ################################################################################
 # UNIT TESTS
