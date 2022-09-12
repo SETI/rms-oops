@@ -20,9 +20,6 @@ class Snapshot(Observation):
     all exposed at the same time.
     """
 
-    PACKRAT_ARGS = ['axes', 'tstart', 'texp', 'fov', 'path', 'frame',
-                    '**subfields']
-
     INVENTORY_IMPLEMENTED = True
 
     #===========================================================================
@@ -96,6 +93,13 @@ class Snapshot(Observation):
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
+
+    def __getstate__(self):
+        return (self.axes, self.tstart, self.texp, self.fov, self.path,
+                self.frame, self.subfields)
+
+    def __setstate__(self, state):
+        self.__init__(*state[:-1], **state[-1])
 
     #===========================================================================
     def uvt(self, indices, remask=False):

@@ -20,12 +20,9 @@ class SpiceType1Frame(Frame):
     kernel.
     """
 
-    PACKRAT_ARGS = ['spice_frame', 'spice_host', 'tick_tolerance',
-                    'spice_reference', 'id']
-
     #===========================================================================
     def __init__(self, spice_frame, spice_host, tick_tolerance,
-                       spice_reference="J2000", id=None):
+                       spice_reference="J2000", frame_id=None, unpickled=False):
         """Constructor for a SpiceType1Frame.
 
         Input:
@@ -41,17 +38,21 @@ class SpiceType1Frame(Frame):
             spice_reference the name or integer ID of the reference frame as
                             used in the SPICE toolkit; "J2000" by default.
 
-            id              the name or ID under which the frame will be
+            frame_id        the name or ID under which the frame will be
                             registered. By default, this will be the value of
                             spice_id if that is given as a string; otherwise
                             it will be the name as used by the SPICE toolkit.
+
+            unpickled       True if this object was read from a pickle file. If
+                            so, then it will be treated as a duplicate of a
+                            pre-existing SpicePath for the same SPICE ID.
         """
 
         # Preserve the inputs
         self.spice_frame = spice_frame
         self.spice_host = spice_host
         self.spice_reference = spice_reference
-        self.id = id
+        self.frame_id = frame_id
 
         # Interpret the SPICE frame and reference IDs
         (self.spice_frame_id,
@@ -64,7 +65,7 @@ class SpiceType1Frame(Frame):
          self.spice_body_name) = spice.body_id_and_name(spice_host)
 
         # Fill in the time tolerances
-        if type(tick_tolerance) == type(''):
+        if isintance(tick_tolerance, str):
             self.tick_tolerance = cspyce.sctiks(spice_body_id, tick_tolerance)
         else:
             self.tick_tolerance = tick_tolerance
@@ -72,7 +73,7 @@ class SpiceType1Frame(Frame):
         self.time_tolerance = None      # filled in on first use
 
         # Fill in the Frame ID and save it in the SPICE global dictionary
-        self.frame_id = id or self.spice_frame_name
+        self.frame_id = frame_id or self.spice_frame_name
         spice.FRAME_TRANSLATION[self.spice_frame_id]   = self.frame_id
         spice.FRAME_TRANSLATION[self.spice_frame_name] = self.frame_id
 
@@ -97,12 +98,26 @@ class SpiceType1Frame(Frame):
 
         # Always register a SpiceType1Frame
         # This also fills in the waypoint
-        self.register()
+        self.register(unpickled=unpickled)
 
         # Initialize cache
         self.cached_shape = None
         self.cached_time = None
         self.cached_transform = None
+
+    def __getstate__(self):
+        return (self.spice_frame, self.spice_host, self.tick_tolerance,
+                self.spice_reference)
+
+    def __setstate__(self, state):
+
+        (spice_frame_name, spice_host, tick_tolerance, spice_reference) = state
+
+        # If this is a duplicate of a pre-existing SpiceType1Frame, make sure it
+        # gets assigned the pre-existing frame ID and Wayframe.
+        frame_id = spice.FRAME_TRANSLATION.get(spice_frame_name, None)
+        self.__init__(spice_frame_name, spice_host, tick_tolerance,
+                      spice_reference, frame_id=frame_id, unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):

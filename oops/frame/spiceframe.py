@@ -21,12 +21,9 @@ import oops.spice_support as spice
 class SpiceFrame(Frame):
     """A Frame defined within the SPICE toolkit."""
 
-    PACKRAT_ARGS = ['spice_frame', 'spice_reference', 'frame_id',
-                    'omega_type', 'omega_dt']
-
     #===========================================================================
-    def __init__(self, spice_frame, spice_reference='J2000', id=None,
-                       omega_type='tabulated', omega_dt=1.):
+    def __init__(self, spice_frame, spice_reference='J2000', frame_id=None,
+                       omega_type='tabulated', omega_dt=1., unpickled=False):
         """Constructor for a SpiceFrame.
 
         Input:
@@ -36,7 +33,7 @@ class SpiceFrame(Frame):
             spice_reference the name or integer ID of the reference frame as
                             used in the SPICE toolkit; 'J2000' by default.
 
-            id              the string ID under which the frame will be
+            frame_id        the string ID under which the frame will be
                             registered. By default, this will be the name as
                             used by the SPICE toolkit.
 
@@ -46,6 +43,10 @@ class SpiceFrame(Frame):
 
             omega_dt        default time step in seconds to use for spline-based
                             numerical derivatives of omega.
+
+            unpickled       True if this object was read from a pickle file. If
+                            so, then it will be treated as a duplicate of a
+                            pre-existing SpicePath for the same SPICE ID.
         """
 
         # Preserve the inputs
@@ -62,7 +63,7 @@ class SpiceFrame(Frame):
          self.spice_reference_name) = spice.frame_id_and_name(spice_reference)
 
         # Fill in the Frame ID and save it in the SPICE global dictionary
-        self.frame_id = id or self.spice_frame_name
+        self.frame_id = frame_id or self.spice_frame_name
         spice.FRAME_TRANSLATION[self.spice_frame_id]   = self.frame_id
         spice.FRAME_TRANSLATION[self.spice_frame_name] = self.frame_id
 
@@ -71,7 +72,7 @@ class SpiceFrame(Frame):
         self.reference = Frame.as_wayframe(reference_id)
 
         # Fill in the origin waypoint
-        self.spice_origin_id   = cspyce.frinfo(self.spice_frame_id)[0]
+        self.spice_origin_id = cspyce.frinfo(self.spice_frame_id)[0]
         self.spice_origin_name = cspyce.bodc2n(self.spice_origin_id)
         origin_id = spice.PATH_TRANSLATION[self.spice_origin_id]
 
@@ -94,7 +95,22 @@ class SpiceFrame(Frame):
 
         # Always register a SpiceFrame
         # This also fills in the waypoint
-        self.register()
+        self.register(unpickled=unpickled)
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.spice_frame_name, self.spice_reference, self.omega_type,
+                self.omega_dt)
+
+    def __setstate__(self, state):
+
+        (spice_frame_name, spice_reference, omega_type, omega_dt) = state
+
+        # If this is a duplicate of a pre-existing SpiceFrame, make sure it gets
+        # assigned the pre-existing frame ID and Wayframe.
+        frame_id = spice.FRAME_TRANSLATION.get(spice_frame_name, None)
+        self.__init__(spice_frame_name, spice_reference, frame_id=frame_id,
+                      omega_type=omega_type, omega_dt=omega_dt, unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):
@@ -556,9 +572,9 @@ class Test_SpiceFrame(unittest.TestCase):
         # Test of various omega methods
         ########################################
 
-        wac1 = SpiceFrame('CASSINI_ISS_WAC', omega_type='tabulated', id='wac1')
-        wac2 = SpiceFrame('CASSINI_ISS_WAC', omega_type='numerical', id='wac2')
-        wac3 = SpiceFrame('CASSINI_ISS_WAC', omega_type='zero',      id='wac3')
+        wac1 = SpiceFrame('CASSINI_ISS_WAC', omega_type='tabulated', frame_id='wac1')
+        wac2 = SpiceFrame('CASSINI_ISS_WAC', omega_type='numerical', frame_id='wac2')
+        wac3 = SpiceFrame('CASSINI_ISS_WAC', omega_type='zero',      frame_id='wac3')
 
         # Test a single time
         xform1 = wac1.transform_at_time(TDB, quick=None)

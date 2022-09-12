@@ -13,8 +13,6 @@ class FlatFOV(FOV):
     implementing an exact pinhole camera model.
     """
 
-    PACKRAT_ARGS = ['uv_scale', 'uv_shape', 'uv_los', 'uv_area']
-
     #===========================================================================
     def __init__(self, uv_scale, uv_shape, uv_los=None, uv_area=None):
         """Constructor for a FlatFOV.
@@ -63,6 +61,12 @@ class FlatFOV(FOV):
                              [0.,   scale.vals[1]]], drank=1).as_readonly()
         self.duv_dxy = Pair([[1/scale.vals[0], 0.],
                              [0., 1/scale.vals[1]]], drank=1).as_readonly()
+
+    def __getstate__(self):
+        return (self.uv_scale, self.uv_shape, self.uv_los, self.uv_area)
+
+    def __setstate__(self):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False):

@@ -17,8 +17,6 @@ class RasterSlit1D(Observation):
     FOV describes the slit.
     """
 
-    PACKRAT_ARGS = ['axes', 'cadence', 'fov', 'path', 'frame', '**subfields']
-
     #===========================================================================
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterSlit observation.
@@ -115,6 +113,13 @@ class RasterSlit1D(Observation):
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
+
+    def __getstate__(self):
+        return (self.axes, self.cadence, self.fov, self.path, self.frame,
+                self.subfields)
+
+    def __setstate__(self, state):
+        self.__init__(*state[:-1], **state[-1])
 
     #===========================================================================
     def uvt(self, indices, remask=False):

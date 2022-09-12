@@ -66,10 +66,12 @@ class Test_spice_shape(unittest.TestCase):
         from ..unittester_support import TESTDATA_PARENT_DIRECTORY
         import os.path
 
+        spice.initialize()
+
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
 
-        ignore = SpicePath("VENUS", "SSB", "J2000", "APHRODITE")
+        ignore = SpicePath("VENUS", "SSB", "J2000", path_id="APHRODITE")
         ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
 
         body = spice_shape("VENUS")

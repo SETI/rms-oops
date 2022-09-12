@@ -1134,8 +1134,7 @@ class Scalar(Qube):
                         Qube.PREFER_BUILTIN_TYPES.
         """
 
-        result = Qube._mean_or_sum(self, axis, recursive=recursive,
-                                   _combine_as_mean=False)
+        result = Qube._sum(self, axis, recursive=recursive)
 
         # Convert result to a Python constant if necessary
         if builtins is None:
@@ -1163,8 +1162,7 @@ class Scalar(Qube):
                         Qube.PREFER_BUILTIN_TYPES.
         """
 
-        result = Qube._mean_or_sum(self, axis, recursive=recursive,
-                                   _combine_as_mean=True)
+        result = Qube._mean(self, axis, recursive=recursive)
 
         # Convert result to a Python type if necessary
         if builtins is None:
@@ -1393,6 +1391,8 @@ class Scalar(Qube):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self.units, arg.units)
+        if self.denom or arg.denom:
+            raise ValueError('"<" operator is incompatible denominators')
 
         compare = (self._values_ < arg._values_)
 
@@ -1404,12 +1404,16 @@ class Scalar(Qube):
 
         compare &= (self.antimask & arg.antimask)
 
-        return Qube.BOOLEAN_CLASS(compare)
+        result = Qube.BOOLEAN_CLASS(compare)
+        result._truth_if_all_ = True
+        return result
 
     def __gt__(self, arg):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self.units, arg.units)
+        if self.denom or arg.denom:
+            raise ValueError('">" operator is incompatible denominators')
 
         compare = (self._values_ > arg._values_)
 
@@ -1421,12 +1425,16 @@ class Scalar(Qube):
 
         compare &= (self.antimask & arg.antimask)
 
-        return Qube.BOOLEAN_CLASS(compare)
+        result = Qube.BOOLEAN_CLASS(compare)
+        result._truth_if_all_ = True
+        return result
 
     def __le__(self, arg):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self.units, arg.units)
+        if self.denom or arg.denom:
+            raise ValueError('"<=" operator is incompatible denominators')
 
         compare = (self._values_ <= arg._values_)
 
@@ -1438,12 +1446,16 @@ class Scalar(Qube):
 
         compare &= (self.antimask & arg.antimask)
 
-        return Qube.BOOLEAN_CLASS(compare)
+        result = Qube.BOOLEAN_CLASS(compare)
+        result._truth_if_all_ = True
+        return result
 
     def __ge__(self, arg):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self.units, arg.units)
+        if self.denom or arg.denom:
+            raise ValueError('">=" operator is incompatible denominators')
 
         compare = (self._values_ >= arg._values_)
 
@@ -1455,7 +1467,9 @@ class Scalar(Qube):
 
         compare &= (self.antimask & arg.antimask)
 
-        return Qube.BOOLEAN_CLASS(compare)
+        result = Qube.BOOLEAN_CLASS(compare)
+        result._truth_if_all_ = True
+        return result
 
     def __round__(self, digits):
 
@@ -1478,8 +1492,6 @@ Scalar.MASKED = Scalar(1, True).as_readonly()
 
 Scalar.INF    = Scalar(np.inf).as_readonly()
 Scalar.NEGINF = Scalar(-np.inf).as_readonly()
-
-Scalar.SIZE0  = Scalar(np.array([0])[:0]).as_readonly()
 
 ################################################################################
 # Once the load is complete, we can fill in a reference to the Scalar class

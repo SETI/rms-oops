@@ -19,10 +19,11 @@ class SpinFrame(Frame):
     another frame.
     """
 
-    PACKRAT_ARGS = ['offset', 'rate', 'epoch', 'axis2', 'reference', 'frame_id']
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
 
     #===========================================================================
-    def __init__(self, offset, rate, epoch, axis, reference, id=None):
+    def __init__(self, offset, rate, epoch, axis, reference, frame_id=None,
+                       unpickled=False):
         """Constructor for a Spin Frame.
 
         Input:
@@ -31,8 +32,9 @@ class SpinFrame(Frame):
             epoch       the time TDB at which the frame is defined.
             axis        the rotation axis: 0 for x, 1 for y, 2 for z.
             reference   the frame relative to which this frame is defined.
-            id          the ID under which this frame is to be registered;
+            frame_id    the ID under which this frame is to be registered;
                         None to use a temporary ID.
+            unpickled   True if this frame has been read from a pickle file.
 
         Note that rate, offset and epoch can be Scalar values, in which case the
         shape of the SpinFrame is defined by broadcasting the shapes of these
@@ -54,13 +56,37 @@ class SpinFrame(Frame):
         self.omega = Vector3(omega_vals, self.rate.mask)
 
         # Required attributes
-        self.frame_id  = id
+        self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin or Path.SSB
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
-        self.register()
+        self.register(unpickled=unpickled)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.offset.vals, self.rate.vals, self.epoch.vals,
+                       self.axis2, self.reference.frame_id)
+                SpinFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.offset, self.rate, self.epoch, self.axis2,
+                self.reference, self.shape)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (offset, rate, epoch, axis2, reference, shape) = state
+        if shape == ():
+            key = (offset.vals, rate.vals, epoch.vals, axis, reference.frame_id)
+            frame_id = SpinFrame.FRAME_IDS.get(key, None)
+        else:
+            frame_id = None
+
+        self.__init__(offset, rate, epoch, axis2, reference, frame_id=frame_id,
+                      unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):

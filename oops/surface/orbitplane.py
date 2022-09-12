@@ -34,10 +34,8 @@ class OrbitPlane(Surface):
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = False
 
-    PACKRAT_ARGS = ['elements', 'epoch', 'origin', 'frame', 'id']
-
     #===========================================================================
-    def __init__(self, elements, epoch, origin, frame, id=None):
+    def __init__(self, elements, epoch, origin, frame, path_id=None):
         """Constructor for an OrbitPlane surface.
 
             elements    a tuple containing three, six or nine orbital elements:
@@ -64,7 +62,7 @@ class OrbitPlane(Surface):
             origin      the path or ID of the planet center.
             frame       the frame or ID of the frame in which the orbit is
                         defined. Should be inertial.
-            id          the ID under which to register the orbit path; None to
+            path_id     the ID under which to register the orbit path; None to
                         leave it unregistered
 
         Note that the origin and frame used by the returned OrbitPlane object
@@ -95,10 +93,10 @@ class OrbitPlane(Surface):
 
         # If the orbit is inclined, define a special-purpose inclined frame
         if self.has_inclination:
-            if id is None:
+            if path_id is None:
                 frame_id = None
             else:
-                frame_id = id + "_INCLINATION"
+                frame_id = path_id + "_INCLINATION"
 
             self.inclined_frame = InclinedFrame(elements[6],  # inclination
                                                 elements[7],  # ascending node
@@ -106,7 +104,7 @@ class OrbitPlane(Surface):
                                                 self.epoch,
                                                 self.internal_frame,
                                                 True,         # despin
-                                                id = frame_id)
+                                                frame_id = frame_id)
             self.internal_frame = self.inclined_frame
         else:
             self.inclined_frame = None
@@ -128,10 +126,10 @@ class OrbitPlane(Surface):
             self.lon_sub_peri = self.lon - elements[4]
             self.n_sub_prec = self.n - elements[5]
 
-            if id is None:
-                path_id = None
+            if path_id is None:
+                new_path_id = None
             else:
-               path_id = id + "_ECCENTRICITY"
+                new_path_id = path_id + "_ECCENTRICITY"
 
             self.peri_path = CirclePath(elements[0] * elements[3],  # a*e
                                         elements[4] + PI,           # apocenter
@@ -139,23 +137,23 @@ class OrbitPlane(Surface):
                                         self.epoch,                 # epoch
                                         self.internal_origin,       # origin
                                         self.internal_frame,        # reference
-                                        id = path_id)
+                                        path_id = new_path_id)
             self.internal_origin = self.peri_path
 
             # The peri_path circulates around the initial origin but does not
             # rotate.
 
-            if id is None:
+            if path_id is None:
                 frame_id = None
             else:
-                frame_id = id + "_PERICENTER"
+                frame_id = path_id + "_PERICENTER"
 
             self.spin_frame = SpinFrame(elements[4],                # pericenter
                                         elements[5],                # precession
                                         self.epoch,                 # epoch
                                         2,                          # z-axis
                                         self.internal_frame,        # reference
-                                        id = frame_id)
+                                        frame_id = frame_id)
             self.internal_frame = self.spin_frame
 
         else:
@@ -173,6 +171,12 @@ class OrbitPlane(Surface):
         # The primary origin and frame for the orbit
         self.origin = self.internal_origin.waypoint
         self.frame = self.internal_frame.wayframe
+
+    def __getstate__(self):
+        return (self.elements, self.epoch, self.origin, self.frame)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

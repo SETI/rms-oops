@@ -23,6 +23,7 @@ import cspyce.aliases
 cspyce.use_errors()
 cspyce.use_aliases()
 
+import oops.backplane.all   as Backplane
 import oops.cadence.all     as cadence
 import oops.calibration.all as calib
 import oops.fov.all         as fov
@@ -32,7 +33,6 @@ import oops.observation.all as obs
 import oops.path.all        as path
 import oops.surface.all     as surface
 
-from oops.backplane import Backplane
 from oops.body      import Body
 from oops.event     import Event
 from oops.fittable  import Fittable

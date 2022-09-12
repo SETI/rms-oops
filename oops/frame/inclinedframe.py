@@ -15,18 +15,20 @@ import oops.constants as constants
 
 class InclinedFrame(Frame):
     """InclinedFrame is a Frame subclass describing a frame that is inclined to
-    the equator of another frame. It is defined by an inclination, a node at
-    epoch, and a nodal regression rate. This frame is oriented to be "nearly
-    inertial," meaning that a longitude in the new frame is determined by
-    measuring from the reference longitude in the reference frame, along that
-    frame's equator to the ascending node, and thence along the ascending node.
+    the equator of another frame.
+
+    It is defined by an inclination, a node at epoch, and a nodal regression
+    rate. This frame is oriented to be "nearly inertial," meaning that a
+    longitude in the new frame is determined by measuring from the reference
+    longitude in the reference frame, along that frame's equator to the
+    ascending node, and thence along the ascending node.
     """
 
-    PACKRAT_ARGS = ['inc', 'node', 'rate', 'epoch', 'reference', 'despin',
-                    'frame_id']
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
 
     #===========================================================================
-    def __init__(self, inc, node, rate, epoch, reference, despin=True, id=None):
+    def __init__(self, inc, node, rate, epoch, reference, despin=True,
+                       frame_id=None, unpickled=False):
         """Constructor for a InclinedFrame.
 
         Input:
@@ -50,8 +52,10 @@ class InclinedFrame(Frame):
                         a frame in which the x-axis is tied to the ascending
                         node.
 
-            id          the ID under which the frame will be registered; None
+            frame_id    the ID under which the frame will be registered; None
                         to leave the frame unregistered.
+
+            unpickled   True if this frame has been read from a pickle file.
 
         Note that inc, node, rate and epoch can all be scalars of arbitrary
         shape. The shape of the InclinedFrame is the result of broadcasting all
@@ -65,7 +69,7 @@ class InclinedFrame(Frame):
 
         self.shape = Qube.broadcast(self.inc, self.node, self.rate, self.epoch)
 
-        self.frame_id  = id
+        self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
         self.keys      = set()
@@ -74,7 +78,7 @@ class InclinedFrame(Frame):
                                 reference=self.reference)
         self.rotate = Rotation(self.inc, axis=0, reference=self.spin1)
 
-        self.despin = despin
+        self.despin = bool(despin)
         if despin:
             self.spin2 = SpinFrame(-self.node, -self.rate, self.epoch, axis=2,
                                    reference=self.rotate)
@@ -82,7 +86,32 @@ class InclinedFrame(Frame):
             self.spin2 = None
 
         # Update wayframe and frame_id; register if not temporary
-        self.register()
+        self.register(unpickled=unpickled)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.inc.vals, self.node.vals, self.rate.vals,
+                       self.epoch.vals, self.reference.frame_id, self.despin)
+                InclinedFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.inc, self.node, self.rate, self.epoch, self.reference,
+                self.despin, self.shape)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (inc, node, rate, epoch, reference, despin, shape) = state
+        if shape == ():
+            key = (inc.vals, node.vals, rate.vals, epoch.vals,
+                   reference.frame_id, despin)
+            frame_id = PoleFrame.FRAME_IDS.get(key, None)
+        else:
+            frame_id = None
+
+        self.__init__(inc, node, rate, epoch, reference, despin,
+                      frame_id=frame_id, unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick=False):

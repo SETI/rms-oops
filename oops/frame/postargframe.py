@@ -15,10 +15,10 @@ class PosTargFrame(Frame):
     frame.
     """
 
-    PACKRAT_ARGS = ['xpos', 'ypos', 'reference', 'frame_id']
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
 
     #===========================================================================
-    def __init__(self, xpos, ypos, reference, id=None):
+    def __init__(self, xpos, ypos, reference, frame_id=None, unpickled=False):
         """Constructor for a PosTarg Frame.
 
         Input:
@@ -27,7 +27,8 @@ class PosTargFrame(Frame):
             ypos        the Y-position of the reference frame's Z-axis in this
                         frame, in radians.
             reference   the frame relative to which this frame is defined.
-            id          the ID to use; None to leave the frame unregistered.
+            frame_id    the ID to use; None to leave the frame unregistered.
+            unpickled   True if this frame has been read from a pickle file.
         """
 
         self.xpos = float(xpos)
@@ -49,18 +50,39 @@ class PosTargFrame(Frame):
 
         mat = ymat * xmat
 
-        self.frame_id  = id
+        self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
         self.shape     = self.reference.shape
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
-        self.register()
+        self.register(unpickled=unpickled)
 
         # It needs a wayframe before we can define the transform
         self.transform = Transform(mat, Vector3.ZERO,
                                    self, self.reference, self.origin)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.xpos, self.ypos, self.reference.frame_id)
+                PosTargFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.xpos, self.ypos, self.reference, self.shape)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (xpos, ypos, reference, shape) = state
+        if shape == ():
+            key = (xpos, ypos, reference.frame_id)
+            frame_id = PosTargFrame.FRAME_IDS.get(key, None)
+        else:
+            frame_id = None
+
+        self.__init__(xpos, ypos, reference, frame_id=frame_id, unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):

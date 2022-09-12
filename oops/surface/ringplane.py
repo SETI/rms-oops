@@ -26,9 +26,6 @@ class RingPlane(Surface):
     COORDINATE_TYPE = "polar"
     IS_VIRTUAL = False
 
-    PACKRAT_ARGS = ['origin', 'frame', 'radii', 'gravity', 'elevation',
-                    'modes', 'epoch']
-
     #===========================================================================
     def __init__(self, origin, frame, radii=None, gravity=None,
                        elevation=0., modes=[], epoch=0.):
@@ -76,6 +73,13 @@ class RingPlane(Surface):
         else:
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
+
+    def __getstate__(self):
+        return (self.origin, self.frame, self.radii, self.gravity,
+                self.elevation, self.modes, self.epoch)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=0., axes=2,

@@ -30,8 +30,6 @@ class Units(object):
     between values that include units.
     """
 
-    PACKRAT_ARGS = ['exponents', 'triple', 'name']
-
     def __init__(self, exponents, triple, name=None):
         """Constructor for a Units object.
 

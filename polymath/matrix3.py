@@ -327,7 +327,7 @@ class Matrix3(Matrix):
 
         # Rotation of a vector or matrix
         if arg.nrank > 0:
-            return self.dot(self, arg, -2, 0, type(arg), recursive)
+            return Qube.dot(self, arg, -2, 0, type(arg), recursive)
 
         # Rotation of a scalar leaves it unchanged
         else:

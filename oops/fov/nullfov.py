@@ -13,8 +13,6 @@ class NullFOV(FOV):
     e.g., an in situ instrument.
     """
 
-    PACKRAT_ARGS = []
-
     #===========================================================================
     def __init__(self):
         """Constructor for a NullFOV."""
@@ -23,6 +21,12 @@ class NullFOV(FOV):
         self.uv_scale = Pair.ONES
         self.uv_shape = (1,1)
         self.uv_area = 1.
+
+    def __getstate__(self):
+        return ()
+
+    def __setstate__(self, state):
+        self.__init__()
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False):

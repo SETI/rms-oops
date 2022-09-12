@@ -16,8 +16,6 @@ class LightSource(object):
     transmitter on the Earth or a spacecraft.
     """
 
-    PACKRAT_ARGS = ['name', 'source', 'weight']
-
     #===========================================================================
     def __init__(self, name, source, weight=None):
         """Constructor for a LightSource. It can be specified as:
@@ -91,6 +89,12 @@ class LightSource(object):
 
         # Register as a Body
         Body.BODY_REGISTRY[self.name] = self
+
+    def __getstate__(self):
+        return (self.name, self.source, self.weight)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def photon_to_event(self, event, derivs=False, guess=None,

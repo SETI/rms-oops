@@ -14,8 +14,6 @@ class ReshapedCadence(Cadence):
     This can be used, for example, to convert a 1-D cadence into an N-D cadence.
     """
 
-    PACKRAT_ARGS = ['cadence', 'shape']
-
     #===========================================================================
     def __init__(self, cadence, shape):
         """Constructor for a ReshapedCadence.
@@ -46,6 +44,12 @@ class ReshapedCadence(Cadence):
         self._oldstride = np.cumproduct((self._oldshape + (1,))[::-1])[-2::-1]
 
         return
+
+    def __getstate__(self):
+        return (self.cadence, self.shape)
+
+    def __setstate__(self):
+        self.__init__(*state)
 
     #===========================================================================
     @staticmethod

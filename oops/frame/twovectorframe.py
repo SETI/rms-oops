@@ -17,13 +17,13 @@ class TwoVectorFrame(Frame):
     and the second vector points in the half-plane of another axis.
     """
 
-    PACKRAT_ARGS = ['reference', 'vector1', 'axis1', 'vector2', 'axis2',
-                    'frame_id']
-
     XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2}
 
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
+
     #===========================================================================
-    def __init__(self, frame, vector1, axis1, vector2, axis2, id='+'):
+    def __init__(self, frame, vector1, axis1, vector2, axis2, frame_id='+',
+                       unpickled=False):
         """Constructor for a TwoVectorFrame.
 
         Input:
@@ -40,12 +40,14 @@ class TwoVectorFrame(Frame):
             axis2       'X', 'Y', or 'Z', indicating the axis defined by the
                         second vector.
 
-            id          the ID under which the frame will be registered. None to
+            frame_id    the ID under which the frame will be registered. None to
                         leave the frame unregistered. If the value begins with
                         "+", then the "+" is replaced by an underscore and the
                         result is appended to the name of the reference frame.
                         If the name is "+" alone, then the registered name is
                         that of the reference frame appended with '_TWOVECTOR'.
+
+            unpickled   True if this frame has been read from a pickle file.
         """
 
         self.vector1 = Vector3.as_vector3(vector1)
@@ -53,28 +55,30 @@ class TwoVectorFrame(Frame):
         self.axis1 = axis1
         self.axis2 = axis2
 
+        assert(self.axis1 in 'XYZ')
+        assert(self.axis2 in 'XYZ')
+
         self.reference = Frame.as_wayframe(frame)
 
-        self.shape = Qube.broadcasted_shape(self.vector1, self.vector2)
+        self.shape = Qube.broadcasted_shape(self.vector1, self.vector2,
+                                            self.reference)
         self.keys = set()
 
         self.origin = self.reference.origin
 
         # Fill in the frame ID
-        if id is None:
+        self._state_frame_id = frame_id
+        if frame_id is None:
             self.frame_id = Frame.temporary_frame_id()
-        elif id.startswith('+') and len(id) > 1:
-            self.frame_id = self.reference.frame_id + '_' + id[1:]
-        elif id == '+':
+        elif frame_id.startswith('+') and len(frame_id) > 1:
+            self.frame_id = self.reference.frame_id + '_' + frame_id[1:]
+        elif frame_id == '+':
             self.frame_id = self.reference.frame_id + '_TWOVECTOR'
         else:
-            self.frame_id = id
+            self.frame_id = frame_id
 
         # Register if necessary
-        if id:
-            self.register()
-        else:
-            self.wayframe = self
+        self.register(unpickled=unpickled)
 
         # Derive the tranform now
         matrix = Matrix3.twovec(self.vector1, TwoVectorFrame.XYZDICT[axis1],
@@ -85,6 +89,32 @@ class TwoVectorFrame(Frame):
 
         z_axis = matrix.row_vector(2, Vector3)
         self.node = Vector3.ZAXIS.ucross(z_axis)
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.reference.frame_id,
+                       tuple(self.vector1.vals), self.axis1,
+                       tuple(self.vector2.vals), self.axis2)
+                TwoVectorFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.reference, self.vector1, self.axis1,
+                                self.vector2, self.axis2)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (frame, vector1, axis1, vector2, axis2) = state
+        if vector1.shape == () and vector2.shape == ():
+            key = (frame.frame_id, tuple(vector1.vals), axis1,
+                                   tuple(vector2.vals), axis2)
+            frame_id = TwoVectorFrame.FRAME_IDS.get(key, None)
+        else:
+            frame_id = None
+
+        self.__init__(frame, pole, retrograde, aries, frame_id=frame_id,
+                      cache_size=cache_size, unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):

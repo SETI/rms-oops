@@ -13,7 +13,7 @@ import cspyce
 from polymath import Qube, Boolean, Scalar, Pair, Vector
 from polymath import Vector3, Matrix3, Quaternion
 
-from oops.path      import Path
+from oops.path           import Path
 from oops.path.multipath import MultiPath
 from oops.path.spicepath import SpicePath
 
@@ -227,14 +227,6 @@ class Body(object):
                         SPICE; otherwise, None.
         path            a Waypoint for the body's path.
         frame           a Wayframe for the body's frame.
-
-        ring_frame      the Wayframe of a "despun" RingFrame relevant to a ring
-                        that might orbit this body. None if not (yet) defined.
-        ring_is_retrograde  True if the ring frame is retrograde relative to
-                            IAU-defined north.
-        ring_body       the Body object associated with an equatorial, unbounded
-                        ring; None if not defined.
-
         parent          the physical body (not necessarily the barycenter) about
                         which this body orbits. If a string is given, the parent
                         is found by looking it up in the BODY_REGISTRY
@@ -244,6 +236,15 @@ class Body(object):
                         is given, the barycenter is found by looking it up in
                         the BODY_REGISTRY dictionary. If None, this is the
                         parent body.
+        spice_name      name of the Body within the SPICE toolkit, if this is
+                        in SPICE.
+
+        ring_frame      the Wayframe of a "despun" RingFrame relevant to a ring
+                        that might orbit this body. None if not (yet) defined.
+        ring_is_retrograde  True if the ring frame is retrograde relative to
+                            IAU-defined north.
+        ring_body       the Body object associated with an equatorial, unbounded
+                        ring; None if not defined.
 
         surface         the Surface object defining the body's surface. None if
                         the body is a point and has no surface.
@@ -271,6 +272,7 @@ class Body(object):
     BODY_REGISTRY = {}          # global dictionary of body objects
     STANDARD_BODIES = set()     # Bodies that always have the same definition
 
+    #===========================================================================
     def __init__(self, name, path, frame, parent=None, barycenter=None,
                  spice_name=None):
         """Constructor for a Body object."""
@@ -279,6 +281,8 @@ class Body(object):
             raise TypeError('Body name must be a string: ' + str(name))
 
         self.name = name.upper()
+        self.is_standard = False        # overridden where necessary
+        self.spk = None
 
         if spice_name is None:
             spice_name = self.name
@@ -299,7 +303,6 @@ class Body(object):
         self.ring_pole = None
         self.ring_body = None
         self.is_ring = False
-
         self.invariable_pole = None
         self.invariable_frame = None
 
@@ -320,20 +323,23 @@ class Body(object):
         self.gravity = None
         self.lightsource = None
         self.keywords = [self.name]
-
-        self.children = []
+        self.child_names = []
 
         # Append this to the appropriate child lists
         if self.parent is not None:
-            if self not in self.parent.children:
-                self.parent.children.append(self)
+            if self.name not in self.parent.child_names:
+                self.parent.child_names.append(self.name)
 
         if self.barycenter is not None:
-            if self not in self.barycenter.children:
-                self.barycenter.children.append(self)
+            if self.name not in self.barycenter.child_names:
+                self.barycenter.child_names.append(self.name)
 
-        # Save it in the Solar System dictionary
-        Body.BODY_REGISTRY[self.name] = self
+        # Register only the first occurrence of this name
+        if self.name not in Body.BODY_REGISTRY:
+            Body.BODY_REGISTRY[self.name] = self
+            self.is_registered = True
+        else:
+            self.is_registered = False
 
     #===========================================================================
     def __str__(self):
@@ -344,41 +350,89 @@ class Body(object):
         return self.__str__()
 
     ############################################################################
-    # For serialization, standard bodies are uniquely identified by name
+    # Serialization support
     ############################################################################
 
-    INIT_ARGS  = ['name', 'path', 'frame', 'parent', 'barycenter', 'spice_name']
-    EXTRA_ARGS = ['surface', 'radius', 'inner_radius',
-                  'ring_epoch', 'ring_is_retrograde', 'ring_pole',
-                  'ring_body', 'gravity']
+    def __getstate__(self):
 
-    def PACKRAT__args__(self):
-        if self.name in Body.STANDARD_BODIES:
-            return ['name'] + Body.EXTRA_ARGS
+        body_dict = self.__dict__.copy()
 
-        return Body.INIT_ARGS + Body.EXTRA_ARGS
+        # Avoid links to other bodies if they are standard
+        # This prevents serialization from saving the entire Solar System
+        if self.parent and self.parent.is_standard:
+            body_dict['parent'] = self.parent.name
+
+        if self.barycenter and self.barycenter.is_standard:
+            body_dict['barycenter'] = self.barycenter.name
+
+        body_dict['is_registered'] = False
+
+        return body_dict
 
     #===========================================================================
-    @staticmethod
-    def PACKRAT__init__(cls, **args):
+    def __setstate__(self, state):
 
-        name = args['name']
-        if name in Body.STANDARD_BODIES:
-            obj = Body.lookup(name)
+        self.__dict__ = state
+
+        # Register if necessary
+        if self.name not in Body.BODY_REGISTRY:
+            Body.BODY_REGISTRY[self.name] = self
+            self.is_registered = True
         else:
-            obj = Body.__init__(name, args['path'], args['frame'],
-                                      args['parent'], args['barycenter'],
-                                      args['spice_name'])
+            self.is_registered = False
 
-        # Override parameters that might change
-        obj.apply_surface(args['surface'], args['radius'], args['inner_radius'])
+        # Register with parent and barycenter
+        if isinstance(self.parent, str):
+            self.parent = Body.BODY_REGISTRY[self.parent]
+        if self.parent and self.name not in self.parent.child_names:
+            self.parent.child_names.append(self.name)
 
-        obj.apply_ring_frame(args['ring_epoch'], args['ring_is_retrograde'],
-                             args['ring_pole'])
+        if isinstance(self.barycenter, str):
+            self.barycenter = Body.BODY_REGISTRY[self.barycenter]
+        if self.barycenter and self.name not in self.barycenter.child_names:
+            self.barycenter.child_names.append(self.name)
 
-        obj.apply_gravity(args['gravity'])
+        # Load SPICE kernels if necessary
+        if 'EARTH' not in Body.BODY_REGISTRY:
+            Body.define_solar_system()
 
-        return obj
+        nplanet = body.spice_id // 100
+        irregs = body.spice_id // 1000
+
+        if self.spk:
+            cspyce.furnsh(spk)
+
+        elif nplanet == 4:
+            if body.spice_id not in Body.MARS_MOONS_LOADED:
+                Body.define_solar_system(planets=(4,))
+
+        elif nplanet == 5 or irregs == 55:
+            if body.spice_id not in Body.JUPITER_MOONS_LOADED:
+                Body.define_solar_system(planets=(5,))
+                if body.spice_id not in Body.JUPITER_MOONS_LOADED:
+                    Body.define_solar_system(planets=(5,), irregulars=True)
+
+        elif nplanet == 6 or irregs == 65:
+            if body.spice_id not in Body.SATURN_MOONS_LOADED:
+                Body.define_solar_system(planets=(6,))
+                if body.spice_id not in Body.SATURN_MOONS_LOADED:
+                    Body.define_solar_system(planets=(6,), irregulars=True)
+
+        elif nplanet == 7:
+            if body.spice_id not in Body.URANUS_MOONS_LOADED:
+                Body.define_solar_system(planets=(7,))
+                if body.spice_id not in Body.URANUS_MOONS_LOADED:
+                    Body.define_solar_system(planets=(7,), irregulars=True)
+
+        elif nplanet == 8:
+            if body.spice_id not in Body.NEPTUNE_MOONS_LOADED:
+                Body.define_solar_system(planets=(8,))
+                if body.spice_id not in Body.NEPTUNE_MOONS_LOADED:
+                    Body.define_solar_system(planets=(8,), irregulars=True)
+
+        elif nplanet == 9:
+            if body.spice_id not in Body.PLUTO_MOONS_LOADED:
+                Body.define_solar_system(planets=(9,))
 
     ############################################################################
 
@@ -413,8 +467,8 @@ class Body(object):
 
             x_axis = Vector3.ZAXIS.ucross(pole)
             self.invariable_frame = TwoVectorFrame(Frame.J2000,
-                                                   pole, 'Z', x_axis, 'X',
-                                                   id=self.name + '_INVARIABLE')
+                                            pole, 'Z', x_axis, 'X',
+                                            frame_id=self.name + '_INVARIABLE')
             self.invariable_pole = pole
 
         else:
@@ -452,6 +506,10 @@ class Body(object):
     ############################################################################
     # Tools for selecting the children of a body
     ############################################################################
+
+    @property
+    def children(self):
+        return [Body.BODY_REGISTRY[name] for name in self.child_names]
 
     def select_children(self, include_all=None, include_any=None,
                               exclude=None, radius=None, recursive=False):
@@ -615,7 +673,7 @@ class Body(object):
 
         selection = []
         for body in bodies:
-            if body.children != [] and body not in selection:
+            if body.child_names and body not in selection:
                 selection.append(body)
 
         return selection
@@ -627,7 +685,7 @@ class Body(object):
 
         selection = []
         for body in bodies:
-            if body.children == [] and body not in selection:
+            if not body.child_names and body not in selection:
                 selection.append(body)
 
         return selection
@@ -694,7 +752,7 @@ class Body(object):
     ############################################################################
 
     @staticmethod
-    def define_multipath(bodies, origin="SSB", frame="J2000", id=None):
+    def define_multipath(bodies, origin="SSB", frame="J2000", path_id=None):
         """Construct a multipath for the centers of the given list of bodies.
 
         The default ID of the path returned is the name of the first body with
@@ -705,7 +763,7 @@ class Body(object):
         for body in bodies:
             paths.append(body.path)
 
-        return MultiPath(paths, origin, frame, id)
+        return MultiPath(paths, origin, frame, path_id)
 
     ############################################################################
     # Body registry
@@ -731,7 +789,14 @@ class Body(object):
         """
 
         if isinstance(body, Body):
-            return body
+            if body.is_registered:
+                return body
+
+            # If Body is unregistered, try to return a registered version.
+            try:
+                return Body.lookup(body.name)
+            except KeyError:
+                return body
 
         return Body.lookup(body)
 
@@ -835,18 +900,18 @@ class Body(object):
                                      asof=asof)
 
         # Define B1950 in addition to J2000
-        ignore = SpiceFrame("B1950", "J2000")
+        _ = SpiceFrame("B1950", "J2000")
 
         # SSB and Sun
-        Body.define_bodies(["SSB"], None, None, ["SUN", "BARYCENTER"])
-        Body.define_bodies(["SUN"], None, None, ["SUN"])
+        Body.define_bodies(["SSB"], None, None, ["SUN", "BARYCENTER"], True)
+        Body.define_bodies(["SUN"], None, None, ["SUN"], True)
 
         # Mercury, Venus, Earth orbit the Sun
-        Body.define_bodies([199, 299, 399], "SUN", "SUN", ["PLANET"])
+        Body.define_bodies([199, 299, 399], "SUN", "SUN", ["PLANET"], True)
 
         # Add Earth's Moon
         Body.define_bodies([301], "EARTH", "EARTH",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+                           ["SATELLITE", "CLASSICAL", "REGULAR"], True)
 
         # Define planetary systems
         if 4 in planets:
@@ -894,15 +959,17 @@ class Body(object):
                                     asof=asof)
 
         # Mars and the Mars barycenter orbit the Sun
-        Body.define_bodies([499], "SUN", "SUN", ["PLANET"])
-        Body.define_bodies([4], "SUN", "SUN", ["BARYCENTER"])
+        Body.define_bodies([499], "SUN", "SUN", ["PLANET"], is_standard=True)
+        Body.define_bodies([4], "SUN", "SUN", ["BARYCENTER"], is_standard=True)
 
         # Moons of Mars
         Body.define_bodies(MARS_ALL_MOONS, "MARS", "MARS",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+                           is_standard=True)
 
         # Rings of Mars
-        ring = Body.define_ring("MARS", "MARS_RING_PLANE", None, [])
+        ring = Body.define_ring("MARS", "MARS_RING_PLANE", None, [],
+                                is_standard=True)
         ring.backplane_id = 'MARS:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
@@ -933,26 +1000,28 @@ class Body(object):
                                     time=(start_time, stop_time),
                                     asof=asof)
 
-        # Jupiter and the Jupiter barycenter orbit the Sun
-        Body.define_bodies([599], "SUN", "SUN", ["PLANET"])
-        Body.define_bodies([5], "SUN", "SUN", ["BARYCENTER"])
+        # Jupiter and the Jupiter barycenter orbit the Solar System barycenter
+        Body.define_bodies([599], "SUN", "SSB", ["PLANET"], is_standard=True)
+        Body.define_bodies([5], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
 
         # Moons and rings of Jupiter
         Body.define_bodies(JUPITER_CLASSICAL, "JUPITER", "JUPITER",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+                           is_standard=True)
         Body.define_bodies(JUPITER_REGULAR, "JUPITER", "JUPITER",
-                           ["SATELLITE", "REGULAR"])
+                           ["SATELLITE", "REGULAR"], is_standard=True)
 
         if irregulars:
             Body.define_bodies(JUPITER_IRREGULAR, "JUPITER",
                                "JUPITER BARYCENTER",
-                              ["SATELLITE", "IRREGULAR"])
+                              ["SATELLITE", "IRREGULAR"], is_standard=True)
 
             for (ids, names) in JUPITER_ALIASES:
                 Body.define_bodies([ids[0]], "JUPITER", "JUPITER BARYCENTER",
-                                   ["SATELLITE", "IRREGULAR"])
+                                   ["SATELLITE", "IRREGULAR"], is_standard=True)
 
-        ring = Body.define_ring("JUPITER", "JUPITER_RING_PLANE", None, [])
+        ring = Body.define_ring("JUPITER", "JUPITER_RING_PLANE", None, [],
+                                is_standard=True)
         ring.backplane_id = 'JUPITER:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
@@ -960,7 +1029,7 @@ class Body(object):
         Body.BODY_REGISTRY['JUPITER'].ring_body = ring
 
         ring = Body.define_ring("JUPITER", "JUPITER_RING_SYSTEM",
-                                JUPITER_MAIN_RING_LIMIT, [])
+                                JUPITER_MAIN_RING_LIMIT, [], is_standard=True)
         ring.backplane_id = 'JUPITER:RING'
         ring.backplane_limits = (0., JUPITER_MAIN_RING_LIMIT)
         ring.unbounded_surface = unbounded_ring
@@ -990,26 +1059,30 @@ class Body(object):
                                     asof=asof)
 
         # Saturn and the Saturn barycenter orbit the SSB
-        Body.define_bodies([699], "SUN", "SSB", ["PLANET"])
-        Body.define_bodies([6], "SUN", "SSB", ["BARYCENTER"])
+        Body.define_bodies([699], "SUN", "SSB", ["PLANET"], is_standard=True)
+        Body.define_bodies([6], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
 
         # Moons and rings of Saturn
         Body.define_bodies(SATURN_CLASSICAL_INNER, "SATURN", "SATURN",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+                           is_standard=True)
         Body.define_bodies(SATURN_CLASSICAL_OUTER, "SATURN",
                            "SATURN BARYCENTER",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+                           is_standard=True)
         Body.define_bodies(SATURN_CLASSICAL_IRREG, "SATURN",
                            "SATURN BARYCENTER",
-                           ["SATELLITE", "CLASSICAL", "IRREGULAR"])
+                           ["SATELLITE", "CLASSICAL", "IRREGULAR"],
+                           is_standard=True)
         Body.define_bodies(SATURN_REGULAR, "SATURN", "SATURN",
-                           ["SATELLITE", "REGULAR"])
+                           ["SATELLITE", "REGULAR"], is_standard=True)
 
         if irregulars:
             Body.define_bodies(SATURN_IRREGULAR, "SATURN", "SATURN BARYCENTER",
-                               ["SATELLITE", "IRREGULAR"])
+                               ["SATELLITE", "IRREGULAR"], is_standard=True)
 
-        ring = Body.define_ring("SATURN", "SATURN_RING_PLANE", None, [])
+        ring = Body.define_ring("SATURN", "SATURN_RING_PLANE", None, [],
+                                is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
@@ -1017,39 +1090,43 @@ class Body(object):
         Body.BODY_REGISTRY['SATURN'].ring_body = ring
 
         ring = Body.define_ring("SATURN", "SATURN_RING_SYSTEM",
-                                SATURN_F_RING_LIMIT, [])
+                                SATURN_F_RING_LIMIT, [], is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = (0., SATURN_F_RING_LIMIT)
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_RINGS", SATURN_RINGS, [])
+        ring = Body.define_ring("SATURN", "SATURN_RINGS", SATURN_RINGS, [],
+                                is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_RINGS
         ring.unbounded_surface = unbounded_ring
 
         ring = Body.define_ring("SATURN", "SATURN_MAIN_RINGS",
-                                SATURN_MAIN_RINGS, [])
+                                SATURN_MAIN_RINGS, [], is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_MAIN_RINGS
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [])
+        ring = Body.define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [],
+                                is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_A_RING
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_B_RING", SATURN_B_RING, [])
+        ring = Body.define_ring("SATURN", "SATURN_B_RING", SATURN_B_RING, [],
+                                is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_B_RING
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_C_RING", SATURN_C_RING, [])
+        ring = Body.define_ring("SATURN", "SATURN_C_RING", SATURN_C_RING, [],
+                                is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_C_RING
         ring.unbounded_surface = unbounded_ring
 
         ring = Body.define_ring("SATURN", "SATURN_AB_RINGS",
-                                SATURN_AB_RINGS, [])
+                                SATURN_AB_RINGS, [], is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_AB_RINGS
         ring.unbounded_surface = unbounded_ring
@@ -1076,21 +1153,22 @@ class Body(object):
                                     asof=asof)
 
         # Uranus and the Uranus barycenter orbit the SSB
-        Body.define_bodies([799], "SUN", "SSB", ["PLANET"])
-        Body.define_bodies([7], "SUN", "SSB", ["BARYCENTER"])
+        Body.define_bodies([799], "SUN", "SSB", ["PLANET"], is_standard=True)
+        Body.define_bodies([7], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
 
         # Moons and rings of Uranus
         Body.define_bodies(URANUS_CLASSICAL, "URANUS", "URANUS",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+                           is_standard=True)
         Body.define_bodies(URANUS_INNER, "URANUS", "URANUS",
-                           ["SATELLITE", "REGULAR"])
+                           ["SATELLITE", "REGULAR"], is_standard=True)
 
         if irregulars:
             Body.define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
-                               ["SATELLITE", "IRREGULAR"])
+                               ["SATELLITE", "IRREGULAR"], is_standard=True)
 
         ring = Body.define_ring("URANUS", "URANUS_RING_PLANE", None,
-                                [], retrograde=True)
+                                [], retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
@@ -1099,19 +1177,19 @@ class Body(object):
 
         ring = Body.define_ring("URANUS", "URANUS_RING_SYSTEM",
                                 URANUS_EPSILON_LIMIT, [],
-                                retrograde=True)
+                                retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = (0., URANUS_EPSILON_LIMIT)
         ring.unbounded_surface = unbounded_ring
 
         ring = Body.define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT,
-                                [], retrograde=True)
+                                [], retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = URANUS_MU_LIMIT
         ring.unbounded_surface = unbounded_ring
 
         ring = Body.define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT,
-                                [], retrograde=True)
+                                [], retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = URANUS_NU_LIMIT
         ring.unbounded_surface = unbounded_ring
@@ -1119,29 +1197,29 @@ class Body(object):
         URANUS_EPOCH = cspyce.utc2et("1977-03-10T20:00:00")
 
         uranus_wrt_b1950 = AliasFrame("IAU_URANUS").wrt("B1950")
-        ignore = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
-                           id="URANUS_RINGS_B1950")
+        _ = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
+                      frame_id="URANUS_RINGS_B1950")
 
         Body.define_orbit("URANUS", "SIX_RING", URANUS_SIX_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
         Body.define_orbit("URANUS", "FIVE_RING", URANUS_FIVE_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
         Body.define_orbit("URANUS", "FOUR_RING", URANUS_FOUR_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
         Body.define_orbit("URANUS", "ALPHA_RING", URANUS_ALPHA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
         Body.define_orbit("URANUS", "BETA_RING", URANUS_BETA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
         Body.define_orbit("URANUS", "ETA_RING", URANUS_ETA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
         Body.define_orbit("URANUS", "GAMMA_RING", URANUS_GAMMA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
         Body.define_orbit("URANUS", "DELTA_RING", URANUS_DELTA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
         Body.define_orbit("URANUS", "LAMBDA_RING", URANUS_LAMBDA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
         Body.define_orbit("URANUS", "EPSILON_RING", URANUS_EPSILON_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"])
+                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
 
         return names
 
@@ -1167,24 +1245,26 @@ class Body(object):
                                     asof=asof)
 
         # Neptune and the Neptune barycenter orbit the SSB
-        Body.define_bodies([899], "SUN", "SSB", ["PLANET"])
-        Body.define_bodies([8], "SUN", "SSB", ["BARYCENTER"])
+        Body.define_bodies([899], "SUN", "SSB", ["PLANET"], is_standard=True)
+        Body.define_bodies([8], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
 
         # Moons and rings of Neptune
         Body.define_bodies(NEPTUNE_CLASSICAL_INNER, "NEPTUNE", "NEPTUNE",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+                           is_standard=True)
         Body.define_bodies(NEPTUNE_CLASSICAL_OUTER, "NEPTUNE",
                            "NEPTUNE BARYCENTER",
-                           ["SATELLITE", "CLASSICAL", "IRREGULAR"])
+                           ["SATELLITE", "CLASSICAL", "IRREGULAR"],
+                           is_standard=True)
         Body.define_bodies(NEPTUNE_REGULAR, "NEPTUNE", "NEPTUNE",
-                           ["SATELLITE", "REGULAR"])
+                           ["SATELLITE", "REGULAR"], is_standard=True)
 
         if irregulars:
             _ = spicedb.furnish_spk(NEPTUNE_IRREGULAR,
                                     time=(start_time, stop_time), asof=asof)
 
         Body.define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
-                           ["SATELLITE", "IRREGULAR"])
+                           ["SATELLITE", "IRREGULAR"], True)
 
     #     ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
     #     dec = cspyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
@@ -1193,7 +1273,7 @@ class Body(object):
         pole = Vector3.from_ra_dec_length(ra,dec)
 
         ring = Body.define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [],
-                                pole=pole)
+                                pole=pole, is_standard=True)
         ring.backplane_id = 'NEPTUNE:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
@@ -1201,16 +1281,17 @@ class Body(object):
         Body.BODY_REGISTRY['NEPTUNE'].ring_body = ring
 
         ring = Body.define_ring("NEPTUNE", "NEPTUNE_RING_SYSTEM",
-                                NEPTUNE_ADAMS_LIMIT, [], pole=pole)
+                                NEPTUNE_ADAMS_LIMIT, [], pole=pole,
+                                is_standard=True)
         ring.backplane_id = 'NEPTUNE:RING'
         ring.backplane_limits = (0., NEPTUNE_ADAMS_LIMIT)
         ring.unbounded_surface = unbounded_ring
 
         return names
 
-    ################################################################################
+    ############################################################################
     # Pluto System
-    ################################################################################
+    ############################################################################
 
     PLUTO_MOONS_LOADED = []
 
@@ -1224,25 +1305,28 @@ class Body(object):
                                     time=(start_time, stop_time),
                                     asof=asof)
 
-        # Pluto and the Pluto barycenter orbit the SSB
-        Body.define_bodies([999], "SUN", "SSB", ["PLANET"])
-        Body.define_bodies([9], "SUN", "SSB", ["BARYCENTER"])
+        # The Pluto barycenter orbits the SSB
+        Body.define_bodies([9], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
 
-        # Moons and rings of Pluto
-        Body.define_bodies(CHARON, "PLUTO", "PLUTO",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"])
+        # Pluto and all the moons orbit the Pluto system barycenter
+        Body.define_bodies([999], "SUN", "PLUTO BARYCENTER", ["PLANET"],
+                           is_standard=True)
+        Body.define_bodies(CHARON, "PLUTO", "PLUTO BARYCENTER",
+                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+                           is_standard=True)
         Body.define_bodies(PLUTO_REGULAR, "PLUTO", "PLUTO BARYCENTER",
-                           ["SATELLITE", "REGULAR"])
+                           ["SATELLITE", "REGULAR"], is_standard=True)
 
         ring = Body.define_ring("PLUTO", "PLUTO_RING_PLANE", None, [],
-                                barycenter_name="PLUTO BARYCENTER")
+                                barycenter_name="PLUTO BARYCENTER",
+                                is_standard=True)
         ring.backplane_id = 'PLUTO:RING'
         ring.backplane_limits = None
         Body.BODY_REGISTRY['PLUTO'].ring_body = ring
 
         ring = Body.define_ring("PLUTO", "PLUTO_INNER_RING_PLANE",
                                 PLUTO_CHARON_DISTANCE - CHARON_RADIUS, [],
-                                barycenter_name="PLUTO")
+                                barycenter_name="PLUTO", is_standard=True)
         ring.backplane_id = 'PLUTO_INNER_RING_PLANE'
         ring.backplane_limits = (0., PLUTO_CHARON_DISTANCE)
 
@@ -1251,12 +1335,13 @@ class Body(object):
 
         return names
 
-    ################################################################################
+    ############################################################################
     # Define bodies and rings...
-    ################################################################################
+    ############################################################################
 
     @staticmethod
-    def define_bodies(spice_ids, parent, barycenter, keywords):
+    def define_bodies(spice_ids, parent, barycenter, keywords,
+                      is_standard=False):
         """Define the path, frame, surface for bodies by name or SPICE ID.
 
         All must share a common parent and barycenter.
@@ -1274,8 +1359,8 @@ class Body(object):
             if name in Body.BODY_REGISTRY:
                 continue
 
-            # Sometimes a frame is undefined for a new moon; in this case assume it
-            # is synchronous
+            # Sometimes a frame is undefined for a new moon; in this case assume
+            # it is synchronous
             try:
                 frame = SpiceFrame(spice_id)
             except LookupError:
@@ -1283,7 +1368,7 @@ class Body(object):
                     frame = Frame.J2000
                 else:
                     frame = SynchronousFrame(path, parent,
-                                             id='SYNCHRONOUS_' + name)
+                                             frame_id='SYNCHRONOUS_' + name)
 
             # Define the planet's body
             # Note that this will overwrite any registered body of the same name
@@ -1297,8 +1382,8 @@ class Body(object):
 
             # Add the surface object if shape information is available
             # RuntimeError was raised by old version of cspyce;
-            # KeyError is raised during a name lookup if the body name is unknown;
-            # ValueError is raised during a SPICE ID lookup if the ID is unknown.
+            # KeyError raised during a name lookup if the body name is unknown;
+            # ValueError raised during a SPICE ID lookup if the ID is unknown.
             try:
                 shape = spice_shape(spice_id, frame.frame_id, (1.,1.,1.))
             except (RuntimeError, ValueError, KeyError):
@@ -1316,39 +1401,36 @@ class Body(object):
             if "BARYCENTER" in body.keywords and parent is not None:
                 body.add_keywords(parent)
 
-            # Save solar system bodies as standard for serialization
-            Body.STANDARD_BODIES.add(body.name)
-            Path.STANDARD_PATHS.add(body.path.path_id)
-            Frame.STANDARD_FRAMES.add(body.frame.frame_id)
+            body.is_standard = bool(is_standard)
 
-    #===============================================================================
+    #===========================================================================
     @staticmethod
     def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
-                    barycenter_name=None, pole=None):
-        """Define and return the body object associate with a ring around another
-        body.
+                    barycenter_name=None, pole=None, is_standard=False):
+        """Define and return the body object associate with a ring around
+        another body.
 
-        A single radius value is used to define the outer limit of rings. Note that
-        a ring has limits but a defined ring plane does not.
+        A single radius value is used to define the outer limit of rings. Note
+        that a ring has limits but a defined ring plane does not.
 
         Input:
             parent_name     the name of the central planet for the ring surface.
             ring_name       the name of the surface.
-            radii           if this is a tuple with two values, these are the radial
-                            limits of the ring; if it is a scalar, then the ring
-                            plane has no defined radial limits, but the radius
-                            attribute of the body will be set to this value; if
-                            None, then the radius attribute of the body will be set
-                            to zero.
-            keywords        the list of keywords under which this surface is to be
-                            registered. Every ring is also registered under its own
-                            name and under the keyword "RING".
-            retrograde      True if the ring is retrograde relative to the central
-                            planet's IAU-defined pole.
+            radii           if this is a tuple with two values, these are the
+                            radial limits of the ring; if it is a scalar, then
+                            the ring plane has no defined radial limits, but the
+                            radius attribute of the body will be set to this
+                            value; if None, then the radius attribute of the
+                            body will be set to zero.
+            keywords        the list of keywords under which this surface is to
+                            be registered. Every ring is also registered under
+                            its own name and under the keyword "RING".
+            retrograde      True if the ring is retrograde relative to the
+                            central planet's IAU-defined pole.
             barycenter_name the name of the ring's barycenter if this is not the
                             same as the name of the central planet.
-            pole            if not None, this is the pole of the invariable plane.
-                            It will be used to define the ring_frame as a
+            pole            if not None, this is the pole of the invariable
+                            plane. It will be used to define the ring_frame as a
                             PoleFrame instead of a RingFrame.
         """
 
@@ -1394,19 +1476,23 @@ class Body(object):
         body.add_keywords([parent, "RING", ring_name])
         body.add_keywords(keywords)
 
+        body.is_standard = bool(is_standard)
         return body
 
-    #===============================================================================
+    #===========================================================================
     @staticmethod
-    def define_orbit(parent_name, ring_name, elements, epoch, reference, keywords):
-        """Define the path, frame, surface and body for ring given orbital elements.
+    def define_orbit(parent_name, ring_name, elements, epoch, reference,
+                     keywords, is_standard=False):
+        """Define the path, frame, surface and body for ring given orbital
+        elements.
 
         The ring can be inclined or eccentric.
         """
 
         parent = Body.lookup(parent_name)
 
-        orbit = OrbitPlane(elements, epoch, parent.path, reference, id=ring_name)
+        orbit = OrbitPlane(elements, epoch, parent.path, reference,
+                           path_id=ring_name)
 
         body = Body(ring_name, orbit.internal_origin, orbit.internal_frame,
                     parent, parent)
@@ -1415,11 +1501,12 @@ class Body(object):
 
         body.add_keywords([parent, "RING", "ORBIT", ring_name])
         body.add_keywords(keywords)
+        body.is_standard = bool(is_standard)
 
-    #===============================================================================
+    #===========================================================================
     @staticmethod
     def define_small_body(spice_id, name=None, spk=None, keywords=[],
-                                    parent='SUN', barycenter='SSB'):
+                          parent='SUN', barycenter='SSB', is_standard=False):
         """Define the path, frame, surface for a body by SPICE ID.
 
         This body treats the Sun as its parent body and barycenter.
@@ -1430,7 +1517,7 @@ class Body(object):
             cspyce.furnsh(spk)
 
         # Define the body's path
-        path = SpicePath(spice_id, "SSB", id=name)
+        path = SpicePath(spice_id, "SSB", path_id=name)
 
         # The name of the path is the name of the body
         name = name or path.path_id
@@ -1447,10 +1534,10 @@ class Body(object):
             if ('BARYCENTER' in keywords) or ('IRREGULAR' in keywords):
                 frame = Frame.J2000
             else:
-                frame = SynchronousFrame(path, parent, id='SYNCHRONOUS_' + name)
+                frame = SynchronousFrame(path, parent,
+                                         frame_id='SYNCHRONOUS_' + name)
 
         # Define the planet's body
-        # Note that this will overwrite any registered body of the same name
         body = Body(name, path.path_id, frame.frame_id,
                           parent=Body.lookup(parent),
                           barycenter=Body.lookup(barycenter))
@@ -1472,6 +1559,9 @@ class Body(object):
         except LookupError:
             shape = NullSurface(path, frame)
             body.apply_surface(shape, 0., 0.)
+
+        body.is_standard = bool(is_standard)
+        body.spk = spk
 
 ################################################################################
 # UNIT TESTS

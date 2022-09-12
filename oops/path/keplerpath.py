@@ -40,12 +40,11 @@ class KeplerPath(Path, Fittable):
     defined using nine orbital elements.
     """
 
-    PACKRAT_ARGS = ['planet', 'epoch', 'elements', 'observer', 'wobbles',
-                    'frame', 'path_id']
+    PATH_IDS = {}
 
     #===========================================================================
     def __init__(self, body, epoch, elements=None, observer=None, wobbles=(),
-                       frame=None, id=None):
+                       frame=None, path_id=None, unpickled=False):
         """Constructor for a KeplerPath.
 
         Input:
@@ -96,7 +95,9 @@ class KeplerPath(Path, Fittable):
                         default, this is the ring_frame of the planet. Ignored
                         if observer is defined.
 
-            id          the name under which to register the path.
+            path_id     the name under which to register the path.
+
+            unpickled   True if this path has been read from a pickle file.
         """
 
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
@@ -136,7 +137,7 @@ class KeplerPath(Path, Fittable):
             frame = self.frame.wrt(self.planet.ring_frame)
             self.to_j2000 = frame.transform_at_time(epoch).matrix
 
-        self.epoch = epoch
+        self.epoch = float(epoch)
 
         if elements is None:
             self.elements = None
@@ -162,14 +163,31 @@ class KeplerPath(Path, Fittable):
         else:
             self.set_params(elements)
 
-        if id is None:
-            self.path_id = Path.temporary_path_id()
-        else:
-            self.path_id = id
-
+        self.path_id = path_id
         self.shape = ()
         self.keys = set()
-        self.register()
+        self.register(unpickled=unpickled)
+
+        # Save in internal dict for name lookup upon serialization
+        if self.path_id in Path.WAYPOINT_REGISTRY:
+            key = (self.planet.name, self.epoch, tuple(self.elements),
+                   self.observer.path_id if self.observer else None,
+                   self.wobbles, self.frame.frame_id)
+            KeplerPath.PATH_IDS[key] = self.path_id
+
+    # Unpickled paths will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.planet, self.epoch, self.elements, self.observer,
+                self.wobbles, self.frame)
+
+    def __setstate__(self, state):
+        # If this path matches a pre-existing path, re-use its ID
+        (body, epoch, elements, observer, wobbles, frame) = state
+        key = (body.name, epoch, tuple(elements),
+               observer.path_id if observer else None,
+               wobbles, frame.frame_id)
+        path_id = KeplerPath.PATH_IDS.get(key, None)
+        self.__init__(*state, path_id=path_id, unpickled=True)
 
     #===========================================================================
     def set_params_new(self, elements):

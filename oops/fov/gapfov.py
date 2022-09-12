@@ -11,8 +11,6 @@ from . import FOV
 class GapFOV(FOV):
     """A subclass of FOV in which there gaps between the individual pixels."""
 
-    PACKRAT_ARGS = []
-
     #===========================================================================
     def __init__(self, fov, uv_size):
         """Constructor for a GapFOV.
@@ -34,9 +32,9 @@ class GapFOV(FOV):
             uv_size = (uv_size, uv_size)
 
         # Convert to Pair
-        self.uv_size  = Pair.as_pair(uv_size)
-        self.uv_size_inv  = Pair.as_pair((1./self.uv_size.vals[0],
-                                         (1./self.uv_size.vals[1]))
+        self.uv_size = Pair.as_pair(uv_size)
+        self.uv_size_inv = Pair.as_pair((1./self.uv_size.vals[0],
+                                        (1./self.uv_size.vals[1]))
 
         self._rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
 
@@ -45,6 +43,12 @@ class GapFOV(FOV):
         self.uv_los   = self.fov.uv_los.element_div(self.rescale)
         self.uv_area  = self.fov.uv_area * self._rescale2
         self.uv_shape = self.fov.uv_shape
+
+    def __getstate__(self):
+        return (self.fov, self.uv_size)
+
+    def __setstate__(self):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,

@@ -6,19 +6,21 @@ import numpy as np
 from polymath import Qube, Boolean, Scalar, Pair, Vector
 from polymath import Vector3, Matrix3, Quaternion
 
-from .       import Path
-from ..event import Event
-from ..frame import Frame
+from .         import Path
+from ..event   import Event
+from ..frame   import Frame
+from ..surface import Surface
 
 class LinearCoordPath(Path):
     """A path defined by coordinates changing linearly on a specified Surface.
     """
 
-    PACKRAT_ARGS = ['surface', 'coords', 'coords_dot', 'epoch', 'obs_path',
-                    'path_id']
+    # Note: LinearCoordPaths are not generally re-used, so their IDs are
+    # expendable. Their IDs are not preserved during pickling.
 
     #===========================================================================
-    def __init__(self, surface, coords, coords_dot, epoch, obs=None, id=None):
+    def __init__(self, surface, coords, coords_dot, epoch, obs=None,
+                       path_id=None):
         """Constructor for a LinearCoordPath.
 
         Input:
@@ -29,25 +31,37 @@ class LinearCoordPath(Path):
             epoch       the epoch at which the coords are defined, seconds TDB.
             obs         optional path of observer, needed to calculate points
                         on virtual surfaces.
-            id          the name under which to register the new path; None to
+            path_id     the name under which to register the new path; None to
                         leave the path unregistered.
         """
 
         self.surface = surface
-        self.coords = coords
-        self.coords_dot = coords_dot
-        self.epoch  = epoch
-        self.obs_path = obs
+        self.coords = [Scalar.as_scalar(c) for c in coords]
+        self.coords_dot = [Scalar.as_scalar(c) for c in coords_dot]
+        self.epoch = Scalar.as_scalar(epoch)
+        self.obs_path = Path.as_path(obs)
+
+        assert isinstance(self.surface, Surface)
 
         # Required attributes
-        self.path_id = id
+        self.path_id = path_id
         self.origin  = self.surface.origin
         self.frame   = self.origin.frame
         self.keys    = set()
-        self.shape   = Qube.broadcasted_shape(*coords)
+        self.shape   = Qube.broadcasted_shape(self.surface, *self.coords,
+                                              *self.coords_dot, self.epoch,
+                                              self.obs_path)
 
         # Update waypoint and path_id; register only if necessary
         self.register()
+
+    # Unpickled paths will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.surface, self.coords, self.coords_dot, self.epoch,
+                self.obs_path)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def event_at_time(self, time, quick={}):

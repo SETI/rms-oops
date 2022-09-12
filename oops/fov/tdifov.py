@@ -12,9 +12,6 @@ from ..cadence.tdicadence import TDICadence
 class TDIFOV(FOV):
     """FOV subclass to apply TDI timing to another FOV."""
 
-    PACKRAT_ARGS = ['fov', 'tdi_texp', 'tdi_stages', 'tdi_axis', 'tdi_sign',
-                    'tstart']
-
     IS_TIME_INDEPENDENT = False         # updated below if necessary
 
     #===========================================================================
@@ -68,6 +65,12 @@ class TDIFOV(FOV):
         self.uv_area  = self.fov.uv_area
 
         self.IS_TIME_INDEPENDENT = (self.cadence.tdi_stages <= 1)
+
+    def __getstate__(self):
+        return (self.fov, self.tdi_axis, self.cadence)
+
+    def __setstate__(self):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,

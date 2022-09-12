@@ -23,10 +23,11 @@ class TrackerFrame(Frame):
     than the midtime.
     """
 
-    PACKRAT_ARGS = ['fixed_frame', 'target_path', 'observer_path', 'frame_id']
+    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
 
     #===========================================================================
-    def __init__(self, frame, target, observer, epoch, id=None):
+    def __init__(self, frame, target, observer, epoch, frame_id=None,
+                       unpickled=False):
         """Constructor for a Tracker Frame.
 
         Input:
@@ -35,27 +36,25 @@ class TrackerFrame(Frame):
             target      the target's path or path ID.
             observer    the observer's path or path ID.
             epoch       the epoch for which the given frame is defined.
-            id          the ID to use; None to use a temporary ID.
+            frame_id    the ID to use; None to use a temporary ID.
+            unpickled   True if this frame has been read from a pickle file.
         """
 
         self.fixed_frame = Frame.as_frame(frame)
         self.target_path = Path.as_path(target)
         self.observer_path = Path.as_path(observer)
-        self.epoch = epoch
-
-        assert self.fixed_frame.shape == ()
-        assert self.target_path.shape == ()
-        assert self.observer_path.shape == ()
+        self.epoch = Scalar.as_scalar(epoch)
+        self.shape = Qube.broadcasted_shape(self.fixed_frame, self.target_path,
+                                            self.observer_path, self.epoch)
 
         # Required attributes
-        self.frame_id  = id
+        self.frame_id  = frame_id
         self.reference = self.fixed_frame.reference
         self.origin    = self.fixed_frame.origin
-        self.shape     = ()
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
-        self.register()
+        self.register(unpickled=unpickled)
 
         # Determine the apparent direction to the target path at epoch
         obs_event = Event(epoch, Vector3.ZERO, self.observer_path, Frame.J2000)
@@ -76,6 +75,31 @@ class TrackerFrame(Frame):
         self.cached_time = None
         self.cached_xform = None
         dummy = self.transform_at_time(self.epoch)  # cache initialized
+
+        # Save in internal dict for name lookup upon serialization
+        if (not unpickled and self.shape == ()
+            and self.frame_id in Frame.WAYFRAME_REGISTRY):
+                key = (self.fixed_frame.frame_id, self.target_path.path_id,
+                       self.observer_path.path_id, self.epoch.vals)
+                TrackerFrame.FRAME_IDS[key] = self.frame_id
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.fixed_frame, self.target_path, self.observer_path,
+                self.epoch, self.shape)
+
+    def __setstate__(self, state):
+        # If this frame matches a pre-existing frame, re-use its ID
+        (frame, target, observer, epoch, shape) = state
+        if shape == ():
+            key = (frame.frame_id, target.path_id, observer.path_id,
+                   epoch.vals)
+            frame_id = TrackerFrame.FRAME_IDS.get(key, None)
+        else:
+            frame_id = None
+
+        self.__init__(frame, target, observer, epoch, frame_id=frame_id,
+                      unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick=False):
@@ -123,7 +147,7 @@ class Test_TrackerFrame(unittest.TestCase):
 
     def runTest(self):
 
-        tracker = TrackerFrame("J2000", "MARS", "EARTH", 0., id="TEST")
+        tracker = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
         mars = AliasPath("MARS")
 
         obs_event = Event(0., Vector3.ZERO, "EARTH", "J2000")

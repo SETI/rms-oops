@@ -14,10 +14,11 @@ class FixedPath(Path):
     """A path described by fixed coordinates relative to another path and frame.
     """
 
-    PACKRAT_ARGS = ['pos', 'origin', 'frame', 'path_id']
+    # Note: FixedPaths are not generally re-used, so their IDs are expendable.
+    # Their IDs are not preserved during pickling.
 
     #===========================================================================
-    def __init__(self, pos, origin, frame, id=None):
+    def __init__(self, pos, origin, frame, path_id=None):
         """Constructor for an FixedPath.
 
         Input:
@@ -26,7 +27,7 @@ class FixedPath(Path):
             origin      the path or ID of the reference point.
             frame       the frame or ID of the frame in which the position is
                         fixed.
-            id          the name under which to register the new path; None to
+            path_id     the name under which to register the new path; None to
                         leave the path unregistered.
         """
 
@@ -36,17 +37,23 @@ class FixedPath(Path):
         self.pos = pos.as_readonly()
 
         # Required attributes
-        self.path_id = id
+        self.path_id = path_id
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame) or self.origin.frame
         self.keys    = set()
-        self.shape   = Qube.broadcasted_shape(self.pos, self.origin.shape,
-                                                        self.frame.shape)
+        self.shape   = Qube.broadcasted_shape(self.pos, self.origin, self.frame)
 
         # Update waypoint and path_id; register only if necessary
         self.register()
 
-    #===========================================================================
+    # Unpickled paths will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.pos, self.origin, self.frame)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
+    #==========================================================================
     def event_at_time(self, time, quick=False):
         """An Event corresponding to a specified time on this path.
 

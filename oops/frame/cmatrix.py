@@ -19,27 +19,28 @@ class Cmatrix(Frame):
     and the Y-axis points downward.
     """
 
-    PACKRAT_ARGS = ['cmatrix', 'reference', 'frame_id']
+    # Note: Navigation frames are not generally re-used, so their IDs are
+    # expendable. Frame IDs are not preserved during pickling.
 
     #===========================================================================
-    def __init__(self, cmatrix, reference=None, id=None):
+    def __init__(self, cmatrix, reference=None, frame_id=None):
         """Constructor for a Cmatrix frame.
 
         Input:
             cmatrix     a Matrix3 object.
             reference   the ID or frame relative to which this frame is defined;
                         None for J2000.
-            id          the ID under which the frame will be registered; None
+            frame_id    the ID under which the frame will be registered; None
                         to leave the frame unregistered
         """
 
         self.cmatrix = Matrix3.as_matrix3(cmatrix)
 
         # Required attributes
-        self.frame_id  = id
+        self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(reference) or Frame.J2000
         self.origin    = self.reference.origin
-        self.shape     = self.cmatrix.shape
+        self.shape     = Qube.broadcasted_shape(self.cmatrix, self.reference)
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
@@ -49,9 +50,16 @@ class Cmatrix(Frame):
         self.transform = Transform(cmatrix, Vector3.ZERO,
                                    self.wayframe, self.reference)
 
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.cmatrix, self.reference)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
     #===========================================================================
     @staticmethod
-    def from_ra_dec(ra, dec, clock, reference=None, id=None):
+    def from_ra_dec(ra, dec, clock, reference=None, frame_id=None):
         """Construct a Cmatrix from RA, dec and celestial north clock angles.
 
         Input:
@@ -63,7 +71,7 @@ class Cmatrix(Frame):
                         degrees, measured clockwise from the "up" direction in
                         the observation.
             reference   the reference frame or ID; None for J2000.
-            id          the ID to use when registering this frame; None to leave
+            frame_id    the ID to use when registering this frame; None to leave
                         it unregistered
 
         Note that this Frame can have an arbitrary shape. This shape is defined
@@ -106,7 +114,7 @@ class Cmatrix(Frame):
         cmatrix_values[...,2,1] =  sinr * cosd
         cmatrix_values[...,2,2] =  sind
 
-        return Cmatrix(Matrix3(cmatrix_values,mask), reference, id)
+        return Cmatrix(Matrix3(cmatrix_values,mask), reference, frame_id)
 
     #===========================================================================
     def transform_at_time(self, time, quick=False):

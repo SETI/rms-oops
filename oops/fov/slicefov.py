@@ -15,8 +15,6 @@ class SliceFOV(FOV):
     This differs from a Subarray in that the optic axis is not modified.
     """
 
-    PACKRAT_ARGS = ['fov', 'origin', 'shape']
-
     #===========================================================================
     def __init__(self, fov, origin, shape):
         """Constructor for a SliceFOV.
@@ -40,6 +38,12 @@ class SliceFOV(FOV):
         self.uv_los   = self.fov.uv_los - self.uv_origin
         self.uv_scale = self.fov.uv_scale
         self.uv_area  = self.fov.uv_area
+
+    def __getstate__(self):
+        return (self.fov, self.uv_origin, self.shape)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,

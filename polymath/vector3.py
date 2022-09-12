@@ -231,7 +231,6 @@ Vector3.XAXIS  = Vector3((1.,0.,0.)).as_readonly()
 Vector3.YAXIS  = Vector3((0.,1.,0.)).as_readonly()
 Vector3.ZAXIS  = Vector3((0.,0.,1.)).as_readonly()
 Vector3.MASKED = Vector3((1,1,1), True).as_readonly()
-Vector3.SIZE0  = Vector3([(0.,0.,0.)]).as_readonly()[:0]
 
 Vector3.ZERO_POS_VEL = Vector3((0.,0.,0.)).as_readonly()
 Vector3.ZERO_POS_VEL.insert_deriv('t', Vector3.ZERO).as_readonly()

@@ -39,8 +39,6 @@ class Ellipsoid(Surface):
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
 
-    PACKRAT_ARGS = ['origin', 'frame', 'radii', 'exclusion']
-
     #===========================================================================
     def __init__(self, origin, frame, radii, exclusion=0.95):
         """Constructor for an Ellipsoid object.
@@ -89,6 +87,12 @@ class Ellipsoid(Surface):
         # geometry.
 
         self.exclusion = exclusion * self.rpol
+
+    def __getstate__(self):
+        return (self.origin, self.frame, self.radii, self.exclusion)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

@@ -18,8 +18,6 @@ class PointSource(Calibration):
     # Methods to be defined for each Calibration subclass
     ############################################################################
 
-    PACKRAT_ARGS = ['name', 'factor', 'fov']
-
     def __init__(self, name, factor, fov):
         """Constructor for an Distorted Calibration.
 
@@ -33,6 +31,8 @@ class PointSource(Calibration):
         self.name = name
         self.factor = Scalar.as_scalar(factor)
         self.fov = fov
+
+    #### __getstate__ and __setstate__ not needed; default behavior is fine.
 
     #===========================================================================
     def value_from_dn(self, dn, uv_pair):

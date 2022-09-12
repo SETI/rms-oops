@@ -25,12 +25,9 @@ class SpicePath(Path):
     # shortcuts and with shortcuts
     USE_SPICEPATH_SHORTCUTS = True
 
-    PACKRAT_ARGS = ['spice_id', 'spice_origin', 'spice_frame', 'path_id',
-                    'shortcut']
-
     #===========================================================================
     def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
-                       id=None, shortcut=None):
+                       path_id=None, shortcut=None, unpickled=False):
         """Constructor for a SpicePath object.
 
         Input:
@@ -43,13 +40,16 @@ class SpicePath(Path):
             spice_frame     the name or integer ID of the reference frame or of
                             the a body with which the frame is primarily
                             associated, as used in the SPICE toolkit.
-            id              the name or ID under which the path will be
+            path_id         the name or ID under which the path will be
                             registered. By default, this will be the value of
                             spice_id if that is given as a string; otherwise
                             it will be the name as used by the SPICE toolkit.
             shortcut        If a shortcut is specified, then this is registered
                             as a shortcut definition; the other registered path
                             definitions are unchanged.
+            unpickled       True if this object was read from a pickle file. If
+                            so, then it will be treated as a duplicate of a
+                            pre-existing SpicePath for the same SPICE ID.
         """
 
         # Preserve the inputs
@@ -68,17 +68,22 @@ class SpicePath(Path):
         self.spice_frame_name = spice.frame_id_and_name(spice_frame)[1]
 
         # Fill in the Path ID and save it in the global dictionary
-        if id is None:
+        if path_id is None:
             if isinstance(spice_id, str):
                 self.path_id = spice_id
             else:
                 self.path_id = self.spice_target_name
         else:
-            self.path_id = id
+            self.path_id = path_id
 
+        # Only save info in the PATH_TRANSLATION dictionary if it is not already
+        # there. We do not want to overwrite original definitions with those
+        # just read from pickle files.
         if not shortcut:
-            spice.PATH_TRANSLATION[self.spice_target_id]   = self.path_id
-            spice.PATH_TRANSLATION[self.spice_target_name] = self.path_id
+            if self.spice_target_id not in spice.PATH_TRANSLATION:
+                spice.PATH_TRANSLATION[self.spice_target_id] = self.path_id
+            if self.spice_target_name not in spice.PATH_TRANSLATION:
+                spice.PATH_TRANSLATION[self.spice_target_name] = self.path_id
 
         # Fill in the origin waypoint, which should already be in the dictionary
         origin_id = spice.PATH_TRANSLATION[self.spice_origin_id]
@@ -94,7 +99,21 @@ class SpicePath(Path):
         self.shortcut = shortcut
 
         # Register the SpicePath; fill in the waypoint
-        self.register(shortcut)
+        self.register(shortcut, unpickled=unpickled)
+
+    def __getstate__(self):
+        return (self.spice_target_id, self.spice_origin_id,
+                self.spice_frame_name)
+
+    def __setstate__(self, state):
+
+        (spice_target_id, spice_origin_id, spice_frame_name) = state
+
+        # If this is a duplicate of a pre-existing SpicePath, make sure it gets
+        # assigned the pre-existing path ID and Waypoint
+        path_id = spice.PATH_TRANSLATION.get(spice_target_id, None)
+        self.__init__(spice_target_id, spice_origin_id, spice_frame_name,
+                      path_id=path_id, unpickled=True)
 
     #===========================================================================
     def event_at_time(self, time, quick={}):
@@ -261,7 +280,7 @@ class Test_SpicePath(unittest.TestCase):
             self.assertEqual(moon_event.vel[i], state[3:6])
 
         # Check light travel time corrections to/from SSB
-        saturn = SpicePath(6, "SSB", id="SATURN")
+        saturn = SpicePath(6, "SSB", path_id="SATURN")
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
         ssb_event = Path.as_primary_path("SSB").event_at_time(times)
 
@@ -329,7 +348,7 @@ class Test_SpicePath(unittest.TestCase):
         earth  = SpicePath("EARTH", "SSB")
         moon   = SpicePath("MOON", "EARTH")
         mars   = SpicePath("MARS", "MOON")
-        saturn = SpicePath(6, "MOON", id="SATURN")
+        saturn = SpicePath(6, "MOON", path_id="SATURN")
 
         self.assertEqual(Path.as_primary_path("SATURN"), saturn)
 
@@ -447,7 +466,7 @@ class Test_SpicePath(unittest.TestCase):
         sun    = SpicePath("SUN", "SSB")
         earth  = SpicePath("EARTH", "SSB")
         moon   = SpicePath("MOON", "EARTH")
-        saturn = SpicePath(6, "SSB", id="SATURN")
+        saturn = SpicePath(6, "SSB", path_id="SATURN")
         ssb    = Path.as_path("SSB")
 
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
@@ -544,7 +563,7 @@ class Test_SpicePath(unittest.TestCase):
 
             ignore = SpiceFrame("IAU_EARTH", "J2000")
             earth  = SpicePath("EARTH", "SSB", frame)
-            pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
+            pluto  = SpicePath(9, "SSB", frame, path_id="PLUTO")
 
             pluto = AliasPath("PLUTO", frame)
             earth_event = AliasPath("EARTH", frame).event_at_time(times)
@@ -606,7 +625,7 @@ class Test_SpicePath(unittest.TestCase):
 
             ignore = SpiceFrame("IAU_EARTH", "J2000")
             earth  = SpicePath("EARTH", "SSB", frame)
-            pluto  = SpicePath(9, "SSB", frame, id="PLUTO")
+            pluto  = SpicePath(9, "SSB", frame, path_id="PLUTO")
 
             pluto = AliasPath("PLUTO", frame)
             earth_event = AliasPath("EARTH", frame).event_at_time(times)
@@ -689,7 +708,7 @@ class Test_SpicePath(unittest.TestCase):
         ignore = SpiceFrame("IAU_EARTH", "J2000")
 
         ignore = SpicePath("EARTH", "SSB", "J2000")
-        ignore = SpicePath(9, "SSB", "J2000", id="PLUTO")
+        ignore = SpicePath(9, "SSB", "J2000", path_id="PLUTO")
 
         pluto = AliasPath("PLUTO", "J2000")
         earth_event = AliasPath("EARTH","IAU_EARTH").event_at_time(times)
@@ -715,8 +734,8 @@ class Test_SpicePath(unittest.TestCase):
         ignore = SpiceFrame("IAU_MARS", "J2000")
 
         ignore = SpicePath("EARTH", "SSB", "J2000")
-        ignore = SpicePath(4, "SSB", "J2000", id="MARS")
-        ignore = SpicePath(9, "SSB", "J2000", id="PLUTO")
+        ignore = SpicePath(4, "SSB", "J2000", path_id="MARS")
+        ignore = SpicePath(9, "SSB", "J2000", path_id="PLUTO")
 
         pluto = AliasPath("PLUTO","J2000")
         earth_event = AliasPath("MARS","IAU_MARS").event_at_time(times)
@@ -740,7 +759,7 @@ class Test_SpicePath(unittest.TestCase):
         times = np.arange(0., 365*86400., 86400.)
 
         earth  = SpicePath("EARTH", "SSB", "J2000")
-        pluto  = SpicePath(9, "SSB", "J2000", id="PLUTO")
+        pluto  = SpicePath(9, "SSB", "J2000", path_id="PLUTO")
 
         pluto = AliasPath("PLUTO","J2000")
         earth_event = AliasPath("EARTH","J2000").event_at_time(times)
@@ -791,7 +810,7 @@ class Test_SpicePath(unittest.TestCase):
 
         ignore = SpiceFrame("IAU_EARTH", "J2000")
         earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
-        pluto  = SpicePath(9, "SSB", "IAU_EARTH", id="PLUTO")
+        pluto  = SpicePath(9, "SSB", "IAU_EARTH", path_id="PLUTO")
 
         pluto = AliasPath("PLUTO", "IAU_EARTH")
         earth_event = AliasPath("EARTH", "IAU_EARTH").event_at_time(times)

@@ -19,82 +19,81 @@ class Event(object):
     """An Event is defined by a time, position and velocity. It always has these
     attributes:
 
-        __time_     event time as a Scalar of arbitrary shape. Times are
+        _time_      event time as a Scalar of arbitrary shape. Times are
                     measured in seconds TDB relative to noon TDB on January 1,
                     2000, consistent with the time system used by the SPICE
                     toolkit.
 
-        __state_    position of the event as a Vector3 of arbitrary shape.
+        _state_     position of the event as a Vector3 of arbitrary shape.
                     Positions are measured in km relative to the specified path.
                     Velocities are specified in km/s as the "t" derivative of
                     the position.
 
-        __origin_   a path object defining the location relative to which all
+        _origin_    a path object defining the location relative to which all
                     positions and velocities are measured.
 
-        __frame_    a frame object defining the coordinate system in which the
+        _frame_     a frame object defining the coordinate system in which the
                     components of the positions and velocities are defined.
 
-        __subfields_ an arbitrary dictionary of objects providing further
-                     information about the properties of the event.
+        _subfields_ an arbitrary dictionary of objects providing further
+                    information about the properties of the event.
 
     It also has these optional attributes:
 
-        __arr_      an optional Vector3 defining the direction of a photon
+        _arr_       an optional Vector3 defining the direction of a photon
                     arriving at this event. It is defined in the coordinate
                     frame of this event and not corrected for stellar
                     aberration. Length is arbitrary.
 
-        __arr_ap_   same as above, but defined as the apparent direction of the
+        _arr_ap_    same as above, but defined as the apparent direction of the
                     arriving photons.
 
-        __arr_j2000_
-                    same as __arr_, but in J2000 coordinates.
+        _arr_j2000_ same as _arr_, but in J2000 coordinates.
 
-        __arr_ap_j2000_
-                    same as __arr_ap_, but in J2000 coordinates.
+        _arr_ap_j2000_
+                    same as _arr_ap_, but in J2000 coordinates.
 
-        __neg_arr_  negative of __arr_ (because it is used so often).
+        _neg_arr_   negative of _arr_ (because it is used so often).
 
-        __neg_arr_ap_
-                    negative of __arr_ap_
+        _neg_arr_ap_
+                    negative of _arr_ap_
 
-        __neg_arr_j2000_
-                    negative of __arr_j2000_.
+        _neg_arr_j2000_
+                    negative of _arr_j2000_.
 
-        __neg_arr_ap_j2000_
-                    negative of __arr_ap_j2000_.
+        _neg_arr_ap_j2000_
+                    negative of _arr_ap_j2000_.
 
-        __arr_lt_   an optional Scalar defining the (negative) light travel time
+        _arr_lt_    an optional Scalar defining the (negative) light travel time
                     for the arriving photon from its origin.
 
-        __dep_      an optional Vector3 defining the direction of a photon
+        _dep_       an optional Vector3 defining the direction of a photon
                     departing from this event. It is defined in the coordinate
                     frame of this event and not corrected for stellar
                     aberration. Length is arbitrary.
 
-        __dep_ap_   same as above, but defined as the apparent direction of the
+        _dep_ap_    same as above, but defined as the apparent direction of the
                     departing photons.
 
-        __dep_j2000_
-                    same as __dep_, but in J2000 coordinates.
+        _dep_j2000_
+                    same as _dep_, but in J2000 coordinates.
 
-        __dep_j2000_ap_
-                    same as __dep_ap_, but in J2000 coordinates.
+        _dep_j2000_ap_
+                    same as _dep_ap_, but in J2000 coordinates.
 
-        __dep_lt_   an optional Scalar defining the light travel time of a
+        _dep_lt_    an optional Scalar defining the light travel time of a
                     departing photon to its destination.
 
-        __perp_     the direction of a normal vector if this event falls on a
+        _perp_      the direction of a normal vector if this event falls on a
                     surface.
 
-        __vflat_    a velocity component within the surface, which can be used
+        _vflat_     a velocity component within the surface, which can be used
                     to describe winds across a planet or orbital motion
                     within a ring plane.
 
-        __ssb_      this event referenced to SSB/J2000.
+        _ssb_       this event referenced to SSB/J2000.
 
-        __xform_to_j2000_
+        _xform_to_j2000_
                     transform that converts coordinates in this event to J2000.
 
     Each of these attributes can also be accessed via a property with the same
@@ -114,33 +113,23 @@ class Event(object):
     # Class constant Event.PATH_CLASS is defined at the end of __init__.py
     ############################################################################
 
-    SPECIAL_PROPERTIES = [
-       'arr', 'arr_ap', 'arr_j2000', 'arr_ap_j2000', 'arr_lt',
-       'dep', 'dep_ap', 'dep_j2000', 'dep_ap_j2000', 'dep_lt',
-       'neg_arr', 'neg_arr_ap', 'neg_arr_j2000', 'neg_arr_ap_j2000',
-       'perp', 'vflat'
-    ]
+    ARR_VEC3_PROPERTIES = ['arr', 'arr_ap', 'arr_j2000', 'arr_ap_j2000',
+                   'neg_arr', 'neg_arr_ap', 'neg_arr_j2000', 'neg_arr_ap_j2000']
+
+    DEP_VEC3_PROPERTIES = ['dep', 'dep_ap', 'dep_j2000', 'dep_ap_j2000']
+
+    SPECIAL_PROPERTIES = ARR_VEC3_PROPERTIES + DEP_VEC3_PROPERTIES
+    SPECIAL_PROPERTIES += ['arr_lt', 'dep_lt', 'perp', 'vflat']
 
     @staticmethod
     def attr_name(prop_name):
-        return '_Event__' + prop_name + '_'
+        return '_' + prop_name + '_'
 
     def get_prop(self, prop_name):
         return Event.__dict__[prop_name].fget(self)
 
     def set_prop(self, prop_name, value):
         Event.__dict__[prop_name].fset(self, value)
-
-    PACKRAT_ARGS = ['_Event__time_', '_Event__state_', '_Event__origin_',
-                    '_Event__frame_', '**_Event__subfields_',
-                    '+_Event__arr_',
-                    '+_Event__arr_ap_',
-                    '+_Event__arr_lt_',
-                    '+_Event__dep_',
-                    '+_Event__dep_ap_',
-                    '+_Event__dep_lt_',
-                    '+_Event__perp_',
-                    '+_Event__vflat_']
 
     #===========================================================================
     def __init__(self, time, state, origin, frame=None, **more):
@@ -167,7 +156,7 @@ class Event(object):
                         subfields can be anything.
         """
 
-        self.__time_ = Scalar.as_scalar(time).as_readonly()
+        self._time_ = Scalar.as_scalar(time).as_readonly()
 
         if isinstance(state, (tuple,list)) and len(state) == 2:
             pos = Vector3.as_vector3(state[0])
@@ -178,30 +167,93 @@ class Event(object):
             if 't' not in state.derivs:
                 state = state.with_deriv('t', Vector3.ZERO)
 
-        self.__state_ = state.as_readonly()
+        self._state_ = state.as_readonly()
 
-        assert 't' in self.__state_.derivs
+        assert 't' in self._state_.derivs
 
-        self.__pos_ = self.__state_.without_deriv('t')
+        self._pos_ = self._state_.without_deriv('t')
 
-        self.__origin_ = Event.PATH_CLASS.as_waypoint(origin)
-        self.__frame_ = Frame.as_wayframe(frame) or origin.frame
+        self._origin_ = Event.PATH_CLASS.as_waypoint(origin)
+        self._frame_ = Frame.as_wayframe(frame) or origin.frame
 
-        self.__ssb_ = None
-        self.__xform_to_j2000_ = None
-        self.__shape_ = None
-        self.__mask_ = None
-        self.__antimask_ = None
-        self.__wod_ = None
+        self._ssb_ = None
+        self._xform_to_j2000_ = None
+        self._shape_ = None
+        self._mask_ = None
+        self._antimask_ = None
+        self._wod_ = None
 
         # Set default values for properties
         for prop_name in Event.SPECIAL_PROPERTIES:
             self.__dict__[Event.attr_name(prop_name)] = None
 
         # Fill in any given subfields or properties
-        self.__subfields_ = {}
+        self._subfields_ = {}
         for (name, value) in more.items():
             self.insert_subfield(name, value)
+
+    #===========================================================================
+    def __getstate__(self):
+        """The minimum info necessary to preserve the entire state of the event.
+        """
+
+        arr_lt_attr = ''
+        dep_lt_attr = ''
+        more = {}
+
+        # Save only the first occurrence of an arriving photon property
+        for prop in ARR_VEC3_PROPERTIES:
+            attr = '_' + prop + '_'
+            if hasattr(self, attr):
+                vec = self.getattr(attr)
+
+                # Scale it by the light time if possible
+                if hasattr(self, '_arr_lt_'):
+                    more[prop] = vec.with_norm(getattr(self, '_arr_lt_'))
+                    arr_lt_attr = attr
+                else:
+                    more[prop] = vec
+
+        # Save only the first occurrence of a departing photon property
+        for prop in DEP_VEC3_PROPERTIES:
+            attr = '_' + prop + '_'
+            if hasattr(self, attr):
+                vec = self.getattr(attr)
+
+                # Scale it by the light time if possible
+                if hasattr(self, '_dep_lt_'):
+                    more[prop] = vec.with_norm(getattr(self, '_dep_lt_'))
+                    dep_lt_attr = attr
+                else:
+                    more[prop] = vec
+
+        # Save additional properties
+        for prop in ('perp', 'vflat'):
+            attr = '_' + prop + '_'
+            if hasattr(self, attr):
+                more[prop] = getattr(self, attr)
+
+        # Save the subfields
+        for (key, value) in self.subfields.items():
+            more[key] = value
+
+        return (self._time_, self._state_, self._origin_, self._frame_,
+                more, arr_lt_attr, dep_lt_attr)
+
+    #===========================================================================
+    def __setstate__(self, state):
+        self.__init__(*state[:-2])
+
+        # Extract arriving and departing light time from the relevant vectors
+        (arr_lt_attr, dep_lt_attr) = state[-2:]
+
+        if arr_lt_attr:
+            vec = getattr(self, arr_lt_attr)
+            self.fset('arr_lt', vec.norm())
+
+        if dep_lt_attr:
+            vec = getattr(self, dep_lt_attr)
+            self.fset('dep_lt', vec.norm())
 
     ############################################################################
     # Read-only properties
@@ -209,57 +261,57 @@ class Event(object):
 
     @property
     def time(self):
-        return self.__time_
+        return self._time_
 
     @property
     def state(self):
         """Position with velocity as time-derivative .d_dt."""
-        return self.__state_
+        return self._state_
 
     @property
     def pos(self):
         """Position without velocity as time-derivative."""
-        return self.__pos_
+        return self._pos_
 
     @property
     def vel(self):
-        if hasattr(self.__state_, 'd_dt'):
-            return self.__state_.d_dt
+        if hasattr(self._state_, 'd_dt'):
+            return self._state_.d_dt
         else:
             return Vector3.ZERO
 
     @property
     def origin(self):
-        return self.__origin_
+        return self._origin_
 
     @property
     def origin_id(self):
-        return self.__origin_.path_id
+        return self._origin_.path_id
 
     @property
     def frame(self):
-        return self.__frame_
+        return self._frame_
 
     @property
     def frame_id(self):
-        return self.__frame_.frame_id
+        return self._frame_.frame_id
 
     @property
     def subfields(self):
-        return self.__subfields_
+        return self._subfields_
 
     @property
     def shape(self):
-        if self.__shape_ is None:
-            self.__shape_ = Qube.broadcasted_shape(self.__time_,
-                                                   self.__state_,
-                                                   self.__origin_,
-                                                   self.__frame_,
-                                                   self.__arr_,
-                                                   self.__arr_ap_,
-                                                   self.__dep_,
-                                                   self.__dep_ap_)
-        return self.__shape_
+        if self._shape_ is None:
+            self._shape_ = Qube.broadcasted_shape(self._time_,
+                                                  self._state_,
+                                                  self._origin_,
+                                                  self._frame_,
+                                                  self._arr_,
+                                                  self._arr_ap_,
+                                                  self._dep_,
+                                                  self._dep_ap_)
+        return self._shape_
 
     @property
     def size(self):
@@ -267,89 +319,89 @@ class Event(object):
 
     @property
     def mask(self):
-        if self.__mask_ is None:
-            self.__mask_ = (self.__time_.mask | self.__state_.mask |
+        if self._mask_ is None:
+            self._mask_ = (self._time_.mask | self._state_.mask |
                                                 self.vel.mask)
-            if self.__dep_ is not None:
-                self.__mask_ = self.__mask_ | self.__dep_.mask
-            if self.__dep_ap_ is not None:
-                self.__mask_ = self.__mask_ | self.__dep_ap_.mask
-            if self.__dep_lt_ is not None:
-                self.__mask_ = self.__mask_ | self.__dep_lt_.mask
-            if self.__arr_ is not None:
-                self.__mask_ = self.__mask_ | self.__arr_.mask
-            if self.__arr_ap_ is not None:
-                self.__mask_ = self.__mask_ | self.__arr_ap_.mask
-            if self.__arr_lt_ is not None:
-                self.__mask_ = self.__mask_ | self.__arr_lt_.mask
+            if self._dep_ is not None:
+                self._mask_ = self._mask_ | self._dep_.mask
+            if self._dep_ap_ is not None:
+                self._mask_ = self._mask_ | self._dep_ap_.mask
+            if self._dep_lt_ is not None:
+                self._mask_ = self._mask_ | self._dep_lt_.mask
+            if self._arr_ is not None:
+                self._mask_ = self._mask_ | self._arr_.mask
+            if self._arr_ap_ is not None:
+                self._mask_ = self._mask_ | self._arr_ap_.mask
+            if self._arr_lt_ is not None:
+                self._mask_ = self._mask_ | self._arr_lt_.mask
 
-            self.__antimask_ = None
+            self._antimask_ = None
 
-        return self.__mask_
+        return self._mask_
 
     @property
     def antimask(self):
-        if self.__antimask_ is None:
-            self.__antimask_ = np.logical_not(self.mask)
+        if self._antimask_ is None:
+            self._antimask_ = np.logical_not(self.mask)
 
-        return self.__antimask_
+        return self._antimask_
 
     @property
     def ssb(self):
-        if self.__ssb_ is None:
+        if self._ssb_ is None:
             _ = self.wrt_ssb(derivs=True)
 
-        return self.__ssb_
+        return self._ssb_
 
     @property
     def xform_to_j2000(self):
         """Transform that rotates from event coordinates to J2000 coordinates.
         """
 
-        if self.__xform_to_j2000_ is None:
-            if self.__ssb_ is None:
+        if self._xform_to_j2000_ is None:
+            if self._ssb_ is None:
                 _ = self.wrt_ssb(derivs=True)
             else:
-                self.__xform_to_j2000_ = self.wrt(Event.PATH_CLASS.SSB,
-                                                  Frame.J2000,
-                                                  derivs=True, quick={},
-                                                  include_xform=True)[1]
+                self._xform_to_j2000_ = self.wrt(Event.PATH_CLASS.SSB,
+                                                 Frame.J2000,
+                                                 derivs=True, quick={},
+                                                 include_xform=True)[1]
 
-        return self.__xform_to_j2000_
+        return self._xform_to_j2000_
 
     @property
     def wod(self):
-        if self.__wod_ is None:
-            self.__wod_ = self.without_derivs()
-            self.__wod_.__wod_ = self.__wod_
+        if self._wod_ is None:
+            self._wod_ = self.without_derivs()
+            self._wod_._wod_ = self._wod_
 
-        return self.__wod_
+        return self._wod_
 
     def empty_cache(self):
         """Remove cached properties; call every time an attribute is set."""
 
-        self.__wod_ = None
-        self.__mask_ = None
-        self.__antimask_ = None
-        self.__shape_ = None
+        self._wod_ = None
+        self._mask_ = None
+        self._antimask_ = None
+        self._shape_ = None
 
-        if self.__ssb_:
-            self.__ssb_.__wod_ = None
-            self.__ssb_.__mask_ = None
-            self.__ssb_.__antimask_ = None
-            self.__ssb_.__shape_ = None
+        if self._ssb_:
+            self._ssb_._wod_ = None
+            self._ssb_._mask_ = None
+            self._ssb_._antimask_ = None
+            self._ssb_._shape_ = None
 
     def reinit(self):
         """Remove all internal information; needed for Events that involve
         Fittable objects.
         """
 
-        self.__ssb_ = None
-        self.__xform_to_j2000_ = None
-        self.__shape_ = None
-        self.__mask_ = None
-        self.__antimask_ = None
-        self.__wod_ = None
+        self._ssb_ = None
+        self._xform_to_j2000_ = None
+        self._shape_ = None
+        self._mask_ = None
+        self._antimask_ = None
+        self._wod_ = None
 
     ############################################################################
     # Special properties: Photon arrival vectors
@@ -357,48 +409,48 @@ class Event(object):
     # These values are cached for repeated use.
     #
     # Upon setting any of these parameters, the immediate value is saved and at
-    # least one of the attributes __arr_ap_ and __arr_ is filled in. All other
+    # least one of the attributes _arr_ap_ and _arr_ is filled in. All other
     # attributes of arriving photons are derived from one of these. Each of
     # these can be derived from the other using actual_arr() and apparent_arr().
     ############################################################################
 
     @property
     def arr(self):
-        if self.__arr_ is None:
-          if self.__arr_ap_ is not None:
+        if self._arr_ is None:
+          if self._arr_ap_ is not None:
             _ = self.actual_arr(derivs=True)    # fill internal attribute
 
-        return self.__arr_                  # returns None if still undefined
+        return self._arr_                   # returns None if still undefined
 
     @arr.setter
     def arr(self, value):
-        if (self.__arr_ is not None) or (self.__arr_ap_ is not None):
+        if (self._arr_ is not None) or (self._arr_ap_ is not None):
             raise ValueError('arriving photons were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         arr = Vector3.as_vector3(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, arr)
+        self._shape_ = Qube.broadcasted_shape(self.shape, arr)
 
-        self.__arr_ = arr
+        self._arr_ = arr
         if ABERRATION.old:
-            self.__arr_ap_ = arr
+            self._arr_ap_ = arr
 
-        if (self.__ssb_ is not None) and (self.__ssb_.__arr_ is None):
-            self.__ssb_.__arr_ = self.xform_to_j2000.rotate(self.__arr_)
+        if (self._ssb_ is not None) and (self._ssb_._arr_ is None):
+            self._ssb_._arr_ = self.xform_to_j2000.rotate(self._arr_)
 
         self.empty_cache()
 
     @property
     def arr_ap(self):
         if ABERRATION.old:
-            return self.__arr_
+            return self._arr_
 
-        if self.__arr_ap_ is None:
-          if self.__arr_ is not None:
+        if self._arr_ap_ is None:
+          if self._arr_ is not None:
             _ = self.apparent_arr(derivs=True)  # fill internal attribute
 
-        return self.__arr_ap_               # returns None if still undefined
+        return self._arr_ap_                # returns None if still undefined
 
     @arr_ap.setter
     def arr_ap(self, value):
@@ -406,18 +458,18 @@ class Event(object):
             self.arr = value
             return
 
-        if (self.__arr_ap_ is not None) or (self.__arr_ is not None):
+        if (self._arr_ap_ is not None) or (self._arr_ is not None):
             raise ValueError('arriving photons were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         arr_ap = Vector3.as_vector3(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, arr_ap)
+        self._shape_ = Qube.broadcasted_shape(self.shape, arr_ap)
 
-        self.__arr_ap_ = arr_ap
+        self._arr_ap_ = arr_ap
 
-        if (self.__ssb_ is not None) and (self.__ssb_.__arr_ap_ is None):
-            self.__ssb_.__arr_ap_ = self.xform_to_j2000.rotate(self.__arr_ap_)
+        if (self._ssb_ is not None) and (self._ssb_._arr_ap_ is None):
+            self._ssb_._arr_ap_ = self.xform_to_j2000.rotate(self._arr_ap_)
 
         self.empty_cache()
 
@@ -434,7 +486,7 @@ class Event(object):
         else:
             value = Vector3.as_vector3(value).as_readonly()
             self.arr = self.xform_to_j2000.unrotate(value)
-            ssb_event.__arr_ = value
+            ssb_event._arr_ = value
 
         self.empty_cache()
 
@@ -458,28 +510,28 @@ class Event(object):
         else:
             value = Vector3.as_vector3(value).as_readonly()
             self.arr_ap = self.xform_to_j2000.unrotate(value)
-            ssb_event.__arr_ap_ = value
+            ssb_event._arr_ap_ = value
 
         self.empty_cache()
 
     @property
     def arr_lt(self):
-        return self.__arr_lt_               # returns None if still undefined
+        return self._arr_lt_                # returns None if still undefined
 
     @arr_lt.setter
     def arr_lt(self, value):
-        if self.__arr_lt_ is not None:
+        if self._arr_lt_ is not None:
             raise ValueError('arriving photons were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         arr_lt = Scalar.as_scalar(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, arr_lt)
+        self._shape_ = Qube.broadcasted_shape(self.shape, arr_lt)
 
-        self.__arr_lt_ = arr_lt
+        self._arr_lt_ = arr_lt
 
-        if (self.__ssb_ is not None) and (self.__ssb_.__arr_lt_ is None):
-            self.__ssb_.__arr_lt_ = self.__arr_lt_
+        if (self._ssb_ is not None) and (self._ssb_._arr_lt_ is None):
+            self._ssb_._arr_lt_ = self._arr_lt_
 
         self.empty_cache()
 
@@ -489,22 +541,22 @@ class Event(object):
     # These values are cached for repeated use.
     #
     # Upon setting any of these parameters, the immediate value is saved and at
-    # least one of the attributes __arr_ap_ and __arr_ is filled in. All other
+    # least one of the attributes _arr_ap_ and _arr_ is filled in. All other
     # attributes of arriving photons are derived from one of these.
     ############################################################################
 
     @property
     def neg_arr(self):
-        if self.__neg_arr_ is None:
-          self.__neg_arr_ = -self.arr
+        if self._neg_arr_ is None:
+          self._neg_arr_ = -self.arr
 
-        return self.__neg_arr_
+        return self._neg_arr_
 
     @neg_arr.setter
     def neg_arr(self, value):
         value = Vector3.as_vector3(value).as_readonly()
         self.arr = -value
-        self.__neg_arr_ = value
+        self._neg_arr_ = value
 
         self.empty_cache()
 
@@ -513,10 +565,10 @@ class Event(object):
         if ABERRATION.old:
             return self.neg_arr
 
-        if self.__neg_arr_ap_ is None:
-          self.__neg_arr_ap_ = -self.arr_ap
+        if self._neg_arr_ap_ is None:
+          self._neg_arr_ap_ = -self.arr_ap
 
-        return self.__neg_arr_ap_
+        return self._neg_arr_ap_
 
     @neg_arr_ap.setter
     def neg_arr_ap(self, value):
@@ -526,7 +578,7 @@ class Event(object):
 
         value = Vector3.as_vector3(value).as_readonly()
         self.arr_ap = -value
-        self.__neg_arr_ap_ = value
+        self._neg_arr_ap_ = value
 
         self.empty_cache()
 
@@ -538,10 +590,10 @@ class Event(object):
     def neg_arr_j2000(self, value):
         value = Vector3.as_vector3(value).as_readonly()
         self.ssb.arr = -value
-        self.ssb.__neg_arr_ = value
+        self.ssb._neg_arr_ = value
 
         if self.ssb is not self:
-            self.arr = self.xform_to_j2000.unrotate(self.ssb.__arr_)
+            self.arr = self.xform_to_j2000.unrotate(self.ssb._arr_)
 
         self.empty_cache()
 
@@ -560,10 +612,10 @@ class Event(object):
 
         value = Vector3.as_vector3(value).as_readonly()
         self.ssb.arr_ap = -value
-        self.ssb.__neg_arr_ap_ = value
+        self.ssb._neg_arr_ap_ = value
 
         if self.ssb is not self:
-            self.arr_ap = self.xform_to_j2000.unrotate(self.ssb.__arr_ap_)
+            self.arr_ap = self.xform_to_j2000.unrotate(self.ssb._arr_ap_)
 
         self.empty_cache()
 
@@ -573,66 +625,66 @@ class Event(object):
     # These values are cached for repeated use.
     #
     # Upon setting any of these parameters, the immediate value is saved and at
-    # least one of the attributes __dep_ap_ and __dep_ is filled in. All other
+    # least one of the attributes _dep_ap_ and _dep_ is filled in. All other
     # attributes of departing photons are derived from one of these. Each of
     # these can be derived from the other using actual_dep() and apparent_dep().
     ############################################################################
 
     @property
     def dep(self):
-        if self.__dep_ is None:
-          if self.__dep_ap_ is not None:
+        if self._dep_ is None:
+          if self._dep_ap_ is not None:
             _ = self.actual_dep(derivs=True)    # fill internal attribute
 
-        return self.__dep_                  # returns None if still undefined
+        return self._dep_                   # returns None if still undefined
 
     @dep.setter
     def dep(self, value):
-        if (self.__dep_ is not None) or (self.__dep_ap_ is not None):
+        if (self._dep_ is not None) or (self._dep_ap_ is not None):
             raise ValueError('departing photons were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         dep = Vector3.as_vector3(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, dep)
+        self._shape_ = Qube.broadcasted_shape(self.shape, dep)
 
-        self.__dep_ = dep
+        self._dep_ = dep
         if ABERRATION.old:
-            self.__dep_ap_ = dep
+            self._dep_ap_ = dep
 
-        if (self.__ssb_ is not None) and (self.__ssb_.__dep_ is None):
-            self.__ssb_.__dep_ = self.xform_to_j2000.rotate(self.__dep_)
+        if (self._ssb_ is not None) and (self._ssb_._dep_ is None):
+            self._ssb_._dep_ = self.xform_to_j2000.rotate(self._dep_)
 
         self.empty_cache()
 
     @property
     def dep_ap(self):
         if ABERRATION.old:
-            return self.__dep_
+            return self._dep_
 
-        if self.__dep_ap_ is None:
-          if self.__dep_ is not None:
+        if self._dep_ap_ is None:
+          if self._dep_ is not None:
             _ = self.apparent_dep(derivs=True)  # fill internal attribute
 
-        return self.__dep_ap_
+        return self._dep_ap_
 
     @dep_ap.setter
     def dep_ap(self, value):
         if ABERRATION.old:
-            return self.__dep_
+            return self._dep_
 
-        if (self.__dep_ap_ is not None) or (self.__dep_ is not None):
+        if (self._dep_ap_ is not None) or (self._dep_ is not None):
             raise ValueError('departing photons were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         dep_ap = Vector3.as_vector3(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, dep_ap)
+        self._shape_ = Qube.broadcasted_shape(self.shape, dep_ap)
 
-        self.__dep_ap_ = dep_ap
+        self._dep_ap_ = dep_ap
 
-        if (self.__ssb_ is not None) and (self.__ssb_.__dep_ap_ is None):
-            self.__ssb_.__dep_ap_ = self.xform_to_j2000.rotate(self.__dep_ap_)
+        if (self._ssb_ is not None) and (self._ssb_._dep_ap_ is None):
+            self._ssb_._dep_ap_ = self.xform_to_j2000.rotate(self._dep_ap_)
 
         self.empty_cache()
 
@@ -649,7 +701,7 @@ class Event(object):
         else:
             value = Vector3.as_vector3(value).as_readonly()
             self.dep = self.xform_to_j2000.unrotate(value)
-            ssb_event.__dep_ = value
+            ssb_event._dep_ = value
 
         self.empty_cache()
 
@@ -673,28 +725,28 @@ class Event(object):
         else:
             value = Vector3.as_vector3(value).as_readonly()
             self.dep_ap = self.xform_to_j2000.unrotate(value)
-            ssb_event.__dep_ap_ = value
+            ssb_event._dep_ap_ = value
 
         self.empty_cache()
 
     @property
     def dep_lt(self):
-        return self.__dep_lt_
+        return self._dep_lt_
 
     @dep_lt.setter
     def dep_lt(self, value):
-        if self.__dep_lt_ is not None:
+        if self._dep_lt_ is not None:
             raise ValueError('departing photons were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         dep_lt = Scalar.as_scalar(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, dep_lt)
+        self._shape_ = Qube.broadcasted_shape(self.shape, dep_lt)
 
-        self.__dep_lt_ = dep_lt
+        self._dep_lt_ = dep_lt
 
-        if (self.__ssb_ is not None):
-            self.__ssb_.__dep_lt_ = self.__dep_lt_
+        if (self._ssb_ is not None):
+            self._ssb_._dep_lt_ = self._dep_lt_
 
         self.empty_cache()
 
@@ -704,46 +756,46 @@ class Event(object):
 
     @property
     def perp(self):
-        return self.__perp_
+        return self._perp_
 
     @perp.setter
     def perp(self, value):
-        if self.__perp_ is not None:
+        if self._perp_ is not None:
             raise ValueError('perpendiculars were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         perp = Vector3.as_vector(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, perp)
+        self._shape_ = Qube.broadcasted_shape(self.shape, perp)
 
-        self.__perp_ = perp
+        self._perp_ = perp
 
-        if (self.__ssb_ is not None) and (self.__ssb_.__perp_ is None):
-            self.__ssb_.__perp_ = self.xform_to_j2000.rotate(self.__perp_)
+        if (self._ssb_ is not None) and (self._ssb_._perp_ is None):
+            self._ssb_._perp_ = self.xform_to_j2000.rotate(self._perp_)
 
         self.empty_cache()
 
     @property
     def vflat(self):
-        if self.__vflat_ is None:
-            self.__vflat_ = Vector3.ZERO
+        if self._vflat_ is None:
+            self._vflat_ = Vector3.ZERO
 
-        return self.__vflat_
+        return self._vflat_
 
     @vflat.setter
     def vflat(self, value):
-        if self.__vflat_ is not None:
+        if self._vflat_ is not None:
             raise ValueError('surface velocities were already defined in ' +
                              str(self))
 
         # Raise a ValueError if the shape is incompatible
         vflat = Vector3.as_vector(value).as_readonly()
-        self.__shape_ = Qube.broadcasted_shape(self.shape, vflat)
+        self._shape_ = Qube.broadcasted_shape(self.shape, vflat)
 
-        self.__vflat_ = vflat
+        self._vflat_ = vflat
 
-        if (self.__ssb_ is not None) and (self.__ssb_.__vflat_ is None):
-            self.__ssb_.__vflat_ = self.xform_to_j2000.rotate(self.__vflat_)
+        if (self._ssb_ is not None) and (self._ssb_._vflat_ is None):
+            self._ssb_._vflat_ = self.xform_to_j2000.rotate(self._vflat_)
 
         self.empty_cache()
 
@@ -787,10 +839,10 @@ class Event(object):
             str_list += [str(vel[0]), ', ..., ', str(vel[-1])]
 
         str_list += [';\n  shape = ', str(self.shape), ', ',
-                     self.__origin_.path_id, ', ',
-                     self.__frame_.frame_id]
+                     self._origin_.path_id, ', ',
+                     self._frame_.frame_id]
 
-        keys = list(self.__subfields_.keys())
+        keys = list(self._subfields_.keys())
         keys.sort()
         for key in keys:
             str_list += ['; ', key]
@@ -810,15 +862,15 @@ class Event(object):
 
         else:
             self.__dict__[name] = value
-            self.__subfields_[name] = value
+            self._subfields_[name] = value
 
-            if self.__ssb_ is not None and self.__ssb_ is not self:
+            if self._ssb_ is not None and self._ssb_ is not self:
                 try:
                     value_j2000 = self.xform_to_j2000.rotate(value)
                 except:
                     value_j2000 = value
 
-                self.__ssb_.insert_subfield(name, value_j2000)
+                self._ssb_.insert_subfield(name, value_j2000)
 
         self.empty_cache()
 
@@ -848,9 +900,9 @@ class Event(object):
         """
 
         # Create the new event
-        result = Event(func(self.__time_, *args),
-                       func(self.__state_, *args),
-                       self.__origin_, self.__frame_)
+        result = Event(func(self._time_, *args),
+                       func(self._state_, *args),
+                       self._origin_, self._frame_)
 
         # Apply to all the properties
         for prop_name in Event.SPECIAL_PROPERTIES:
@@ -862,17 +914,17 @@ class Event(object):
                 result.__dict__[attr] = value
 
         # Handle SSB attributes
-        if self.__ssb_ is None:
-            result.__ssb_ = None
-        elif self.__ssb_ == self:
-            result.__ssb_ = result
+        if self._ssb_ is None:
+            result._ssb_ = None
+        elif self._ssb_ == self:
+            result._ssb_ = result
         else:
-            result.__ssb_ = self.__ssb_._apply_this_func(func, *args)
-            result.__ssb_.__ssb_ = result.__ssb_
-            result.__xform_to_j2000_ = self.xform_to_j2000
+            result._ssb_ = self._ssb_._apply_this_func(func, *args)
+            result._ssb_._ssb_ = result._ssb_
+            result._xform_to_j2000_ = self.xform_to_j2000
 
         # Handle subfields
-        for (name, value) in self.__subfields_.items():
+        for (name, value) in self._subfields_.items():
             if isinstance(value, Qube):
                 result.insert_subfield(name, func(value, *args))
             else:
@@ -911,15 +963,15 @@ class Event(object):
                     if name in prop_name and '_lt' not in prop_name:
                         attr = Event.attr_name(prop_name)
                         result.__dict__[attr] = None
-                        if result.__ssb_ is not None:
-                            result.__ssb_.__dict__[attr] = None
+                        if result._ssb_ is not None:
+                            result._ssb_.__dict__[attr] = None
 
             # Wipe out other properties individually
             elif name in Event.SPECIAL_PROPERTIES:
                 attr = Event.attr_name(name)
                 result.__dict__[attr] = None
-                if result.__ssb_ is not None:
-                    result.__ssb_.__dict__[attr] = None
+                if result._ssb_ is not None:
+                    result._ssb_.__dict__[attr] = None
 
             # Otherwise assume it is a subfield
             else:
@@ -933,14 +985,14 @@ class Event(object):
                 except KeyError:
                     pass
 
-                if result.__ssb_:
+                if result._ssb_:
                     try:
-                        del result.__ssb_.subfields[name]
+                        del result._ssb_.subfields[name]
                     except KeyError:
                         pass
 
                     try:
-                        del result.__ssb_.__dict__[name]
+                        del result._ssb_.__dict__[name]
                     except KeyError:
                         pass
 
@@ -977,26 +1029,26 @@ class Event(object):
             broadcast = self.shape
 
         result = self._apply_this_func(fully_masked)
-        result.__mask_ = True
+        result._mask_ = True
         result.__antimask = False
 
         # Change the origin or frame if requested
         if origin:
-            result.__origin_ = origin
+            result._origin_ = origin
         if frame:
-            result.__frame_ = frame
+            result._frame_ = frame
 
-        # Fill in __ssb_, also masked
-        if (result.__origin_ == Event.PATH_CLASS.SSB and
-            result.__frame_ == Frame.J2000):
-                result.__ssb_ == result
+        # Fill in _ssb_, also masked
+        if (result._origin_ == Event.PATH_CLASS.SSB and
+            result._frame_ == Frame.J2000):
+                result._ssb_ == result
         else:
-                result.__ssb_ = result.all_masked(Event.PATH_CLASS.SSB,
+                result._ssb_ = result.all_masked(Event.PATH_CLASS.SSB,
                                                   Frame.J2000)
-                result.__ssb_.__xform_to_j2000_ = Transform.IDENTITY
+                result._ssb_._xform_to_j2000_ = Transform.IDENTITY
 
-        if result.__xform_to_j2000_ is None:
-            result.__xform_to_j2000_ = Transform.IDENTITY
+        if result._xform_to_j2000_ is None:
+            result._xform_to_j2000_ = Transform.IDENTITY
 
         return result
 
@@ -1053,15 +1105,15 @@ class Event(object):
         frame of the event.
         """
 
-        if 't' in self.__time_.derivs:
+        if 't' in self._time_.derivs:
             return self
 
         event = self.copy()
-        event.__time_.insert_deriv('t', Scalar.ONE, override=True)
+        event._time_.insert_deriv('t', Scalar.ONE, override=True)
 
-        if event.__ssb_ is not None and event.__ssb_ is not event and \
-           event.__ssb_.__time_ is not event.__time_:
-            event.ssb.__time_.insert_deriv('t', Scalar.ONE, override=True)
+        if event._ssb_ is not None and event._ssb_ is not event and \
+           event._ssb_._time_ is not event._time_:
+            event.ssb._time_.insert_deriv('t', Scalar.ONE, override=True)
 
         return event
 
@@ -1090,12 +1142,12 @@ class Event(object):
             return self
 
         event = self.copy()
-        event.__state_.insert_deriv('pos', Vector3.IDENTITY, override=True)
+        event._state_.insert_deriv('pos', Vector3.IDENTITY, override=True)
 
-        if event.__ssb_ is not None and event.__ssb_ is not event:
-            dpos_dpos_j2000 = event.xform_to_j2000.rotate(event.__state_,
+        if event._ssb_ is not None and event._ssb_ is not event:
+            dpos_dpos_j2000 = event.xform_to_j2000.rotate(event._state_,
                                                           derivs=True)
-            event.ssb.__state_.insert_deriv('pos', Vector3.IDENTITY,
+            event.ssb._state_.insert_deriv('pos', Vector3.IDENTITY,
                                                    override=True)
 
         return event
@@ -1110,11 +1162,11 @@ class Event(object):
             return self
 
         event = self.copy()
-        event.__arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
+        event._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
 
-        if event.__ssb_ is not None and event.__ssb_ is not event and \
-           event.__ssb_.__arr_lt_ is not event.__arr_lt_:
-            event.__ssb_.__arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
+        if event._ssb_ is not None and event._ssb_ is not event and \
+           event._ssb_._arr_lt_ is not event._arr_lt_:
+            event._ssb_._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
 
         return event
 
@@ -1143,11 +1195,11 @@ class Event(object):
             return self
 
         event = self.copy()
-        event.__dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
+        event._dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
 
-        if event.__ssb_ is not None and event.__ssb_ is not event and \
-           event.__ssb_.__dep_lt_ is not event.__dep_lt_:
-            event.__ssb_.__dep_lt_.insert_deriv('dlt', Scalar.ONE,
+        if event._ssb_ is not None and event._ssb_ is not event and \
+           event._ssb_._dep_lt_ is not event._dep_lt_:
+            event._ssb_._dep_lt_.insert_deriv('dlt', Scalar.ONE,
                                                        override=True)
 
         return event
@@ -1175,16 +1227,16 @@ class Event(object):
 
         result = self._apply_this_func(shrink1)
 
-        if self.__xform_to_j2000_ is not None:
-            xform = self.__xform_to_j2000_
+        if self._xform_to_j2000_ is not None:
+            xform = self._xform_to_j2000_
             new_xform = Transform(xform.matrix.shrink(antimask),
                                   xform.omega.shrink(antimask),
                                   xform.frame, xform.reference, xform.origin)
-            result.__xform_to_j2000_ = new_xform
+            result._xform_to_j2000_ = new_xform
 
-        ssb = result.__ssb_
+        ssb = result._ssb_
         if (ssb is not None and ssb is not result):
-            ssb.__xform_to_j2000_ = Transform.IDENTITY
+            ssb._xform_to_j2000_ = Transform.IDENTITY
 
         return result
 
@@ -1206,16 +1258,16 @@ class Event(object):
 
         result = self._apply_this_func(unshrink1)
 
-        if self.__xform_to_j2000_ is not None:
-            xform = self.__xform_to_j2000_
+        if self._xform_to_j2000_ is not None:
+            xform = self._xform_to_j2000_
             new_xform = Transform(xform.matrix.unshrink(antimask, shape),
                                   xform.omega.unshrink(antimask, shape),
                                   xform.frame, xform.reference, xform.origin)
-            result.__xform_to_j2000_ = new_xform
+            result._xform_to_j2000_ = new_xform
 
-        ssb = result.__ssb_
+        ssb = result._ssb_
         if (ssb is not None and ssb is not result):
-            ssb.__xform_to_j2000_ = Transform.IDENTITY
+            ssb._xform_to_j2000_ = Transform.IDENTITY
 
         return result
 
@@ -1239,36 +1291,36 @@ class Event(object):
                         default configuration is defined in config.py.
         """
 
-        if self.__ssb_ is not None:
+        if self._ssb_ is not None:
             if derivs:
-                return self.__ssb_
+                return self._ssb_
             else:
-                return self.__ssb_.wod
+                return self._ssb_.wod
 
-        if (self.__origin_ == Event.PATH_CLASS.SSB) and \
-           (self.__frame_ == Frame.J2000):
-                self.__ssb_ = self
-                self.__ssb_.__ssb_ = self
-                self.__xform_to_j2000_ = Transform.identity(Frame.J2000)
+        if (self._origin_ == Event.PATH_CLASS.SSB) and \
+           (self._frame_ == Frame.J2000):
+                self._ssb_ = self
+                self._ssb_._ssb_ = self
+                self._xform_to_j2000_ = Transform.identity(Frame.J2000)
                 if derivs:
-                    return self.__ssb_
+                    return self._ssb_
                 else:
-                    return self.__ssb_.wod
+                    return self._ssb_.wod
 
-        (self.__ssb_,
-         self.__xform_to_j2000_) = self.wrt(Event.PATH_CLASS.SSB,
+        (self._ssb_,
+         self._xform_to_j2000_) = self.wrt(Event.PATH_CLASS.SSB,
                                             Frame.J2000,
                                             derivs=derivs, quick=quick,
                                             include_xform=True)
 
-        if self.__ssb_ is not self:
-            self.__ssb_.__ssb_ = self.__ssb_
-            self.__ssb_.__xform_to_j2000_ = Transform.IDENTITY
+        if self._ssb_ is not self:
+            self._ssb_._ssb_ = self._ssb_
+            self._ssb_._xform_to_j2000_ = Transform.IDENTITY
 
         if derivs:
-            return self.__ssb_
+            return self._ssb_
         else:
-            return self.__ssb_.wod
+            return self._ssb_.wod
 
     #===========================================================================
     def from_ssb(self, path, frame, derivs=True, quick={}):
@@ -1288,12 +1340,12 @@ class Event(object):
                         default configuration is defined in config.py.
         """
 
-        assert self.__frame_ == Frame.J2000
-        assert self.__origin_ == Event.PATH_CLASS.SSB
+        assert self._frame_ == Frame.J2000
+        assert self._origin_ == Event.PATH_CLASS.SSB
 
         event = self.wrt(path, frame, derivs=True, quick=quick)
-        event.__ssb_ = self
-        event.__ssb_.__ssb_ = self
+        event._ssb_ = self
+        event._ssb_._ssb_ = self
 
         if derivs:
             return event
@@ -1327,12 +1379,12 @@ class Event(object):
 
         # Interpret inputs
         if path is None:
-            path = self.__origin_
+            path = self._origin_
         else:
             path = Event.PATH_CLASS.as_path(path)
 
         if frame is None:
-            frame = self.__frame_
+            frame = self._frame_
         else:
             frame = Frame.as_frame(frame)
 
@@ -1341,10 +1393,10 @@ class Event(object):
 
         # If the path is shifting...
         xform1 = None
-        if event.__origin_.waypoint != path.waypoint:
+        if event._origin_.waypoint != path.waypoint:
 
             # ...and the current frame is rotating...
-            old_frame = event.__frame_
+            old_frame = event._frame_
             if old_frame.origin is not None:
 
                 # ...then rotate to J2000
@@ -1353,7 +1405,7 @@ class Event(object):
                                                   include_xform=True)
 
         # If the frame is changing...
-        if event.__frame_.wayframe != frame.wayframe:
+        if event._frame_.wayframe != frame.wayframe:
 
             # ...and the new frame is rotating...
             if frame.origin is not None:
@@ -1370,7 +1422,7 @@ class Event(object):
 
         # Now fix the frame again if necessary
         xform2 = None
-        if event.__frame_.wayframe != frame.wayframe:
+        if event._frame_.wayframe != frame.wayframe:
             (event, xform2) = event.wrt_frame(frame, derivs=derivs, quick=quick,
                                               include_xform=True)
 
@@ -1401,11 +1453,11 @@ class Event(object):
         """
 
         if path is None:
-            path = self.__origin_
+            path = self._origin_
         else:
             path = Event.PATH_CLASS.as_path(path)
 
-        if self.__origin_.waypoint == path.waypoint:
+        if self._origin_.waypoint == path.waypoint:
             if derivs:
                 return self
             else:
@@ -1416,7 +1468,7 @@ class Event(object):
         if self.frame.wayframe != path.frame.wayframe:
             event = event.wrt(path, path.frame, derivs=derivs, quick=quick)
 
-        new_path = event.__origin_.wrt(path, path.frame)
+        new_path = event._origin_.wrt(path, path.frame)
         result = new_path.add_to_event(event, derivs=derivs, quick=quick)
 
         # Other attributes do not depend on the path
@@ -1424,7 +1476,7 @@ class Event(object):
             attr = Event.attr_name(prop_name)
             result.__dict__[attr] = event.__dict__[attr]
 
-        for (name, value) in event.__subfields_.items():
+        for (name, value) in event._subfields_.items():
             result.insert_subfield(name, value)
 
         if derivs:
@@ -1454,11 +1506,11 @@ class Event(object):
         """
 
         if frame is None:
-            frame = self.__frame_
+            frame = self._frame_
         else:
             frame = Frame.as_frame(frame)
 
-        if self.__frame_.wayframe == frame.wayframe:
+        if self._frame_.wayframe == frame.wayframe:
             if derivs:
                 result = self
             else:
@@ -1469,7 +1521,7 @@ class Event(object):
             else:
                 return result
 
-        new_frame = frame.wrt(self.__frame_)
+        new_frame = frame.wrt(self._frame_)
         return self.rotate_by_frame(new_frame, derivs=derivs, quick=quick,
                                                include_xform=include_xform)
 
@@ -1507,20 +1559,20 @@ class Event(object):
             event = self.wod
 
         frame = Frame.as_frame(frame)
-        xform = frame.transform_at_time(event.__time_, quick=quick)
+        xform = frame.transform_at_time(event._time_, quick=quick)
                     # xform rotates from event frame to new frame
 
-        state = xform.rotate(event.__state_, derivs=True)
+        state = xform.rotate(event._state_, derivs=True)
 
-        result = Event(event.__time_, state, event.__origin_, frame.wayframe)
+        result = Event(event._time_, state, event._origin_, frame.wayframe)
 
         for prop_name in Event.SPECIAL_PROPERTIES:
             attr = Event.attr_name(prop_name)
             result.__dict__[attr] = xform_rotate(event.__dict__[attr])
 
-        result.__xform_to_j2000_ = None
+        result._xform_to_j2000_ = None
 
-        for (name, value) in event.__subfields_.items():
+        for (name, value) in event._subfields_.items():
             result.insert_subfield(name, xform_rotate(value))
 
         if include_xform:
@@ -1559,19 +1611,19 @@ class Event(object):
             event = self.wod
 
         frame = Frame.as_frame(frame)
-        xform = frame.transform_at_time(event.__time_, quick=quick)
+        xform = frame.transform_at_time(event._time_, quick=quick)
 
-        state = xform.unrotate(event.__state_, derivs=True)
+        state = xform.unrotate(event._state_, derivs=True)
 
-        result = Event(event.__time_, state, event.__origin_, frame.reference)
+        result = Event(event._time_, state, event._origin_, frame.reference)
 
         for prop_name in Event.SPECIAL_PROPERTIES:
             attr = Event.attr_name(prop_name)
             result.__dict__[attr] = xform_unrotate(event.__dict__[attr])
 
-        result.__xform_to_j2000_ = None
+        result._xform_to_j2000_ = None
 
-        for (name, value) in event.__subfields_.items():
+        for (name, value) in event._subfields_.items():
             result.insert_subfield(name, xform_unrotate(value))
 
         return result
@@ -1597,16 +1649,16 @@ class Event(object):
                 return arg
             return arg.wod
 
-        if self.__time_.shape == ():
+        if self._time_.shape == ():
             return self
-        if self.__time_.derivs:
+        if self._time_.derivs:
             return self
 
         if threshold is None:
             threshold = EVENT_CONFIG.collapse_threshold
 
-        tmin = self.__time_.min()
-        tmax = self.__time_.max()
+        tmin = self._time_.min()
+        tmax = self._time_.max()
         span = tmax - tmin
 
         collapsed_mask = (span == Scalar.MASKED)
@@ -1617,15 +1669,15 @@ class Event(object):
         if LOGGING.event_time_collapse:
             print(LOGGING.prefix, "Event.collapse_time()", tmin, tmax - tmin)
 
-        midtime = Scalar((tmin + tmax)/2., collapsed_mask, self.__time_.units)
+        midtime = Scalar((tmin + tmax)/2., collapsed_mask, self._time_.units)
 
         result = self.copy()
-        result.__time_ = midtime
+        result._time_ = midtime
 
-        if result.__ssb_ is not None and result.__ssb_ is not result:
-            result.__ssb_.__time_ = midtime
+        if result._ssb_ is not None and result._ssb_ is not result:
+            result._ssb_._time_ = midtime
 
-        result.__shape_ = None
+        result._shape_ = None
 
         return result
 
@@ -1661,13 +1713,13 @@ class Event(object):
         state = ref_unrotate(event_ssb.state - reference_ssb.state)
         diff = Event(time, state, reference.origin, reference.frame)
 
-        diff.__ssb_ = self.__ssb_
+        diff._ssb_ = self._ssb_
 
         for prop_name in Event.SPECIAL_PROPERTIES:
             attr = Event.attr_name(prop_name)
             diff.__dict__[attr] = ref_unrotate(event_ssb.__dict__[attr])
 
-        for (key,subfield) in event_ssb.__subfields_.items():
+        for (key,subfield) in event_ssb._subfields_.items():
             try:
                 subfield = ref_unrotate(subfield)
             except:
@@ -1789,26 +1841,26 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self.__arr_ap_ is not None:
+        if not ABERRATION.old and self._arr_ap_ is not None:
             if derivs:
-                return self.__arr_ap_
+                return self._arr_ap_
             else:
-                return self.__arr_ap_.wod
+                return self._arr_ap_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
         arr_ap_ssb = self.apparent_ray_ssb(wrt_ssb.arr, derivs, quick=quick)
-        wrt_ssb.__arr_ap_ = arr_ap_ssb
+        wrt_ssb._arr_ap_ = arr_ap_ssb
 
         # Convert to this event's frame
-        if self.__frame_ != Frame.J2000:
-            arr_ap = self.__xform_to_j2000_.unrotate(arr_ap_ssb, derivs=True)
+        if self._frame_ != Frame.J2000:
+            arr_ap = self._xform_to_j2000_.unrotate(arr_ap_ssb, derivs=True)
         else:
             arr_ap = arr_ap_ssb
 
         # Cache the result
         if not ABERRATION.old:
-            self.__arr_ap_ = arr_ap
+            self._arr_ap_ = arr_ap
 
         if derivs:
             return arr_ap
@@ -1829,26 +1881,26 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self.__arr_ is not None:
+        if not ABERRATION.old and self._arr_ is not None:
             if derivs:
-                return self.__arr_
+                return self._arr_
             else:
-                return self.__arr_.wod
+                return self._arr_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
         arr_ssb = self.actual_ray_ssb(wrt_ssb.arr_ap, derivs, quick=quick)
-        wrt_ssb.__arr_ = arr_ssb
+        wrt_ssb._arr_ = arr_ssb
 
         # Convert to this event's frame
-        if self.__frame_ != Frame.J2000:
-            arr = self.__xform_to_j2000_.unrotate(arr_ssb, derivs=True)
+        if self._frame_ != Frame.J2000:
+            arr = self._xform_to_j2000_.unrotate(arr_ssb, derivs=True)
         else:
             arr = arr_ssb
 
         # Cache the result
         if not ABERRATION.old:
-            self.__arr_ = arr
+            self._arr_ = arr
 
         if derivs:
             return arr
@@ -1869,26 +1921,26 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self.__dep_ap_ is not None:
+        if not ABERRATION.old and self._dep_ap_ is not None:
             if derivs:
-                return self.__dep_ap_
+                return self._dep_ap_
             else:
-                return self.__dep_ap_.wod
+                return self._dep_ap_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        dep_ap_ssb = self.apparent_ray_ssb(wrt_ssb.__dep_, derivs, quick=quick)
-        wrt_ssb.__dep_ap_ = dep_ap_ssb
+        dep_ap_ssb = self.apparent_ray_ssb(wrt_ssb._dep_, derivs, quick=quick)
+        wrt_ssb._dep_ap_ = dep_ap_ssb
 
         # Convert to this event's frame
-        if self.__frame_ != Frame.J2000:
-            dep_ap = self.__xform_to_j2000_.unrotate(dep_ap_ssb, derivs=True)
+        if self._frame_ != Frame.J2000:
+            dep_ap = self._xform_to_j2000_.unrotate(dep_ap_ssb, derivs=True)
         else:
             dep_ap = dep_ap_ssb
 
         # Cache the result
         if not ABERRATION.old:
-            self.__dep_ap_ = dep_ap
+            self._dep_ap_ = dep_ap
 
         if derivs:
             return dep_ap
@@ -1909,26 +1961,26 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self.__dep_ is not None:
+        if not ABERRATION.old and self._dep_ is not None:
             if derivs:
-                return self.__dep_
+                return self._dep_
             else:
-                return self.__dep_.wod
+                return self._dep_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        dep_ssb = self.actual_ray_ssb(wrt_ssb.__dep_ap_, derivs, quick=quick)
-        wrt_ssb.__dep_ = dep_ssb
+        dep_ssb = self.actual_ray_ssb(wrt_ssb._dep_ap_, derivs, quick=quick)
+        wrt_ssb._dep_ = dep_ssb
 
         # Convert to this event's frame
-        if self.__frame_ != Frame.J2000:
-            dep = self.__xform_to_j2000_.unrotate(dep_ssb, derivs=True)
+        if self._frame_ != Frame.J2000:
+            dep = self._xform_to_j2000_.unrotate(dep_ssb, derivs=True)
         else:
             dep = dep_ssb
 
         # Cache the result
         if not ABERRATION.old:
-            self.__dep_ = dep
+            self._dep_ = dep
 
         if derivs:
             return dep
@@ -1952,10 +2004,10 @@ class Event(object):
                         default configuration is defined in config.py.
         """
 
-        if self.__arr_ is None and self.__arr_ap_ is None:
+        if self._arr_ is None and self._arr_ap_ is None:
             raise ValueError('Undefined arrival vector in ' + str(self))
 
-        if self.__perp_ is None:
+        if self._perp_ is None:
             raise ValueError('Undefined perpendicular vector in ' + str(self))
 
         shrunk = self.shrink(self.antimask)
@@ -1986,10 +2038,10 @@ class Event(object):
                         default configuration is defined in config.py.
         """
 
-        if self.__dep_ is None and self.__dep_ap_ is None:
+        if self._dep_ is None and self._dep_ap_ is None:
             raise ValueError('Undefined departure vector in ' + str(self))
 
-        if self.__perp_ is None:
+        if self._perp_ is None:
             raise ValueError('Undefined perpendicular vector in ' + str(self))
 
         shrunk = self.shrink(self.antimask)
@@ -2020,10 +2072,10 @@ class Event(object):
                         default configuration is defined in config.py.
         """
 
-        if self.__arr_ is None and self.__arr_ap_ is None:
+        if self._arr_ is None and self._arr_ap_ is None:
             raise ValueError('Undefined arrival vector in ' + str(self))
 
-        if self.__dep_ is None and self.__dep_ap_ is None:
+        if self._dep_ is None and self._dep_ap_ is None:
             raise ValueError('Undefined departure vector in ' + str(self))
 
         shrunk = self.shrink(self.antimask)
@@ -2274,28 +2326,28 @@ class Test_Event(unittest.TestCase):
                                 ('PLUTO', 'IAU_EARTH')]:
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ########################
             # Define arr
             ########################
 
             ev.arr = (1,2,3)
-            self.assertEqual(ev._Event__arr_, Vector3((1.,2.,3.)))
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertEqual(ev._arr_, Vector3((1.,2.,3.)))
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
-            self.assertIsNone(ev._Event__neg_arr_)
+            self.assertIsNone(ev._neg_arr_)
             self.assertEqual(ev.neg_arr, Vector3((-1.,-2.,-3.)))
-            self.assertIs(ev.neg_arr, ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIs(ev.neg_arr, ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.arr_ap = (1,2,3)
@@ -2303,9 +2355,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.neg_arr_ap = (1,2,3)
@@ -2313,9 +2365,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             # Let arr_ap and ssb be filled in
             ignore = ev.arr_ap
@@ -2326,37 +2378,37 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.arr_j2000, ev.arr)
                 self.assertEqual(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define arr_ap
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ev.arr_ap = (1,2,3)
-            self.assertEqual(ev._Event__arr_ap_, Vector3((1.,2.,3.)))
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertEqual(ev._arr_ap_, Vector3((1.,2.,3.)))
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             self.assertEqual(ev.neg_arr_ap, Vector3((-1.,-2.,-3.)))
-            self.assertEqual(ev._Event__arr_ap_, Vector3((1.,2.,3.)))
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertEqual(ev._arr_ap_, Vector3((1.,2.,3.)))
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.arr = (1,2,3)
@@ -2364,9 +2416,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._ssb_)
 
             # Let arr and ssb be filled in
             ignore = ev.arr
@@ -2377,36 +2429,36 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertIs(ev.arr_j2000, ev.arr)
                 self.assertIs(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define arr_j2000
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ev.arr_j2000 = (1,2,3)
-            self.assertIsNotNone(ev._Event__ssb_)
-            self.assertEqual(ev.ssb._Event__arr_, Vector3((1.,2.,3.)))
-            self.assertIsNone(ev.ssb._Event__arr_ap_)
-            self.assertIsNone(ev.ssb._Event__neg_arr_)
-            self.assertIsNone(ev.ssb._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._ssb_)
+            self.assertEqual(ev.ssb._arr_, Vector3((1.,2.,3.)))
+            self.assertIsNone(ev.ssb._arr_ap_)
+            self.assertIsNone(ev.ssb._neg_arr_)
+            self.assertIsNone(ev.ssb._neg_arr_ap_)
 
-            self.assertIsNotNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
 
             try:
                 ev.arr = (1,2,3)
@@ -2420,10 +2472,10 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNotNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
 
             try:
                 ev.neg_arr = (1,2,3)
@@ -2431,9 +2483,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
 
             # Let arr_ap and ssb be filled in
             ignore = ev.arr_ap
@@ -2444,36 +2496,36 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.arr_j2000, ev.arr)
                 self.assertEqual(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define arr_ap_j2000
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ev.arr_ap_j2000 = (1,2,3)
-            self.assertIsNotNone(ev._Event__ssb_)
-            self.assertEqual(ev.ssb._Event__arr_ap_, Vector3((1.,2.,3.)))
-            self.assertIsNone(ev.ssb._Event__arr_)
-            self.assertIsNone(ev.ssb._Event__neg_arr_)
-            self.assertIsNone(ev.ssb._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._ssb_)
+            self.assertEqual(ev.ssb._arr_ap_, Vector3((1.,2.,3.)))
+            self.assertIsNone(ev.ssb._arr_)
+            self.assertIsNone(ev.ssb._neg_arr_)
+            self.assertIsNone(ev.ssb._neg_arr_ap_)
 
-            self.assertIsNotNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._arr_ap_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
 
             try:
                 ev.arr = (1,2,3)
@@ -2487,10 +2539,10 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNotNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._arr_ap_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
 
             try:
                 ev.neg_arr_ap = (1,2,3)
@@ -2498,9 +2550,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
 
             # Let arr and ssb be filled in
             ignore = ev.arr_ap
@@ -2511,31 +2563,31 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.arr_j2000, ev.arr)
                 self.assertEqual(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define neg_arr
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ev.neg_arr = (-1,-2,-3)
-            self.assertEqual(ev._Event__arr_, Vector3((1.,2.,3.)))
-            self.assertEqual(ev._Event__neg_arr_, Vector3((-1.,-2.,-3.)))
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertEqual(ev._arr_, Vector3((1.,2.,3.)))
+            self.assertEqual(ev._neg_arr_, Vector3((-1.,-2.,-3.)))
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.arr = (1,2,3)
@@ -2549,9 +2601,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.neg_arr_ap = (1,2,3)
@@ -2559,9 +2611,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             # Let arr_ap and ssb be filled in
             ignore = ev.arr_ap
@@ -2572,31 +2624,31 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.arr_j2000, ev.arr)
                 self.assertEqual(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define neg_arr_ap
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ev.neg_arr_ap = (-1,-2,-3)
-            self.assertEqual(ev._Event__arr_ap_, Vector3((1.,2.,3.)))
-            self.assertEqual(ev._Event__neg_arr_ap_, Vector3((-1.,-2.,-3.)))
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertEqual(ev._arr_ap_, Vector3((1.,2.,3.)))
+            self.assertEqual(ev._neg_arr_ap_, Vector3((-1.,-2.,-3.)))
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.arr = (1,2,3)
@@ -2610,9 +2662,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.neg_arr_ap = (1,2,3)
@@ -2620,9 +2672,9 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._ssb_)
 
             # Let arr and ssb be filled in
             ignore = ev.arr
@@ -2633,31 +2685,31 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.arr_j2000, ev.arr)
                 self.assertEqual(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define neg_arr_j2000
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ev.neg_arr_j2000 = (-1,-2,-3)
-            self.assertIsNotNone(ev._Event__ssb_)
-            self.assertEqual(ev.ssb._Event__arr_, Vector3((1.,2.,3.)))
-            self.assertEqual(ev.ssb._Event__neg_arr_, Vector3((-1.,-2.,-3.)))
-            self.assertIsNone(ev.ssb._Event__arr_ap_)
-            self.assertIsNone(ev.ssb._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._ssb_)
+            self.assertEqual(ev.ssb._arr_, Vector3((1.,2.,3.)))
+            self.assertEqual(ev.ssb._neg_arr_, Vector3((-1.,-2.,-3.)))
+            self.assertIsNone(ev.ssb._arr_ap_)
+            self.assertIsNone(ev.ssb._neg_arr_ap_)
 
             try:
                 ev.arr = (1,2,3)
@@ -2686,31 +2738,31 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.arr_j2000, ev.arr)
                 self.assertEqual(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define neg_arr_ap_j2000
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__arr_)
-            self.assertIsNone(ev._Event__arr_ap_)
-            self.assertIsNone(ev._Event__neg_arr_)
-            self.assertIsNone(ev._Event__neg_arr_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._arr_)
+            self.assertIsNone(ev._arr_ap_)
+            self.assertIsNone(ev._neg_arr_)
+            self.assertIsNone(ev._neg_arr_ap_)
+            self.assertIsNone(ev._ssb_)
 
             ev.neg_arr_ap_j2000 = (-1,-2,-3)
-            self.assertIsNotNone(ev._Event__ssb_)
-            self.assertEqual(ev.ssb._Event__arr_ap_, Vector3((1.,2.,3.)))
-            self.assertEqual(ev.ssb._Event__neg_arr_ap_, Vector3((-1.,-2.,-3.)))
-            self.assertIsNotNone(ev.ssb._Event__arr_ap_)
-            self.assertIsNotNone(ev.ssb._Event__neg_arr_ap_)
+            self.assertIsNotNone(ev._ssb_)
+            self.assertEqual(ev.ssb._arr_ap_, Vector3((1.,2.,3.)))
+            self.assertEqual(ev.ssb._neg_arr_ap_, Vector3((-1.,-2.,-3.)))
+            self.assertIsNotNone(ev.ssb._arr_ap_)
+            self.assertIsNotNone(ev.ssb._neg_arr_ap_)
 
             try:
                 ev.arr = (1,2,3)
@@ -2739,26 +2791,26 @@ class Test_Event(unittest.TestCase):
             self.assertEqual(ev.neg_arr_ap_j2000, -ev.arr_ap_j2000)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.arr_j2000, ev.arr)
                 self.assertEqual(ev.arr_ap_j2000, ev.arr_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.arr)
-                self.assertIsNotNone(ev._Event__ssb_.arr_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.arr)
+                self.assertIsNotNone(ev._ssb_.arr_ap)
 
             ########################
             # Define dep
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__dep_)
-            self.assertIsNone(ev._Event__dep_ap_)
+            self.assertIsNone(ev._dep_)
+            self.assertIsNone(ev._dep_ap_)
 
             ev.dep = (-1,2,-3)
-            self.assertEqual(ev._Event__dep_, Vector3((-1.,2.,-3.)))
-            self.assertIsNone(ev._Event__dep_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertEqual(ev._dep_, Vector3((-1.,2.,-3.)))
+            self.assertIsNone(ev._dep_ap_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.dep_ap = (-1,2,-3)
@@ -2766,34 +2818,34 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__dep_ap_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._dep_ap_)
+            self.assertIsNone(ev._ssb_)
 
             # Fill in dep_ap and ssb
             ignore = ev.dep_ap
             self.assertTrue((ev.dep_ap - ev.dep).norm() < 5*BETA)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.dep_j2000, ev.dep)
                 self.assertEqual(ev.dep_ap_j2000, ev.dep_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.dep)
-                self.assertIsNotNone(ev._Event__ssb_.dep_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.dep)
+                self.assertIsNotNone(ev._ssb_.dep_ap)
 
             ########################
             # Define dep_ap
             ########################
 
             ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-            self.assertIsNone(ev._Event__dep_)
-            self.assertIsNone(ev._Event__dep_ap_)
+            self.assertIsNone(ev._dep_)
+            self.assertIsNone(ev._dep_ap_)
 
             ev.dep_ap = (-1,2,-3)
-            self.assertEqual(ev._Event__dep_ap_, Vector3((-1.,2.,-3.)))
-            self.assertIsNone(ev._Event__dep_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertEqual(ev._dep_ap_, Vector3((-1.,2.,-3.)))
+            self.assertIsNone(ev._dep_)
+            self.assertIsNone(ev._ssb_)
 
             try:
                 ev.dep_ap = (-1,2,-3)
@@ -2801,21 +2853,21 @@ class Test_Event(unittest.TestCase):
             except ValueError:
                 pass
 
-            self.assertIsNone(ev._Event__dep_)
-            self.assertIsNone(ev._Event__ssb_)
+            self.assertIsNone(ev._dep_)
+            self.assertIsNone(ev._ssb_)
 
             # Fill in dep and ssb
             ignore = ev.dep
             self.assertTrue((ev.dep_ap - ev.dep).norm() < 5*BETA)
 
             if (origin, frame) == ('SSB', 'J2000'):
-                self.assertIs(ev, ev._Event__ssb_)
+                self.assertIs(ev, ev._ssb_)
                 self.assertEqual(ev.dep_j2000, ev.dep)
                 self.assertEqual(ev.dep_ap_j2000, ev.dep_ap)
             else:
-                self.assertIsNotNone(ev._Event__ssb_)
-                self.assertIsNotNone(ev._Event__ssb_.dep)
-                self.assertIsNotNone(ev._Event__ssb_.dep_ap)
+                self.assertIsNotNone(ev._ssb_)
+                self.assertIsNotNone(ev._ssb_.dep)
+                self.assertIsNotNone(ev._ssb_.dep_ap)
 
 #########################################
 if __name__ == '__main__':

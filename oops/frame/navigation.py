@@ -15,10 +15,11 @@ class Navigation(Frame, Fittable):
     defined by two or three rotation angles.
     """
 
-    PACKRAT_ARGS = ['angles', 'reference', 'frame_id']
+    # Note: Navigation frames are not generally re-used, so their IDs are
+    # expendable. Frame IDs are not preserved during pickling.
 
     #===========================================================================
-    def __init__(self, angles, reference, id=None, matrix=None):
+    def __init__(self, angles, reference, frame_id=None, matrix=None):
         """Constructor for a Navigation Frame.
 
         Input:
@@ -26,7 +27,7 @@ class Navigation(Frame, Fittable):
                         rotations is about the y, x and z axes.
             reference   the frame or frame ID relative to which this rotation is
                         defined.
-            id          the ID to use; None to use a temporary ID.
+            frame_id    the ID to use; None to use a temporary ID.
             matrix      an optional parameter, used internally, to speed up the
                         copying of Navigation objects. If not None, it must
                         contain the Matrix3 object that performs the defined
@@ -47,7 +48,7 @@ class Navigation(Frame, Fittable):
             if self.nparams > 2 and self.angles[2] != 0.:
                 matrix = Navigation._rotmat(self.angles[2], 2) * matrix
 
-        self.frame_id  = id
+        self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
         self.shape     = self.reference.shape
@@ -58,6 +59,13 @@ class Navigation(Frame, Fittable):
 
         self.transform = Transform(matrix, Vector3.ZERO,
                                    self, self.reference, self.origin)
+
+    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def __getstate__(self):
+        return (self.angles, self.reference)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     #===========================================================================
     @staticmethod
