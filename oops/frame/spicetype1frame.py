@@ -65,7 +65,7 @@ class SpiceType1Frame(Frame):
          self.spice_body_name) = spice.body_id_and_name(spice_host)
 
         # Fill in the time tolerances
-        if isintance(tick_tolerance, str):
+        if isinstance(tick_tolerance, str):
             self.tick_tolerance = cspyce.sctiks(spice_body_id, tick_tolerance)
         else:
             self.tick_tolerance = tick_tolerance

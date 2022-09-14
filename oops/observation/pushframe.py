@@ -292,7 +292,7 @@ class Pushframe(Observation):
         return obs
 
     #===========================================================================
-    def inventory(*args, **kwargs):
+    def inventory(self, *args, **kwargs):
         """Info about the bodies that appear unobscured inside the FOV. See
         Snapshot.inventory() for details.
 
