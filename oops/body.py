@@ -3,30 +3,27 @@
 ################################################################################
 
 import numpy as np
-import os
 import numbers
 
-import spicedb
-import julian
 import cspyce
+import spicedb
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Vector3
 
 from oops.path           import Path
 from oops.path.multipath import MultiPath
 from oops.path.spicepath import SpicePath
 
 from oops.frame                  import Frame, AliasFrame
-from oops.frame.ringframe        import RingFrame
 from oops.frame.poleframe        import PoleFrame
+from oops.frame.ringframe        import RingFrame
 from oops.frame.spiceframe       import SpiceFrame
 from oops.frame.synchronousframe import SynchronousFrame
 from oops.frame.twovectorframe   import TwoVectorFrame
 
 from oops.surface.nullsurface import NullSurface
-from oops.surface.ringplane   import RingPlane
 from oops.surface.orbitplane  import OrbitPlane
+from oops.surface.ringplane   import RingPlane
 from oops.surface.spice_shape import spice_shape
 
 from oops.gravity               import Gravity
@@ -400,7 +397,7 @@ class Body(object):
         irregs = body.spice_id // 1000
 
         if self.spk:
-            cspyce.furnsh(spk)
+            cspyce.furnsh(self.spk)
 
         elif nplanet == 4:
             if body.spice_id not in Body.MARS_MOONS_LOADED:
@@ -617,7 +614,7 @@ class Body(object):
         selection = []
         for body in bodies:
             name = type(body.surface).__name__
-            if name in class_names and body not in selected:
+            if name in class_names and body not in selection:
                 selection.append(body)
 
         return selection
@@ -661,7 +658,7 @@ class Body(object):
 
         selection = []
         for body in bodies:
-            if body.gm is None and body not in lisselectiont:
+            if body.gm is None and body not in selection:
                 selection.append(body)
 
         return selection

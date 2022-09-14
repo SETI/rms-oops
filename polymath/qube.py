@@ -1531,6 +1531,8 @@ class Qube(object):
                 return self
             return self.wod
 
+        values = self._values_
+
         # Array case
         if isinstance(values, np.ndarray):
             if values.dtype.kind != 'b':

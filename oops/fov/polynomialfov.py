@@ -5,8 +5,7 @@
 from __future__ import print_function
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Pair
 
 from . import FOV
 

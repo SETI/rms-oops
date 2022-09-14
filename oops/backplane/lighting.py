@@ -2,9 +2,7 @@
 # oops/backplanes/lighting.py: Lighting geometry backplanes
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Boolean, Scalar
 
 from . import Backplane
 

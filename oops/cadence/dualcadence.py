@@ -3,6 +3,7 @@
 ################################################################################
 
 from polymath   import Qube, Boolean, Scalar, Pair, Vector
+
 from .          import Cadence
 from .metronome import Metronome
 
@@ -473,4 +474,3 @@ class Test_DualCadence(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
-

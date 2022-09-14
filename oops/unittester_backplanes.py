@@ -17,8 +17,7 @@
 
 import sys
 import unittest
-import oops
-from oops.backplane_unittests import Test_Backplane_Exercises
+from oops.backplane.unittester import Test_Backplane_Exercises
 
 if __name__ == '__main__':
 

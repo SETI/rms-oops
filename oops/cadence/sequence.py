@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Boolean, Scalar
 
 from . import Cadence
 
@@ -108,7 +108,7 @@ class Sequence(Cadence):
     def __getstate__(self):
         return (self.tlist, self._state_texp)
 
-    def __setstate__(self):
+    def __setstate__(self, *state):
         self.__init__(*state)
 
     #===========================================================================

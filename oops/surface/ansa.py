@@ -3,15 +3,13 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
-from .          import Surface
-from .ringplane import RingPlane
-from ..path     import Path
-from ..frame    import Frame
-from ..config   import SURFACE_PHOTONS, LOGGING
-from ..constants import PI, HALFPI, TWOPI, DPR
+from .           import Surface
+from .ringplane  import RingPlane
+from ..frame     import Frame
+from ..path      import Path
+from ..constants import PI, HALFPI, TWOPI
 
 class Ansa(Surface):
     """This surface is defined as the locus of points where a radius vector from
@@ -62,7 +60,7 @@ class Ansa(Surface):
         return (self.origin, self.frame, self.gravity, self._state_ringplane)
 
     def __setstate__(self, state):
-        rself.__init__(*state)
+        self.__init__(*state)
 
     #===========================================================================
     @staticmethod

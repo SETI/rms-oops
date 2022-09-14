@@ -3,14 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3, Matrix3
 
-from .                 import Frame
-from .ringframe        import RingFrame
-from .poleframe        import PoleFrame
-from ..path.keplerpath import KeplerPath
-from ..transform       import Transform
+from .           import Frame
+from .poleframe  import PoleFrame
+from ..transform import Transform
 
 class LaplaceFrame(Frame):
     """A Frame subclass defined by a Kepler Path and a tilt angle.

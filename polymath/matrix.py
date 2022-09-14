@@ -150,8 +150,8 @@ class Matrix(Qube):
             recursive   True to extract the derivatives as well.
         """
 
-        vector = self.extract_numer(0, axis0, Vector, recursive)
-        return   self.extract_numer(0, axis1, Scalar, recursive)
+        vector = self.extract_numer(0, indx0, Vector, recursive)
+        return   self.extract_numer(0, indx1, Scalar, recursive)
 
     #===========================================================================
     @staticmethod

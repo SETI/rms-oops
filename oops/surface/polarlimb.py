@@ -3,12 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
 from .           import Surface
 from .limb       import Limb
-from ..config    import SURFACE_PHOTONS, LOGGING
 from ..constants import HALFPI
 
 class PolarLimb(Surface):
@@ -196,7 +194,7 @@ class PolarLimb(Surface):
     # (lon,lat) conversions
     ############################################################################
 
-    def lonlat_from_vector3(pos, derivs=False, groundtrack=True):
+    def lonlat_from_vector3(self, pos, derivs=False, groundtrack=True):
         """Longitude and latitude for a position near the surface."""
 
         track = self.ground.intercept_normal_to(pos, derivs=derivs)

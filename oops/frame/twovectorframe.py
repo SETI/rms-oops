@@ -2,9 +2,7 @@
 # oops/frame/twovectorframe.py: Subclass TwoVectorFrame of class Frame
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Vector3, Matrix3
 
 from .           import Frame
 from ..transform import Transform

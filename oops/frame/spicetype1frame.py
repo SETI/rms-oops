@@ -5,14 +5,12 @@
 import numpy as np
 import cspyce
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
 from .                import Frame
 from ..path           import Path
 from ..path.spicepath import SpicePath
 from ..transform      import Transform
-from ..config         import QUICK
 import oops.spice_support as spice
 
 class SpiceType1Frame(Frame):
@@ -66,7 +64,8 @@ class SpiceType1Frame(Frame):
 
         # Fill in the time tolerances
         if isinstance(tick_tolerance, str):
-            self.tick_tolerance = cspyce.sctiks(spice_body_id, tick_tolerance)
+            self.tick_tolerance = cspyce.sctiks(self.spice_body_id,
+                                                tick_tolerance)
         else:
             self.tick_tolerance = tick_tolerance
 

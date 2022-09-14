@@ -3,15 +3,14 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar
 
 from .                 import Observation
-from ..path            import Path
-from ..frame           import Frame
 from ..cadence         import Cadence
 from ..cadence.instant import Instant
 from ..fov.nullfov     import NullFOV
+from ..frame           import Frame
+from ..path            import Path
 
 class InSitu(Observation):
     """NOTE: This is still a work in progress. Not yet tested. Do not use.

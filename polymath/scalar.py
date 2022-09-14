@@ -685,7 +685,7 @@ class Scalar(Qube):
                 x0[a_zeros] = linear_x0[a_zeros]
 
         if include_antimask:
-            return (x0, x1, Boolean(discr._values_ >= 0, discr._mask_))
+            return (x0, x1, bool(discr._values_ >= 0, discr._mask_))
         else:
             return (x0, x1)
 

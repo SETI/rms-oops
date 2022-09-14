@@ -3,13 +3,12 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3, Matrix3
 
 from .           import Frame
-from ..path      import Path, AliasPath
-from ..transform import Transform
 from ..event     import Event
+from ..path      import AliasPath, Path
+from ..transform import Transform
 
 class TrackerFrame(Frame):
     """A Frame subclass that ensures, via a small rotation, that a designated

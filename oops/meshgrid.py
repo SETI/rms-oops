@@ -5,10 +5,7 @@
 import numpy as np
 import numbers
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
-
-from oops.fov import FOV
+from polymath import Scalar, Pair, Vector3
 
 class Meshgrid(object):
     """A Meshgrid is an arbitrary array of coordinate pairs within a Field of

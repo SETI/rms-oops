@@ -2,7 +2,7 @@
 # oops/cadence/metronome.py: Metronome subclass of class Cadence
 ################################################################################
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Scalar
 
 from . import Cadence
 
@@ -580,4 +580,3 @@ class Test_Metronome(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
-

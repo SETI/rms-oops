@@ -4,9 +4,6 @@
 
 import cspyce
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
-
 from .spheroid          import Spheroid
 from .ellipsoid         import Ellipsoid
 from ..path.spicepath   import SpicePath

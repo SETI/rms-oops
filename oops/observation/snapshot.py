@@ -3,17 +3,15 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair, Vector, Vector3
 
 from .                   import Observation
-from ..cadence           import Cadence
+from ..body              import Body
 from ..cadence.metronome import Metronome
+from ..event             import Event
+from ..frame             import Frame
 from ..path              import Path
 from ..path.multipath    import MultiPath
-from ..frame             import Frame
-from ..body              import Body
-from ..event             import Event
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
@@ -317,10 +315,10 @@ class Snapshot(Observation):
         """
 
         # Limit iterations to 1 for Snapshot
-        return super(Observation, self).uv_from_ra_and_dec(ra, dec, tfrac, time,
-                                                           apparent=apparent,
-                                                           derivs=derivs,
-                                                           iters=1, quick=quick)
+        return super(Snapshot, self).uv_from_ra_and_dec(ra, dec, tfrac, time,
+                                                        apparent=apparent,
+                                                        derivs=derivs,
+                                                        iters=1, quick=quick)
 
     #===========================================================================
     def uv_from_path(self, path, tfrac=0.5, time=None, derivs=False, guess=None,
@@ -358,9 +356,9 @@ class Snapshot(Observation):
 
             time = self.time[0] + tfrac * (self.time[1] - self.time[0])
 
-        return super(Observation, self).uv_from_path(path, None, time,
-                                                     derivs=False, guess=None,
-                                                     quick={}, converge={})
+        return super(Snapshot, self).uv_from_path(path, None, time,
+                                                  derivs=False, guess=None,
+                                                  quick={}, converge={})
 
     #===========================================================================
     def uv_from_coords(self, surface, coords, tfrac=0.5, time=None,

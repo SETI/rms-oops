@@ -7,21 +7,14 @@ from __future__ import print_function
 import numpy as np
 import os.path
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Vector3
 
-from oops.backplane           import Backplane
-from oops.surface             import Surface
-from oops.surface.ansa        import Ansa
-from oops.surface.limb        import Limb
-from oops.surface.ringplane   import RingPlane
-from oops.surface.nullsurface import NullSurface
-from oops.path                import Path, AliasPath
-from oops.frame               import Frame
-from oops.event               import Event
-from oops.meshgrid            import Meshgrid
-from oops.body                import Body
-from oops.constants           import PI, HALFPI, TWOPI, DPR, C
+from oops.backplane    import Backplane
+from oops.body         import Body
+from oops.event        import Event
+from oops.meshgrid     import Meshgrid
+from oops.surface.ansa import Ansa
+from oops.constants    import HALFPI, DPR
 import oops.config as config
 
 def exercise_backplanes(filespec, printing, logging, saving, undersample=16,

@@ -2,11 +2,9 @@
 # oops/transform.py: Class Transform
 ################################################################################
 
-import sys
 import numpy as np
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3, Matrix3
 
 class Transform(object):
     """An object describing a coordinate transformation, defined by a rotation

@@ -2,16 +2,15 @@
 # oops/path/spicepath.py: Subclass SpicePath of class Path
 ################################################################################
 
-import numpy as np
 import cspyce
+import numpy as np
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
-from .        import Path, AliasPath, RotatedPath
-from ..config import QUICK
-from ..event  import Event
-from ..frame  import Frame
+from .       import AliasPath, Path, RotatedPath
+from ..event import Event
+from ..frame import Frame
+from ..path  import ReversedPath
 import oops.spice_support as spice
 
 class SpicePath(Path):

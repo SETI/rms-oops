@@ -2,11 +2,9 @@
 # oops/backplanes/distance.py: Distance-related backplanes
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Pair, Vector3
 
-from . import Backplane
+from .         import Backplane
 from ..surface import Surface
 
 #===============================================================================

@@ -2,10 +2,6 @@
 # oops/backplanes/limb_backplanes.py: Latitude/longitude backplanes
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
-
 from . import Backplane
 
 #===============================================================================

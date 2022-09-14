@@ -5,11 +5,10 @@
 from __future__ import print_function
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3, Matrix3
 
-from .        import Surface
-from ..config import SURFACE_PHOTONS, LOGGING
+from .           import Surface
+from ..config    import SURFACE_PHOTONS, LOGGING
 from ..constants import PI, HALFPI, TWOPI
 
 class Limb(Surface):

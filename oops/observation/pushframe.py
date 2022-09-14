@@ -3,17 +3,13 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Pair, Vector
 
 from .                    import Observation
 from .snapshot            import Snapshot
-from ..cadence            import Cadence
 from ..cadence.tdicadence import TDICadence
-from ..path               import Path
 from ..frame              import Frame
-from ..body               import Body
-from ..event              import Event
+from ..path               import Path
 
 class Pushframe(Observation):
     """An Observation obtained with a TDI ("Time Delay and Integration") camera.

@@ -3,10 +3,9 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
-from . import Backplane
+from .       import Backplane
 from ..frame import Frame
 
 #===============================================================================

@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Qube, Scalar, Pair, Vector
 
 from . import Cadence
 
@@ -48,7 +48,7 @@ class ReshapedCadence(Cadence):
     def __getstate__(self):
         return (self.cadence, self.shape)
 
-    def __setstate__(self):
+    def __setstate__(self, *state):
         self.__init__(*state)
 
     #===========================================================================
@@ -314,4 +314,3 @@ class Test_ReshapedCadence(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
-

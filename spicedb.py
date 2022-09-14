@@ -7,14 +7,15 @@
 ################################################################################
 
 from __future__ import division
-import os
 import datetime
-import unittest
 import numbers
+import os
+import unittest
 
-import julian
 import interval
+import julian
 import textkernel
+
 import cspyce
 
 import sqlite_db as db
@@ -619,7 +620,7 @@ def _fileno_values(name):
 
     # Interpret the indices
     filenos = []
-    split_by_commas = index.split(',')
+    split_by_commas = name.index.split(',')
     for item in split_by_commas:
         split_by_dash = item.split('-')
         if len(split_by_dash) == 2:

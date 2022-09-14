@@ -2,14 +2,12 @@
 # oops/backplanes/orbit.py: Orbit backplanes
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Vector3, Matrix3
 
-from . import Backplane
-from ..body import Body
-from ..frame import Frame
-from ..constants import PI, HALFPI, TWOPI
+from .           import Backplane
+from ..body      import Body
+from ..frame     import Frame
+from ..constants import TWOPI
 
 #===============================================================================
 def orbit_longitude(self, event_key, reference='obs', planet=None):

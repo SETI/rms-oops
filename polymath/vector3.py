@@ -9,7 +9,6 @@ import numbers
 from .qube   import Qube
 from .scalar import Scalar
 from .vector import Vector
-from .units  import Units
 
 TWOPI = 2. * np.pi
 
@@ -246,4 +245,3 @@ Vector3.AXES = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
 Qube.VECTOR3_CLASS = Vector3
 
 ################################################################################
-

@@ -3,12 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
-from .         import Surface
-from .spheroid import Spheroid
-from ..constants import PI, HALFPI, TWOPI, RPD
+from .           import Surface
+from .spheroid   import Spheroid
+from ..constants import HALFPI
 
 class GraphicSpheroid(Surface):
     """A variant of Spheroid in which latitudes are planetographic."""

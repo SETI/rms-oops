@@ -4,11 +4,9 @@
 
 from __future__ import print_function
 
-import sys
 import numpy as np
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3
 
 from oops.frame     import Frame
 from oops.transform import Transform
@@ -315,7 +313,7 @@ class Event(object):
 
     @property
     def size(self):
-        return int(prod(self.shape))
+        return int(np.prod(self.shape))
 
     @property
     def mask(self):

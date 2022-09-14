@@ -3,13 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3, Matrix3
 
 from .           import Frame
-from .cmatrix    import Cmatrix
 from ..transform import Transform
-import oops.constants as constants
+from ..constants import TWOPI
 
 class PoleFrame(Frame):
     """A Frame subclass describing a non-rotating frame centered on the Z-axis

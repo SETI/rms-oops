@@ -16,7 +16,7 @@
 # to the ends of rows where any change exceeds 0.1%.
 ################################################################################
 
-import os,sys
+import sys
 import re
 
 REGEX = re.compile('[-+]?\d+\.?\d*[eE]?[-+]?\d*')

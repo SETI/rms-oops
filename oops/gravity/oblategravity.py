@@ -3,9 +3,11 @@
 ################################################################################
 
 import warnings
+
 import numpy as np
 
-from . import Gravity
+from .           import Gravity
+from ..constants import TWOPI
 
 class OblateGravity(Gravity):
     """A class describing the gravity field of an oblate planet using an

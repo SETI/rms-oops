@@ -3,12 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3, Matrix3
 
 from .           import Frame
 from ..transform import Transform
-from ..constants import PI, HALFPI, TWOPI, DPR
+from ..constants import TWOPI
 
 class RingFrame(Frame):
     """A Frame subclass describing a non-rotating frame centered on the Z-axis

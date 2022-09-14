@@ -7,7 +7,6 @@ import numpy as np
 
 from .qube    import Qube
 from .scalar  import Scalar
-from .vector  import Vector
 from .vector3 import Vector3
 from .matrix  import Matrix
 from .units   import Units
