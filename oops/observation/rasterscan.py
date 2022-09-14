@@ -5,7 +5,7 @@
 import numpy as np
 from polymath import Boolean, Pair, Vector
 
-from .observation          import Observation
+from .                     import Observation
 from .snapshot             import Snapshot
 from ..cadence             import Cadence
 from ..cadence.dualcadence import DualCadence
