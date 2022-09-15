@@ -4,7 +4,8 @@
 
 from polymath import Scalar, Pair
 
-from ..fov import FOV
+from ..fov                import FOV
+from ..cadence.tdicadence import TDICadence
 
 class TDIFOV(FOV):
     """FOV subclass to apply TDI timing to another FOV."""

@@ -26,7 +26,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
     from PIL import Image
 
     #===========================================================================
-    def save_image(image, filename, lo=None, hi=None, zoom=1.):
+    def save_image(image, filename, lo=None, hi=None):
         """Save an image file of a 2-D array.
 
         Input:
@@ -37,8 +37,6 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
                         minimum value in the array is used.
             hi          the array value to map to white; if None, then the
                         maximum value in the array is used.
-            zoom        the scale factor by which to enlarge the image, default
-                        1.
         """
 
         image = np.asfarray(image)
@@ -48,9 +46,6 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
         if hi is None:
             hi = image.max()
-
-        if zoom != 1:
-            image = zoom_image(image, zoom, order=1)
 
         if hi == lo:
             bytes = np.zeros(image.shape, dtype='uint8')

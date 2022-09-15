@@ -13,6 +13,8 @@ class Test_Quaternion_matrix3(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2496)
+
     # Quaternion to Matrix3 and back
 
     # One quaternion

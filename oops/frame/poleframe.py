@@ -238,6 +238,8 @@ class Test_PoleFrame(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(1152)
+
         # Imports are here to reduce conflicts
         import os
         import cspyce

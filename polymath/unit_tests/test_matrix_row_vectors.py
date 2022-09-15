@@ -13,6 +13,8 @@ class Test_Matrix_row_vectors(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(6036)
+
     N = 100
     a = Matrix(np.random.randn(N,1,7))
     b = a.row_vector(0)

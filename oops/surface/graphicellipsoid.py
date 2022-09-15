@@ -338,6 +338,8 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         from ..frame import Frame
         from ..path import Path
 
+        np.random.seed(6926)
+
         REQ  = 60268.
         RMID = 54364.
         RPOL = 50000.

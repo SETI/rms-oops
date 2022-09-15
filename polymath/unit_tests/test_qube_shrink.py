@@ -13,6 +13,8 @@ class Test_Qube_shrink(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(1207)
+
     # corners
     values = np.ones((100,200))
     a = Scalar(values)

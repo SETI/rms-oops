@@ -131,6 +131,8 @@ class Test_Cmatrix(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(7316)
+
         # Imports are here to avoid conflicts
         import os
         import cspyce

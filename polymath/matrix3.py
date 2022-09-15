@@ -165,7 +165,7 @@ class Matrix3(Matrix):
             matrix[...,2,1] = -cos_angle
             matrix[...,2,2] = -sin_angle
 
-            for (key, deriv) in self.derivs.items():
+            for (key, deriv) in angle.derivs.items():
                 obj.insert_deriv(key, Matrix(matrix * deriv))
 
         return obj
@@ -202,7 +202,7 @@ class Matrix3(Matrix):
             matrix[...,2,0] = -cos_angle
             matrix[...,2,2] = -sin_angle
 
-            for (key, deriv) in self.derivs.items():
+            for (key, deriv) in angle.derivs.items():
                 obj.insert_deriv(key, Matrix(matrix * deriv))
 
         return obj
@@ -239,7 +239,7 @@ class Matrix3(Matrix):
             matrix[...,1,0] =  cos_angle
             matrix[...,1,1] = -sin_angle
 
-            for (key, deriv) in self.derivs.items():
+            for (key, deriv) in angle.derivs.items():
                 obj.insert_deriv(key, Matrix(matrix * deriv))
 
         return obj

@@ -79,7 +79,8 @@ class SpinFrame(Frame):
         # If this frame matches a pre-existing frame, re-use its ID
         (offset, rate, epoch, axis2, reference, shape) = state
         if shape == ():
-            key = (offset.vals, rate.vals, epoch.vals, axis, reference.frame_id)
+            key = (offset.vals, rate.vals, epoch.vals, axis2,
+                   reference.frame_id)
             frame_id = SpinFrame.FRAME_IDS.get(key, None)
         else:
             frame_id = None
@@ -117,6 +118,8 @@ import unittest
 class Test_SpinFrame(unittest.TestCase):
 
     def runTest(self):
+
+        np.random.seed(6521)
 
         # Import here to avoid conflicts
         from ..event import Event

@@ -13,6 +13,8 @@ class Test_Vector_cross_2x2(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8752)
+
     omega = Vector(np.random.randn(30,2))
     vec = Vector(np.random.randn(20,30,2))
     cross1 = omega.cross(vec)

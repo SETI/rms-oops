@@ -13,6 +13,8 @@ class Test_Pair_as_pair(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2046)
+
     N = 10
     a = Pair(np.random.randn(N,2))
     da_dt = Pair(np.random.randn(N,2))

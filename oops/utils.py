@@ -238,6 +238,8 @@ class Test_utils(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(6167)
+
         # dot
         self.assertEqual(dot((1,2),(3,4)), 11)
         self.assertEqual(dot((1,2,3),(3,4,5)), 26)

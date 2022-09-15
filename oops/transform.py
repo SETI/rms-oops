@@ -378,6 +378,8 @@ class Test_Transform(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(5819)
+
         # Additional imports needed for testing
         from oops.frame import Frame, Wayframe
         from oops.frame.spinframe import SpinFrame

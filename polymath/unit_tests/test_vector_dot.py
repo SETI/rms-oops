@@ -13,6 +13,8 @@ class Test_Vector_dot(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(5795)
+
     a = Vector(np.random.randn(10,5))
     b = Vector(np.random.randn(3,10,4))
     self.assertRaises(ValueError, a.dot, b)

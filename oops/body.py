@@ -393,42 +393,42 @@ class Body(object):
         if 'EARTH' not in Body.BODY_REGISTRY:
             Body.define_solar_system()
 
-        nplanet = body.spice_id // 100
-        irregs = body.spice_id // 1000
+        nplanet = self.spice_id // 100
+        irregs = self.spice_id // 1000
 
         if self.spk:
             cspyce.furnsh(self.spk)
 
         elif nplanet == 4:
-            if body.spice_id not in Body.MARS_MOONS_LOADED:
+            if self.spice_id not in Body.MARS_MOONS_LOADED:
                 Body.define_solar_system(planets=(4,))
 
         elif nplanet == 5 or irregs == 55:
-            if body.spice_id not in Body.JUPITER_MOONS_LOADED:
+            if self.spice_id not in Body.JUPITER_MOONS_LOADED:
                 Body.define_solar_system(planets=(5,))
-                if body.spice_id not in Body.JUPITER_MOONS_LOADED:
+                if self.spice_id not in Body.JUPITER_MOONS_LOADED:
                     Body.define_solar_system(planets=(5,), irregulars=True)
 
         elif nplanet == 6 or irregs == 65:
-            if body.spice_id not in Body.SATURN_MOONS_LOADED:
+            if self.spice_id not in Body.SATURN_MOONS_LOADED:
                 Body.define_solar_system(planets=(6,))
-                if body.spice_id not in Body.SATURN_MOONS_LOADED:
+                if self.spice_id not in Body.SATURN_MOONS_LOADED:
                     Body.define_solar_system(planets=(6,), irregulars=True)
 
         elif nplanet == 7:
-            if body.spice_id not in Body.URANUS_MOONS_LOADED:
+            if self.spice_id not in Body.URANUS_MOONS_LOADED:
                 Body.define_solar_system(planets=(7,))
-                if body.spice_id not in Body.URANUS_MOONS_LOADED:
+                if self.spice_id not in Body.URANUS_MOONS_LOADED:
                     Body.define_solar_system(planets=(7,), irregulars=True)
 
         elif nplanet == 8:
-            if body.spice_id not in Body.NEPTUNE_MOONS_LOADED:
+            if self.spice_id not in Body.NEPTUNE_MOONS_LOADED:
                 Body.define_solar_system(planets=(8,))
-                if body.spice_id not in Body.NEPTUNE_MOONS_LOADED:
+                if self.spice_id not in Body.NEPTUNE_MOONS_LOADED:
                     Body.define_solar_system(planets=(8,), irregulars=True)
 
         elif nplanet == 9:
-            if body.spice_id not in Body.PLUTO_MOONS_LOADED:
+            if self.spice_id not in Body.PLUTO_MOONS_LOADED:
                 Body.define_solar_system(planets=(9,))
 
     ############################################################################

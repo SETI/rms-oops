@@ -384,6 +384,8 @@ class Test_PolynomialFOV(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(5294)
+
         PolynomialFOV.DEBUG = False
         SpeedTest = False
 

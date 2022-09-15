@@ -13,6 +13,8 @@ class Test_Vector_norm_sq(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8448)
+
     # Single values
     x = Vector((-1.,))
     self.assertAlmostEqual(x.norm_sq(), 1.)

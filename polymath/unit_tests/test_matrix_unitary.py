@@ -13,6 +13,8 @@ class Test_Matrix_unitary(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2163)
+
     # Matrices 10% perturbed from unitary
     N = 100
     SCALE = 0.1

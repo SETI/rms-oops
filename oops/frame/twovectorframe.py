@@ -99,20 +99,20 @@ class TwoVectorFrame(Frame):
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
         return (self.reference, self.vector1, self.axis1,
-                                self.vector2, self.axis2)
+                                self.vector2, self.axis2, self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
-        (frame, vector1, axis1, vector2, axis2) = state
-        if vector1.shape == () and vector2.shape == ():
+        (frame, vector1, axis1, vector2, axis2, shape) = state
+        if self.shape == ():
             key = (frame.frame_id, tuple(vector1.vals), axis1,
                                    tuple(vector2.vals), axis2)
             frame_id = TwoVectorFrame.FRAME_IDS.get(key, None)
         else:
             frame_id = None
 
-        self.__init__(frame, pole, retrograde, aries, frame_id=frame_id,
-                      cache_size=cache_size, unpickled=True)
+        self.__init__(frame, vector1, axis1, vector2, axis2, frame_id=frame_id,
+                      unpickled=True)
 
     #===========================================================================
     def transform_at_time(self, time, quick={}):

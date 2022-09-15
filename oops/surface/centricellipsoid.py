@@ -340,6 +340,8 @@ class Test_CentricEllipsoid(unittest.TestCase):
         from ..frame import Frame
         from ..path import Path
 
+        np.random.seed(9123)
+
         REQ  = 60268.
         RMID = 54364.
         RPOL = 50000.

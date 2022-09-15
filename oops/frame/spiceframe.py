@@ -403,6 +403,8 @@ class Test_SpiceFrame(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(6242)
+
         # Imports are here to avoid conflicts
         import os.path
         from ..path           import Path

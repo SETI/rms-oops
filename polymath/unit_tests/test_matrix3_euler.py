@@ -13,6 +13,8 @@ class Test_Matrix3_euler(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(5072)
+
     DEL = 1.e-12
 
     N = 30

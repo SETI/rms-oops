@@ -13,6 +13,8 @@ class Test_Vector_outer(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(9008)
+
     a = Vector(np.random.randn(10,5))
     b = Vector(np.random.randn(3,10,2))
     self.assertEqual(a.outer(b).shape, (3,10))

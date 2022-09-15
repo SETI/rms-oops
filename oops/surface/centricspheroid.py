@@ -331,6 +331,8 @@ class Test_CentricSpheroid(unittest.TestCase):
         from ..frame import Frame
         from ..path import Path
 
+        np.random.seed(6738)
+
         REQ  = 60268.
         #RPOL = 54364.
         RPOL = 50000.

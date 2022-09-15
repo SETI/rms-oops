@@ -607,6 +607,8 @@ class Test_Limb(unittest.TestCase):
         from .centricellipsoid import CentricEllipsoid
         from .graphicellipsoid import GraphicEllipsoid
 
+        np.random.seed(6922)
+
         REQ  = 60268.
         RMID = 54364.
         RPOL = 50000.

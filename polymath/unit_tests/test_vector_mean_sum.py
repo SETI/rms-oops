@@ -13,6 +13,8 @@ class Test_Vector_mean_sum(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7365)
+
     # Mean
     self.assertEqual(Vector([1,2,3,4]).mean(), [1,2,3,4])
 

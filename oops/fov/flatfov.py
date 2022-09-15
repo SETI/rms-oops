@@ -64,7 +64,7 @@ class FlatFOV(FOV):
     def __getstate__(self):
         return (self.uv_scale, self.uv_shape, self.uv_los, self.uv_area)
 
-    def __setstate__(self, *state):
+    def __setstate__(self, state):
         self.__init__(*state)
 
     #===========================================================================

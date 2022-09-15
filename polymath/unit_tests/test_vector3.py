@@ -12,6 +12,8 @@ class Test_Vector3(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(2599)
+
         # arrays of wrong shape raise ValueError
         self.assertRaises(ValueError, Vector3, np.random.randn(3,4,5))
         self.assertRaises(ValueError, Vector3, 1.)

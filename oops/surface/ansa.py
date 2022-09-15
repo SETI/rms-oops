@@ -270,6 +270,8 @@ class Test_Ansa(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(7742)
+
         surface = Ansa("SSB", "J2000")
 
         # intercept()

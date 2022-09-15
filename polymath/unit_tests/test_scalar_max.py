@@ -21,6 +21,8 @@ class Test_Scalar_max(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7250)
+
     # Individual values
     self.assertEqual(Scalar(0.3).max(), 0.3)
     self.assertEqual(type(Scalar(0.3).max()), float)

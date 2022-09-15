@@ -13,6 +13,8 @@ class Test_Matrix_is_diagonal(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(6216)
+
     N = 4
     mats = np.random.randn(N,5,5)
     self.assertEqual(Matrix(mats).is_diagonal(), False)

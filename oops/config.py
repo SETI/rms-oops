@@ -50,11 +50,6 @@ class QUICK(object):
                                 # True to derive the omega rotation vectors
                                 # via numerical derivatives rather than via
                                 # interpolation of the vector components.
-    "use_superseded_quickframes": False,
-                                # True to use the old frame interpolation method
-                                # involving matrix components rather than
-                                # quaternions. DEPRECATED by perserved for
-                                # testing purposes.
 }
 
 ################################################################################

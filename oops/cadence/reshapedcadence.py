@@ -48,7 +48,7 @@ class ReshapedCadence(Cadence):
     def __getstate__(self):
         return (self.cadence, self.shape)
 
-    def __setstate__(self, *state):
+    def __setstate__(self, state):
         self.__init__(*state)
 
     #===========================================================================

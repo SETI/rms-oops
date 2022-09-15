@@ -21,6 +21,8 @@ class Test_Scalar_median(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(9781)
+
     # Individual values
     self.assertEqual(Scalar(0.3).median(), 0.3)
     self.assertEqual(type(Scalar(0.3).median()), float)

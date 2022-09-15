@@ -82,7 +82,7 @@ class OblateGravity(Gravity):
         """The potential energy at radius a, in the equatorial plane."""
 
         return -self.gm/a * (1. - OblateGravity._jseries(self.potential_jn,
-                                                         self.r2/a2))
+                                                         self.r2/a**2))
 
     #===========================================================================
     def omega(self, a, e=0., sin_i=0.):
@@ -1097,7 +1097,9 @@ ERROR_TOLERANCE = 1.e-15
 
 class Test_Gravity(unittest.TestCase):
 
-    def test_uncombo(self):
+    def runTest(self):
+
+        np.random.seed(6950)
 
         # Testing scalars in a loop...
         tests = 100

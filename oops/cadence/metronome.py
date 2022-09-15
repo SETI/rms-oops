@@ -252,6 +252,8 @@ class Test_Metronome(unittest.TestCase):
         import numpy.random as random
         from polymath import Boolean
 
+        random.seed(4182)
+
         ####################################
         # Continuous case
         # 100-110, 110-120, 120-130, 130-140

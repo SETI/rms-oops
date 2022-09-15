@@ -225,6 +225,8 @@ class Test_RingFrame(unittest.TestCase):
         from ..path           import Path
         from ..unittester_support import TESTDATA_PARENT_DIRECTORY
 
+        np.random.seed(2492)
+
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))

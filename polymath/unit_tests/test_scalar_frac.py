@@ -13,6 +13,8 @@ class Test_Scalar_frac(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(4984)
+
     # Individual values
     self.assertEqual(Scalar( 1.25).frac(), 0.25)
     self.assertEqual(Scalar(-1.25).frac(), 0.75)

@@ -197,7 +197,7 @@ class Pushframe(Observation):
                 time_min = time_min.mask_where(is_outside)
                 # Note that time_max is a single value so no mask is needed
 
-        return (uv_min, uv_max + Pair.INT11, time_min, time_max)
+        return (uv_min, uv_min + Pair.INT11, time_min, time_max)
 
     #===========================================================================
     def uv_range_at_tstep(self, tstep, remask=False):

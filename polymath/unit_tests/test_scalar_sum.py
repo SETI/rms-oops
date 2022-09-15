@@ -21,6 +21,8 @@ class Test_Scalar_sum(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(3918)
+
     # Individual values
     self.assertEqual(Scalar(0.3).sum(), 0.3)
     self.assertEqual(type(Scalar(0.3).sum()), float)

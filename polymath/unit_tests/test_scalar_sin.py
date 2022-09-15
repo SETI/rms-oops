@@ -13,6 +13,8 @@ class Test_Scalar_sin(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7012)
+
     # Individual values
     self.assertEqual(Scalar(1.25).sin(), np.sin(1.25))
     self.assertEqual(type(Scalar(1.25).sin()), Scalar)

@@ -841,7 +841,7 @@ class KeplerPath(Path, Fittable):
                                                        quick=quick,
                                                        converge=converge)
             if partials:
-                (pos, vel) = self.xyz_planet(planet_event.time, partials=True)
+                (pos, vel) = self.xyz_planet(link_event.time, partials=True)
                 path_event.pos.insert_deriv('elements', pos.d_delements)
 
             return (path_event, link_event)

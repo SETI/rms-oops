@@ -324,6 +324,9 @@ class Test_RingPlane(unittest.TestCase):
     def runTest(self):
 
         from ..gravity import Gravity
+
+        np.random.seed(8829)
+
         plane = RingPlane(Path.SSB, Frame.J2000)
 
         # Coordinate/vector conversions

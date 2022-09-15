@@ -13,6 +13,8 @@ class Test_Scalar_reciprocal(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(1071)
+
     # Individual values
     self.assertEqual(Scalar(1.).reciprocal(), 1.)
     self.assertEqual(type(Scalar(1.).reciprocal()), Scalar)

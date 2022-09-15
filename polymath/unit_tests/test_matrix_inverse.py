@@ -13,6 +13,8 @@ class Test_Matrix_inverse(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(9893)
+
     DEL = 2.e-11
 
     # Make sure 3x3 matrix inversion is successful

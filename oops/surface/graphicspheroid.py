@@ -331,6 +331,8 @@ class Test_GraphicSpheroid(unittest.TestCase):
         from ..frame import Frame
         from ..path import Path
 
+        np.random.seed(7204)
+
         REQ  = 60268.
         #RPOL = 54364.
         RPOL = 50000.

@@ -26,6 +26,8 @@ class Test_Qube_items(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8736)
+
     ############################################################################
     # transpose_numer(self, axis1=0, axis2=1, recursive=True)
     ############################################################################

@@ -47,7 +47,7 @@ class GapFOV(FOV):
     def __getstate__(self):
         return (self.fov, self.uv_size)
 
-    def __setstate__(self, *state):
+    def __setstate__(self, state):
         self.__init__(*state)
 
     #===========================================================================

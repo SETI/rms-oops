@@ -129,12 +129,13 @@ class PolarLimb(Surface):
             raise NotImplementedError("PolarLimb.vector3_from_coords() " +
                                       "does not implement derivatives")
 
+        (z, clock) = coords[:2]
         (cept, track) = self.limb.intercept_from_z_clock(z, clock, obs,
                                                          derivs=False,
                                                          groundtrack=True)
 
         if len(coords) > 2:
-            d = Scalar.as_scalar(coords[2], False)
+            d = Scalar.as_scalar(clock, False)
             los = cept - obs
             cept += (d / los.norm()) * los
 

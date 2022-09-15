@@ -13,6 +13,8 @@ class Test_Matrix_column_vectors(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2897)
+
     N = 100
     a = Matrix(np.random.randn(N,7,1))
     b = a.column_vector(0)

@@ -13,6 +13,8 @@ class Test_Qube_setitem(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8343)
+
     ############################################################################
     # Qube into Qube, no broadcast, unmasked, with integers, ellipses, colons
     ############################################################################

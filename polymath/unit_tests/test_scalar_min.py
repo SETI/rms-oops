@@ -21,6 +21,8 @@ class Test_Scalar_min(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2956)
+
     # Individual values
     self.assertEqual(Scalar(0.3).min(), 0.3)
     self.assertEqual(type(Scalar(0.3).min()), float)

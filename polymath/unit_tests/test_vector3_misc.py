@@ -13,6 +13,8 @@ class Test_Vector3_misc(unittest.TestCase):
   # runTest
     def runTest(self):
 
+        np.random.seed(2222)
+
         eps = 3.e-16
         lo = 1. - eps
         hi = 1. + eps

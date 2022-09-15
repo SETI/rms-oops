@@ -13,6 +13,8 @@ class Test_Matrix3_quaternion(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(4851)
+
     N = 100
     q = Quaternion(np.random.randn(N,4)).unit()
 

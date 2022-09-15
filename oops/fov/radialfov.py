@@ -405,6 +405,8 @@ class Test_RadialFOV(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(1208)
+
         RadialFOV.DEBUG = False
         SpeedTest = False
 

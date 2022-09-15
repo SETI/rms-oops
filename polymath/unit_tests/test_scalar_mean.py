@@ -21,6 +21,8 @@ class Test_Scalar_mean(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2659)
+
     # Individual values
     self.assertEqual(Scalar(0.3).mean(), 0.3)
     self.assertEqual(type(Scalar(0.3).mean()), float)

@@ -117,6 +117,8 @@ class Test_CirclePath(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(2787)
+
         # Note: Unit testing is performed in surface/orbitplane.py
 
         ####################################

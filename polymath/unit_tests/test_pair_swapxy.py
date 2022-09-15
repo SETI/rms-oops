@@ -13,6 +13,8 @@ class Test_Pair_swapxy(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(1871)
+
     # Single values
     a = Pair((1,2))
     b = a.swapxy()

@@ -13,6 +13,8 @@ class Test_Vector_element_div(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(1472)
+
     # Single values
     self.assertEqual(Vector((2,21,0)).element_div((1,3,1)), (2,7,0))
     self.assertEqual(Vector((20,30,40)).element_div((10,10,-20)), (2,3,-2))

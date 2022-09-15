@@ -200,7 +200,7 @@ class Event(object):
         more = {}
 
         # Save only the first occurrence of an arriving photon property
-        for prop in ARR_VEC3_PROPERTIES:
+        for prop in Event.ARR_VEC3_PROPERTIES:
             attr = '_' + prop + '_'
             if hasattr(self, attr):
                 vec = self.getattr(attr)
@@ -213,7 +213,7 @@ class Event(object):
                     more[prop] = vec
 
         # Save only the first occurrence of a departing photon property
-        for prop in DEP_VEC3_PROPERTIES:
+        for prop in Event.DEP_VEC3_PROPERTIES:
             attr = '_' + prop + '_'
             if hasattr(self, attr):
                 vec = self.getattr(attr)
@@ -2163,6 +2163,8 @@ class Test_Event(unittest.TestCase):
 
     def runTest(self):
         import cspyce
+
+        np.random.seed(5531)
 
         # This is the exact formula for stellar aberration
         #   beta = v/c
