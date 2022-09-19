@@ -2,19 +2,16 @@
 # oops/inst/juno/jiram/img.py
 ################################################################################
 
-from IPython import embed   ## TODO: remove
-
 import numpy as np
 import julian
 import pdstable
 import cspyce
-import oops
 from polymath import *
 import os.path
 import pdsparser
+import oops
 
-from oops.inst.juno.juno_ import Juno
-from oops.inst.juno.jiram import JIRAM
+from . import JIRAM
 
 ################################################################################
 # Standard class methods

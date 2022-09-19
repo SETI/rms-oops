@@ -2,19 +2,16 @@
 # oops/inst/juno/jiram/spe.py
 ################################################################################
 
-from IPython import embed   ## TODO: remove
-
 import numpy as np
 import julian
 import pdstable
 import cspyce
-import oops
 from polymath import *
 import os.path
 import pdsparser
+import oops
 
-from oops.inst.juno.juno_ import Juno
-from oops.inst.juno.jiram import JIRAM
+from . import JIRAM
 
 ################################################################################
 # Standard class methods
@@ -61,11 +58,11 @@ def from_file(filespec, label, fast_distortion=True,
     slits = []
     for i in range(meta.nsamples):
         item = oops.obs.Snapshot(("v","u"),
-                             meta.tstart, meta.exposure, meta.fov_slits,
+                             meta.tstart, meta.exposure, meta.fov,
                              "JUNO", "JUNO_JIRAM_S",
                              data=np.reshape(data[:,i],(1,meta.nlines)) )
 
-#        item.insert_subfield('spice_kernels', \
+#        item.insert_subfield('spice_kernels', 
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
         item.insert_subfield('filespec', filespec)
         item.insert_subfield('basename', os.path.basename(filespec))
@@ -75,13 +72,13 @@ def from_file(filespec, label, fast_distortion=True,
 
 
     #-------------------------------------------
-    # Construct Snapshot for all bands
+    # Construct Slit1D for all bands
     #-------------------------------------------
-    obs = oops.obs.Snapshot(("v","u","b"),
+    obs = oops.obs.Slit1D(("u","b"),  
                          meta.tstart, meta.exposure, meta.fov,
                          "JUNO", "JUNO_JIRAM_S", data=data )
 
-#    obs.insert_subfield('spice_kernels', \
+#    obs.insert_subfield('spice_kernels', 
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
     obs.insert_subfield('filespec', filespec)
     obs.insert_subfield('basename', os.path.basename(filespec))
@@ -186,9 +183,7 @@ class Metadata(object):
         #-------------
         # FOVs
         #-------------
-        self.fov_slits = oops.fov.FlatFOV(scale, (self.nlines, 1), cxy)
-        self.fov = oops.fov.FlatFOV(scale, (self.nlines, self.nsamples),
-                                                   [cxy[0], self.nsamples/2])
+        self.fov = oops.fov.FlatFOV(scale, (self.nlines, 1), cxy)
 
         return
     #===========================================================================

@@ -195,7 +195,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
                                         oops.Vector3([velx, vely, velz])),
                                        tdb_midtime, sun_path,
                                        oops.Frame.J2000,
-                                       id=path_id)
+                                       path_id=path_id)
         path = oops.Path.as_waypoint(sc_path)
 
     if pointing == 'spice':
@@ -234,7 +234,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         lorri_frame = oops.frame.Cmatrix.from_ra_dec(ra_deg, dec_deg,
                                                      north_clock_deg,
                                                      oops.Frame.J2000,
-                                                     id=frame_id)
+                                                     frame_id=frame_id)
         frame = oops.Frame.as_wayframe(lorri_frame)
 
         event = oops.Event(tdb_midtime, oops.Vector3.ZERO, path, frame)
@@ -479,7 +479,8 @@ class LORRI(object):
         LORRI.fovs['4X4', 'flat'] = oops.fov.SubsampledFOV(full_fov_flat, 4)
 
         # Construct a SpiceFrame
-        lorri_flipped = oops.frame.SpiceFrame('NH_LORRI', id='NH_LORRI_FLIPPED')
+        lorri_flipped = oops.frame.SpiceFrame('NH_LORRI', 
+                                                    frame_id='NH_LORRI_FLIPPED')
 
         # The SPICE IK gives the boresight along -Z, so flip axes
         flipxyz = oops.Matrix3([[ 1, 0, 0],

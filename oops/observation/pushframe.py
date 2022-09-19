@@ -35,7 +35,7 @@ class Pushframe(Observation):
             cadence     a TDICadence object defining the start time and duration
                         of each consecutive line of the detector. Alternatively,
                         a tuple or dictionary providing input arguments to the
-                        TdiCadence constructor (after the number of lines, which
+                        TDICadence constructor (after the number of lines, which
                         is defined by the FOV):
                             (tstart, tdi_texp, tdi_stages[, tdi_sign])
 

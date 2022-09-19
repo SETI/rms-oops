@@ -307,7 +307,7 @@ class HST(object):
 
         # Applies at the start time of the observation
         cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
-                                                 id=frame_id + "_CMATRIX")
+                                                 frame_id=frame_id + "_CMATRIX")
 
         # If there is no target, assume inertial pointing
         target_body = self.target_body(hst_file, **parameters)
