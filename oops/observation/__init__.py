@@ -326,7 +326,7 @@ class Observation(object):
                         0.5.
         """
 
-        (time0, time1) = self.times_at_uv(uv)
+        (time0, time1) = self.time_range_at_uv(uv)
         return tfrac * (time0 + time1)
 
     #===========================================================================
@@ -470,7 +470,7 @@ class Observation(object):
             return Scalar.as_scalar(times.reshape(tshape))
 
         # Get times at each pixel in meshgrid
-        (tstarts, tstops) = self.times_at_uv(meshgrid.uv)
+        (tstarts, tstops) = self.time_range_at_uv(meshgrid.uv)
 
         # Scale based on tfrac_limits
         time0 = tstarts + tfrac_limits[0] * (tstops - tstarts)
@@ -669,7 +669,7 @@ class Observation(object):
                 break
 
             # Update the time
-            (t0, t1) = self.times_at_uv(uv)
+            (t0, t1) = self.time_range_at_uv(uv)
             obs_time = t0 + tfrac * (t1 - t0)
 
             # Stop at convergence
@@ -752,7 +752,7 @@ class Observation(object):
             (uv_min, uv_max) = self.uv_at_time(obs_event.time)
 
             # Update the observation times based on pixel midtimes
-            (t0, t1) = self.times_at_uv(uv_min)
+            (t0, t1) = self.time_range_at_uv(uv_min)
             new_obs_time = t0 + tfrac * (t1 - t0)
 
             # Test for convergence

@@ -3,7 +3,6 @@
 ################################################################################
 
 from polymath import Qube, Boolean, Scalar, Pair, Vector
-
 from . import Cadence
 
 class TDICadence(Cadence):
@@ -59,6 +58,7 @@ class TDICadence(Cadence):
     # Methods unique to this class
     ############################################################################
 
+    #===========================================================================
     def tdi_shifts_at_line(self, line, remask=False):
         """The number of TDI shifts at the given image line.
 
@@ -80,11 +80,13 @@ class TDICadence(Cadence):
             shifts = self._max_line - line
 
         shifts = shifts.clip(0, self._max_shifts, remask=remask)
+        return shifts
 
     ############################################################################
     # Standard Cadence methods
     ############################################################################
 
+    #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
@@ -129,6 +131,23 @@ class TDICadence(Cadence):
                         index. It is given in seconds TDB.
             time_max    a Scalar defining the maximum time value.
         """
+
+
+
+# from juno-py3...
+#        tstep_int = Scalar.as_scalar(tstep).as_int()
+#        tstep_int = tstep_int.clip(0, self.lines, remask=mask)
+
+#        if self._tdi_upward:
+#            offset = Scalar.minimum(tstep_int + 1, self.tdi_stages)
+#        else:
+#            offset = Scalar.minimum(self.lines - tstep_int, self.tdi_stages)
+
+#        time0 = self.time[1] - offset * self.tdi_texp
+
+#        return (time0, self.time[1])
+
+
 
         stages = self.tdi_shifts_at_line(tstep, remask=remask) + 1
 
