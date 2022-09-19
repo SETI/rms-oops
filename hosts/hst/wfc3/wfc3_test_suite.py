@@ -238,7 +238,7 @@ names = [moon.name for moon in moons]
 print(names)
 
 # Create a "multipath" that defines the path of each
-multipath = oops.Body.define_multipath(moons, id="URANIAN_MOONS")
+multipath = oops.Body.define_multipath(moons, path_id="URANIAN_MOONS")
 
 # Locate the moons in the FOV by solving for the photon paths
 image_event = oops.Event(snapshot.midtime, (0.,0.,0.), (0.,0.,0.),

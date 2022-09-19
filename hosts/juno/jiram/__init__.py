@@ -2,18 +2,16 @@
 # oops/inst/juno/jiram/__init__.py
 ################################################################################
 
-from IPython import embed   ## TODO: remove
-
 import numpy as np
 import julian
 import pdstable
 import cspyce
-import oops
 from polymath import *
 import os.path
 import pdsparser
+import oops
 
-from oops.inst.juno.juno_ import Juno
+from hosts.juno import Juno
 
 
 ################################################################################
@@ -65,13 +63,13 @@ def from_file(filespec,
 
     # Image
     if ext.upper() == '.IMG':
-        import oops.inst.juno.jiram.img as img
+        from . import img
         return(img.from_file(filespec, label,
                                      return_all_planets=False, **parameters))
 
     # Spectrum
     if ext.upper() == '.DAT':
-        import oops.inst.juno.jiram.spe as spe
+        from . import spe
         return(spe.from_file(filespec, label,
                                      return_all_planets=False, **parameters))
 
@@ -215,12 +213,14 @@ class JIRAM(object):
         # Define fixed frame relative to J2000 from JIRAM orientation at
         # given time
         #-----------------------------------------------------------------
-        jiram_raw = oops.frame.SpiceFrame(spice_frame, id=spice_frame+"_RAW")
+        jiram_raw = \
+                 oops.frame.SpiceFrame(spice_frame, frame_id=spice_frame+"_RAW")
         xform = jiram_raw.transform_at_time(time)
 
         jiram_raw_j2000 = \
-                oops.frame.Cmatrix(xform.matrix, id=spice_frame+"_RAW_J2000")
-        jiram_frame = oops.frame.Cmatrix(rot, jiram_raw_j2000, id=spice_frame)
+             oops.frame.Cmatrix(xform.matrix, frame_id=spice_frame+"_RAW_J2000")
+        jiram_frame = \
+                  oops.frame.Cmatrix(rot, jiram_raw_j2000, frame_id=spice_frame)
 
     #===========================================================================
 
