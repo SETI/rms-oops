@@ -13,6 +13,8 @@ class Test_Scalar_sqrt(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(9396)
+
     # Individual values
     self.assertEqual(Scalar(0.3).sqrt(), np.sqrt(0.3))
     self.assertEqual(type(Scalar(0.3).sqrt()), Scalar)

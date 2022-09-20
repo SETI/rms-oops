@@ -13,6 +13,8 @@ class Test_Vector_as_vector(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(4469)
+
     N = 10
     a = Vector(np.random.randn(N,6))
     da_dt = Vector(np.random.randn(N,6))

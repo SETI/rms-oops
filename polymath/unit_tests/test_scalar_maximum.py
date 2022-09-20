@@ -13,6 +13,8 @@ class Test_Scalar_maximum(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(4187)
+
     self.assertRaises(ValueError, Scalar.maximum)
 
     a = Scalar(np.random.randn(10,1))

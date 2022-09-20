@@ -3,13 +3,12 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair
 
-from . import Backplane
-from ..frame import Frame
-from ..body import Body
-from ..constants import PI, HALFPI, TWOPI
+from .           import Backplane
+from ..body      import Body
+from ..frame     import Frame
+from ..constants import PI, TWOPI
 
 #===============================================================================
 def ring_radius(self, event_key, rmin=None, rmax=None, lock_limits=False):

@@ -3,14 +3,12 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair, Vector
 
 from .                   import Observation
-from ..cadence           import Cadence
 from ..cadence.metronome import Metronome
-from ..path              import Path
 from ..frame             import Frame
+from ..path              import Path
 
 class Slit1D(Observation):
     """A subclass of Observation consisting of a 1-D slit measurement with no
@@ -221,8 +219,8 @@ class Slit1D(Observation):
         if remask:
             is_outside = (tstep.vals < 0) | (tstep.vals > 1)
             if np.any(is_outside):
-                zero_vals = np.zeros(tstep_int.shape + (2,), dtype='int')
-                zeros = Pair(zero_vals, tstep_int.mask)
+                zero_vals = np.zeros(tstep.shape + (2,), dtype='int')
+                zeros = Pair(zero_vals, tstep.mask)
 
                 return (zeros, zeros + self.uv_shape)
 

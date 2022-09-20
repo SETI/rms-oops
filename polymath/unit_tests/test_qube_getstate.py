@@ -16,6 +16,8 @@ class Test_Qube_getstate(unittest.TestCase):
 
   def runTest(self):
 
+    np.random.seed(4735)
+
     # Scalar tests, no derivatives
     for readonly in (False, True):
       for vals in (1, 1., (1,2,3), (1.,2.,3.)):

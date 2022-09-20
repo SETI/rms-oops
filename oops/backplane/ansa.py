@@ -2,14 +2,12 @@
 # oops/backplanes/ansa_backplanes.py: Ansa backplanes
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair, Vector3
 
-from . import Backplane
-from ..constants import PI, HALFPI, TWOPI
-from ..event import Event
-from ..path import AliasPath
+from .           import Backplane
+from ..event     import Event
+from ..path      import AliasPath
+from ..constants import TWOPI
 
 #===============================================================================
 def ansa_radius(self, event_key, radius_type='positive', rmax=None,

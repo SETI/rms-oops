@@ -3,17 +3,13 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Pair, Vector
 
 from .                    import Observation
 from .snapshot            import Snapshot
-from ..cadence            import Cadence
 from ..cadence.tdicadence import TDICadence
-from ..path               import Path
 from ..frame              import Frame
-from ..body               import Body
-from ..event              import Event
+from ..path               import Path
 
 class Pushframe(Observation):
     """An Observation obtained with a TDI ("Time Delay and Integration") camera.
@@ -39,7 +35,7 @@ class Pushframe(Observation):
             cadence     a TDICadence object defining the start time and duration
                         of each consecutive line of the detector. Alternatively,
                         a tuple or dictionary providing input arguments to the
-                        TdiCadence constructor (after the number of lines, which
+                        TDICadence constructor (after the number of lines, which
                         is defined by the FOV):
                             (tstart, tdi_texp, tdi_stages[, tdi_sign])
 
@@ -201,7 +197,7 @@ class Pushframe(Observation):
                 time_min = time_min.mask_where(is_outside)
                 # Note that time_max is a single value so no mask is needed
 
-        return (uv_min, uv_max + Pair.INT11, time_min, time_max)
+        return (uv_min, uv_min + Pair.INT11, time_min, time_max)
 
     #===========================================================================
     def uv_range_at_tstep(self, tstep, remask=False):
@@ -292,7 +288,7 @@ class Pushframe(Observation):
         return obs
 
     #===========================================================================
-    def inventory(*args, **kwargs):
+    def inventory(self, *args, **kwargs):
         """Info about the bodies that appear unobscured inside the FOV. See
         Snapshot.inventory() for details.
 

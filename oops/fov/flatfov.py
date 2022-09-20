@@ -3,8 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Pair
 
 from . import FOV
 
@@ -65,7 +64,7 @@ class FlatFOV(FOV):
     def __getstate__(self):
         return (self.uv_scale, self.uv_shape, self.uv_los, self.uv_area)
 
-    def __setstate__(self):
+    def __setstate__(self, state):
         self.__init__(*state)
 
     #===========================================================================

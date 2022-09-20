@@ -2,7 +2,7 @@
 # oops/calibration/point.py: Subclass PointSource of class Calibration
 ################################################################################
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Scalar
 
 from . import Calibration
 

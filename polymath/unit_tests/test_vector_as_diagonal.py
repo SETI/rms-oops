@@ -13,6 +13,8 @@ class Test_Vector_as_diagonal(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7098)
+
     # Check one matrix
     a = Vector(np.arange(6))
     b = a.as_diagonal()

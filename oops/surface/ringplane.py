@@ -4,12 +4,11 @@
 
 import numpy as np
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
-from .       import Surface
-from ..path  import Path
-from ..frame import Frame
+from .           import Surface
+from ..frame     import Frame
+from ..path      import Path
 from ..constants import TWOPI
 
 class RingPlane(Surface):
@@ -325,6 +324,9 @@ class Test_RingPlane(unittest.TestCase):
     def runTest(self):
 
         from ..gravity import Gravity
+
+        np.random.seed(8829)
+
         plane = RingPlane(Path.SSB, Frame.J2000)
 
         # Coordinate/vector conversions

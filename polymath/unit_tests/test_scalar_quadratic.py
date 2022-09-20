@@ -13,6 +13,8 @@ class Test_Scalar_quadratic(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7108)
+
     # Arrays of various sizes
     a = np.random.randn(8)
     b = np.random.randn(3,8)

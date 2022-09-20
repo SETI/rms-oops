@@ -3,13 +3,12 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair, Vector, Vector3, Matrix3
 
-from oops.body  import Body
-from oops.path  import Path
-from oops.frame import Frame
-from oops.constants import RPD
+from oops.body      import Body
+from oops.path      import Path
+from oops.constants import C, RPD, RPS
+from oops.event     import Event
 
 class LightSource(object):
     """Defines a source of illumination, such as the Sun, a star, or a radio
@@ -233,7 +232,7 @@ class DiskSource(LightSource):
 
         # For a fixed line of sight, rotate and scale the vectors now
         if not self.source_is_moving:
-            self.radius *= constants.RPS
+            self.radius *= RPS
             matrix = Matrix3.twovec(lightsource.source, 2, Vector3.YAXIS, 1)
             self.xy_grid = matrix * (Vector.ZAXIS + self.radius * self.xy_grid)
 
@@ -303,7 +302,7 @@ class DiskSource(LightSource):
             arrival = self.source.solve_photon(event, -1, derivs, guess,
                                                antimask, quick, converge)[1]
 
-            rad = self.radius / (constants.C * self.arr_lt)
+            rad = self.radius / (C * self.arr_lt)
             los = arrival.neg_arr_ap_j2000
             matrix = Matrix3.twovec(los, 2, Vector3.YAXIS, 1)
             new_los = matrix * (Vector3.ZAXIS + rad * self.xy_grid)

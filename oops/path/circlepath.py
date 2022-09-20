@@ -3,8 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3
 
 from .       import Path
 from ..event import Event
@@ -117,6 +116,8 @@ import unittest
 class Test_CirclePath(unittest.TestCase):
 
     def runTest(self):
+
+        np.random.seed(2787)
 
         # Note: Unit testing is performed in surface/orbitplane.py
 

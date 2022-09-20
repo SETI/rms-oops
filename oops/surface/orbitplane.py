@@ -3,17 +3,16 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
 from .                     import Surface
 from .ringplane            import RingPlane
 from ..event               import Event
-from ..path                import Path
-from ..path.circlepath     import CirclePath
 from ..frame               import Frame
 from ..frame.inclinedframe import InclinedFrame
 from ..frame.spinframe     import SpinFrame
+from ..path                import Path
+from ..path.circlepath     import CirclePath
 from ..constants           import PI, HALFPI, TWOPI, RPD
 
 class OrbitPlane(Surface):

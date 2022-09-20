@@ -3,8 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair, Vector3
 
 class FOV(object):
     """The FOV (Field of View) abstract class provides a description of the

@@ -7,21 +7,14 @@ from __future__ import print_function
 import numpy as np
 import os.path
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Vector3
 
-from oops.backplane           import Backplane
-from oops.surface             import Surface
-from oops.surface.ansa        import Ansa
-from oops.surface.limb        import Limb
-from oops.surface.ringplane   import RingPlane
-from oops.surface.nullsurface import NullSurface
-from oops.path                import Path, AliasPath
-from oops.frame               import Frame
-from oops.event               import Event
-from oops.meshgrid            import Meshgrid
-from oops.body                import Body
-from oops.constants           import PI, HALFPI, TWOPI, DPR, C
+from oops.backplane    import Backplane
+from oops.body         import Body
+from oops.event        import Event
+from oops.meshgrid     import Meshgrid
+from oops.surface.ansa import Ansa
+from oops.constants    import HALFPI, DPR
 import oops.config as config
 
 def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
@@ -33,7 +26,7 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
     from PIL import Image
 
     #===========================================================================
-    def save_image(image, filename, lo=None, hi=None, zoom=1.):
+    def save_image(image, filename, lo=None, hi=None):
         """Save an image file of a 2-D array.
 
         Input:
@@ -44,8 +37,6 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
                         minimum value in the array is used.
             hi          the array value to map to white; if None, then the
                         maximum value in the array is used.
-            zoom        the scale factor by which to enlarge the image, default
-                        1.
         """
 
         image = np.asfarray(image)
@@ -55,9 +46,6 @@ def exercise_backplanes(filespec, printing, logging, saving, undersample=16,
 
         if hi is None:
             hi = image.max()
-
-        if zoom != 1:
-            image = zoom_image(image, zoom, order=1)
 
         if hi == lo:
             bytes = np.zeros(image.shape, dtype='uint8')

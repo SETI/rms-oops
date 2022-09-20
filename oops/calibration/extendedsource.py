@@ -2,7 +2,8 @@
 # oops/calibration/extendedsource.py: ExtendedSource subclass of Calibration
 ################################################################################
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Scalar
+
 from . import Calibration
 
 class ExtendedSource(Calibration):

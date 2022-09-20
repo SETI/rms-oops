@@ -12,6 +12,8 @@ class Test_Matrix_misc(unittest.TestCase):
 
     def runTest(self):
 
+        np.random.seed(6921)
+
         a = Vector((1,2))
         b = Vector((0,1,-1))
 

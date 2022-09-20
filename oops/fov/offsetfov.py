@@ -2,11 +2,9 @@
 # oops/fov/offsetfov.py: OffsetFOV subclass of FOV
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Pair
 
-from . import FOV
+from .          import FOV
 from ..fittable import Fittable
 
 class OffsetFOV(FOV, Fittable):

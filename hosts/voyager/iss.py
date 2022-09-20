@@ -131,7 +131,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
              found_ticks) = cspyce.ckgp(scan_platform_id, mid_ticks,
                                                           tol_ticks, 'J2000')
             platform_to_camera = cspyce.pxform('VG' + vgr + '_SCAN_PLATFORM',
-                                               'VG' + vgr + 'ISS' + camera[:2],
+                                               'VG' + vgr + '_ISS' + camera[:2],
                                                0.)
             image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) *
                                              oops.Matrix3(j2000_to_platform))
@@ -355,32 +355,32 @@ class ISS(object):
         ISS.fovs['WAC_GEOMED'] = oops.fov.FlatFOV((uscale,vscale), (1000,1000))
 
         # Construct the Voyager paths
-        ignore = oops.path.SpicePath('VOYAGER 1', id='VOYAGER1')
-        ignore = oops.path.SpicePath('VOYAGER 2', id='VOYAGER2')
+        ignore = oops.path.SpicePath('VOYAGER 1', path_id='VOYAGER1')
+        ignore = oops.path.SpicePath('VOYAGER 2', path_id='VOYAGER2')
 
         # Construct a SpiceType1Frame for each scan platform
         _ = oops.frame.SpiceType1Frame('VG1_SCAN_PLATFORM', -31, TOL_TICKS,
-                                       id='VOYAGER1_SCAN_PLATFORM')
+                                       frame_id='VOYAGER1_SCAN_PLATFORM')
 
         _ = oops.frame.SpiceType1Frame('VG2_SCAN_PLATFORM', -32, TOL_TICKS,
-                                       id='VOYAGER2_SCAN_PLATFORM')
+                                       frame_id='VOYAGER2_SCAN_PLATFORM')
 
         # Construct additional rotations for each camera
         matrix = cspyce.pxform('VG1_SCAN_PLATFORM', 'VG1_ISSNA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER1_SCAN_PLATFORM',
-                                       id='VOYAGER1_ISS_NAC')
+                                       frame_id='VOYAGER1_ISS_NAC')
 
         matrix = cspyce.pxform('VG1_SCAN_PLATFORM', 'VG1_ISSWA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER1_SCAN_PLATFORM',
-                                       id='VOYAGER1_ISS_WAC')
+                                       frame_id='VOYAGER1_ISS_WAC')
 
         matrix = cspyce.pxform('VG2_SCAN_PLATFORM', 'VG2_ISSNA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER2_SCAN_PLATFORM',
-                                       id='VOYAGER2_ISS_NAC')
+                                       frame_id='VOYAGER2_ISS_NAC')
 
         matrix = cspyce.pxform('VG2_SCAN_PLATFORM', 'VG2_ISSWA', 0.)
         _ = oops.frame.Cmatrix(matrix, 'VOYAGER2_SCAN_PLATFORM',
-                                       id='VOYAGER2_ISS_WAC')
+                                       frame_id='VOYAGER2_ISS_WAC')
 
         ISS.initialized = True
 

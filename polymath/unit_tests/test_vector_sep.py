@@ -13,6 +13,8 @@ class Test_Vector_sep(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8393)
+
     # Single values
     DEL = 1.e-12
     a = Vector((2,0,0))

@@ -3,15 +3,14 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Boolean, Pair, Vector
 
-from .         import Observation
-from .snapshot import Snapshot
-from ..cadence import Cadence
-from ..path    import Path
-from ..frame   import Frame
-from ..event   import Event
+from .                     import Observation
+from .snapshot             import Snapshot
+from ..cadence             import Cadence
+from ..cadence.dualcadence import DualCadence
+from ..frame               import Frame
+from ..path                import Path
 
 class RasterSlit(Observation):
     """A subclass of Observation consisting of a 2-D image in which one
@@ -319,7 +318,7 @@ class RasterSlit(Observation):
         return obs
 
     #===========================================================================
-    def inventory(*args, **kwargs):
+    def inventory(self, *args, **kwargs):
         """Info about the bodies that appear unobscured inside the FOV. See
         Snapshot.inventory() for details.
 

@@ -21,6 +21,8 @@ class Test_Qube_all(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7456)
+
     # Individual values
     self.assertEqual(Scalar(0.3).all(), True)
     self.assertEqual(type(Scalar(0.3).all()), bool)

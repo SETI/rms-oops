@@ -3,8 +3,8 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+import numbers
+from polymath import Pair
 
 from . import FOV
 
@@ -34,7 +34,7 @@ class GapFOV(FOV):
         # Convert to Pair
         self.uv_size = Pair.as_pair(uv_size)
         self.uv_size_inv = Pair.as_pair((1./self.uv_size.vals[0],
-                                        (1./self.uv_size.vals[1]))
+                                         1./self.uv_size.vals[1]))
 
         self._rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
 
@@ -47,7 +47,7 @@ class GapFOV(FOV):
     def __getstate__(self):
         return (self.fov, self.uv_size)
 
-    def __setstate__(self):
+    def __setstate__(self, state):
         self.__init__(*state)
 
     #===========================================================================

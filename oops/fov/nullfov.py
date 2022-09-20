@@ -2,9 +2,7 @@
 # oops/fov/nullfov.py: NullFOV subclass of class FOV
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Boolean, Scalar, Pair, Vector3
 
 from . import FOV
 

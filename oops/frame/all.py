@@ -4,8 +4,8 @@
 
 # Import the Frame class and its core components into a common name space
 
-from .                 import Frame, Wayframe, AliasFrame, LinkedFrame, \
-                              RelativeFrame, ReversedFrame, QuickFrame
+from .                 import (Frame, Wayframe, AliasFrame, LinkedFrame,
+                               RelativeFrame, ReversedFrame, QuickFrame)
 from .cmatrix          import Cmatrix
 from .inclinedframe    import InclinedFrame
 from .laplaceframe     import LaplaceFrame

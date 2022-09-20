@@ -13,6 +13,8 @@ class Test_Qube_getitem(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2745)
+
     ############################################################################
     # Integers, ellipses, colons, on unmasked objects
     ############################################################################

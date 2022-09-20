@@ -16,6 +16,8 @@ class Test_Qube_readonly(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(6687)
+
     a = Vector(np.random.randn(4,5,6,3,2), drank=1)
     self.assertEqual(a.readonly, False)
     a.values[0,0,0,0,0] = 1.

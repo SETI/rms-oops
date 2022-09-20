@@ -45,7 +45,7 @@ class Quaternion(Vector):
         if isinstance(arg, Qube):
 
             if arg.numer == (3,):
-                return from_parts(0., arg, recursive)
+                return Quaternion.from_parts(0., arg, recursive)
 
             arg = Quaternion(arg, arg._mask_, example=arg)
             if recursive:

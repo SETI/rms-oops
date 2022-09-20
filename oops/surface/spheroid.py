@@ -5,14 +5,13 @@
 from __future__ import print_function
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix, Matrix3, Quaternion
+from polymath import Scalar, Vector3, Matrix
 
-from .        import Surface
-from ..path   import Path
-from ..frame  import Frame
-from ..config import SURFACE_PHOTONS, LOGGING
-from ..constants import PI, HALFPI, TWOPI, RPD
+from .           import Surface
+from ..frame     import Frame
+from ..path      import Path
+from ..config    import SURFACE_PHOTONS, LOGGING
+from ..constants import HALFPI, TWOPI
 
 class Spheroid(Surface):
     """A spheroidal surface centered on the given path and fixed with respect to
@@ -614,6 +613,8 @@ class Test_Spheroid(unittest.TestCase):
 
         from ..frame import Frame
         from ..path import Path
+
+        np.random.seed(2344)
 
         REQ  = 60268.
         #RPOL = 54364.

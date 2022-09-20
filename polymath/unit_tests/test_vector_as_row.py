@@ -13,6 +13,8 @@ class Test_Vector_as_row(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2957)
+
     N = 100
     a = Vector(np.random.randn(N,1))
     b = a.as_row()

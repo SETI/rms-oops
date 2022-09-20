@@ -2,9 +2,7 @@
 # oops/path/linearpath.py: Subclass LinearPath of class Path
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3
 
 from .       import Path
 from ..event import Event

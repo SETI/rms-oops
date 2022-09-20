@@ -2,9 +2,11 @@
 # oops/spice_support.py
 ################################################################################
 
-import spicedb, cspyce, julian
-import os
 import numbers
+import os
+
+import cspyce
+import spicedb
 
 from oops.path import Path
 

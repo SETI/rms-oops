@@ -13,6 +13,8 @@ class Test_Vector_ucross(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2418)
+
     # Single values
     x = Vector((1.,0.,0.))
     y = Vector((0.,1.,0.))

@@ -13,6 +13,8 @@ class Test_Vector_scalars(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(4464)
+
     N = 100
     a = Vector(np.random.randn(N,1))
     b = a.to_scalar(0)

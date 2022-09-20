@@ -3,12 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
 from .           import Surface
 from .limb       import Limb
-from ..config    import SURFACE_PHOTONS, LOGGING
 from ..constants import HALFPI
 
 class PolarLimb(Surface):
@@ -131,12 +129,13 @@ class PolarLimb(Surface):
             raise NotImplementedError("PolarLimb.vector3_from_coords() " +
                                       "does not implement derivatives")
 
+        (z, clock) = coords[:2]
         (cept, track) = self.limb.intercept_from_z_clock(z, clock, obs,
                                                          derivs=False,
                                                          groundtrack=True)
 
         if len(coords) > 2:
-            d = Scalar.as_scalar(coords[2], False)
+            d = Scalar.as_scalar(clock, False)
             los = cept - obs
             cept += (d / los.norm()) * los
 
@@ -196,7 +195,7 @@ class PolarLimb(Surface):
     # (lon,lat) conversions
     ############################################################################
 
-    def lonlat_from_vector3(pos, derivs=False, groundtrack=True):
+    def lonlat_from_vector3(self, pos, derivs=False, groundtrack=True):
         """Longitude and latitude for a position near the surface."""
 
         track = self.ground.intercept_normal_to(pos, derivs=derivs)

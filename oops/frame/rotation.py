@@ -3,8 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3, Matrix3
 
 from .           import Frame
 from ..fittable  import Fittable
@@ -85,7 +84,7 @@ class Rotation(Frame, Fittable):
     # Fittable interface
     ############################################################################
 
-    def set_params(params):
+    def set_params(self, params):
         """Redefine the Fittable object, using this set of parameters.
 
         In this case, params is the set of angles of rotation.

@@ -5,10 +5,9 @@
 from __future__ import print_function
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3
 
-from ..config import QUICK, SURFACE_PHOTONS, LOGGING
+from ..config import SURFACE_PHOTONS, LOGGING
 from ..event  import Event
 from ..frame  import Frame
 from ..path   import Path

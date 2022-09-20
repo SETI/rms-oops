@@ -4,26 +4,11 @@
 
 from __future__ import print_function
 
-import numpy as np
-import os.path
+from polymath import Scalar
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from .           import Backplane
+from ..constants import PI, TWOPI
 
-from oops.surface             import Surface
-from oops.surface.ansa        import Ansa
-from oops.surface.limb        import Limb
-from oops.surface.ringplane   import RingPlane
-from oops.surface.nullsurface import NullSurface
-from oops.path                import Path, AliasPath
-from oops.frame               import Frame
-from oops.event               import Event
-from oops.meshgrid            import Meshgrid
-from oops.body                import Body
-from oops.constants           import PI, HALFPI, TWOPI, DPR, C
-import oops.config as config
-
-from . import Backplane
 
 ############################################################################
 # Body surface geometry, surface intercept versions
