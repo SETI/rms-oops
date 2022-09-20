@@ -51,9 +51,9 @@ class NewHorizons(object):
             spicedb.open_db()
 
             names = spicedb.furnish_lsk(asof=asof)
-            names = spicedb.furnish_pck([5,9] + list(range(501,505)) +
-                                                list(range(514,517)) +
-                                                list(range(901,906)), asof=asof)
+            names = spicedb.furnish_pck([5,9] + lrange(501,505) +
+                                                lrange(514,517) +
+                                                lrange(901,906), asof=asof)
 
             names += spicedb.furnish_inst(-98, asof=asof)
 

@@ -9,12 +9,8 @@
 *.log
 *.xml
 *.npz
-website
-swift
-rf-research
-fitter2
-cassini-backplane
-psfmodel
 oops/backplane-unittest-results*
 *.so
 *.png
+*venv*
+**/.vscode
