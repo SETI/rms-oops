@@ -2,13 +2,11 @@
 # oops/surface/nullsurface.py: NullSurface subclass of class Surface
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3
 
 from .       import Surface
-from ..path  import Path
 from ..frame import Frame
+from ..path  import Path
 
 class NullSurface(Surface):
     """A subclass of Surface of describing an infinitesimal surface centered on

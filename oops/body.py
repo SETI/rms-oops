@@ -3,30 +3,27 @@
 ################################################################################
 
 import numpy as np
-import os
 import numbers
 
-import spicedb
-import julian
 import cspyce
+import spicedb
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Vector3
 
 from oops.path           import Path
 from oops.path.multipath import MultiPath
 from oops.path.spicepath import SpicePath
 
 from oops.frame                  import Frame, AliasFrame
-from oops.frame.ringframe        import RingFrame
 from oops.frame.poleframe        import PoleFrame
+from oops.frame.ringframe        import RingFrame
 from oops.frame.spiceframe       import SpiceFrame
 from oops.frame.synchronousframe import SynchronousFrame
 from oops.frame.twovectorframe   import TwoVectorFrame
 
 from oops.surface.nullsurface import NullSurface
-from oops.surface.ringplane   import RingPlane
 from oops.surface.orbitplane  import OrbitPlane
+from oops.surface.ringplane   import RingPlane
 from oops.surface.spice_shape import spice_shape
 
 from oops.gravity               import Gravity
@@ -396,42 +393,42 @@ class Body(object):
         if 'EARTH' not in Body.BODY_REGISTRY:
             Body.define_solar_system()
 
-        nplanet = body.spice_id // 100
-        irregs = body.spice_id // 1000
+        nplanet = self.spice_id // 100
+        irregs = self.spice_id // 1000
 
         if self.spk:
-            cspyce.furnsh(spk)
+            cspyce.furnsh(self.spk)
 
         elif nplanet == 4:
-            if body.spice_id not in Body.MARS_MOONS_LOADED:
+            if self.spice_id not in Body.MARS_MOONS_LOADED:
                 Body.define_solar_system(planets=(4,))
 
         elif nplanet == 5 or irregs == 55:
-            if body.spice_id not in Body.JUPITER_MOONS_LOADED:
+            if self.spice_id not in Body.JUPITER_MOONS_LOADED:
                 Body.define_solar_system(planets=(5,))
-                if body.spice_id not in Body.JUPITER_MOONS_LOADED:
+                if self.spice_id not in Body.JUPITER_MOONS_LOADED:
                     Body.define_solar_system(planets=(5,), irregulars=True)
 
         elif nplanet == 6 or irregs == 65:
-            if body.spice_id not in Body.SATURN_MOONS_LOADED:
+            if self.spice_id not in Body.SATURN_MOONS_LOADED:
                 Body.define_solar_system(planets=(6,))
-                if body.spice_id not in Body.SATURN_MOONS_LOADED:
+                if self.spice_id not in Body.SATURN_MOONS_LOADED:
                     Body.define_solar_system(planets=(6,), irregulars=True)
 
         elif nplanet == 7:
-            if body.spice_id not in Body.URANUS_MOONS_LOADED:
+            if self.spice_id not in Body.URANUS_MOONS_LOADED:
                 Body.define_solar_system(planets=(7,))
-                if body.spice_id not in Body.URANUS_MOONS_LOADED:
+                if self.spice_id not in Body.URANUS_MOONS_LOADED:
                     Body.define_solar_system(planets=(7,), irregulars=True)
 
         elif nplanet == 8:
-            if body.spice_id not in Body.NEPTUNE_MOONS_LOADED:
+            if self.spice_id not in Body.NEPTUNE_MOONS_LOADED:
                 Body.define_solar_system(planets=(8,))
-                if body.spice_id not in Body.NEPTUNE_MOONS_LOADED:
+                if self.spice_id not in Body.NEPTUNE_MOONS_LOADED:
                     Body.define_solar_system(planets=(8,), irregulars=True)
 
         elif nplanet == 9:
-            if body.spice_id not in Body.PLUTO_MOONS_LOADED:
+            if self.spice_id not in Body.PLUTO_MOONS_LOADED:
                 Body.define_solar_system(planets=(9,))
 
     ############################################################################
@@ -617,7 +614,7 @@ class Body(object):
         selection = []
         for body in bodies:
             name = type(body.surface).__name__
-            if name in class_names and body not in selected:
+            if name in class_names and body not in selection:
                 selection.append(body)
 
         return selection
@@ -661,7 +658,7 @@ class Body(object):
 
         selection = []
         for body in bodies:
-            if body.gm is None and body not in lisselectiont:
+            if body.gm is None and body not in selection:
                 selection.append(body)
 
         return selection

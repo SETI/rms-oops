@@ -2,15 +2,12 @@
 # oops/frame/inclinedframe.py: Subclass InclinedFrame of class Frame
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar
 
-from .           import Frame
-from .spinframe  import SpinFrame
-from .rotation   import Rotation
-from ..transform import Transform
-from ..path      import Path
+from .                 import Frame
+from .rotation         import Rotation
+from .spinframe        import SpinFrame
+from ..frame.poleframe import PoleFrame
 import oops.constants as constants
 
 class InclinedFrame(Frame):

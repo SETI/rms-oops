@@ -13,6 +13,8 @@ class Test_Matrix3_twovec(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7877)
+
     DEL = 1.e-12
 
     # These all regenerate the Identity matrix

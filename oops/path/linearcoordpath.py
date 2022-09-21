@@ -2,13 +2,10 @@
 # oops/path/linearcoordpath.py: Subclass LinearCoordPath of class Path
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar
 
 from .         import Path
 from ..event   import Event
-from ..frame   import Frame
 from ..surface import Surface
 
 class LinearCoordPath(Path):

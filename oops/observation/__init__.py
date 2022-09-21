@@ -7,15 +7,11 @@ from __future__ import print_function
 import numpy as np
 import numbers
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair, Vector, Vector3
 
 from ..config   import LOGGING, PATH_PHOTONS
 from ..event    import Event
-from ..frame    import Frame
 from ..meshgrid import Meshgrid
-from ..body     import Body
-from ..cadence  import Cadence
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
@@ -236,7 +232,7 @@ class Observation(object):
         tstep_int = tstep_pair.int(top=self.cadence.shape, remask=remask)
 
         # Construct the result array
-        uv_min_vals = np.zeros(tstep_shape + (2,), dtype='int')
+        uv_min_vals = np.zeros(tstep_pair.shape + (2,), dtype='int')
 
         if slow_uv_axis != -1:
             uv_min_vals[..., slow_uv_axis] = tstep_int.vals[0]
@@ -640,7 +636,7 @@ class Observation(object):
             obs_time = self.time[0] + tfrac * (self.time[1] - self.time[0])
 
             # Require extra at least two iterations if tfrac != 0.5
-            if not (Scalar.as_scalar(tfrac) == 0.5).all():
+            if not (Scalar.as_scalar(Scalar.as_scalar(tfrac) == 0.5)).all():
                 iters = max(2, iters)
 
         else:

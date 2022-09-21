@@ -2,7 +2,8 @@
 # oops/cadence/instant.py: Class Instant
 ################################################################################
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+import numpy as np
+from polymath import Scalar
 
 from . import Cadence
 

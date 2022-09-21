@@ -2,11 +2,9 @@
 # oops/fov/TDIFOV.py: TDIFOV subclass of class FOV
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair
 
-from ..fov import FOV
+from ..fov                import FOV
 from ..cadence.tdicadence import TDICadence
 
 class TDIFOV(FOV):
@@ -69,7 +67,7 @@ class TDIFOV(FOV):
     def __getstate__(self):
         return (self.fov, self.tdi_axis, self.cadence)
 
-    def __setstate__(self):
+    def __setstate__(self, *state):
         self.__init__(*state)
 
     #===========================================================================

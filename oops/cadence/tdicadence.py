@@ -2,7 +2,8 @@
 # oops/cadence/tdicadence.py: TDICadence subclass of class Cadence
 ################################################################################
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Scalar
+
 from . import Cadence
 
 class TDICadence(Cadence):
@@ -223,4 +224,3 @@ class Test_TDICadence(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
-

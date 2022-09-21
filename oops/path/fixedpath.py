@@ -2,9 +2,7 @@
 # oops/path/fixedpath.py: Subclass FixedPath of class Path
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Vector3
 
 from .       import Path
 from ..event import Event

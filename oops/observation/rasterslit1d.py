@@ -3,13 +3,13 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair
 
-from .         import Observation
-from ..cadence import Cadence
-from ..path    import Path
-from ..frame   import Frame
+from .                   import Observation
+from ..cadence           import Cadence
+from ..cadence.metronome import Metronome
+from ..frame             import Frame
+from ..path              import Path
 
 class RasterSlit1D(Observation):
     """A subclass of Observation consisting of a 1-D observation in which the

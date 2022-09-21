@@ -13,6 +13,8 @@ class Test_Quaternion_euler(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7599)
+
     # Quaternion to Euler and back, one Quaternion
     for code in Quaternion._AXES2TUPLE.keys():
         a = Quaternion(np.random.rand(4)).unit()

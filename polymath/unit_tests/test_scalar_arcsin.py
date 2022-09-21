@@ -13,6 +13,8 @@ class Test_Scalar_arcsin(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7221)
+
     # Individual values
     self.assertEqual(Scalar(-0.3).arcsin(), np.arcsin(-0.3))
     self.assertEqual(type(Scalar(-0.3).arcsin()), Scalar)

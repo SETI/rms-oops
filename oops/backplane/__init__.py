@@ -2,16 +2,15 @@
 # oops/backplane/__init__.py: Backplane class
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
-import os
 import types
 
-from ..body import Body
-from ..path import AliasPath
-from ..surface.ansa import Ansa
-from ..surface.limb import Limb
+import numpy as np
+from polymath import Boolean, Qube, Scalar
+
+from ..body              import Body
+from ..path              import AliasPath
+from ..surface.ansa      import Ansa
+from ..surface.limb      import Limb
 from ..surface.ringplane import RingPlane
 
 #===============================================================================

@@ -5,15 +5,14 @@
 import numpy as np
 import cspyce
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3, Matrix3, Quaternion
 
 from scipy.interpolate import UnivariateSpline
 
 from .                import Frame
+from ..config         import QUICK
 from ..path           import Path
 from ..path.spicepath import SpicePath
-from ..config         import QUICK
 from ..transform      import Transform
 from ..constants      import DPR
 import oops.spice_support as spice
@@ -403,6 +402,8 @@ import unittest
 class Test_SpiceFrame(unittest.TestCase):
 
     def runTest(self):
+
+        np.random.seed(6242)
 
         # Imports are here to avoid conflicts
         import os.path

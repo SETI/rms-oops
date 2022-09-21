@@ -13,6 +13,8 @@ class Test_Scalar_tan(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(9359)
+
     # Individual values
     self.assertEqual(Scalar(1.25).tan(), np.tan(1.25))
     self.assertEqual(type(Scalar(1.25).tan()), Scalar)

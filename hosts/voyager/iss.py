@@ -131,7 +131,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
              found_ticks) = cspyce.ckgp(scan_platform_id, mid_ticks,
                                                           tol_ticks, 'J2000')
             platform_to_camera = cspyce.pxform('VG' + vgr + '_SCAN_PLATFORM',
-                                               'VG' + vgr + 'ISS' + camera[:2],
+                                               'VG' + vgr + '_ISS' + camera[:2],
                                                0.)
             image_frame = oops.frame.Cmatrix(oops.Matrix3(platform_to_camera) *
                                              oops.Matrix3(j2000_to_platform))

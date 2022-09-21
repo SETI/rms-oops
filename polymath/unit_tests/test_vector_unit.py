@@ -13,6 +13,8 @@ class Test_Vector_unit(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(3455)
+
     # Single values
     x = Vector((1.,2.,4.,8.))
     u = x.unit()

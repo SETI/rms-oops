@@ -13,6 +13,8 @@ class Test_Scalar_int(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(4353)
+
     # Individual values
     self.assertEqual(Scalar( 1.2).int(),  1)
     self.assertEqual(Scalar(-1.2).int(), -2)

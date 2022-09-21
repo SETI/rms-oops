@@ -13,6 +13,8 @@ class Test_Scalar_arctan(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(6021)
+
     # Individual values
     self.assertEqual(Scalar(-0.3).arctan(), np.arctan(-0.3))
     self.assertEqual(type(Scalar(-0.3).arctan()), Scalar)

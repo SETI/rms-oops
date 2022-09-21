@@ -13,6 +13,8 @@ class Test_Scalar_arccos(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8994)
+
     # Individual values
     self.assertEqual(Scalar(-0.3).arccos(), np.arccos(-0.3))
     self.assertEqual(type(Scalar(-0.3).arccos()), Scalar)

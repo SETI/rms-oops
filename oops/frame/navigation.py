@@ -3,12 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Vector3, Matrix3
 
 from .           import Frame
-from ..transform import Transform
 from ..fittable  import Fittable
+from ..transform import Transform
 
 class Navigation(Frame, Fittable):
     """A Frame subclass describing a fittable, fixed offset from another frame,

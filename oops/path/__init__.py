@@ -7,12 +7,11 @@ from __future__ import print_function
 import numpy as np
 import scipy.interpolate as interp
 
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3
 
-from ..config   import QUICK, PATH_PHOTONS, LOGGING, PICKLE_CONFIG
-from ..event    import Event
-from ..frame    import Frame, Wayframe
+from ..config import QUICK, PATH_PHOTONS, LOGGING, PICKLE_CONFIG
+from ..event  import Event
+from ..frame  import Frame
 import oops.constants as constants
 
 class Path(object):
@@ -1174,7 +1173,8 @@ class RelativePath(Path):
         event = self.path.event_at_time(time, quick=quick)
 
         if self.rotation is not None:
-            event = event.unrotate_by_frame(rotation, derivs=False, quick=quick)
+            event = event.unrotate_by_frame(self.rotation, derivs=False,
+                                            quick=quick)
 
         return self.new_origin.subtract_from_event(event, derivs=False,
                                                           quick=quick)

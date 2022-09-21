@@ -5,14 +5,13 @@
 from __future__ import print_function
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix, Matrix3, Quaternion
+from polymath import Scalar, Vector3, Matrix
 
-from .        import Surface
-from ..path   import Path
-from ..frame  import Frame
-from ..config import SURFACE_PHOTONS, LOGGING
-from ..constants import PI, HALFPI, TWOPI, RPD
+from .           import Surface
+from ..config    import SURFACE_PHOTONS, LOGGING
+from ..frame     import Frame
+from ..path      import Path
+from ..constants import PI, HALFPI, TWOPI
 
 class Ellipsoid(Surface):
     """An ellipsoidal surface centered on the given path and fixed with respect
@@ -616,6 +615,8 @@ class Test_Ellipsoid(unittest.TestCase):
 
         from ..frame import Frame
         from ..path import Path
+
+        np.random.seed(2610)
 
         REQ  = 60268.
         RMID = 54364.

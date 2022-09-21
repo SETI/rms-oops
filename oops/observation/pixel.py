@@ -3,14 +3,13 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Pair, Vector3
 
 from .         import Observation
-from ..path    import Path
-from ..frame   import Frame
 from ..cadence import Cadence
 from ..event   import Event
+from ..frame   import Frame
+from ..path    import Path
 
 class Pixel(Observation):
     """A subclass of Observation consisting of one or more measurements obtained
@@ -193,7 +192,7 @@ class Pixel(Observation):
             tstep = Scalar.as_scalar(tstep)
             is_outside = ((tstep.vals < 0) |
                           (tstep.vals > self.cadence.shape[0]))
-            new_mask = is_outside | tstep_mask
+            new_mask = is_outside | tstep.mask
             if np.any(new_mask):
                 uv_min_vals = np.zeros(tstep.shape + (2,), dtype='int')
                 uv_max_vals = np.ones(tstep.shape + (2,), dtype='int')

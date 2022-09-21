@@ -13,6 +13,8 @@ class Test_Scalar_log(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8622)
+
     # Individual values
     self.assertEqual(Scalar(0.3).log(), np.log(0.3))
     self.assertEqual(type(Scalar(0.3).log()), Scalar)

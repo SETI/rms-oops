@@ -2,8 +2,6 @@
 # oops/gravity/__init__.py: Abstract Gravity class
 ################################################################################
 
-import numpy as np
-
 class Gravity(object):
     """An abstract class describing the gravity field of a body."""
 

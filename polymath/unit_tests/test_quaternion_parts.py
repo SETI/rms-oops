@@ -13,6 +13,8 @@ class Test_Quaternion_parts(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(3219)
+
     a = Quaternion.from_parts(1., [(1,0,0),(0,1,0),(0,0,1)])
     self.assertEqual(a.shape, (3,))
     self.assertEqual(a[0], (1,1,0,0))

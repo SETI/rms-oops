@@ -13,6 +13,8 @@ class Test_Vector_cross_3x3(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(9797)
+
     omega = Vector(np.random.randn(30,3))
     omega_as_matrix = omega.cross_product_as_matrix()
 

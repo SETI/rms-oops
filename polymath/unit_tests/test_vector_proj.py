@@ -13,6 +13,8 @@ class Test_Vector_proj(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(1634)
+
     # Single values
     self.assertEqual(Vector((2,3,0)).proj((0,7,0)), (0,3,0))
     self.assertEqual(Vector((2,3,0)).proj((-1,0,0)), (2,0,0))

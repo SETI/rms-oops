@@ -13,6 +13,8 @@ class Test_Vector_ops(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(3762)
+
     # Unary plus
     a = Vector((1,2,3))
     b = +a

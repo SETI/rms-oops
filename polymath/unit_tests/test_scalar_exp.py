@@ -13,6 +13,8 @@ class Test_Scalar_exp(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(1641)
+
     # Individual values
     self.assertEqual(Scalar(1.25).exp(), np.exp(1.25))
     self.assertEqual(type(Scalar(1.25).exp()), Scalar)

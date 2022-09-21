@@ -18,6 +18,8 @@ class Test_Quaternion(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8615)
+
     ############################################################################
     # as_quaternion(arg)
     ############################################################################

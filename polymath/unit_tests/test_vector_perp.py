@@ -13,6 +13,8 @@ class Test_Vector_perp(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2435)
+
     # Single values
     self.assertEqual(Vector((2,3,0)).perp((0,7,0)), (2,0,0))
     self.assertEqual(Vector((2,3,0)).perp((-1,0,0)), (0,3,0))

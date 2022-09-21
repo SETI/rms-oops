@@ -3,6 +3,7 @@
 ################################################################################
 
 from polymath   import Qube, Boolean, Scalar, Pair, Vector
+
 from .          import Cadence
 from .metronome import Metronome
 
@@ -331,6 +332,8 @@ class Test_DualCadence(unittest.TestCase):
 
         import numpy.random as random
 
+        np.random.seed(4305)
+
         # cad2d has shape (10,5)
         # cad1d has shape (50,)
         # We define them so that cad2d[i,j] = cad1d[5*i+j]
@@ -473,4 +476,3 @@ class Test_DualCadence(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
-

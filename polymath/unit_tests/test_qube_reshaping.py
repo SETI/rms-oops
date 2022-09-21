@@ -19,6 +19,8 @@ class Test_qube_reshaping(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2292)
+
     # reshape(self, shape, recursive=True)
     a = Vector(np.random.randn(3,4,5,2))
     b = a.reshape((3,4,5))

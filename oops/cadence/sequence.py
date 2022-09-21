@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
+from polymath import Boolean, Scalar
 
 from . import Cadence
 
@@ -108,7 +108,7 @@ class Sequence(Cadence):
     def __getstate__(self):
         return (self.tlist, self._state_texp)
 
-    def __setstate__(self):
+    def __setstate__(self, state):
         self.__init__(*state)
 
     #===========================================================================
@@ -305,6 +305,8 @@ class Test_Sequence(unittest.TestCase):
     def runTest(self):
 
         import numpy.random as random
+
+        random.seed(5995)
 
         # These are the tests for subclass Metronome. We define the Sequence so
         # that behavior should be identical, except in the out-of-bound cases

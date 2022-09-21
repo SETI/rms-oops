@@ -3,12 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Qube, Scalar, Vector3, Matrix3
 
 from .           import Frame
 from ..transform import Transform
-from ..constants import PI, HALFPI, TWOPI, DPR
+from ..constants import TWOPI
 
 class RingFrame(Frame):
     """A Frame subclass describing a non-rotating frame centered on the Z-axis
@@ -225,6 +224,8 @@ class Test_RingFrame(unittest.TestCase):
         from ..event          import Event
         from ..path           import Path
         from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+
+        np.random.seed(2492)
 
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))

@@ -13,6 +13,8 @@ class Test_Quaternion_ops(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8291)
+
     N = 3
     M = 2
     a = Quaternion(np.random.randn(N,1,4))

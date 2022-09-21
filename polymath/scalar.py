@@ -7,8 +7,8 @@ import numpy as np
 import sys
 import warnings
 
-from .qube  import Qube
-from .units import Units
+from .qube    import Qube
+from .units   import Units
 
 # Maximum argument to exp()
 EXP_CUTOFF = np.log(sys.float_info.max)
@@ -685,7 +685,8 @@ class Scalar(Qube):
                 x0[a_zeros] = linear_x0[a_zeros]
 
         if include_antimask:
-            return (x0, x1, Boolean(discr._values_ >= 0, discr._mask_))
+            return (x0, x1, Qube.BOOLEAN_CLASS(discr._values_ >= 0,
+                                               discr._mask_))
         else:
             return (x0, x1)
 

@@ -13,6 +13,8 @@ class Test_Scalar_minimum(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(2251)
+
     self.assertRaises(ValueError, Scalar.minimum)
 
     a = Scalar(np.random.randn(10,1))

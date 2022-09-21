@@ -13,6 +13,8 @@ class Test_Scalar_sign(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(5251)
+
     # Individual values
     self.assertEqual(Scalar(1.25).sign(), 1.)
     self.assertEqual(type(Scalar(1.25).sign()), Scalar)

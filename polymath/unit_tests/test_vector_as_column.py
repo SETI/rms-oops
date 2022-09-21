@@ -13,6 +13,8 @@ class Test_Vector_as_column(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(1684)
+
     N = 100
     a = Vector(np.random.randn(N,1))
     b = a.as_column()

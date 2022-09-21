@@ -3,17 +3,14 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Boolean, Scalar, Pair, Vector
-from polymath import Vector3, Matrix3, Quaternion
+from polymath import Scalar, Vector3, Matrix3
 
 from .          import Path
-from ..event    import Event
 from ..body     import Body
+from ..event    import Event
+from ..fittable import Fittable
 from ..frame    import Frame
 from ..gravity  import Gravity
-from ..fittable import Fittable
-from ..config   import PATH_PHOTONS
-import oops.constants as constants
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
 MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians)
@@ -844,7 +841,7 @@ class KeplerPath(Path, Fittable):
                                                        quick=quick,
                                                        converge=converge)
             if partials:
-                (pos, vel) = self.xyz_planet(event.time, partials=True)
+                (pos, vel) = self.xyz_planet(link_event.time, partials=True)
                 path_event.pos.insert_deriv('elements', pos.d_delements)
 
             return (path_event, link_event)

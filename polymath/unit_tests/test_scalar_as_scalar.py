@@ -13,6 +13,8 @@ class Test_Scalar_as_scalar(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(3560)
+
     N = 10
     a = Scalar(np.random.randn(N))
     da_dt = Scalar(np.random.randn(N,6), drank=1)

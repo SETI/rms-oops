@@ -4,8 +4,8 @@
 
 # Import the Path class and all its core components into a common name space
 
-from .           import Path, Waypoint, AliasPath, LinkedPath, RelativePath, \
-                        ReversedPath, RotatedPath, QuickPath
+from .           import (Path, Waypoint, AliasPath, LinkedPath, RelativePath,
+                         ReversedPath, RotatedPath, QuickPath)
 from .circlepath import CirclePath
 from .coordpath  import CoordPath
 from .fixedpath  import FixedPath

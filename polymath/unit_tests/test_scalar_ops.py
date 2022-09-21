@@ -13,6 +13,8 @@ class Test_Scalar_ops(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(4420)
+
     # Unary plus
     a = Scalar(1)
     b = +a

@@ -13,6 +13,8 @@ class Test_Vector_element_mul(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(7263)
+
     # Single values
     self.assertEqual(Vector((2,3,0)).element_mul((0,7,0)), (0,21,0))
     self.assertEqual(Vector((2,3,4)).element_mul((-1,3,3)), (-2,9,12))

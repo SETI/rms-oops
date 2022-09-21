@@ -13,6 +13,8 @@ class Test_Scalar_cos(unittest.TestCase):
   # runTest
   def runTest(self):
 
+    np.random.seed(8948)
+
     # Individual values
     self.assertEqual(Scalar(1.25).cos(), np.cos(1.25))
     self.assertEqual(type(Scalar(1.25).cos()), Scalar)
