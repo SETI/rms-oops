@@ -5,12 +5,8 @@
 from __future__ import print_function
 
 import numpy as np
-#import os.path
-
-#from polymath import Vector3
 
 from oops.backplane    import Backplane
-#from oops.body         import Body
 from oops.event        import Event
 from oops.meshgrid     import Meshgrid
 from oops.surface.ansa import Ansa
@@ -18,6 +14,9 @@ from oops.constants    import HALFPI, DPR
 import oops.config as config
 
 #===============================================================================
+#def exercise_backplanes(obs, primary_name, secondary_name, ring_name, 
+#                        printing, logging, saving, undersample=16,
+#                        use_inventory=False, inventory_border=2):
 def exercise_backplanes(obs, printing, logging, saving, undersample=16,
                                   use_inventory=False, inventory_border=2):
     """Generates info from every backplane."""

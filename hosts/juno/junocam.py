@@ -393,7 +393,6 @@ class Test_Juno_Junocam(unittest.TestCase):
     def runTest(self):
 
         from oops.backplane import Backplane
-        from IPython import embed; embed()
 
         root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/junocam")
         file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
@@ -401,8 +400,9 @@ class Test_Juno_Junocam(unittest.TestCase):
 
         printing = 1
         logging = 0
-        saving = 0
-        bp = exercise_backplanes(obs, printing, logging, saving)
+        saving = 1
+        bp = exercise_backplanes(obs, printing, logging, saving, use_inventory=True)
+#        bp = exercise_backplanes(obs, body_name, printing, logging, saving)
  
  
  

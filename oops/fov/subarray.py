@@ -109,7 +109,7 @@ class Subarray(FOV):
         """
 
         old_uv = self.fov.uv_from_xyt(self.new_los_wrt_old_xy + xy_pair,
-                                      tfrac, time, derivs=derivs, **keywords)
+                             tfrac=tfrac, time=time, derivs=derivs, **keywords)
         return old_uv - self.new_origin_in_old_uv
 
 ################################################################################

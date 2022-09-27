@@ -271,6 +271,8 @@ class Test_Backplane_Exercises(unittest.TestCase):
         if TEST_LEVEL > 0:
 
             snap = iss.from_file(filespec)
+# saturn, epimetheus, saturn_main_rings
+#            bp = exercise_backplanes(snap, ['saturn', 'epimetheus'], printing, logging, saving,
             bp = exercise_backplanes(snap, printing, logging, saving,
                                      undersample,
                                      use_inventory=True, inventory_border=4)
