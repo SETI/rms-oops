@@ -1,5 +1,5 @@
 ################################################################################
-# oops/inst/juno/juno_.py
+# oops/inst/juno/__init__.py
 #
 # Utility functions for managing SPICE kernels while working with juno data
 # sets.

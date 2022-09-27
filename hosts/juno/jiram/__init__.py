@@ -20,11 +20,8 @@ from hosts.juno import Juno
 
 
 #===============================================================================
-# from_file
-#===============================================================================
 def from_file(filespec,
               return_all_planets=False, **parameters):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
@@ -33,32 +30,23 @@ def from_file(filespec,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     JIRAM.initialize()    # Define everything the first time through; use
                           # defaults unless initialize() is called explicitly.
 
-    #-----------------------
     # Load the PDS label
-    #-----------------------
     base = os.path.splitext(filespec)[0]
     lbl_filespec = base + '.LBL'
     recs = pdsparser.PdsLabel.load_file(lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
-    #---------------------------------
     # Get common metadata
-    #---------------------------------
     meta = Metadata(label)
 
-    #--------------------------------
     # Load time-dependent kernels
-    #--------------------------------
     Juno.load_cks(meta.tstart, meta.tstart + 3600.)
     Juno.load_spks(meta.tstart, meta.tstart + 3600.)
 
-    #----------------------------------------------------
     # Determine which observation type and load data
-    #----------------------------------------------------
     ext = os.path.splitext(filespec)[1]
 
     # Image
@@ -74,20 +62,14 @@ def from_file(filespec,
                                      return_all_planets=False, **parameters))
 
     return(None)
-#===============================================================================
 
 
 
-#*******************************************************************************
-# Metadata
 #*******************************************************************************
 class Metadata(object):
 
     #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, label):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Uses the label to assemble the image metadata.
 
@@ -103,45 +85,32 @@ class Metadata(object):
             nframelets
 
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #--------------------------------------------
         # Default timing for unprocessed frame
-        #--------------------------------------------
         self.tstart = julian.tdb_from_tai(
                         julian.tai_from_iso(label['START_TIME']))
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
 
         return
-    #===========================================================================
-
-#*******************************************************************************
 
 
 
-#*******************************************************************************
-# JIRAM
 #*******************************************************************************
 class JIRAM(object):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A instance-free class to hold JIRAM instrument parameters.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     instrument_kernel = None
     fovs = {}
     initialized = False
 
     #===========================================================================
-    # initialize
-    #===========================================================================
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Initialize key information about the JIRAM instrument.
 
@@ -163,16 +132,11 @@ class JIRAM(object):
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------
         # Quick exit after first call
-        #------------------------------------
         if JIRAM.initialized: return
 
-        #------------------------------------
         # initialize Juno
-        #------------------------------------
         Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                            gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
@@ -180,16 +144,11 @@ class JIRAM(object):
 
 
         JIRAM.initialized = True
-    #===========================================================================
 
 
-
-    #===========================================================================
-    # create_frame
     #===========================================================================
     @staticmethod
     def create_frame(time, name):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Create a frame for JIRAM component.
 
@@ -199,20 +158,15 @@ class JIRAM(object):
 
             name  name of the component.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         spice_frame = "JUNO_JIRAM_" + name
 
-        #---------------------------------------------------
         # rotation to reorganize axes vectors
-        #---------------------------------------------------
         rot = oops.Matrix3([[ 0,-1, 0],
                             [-1, 0, 0],
                             [ 0, 0, 1]])
 
-        #-----------------------------------------------------------------
         # Define fixed frame relative to J2000 from JIRAM orientation at
         # given time
-        #-----------------------------------------------------------------
         jiram_raw = \
                  oops.frame.SpiceFrame(spice_frame, frame_id=spice_frame+"_RAW")
         xform = jiram_raw.transform_at_time(time)
@@ -222,29 +176,19 @@ class JIRAM(object):
         jiram_frame = \
                   oops.frame.Cmatrix(rot, jiram_raw_j2000, frame_id=spice_frame)
 
-    #===========================================================================
 
 
-
-    #===========================================================================
-    # reset
     #===========================================================================
     @staticmethod
     def reset():
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Resets the internal JIRAM parameters. Can be useful for
         debugging.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         JIRAM.instrument_kernel = None
         JIRAM.fovs = {}
         JIRAM.initialized = False
 
         Juno.reset()
-    #============================================================================
-
-#*****************************************************************************
-
 
 
