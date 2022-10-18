@@ -360,6 +360,7 @@ class JUNOCAM(object):
         JUNOCAM.initialized = True
 
 
+
     #===========================================================================
     @staticmethod
     def reset():
