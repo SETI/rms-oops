@@ -19,11 +19,8 @@ from . import Juno
 ################################################################################
 
 #===============================================================================
-# from_file
-#===============================================================================
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, **parameters):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A general, static method to return a Pushframe object based on a given
     JUNOCAM image file.
@@ -36,36 +33,25 @@ def from_file(filespec, fast_distortion=True,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     JUNOCAM.initialize()    # Define everything the first time through; use
                             # defaults unless initialize() is called explicitly.
 
-    #-----------------------
     # Load the PDS label
-    #-----------------------
     lbl_filespec = filespec.replace(".img", ".LBL")
     recs = pdsparser.PdsLabel.load_file(lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
-    #---------------------------------
     # Get composite image metadata
-    #---------------------------------
     meta = Metadata(label)
 
-    #------------------------------------------------------------------
     # Load the data array as separate framelets, with associated labels
-    #------------------------------------------------------------------
     (framelets, flabels) = _load_data(filespec, label, meta)
 
-    #--------------------------------
     # Load time-dependent kernels
-    #--------------------------------
     Juno.load_cks(meta.tstart0, meta.tstart0 + 3600.)
     Juno.load_spks(meta.tstart0, meta.tstart0 + 3600.)
 
-    #-----------------------------------------
     # Construct a Pushframe for each framelet
-    #-----------------------------------------
 
     snap = False
 
@@ -104,17 +90,11 @@ def from_file(filespec, fast_distortion=True,
 
     return obs
 
-#===============================================================================
 
-
-
-#===============================================================================
-# initialize
 #===============================================================================
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Initialize key information about the JUNOCAM instrument.
 
@@ -137,20 +117,14 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     JUNOCAM.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
-#===============================================================================
 
 
-
-#===============================================================================
-# _load_data
 #===============================================================================
 def _load_data(filespec, label, meta):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Loads the data array from the file and splits into individual framelets.
 
@@ -164,21 +138,16 @@ def _load_data(filespec, label, meta):
                         axis order (line, sample, framelet #).
         framelet_labels List of labels for each framelet.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #----------------
     # Read data
-    #----------------
     # seems like this should be handled in a readpds-style function somewhere
     bits = label['IMAGE']['SAMPLE_BITS']
     dtype = '>u' +str(int(bits/8))
     data = np.fromfile(filespec, dtype=dtype).reshape(meta.nlines,meta.nsamples)
 
-    #--------------------------------------------------------
     # Split into framelets:
     #   - Add framelet number and filter index to label
     #   - Change image dimensions in label
-    #--------------------------------------------------------
     nf = len(meta.filter)
     framelets = np.empty([meta.frlines,meta.nsamples,meta.nframelets])
     framelet_labels = []
@@ -204,20 +173,14 @@ def _load_data(filespec, label, meta):
 
 
     return (framelets, framelet_labels)
-#===============================================================================
 
 
 
-#*******************************************************************************
-# Metadata
 #*******************************************************************************
 class Metadata(object):
 
     #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, label):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Uses the label to assemble the image metadata.
 
@@ -233,30 +196,21 @@ class Metadata(object):
             nframelets
 
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #---------------------
         # image dimensions
-        #---------------------
         self.nlines = label['IMAGE']['LINES']
         self.nsamples = label['IMAGE']['LINE_SAMPLES']
         self.frlines = 128
         self.nframelets = int(self.nlines/self.frlines)
 
-        #-----------------
         # Exposure time
-        #-----------------
         exposure_ms = label['EXPOSURE_DURATION']
         self.exposure = exposure_ms/1000.
 
-        #-------------
         # Filters
-        #-------------
         self.filter = label['FILTER_NAME']
 
-        #--------------------------------------------
         # Default timing for unprocessed frame
-        #--------------------------------------------
         self.tinter = label['INTERFRAME_DELAY']
         self.tinter0 = self.tinter
 
@@ -271,14 +225,10 @@ class Metadata(object):
         self.tdi_texp = self.exposure/self.tdi_stages
         if self.exposure < self.tdi_texp: self.tdi_texp = self.exposure
 
-        #-------------
         # target
-        #-------------
         self.target = label['TARGET_NAME']
 
-        #----------------------------------------------
         # Framelet-specific parameters, if applicable
-        #----------------------------------------------
         if 'FRAMELET' in label.keys():
             frn = label['FRAMELET']['FRAME_NUMBER']
 
@@ -334,15 +284,10 @@ class Metadata(object):
                                             uv_los=(cx, cy))
 
         return
-    #===========================================================================
 
 
-
-    #===========================================================================
-    # update_cy
     #===========================================================================
     def update_cy(self, label, cy):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Looks at label RATIONALE_DESC for a correction to DISTORTION_Y for
         some methane images.
@@ -355,39 +300,28 @@ class Metadata(object):
             cy              Corrected cy value.
 
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         desc = label['RATIONALE_DESC']
         desc = re.sub("\s+"," ", desc)                     # compress whitespace
         kv = desc.partition('INS-61504_DISTORTION_Y = ')   # parse keyword
         return float(kv[2].split()[0])                     # parse/convert value
-#*******************************************************************************
 
 
 
-
-
-#*******************************************************************************
-# JUNOCAM
 #*******************************************************************************
 class JUNOCAM(object):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A instance-free class to hold JUNOCAM instrument parameters.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     instrument_kernel = None
     fovs = {}
     initialized = False
 
+    #===========================================================================
     @staticmethod
-    #===========================================================================
-    # initialize
-    #===========================================================================
     def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Initialize key information about the JUNOCAM instrument; fill in key
         information about the WAC and NAC.
@@ -410,33 +344,22 @@ class JUNOCAM(object):
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #-----------------------------------
         # Quick exit after first call
-        #-----------------------------------
         if JUNOCAM.initialized: return
 
-        #-----------------------------------
         # Initialize Juno
-        #-----------------------------------
         Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                            gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
         Juno.load_instruments(asof=asof)
 
-        #-----------------------------------
         # Construct the SpiceFrame
-        #-----------------------------------
         ignore = oops.frame.SpiceFrame("JUNO_JUNOCAM")
 
         JUNOCAM.initialized = True
-    #===========================================================================
 
 
-
-    #===========================================================================
-    # reset
     #===========================================================================
     @staticmethod
     def reset():
@@ -451,9 +374,41 @@ class JUNOCAM(object):
         JUNOCAM.initialized = False
 
         Juno.reset()
-    #============================================================================
-
-#*****************************************************************************
 
 
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+import os.path
+
+import hosts.juno.junocam as junocam
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+
+class Test_Juno_Junocam(unittest.TestCase):
+
+    def runTest(self):
+
+        from oops.backplane import Backplane
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/junocam")
+        file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
+        _obs = junocam.from_file(file); body_name = "JUPITER"; obs = _obs[5]
+
+        printing = 1
+        logging = 0
+        saving = 1
+        bp = exercise_backplanes(obs, printing, logging, saving, use_inventory=True)
+#        bp = exercise_backplanes(obs, body_name, printing, logging, saving)
+
+
+
+
+############################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
+################################################################################
 

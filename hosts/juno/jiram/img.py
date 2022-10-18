@@ -18,11 +18,8 @@ from . import JIRAM
 ################################################################################
 
 #===============================================================================
-# from_file
-#===============================================================================
 def from_file(filespec, label, fast_distortion=True,
               return_all_planets=False, **parameters):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
@@ -35,26 +32,17 @@ def from_file(filespec, label, fast_distortion=True,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #---------------------------------
     # Get metadata
-    #---------------------------------
     meta = Metadata(label)
 
-    #--------------------------------------------
     # Define everything the first time through
-    #--------------------------------------------
     IMG.initialize(meta.tstart)
 
-    #------------------------------------------------------------------
     # Load the data array as separate framelets, with associated labels
-    #------------------------------------------------------------------
     (framelets, flabels) = _load_data(filespec, label, meta)
 
-    #-----------------------------------------
     # Construct a Snapshot for each framelet
-    #-----------------------------------------
     obs = []
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
@@ -74,15 +62,9 @@ def from_file(filespec, label, fast_distortion=True,
 
     return obs
 
-#===============================================================================
 
-
-
-#===============================================================================
-# _load_data
 #===============================================================================
 def _load_data(filespec, label, meta):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     Loads the data array from the file and splits into individual framelets.
 
@@ -96,19 +78,14 @@ def _load_data(filespec, label, meta):
                         axis order (line, sample, framelet #).
         framelet_labels List of labels for each framelet.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #----------------
     # Read data
-    #----------------
     # seems like this should be handled in a readpds-style function somewhere
     data = np.fromfile(filespec, dtype='<f4').reshape(meta.nlines,meta.nsamples)
 
-    #--------------------------------------------------------
     # Split into framelets:
     #   - Add framelet number and filter index to label
     #   - Change image dimensions in label
-    #--------------------------------------------------------
     filters = meta.filter
     nf = len(filters)
     framelets = np.empty([meta.frlines,meta.nsamples,meta.nframelets])
@@ -133,20 +110,14 @@ def _load_data(filespec, label, meta):
 
 
     return (framelets, framelet_labels)
-#===============================================================================
 
 
 
-#*******************************************************************************
-# Metadata
 #*******************************************************************************
 class Metadata(object):
 
     #===========================================================================
-    # __init__
-    #===========================================================================
     def __init__(self, label):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Uses the label to assemble the image metadata.
 
@@ -162,20 +133,15 @@ class Metadata(object):
             nframelets
 
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #---------------------
         # image dimensions
-        #---------------------
         self.nlines = label['FILE']['IMAGE']['LINES']
         self.nsamples = label['FILE']['IMAGE']['LINE_SAMPLES']
         self.frlines = 128
         self.nframelets = int(self.nlines/self.frlines)
         self.size = [self.nsamples, self.frlines]
 
-        #-----------------
         # Exposure time
-        #-----------------
         self.exposure = 0
         try:
             self.exposure = label['EXPOSURE_DURATION']
@@ -184,9 +150,7 @@ class Metadata(object):
             self.exposure = 1.      # This should go away after the labels are
                                     # redelivered
 
-        #-------------
         # Filters
-        #-------------
         self.filter = []
 
         Lparm = label['L_BAND_PARAMETERS']['LINE_FIRST_PIXEL']
@@ -195,23 +159,17 @@ class Metadata(object):
         Mparm = label['M_BAND_PARAMETERS']['LINE_FIRST_PIXEL']
         if type(Mparm) is int: self.filter.append('M_BAND')
 
-        #--------------------------------------------
         # Default timing for unprocessed frame
-        #--------------------------------------------
         self.tstart = julian.tdb_from_tai(
                         julian.tai_from_iso(label['START_TIME']))
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
         if self.exposure == 0: self.exposure = self.tstop - self.tstart
 
-        #-------------
         # target
-        #-------------
         self.target = label['TARGET_NAME']
 
-        #----------------------------------------------
         # Framelet-specific parameters, if applicable
-        #----------------------------------------------
         if 'FRAMELET' in label.keys():
             frn = label['FRAMELET']['FRAME_NUMBER']
 
@@ -239,32 +197,22 @@ class Metadata(object):
                                         (self.nsamples, self.frlines), cxy)
 
         return
-    #===========================================================================
-
-#*******************************************************************************
 
 
 
-#*******************************************************************************
-# IMG
 #*******************************************************************************
 class IMG(object):
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     """
     A instance-free class to hold IMG instrument parameters.
     """
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     initialized = False
 
-    #===========================================================================
-    # initialize
     #===========================================================================
     @staticmethod
     def initialize(time, ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """
         Initialize key information about the IMG instrument.
 
@@ -287,34 +235,23 @@ class IMG(object):
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        #------------------------------------
         # Quick exit after first call
-        #------------------------------------
         if IMG.initialized: return
 
-        #------------------------------------
         # initialize JIRAM
-        #------------------------------------
         JIRAM.initialize(ck=ck, planets=planets, asof=asof,
                      spk=spk, gapfill=gapfill,
                      mst_pck=mst_pck, irregulars=irregulars)
 
-        #-----------------------------------
         # Construct the SpiceFrames
-        #-----------------------------------
         JIRAM.create_frame(time, 'I_MBAND')
         JIRAM.create_frame(time, 'I_LBAND')
 
 
         IMG.initialized = True
-    #===========================================================================
 
 
-
-    #===========================================================================
-    # reset
     #===========================================================================
     @staticmethod
     def reset():
@@ -327,7 +264,5 @@ class IMG(object):
         IMG.initialized = False
 
         JIRAM.reset()
-    #============================================================================
 
-#*****************************************************************************
 

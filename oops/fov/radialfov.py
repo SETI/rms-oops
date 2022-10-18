@@ -130,7 +130,7 @@ class RadialFOV(FOV):
         return xy
 
     #===========================================================================
-    def uv_from_xyt(self, xy, tfrac=0.5, derivs=False, fast=False):
+    def uv_from_xyt(self, xy, tfrac=0.5, time=None, derivs=False, fast=False):
         """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
         the specified time.
 

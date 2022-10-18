@@ -815,6 +815,8 @@ class KeplerPath(Path, Fittable):
         node = self.node_at_time(time)
         cos_node = np.cos(node)
         sin_node = np.sin(node)
+        _node_in_j2000 = (cos_node * x_axis_in_j2000 +
+                          sin_node * y_axis_in_j2000)
 
         # This vector is 90 degrees behind of the node in the reference equator
         target_in_j2000 = ( sin_node * x_axis_in_j2000 +
@@ -871,7 +873,7 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
     """
 
     # Save the position and its derivatives
-    (xyz, _) = kep.xyz_planet(t, partials=True)
+    (xyz, _d_xyz_dt) = kep.xyz_planet(t, partials=True)
     d_xyz_d_elem = xyz.d_delements.vals
     pos_norm = xyz.norm().vals
 
@@ -921,6 +923,8 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
 
     # Save the position and its derivatives
     event = kep.event_at_time(t, partials=True)
+    _xyz = event.pos.vals
+    _d_xyz_dt = event.vel.vals
     d_xyz_d_elem = event.pos.d_delements.vals
     pos_norm = event.pos.norm().vals
 
