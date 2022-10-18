@@ -94,8 +94,8 @@ class SubsampledFOV(FOV):
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-        uv_pair = self.fov.uv_from_xyt(xy_pair, tfrac, time,
-                                       derivs=derivs, **keywords)
+        uv_pair = self.fov.uv_from_xyt(xy_pair, tfrac=tfrac, time=time,
+                                                    derivs=derivs, **keywords)
         uv_new = uv_pair.element_div(self.rescale)
 
         return uv_new
