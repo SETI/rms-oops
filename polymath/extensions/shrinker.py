@@ -3,7 +3,8 @@
 ################################################################################
 
 import numpy as np
-from ..qube import Qube
+from ..qube   import Qube
+from ..scalar import Scalar
 
 def shrink(self, antimask):
     """A 1-D version of this object, containing only the samples in the antimask

@@ -571,7 +571,6 @@ def as_diagonal(arg, axis, classes=(), recursive=True):
     new_values = np.rollaxis(new_values, -1, k1)
 
     # Construct and cast
-    new_numer = new_values.shape[len(arg._shape_):][:arg._nrank_+1]
     obj = Qube(new_values, arg._mask_,
                nrank=arg._nrank_ + 1, example=arg)
     obj = obj.cast(classes)

@@ -227,7 +227,7 @@ class Qube(object):
     BOOLS_OK = True     # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
 
     #===========================================================================
     def __new__(subtype, *values, **keywords):
@@ -388,8 +388,8 @@ class Qube(object):
         # Check the shape against nrank and drank
         full_shape = np.shape(arg)
         if len(full_shape) < rank:
-            raise ValueError(("incompatible array shape for class '%s': " +
-                              "%s; minimum rank = %d + %d") %
+            raise ValueError(('incompatible array shape for class %s: ' +
+                              '%s; minimum rank = %d + %d') %
                               (type(self).__name__, str(full_shape),
                                nrank, drank))
 
@@ -401,8 +401,8 @@ class Qube(object):
         shape = full_shape[:nn]
 
         if self.NUMER is not None and self.NUMER != numer:
-            raise ValueError(("incompatible numerator shape for class '%s': " +
-                              "%s, %s") % (type(self).__name__,
+            raise ValueError(('incompatible numerator shape for class %s: ' +
+                              '%s, %s') % (type(self).__name__,
                                            str(self.NUMER), str(numer)))
 
         # Fill in the values
@@ -429,7 +429,7 @@ class Qube(object):
                 else:
                     arg = (arg != 0)
             else:
-                raise ValueError("unsupported data type: %s" % str(arg.dtype))
+                raise ValueError('unsupported data type: %s' % str(arg.dtype))
 
         else:
             if isinstance(arg, (bool, np.bool_)):
@@ -454,7 +454,7 @@ class Qube(object):
                 else:
                     arg = (arg != 0)
             else:
-                raise ValueError("unsupported data type: '%s'" % str(arg))
+                raise ValueError('unsupported data type: %s' % str(arg))
 
         self._values_ = arg
 
@@ -478,9 +478,9 @@ class Qube(object):
         if np.shape(mask) not in ((), shape):
             try:
                 mask = np.broadcast_to(mask, shape)
-            except:
-                raise ValueError(("object shape and mask shape are " +
-                                  "incompatible: %s, %s") %
+            except ValueError:
+                raise ValueError(('object shape and mask shape are ' +
+                                  'incompatible: %s, %s') %
                                   (str(shape), str(np.shape(mask))))
 
         self._mask_ = mask
@@ -1002,17 +1002,17 @@ class Qube(object):
         """
 
         if not self.DERIVS_OK:
-            raise TypeError("derivatives are disallowed in class '%s'" %
+            raise TypeError('derivatives are disallowed in class %s' %
                             type(self).__name__)
 
         # Make sure the derivative is compatible with the object
         if not isinstance(deriv, Qube):
-            raise ValueError("invalid class for derivative '%s': '%s'" %
+            raise ValueError('invalid class for derivative "%s": %s' %
                              (key, type(deriv).__name__))
 
         if self._numer_ != deriv._numer_:
-            raise ValueError(("shape mismatch for numerator of derivative " +
-                              "'%s': %s, %s") % (key, str(deriv._numer_),
+            raise ValueError(('shape mismatch for numerator of derivative ' +
+                              '"%s": %s, %s') % (key, str(deriv._numer_),
                                                       str(self._numer_)))
 
         if self.readonly and (key in self._derivs_) and not override:
@@ -1251,7 +1251,7 @@ class Qube(object):
         """
 
         if not self.UNITS_OK and units is not None:
-            raise TypeError("units are disallowed in class '%s'" %
+            raise TypeError('units are disallowed in class %s' %
                             type(self).__name__)
 
         if not override:
@@ -1593,7 +1593,7 @@ class Qube(object):
                 obj.__init__(values.astype(np.float_), self._mask_,
                              derivs=self._derivs_, example=self)
             else:
-                raise TypeError("data type float is incompatible with class " +
+                raise TypeError('data type float is incompatible with class ' +
                                 type(self).__name__)
 
         # Scalar case
@@ -1603,7 +1603,7 @@ class Qube(object):
                 obj.__init__(float(values), self._mask_,
                              derivs=self._derivs_, example=self)
             else:
-                raise TypeError("data type float is incompatible with class " +
+                raise TypeError('data type float is incompatible with class ' +
                                 type(self).__name__)
 
         return obj
@@ -1641,7 +1641,7 @@ class Qube(object):
                 obj = Qube.__new__(type(self))
                 obj.__init__((values//1).astype(np.int_), self._mask_)
             else:
-                raise TypeError("data type int is incompatible with class " +
+                raise TypeError('data type int is incompatible with class ' +
                                 type(self).__name__)
 
         # Scalar case
@@ -1650,7 +1650,7 @@ class Qube(object):
                 obj = Qube.__new__(type(self))
                 obj.__init__(int(values//1), self._mask_)
             else:
-                raise TypeError("data type int is incompatible with class " +
+                raise TypeError('data type int is incompatible with class ' +
                                 type(self).__name__)
 
         return obj
@@ -1680,7 +1680,7 @@ class Qube(object):
                 obj = Qube.__new__(type(self))
                 obj.__init__(values.astype(np.bool_), self._mask_)
             else:
-                raise TypeError("data type bool is incompatible with class " +
+                raise TypeError('data type bool is incompatible with class ' +
                                 type(self).__name__)
 
         # Scalar case
@@ -1689,7 +1689,7 @@ class Qube(object):
                 obj = Qube.__new__(type(self))
                 obj.__init__(bool(values), self._mask_)
             else:
-                raise TypeError("data type bool is incompatible with class " +
+                raise TypeError('data type bool is incompatible with class ' +
                                 type(self).__name__)
 
         return obj
@@ -2231,7 +2231,7 @@ class Qube(object):
         suffix = []
 
         # Apply the units if necessary
-        obj = self.into_units(recursive=False)
+        self = self.into_units(recursive=False)
 
         # Indicate the denominator shape if necessary
         if self._denom_ != ():
@@ -2336,7 +2336,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = self.as_this_type(arg, coerce=False)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('+', self, original_arg)
 
         # Verify compatibility
@@ -2382,7 +2382,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = self.as_this_type(arg, coerce=False)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('+=', self, original_arg)
 
         # Verify compatibility
@@ -2446,7 +2446,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = self.as_this_type(arg, coerce=False)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('-', self, original_arg)
 
         # Verify compatibility
@@ -2496,7 +2496,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = self.as_this_type(arg, coerce=False)
-            except Exception as e:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('-=', self, original_arg)
 
         # Verify compatibility
@@ -2564,12 +2564,12 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('*', self, original_arg)
 
         # Check denominators
         if self._drank_ and arg._drank_:
-            raise ValueError("dual operand denominators for '*': %s, %s" %
+            raise ValueError('dual operand denominators for "*": %s, %s' %
                              (str(self._denom_), str(arg._denom_)))
 
         # Multiply by scalar...
@@ -2578,7 +2578,7 @@ class Qube(object):
                 return self._mul_by_scalar(arg, recursive)
 
             # Revise the exception if the arg was modified
-            except:
+            except (ValueError, TypeError):
                 if arg is not original_arg:
                     Qube._raise_unsupported_op('*', self, original_arg)
                 raise
@@ -2610,7 +2610,7 @@ class Qube(object):
             return self._mul_by_scalar(arg, recursive)
 
         # Revise the exception if the arg was modified
-        except:
+        except (ValueError, TypeError):
             if arg is not original_arg:
                 Qube._raise_unsupported_op('*', original_arg, self)
             raise
@@ -2625,7 +2625,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('*=', self, original_arg)
 
         # Scalar case
@@ -2706,7 +2706,6 @@ class Qube(object):
         """Dictionary of multiplied derivatives."""
 
         new_derivs = {}
-        new_shape = self._shape_
 
         if self._derivs_:
             arg_wod = arg.wod
@@ -2750,12 +2749,12 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('/', self, original_arg)
 
         # Check right denominator
         if arg._drank_ > 0:
-            raise ValueError("right operand denominator for '/': %s" %
+            raise ValueError('right operand denominator for "/": %s' %
                              str(arg._denom_))
 
         # Divide by scalar...
@@ -2764,7 +2763,7 @@ class Qube(object):
                 return self._div_by_scalar(arg, recursive)
 
             # Revise the exception if the arg was modified
-            except:
+            except (ValueError, TypeError):
                 if arg is not original_arg:
                     Qube._raise_unsupported_op('/', self, original_arg)
                 raise
@@ -2795,8 +2794,7 @@ class Qube(object):
             return arg.__truediv__(self, recursive)
 
         # Revise the exception if the arg was modified
-        except Exception as e:
-            raise
+        except (ValueError, TypeError):
             if arg is not original_arg:
                 Qube._raise_unsupported_op('/', original_arg, self)
             raise
@@ -2815,7 +2813,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('/=', self, original_arg)
 
         # In-place multiply by the reciprocal
@@ -2823,7 +2821,7 @@ class Qube(object):
             return self.__imul__(arg.reciprocal())
 
         # Revise the exception if the arg was modified
-        except:
+        except (ValueError, TypeError):
             if arg is not original_arg:
                 Qube._raise_unsupported_op('/=', self, original_arg)
             raise
@@ -2915,12 +2913,12 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('//', self, original_arg)
 
         # Check right denominator
         if arg._drank_ > 0:
-            raise ValueError("right operand denominator for '//': %s" %
+            raise ValueError('right operand denominator for "//": %s' %
                              str(arg._denom_))
 
         # Floor divide by scalar...
@@ -2929,7 +2927,7 @@ class Qube(object):
                 return self._floordiv_by_scalar(arg)
 
             # Revise the exception if the arg was modified
-            except:
+            except (ValueError, TypeError):
                 if arg is not original_arg:
                     Qube._raise_unsupported_op('//', original_arg, self)
                 raise
@@ -2948,7 +2946,7 @@ class Qube(object):
             return arg.__floordiv__(self)
 
         # Revise the exception if the arg was modified
-        except:
+        except (ValueError, TypeError):
             if arg is not original_arg:
                 Qube._raise_unsupported_op('//', original_arg, self)
             raise
@@ -2963,7 +2961,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('//=', self, original_arg)
 
         # Handle floor division by a scalar
@@ -3041,12 +3039,12 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('%', self, original_arg)
 
         # Check right denominator
         if arg._drank_ > 0:
-            raise ValueError("right operand denominator for '%': %s" %
+            raise ValueError('right operand denominator for "%%": %s' %
                              str(arg._denom_))
 
         # Modulus by scalar...
@@ -3055,7 +3053,7 @@ class Qube(object):
                 return self._mod_by_scalar(arg, recursive)
 
             # Revise the exception if the arg was modified
-            except:
+            except (ValueError, TypeError):
                 if arg is not original_arg:
                     Qube._raise_unsupported_op('%', self, original_arg)
                 raise
@@ -3074,7 +3072,7 @@ class Qube(object):
             return arg.__mod__(self)
 
         # Revise the exception if the arg was modified
-        except:
+        except (ValueError, TypeError):
             if arg is not original_arg:
                 Qube._raise_unsupported_op('%', original_arg, self)
             raise
@@ -3090,7 +3088,7 @@ class Qube(object):
         if not isinstance(arg, Qube):
             try:
                 arg = Qube.SCALAR_CLASS.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube._raise_unsupported_op('%=', self, original_arg)
 
         # Handle modulus by a scalar
@@ -3207,7 +3205,7 @@ class Qube(object):
             # Zero to a negative power creates a RuntTimeWarning, which needs to
             # be suppressed.
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+                warnings.simplefilter('ignore')
                 new_values = self._values_ ** expo._values_
 
             new_mask = (self._mask_
@@ -3267,7 +3265,7 @@ class Qube(object):
                 obj = Qube.__new__(type(self))
                 obj.__init__(arg, example=self)
                 arg = obj
-            except:
+            except (ValueError, TypeError):
                 return None
 
         else:
@@ -3384,7 +3382,7 @@ class Qube(object):
                          type(self).__name__)
 
     #===========================================================================
-    def __gt__(self, arg):
+    def __ge__(self, arg):
         raise ValueError('comparison operators are not supported for class ' +
                          type(self).__name__)
 
@@ -3762,7 +3760,7 @@ class Qube(object):
         """Raise a TypeError or ValueError for unsupported operations."""
 
         if obj2 is None:
-            raise TypeError("bad operand type for %s: '%s'"
+            raise TypeError('bad operand type for "%s": %s'
                             % (op, type(obj1).__name__))
 
         if (isinstance(obj1, (list,tuple,np.ndarray)) or
@@ -3777,13 +3775,12 @@ class Qube(object):
                 else:
                     shape2 = np.shape(obj2)
 
-                raise ValueError(("unsupported operand item shapes for '%s': "
-                                  "%s, %s") % (op, str(shape1),
-                                                       str(shape2)))
+                raise ValueError(('unsupported operand item shapes for "%s": ' +
+                                  '%s, %s') % (op, str(shape1), str(shape2)))
 
-        raise TypeError(("unsupported operand types for '%s': " +
-                         "'%s', '%s'") % (op, type(obj1).__name__,
-                                              type(obj2).__name__))
+        raise TypeError(('unsupported operand types for "%s": ' +
+                         '%s, %s') % (op, type(obj1).__name__,
+                                          type(obj2).__name__))
 
     ############################################################################
     # Broadcast operations
@@ -4090,7 +4087,7 @@ class Qube(object):
 
         # Construct the values array
         new_drank = len(new_denom)
-        new_values = np.array(arrays)
+        new_values = np.array(arrays, dtype=dtype)
         new_values = np.rollaxis(new_values, 0, new_values.ndim - new_drank)
 
         # Construct the mask (scalar or array)

@@ -111,22 +111,6 @@ class Cadence(object):
             return time.tvl_lt(self.time[0]) | time.tvl_ge(self.time[1])
 
     #===========================================================================
-    def time_is_inside(self, time, inclusive=True):
-        """A Boolean mask of times that fall inside the cadence.
-
-        Input:
-            time        a Scalar of times in seconds TDB.
-            inclusive   True to treat the end time of an interval as inside;
-                        False to treat it as outside. The start time of an
-                        interval is always treated as inside.
-
-        Return:         a Boolean array indicating which time values are
-                        sampled by the cadence.
-        """
-
-        return self.time_is_outside(time, inclusive=inclusive).logical_not()
-
-    #===========================================================================
     def time_shift(self, secs):
         """Construct a duplicate of this Cadence with all times shifted by given
         amount.

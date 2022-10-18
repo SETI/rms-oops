@@ -149,7 +149,7 @@ class RingPlane(Surface):
         if len(coords) > 2:
             z = Scalar.as_scalar(coords[2] + self.elevation, derivs)
         else:
-            z = Scalar.as_scalar(self.elevation)
+            z = Scalar.as_scalar(self.elevation, derivs)
 
         x = r * theta.cos()
         y = r * theta.sin()
@@ -324,6 +324,7 @@ class Test_RingPlane(unittest.TestCase):
     def runTest(self):
 
         from ..gravity import Gravity
+        from ..event import Event
 
         np.random.seed(8829)
 
@@ -451,6 +452,23 @@ class Test_RingPlane(unittest.TestCase):
         speed2 = a * Gravity.SATURN.n(a.vals)
         diff = (speed2 - speed1) / speed1
         self.assertTrue(abs(diff).max() < 1.e-15)
+
+        ########################################################################
+        # coords_of_event, event_from_coords
+        ########################################################################
+
+        plane = RingPlane(Path.SSB, Frame.J2000)
+
+        pos = Vector3(np.random.rand(2,4,3,3))
+        vel = Vector3(np.random.rand(2,4,3,3))
+        pos.insert_deriv('t', vel)
+
+        event = Event(0., pos, Path.SSB, Frame.J2000)
+        coords = plane.coords_of_event(event)
+        test = plane.event_at_coords(0., coords)
+
+        self.assertTrue(np.all(np.abs(test.pos.vals - pos.vals) < 1.e-15))
+        self.assertTrue(np.all(np.abs(test.vel.vals - vel.vals) < 1.e-15))
 
         ########################################################################
         # Note: Additional unit testing is performed in orbitplane.py

@@ -108,13 +108,15 @@ class NullSurface(Surface):
                             intercept = obs + t * los
         """
 
-        obs = Vector3.as_vector(obs, derivs)
-        los = Vector3.as_vector(los, derivs)
-        shape = Qube.broadcasted_shape(obs, los)
+        # This is a quick way to create a position vector of the correct shape,
+        # and with the correct set of derivatives, even though it will be
+        # entirely masked.
 
-        t = obs.to_scalar(0, derivs)
-        t = t.all_masked(derivs)
-        pos = obs.all_masked(derivs)
+        pos = Vector3.as_vector(obs, derivs) + Vector3.as_vector(los, derivs)
+        t = pos.to_scalar(0, derivs)
+
+        pos = pos.as_all_constant(1.).as_all_masked()
+        t = t.as_all_constant(0.).as_all_masked()
 
         return (pos, t)
 

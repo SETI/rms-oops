@@ -68,8 +68,8 @@ class Test_spice_shape(unittest.TestCase):
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
 
-        ignore = SpicePath("VENUS", "SSB", "J2000", path_id="APHRODITE")
-        ignore = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
+        _ = SpicePath("VENUS", "SSB", "J2000", path_id="APHRODITE")
+        _ = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
 
         body = spice_shape("VENUS")
         self.assertEqual(Path.as_path_id(body.origin), "APHRODITE")

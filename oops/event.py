@@ -865,7 +865,7 @@ class Event(object):
             if self._ssb_ is not None and self._ssb_ is not self:
                 try:
                     value_j2000 = self.xform_to_j2000.rotate(value)
-                except:
+                except (ValueError, TypeError, KeyError):
                     value_j2000 = value
 
                 self._ssb_.insert_subfield(name, value_j2000)
@@ -1136,7 +1136,7 @@ class Event(object):
         the frame of the event.
         """
 
-        if 'pos' in event.__state__.derivs:
+        if 'pos' in self.__state__.derivs:
             return self
 
         event = self.copy()
@@ -1145,8 +1145,8 @@ class Event(object):
         if event._ssb_ is not None and event._ssb_ is not event:
             dpos_dpos_j2000 = event.xform_to_j2000.rotate(event._state_,
                                                           derivs=True)
-            event.ssb._state_.insert_deriv('pos', Vector3.IDENTITY,
-                                                   override=True)
+            event.ssb._state_.insert_deriv('pos', dpos_dpos_j2000,
+                                                  override=True)
 
         return event
 
@@ -1548,7 +1548,7 @@ class Event(object):
         def xform_rotate(arg):
             try:
                 return xform.rotate(arg, derivs=True)
-            except:
+            except (ValueError, TypeError, KeyError):
                 return arg
 
         if derivs:
@@ -1600,7 +1600,7 @@ class Event(object):
         def xform_unrotate(arg):
             try:
                 return xform.unrotate(arg, derivs=True)
-            except:
+            except (ValueError, TypeError, KeyError):
                 return arg
 
         if derivs:
@@ -1701,7 +1701,7 @@ class Event(object):
         def ref_unrotate(arg):
             try:
                 return reference.xform_to_j2000.unrotate(arg)
-            except:
+            except (ValueError, TypeError, KeyError):
                 return arg
 
         event_ssb = self.wrt_ssb(derivs=True, quick=quick)
@@ -1720,7 +1720,7 @@ class Event(object):
         for (key,subfield) in event_ssb._subfields_.items():
             try:
                 subfield = ref_unrotate(subfield)
-            except:
+            except (ValueError, TypeError, KeyError):
                 pass
 
             diff.insert_subfield(key, subfield)
@@ -2370,7 +2370,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._ssb_)
 
             # Let arr_ap and ssb be filled in
-            ignore = ev.arr_ap
+            _ = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2421,7 +2421,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._ssb_)
 
             # Let arr and ssb be filled in
-            ignore = ev.arr
+            _ = ev.arr
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2488,7 +2488,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._neg_arr_ap_)
 
             # Let arr_ap and ssb be filled in
-            ignore = ev.arr_ap
+            _ = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2555,7 +2555,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._neg_arr_ap_)
 
             # Let arr and ssb be filled in
-            ignore = ev.arr_ap
+            _ = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2616,7 +2616,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._ssb_)
 
             # Let arr_ap and ssb be filled in
-            ignore = ev.arr_ap
+            _ = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2677,7 +2677,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._ssb_)
 
             # Let arr and ssb be filled in
-            ignore = ev.arr
+            _ = ev.arr
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2730,7 +2730,7 @@ class Test_Event(unittest.TestCase):
                 pass
 
             # Let arr_ap and ssb be filled in
-            ignore = ev.arr_ap
+            _ = ev.arr_ap
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2783,7 +2783,7 @@ class Test_Event(unittest.TestCase):
                 pass
 
             # Let arr and ssb be filled in
-            ignore = ev.arr
+            _ = ev.arr
             self.assertTrue((ev.arr_ap - ev.arr).norm() < 5*BETA)
             self.assertEqual(ev.neg_arr, -ev.arr)
             self.assertEqual(ev.neg_arr_ap, -ev.arr_ap)
@@ -2822,7 +2822,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._ssb_)
 
             # Fill in dep_ap and ssb
-            ignore = ev.dep_ap
+            _ = ev.dep_ap
             self.assertTrue((ev.dep_ap - ev.dep).norm() < 5*BETA)
 
             if (origin, frame) == ('SSB', 'J2000'):
@@ -2857,7 +2857,7 @@ class Test_Event(unittest.TestCase):
             self.assertIsNone(ev._ssb_)
 
             # Fill in dep and ssb
-            ignore = ev.dep
+            _ = ev.dep
             self.assertTrue((ev.dep_ap - ev.dep).norm() < 5*BETA)
 
             if (origin, frame) == ('SSB', 'J2000'):

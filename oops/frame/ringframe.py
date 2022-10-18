@@ -234,7 +234,7 @@ class Test_RingFrame(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        center = SpicePath("MARS", "SSB")
+        _ = SpicePath("MARS", "SSB")
         planet = SpiceFrame("IAU_MARS", "J2000")
         rings  = RingFrame(planet)
         self.assertEqual(Frame.as_wayframe("IAU_MARS"), planet.wayframe)

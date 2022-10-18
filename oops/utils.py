@@ -34,8 +34,10 @@ def cross3d(a,b):
     a = np.asarray(a)
     b = np.asarray(b)
 
-    while len(a.shape) < len(b.shape): a = a[np.newaxis]
-    while len(b.shape) < len(a.shape): b = b[np.newaxis]
+    while len(a.shape) < len(b.shape):
+        a = a[np.newaxis]
+    while len(b.shape) < len(a.shape):
+        b = b[np.newaxis]
 
     return np.cross(a,b)
 

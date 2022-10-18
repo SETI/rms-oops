@@ -234,53 +234,27 @@ class Surface(object):
             obs         observing event, which may occur at a different time.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
-            derivs      a boolean or tuple of booleans. If True, then the
-                        partial derivatives of each coordinate are returned as
-                        well. Using a tuple, you can indicate whether to return
-                        time derivatives on a coordinate-by-coordinate basis.
+            derivs      If True, then all derivatives are carried forward into
+                        the event; if False, only time derivatives are included.
 
         Return:         coordinate values packaged as a tuple containing two or
                         three unitless Scalars, one for each coordinate.
         """
 
-        any_derivs = np.any(derivs)
-
         # Locate the events WRT the surface frame
-        pos_wrt_surface = event.wrt(self.origin, self.frame,
-                                    derivs=any_derivs).state
-        if any_derivs:
-            pos_wrt_surface.insert_deriv('pos', Vector3.IDENTITY, override=True)
-        else:
-            pos_wrt_surface = pos_wrt_surface.wod
+        pos_wrt_surface = event.wrt(self.origin,
+                                    self.frame, derivs=derivs).state
 
         if obs is not None:
-            obs_wrt_surface = obs.wrt(self.origin, self.frame,
-                                      derivs=any_derivs).state
-            if any_derivs:
-                obs_wrt_surface.insert_deriv('obs', Vector3.IDENTITY,
-                                                    override=True)
-            else:
-                obs_wrt_surface = obs_wrt_surface.wod
+            obs_wrt_surface = obs.wrt(self.origin,
+                                      self.frame, derivs=derivs).state
         else:
             obs_wrt_surface = None
 
         # Evaluate the coords and optional derivatives
-        coords = self.coords_from_vector3(pos_wrt_surface, obs=obs_wrt_surface,
-                                          time=event.time, axes=axes,
-                                          derivs=any_derivs)
-
-        if not any_derivs:
-            return coords
-
-        # Update the derivatives if necessary
-        if type(derivs) not in (tuple, list):
-            derivs = (derivs, derivs, derivs)
-
-        for i in range(3):
-            if not derivs[i]:
-                coords[i] = coords[i].wod
-
-        return coords
+        return self.coords_from_vector3(pos_wrt_surface, obs=obs_wrt_surface,
+                                        time=event.time, axes=axes,
+                                        derivs=True)
 
     #===========================================================================
     def event_at_coords(self, time, coords, obs=None, derivs=False):
@@ -295,8 +269,8 @@ class Surface(object):
                         zero.
             obs         a Vector3 of observer positions. Needed for virtual
                         surfaces; can be None otherwise.
-            derivs      If True, then the partial derivatives of the event
-                        position are returned as well.
+            derivs      If True, then all derivatives are carried forward into
+                        the event; if False, only time derivatives are included.
 
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
@@ -322,12 +296,8 @@ class Surface(object):
                 obs = obs.without_derivs(preserve='t')
 
         # Determine position and velocity
-        pos = self.vector3_from_coords((coord1, coord2, coord3), obs=obs,
-                                        time=time, derivs=True)
-        pos2 = Vector3(np.zeros(pos.values.shape))
-        pos2.insert_deriv('t', self.velocity(pos, time))
-
-        state = pos + pos2
+        state = self.vector3_from_coords((coord1, coord2, coord3), obs=obs,
+                                         time=time, derivs=True)
 
         # Return the event
         return Event(time, state, self.origin, self.frame)

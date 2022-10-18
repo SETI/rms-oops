@@ -19,7 +19,7 @@
 import sys
 import re
 
-REGEX = re.compile('[-+]?\d+\.?\d*[eE]?[-+]?\d*')
+REGEX = re.compile(r'[-+]?\d+\.?\d*[eE]?[-+]?\d*')
 
 if '--verbose' in sys.argv[1:]:
     verbose = True

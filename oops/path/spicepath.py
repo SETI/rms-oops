@@ -266,7 +266,7 @@ class Test_SpicePath(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        sun   = SpicePath("SUN", "SSB")
+        _     = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SSB")
         moon  = SpicePath("MOON", "EARTH")
 
@@ -343,7 +343,7 @@ class Test_SpicePath(unittest.TestCase):
 
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
 
-        sun    = SpicePath("SUN", "SSB")
+        _      = SpicePath("SUN", "SSB")
         earth  = SpicePath("EARTH", "SSB")
         moon   = SpicePath("MOON", "EARTH")
         mars   = SpicePath("MARS", "MOON")
@@ -368,9 +368,9 @@ class Test_SpicePath(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        ignore = SpicePath("MARS", "SSB")
-        ignore = SpiceFrame("IAU_MARS", "J2000")
-        earth  = SpicePath("EARTH", "SSB", "IAU_MARS")
+        _ = SpicePath("MARS", "SSB")
+        _ = SpiceFrame("IAU_MARS", "J2000")
+        earth = SpicePath("EARTH", "SSB", "IAU_MARS")
 
         path = Path.as_path("EARTH").wrt("SSB", "J2000")
         event = path.event_at_time(times)
@@ -386,15 +386,15 @@ class Test_SpicePath(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        ignore = SpiceFrame("IAU_EARTH", "J2000")
-        ignore = SpiceFrame("IAU_MARS", "IAU_EARTH")
-        ignore = SpiceFrame("IAU_MOON", "IAU_EARTH")
-        ignore = SpiceFrame("B1950", "J2000")
+        _ = SpiceFrame("IAU_EARTH", "J2000")
+        _ = SpiceFrame("IAU_MARS", "IAU_EARTH")
+        _ = SpiceFrame("IAU_MOON", "IAU_EARTH")
+        _ = SpiceFrame("B1950", "J2000")
 
-        earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
-        moon   = SpicePath("MOON", "EARTH", "IAU_MOON")
-        sun    = SpicePath("SUN", "SSB", "J2000")
-        mars   = SpicePath("MARS", "SUN", "J2000")
+        earth = SpicePath("EARTH", "SSB", "IAU_EARTH")
+        moon  = SpicePath("MOON", "EARTH", "IAU_MOON")
+        _     = SpicePath("SUN", "SSB", "J2000")
+        mars  = SpicePath("MARS", "SUN", "J2000")
 
         path = Path.as_path("EARTH").wrt("SSB", "J2000")
         event = path.event_at_time(times)
@@ -437,12 +437,12 @@ class Test_SpicePath(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        ignore = SpiceFrame("IAU_MARS", "J2000")
-        ignore = SpiceFrame("IAU_EARTH", "J2000")
-        ignore = SpiceFrame("B1950", "IAU_EARTH")
-        ignore = SpiceFrame("IAU_MOON", "B1950")
+        _ = SpiceFrame("IAU_MARS", "J2000")
+        _ = SpiceFrame("IAU_EARTH", "J2000")
+        _ = SpiceFrame("B1950", "IAU_EARTH")
+        _ = SpiceFrame("IAU_MOON", "B1950")
 
-        sun    = SpicePath("SUN", "SSB", "J2000")
+        _      = SpicePath("SUN", "SSB", "J2000")
         earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
         moon   = SpicePath("MOON", "EARTH", "IAU_MOON")
         mars   = SpicePath("MARS", "MOON", "B1950")
@@ -462,11 +462,11 @@ class Test_SpicePath(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        sun    = SpicePath("SUN", "SSB")
+        _      = SpicePath("SUN", "SSB")
         earth  = SpicePath("EARTH", "SSB")
         moon   = SpicePath("MOON", "EARTH")
         saturn = SpicePath(6, "SSB", path_id="SATURN")
-        ssb    = Path.as_path("SSB")
+        _      = Path.as_path("SSB")
 
         times = np.arange(-3.e8, 3.01e8, 0.5e8)
 
@@ -560,9 +560,9 @@ class Test_SpicePath(unittest.TestCase):
             Path.reset_registry()
             Frame.reset_registry()
 
-            ignore = SpiceFrame("IAU_EARTH", "J2000")
-            earth  = SpicePath("EARTH", "SSB", frame)
-            pluto  = SpicePath(9, "SSB", frame, path_id="PLUTO")
+            _ = SpiceFrame("IAU_EARTH", "J2000")
+            earth = SpicePath("EARTH", "SSB", frame)
+            pluto = SpicePath(9, "SSB", frame, path_id="PLUTO")
 
             pluto = AliasPath("PLUTO", frame)
             earth_event = AliasPath("EARTH", frame).event_at_time(times)
@@ -622,9 +622,9 @@ class Test_SpicePath(unittest.TestCase):
             Path.reset_registry()
             Frame.reset_registry()
 
-            ignore = SpiceFrame("IAU_EARTH", "J2000")
-            earth  = SpicePath("EARTH", "SSB", frame)
-            pluto  = SpicePath(9, "SSB", frame, path_id="PLUTO")
+            _ = SpiceFrame("IAU_EARTH", "J2000")
+            earth = SpicePath("EARTH", "SSB", frame)
+            pluto = SpicePath(9, "SSB", frame, path_id="PLUTO")
 
             pluto = AliasPath("PLUTO", frame)
             earth_event = AliasPath("EARTH", frame).event_at_time(times)
@@ -676,12 +676,12 @@ class Test_SpicePath(unittest.TestCase):
 
         times = np.arange(0., 864001., 8640.)
 
-        ignore = SpiceFrame("IAU_MARS", "J2000")
-        ignore = SpiceFrame("B1950", "J2000")
-        ignore = SpiceFrame("IAU_EARTH", "B1950")
+        _ = SpiceFrame("IAU_MARS", "J2000")
+        _ = SpiceFrame("B1950", "J2000")
+        _ = SpiceFrame("IAU_EARTH", "B1950")
 
-        ignore = SpicePath("MARS", "SSB")
-        ignore = SpicePath("EARTH", "MARS", "IAU_MARS")
+        _ = SpicePath("MARS", "SSB")
+        _ = SpicePath("EARTH", "MARS", "IAU_MARS")
 
         mars = AliasPath("MARS", "J2000")
         earth_event = AliasPath("EARTH","B1950").event_at_time(times)
@@ -704,10 +704,9 @@ class Test_SpicePath(unittest.TestCase):
 
         times = np.arange(0., 864001., 86400.)
 
-        ignore = SpiceFrame("IAU_EARTH", "J2000")
-
-        ignore = SpicePath("EARTH", "SSB", "J2000")
-        ignore = SpicePath(9, "SSB", "J2000", path_id="PLUTO")
+        _ = SpiceFrame("IAU_EARTH", "J2000")
+        _ = SpicePath("EARTH", "SSB", "J2000")
+        _ = SpicePath(9, "SSB", "J2000", path_id="PLUTO")
 
         pluto = AliasPath("PLUTO", "J2000")
         earth_event = AliasPath("EARTH","IAU_EARTH").event_at_time(times)
@@ -730,11 +729,10 @@ class Test_SpicePath(unittest.TestCase):
 
         times = np.arange(0., 864001., 86400.)
 
-        ignore = SpiceFrame("IAU_MARS", "J2000")
-
-        ignore = SpicePath("EARTH", "SSB", "J2000")
-        ignore = SpicePath(4, "SSB", "J2000", path_id="MARS")
-        ignore = SpicePath(9, "SSB", "J2000", path_id="PLUTO")
+        _ = SpiceFrame("IAU_MARS", "J2000")
+        _ = SpicePath("EARTH", "SSB", "J2000")
+        _ = SpicePath(4, "SSB", "J2000", path_id="MARS")
+        _ = SpicePath(9, "SSB", "J2000", path_id="PLUTO")
 
         pluto = AliasPath("PLUTO","J2000")
         earth_event = AliasPath("MARS","IAU_MARS").event_at_time(times)
@@ -807,9 +805,9 @@ class Test_SpicePath(unittest.TestCase):
 
         times = np.arange(0., 365*86400., 86400.)
 
-        ignore = SpiceFrame("IAU_EARTH", "J2000")
-        earth  = SpicePath("EARTH", "SSB", "IAU_EARTH")
-        pluto  = SpicePath(9, "SSB", "IAU_EARTH", path_id="PLUTO")
+        _ = SpiceFrame("IAU_EARTH", "J2000")
+        earth = SpicePath("EARTH", "SSB", "IAU_EARTH")
+        pluto = SpicePath(9, "SSB", "IAU_EARTH", path_id="PLUTO")
 
         pluto = AliasPath("PLUTO", "IAU_EARTH")
         earth_event = AliasPath("EARTH", "IAU_EARTH").event_at_time(times)

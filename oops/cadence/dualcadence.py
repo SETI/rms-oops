@@ -330,8 +330,6 @@ class Test_DualCadence(unittest.TestCase):
 
     def runTest(self):
 
-        import numpy.random as random
-
         np.random.seed(4305)
 
         # cad2d has shape (10,5)

@@ -70,12 +70,12 @@ class OrbitPlane(Surface):
 
         # Save the initial center path and frame. The frame should be inertial.
         self.defined_origin = Path.as_waypoint(origin)
-        self.defined_frame = Frame.as_wayframe(frame)
+        self.defined_frame  = Frame.as_wayframe(frame)
         assert self.defined_frame.origin is None    # assert inertial
 
         # We will update the surface's actual path and frame as needed
         self.internal_origin = self.defined_origin
-        self.internal_frame = self.defined_frame
+        self.internal_frame  = self.defined_frame
 
         # Save the orbital elements
         self.a   = elements[0]
@@ -161,11 +161,7 @@ class OrbitPlane(Surface):
 
         self.ringplane = RingPlane(self.internal_origin,
                                    self.internal_frame,
-                                   radii=(0,self.a), gravity=None, elevation=0.)
-
-        self.refplane = RingPlane(self.defined_origin,
-                                  self.defined_frame,
-                                  radii=(0,self.a), gravity=None, elevation=0.)
+                                   radii=None, gravity=None, elevation=0.)
 
         # The primary origin and frame for the orbit
         self.origin = self.internal_origin.waypoint
@@ -467,9 +463,9 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(z - z_true).max() < delta)
 
         # Eccentric orbit, no derivatives, reverse
-        event2 = orbit.event_at_coords(event.time, (r,l,z))
-        self.assertTrue((pos - event.pos).norm().max() < 1.e-10)
-        self.assertTrue((event.vel).norm().max() < 1.e-10)
+        event2 = orbit.event_at_coords(event.time, (r,l,z)).wrt_ssb()
+        self.assertTrue((pos - event2.pos).norm().max() < 1.e-10)
+        self.assertTrue((event2.vel).norm().max() < 1.e-10)
 
         # Eccentric orbit, with derivatives, forward
         ae = 0.1
@@ -551,9 +547,9 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(z - z_true).max() < delta)
 
         # Inclined orbit, no derivatives, reverse
-        event2 = orbit.event_at_coords(event.time, (r,l,z))
-        self.assertTrue((pos - event.pos).norm().max() < 1.e-10)
-        self.assertTrue(event.vel.norm().max() < 1.e-10)
+        event2 = orbit.event_at_coords(event.time, (r,l,z)).wrt_ssb()
+        self.assertTrue((pos - event2.pos).norm().max() < 1.e-10)
+        self.assertTrue(event2.vel.norm().max() < 1.e-10)
 
         # Inclined orbit, with derivatives, forward
         inc = 0.1

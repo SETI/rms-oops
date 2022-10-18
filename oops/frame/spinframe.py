@@ -123,15 +123,14 @@ class Test_SpinFrame(unittest.TestCase):
 
         # Import here to avoid conflicts
         from ..event import Event
-        from ..transform import Transform
 
         Frame.reset_registry()
         Path.reset_registry()
 
-        spin1  = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
-        spin2  = SpinFrame(0., 2., 0., 2, "J2000", "spin2")
-        spin3  = SpinFrame(0., 1., 0., 2, "spin2", "spin3")
-        spin1a = SpinFrame(1., 1., 1., 2, "J2000", "spin1a")
+        spin1 = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
+        _ = SpinFrame(0., 2., 0., 2, "J2000", "spin2")
+        _ = SpinFrame(0., 1., 0., 2, "spin2", "spin3")
+        _ = SpinFrame(1., 1., 1., 2, "J2000", "spin1a")
 
         event = Event(Scalar.ZERO, Vector3.XAXIS, "SSB", "J2000")
         self.assertEqual(event.pos, (1,0,0))

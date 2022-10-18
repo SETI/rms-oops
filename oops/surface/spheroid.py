@@ -362,7 +362,8 @@ class Spheroid(Surface):
 
             if (np.all(Scalar.as_scalar(max_dp).mask) or
                 max_dp <= SURFACE_PHOTONS.dlt_precision or
-                max_dp >= prev_max_dp * 0.5): break
+                max_dp >= prev_max_dp * 0.5):
+                    break
 
         denom = Vector3.ONES + p * self.unsquash_sq
         cept = pos.element_div(denom)

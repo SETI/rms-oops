@@ -247,7 +247,8 @@ class Limb(Surface):
                 print(LOGGING.prefix, "Limb.intercept", iter, max_abs_dt)
 
             if (max_abs_dt <= SURFACE_PHOTONS.dlt_precision or
-                max_abs_dt >= prev_max_abs_dt): break
+                max_abs_dt >= prev_max_abs_dt):
+                    break
 
         t = t.wod
         pos = obs + t * los
@@ -359,10 +360,8 @@ class Limb(Surface):
         dv_dv = Scalar(np.ones(clock.shape))
 
         prev_max_abs_dv = 1.e99
-
-        MAX_ITERS = 8
-        DV_CUTOFF = 3.e-16 * self.ground.radii[2]
-        for iter in range(8):
+        MAX_ITERS = 20
+        for iter in range(MAX_ITERS):
 
             v.insert_deriv('v', dv_dv, override=True)
             u = (aa * v**2 + bb).sqrt() - cc * v
@@ -382,7 +381,10 @@ class Limb(Surface):
                 print(LOGGING.prefix, "Limb.groundtrack_from_clock",
                                       iter, max_abs_dv)
 
-            if max_abs_dv <= DV_CUTOFF:
+            # Break when convergence stops, even if the target precision was not
+            # reached. This is OK because the ground track is perpendicular to
+            # the line of sight, so we can't expect perfect precision.
+            if max_abs_dv > prev_max_abs_dv:
                 break
             prev_max_abs_dv = max_abs_dv
 
@@ -495,9 +497,7 @@ class Limb(Surface):
         dv_dv = Scalar(np.ones(clock.shape))
 
         prev_max_abs_dv = 1.e99
-
-        MAX_ITERS = 10
-        DV_CUTOFF = 3.e-16 * self.ground.radii[2]
+        MAX_ITERS = 20
         for iter in range(MAX_ITERS):
 
             v.insert_deriv('v', dv_dv, override=True)
@@ -516,10 +516,13 @@ class Limb(Surface):
             max_abs_dv = abs(dv).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print(LOGGING.prefix, "Limb.groundtrack_from_clock",
+                print(LOGGING.prefix, "Limb.intercept_from_z_clock",
                                       iter, max_abs_dv)
 
-            if max_abs_dv <= DV_CUTOFF:
+            # Break when convergence stops, even if the target precision was not
+            # reached. This is OK because the ground track is perpendicular to
+            # the line of sight, so we can't expect perfect precision.
+            if max_abs_dv > prev_max_abs_dv:
                 break
             prev_max_abs_dv = max_abs_dv
 
@@ -893,5 +896,9 @@ class Test_Limb(unittest.TestCase):
 
 ########################################
 if __name__ == '__main__':
+
+    import oops
+    oops.config.LOGGING.on('     ')
     unittest.main(verbosity=2)
+
 ################################################################################

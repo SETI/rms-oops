@@ -53,8 +53,8 @@ class TwoVectorFrame(Frame):
         self.axis1 = axis1
         self.axis2 = axis2
 
-        assert(self.axis1 in 'XYZ')
-        assert(self.axis2 in 'XYZ')
+        assert (self.axis1 in 'XYZ')
+        assert (self.axis2 in 'XYZ')
 
         self.reference = Frame.as_wayframe(frame)
 

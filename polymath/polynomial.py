@@ -349,7 +349,7 @@ class Polynomial(Vector):
 
         x_powers = Vector.from_scalars(*(x_powers[::-1]))
 
-        result = Qube.dot(self, x_powers, 0, 0, (Scalar,), recursive=recursive)
+        return Qube.dot(self, x_powers, 0, 0, (Scalar,), recursive=recursive)
 
     #===========================================================================
     def roots(self, recursive=True):

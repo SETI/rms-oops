@@ -52,7 +52,7 @@ def emission_angle(self, event_key):
         if event.surface.COORDINATE_TYPE == 'polar':
 
             # Get the flip flag
-            ignore = self.incidence_angle(event_key)
+            _ = self.incidence_angle(event_key)
             flip = self.backplanes[('ring_flip', event_key)]
 
             # Flip emission angles where necessary
@@ -153,7 +153,7 @@ def center_emission_angle(self, event_key):
         if event.surface.COORDINATE_TYPE == 'polar':
 
             # Get the flip flag
-            ignore = self.center_incidence_angle(event_key)
+            _ = self.center_incidence_angle(event_key)
             flip = self.backplanes[('ring_center_flip', event_key)]
 
             # Flip emission angles where necessary

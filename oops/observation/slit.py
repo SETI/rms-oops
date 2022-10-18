@@ -320,7 +320,7 @@ class Test_Slit(unittest.TestCase):
 
     def runTest(self):
 
-        from..cadence.metronome import Metronome
+        from ..cadence.metronome import Metronome
         from ..fov.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (10,1))
