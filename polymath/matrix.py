@@ -23,7 +23,7 @@ class Matrix(Qube):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
 
     DEBUG = False       # Set to True for some debugging tasks
     DELTA = np.finfo(float).eps * 3     # Cutoff used in unary()
@@ -151,7 +151,7 @@ class Matrix(Qube):
         """
 
         vector = self.extract_numer(0, indx0, Vector, recursive)
-        return   self.extract_numer(0, indx1, Scalar, recursive)
+        return vector.extract_numer(0, indx1, Scalar, recursive)
 
     #===========================================================================
     @staticmethod
@@ -219,8 +219,8 @@ class Matrix(Qube):
                                  'a square Matrix')
             item = (dim, dim)
 
-        result = vector.reshape_numer(item, list(classes) + [Matrix],
-                                            recursive=True)
+        return vector.reshape_numer(item, list(classes) + [Matrix],
+                                    recursive=True)
 
     #===========================================================================
     def is_diagonal(self, delta=0.):

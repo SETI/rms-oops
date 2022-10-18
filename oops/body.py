@@ -1375,7 +1375,8 @@ class Body(object):
             # Add the gravity object if it exists
             try:
                 body.apply_gravity(Gravity.lookup(name))
-            except KeyError: pass
+            except KeyError:
+                pass
 
             # Add the surface object if shape information is available
             # RuntimeError was raised by old version of cspyce;

@@ -149,8 +149,8 @@ class Test_Cmatrix(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        ignore = SpicePath("MARS", "SSB")
-        mars = SpiceFrame("IAU_MARS", "J2000")
+        _ = SpicePath("MARS", "SSB")
+        _ = SpiceFrame("IAU_MARS", "J2000")
 
         # Define a version of the IAU Mars frame always rotated by 180 degrees
         # around the Z-axis

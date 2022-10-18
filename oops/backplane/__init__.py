@@ -198,14 +198,14 @@ class Backplane(object):
 
     @property
     def dlos_duv(self):
-        if self._filled_dlos_duv == None:
+        if self._filled_dlos_duv is None:
             self._filled_dlos_duv = self.meshgrid.dlos_duv(self.time)
 
         return self._filled_dlos_duv
 
     @property
     def duv_dlos(self):
-        if self._filled_duv_dlos == None:
+        if self._filled_duv_dlos is None:
             self._filled_duv_dlos = self.meshgrid.duv_dlos(self.time)
 
         return self._filled_duv_dlos
@@ -389,16 +389,17 @@ class Backplane(object):
             antimask[self.meshgrid.uv.values[...,0] >= u_max] = False
             antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
             antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
-
-            # Swap axes if necessary
-            for c in self.obs.axes:
-                if c[0] == 'v':
-                    new_mask = antimask.swapaxes(0,1)
-                    break
-                if c[0] == 'u':
-                    break
-
             return antimask
+
+            # Swap axes if necessary THIS IS NOT RIGHT!
+#             for c in self.obs.axes:
+#                 if c[0] == 'v':
+#                     antimask = antimask.swapaxes(0,1)
+#                     break
+#                 if c[0] == 'u':
+#                     break
+#
+#             return antimask
 
         return True
 

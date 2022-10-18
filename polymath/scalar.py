@@ -7,8 +7,8 @@ import numpy as np
 import sys
 import warnings
 
-from .qube    import Qube
-from .units   import Units
+from .qube  import Qube
+from .units import Units
 
 # Maximum argument to exp()
 EXP_CUTOFF = np.log(sys.float_info.max)
@@ -25,7 +25,7 @@ class Scalar(Qube):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
 
     DEFAULT_VALUE = 1
 
@@ -380,7 +380,7 @@ class Scalar(Qube):
                 warnings.filterwarnings('error')
                 try:
                     func_values = np.arcsin(self._values_)
-                except:
+                except RuntimeWarning:
                     raise ValueError('arcsin of value outside domain (-1,1)')
 
             obj = Scalar(func_values, mask=self._mask_)
@@ -432,7 +432,7 @@ class Scalar(Qube):
                 warnings.filterwarnings('error')
                 try:
                     func_values = np.arccos(self._values_)
-                except:
+                except RuntimeWarning:
                     raise ValueError('arccos of value outside domain (-1,1)')
 
             obj = Scalar(func_values, mask=self._mask_)
@@ -530,8 +530,8 @@ class Scalar(Qube):
                 warnings.filterwarnings('error')
                 try:
                     sqrt_vals = np.sqrt(no_negs._values_)
-                except:
-                    raise ValueError('sqrt of value negative value')
+                except RuntimeWarning:
+                    raise ValueError('sqrt of negative value')
 
         obj = Scalar(sqrt_vals, mask=no_negs._mask_,
                                 units=Units.sqrt_units(no_negs.units))
@@ -568,7 +568,7 @@ class Scalar(Qube):
                 warnings.filterwarnings('error')
                 try:
                     log_values = np.log(no_negs._values_)
-                except:
+                except RuntimeWarning:
                     raise ValueError('log of non-positive value')
 
         obj = Scalar(log_values, mask=no_negs._mask_)
@@ -609,7 +609,7 @@ class Scalar(Qube):
                 warnings.filterwarnings('error')
                 try:
                     exp_values = np.exp(no_oflow._values_)
-                except:
+                except (ValueError, TypeError):
                     raise ValueError('overflow encountered in exp')
 
         obj = Scalar(exp_values, mask=no_oflow._mask_)
@@ -1249,7 +1249,7 @@ class Scalar(Qube):
             elif bool_mask is False:
                 count = self._values_.size // new_values[0].size
             else:
-                count = np.sum(new_scalar._mask_ == False, axis=0)
+                count = np.sum(new_scalar.antimask, axis=0)
 
             # Define the indices of the middle one or two
             klo = np.maximum((count - 1) // 2, 0)

@@ -22,7 +22,7 @@ class Matrix3(Matrix):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
 
     DEFAULT_VALUE = np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])
 
@@ -348,7 +348,7 @@ class Matrix3(Matrix):
         if not isinstance(arg, Qube):
             try:
                 arg = Scalar.as_scalar(arg)
-            except:
+            except (ValueError, TypeError):
                 Qube.raise_unsupported_op('*', self, original_arg)
 
         # Rotate a scalar, returning the scalar unchanged except for new derivs
@@ -368,7 +368,7 @@ class Matrix3(Matrix):
         original_arg = arg
         try:
             arg = Matrix3.as_matrix3(arg)
-        except:
+        except (ValueError, TypeError):
             Qube.raise_unsupported_op('*=', self, original_arg)
 
         return Qube.__imul__(self, arg)

@@ -9,8 +9,6 @@ from .           import Surface
 from .ellipsoid  import Ellipsoid
 from ..constants import PI, HALFPI
 
-from oops.constants import *
-
 class CentricEllipsoid(Surface):
     """A variant of Ellipsoid in which latitudes are planetocentric."""
 

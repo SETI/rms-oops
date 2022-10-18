@@ -176,16 +176,24 @@ class Frame(object):
 
     # A frame can be registered by an ID string. Any frame so registered can be
     # retrieved afterward from the registry using the string. However, it is not
-    # necessary to register a frame; just set the attribute 'wayframe' to self
-    # instead.
+    # necessary to register a frame.
     #
     # When an ID is registered for the first time, a Wayframe is constructed and
     # added to the WAYFRAME_REGISTRY, which is a dictionary that returns the
     # Wayframe associated with any ID.
     #
-    # If a frame is redefined, a new Wayframe is created and replaces the old
-    # one in the registry. This enables us to identify objects that are no
-    # longer using an up-to-date version of a frame.
+    # Wayframe is a Frame subclass that contains no information except the ID.
+    # You can use this subclass anywhere a Frame is required. This makes it
+    # possible to identify a frame without indicating how it is to be
+    # calculated. That information is in the registry and will be used to
+    # determine the method of calculation when the time comes.
+    #
+    # Normally, a frame is defined by name only once. It can be overridden if
+    # necessary, but note that this might alter the behavior of any other object
+    # that refers to this frame by name. Objects that link directly to a Frame
+    # object, rather than referring to it by name or Wayframe, will still refer
+    # to the original object, but the old frame will no longer be accessible
+    # from the registry.
     #
     # The FRAME_CACHE contains every calculated version of a Frame object. This
     # saves us the effort of re-connecting a frame (wayframe, reference, origin)
@@ -196,6 +204,14 @@ class Frame(object):
     # If the key is not a tuple, then this constitutes the primary definition of
     # the frame. The reference wayframe must already be in the cache, and the
     # new wayframe cannot be in the cache.
+    #
+    # The frame registry can also contain "shortcuts". By default, a frame
+    # calculation might require a sequence of internal calculations to get from
+    # a given origin to a given target frame. For example, the frame of
+    # of Saturn's rings relative to HST could involve internal calculations of
+    # Saturn's rings relative to Saturn, Saturn relative to J2000, and HST
+    # relative to J2000. A shortcut is a way to define a more direct
+    # calculation.
 
     @staticmethod
     def initialize_registry():
@@ -228,7 +244,7 @@ class Frame(object):
         Frame.initialize_registry()
 
     #===========================================================================
-    def register(self, shortcut=None, unpickled=False):
+    def register(self, shortcut=None, override=False, unpickled=False):
         """Register a Frame's definition.
 
         A shortcut makes it possible to calculate one SPICE frame relative to
@@ -236,6 +252,10 @@ class Frame(object):
         name is given, then this frame is treated as a shortcut definition. The
         frame is cached under the shortcut name and also under the tuple
         (wayframe, reference_wayframe).
+
+        If override is True, then this frame will override the current primary
+        definition of any previous frame with the same name. The old frame might
+        still exist, but it will not be available from the registry.
 
         If unpickled is True and a frame with the same ID is already in the
         registry, then this frame is not registered. Instead, its wayframe will
@@ -277,18 +297,17 @@ class Frame(object):
             self.wayframe = self
             return
 
-        # Make sure the reference frame is registered; otherwise raise KeyError
-        try:
-            test = Frame.WAYFRAME_REGISTRY[self.reference.frame_id]
-        except KeyError:
+        # Raise ValueError if the reference frame is unregistered
+        if self.reference.frame_id not in Frame.WAYFRAME_REGISTRY:
             raise ValueError('frame ' + self.frame_id +
                              ' cannot be registered because it connects to ' +
                              'unregistered frame ' + self.reference.frame_id)
 
-        test = Frame.FRAME_CACHE[self.reference]
+        # Raise KeyError if the reference is not a WayFrame
+        _ = Frame.FRAME_CACHE[self.reference]
 
         # If the ID is not registered, insert this as the primary definition
-        if frame_id not in Frame.WAYFRAME_REGISTRY:
+        if (frame_id not in Frame.WAYFRAME_REGISTRY) or override:
 
             # Fill in the ancestry
             reference = Frame.as_primary_frame(self.reference)
@@ -593,13 +612,15 @@ class Frame(object):
 ################################################################################
 
 class Wayframe(Frame):
-    """Wayframe is used to identify a Frame ID in the registry.
+    """Wayframe is lightweight Frame subclass used to identify a registered
+    Frame by its ID.
 
-    When evaluated, it always returns a null transform. A Wayframe cannot be
-    registered by the user.
+    A Wayframe does not provide information about how it is to be calculated. It
+    has the property that self.origin == self, so it always evaluates to a null
+    transform.
+
+    A Wayframe cannot be registered.
     """
-
-    PACKRAT_ARGS = ['frame_id', 'origin', 'shape']
 
     def __init__(self, frame_id, origin=None, shape=()):
         """Constructor for a Wayframe.
@@ -818,7 +839,6 @@ class ReversedFrame(Frame):
 
         if frame.is_registered() and frame.reference.is_registered():
             self.register()         # save for later use
-
 
     def __getstate__(self):
         return (self.oldframe)
@@ -1056,8 +1076,8 @@ class QuickFrame(Frame):
             quat[:,2] = self.quat_splines[2](tflat2.vals)
             quat[:,3] = self.quat_splines[3](tflat2.vals)
 
-            quat = Quaternion(quat[0] + (quat[1] - quat[0]) * \
-                                        frac[...,np.newaxis])
+            quat = Quaternion(quat[0] + (quat[1] - quat[0])
+                                        * frac[...,np.newaxis])
             matrix = Matrix3.as_matrix3(quat)
 
             if self.omega_splines is not None:
@@ -1076,8 +1096,8 @@ class QuickFrame(Frame):
                 qd[:,3] = self.qdot_splines[3](tflat2.vals)
                 qd_x2 = 2. * qd
 
-                qdot_x2 = Quaternion(qd_x2[0] + frac[...,np.newaxis] * \
-                                                (qd_x2[1] - qd_x2[0]))
+                qdot_x2 = Quaternion(qd_x2[0] + frac[...,np.newaxis]
+                                                * (qd_x2[1] - qd_x2[0]))
 
                 omega = (qdot_x2 / quat).to_parts()[1]
 
@@ -1232,7 +1252,7 @@ class Test_Frame(unittest.TestCase):
     def runTest(self):
 
         # Re-import here to so modules all come from the oops tree
-        from . import Frame, QuickFrame, ReversedFrame
+        from . import Frame, QuickFrame
 
         # More imports are here to avoid conflicts
         import os
@@ -1250,9 +1270,9 @@ class Test_Frame(unittest.TestCase):
 
         # QuickFrame tests
 
-        ignore = SpicePath('EARTH', 'SSB')
-        ignore = SpicePath('MOON', 'SSB')
-        ignore = SpiceFrame('IAU_EARTH', 'J2000')
+        _ = SpicePath('EARTH', 'SSB')
+        _ = SpicePath('MOON', 'SSB')
+        _ = SpiceFrame('IAU_EARTH', 'J2000')
         moon  = SpiceFrame('IAU_MOON', 'IAU_EARTH')
         quick = QuickFrame(moon, (-5.,5.),
                         dict(QUICK.dictionary, **{'frame_self_check':3.e-14}))
@@ -1262,12 +1282,13 @@ class Test_Frame(unittest.TestCase):
             quick = QuickFrame(moon, (-5.,5.),
                         dict(QUICK.dictionary, **{'frame_self_check':0.}))
             self.assertTrue(False, 'No ValueError raised for PRECISION = 0.')
-        except ValueError: pass
+        except ValueError:
+            pass
 
         # Timing tests...
         test = np.zeros(200000)
-        # ignore = moon.transform_at_time(test, quick=False)  # takes about 10 sec
-        ignore = quick.transform_at_time(test) # takes way less than 1 sec
+        # _ = moon.transform_at_time(test, quick=False)   # takes about 10 sec
+        _ = quick.transform_at_time(test)           # takes way less than 1 sec
 
         Frame.reset_registry()
 

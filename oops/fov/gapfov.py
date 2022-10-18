@@ -104,7 +104,7 @@ class GapFOV(FOV):
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-        uv_pair = self.fov.uv_from_xyt(xy_pair, 
+        uv_pair = self.fov.uv_from_xyt(xy_pair,
                             tfrac=tfrac, time=time, derivs=derivs, **keywords)
         uv_int = uv_pair.int(top=self.uv_shape, recursive=derivs)
         uv_frac = (uv_pair - uv_int).element_mul(self.uv_size_inv)

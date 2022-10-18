@@ -802,7 +802,7 @@ def ring_shadow_radius(self, event_key, ring_body):
 
     key = ('ring_shadow_radius', event_key, ring_body)
     if key not in self.backplanes:
-        event = self.get_surface_event_with_arr(event_key)
+        _ = self.get_surface_event_with_arr(event_key)
         ring_event = self.get_surface_event((ring_body,) + event_key)
         radius = ring_event.coord1
         self.register_backplane(key, radius)

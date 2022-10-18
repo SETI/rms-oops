@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import numbers
 from ..qube import Qube
 
 def reshape(self, shape, recursive=True):
@@ -213,7 +212,7 @@ def stack(*args, **keywords):
     # Only use class Qube if no suitable subclass was found
     floats_found = False
     ints_found = False
-    bools_found = False
+    _bools_found = False
 
     float_arg = None
     int_arg = None
@@ -249,7 +248,7 @@ def stack(*args, **keywords):
                 int_arg = arg
                 subclass_indx = i
         elif arg.is_bool() and int_arg is None and float_arg is None:
-            bools_found = True
+            _bools_found = True
             if bool_arg is None or not qubed:
                 bool_arg = arg
                 subclass_indx = i

@@ -21,7 +21,7 @@ class Vector(Qube):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
 
     #===========================================================================
     def __init__(self, arg, mask=False, derivs={}, units=None,

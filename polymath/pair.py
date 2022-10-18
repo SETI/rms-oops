@@ -7,7 +7,6 @@ import numpy as np
 import numbers
 
 from .qube   import Qube
-from .scalar import Scalar
 from .vector import Vector
 from .units  import Units
 
@@ -23,7 +22,7 @@ class Pair(Vector):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
 
     DEFAULT_VALUE = np.array([1,1])
 

@@ -257,7 +257,7 @@ class Test_PoleFrame(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        center = SpicePath('MARS', 'SSB')
+        _ = SpicePath('MARS', 'SSB')
         planet = SpiceFrame('IAU_MARS', 'J2000')
         self.assertEqual(Frame.as_wayframe('IAU_MARS'), planet.wayframe)
 
@@ -316,7 +316,7 @@ class Test_PoleFrame(unittest.TestCase):
         self.assertTrue(diff.abs() < 1.e-15)
 
         # Now try for Neptune
-        center = SpicePath('NEPTUNE', 'SSB')
+        _ = SpicePath('NEPTUNE', 'SSB')
         planet = SpiceFrame('IAU_NEPTUNE', 'J2000')
 
         # This invariable pole is aligned with the planet's pole, so this

@@ -138,7 +138,7 @@ def _diff_logs(old_log, new_log, verbose=False):
     change in every numeric value; in this case, a string of asterisks is 
     appended to the ends of rows where any change exceeds 0.1%.
     """
-    REGEX = re.compile('[-+]?\d+\.?\d*[eE]?[-+]?\d*')
+    REGEX = re.compile('r[-+]?\d+\.?\d*[eE]?[-+]?\d*')
 
     if '--verbose' in sys.argv[1:]:
         verbose = True

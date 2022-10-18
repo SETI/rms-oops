@@ -720,8 +720,7 @@ class Observation(object):
             converge = PATH_PHOTONS.__dict__
 
         iters = converge['max_iterations']
-        precision = converge['dlt_precision']
-        limit = converge['dlt_limit']
+        dlt_precision = converge['dlt_precision']
 
         # Interpret the time
         if time is None:
@@ -759,7 +758,7 @@ class Observation(object):
             if LOGGING.observation_iterations:
                 print(LOGGING.prefix, "Observation.uv_from_path", count, max_dt)
 
-            if max_dt <= PATH_PHOTONS.dlt_precision or max_dt >= prev_max_dt:
+            if max_dt <= dlt_precision or max_dt >= prev_max_dt:
                 break
 
         # Return the results

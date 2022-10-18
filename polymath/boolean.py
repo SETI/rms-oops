@@ -23,7 +23,7 @@ class Boolean(Scalar):
     BOOLS_OK = True     # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    DERIVS_OK = False   # True to disallow derivatives; False to allow them.
+    DERIVS_OK = False   # True to allow derivatives; False to disallow them.
 
     DEFAULT_VALUE = False
 

@@ -3,8 +3,6 @@
 ################################################################################
 
 import numbers
-import os
-
 import cspyce
 import spicedb
 
@@ -33,7 +31,7 @@ def load_leap_seconds():
 
     # Furnish the LSK to the SPICE toolkit
     spicedb.open_db()
-    lsk = spicedb.furnish_lsk(fast=True)
+    _ = spicedb.furnish_lsk(fast=True)
     spicedb.close_db()
 
     LSK_LOADED = True
@@ -54,16 +52,17 @@ def body_id_and_name(arg):
                             type(path).__name__)
 
         return (path.spice_target_id, path.spice_target_name)
-    except KeyError: pass
+    except KeyError:
+        pass
 
     # Interpret the argument given as a string
     if isinstance(arg, str):
-        id = cspyce.bodn2c(arg)     # raises LookupError if not found
-        name = cspyce.bodc2n(id)
-        return (id, name)
+        body_id = cspyce.bodn2c(arg)    # raises LookupError if not found
+        name = cspyce.bodc2n(body_id)
+        return (body_id, name)
 
     # Otherwise, interpret the argument given as an integer
-    elif type(arg) == int:
+    elif isinstance(arg, numbers.Integral):
         try:
             name = cspyce.bodc2n(arg)
         except LookupError:
@@ -98,32 +97,32 @@ def frame_id_and_name(arg):
             raise LookupError('frame for body %d is undefined' % arg)
 
         # Otherwise, perhaps it is a body ID
-        return cspyce.cidfrm(arg) # LookupError if not found
+        return cspyce.cidfrm(arg)   # LookupError if not found
 
     # Interpret the argument given as a string
     if isinstance(arg, str):
 
         # Validate this as the name of a frame
         try:
-            id = cspyce.namfrm(arg)     # does not raise an error; I may fix
+            frame_id = cspyce.namfrm(arg)   # does not raise an error; I may fix
         except ValueError:
-            id = 0
+            frame_id = 0
         except KeyError:
-            id = 0
+            frame_id = 0
 
         # If a nonzero ID is found...
-        if id != 0:
+        if frame_id != 0:
 
             # Make sure the frame is defined
-            body_id = cspyce.frinfo(id)[0]
+            body_id = cspyce.frinfo(frame_id)[0]
             if (body_id > 0) and not cspyce.bodfnd(body_id, 'POLE_RA'):
                 raise LookupError('frame "%s" is undefined' % arg)
 
             # Return the official, capitalized name
-            return (id, cspyce.frmnam(id))
+            return (frame_id, cspyce.frmnam(frame_id))
 
         # See if this is the name of a body
-        body_id = cspyce.bodn2c(arg)         # raises LookupError if not found
+        body_id = cspyce.bodn2c(arg)        # raises LookupError if not found
 
         # Make sure the body's frame is defined
         if not cspyce.bodfnd(body_id, 'POLE_RA'):

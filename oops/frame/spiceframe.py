@@ -294,7 +294,7 @@ class SpiceFrame(Frame):
         matrix_list = []
         omega_list = []
 
-        error_found = False
+        error_found = None
 
         # Case 1: omega_type = tabulated
         if self.omega_tabulated:
@@ -315,7 +315,7 @@ class SpiceFrame(Frame):
                 except (RuntimeError, ValueError, IOError) as e:
                     if len(time.shape) > 1:
                         raise e
-                    error_found = True
+                    error_found = e
 
         # Case 2: omega_type = zero
         elif self.omega_zero:
@@ -335,7 +335,7 @@ class SpiceFrame(Frame):
                 except (RuntimeError, ValueError, IOError) as e:
                     if len(time.shape) > 1:
                         raise e
-                    error_found = True
+                    error_found = e
 
         # Case 3: omega_type = numerical
         # This procedure calculates each omega using its own UnivariateSpline;
@@ -375,11 +375,11 @@ class SpiceFrame(Frame):
               except (RuntimeError, ValueError, IOError) as e:
                 if len(time.shape) > 1:
                     raise e
-                error_found = True
+                error_found = e
 
-        if error_found:
+        if error_found is not None:
             if len(new_time) == 0:
-                raise e
+                raise error_found
 
             time = Scalar(new_time)
             matrix = Matrix3(matrix_list)
@@ -423,9 +423,9 @@ class Test_SpiceFrame(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        ignore = SpicePath('EARTH', 'SSB')
+        _ = SpicePath('EARTH', 'SSB')
 
-        earth = SpiceFrame('IAU_EARTH', 'J2000')
+        _ = SpiceFrame('IAU_EARTH', 'J2000')
         time  = Scalar(np.random.rand(3,4,2) * 1.e8)
         posvel = np.random.rand(3,4,2,6,1)
         event = Event(time, (posvel[...,0:3,0],posvel[...,3:6,0]), 'SSB',
@@ -448,16 +448,16 @@ class Test_SpiceFrame(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        ignore = SpicePath('EARTH', 'SSB')
-        ignore = SpicePath('VENUS', 'EARTH')
-        ignore = SpicePath('MARS', 'VENUS')
-        ignore = SpicePath('MOON', 'VENUS')
+        _ = SpicePath('EARTH', 'SSB')
+        _ = SpicePath('VENUS', 'EARTH')
+        _ = SpicePath('MARS', 'VENUS')
+        _ = SpicePath('MOON', 'VENUS')
 
-        earth  = SpiceFrame('IAU_EARTH', 'J2000')
-        b1950  = SpiceFrame('B1950', 'IAU_EARTH')
-        venus  = SpiceFrame('IAU_VENUS', 'B1950')
-        mars   = SpiceFrame('IAU_MARS',  'J2000')
-        mars   = SpiceFrame('IAU_MOON',  'B1950')
+        _ = SpiceFrame('IAU_EARTH', 'J2000')
+        _ = SpiceFrame('B1950', 'IAU_EARTH')
+        _ = SpiceFrame('IAU_VENUS', 'B1950')
+        _ = SpiceFrame('IAU_MARS', 'J2000')
+        _ = SpiceFrame('IAU_MOON', 'B1950')
 
         times = Scalar(np.arange(-3.e8, 3.01e8, 0.5e7))
 
@@ -548,9 +548,9 @@ class Test_SpiceFrame(unittest.TestCase):
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY,
                                   'SPICE', '080123R_SCPSE_07309_07329.bsp'))
 
-        ignore = SpicePath('CASSINI', 'SSB')
-        ignore = SpiceFrame('CASSINI_ISS_NAC')
-        ignore = SpiceFrame('CASSINI_ISS_WAC')
+        _ = SpicePath('CASSINI', 'SSB')
+        _ = SpiceFrame('CASSINI_ISS_NAC')
+        _ = SpiceFrame('CASSINI_ISS_WAC')
 
         # Look up N1573186009_1.IMG from COISS_2039/data/1573186009_1573197826/
         timestring = '2007-312T03:34:16.391'
@@ -709,7 +709,7 @@ class Test_SpiceFrame(unittest.TestCase):
         quickdict['quickframe_numerical_omega'] = True
         wac1b = QuickFrame(wac1, (TDB-100.,TDB+100.), quickdict)
 
-        wac3a = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
+        _wac3a = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
 
         # Test a single time
         time = TDB - 44.

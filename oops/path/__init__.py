@@ -107,17 +107,24 @@ class Path(object):
 
     # A path can be registered by an ID string. Any path so registered can be
     # retrieved afterward from the registry using the string. However, it is not
-    # necessary to register a path; just set the attribute 'waypoint' to self
-    # instead.
+    # necessary to register a path.
     #
     # When an ID is registered for the first time, a Waypoint is constructed and
     # added to the WAYPOINT_REGISTRY, which is a dictionary that returns the
     # Waypoint object associated with any ID.
     #
-    # If a path definition is overridden, then a new Waypoint is created and
-    # replaces the previous one in the registry. The old path will still exist
-    # and can still be used, but it will no longer be accessible from the
-    # registry.
+    # Waypoint is a Path subclass that contains no information except the ID.
+    # You can use this subclass anywhere a Path is required. This makes it
+    # possible to identify a path without indicating how it is to be calculated.
+    # That information is in the registry and will be used to determine the
+    # method of calculation when the time comes.
+    #
+    # Normally, a path is defined by name only once. It can be overridden if
+    # necessary, but note that this might alter the behavior of any other object
+    # that refers to this path by name. Objects that link directly to a Path
+    # object, rather than referring to it by name or Waypoint, will still refer
+    # to the original object, but the old path will no longer be accessible from
+    # the registry.
     #
     # The PATH_CACHE contains every calculated version of a Path object. This
     # saves us the effort of re-connecting a path (waypoint, origin, frame) each
@@ -129,6 +136,15 @@ class Path(object):
     # If the key is not a tuple, then this constitutes the primary definition of
     # the path. The origin waypoint must already be in the cache, and the new
     # waypoint cannot be in the cache.
+    #
+    # The path registry can also contain "shortcuts". By default, a path
+    # calculation might require a sequence of internal calculations to get from
+    # a given origin to a given target in a given frame. For example, the path
+    # of Enceladus relative to HST could involve internal calculations of
+    # Enceladus relative to Saturn, Saturn relative to the SSB, Earth relative
+    # to the SSB, and HST relative to Earth. A shortcut is a way to define a
+    # more direct calculation. This feature is primarily used by the SpicePath
+    # subclass.
 
     @staticmethod
     def initialize_registry():
@@ -176,14 +192,14 @@ class Path(object):
         name and also under the tuple (waypoint, origin_waypoint, wayframe).
 
         If override is True, then this path will override the current primary
-        definition of any previous path with the same name. The old path might
+        definition of any previous path with the same name. The old path will
         still exist, but it will not be available from the registry.
 
         If unpickled is True and a path with the same ID is already in the
-        registry, then this path is not registered. Instead, its waypoint will
-        be defined by the path with the same name that is already registered.
+        registry, then this path is not registered. Instead, its will share its
+        waypoint with the existing, registered path of the same name.
 
-        If the path ID is None, blank, or begins with '.', it is treated as a
+        If the path ID is None, blank, or begins with '.', this is treated as a
         temporary path and is not registered.
         """
 
@@ -223,8 +239,8 @@ class Path(object):
             return
 
         # Make sure the origin path is registered; raise a KeyError otherwise
-        test = Path.WAYPOINT_REGISTRY[self.origin.path_id]
-        test = Path.PATH_CACHE[self.origin]
+        _ = Path.WAYPOINT_REGISTRY[self.origin.path_id]
+        _ = Path.PATH_CACHE[self.origin]
 
         # If the ID is unregistered, insert this as a primary definition
         if (path_id not in Path.WAYPOINT_REGISTRY) or override:
@@ -658,8 +674,8 @@ class Path(object):
 
         # Broadcast the path_time to encompass the shape of the path, if any
         shape = Qube.broadcasted_shape(path_time, link_shape)
-        if path_time.shape != link_shape:
-            path_time = path_time.broadcast_into_shape(link_shape)
+        if path_time.shape != shape:
+            path_time = path_time.broadcast_into_shape(shape)
 
         # Iterate a fixed number of times or until the threshold of error
         # tolerance is reached. Convergence takes just a few iterations.
@@ -966,11 +982,14 @@ class Path(object):
 ################################################################################
 
 class Waypoint(Path):
-    """Waypoint is a Path subclass used internally to identify a path by its
-    path ID in the registry. It has no practical use outside of the registry.
+    """Waypoint is a lightweight Path subclass used to identify a registered
+    Path by its ID.
 
-    When evaluated, it always places itself at the origin of its own path. A
-    Waypoint cannot be registered by the user.
+    A Waypoint does not provide information about how it is to be calculated. It
+    has the property that self.origin == self, so it always evaluates to a zero
+    state vector.
+
+    A Waypoint cannot be registered.
     """
 
     def __init__(self, path_id, frame=None, shape=()):
@@ -1004,7 +1023,7 @@ class Waypoint(Path):
         self.__init__(primary_path.path_id, primary_path.frame,
                       primary_path.shape)
 
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, quick={}):
         return Event(time, Vector3.ZERO, self.origin, self.frame)
 
     # Registration does nothing
@@ -1066,8 +1085,7 @@ class AliasPath(Path):
         event = self.path.event_at_time(time, quick=quick)
 
         if self.rotation is not None:
-            event = event.rotate_by_frame(self.rotation, derivs=False,
-                                                         quick=quick)
+            event = event.rotate_by_frame(self.rotation, quick=quick)
         return event
 
 ################################################################################
@@ -1119,10 +1137,9 @@ class LinkedPath(Path):
         event = self.path.event_at_time(time, quick=quick)
 
         if self.rotation is not None:
-            event = event.unrotate_by_frame(self.rotation, derivs=False,
-                                                           quick=quick)
+            event = event.unrotate_by_frame(self.rotation, quick=quick)
 
-        return self.parent.add_to_event(event, derivs=False, quick=quick)
+        return self.parent.add_to_event(event, quick=quick)
 
 ################################################################################
 
@@ -1173,11 +1190,9 @@ class RelativePath(Path):
         event = self.path.event_at_time(time, quick=quick)
 
         if self.rotation is not None:
-            event = event.unrotate_by_frame(self.rotation, derivs=False,
-                                            quick=quick)
+            event = event.unrotate_by_frame(self.rotation, quick=quick)
 
-        return self.new_origin.subtract_from_event(event, derivs=False,
-                                                          quick=quick)
+        return self.new_origin.subtract_from_event(event, quick=quick)
 
 ################################################################################
 
@@ -1252,7 +1267,7 @@ class RotatedPath(Path):
 
     def event_at_time(self, time, quick={}):
         event = self.path.event_at_time(time, quick=quick)
-        return event.rotate_by_frame(self.rotation, derivs=False, quick=quick)
+        return event.rotate_by_frame(self.rotation, quick=quick)
 
 ################################################################################
 
@@ -1446,12 +1461,12 @@ class QuickPath(Path):
 
         if interval[1] > self.t1:
             count1 = int((interval[1] - self.t1) // self.dt) + 1 + self.extras
-            new_t1 = self.t1 + count1 * self.dt
+            _new_t1 = self.t1 + count1 * self.dt
             times  = np.arange(count1) * self.dt + self.t1 + self.dt
             event1 = self.slowpath.event_at_time(times, quick=False)
         else:
             count1 = 0
-            new_t1 = self.t1
+            _new_t1 = self.t1
 
         # Allocate the new arrays
         old_size = self.times.size
@@ -1528,7 +1543,7 @@ class Test_Path(unittest.TestCase):
         self.assertEqual(Path.WAYPOINT_REGISTRY["SSB"], Path.SSB)
 
         # LinkedPath tests
-        sun = SpicePath("SUN", "SSB")
+        _sun = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SUN")
 
         moon = SpicePath("MOON", "EARTH")
@@ -1587,12 +1602,13 @@ class Test_Path(unittest.TestCase):
             quick = QuickPath(moon, np.arange(0.,100.,0.0001),
                               dict(QUICK.dictionary, **{"path_self_check":0.}))
             self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
-        except ValueError: pass
+        except ValueError:
+            pass
 
         # Timing tests...
         test = np.zeros(3000000)
-        # ignore = moon.event_at_time(test, quick=False)  # takes about 15 sec
-        ignore = quick.event_at_time(test) # takes maybe 2 sec
+        # _ = moon.event_at_time(test, quick=False)       # takes about 15 sec
+        _ = quick.event_at_time(test)                   # takes maybe 2 sec
 
         Path.reset_registry()
         Frame.reset_registry()

@@ -20,7 +20,7 @@ def _interpret_digits(digits):
     """
 
     if digits is None:
-        digits = self.DEFAULT_PICKLE_DIGITS
+        digits = Qube.DEFAULT_PICKLE_DIGITS
 
     if isinstance(digits, numbers.Real):
         digits = min(max(SINGLE_DIGITS, digits, DOUBLE_DIGITS))

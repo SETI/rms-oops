@@ -151,7 +151,6 @@ class Test_MultiPath(unittest.TestCase):
     def runTest(self):
 
         import cspyce
-        import oops.spice_support as spice
         from .spicepath import SpicePath
         from ..unittester_support import TESTDATA_PARENT_DIRECTORY
         import os

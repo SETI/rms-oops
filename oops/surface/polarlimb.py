@@ -226,8 +226,6 @@ class Test_PolarLimb(unittest.TestCase):
         RMID = 54364.
         RPOL = 50000.
 
-        NPTS = 1000
-
         ground = Spheroid("SSB", "J2000", (REQ, RPOL))
         limb = Limb(ground)
 
