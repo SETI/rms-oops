@@ -6,8 +6,8 @@ from __future__ import print_function
 
 from polymath import Scalar
 
-from .           import Backplane
-from ..constants import PI, TWOPI
+from oops.backplane import Backplane
+from oops.constants import PI, TWOPI
 
 
 ############################################################################
@@ -481,4 +481,245 @@ def lommel_seeliger_law(self, event_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+
+
+
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+from oops.meshgrid     import Meshgrid
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.constants    import DPR
+from oops.backplane.unittester_support    import show_info
+
+
+#===========================================================================
+def exercise_limb_longitude(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for spheroid.py"""
+    
+    if planet != None:
+        test = bp.longitude(planet+':limb', 'iau')
+        show_info('Limb longitude wrt IAU (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet+':limb', 'obs')
+        show_info('Limb longitude wrt observer (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet+':limb', reference='obs', minimum=-180)
+        show_info('Limb longitude wrt observer, -180 (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet+':limb', 'oha')
+        show_info('Limb longitude wrt OHA (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet+':limb', 'sun')
+        show_info('Limb longitude wrt Sun (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet+':limb', 'sha')
+        show_info('Limb longitude wrt SHA (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_limb_latitude(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for spheroid.py"""
+    
+    if planet != None:
+        test = bp.latitude(planet+':limb', lat_type='centric')
+        show_info('Limb planetocentric latitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.latitude(planet+':limb', lat_type='squashed')
+        show_info('Limb squashed latitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.latitude(planet+':limb', lat_type='graphic')
+        show_info('Limb planetographic latitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_surface_latitude(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for spheroid.py"""
+    
+    if planet != None:
+        test = bp.latitude(planet, lat_type='centric')
+        show_info('planet latitude, planetocentric (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.latitude(planet, lat_type='squashed')
+        show_info('planet latitude, squashed (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.latitude(planet, lat_type='graphic')
+        show_info('planet latitude, planetographic (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_observer_latitude(planet)
+        show_info('planet sub-observer latitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_solar_latitude(planet)
+        show_info('planet sub-solar latitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if moon != None:
+        test = bp.latitude(moon, lat_type='centric')
+        show_info('moon latitude, planetocentric (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.latitude(moon, lat_type='squashed')
+        show_info('moon latitude, squashed (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.latitude(moon, lat_type='graphic')
+        show_info('moon latitude, planetographic (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_observer_latitude(moon)
+        show_info('moon sub-observer latitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_solar_latitude(moon)
+        show_info('moon sub-solar latitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_surface_planet_moon(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for spheroid.py"""
+    
+    if planet != None:
+        test = bp.longitude(planet)
+        show_info('planet longitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, reference='iau')
+        show_info('planet longitude wrt IAU frame (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, lon_type='centric')
+        show_info('planet longitude centric (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, lon_type='graphic')
+        show_info('planet longitude graphic (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, lon_type='squashed')
+        show_info('planet longitude squashed (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, direction='east')
+        show_info('planet longitude eastward (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, minimum=-180)
+        show_info('planet longitude with -180 minimum (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, reference='iau', minimum=-180)
+        show_info('planet longitude wrt IAU frame with -180 minimum (deg)', 
+                          test*DPR, printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, reference='sun')
+        show_info('planet longitude wrt Sun (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, reference='sha')
+        show_info('planet longitude wrt SHA (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, reference='obs')
+        show_info('planet longitude wrt observer (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.longitude(planet, reference='oha')
+        show_info('planet longitude wrt OHA (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_observer_longitude(planet, reference='iau')
+        show_info('planet sub-observer longitude wrt IAU (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_observer_longitude(planet, reference='sun', minimum=-180)
+        show_info('planet sub-observer longitude wrt Sun (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_observer_longitude(planet, reference='obs', minimum=-180)
+        show_info('planet sub-observer longitude wrt observer (deg)', 
+                          test*DPR, printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_solar_longitude(planet, reference='iau')
+        show_info('planet sub-solar longitude wrt IAU (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_solar_longitude(planet, reference='obs', minimum=-180)
+        show_info('planet sub-solar longitude wrt observer (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_solar_longitude(planet, reference='sun', minimum=-180)
+        show_info('planet sub-solar longitude wrt Sun (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if moon != None:
+        test = bp.longitude(moon)
+        show_info('moon longitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_observer_longitude(moon)
+        show_info('moon sub-observer longitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.sub_solar_longitude(moon)
+        show_info('moon sub-solar longitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_ring(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for spheroid.py"""
+    
+    if ring != None:
+        test = bp.sub_observer_longitude(ring, 'sun', minimum=-180)
+        show_info('Ring observer-sun longitude (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#*******************************************************************************
+class Test_Spheroid(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY: 
+            return
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

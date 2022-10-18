@@ -4,7 +4,7 @@
 
 from polymath import Boolean, Scalar
 
-from . import Backplane
+from oops.backplane import Backplane
 
 #===============================================================================
 def incidence_angle(self, event_key):
@@ -200,4 +200,77 @@ def center_scattering_angle(self, event_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+
+
+
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+from oops.meshgrid                       import Meshgrid
+from oops.unittester_support             import TESTDATA_PARENT_DIRECTORY
+from oops.constants                      import DPR
+from oops.backplane.unittester_support   import show_info
+
+
+#===========================================================================
+def exercise_planet(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for lighting.py"""
+    
+    if planet != None:
+        test = bp.phase_angle(planet)
+        show_info('planet phase angle (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.scattering_angle(planet)
+        show_info('planet scattering angle (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.incidence_angle(planet)
+        show_info('planet incidence angle (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.emission_angle(planet)
+        show_info('planet emission angle (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.lambert_law(planet)
+        show_info('planet as a Lambert law', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_ring(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for lighting.py"""
+    
+    if ring != None:
+        test = bp.phase_angle(ring)
+        show_info('Ring phase angle (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+
+#*******************************************************************************
+class Test_Lighting(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY: 
+            return
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

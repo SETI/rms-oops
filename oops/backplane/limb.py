@@ -2,7 +2,7 @@
 # oops/backplanes/limb_backplanes.py: Latitude/longitude backplanes
 ################################################################################
 
-from . import Backplane
+from oops.backplane import Backplane
 
 #===============================================================================
 def limb_altitude(self, event_key, limit=None, lock_limits=False):
@@ -82,4 +82,47 @@ def _fill_limb_intercepts(self, event_key, limit=None, lock_limits=False):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+
+
+
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+from oops.meshgrid     import Meshgrid
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.constants    import DPR
+from oops.backplane.unittester_support    import show_info
+
+
+#===========================================================================
+def exercise(bp, obs, printing, saving, dir, 
+                        planet=None, moon=None, ring=None, 
+                        undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for limb.py"""
+    
+    if planet != None:
+        test = bp.limb_altitude(planet+':limb')
+        show_info('Limb altitude (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#*******************************************************************************
+class Test_Limb(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY: 
+            return
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

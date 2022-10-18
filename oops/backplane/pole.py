@@ -4,9 +4,9 @@
 
 from polymath import Scalar, Vector3, Matrix3
 
-from .           import Backplane
-from ..frame     import Frame
-from ..constants import TWOPI
+from oops.backplane import Backplane
+from oops.frame     import Frame
+from oops.constants import TWOPI
 
 #===============================================================================
 def pole_clock_angle(self, event_key):
@@ -66,4 +66,51 @@ def pole_position_angle(self, event_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+
+
+
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+from oops.meshgrid     import Meshgrid
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.constants    import DPR
+from oops.backplane.unittester_support    import show_info
+
+
+#===========================================================================
+def exercise(bp, obs, printing, saving, dir, 
+             planet=None, moon=None, ring=None, 
+             undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for pole.py"""
+    
+    if planet != None:
+        test = bp.pole_clock_angle(planet)
+        show_info('planet pole clock angle (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.pole_position_angle(planet)
+        show_info('planet pole position angle (deg)', test*DPR,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#*******************************************************************************
+class Test_Pole(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY: 
+            return
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

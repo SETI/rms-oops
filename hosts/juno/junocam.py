@@ -12,7 +12,8 @@ import os.path
 import pdsparser
 import oops
 
-from . import Juno
+#from . import Juno
+from hosts.juno import Juno
 
 ################################################################################
 # Standard class methods
@@ -385,30 +386,41 @@ import unittest
 import os.path
 
 import hosts.juno.junocam as junocam
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
 
-class Test_Juno_Junocam(unittest.TestCase):
+#*******************************************************************************
+class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
 
+    #===========================================================================
     def runTest(self):
 
-        from oops.backplane import Backplane
+        if Backplane_Settings.NO_EXERCISES:
+            return 
 
         root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/junocam")
         file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
         _obs = junocam.from_file(file); body_name = "JUPITER"; obs = _obs[5]
 
-        printing = 1
-        logging = 0
-        saving = 1
-        bp = exercise_backplanes(obs, printing, logging, saving, use_inventory=True)
-#        bp = exercise_backplanes(obs, body_name, printing, logging, saving)
+        bp = exercise_backplanes(obs, 
+                                 Backplane_Settings.PRINTING, 
+                                 Backplane_Settings.LOGGING, 
+                                 Backplane_Settings.SAVING,
+                                 Backplane_Settings.OUTPUT, 
+                                 undersample=Backplane_Settings.UNDERSAMPLE,
+                                 use_inventory=True, inventory_border=4,
+                                 planet_key=body_name)
  
  
  
- 
-############################################
+##############################################
+# See oops/backplane/unittester.py for usage
+from oops.backplane.unittester_support      import backplane_unittester_args
+
 if __name__ == '__main__':
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################
 

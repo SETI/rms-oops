@@ -2,8 +2,8 @@
 # oops/backplanes/distance.py: Distance-related backplanes
 ################################################################################
 
-from .           import Backplane
-from ..constants import C
+from oops.backplane import Backplane
+from oops.constants import C
 
 #===============================================================================
 def distance(self, event_key, direction='dep'):
@@ -139,4 +139,275 @@ def center_time(self, event_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+
+
+
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+from oops.meshgrid                      import Meshgrid
+from oops.unittester_support import     TESTDATA_PARENT_DIRECTORY
+from oops.constants                     import DPR
+from oops.backplane.unittester_support  import show_info
+
+
+#===========================================================================
+def exercise_observer(bp, obs, printing, saving, dir, 
+                      planet=None, moon=None, ring=None, 
+                     undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for distance.py"""
+    
+    if planet != None:
+        test = bp.distance(planet)
+        show_info('Distance observer to planet (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.distance(planet, direction='dep')
+        show_info('Distance observer to planet via dep (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_distance(planet)
+        show_info('Distance observer to planet center (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.distance(planet+':limb')
+        show_info('Distance observer to planet limb (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.distance(planet+':ansa')
+        show_info('Distance observer to ansa (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if ring != None:
+        test = bp.distance(ring)
+        show_info('Distance observer to rings (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_distance(ring)
+        show_info('Distance observer to ring center (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if moon != None:
+        test = bp.distance(moon)
+        show_info('Distance observer to moon (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_distance(moon)
+        show_info('Distance observer to moon center (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_sun(bp, obs, printing, saving, dir, 
+                      planet=None, moon=None, ring=None, 
+                     undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for distance.py"""
+    
+    if planet != None:
+        test = bp.distance(planet, direction='arr')
+        show_info('Distance Sun to planet, arrival (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.distance(('sun', planet), direction='dep')
+        show_info('Distance Sun to planet, departure (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_distance(planet, direction='arr')
+        show_info('Distance Sun to planet center, arrival (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_distance(('sun', planet), direction='dep')
+        show_info('Distance Sun to planet center, departure (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.distance(planet+':ansa', direction='arr')
+        show_info('Distance Sun to ansa (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.distance(planet+':limb', direction='arr')
+        show_info('Distance Sun to limb (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if ring != None:
+        test = bp.distance(ring, direction='arr')
+        show_info('Distance Sun to rings, arrival (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.distance(('sun', ring), direction='dep')
+        show_info('Distance Sun to rings, departure (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_distance(ring, direction='arr')
+        show_info('Distance Sun to ring center, arrival (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_distance(('sun', ring), direction='dep')
+        show_info('Distance Sun to ring center, departure (km)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_observer_light_time(bp, obs, printing, saving, dir, 
+                      planet=None, moon=None, ring=None, 
+                     undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for distance.py"""
+    
+    if planet != None:
+        test = bp.light_time(planet)
+        show_info('Light-time observer to planet (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.light_time(planet, direction='dep')
+        show_info('Light-time observer to planet via dep (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.light_time(planet+':limb')
+        show_info('Light-time observer to limb (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.light_time(planet+':ansa')
+        show_info('Light-time observer to ansa (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_light_time(planet)
+        show_info('Light-time observer to planet center (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if ring != None:
+        test = bp.light_time(ring)
+        show_info('Light-time observer to rings (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_light_time(ring)
+        show_info('Light-time observer to ring center (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if moon != None:
+        test = bp.light_time(moon)
+        show_info('Light-time observer to moon (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_light_time(moon)
+        show_info('Light-time observer to moon center (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+#===========================================================================
+def exercise_sun_light_time(bp, obs, printing, saving, dir, 
+                      planet=None, moon=None, ring=None, 
+                     undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for distance.py"""
+    
+    if planet != None:
+        test = bp.light_time(planet)
+        show_info('Light-time observer to planet (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.light_time(planet, direction='dep')
+        show_info('Light-time observer to planet via dep (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.light_time(planet+':limb')
+        show_info('Light-time observer to limb (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.light_time(planet+':ansa')
+        show_info('Light-time observer to ansa (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_light_time(planet)
+        show_info('Light-time observer to planet center (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if ring != None:
+        test = bp.light_time(ring)
+        show_info('Light-time observer to rings (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_light_time(ring)
+        show_info('Light-time observer to ring center (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if moon != None:
+        test = bp.light_time(moon)
+        show_info('Light-time observer to moon (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_light_time(moon)
+        show_info('Light-time observer to moon center (sec)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+
+#===========================================================================
+def exercise_event_time(bp, obs, printing, saving, dir, 
+                      planet=None, moon=None, ring=None, 
+                     undersample=16, use_inventory=False, inventory_border=2):
+    """Gerneric unit tests for distance.py"""
+    
+    test = bp.event_time(())
+    show_info('Event time at Cassini (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    test = bp.center_time(())
+    show_info('Event time at Cassini center (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if planet != None:
+        test = bp.event_time(planet)
+        show_info('Event time at planet (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_time(planet)
+        show_info('Event time at planet (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if ring != None:
+        test = bp.event_time(ring)
+        show_info('Event time at rings (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.center_time(ring)
+        show_info(' Event time at ring center (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+    if moon != None:
+        test = bp.event_time(moon)
+        show_info('Event time at moon (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.event_time(moon)
+        show_info('Event time at moon (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+        test = bp.event_time(moon)
+        show_info('Event time at moon center (sec, TDB)', test,   
+                                    printing=printing, saving=saving, dir=dir)
+
+
+
+
+
+#*******************************************************************************
+class Test_Distance(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY: 
+            return
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

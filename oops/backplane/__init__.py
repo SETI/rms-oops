@@ -7,11 +7,11 @@ import types
 import numpy as np
 from polymath import Boolean, Qube, Scalar
 
-from ..body              import Body
-from ..path              import AliasPath
-from ..surface.ansa      import Ansa
-from ..surface.limb      import Limb
-from ..surface.ringplane import RingPlane
+from oops.body              import Body
+from oops.path              import AliasPath
+from oops.surface.ansa      import Ansa
+from oops.surface.limb      import Limb
+from oops.surface.ringplane import RingPlane
 
 #===============================================================================
 class Backplane(object):
@@ -734,13 +734,401 @@ class Backplane(object):
                 if key[0] != '_':
                     Backplane.CALLABLES.add(key)
 
-########################################
+
+
+
+
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+import os
+
+import oops.config as config
+
+from polymath                   import Vector3
+
+from oops.config                import ABERRATION
+from oops.meshgrid              import Meshgrid
+from oops.body                  import Body
+from oops.event                 import Event
+from oops.surface.ansa          import Ansa
+
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
+
+
+UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                      'cassini/ISS/W1573721822_1.IMG')
+UNITTEST_RHEA_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                      'cassini/ISS/N1649465464_1.IMG')
+UNITTEST_UNDERSAMPLE = 16
+
+
+#*******************************************************************************
+class Test_Backplane_Surfaces(unittest.TestCase):
+
+    OLD_RHEA_SURFACE = None
+
+
+    #===========================================================================
+    def setUp(self):
+        global OLD_RHEA_SURFACE
+
+        from oops.surface.ellipsoid  import Ellipsoid
+
+        Body.reset_registry()
+        Body.define_solar_system('2000-01-01', '2020-01-01')
+
+        # Distort Rhea's shape for better Ellipsoid testing
+        rhea = Body.as_body('RHEA')
+        OLD_RHEA_SURFACE = rhea.surface
+        old_rhea_radii = OLD_RHEA_SURFACE.radii
+
+        new_rhea_radii = tuple(np.array([1.1, 1., 0.9]) * old_rhea_radii)
+        new_rhea_surface = Ellipsoid(rhea.path, rhea.frame, new_rhea_radii)
+        Body.as_body('RHEA').surface = new_rhea_surface
+
+  #      config.LOGGING.on('   ')
+        config.EVENT_CONFIG.collapse_threshold = 0.
+        config.SURFACE_PHOTONS.collapse_threshold = 0.
+
+
+    #===========================================================================
+    def tearDown(self):
+        global OLD_RHEA_SURFACE
+
+        config.LOGGING.off()
+        config.EVENT_CONFIG.collapse_threshold = 3.
+        config.SURFACE_PHOTONS.collapse_threshold = 3.
+
+        # Restore Rhea's shape
+        Body.as_body('RHEA').surface = OLD_RHEA_SURFACE
+
+        ABERRATION.old = False
+
+
+    #===========================================================================
+    def runTest(self):
+
+      from oops.surface.centricspheroid import CentricSpheroid
+      from oops.surface.graphicspheroid import GraphicSpheroid
+      from oops.surface.centricellipsoid import CentricEllipsoid
+      from oops.surface.graphicellipsoid import GraphicEllipsoid
+      import hosts.cassini.iss as iss
+
+      if Backplane_Settings.EXERCISES_ONLY: 
+        return
+
+      for ABERRATION.old in (False, True):
+
+        snap = iss.from_file(UNITTEST_SATURN_FILESPEC, fast_distortion=False)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=UNITTEST_UNDERSAMPLE,
+                                    swap=True)
+        #meshgrid = Meshgrid(snap.fov, (512,512))
+        uv0 = meshgrid.uv
+        bp = Backplane(snap, meshgrid)
+
+        # Actual (ra,dec)
+        ra = bp.right_ascension(apparent=False)
+        dec = bp.declination(apparent=False)
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        ev.neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec)
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        self.assertTrue(diff.norm().max() < 1.e-9)
+
+        # Apparent (ra,dec)  # test doesn't work for ABERRATION=old
+        if not ABERRATION.old:
+            ra = bp.right_ascension(apparent=True)
+            dec = bp.declination(apparent=True)
+
+            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+            ev.neg_arr_ap_j2000 = Vector3.from_ra_dec_length(ra, dec)
+            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+
+            diff = uv - uv0
+        self.assertTrue(diff.norm().max() < 1.e-9)
+
+        # RingPlane (rad, lon)
+        rad = bp.ring_radius('saturn:ring')
+        lon = bp.ring_longitude('saturn:ring', reference='node')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('SATURN_RING_PLANE')
+        (surface_ev, ev) = body.surface.photon_to_event_by_coords(ev, (rad,lon))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        self.assertTrue(diff.norm().max() < 1.e-8)
+
+        # Ansa (rad, alt)
+        rad = bp.ansa_radius('saturn:ansa', radius_type='right')
+        alt = bp.ansa_altitude('saturn:ansa')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('SATURN_RING_PLANE')
+        surface = Ansa.for_ringplane(body.surface)
+        (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (rad,alt))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        self.assertTrue(diff.norm().max() < 1.e-8)
+
+        # Spheroid (lon,lat)
+        lat = bp.latitude('saturn', lat_type='squashed')
+        lon = bp.longitude('saturn', reference='iau', direction='east',
+                                     lon_type='centric')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('SATURN')
+        (surface_ev, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        self.assertTrue(diff.norm().max() < 1.e-8)
+
+        # CentricSpheroid (lon,lat)
+        lat = bp.latitude('saturn', lat_type='centric')
+        lon = bp.longitude('saturn', reference='iau', direction='east',
+                                     lon_type='centric')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('SATURN')
+        surface = CentricSpheroid(body.path, body.frame, body.surface.radii)
+        (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        self.assertTrue(diff.norm().max() < 1.e-8)
+
+        # GraphicSpheroid (lon,lat)
+        lat = bp.latitude('saturn', lat_type='graphic')
+        lon = bp.longitude('saturn', reference='iau', direction='east',
+                                     lon_type='centric')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('SATURN')
+        surface = GraphicSpheroid(body.path, body.frame, body.surface.radii)
+        (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        self.assertTrue(diff.norm().max() < 1.e-8)
+
+        # Rhea tests, with Rhea modified
+        body = Body.as_body('RHEA')
+        snap = iss.from_file(UNITTEST_RHEA_FILESPEC, fast_distortion=False)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=UNITTEST_UNDERSAMPLE,
+                                    swap=True)
+
+        uv0 = meshgrid.uv
+        bp = Backplane(snap, meshgrid)
+
+        # Ellipsoid (lon,lat)
+        lat = bp.latitude('rhea', lat_type='squashed')
+        lon = bp.longitude('rhea', reference='iau', direction='east',
+                                     lon_type='squashed')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('RHEA')
+        (surface_ev, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        #print(diff.norm().min(), diff.norm().max())
+        self.assertTrue(diff.norm().max() < 2.e-7)
+
+        # CentricEllipsoid (lon,lat)
+        lat = bp.latitude('rhea', lat_type='centric')
+        lon = bp.longitude('rhea', reference='iau', direction='east',
+                                     lon_type='centric')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('RHEA')
+        surface = CentricEllipsoid(body.path, body.frame, body.surface.radii)
+        (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        #print(diff.norm().min(), diff.norm().max())
+        self.assertTrue(diff.norm().max() < 2.e-7)
+
+        # GraphicEllipsoid (lon,lat)
+        lat = bp.latitude('rhea', lat_type='graphic')
+        lon = bp.longitude('rhea', reference='iau', direction='east',
+                                     lon_type='graphic')
+
+        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
+        body = Body.as_body('RHEA')
+        surface = GraphicEllipsoid(body.path, body.frame, body.surface.radii)
+        (surface_ev, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
+
+        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
+        diff = uv - uv0
+        #print(diff.norm().min(), diff.norm().max())
+        self.assertTrue(diff.norm().max() < 2.e-7)
+
+
+
+#*******************************************************************************
+class Test_Backplane_Borders(unittest.TestCase):
+
+
+    #===========================================================================
+    def runTest(self):
+      """ 
+      These tests are sensitive to the specific kernel pool used.
+      """
+      import hosts.cassini.iss as iss
+
+      if Backplane_Settings.EXERCISES_ONLY: 
+        return
+
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                'cassini/ISS/W1573721822_1.IMG')
+
+        snap = iss.from_file(filespec)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=UNITTEST_UNDERSAMPLE,
+                                    swap=True)
+        bp = Backplane(obs, meshgrid, inventory=None)
+
+
+
+        # Test border of planet intercepted mask, inside
+        mask = bp.where_intercepted('saturn')
+        
+        test = bp.border_inside(mask)
+        count = np.sum(test.vals)
+        total = np.size(test.vals)
+        self.assertTrue(count == 961)
+        self.assertTrue(total-count == 1047615)
+
+        # Test border of planet intercepted mask, outside
+        test = bp.border_outside(mask)
+        count = np.sum(test.vals)
+        total = np.size(test.vals)
+        self.assertTrue(count == 962)
+        self.assertTrue(total-count == 1047614)
+
+        # Test border of ring radius below 100 km
+        test = bp.border_below(('ring_radius', 'saturn:ring'), 100.e3)
+        count = np.sum(test.vals)
+        total = np.size(test.vals)
+        self.assertTrue(count == 1713)
+        self.assertTrue(total-count == 1046863)
+
+        # Test border of ring radius atop 100 km
+        test = bp.border_atop(('ring_radius', 'saturn:ring'), 100.e3)
+        count = np.sum(test.vals)
+        total = np.size(test.vals)
+        self.assertTrue(count == 1715)
+        self.assertTrue(total-count == 1046861)
+
+        # Test border of ring radius above 100 km
+        test = bp.border_above(('ring_radius', 'saturn:ring'), 100.e3)
+        count = np.sum(test.vals)
+        total = np.size(test.vals)
+        self.assertTrue(count == 1715)
+        self.assertTrue(total-count == 1046861)
+
+        # Test border of ring radius above 100 km via evaluate()
+        test = bp.evaluate(('border_above', ('ring_radius', 'saturn:ring'), 100.e3))
+        count = np.sum(test.vals)
+        total = np.size(test.vals)
+        self.assertTrue(count == 1715)
+        self.assertTrue(total-count == 1046861)
+
+
+
+#*******************************************************************************
+class Test_Backplane_Empty_Events(unittest.TestCase):
+
+
+    #===========================================================================
+    def runTest(self):
+      import hosts.cassini.iss as iss
+
+      if Backplane_Settings.EXERCISES_ONLY: 
+        return
+
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                'cassini/ISS/W1573721822_1.IMG')
+
+        snap = iss.from_file(filespec)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=UNITTEST_UNDERSAMPLE,
+                                    swap=True)
+        bp = Backplane(obs, meshgrid, inventory=None)
+
+
+
+        # Test empty mask of planet ring radius below 10 km
+        test = bp.where_below(('ring_radius', 'saturn_main_rings'), 10.e3)
+        count = np.sum(test.vals)
+        total = np.size(test.vals)
+        percent = int(count / float(total) * 100. + 0.5)
+        self.assertTrue(percent == 0)
+        
+        # Test empty ring radius for Pluto 
+        test = bp.ring_radius('pluto:ring')
+        total = np.size(test.mask)
+        masked = np.sum(test.mask)
+        percent = int(masked / float(total) * 100. + 0.5)
+        self.assertTrue(percent == 100)
+
+        # Test empty longitude for Pluto
+        test = bp.longitude('pluto')
+        total = np.size(test.mask)
+        masked = np.sum(test.mask)
+        percent = int(masked / float(total) * 100. + 0.5)
+        self.assertTrue(percent == 100)
+
+        # Test empty incidence angle for Pluto
+        test = bp.incidence_angle('pluto')
+        total = np.size(test.mask)
+        masked = np.sum(test.mask)
+        percent = int(masked / float(total) * 100. + 0.5)
+        self.assertTrue(percent == 100)
+
+
+
+#*******************************************************************************
+class Test_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        import hosts.cassini.iss as iss
+        if Backplane_Settings.NO_EXERCISES:
+            return 
+
+#        iss.initialize(asof='2019-09-01', mst_pck=True)
+
+        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                'cassini/ISS/W1573721822_1.IMG')
+
+        obs = iss.from_file(filespec)
+        bp = exercise_backplanes(obs, 
+                                 Backplane_Settings.PRINTING, 
+                                 Backplane_Settings.LOGGING, 
+                                 Backplane_Settings.SAVING,
+                                 Backplane_Settings.OUTPUT, 
+                                 undersample=Backplane_Settings.UNDERSAMPLE,
+                                 use_inventory=True, inventory_border=4,
+                                 planet_key='saturn', 
+                                 moon_key='epimetheus', 
+                                 ring_key='saturn_main_rings')                                     
+
+
+
+##############################################
+# See oops/backplane/unittester.py for usage
+from oops.backplane.unittester_support      import backplane_unittester_args
 
 if __name__ == '__main__':
-
-    import unittest
-    from oops.backplane.unittester import Test_Backplane
-
+    backplane_unittester_args()
     unittest.main(verbosity=2)
-
 ################################################################################
