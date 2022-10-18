@@ -60,7 +60,7 @@ def from_file(filespec, label, fast_distortion=True,
 
 
     # Construct Slit1D for all bands
-    obs = oops.obs.Slit1D(("u","b"),
+    obs = oops.obs.Slit1D(("u","b"),  
                          meta.tstart, meta.exposure, meta.fov,
                          "JUNO", "JUNO_JIRAM_S", data=data )
 
@@ -207,6 +207,7 @@ class SPE(object):
 
         JIRAM.reset()
 
+    
 
 
 

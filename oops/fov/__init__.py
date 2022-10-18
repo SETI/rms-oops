@@ -330,7 +330,7 @@ class FOV(object):
         """
 
         xy_pair = self.xy_from_los(los, derivs=derivs)
-        return self.uv_from_xyt(xy_pair,
+        return self.uv_from_xyt(xy_pair, 
                             tfrac=tfrac, time=time, derivs=derivs, **keywords)
 
     #===========================================================================
@@ -472,7 +472,7 @@ class FOV(object):
                         full FOV.
         """
 
-        uv = self.uv_from_xyt(xy_pair, tfrac=tfrac, time=time, derivs=False, **keywords)
+        uv = self.uv_from_xyt(xy_pair, tfrac=tfrac, derivs=False, **keywords)
         return self.uv_is_outside(uv, inclusive, uv_min, uv_max)
 
     #===========================================================================
