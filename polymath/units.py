@@ -256,7 +256,7 @@ class Units(object):
         if isinstance(arg, numbers.Real):
             return self * (Units((0,0,0), (arg,1,0)))
 
-        return  NotImplemented
+        return NotImplemented
 
     def __rmul__(self, arg):
         return self.__mul__(arg)
@@ -344,8 +344,6 @@ class Units(object):
         if self.triple[2] != 2*pi_expo:
             numer *= np.pi**(self.triple[2] / 2.)
             pi_expo = 0
-
-        triple = (numer, denom, pi_expo)
 
         if name is None:
             name = Units.name_power(self.name, 0.5)
@@ -889,9 +887,9 @@ Units.UNITS_BY_EXPO = [Units.DISTANCE_LIST,     # index = 0
                        Units.ANGLE_LIST]        # index = 2
 
 Units.STANDARD_LIST = [Units.UNITLESS] + \
-                      Units.DISTANCE_LIST + \
-                      Units.TIME_LIST + \
-                      Units.ANGLE_LIST
+                       Units.DISTANCE_LIST + \
+                       Units.TIME_LIST + \
+                       Units.ANGLE_LIST
 
 # Fill in the dictionaries
 for units in Units.STANDARD_LIST:

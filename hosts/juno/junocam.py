@@ -359,7 +359,8 @@ class JUNOCAM(object):
 
         JUNOCAM.initialized = True
 
-    
+
+
     #===========================================================================
     @staticmethod
     def reset():
@@ -403,10 +404,10 @@ class Test_Juno_Junocam(unittest.TestCase):
         saving = 1
         bp = exercise_backplanes(obs, printing, logging, saving, use_inventory=True)
 #        bp = exercise_backplanes(obs, body_name, printing, logging, saving)
- 
- 
- 
- 
+
+
+
+
 ############################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -73,7 +73,7 @@ class TrackerFrame(Frame):
         # Prepare to cache the most recently used transform
         self.cached_time = None
         self.cached_xform = None
-        dummy = self.transform_at_time(self.epoch)  # cache initialized
+        _ = self.transform_at_time(self.epoch)  # cache initialized
 
         # Save in internal dict for name lookup upon serialization
         if (not unpickled and self.shape == ()
@@ -136,7 +136,6 @@ class Test_TrackerFrame(unittest.TestCase):
 
     def setUp(self):
         from ..body import Body
-        import oops.spice_support as spice
 
         Body.reset_registry()
         Body.define_solar_system('1990-01-01', '2020-01-01')
@@ -146,7 +145,7 @@ class Test_TrackerFrame(unittest.TestCase):
 
     def runTest(self):
 
-        tracker = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
+        _tracker = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
         mars = AliasPath("MARS")
 
         obs_event = Event(0., Vector3.ZERO, "EARTH", "J2000")

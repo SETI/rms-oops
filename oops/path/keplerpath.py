@@ -503,7 +503,7 @@ class KeplerPath(Path, Fittable):
                         de_delem += dw_delem
 
                 else:
-                    pole_inc = w
+                    i     += w
                     di_dt += dw_dt
                     if partials:
                         di_delem += dw_delem
@@ -688,8 +688,7 @@ class KeplerPath(Path, Fittable):
             cos2_node = laplace_cos_node**2
             sin2_node = laplace_sin_node**2
 
-            cos_sin_node_1_minus_cos_inc = (laplace_cos_node *
-                                            laplace_sin_node *
+            cos_sin_node_1_minus_cos_inc = (cos_sin_node *
                                             (1. - laplace_cos_inc))
 
             rotate = np.array(
@@ -816,8 +815,8 @@ class KeplerPath(Path, Fittable):
         node = self.node_at_time(time)
         cos_node = np.cos(node)
         sin_node = np.sin(node)
-        node_in_j2000 = (cos_node * x_axis_in_j2000 +
-                         sin_node * y_axis_in_j2000)
+        _node_in_j2000 = (cos_node * x_axis_in_j2000 +
+                          sin_node * y_axis_in_j2000)
 
         # This vector is 90 degrees behind of the node in the reference equator
         target_in_j2000 = ( sin_node * x_axis_in_j2000 +
@@ -874,10 +873,9 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
     """
 
     # Save the position and its derivatives
-    (xyz, d_xyz_dt) = kep.xyz_planet(t, partials=True)
+    (xyz, _d_xyz_dt) = kep.xyz_planet(t, partials=True)
     d_xyz_d_elem = xyz.d_delements.vals
     pos_norm = xyz.norm().vals
-    vel_norm = d_xyz_dt.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
     khi = kep.copy()
@@ -925,12 +923,10 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
 
     # Save the position and its derivatives
     event = kep.event_at_time(t, partials=True)
-    xyz = event.pos.vals
-    d_xyz_dt = event.vel.vals
+    _xyz = event.pos.vals
+    _d_xyz_dt = event.vel.vals
     d_xyz_d_elem = event.pos.d_delements.vals
-
     pos_norm = event.pos.norm().vals
-    vel_norm = event.vel.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
     khi = kep.copy()
@@ -939,7 +935,6 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     params = kep.get_params()
 
     # Loop through parameters...
-    new_derivs = np.zeros(np.shape(t) + (3,kep.nparams))
     errors = np.zeros(np.shape(t) + (3,kep.nparams))
     for e in range(kep.nparams):
 

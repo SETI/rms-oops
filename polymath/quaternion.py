@@ -25,7 +25,7 @@ class Quaternion(Vector):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to disallow derivatives; False to allow them.
+    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
 
     DEFAULT_VALUE = np.array([1.,0.,0.,0.])
 
@@ -82,10 +82,7 @@ class Quaternion(Vector):
                              (str(scalar.denom), str(vector.denom)))
 
         # Align axes
-        s_values = scalar._values_
-        v_values = vector._values_
         drank = scalar.drank
-
         before = len(scalar.shape) * (slice(None),)
         after  = drank * (slice(None),)
 

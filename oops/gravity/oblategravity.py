@@ -389,8 +389,8 @@ class OblateGravity(Gravity):
             # our f(x) = self.combo() - freq
             #     fp(x) = self.dcombo()
 
-            da = ((self.combo(a, factors, e, sin_i) - freq) / \
-                   self.dcombo_da(a, factors, e, sin_i))
+            da = ((self.combo(a, factors, e, sin_i) - freq)
+                   / self.dcombo_da(a, factors, e, sin_i))
             da_max = np.max(np.abs(da))
             if da_max == 0.:
                 break
@@ -619,7 +619,6 @@ class OblateGravity(Gravity):
         # product RDOTV, the energy per unit mass ENERGY.
         r = np.sqrt(x*x + y*y + z*z)
         v2 = vx*vx + vy*vy + vz*vz
-        v = np.sqrt(v2)
         vdotr = x*vx + y*vy + z*vz
         energy = 0.5*v2 - gmsum/r
 
@@ -671,8 +670,6 @@ class OblateGravity(Gravity):
         lam = np.asfarray(mean_lon)
         long_peri = np.asfarray(long_peri)
         long_node = np.asfarray(long_node)
-
-        mean_anomaly = lam - long_peri
 
         (n, kappa, nu, eta2, chi2,
          alpha1, alpha2, alphasq) = self._geom_to_freq(a, e, inc, body_gm)

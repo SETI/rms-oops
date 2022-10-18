@@ -175,9 +175,9 @@ def __setitem__(self, indx, arg):
     # Set the new values and mask
     if not np.any(post_mask):               # post-mask is False
 
-        self._values_[vals_index] = arg._values_
+        self._values_[vals_index] = arg_values
         if np.shape(self._mask_):
-            self._mask_[pre_index] = arg._mask_
+            self._mask_[pre_index] = arg_mask
 
     else:                                   # post-mask is an array
 
@@ -186,20 +186,20 @@ def __setitem__(self, indx, arg):
 
         selection = self._values_[vals_index]
 
-        if np.shape(arg._values_):
-            selection[antimask] = arg._values_[antimask]
+        if np.shape(arg_values):
+            selection[antimask] = arg_values[antimask]
         else:
-            selection[antimask] = arg._values_
+            selection[antimask] = arg_values
 
         self._values_[vals_index] = selection
 
         if np.shape(self._mask_):
             selection = self._mask_[pre_index]
 
-            if np.shape(arg._mask_):
-                selection[antimask] = arg._mask_[antimask]
+            if np.shape(arg_mask):
+                selection[antimask] = arg_mask[antimask]
             else:
-                selection[antimask] = arg._mask_
+                selection[antimask] = arg_mask
 
             self._mask_[pre_index] = selection
 

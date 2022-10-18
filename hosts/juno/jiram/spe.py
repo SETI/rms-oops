@@ -50,7 +50,7 @@ def from_file(filespec, label, fast_distortion=True,
                              "JUNO", "JUNO_JIRAM_S",
                              data=np.reshape(data[:,i],(1,meta.nlines)) )
 
-#        item.insert_subfield('spice_kernels', 
+#        item.insert_subfield('spice_kernels',
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
         item.insert_subfield('filespec', filespec)
         item.insert_subfield('basename', os.path.basename(filespec))
@@ -60,11 +60,11 @@ def from_file(filespec, label, fast_distortion=True,
 
 
     # Construct Slit1D for all bands
-    obs = oops.obs.Slit1D(("u","b"),  
+    obs = oops.obs.Slit1D(("u","b"),
                          meta.tstart, meta.exposure, meta.fov,
                          "JUNO", "JUNO_JIRAM_S", data=data )
 
-#    obs.insert_subfield('spice_kernels', 
+#    obs.insert_subfield('spice_kernels',
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
     obs.insert_subfield('filespec', filespec)
     obs.insert_subfield('basename', os.path.basename(filespec))
@@ -207,6 +207,6 @@ class SPE(object):
 
         JIRAM.reset()
 
-    
+
 
 

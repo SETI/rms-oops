@@ -131,8 +131,6 @@ class Navigation(Frame, Fittable):
         return Navigation(self.angles.copy(), self.reference,
                           matrix=self.transform.matrix.copy())
 
-        return result
-
 ################################################################################
 # UNIT TESTS
 ################################################################################

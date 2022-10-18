@@ -198,7 +198,7 @@ class Pixel(Observation):
                 uv_max_vals = np.ones(tstep.shape + (2,), dtype='int')
 
                 uv_min = Pair(uv_min_vals, new_mask)
-                uv_max = Pair(uv_min_vals, uv_min.mask) # OK to share mask?
+                uv_max = Pair(uv_max_vals, uv_min.mask)     # OK to share mask?
 
                 return (uv_min, uv_max)
 
