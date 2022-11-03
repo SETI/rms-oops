@@ -845,11 +845,11 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise(bp, obs, printing, logging, saving, 
-                        planet=None, moon=None, ring=None, 
+def exercise(bp, obs, printing, logging, saving,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for ring.py"""
-    
+    """generic unit tests for ring.py"""
+
     test = bp.ring_radial_resolution(ring)
     show_info('Ring radial resolution (km)', test)
 

@@ -101,7 +101,7 @@ class Cassini(object):
                                  mst_pck=mst_pck,
                                  irregulars=irregulars)
 
-        ignore = oops.path.SpicePath("CASSINI", "SATURN")
+        _ = oops.path.SpicePath("CASSINI", "SATURN")
 
         spicedb.open_db()
 
@@ -137,7 +137,7 @@ class Cassini(object):
 
         spicedb.close_db()
 
-        initialized = True
+        Cassini.initialized = True
 
     #===========================================================================
     @staticmethod

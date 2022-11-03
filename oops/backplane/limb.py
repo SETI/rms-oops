@@ -99,15 +99,15 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for limb.py"""
-    
+    """generic unit tests for limb.py"""
+
     if planet != None:
         test = bp.limb_altitude(planet+':limb')
-        show_info('Limb altitude (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Limb altitude (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -117,8 +117,8 @@ class Test_Limb(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY: 
-            return
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
         pass
 
 

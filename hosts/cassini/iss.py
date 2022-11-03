@@ -10,6 +10,7 @@ import oops
 
 from . import Cassini
 
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -84,6 +85,7 @@ def from_file(filespec, fast_distortion=True,
 
     return result
 
+
 #===============================================================================
 def from_index(filespec, **parameters):
     """A static method to return a list of Snapshot objects, one for each row
@@ -138,6 +140,8 @@ def from_index(filespec, **parameters):
 
     return snapshots
 
+
+
 #===============================================================================
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                spk='reconstructed', gapfill=True,
@@ -168,7 +172,8 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
-#===============================================================================
+
+
 #===============================================================================
 class ISS(object):
     """A instance-free class to hold Cassini ISS instrument parameters.
@@ -282,6 +287,8 @@ class ISS(object):
 
     DISTORTION_COEFF_UV_TO_XY = {'NAC': NAC_INV_COEFF,
                                  'WAC': WAC_INV_COEFF}
+
+
 
     #===========================================================================
     @staticmethod
@@ -402,6 +409,8 @@ class ISS(object):
 
         ISS.initialized = True
 
+
+
     #===========================================================================
     @staticmethod
     def reset():
@@ -414,6 +423,8 @@ class ISS(object):
         ISS.initialized = False
 
         Cassini.reset()
+
+
 
 ################################################################################
 # UNIT TESTS

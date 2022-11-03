@@ -845,269 +845,269 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise_resolution(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_resolution(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for ring.py"""
-    
+    """Generic unit tests for ring.py"""
+
     if ring != None:
         test = bp.ring_radial_resolution(ring)
-        show_info('Ring radial resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring radial resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_angular_resolution(ring)
-        show_info('Ring angular resolution (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring angular resolution (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         radii = bp.ring_radius(ring)
-        show_info('Ring angular resolution (km)', test * radii,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring angular resolution (km)', test * radii,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 #===========================================================================
-def exercise_radial_modes(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_radial_modes(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for ring.py"""
-    
+    """Generic unit tests for ring.py"""
+
     if ring != None:
         test = bp.ring_radius(ring)
-        show_info('Ring radius (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring radius (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test0 = bp.ring_radius(ring, 70.e3, 100.e3)
-        show_info('Ring radius, 70-100 kkm (km)', test0,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring radius, 70-100 km (km)', test0,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test1 = bp.radial_mode(test0.key, 40, 0., 1000., 0., 0., 100.e3)
-        show_info('Ring radius, 70-100 kkm, mode 1 (km)', test1,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring radius, 70-100 km, mode 1 (km)', test1,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.radial_mode(test1.key, 40, 0., -1000., 0., 0., 100.e3)
-        show_info('Ring radius, 70-100 kkm, mode 1 canceled (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring radius, 70-100 km, mode 1 canceled (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test2 = bp.radial_mode(test1.key, 25, 0., 500., 0., 0., 100.e3)
-        show_info('Ring radius, 70-100 kkm, modes 1 and 2 (km)', test2,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring radius, 70-100 km, modes 1 and 2 (km)', test2,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_radius(ring).without_mask()
-        show_info('Ring radius unmasked (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring radius unmasked (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 #===========================================================================
-def exercise_radial_longitude_azimuth(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_radial_longitude_azimuth(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for ring.py"""
-    
+    """Generic unit tests for ring.py"""
+
     if ring != None:
         test = bp.ring_longitude(ring, reference='node')
-        show_info('Ring longitude wrt node (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring longitude wrt node (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_longitude(ring, 'node', 70.e3, 100.e3)
-        show_info('Ring longitude wrt node, 70-100 kkm (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring longitude wrt node, 70-100 km (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_longitude(ring, reference='aries')
-        show_info('Ring longitude wrt Aries (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring longitude wrt Aries (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_longitude(ring, reference='obs')
-        show_info('Ring longitude wrt observer (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring longitude wrt observer (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_azimuth(ring, 'obs')
-        show_info('Ring azimuth wrt observer (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring azimuth wrt observer (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_longitude(ring, 'obs')
         diff = test - compare
-        show_info('Ring azimuth minus longitude wrt observer (deg)', 
+        show_info('Ring azimuth minus longitude wrt observer (deg)',
                           diff*DPR, printing=printing, saving=saving, dir=dir)
 
         test = bp.ring_longitude(ring, reference='oha')
-        show_info('Ring longitude wrt OHA (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring longitude wrt OHA (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_longitude(ring, reference='sun')
-        show_info('Ring longitude wrt Sun (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring longitude wrt Sun (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_azimuth(ring, reference='sun')
-        show_info('Ring azimuth wrt Sun (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring azimuth wrt Sun (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_longitude(ring, 'sun')
         diff = test - compare
-        show_info('Ring azimuth minus longitude wrt Sun (deg)', diff*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring azimuth minus longitude wrt Sun (deg)', diff*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_longitude(ring, reference='sha')
-        show_info('Ring longitude wrt SHA (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring longitude wrt SHA (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_observer_longitude(ring, 'node')
-        show_info('Ring sub-observer longitude wrt node (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-observer longitude wrt node (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_observer_longitude(ring, 'aries')
-        show_info('Ring sub-observer longitude wrt Aries (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-observer longitude wrt Aries (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_observer_longitude(ring, 'sun')
-        show_info('Ring sub-observer longitude wrt Sun (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-observer longitude wrt Sun (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_observer_longitude(ring, 'obs')
-        show_info('Ring sub-observer longitude wrt observer (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-observer longitude wrt observer (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_solar_longitude(ring, 'node')
-        show_info('Ring sub-solar longitude wrt node (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-solar longitude wrt node (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_solar_longitude(ring, 'aries')
-        show_info('Ring sub-solar longitude wrt Aries (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-solar longitude wrt Aries (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_solar_longitude(ring, 'sun')
-        show_info('Ring sub-solar longitude wrt Sun (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-solar longitude wrt Sun (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_sub_solar_longitude(ring, 'obs')
-        show_info('Ring sub-solar longitude wrt observer (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring sub-solar longitude wrt observer (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if planet != None:
         test = bp.ring_azimuth(planet+':ring', 'obs')
-        show_info('Ring azimuth wrt observer (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring azimuth wrt observer (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_azimuth(planet+':ring', 'obs')
-        show_info('Ring azimuth wrt observer, unmasked (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring azimuth wrt observer, unmasked (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_longitude(planet+':ring', 'obs')
         diff = test - compare
-        show_info('Ring azimuth minus longitude wrt observer, unmasked (deg)', 
+        show_info('Ring azimuth minus longitude wrt observer, unmasked (deg)',
                           diff*DPR, printing=printing, saving=saving, dir=dir)
 
         test = bp.ring_azimuth(planet+':ring', reference='sun')
-        show_info('Ring azimuth wrt Sun, unmasked (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring azimuth wrt Sun, unmasked (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_longitude(planet+':ring', 'sun')
         diff = test - compare
-        show_info('Ring azimuth minus longitude wrt Sun, unmasked (deg)', 
+        show_info('Ring azimuth minus longitude wrt Sun, unmasked (deg)',
                           diff*DPR, printing=printing, saving=saving, dir=dir)
 
 
 
 #===========================================================================
-def exercise_photometry(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_photometry(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for ring.py"""
-    
+    """Generic unit tests for ring.py"""
+
     if ring != None:
         test = bp.ring_incidence_angle(ring, 'sunward')
-        show_info('Ring incidence angle, sunward (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring incidence angle, sunward (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_incidence_angle(ring, 'north')
-        show_info('Ring incidence angle, north (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring incidence angle, north (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_incidence_angle(ring, 'prograde')
-        show_info('Ring incidence angle, prograde (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring incidence angle, prograde (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.incidence_angle(ring)
-        show_info('Ring incidence angle via incidence() (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring incidence angle via incidence() (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_elevation(ring, reference='sun')
-        show_info('Ring elevation wrt Sun (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring elevation wrt Sun (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_incidence_angle(ring, 'north')
         diff = test + compare
-        show_info('Ring elevation wrt Sun plus north incidence (deg)', 
+        show_info('Ring elevation wrt Sun plus north incidence (deg)',
                           diff*DPR, printing=printing, saving=saving, dir=dir)
 
         test = bp.ring_center_incidence_angle(ring, 'sunward')
-        show_info('Ring center incidence angle, sunward (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center incidence angle, sunward (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_center_incidence_angle(ring, 'north')
-        show_info('Ring center incidence angle, north (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center incidence angle, north (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_center_incidence_angle(ring, 'prograde')
-        show_info('Ring center incidence angle, prograde (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center incidence angle, prograde (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_emission_angle(ring, 'sunward')
-        show_info('Ring emission angle, sunward (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring emission angle, sunward (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_emission_angle(ring, 'north')
-        show_info('Ring emission angle, north (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring emission angle, north (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_emission_angle(ring, 'prograde')
-        show_info('Ring emission angle, prograde (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring emission angle, prograde (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.emission_angle(ring)
-        show_info('Ring emission angle via emission() (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring emission angle via emission() (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_elevation(ring, reference='obs')
-        show_info('Ring elevation wrt observer (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring elevation wrt observer (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_emission_angle(ring, 'north')
         diff = test + compare
-        show_info('Ring elevation wrt observer plus north emission (deg)', 
+        show_info('Ring elevation wrt observer plus north emission (deg)',
                            diff*DPR, printing=printing, saving=saving, dir=dir)
 
         test = bp.ring_center_emission_angle(ring, 'sunward')
-        show_info('Ring center emission angle, sunward (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center emission angle, sunward (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_center_emission_angle(ring, 'north')
-        show_info('Ring center emission angle, north (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center emission angle, north (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ring_center_emission_angle(ring, 'prograde')
-        show_info('Ring center emission angle, prograde (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center emission angle, prograde (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if planet != None:
         test = bp.ring_elevation(planet+':ring', reference='sun')
-        show_info('Ring elevation wrt Sun, unmasked (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring elevation wrt Sun, unmasked (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_incidence_angle(planet+':ring', 'north')
         diff = test + compare
         show_info(
-            'Ring elevation wrt Sun plus north incidence, unmasked (deg)', 
+            'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
                           diff*DPR, printing=printing, saving=saving, dir=dir)
 
         test = bp.ring_elevation(planet+':ring', reference='obs')
-        show_info('Ring elevation wrt observer, unmasked (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring elevation wrt observer, unmasked (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         compare = bp.ring_emission_angle(planet+':ring', 'north')
         diff = test + compare
         show_info(
-            'Ring elevation wrt observer plus north emission, unmasked (deg)',   
+            'Ring elevation wrt observer plus north emission, unmasked (deg)',
                            diff*DPR, printing=printing, saving=saving, dir=dir)
 
 
@@ -1120,8 +1120,8 @@ class Test_Ring(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY: 
-            return
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
         pass
 
 

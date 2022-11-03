@@ -136,153 +136,153 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise_surface(bp, obs, printing, saving, dir, 
-                     planet=None, moon=None, ring=None, 
+def exercise_surface(bp, obs, printing, saving, dir, refdir,
+                     planet=None, moon=None, ring=None,
                      undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for resolution.py"""
-    
+    """generic unit tests for resolution.py"""
+
     if planet != None:
         test = bp.resolution(planet, 'u')
-        show_info('planet resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.resolution(planet, 'v')
-        show_info('planet resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(planet, 'u')
-        show_info('planet center resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet center resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(planet, 'v')
-        show_info('planet center resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet center resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.finest_resolution(planet)
-        show_info('planet finest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet finest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.coarsest_resolution(planet)
-        show_info('planet coarsest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet coarsest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if moon != None:
         test = bp.resolution(moon, 'u')
-        show_info('moon resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('moon resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.resolution(moon, 'v')
-        show_info('moon resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('moon resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(moon, 'u')
-        show_info('moon center resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('moon center resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(moon, 'v')
-        show_info('moon center resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('moon center resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.finest_resolution(moon)
-        show_info('moon finest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('moon finest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.coarsest_resolution(moon)
-        show_info('moon coarsest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('moon coarsest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if ring != None:
         test = bp.resolution(ring, 'u')
-        show_info('Ring resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.resolution(ring, 'v')
-        show_info('Ring resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(ring, 'u')
-        show_info('Ring center resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(ring, 'v')
-        show_info('Ring center resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring center resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.finest_resolution(ring)
-        show_info('Ring finest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring finest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.coarsest_resolution(ring)
-        show_info('Ring coarsest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ring coarsest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 
 #===========================================================================
-def exercise_ansa(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_ansa(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for resolution.py"""
-    
+    """generic unit tests for resolution.py"""
+
     if planet != None:
         test = bp.resolution(planet+':ansa', 'u')
-        show_info('Ansa resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.resolution(planet+':ansa', 'v')
-        show_info('Ansa resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(planet+':ansa', 'u')
-        show_info('Ansa center resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa center resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_resolution(planet+':ansa', 'v')
-        show_info('Ansa center resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa center resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.finest_resolution(planet+':ansa')
-        show_info('Ansa finest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa finest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.coarsest_resolution(planet+':ansa')
-        show_info('Ansa coarsest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa coarsest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 
 #===========================================================================
-def exercise_limb(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_limb(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for resolution.py"""
-    
+    """generic unit tests for resolution.py"""
+
     if planet != None:
         test = bp.resolution(planet+':limb', 'u')
-        show_info('Limb resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Limb resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.resolution(planet+':limb', 'v')
-        show_info('Limb resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Limb resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.resolution(planet+':limb', 'u')
-        show_info('Limb resolution along u axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Limb resolution along u axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.resolution(planet+':limb', 'v')
-        show_info('Limb resolution along v axis (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Limb resolution along v axis (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.finest_resolution(planet+':limb')
-        show_info('Limb finest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Limb finest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.coarsest_resolution(planet+':limb')
-        show_info('Limb coarsest resolution (km)', test,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Limb coarsest resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -295,8 +295,8 @@ class Test_Resolution(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY: 
-            return
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
         pass
 
 

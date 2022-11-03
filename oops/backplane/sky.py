@@ -260,86 +260,86 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise_right_ascension(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_right_ascension(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for sky.py"""
-    
+    """generic unit tests for sky.py"""
+
     test = bp.right_ascension(apparent=False)
-    show_info('Right ascension (deg, actual)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+    show_info('Right ascension (deg, actual)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     test = bp.right_ascension(apparent=True)
-    show_info('Right ascension (deg, apparent)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+    show_info('Right ascension (deg, apparent)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if planet != None:
         test = bp.center_right_ascension(planet, apparent=False)
-        show_info('Right ascension of planet (deg, actual)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Right ascension of planet (deg, actual)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_right_ascension(planet, apparent=True)
-        show_info('Right ascension of planet (deg, apparent)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Right ascension of planet (deg, apparent)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if moon != None:
         test = bp.center_right_ascension(moon, apparent=False)
-        show_info('Right ascension of moon (deg, actual)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Right ascension of moon (deg, actual)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_right_ascension(moon, apparent=True)
-        show_info('Right ascension of moon (deg, apparent)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Right ascension of moon (deg, apparent)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 #===========================================================================
-def exercise_declination(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_declination(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for sky.py"""
-    
+    """generic unit tests for sky.py"""
+
     test = bp.declination(apparent=False)
-    show_info('Declination (deg, actual)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+    show_info('Declination (deg, actual)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     test = bp.declination(apparent=True)
-    show_info('Declination (deg, apparent)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+    show_info('Declination (deg, apparent)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if planet != None:
         test = bp.center_declination(planet, apparent=False)
-        show_info('Declination of planet (deg, actual)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Declination of planet (deg, actual)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_declination(planet, apparent=True)
-        show_info('Declination of planet (deg, apparent)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Declination of planet (deg, apparent)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if moon != None:
         test = bp.center_declination(moon, apparent=False)
-        show_info('Declination of moon (deg, actual)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Declination of moon (deg, actual)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_declination(moon, apparent=True)
-        show_info('Declination of moon (deg, apparent)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Declination of moon (deg, apparent)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 #===========================================================================
-def exercise_celestial_and_polar_angles(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_celestial_and_polar_angles(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for sky.py"""
-    
+    """generic unit tests for sky.py"""
+
     test = bp.celestial_north_angle()
-    show_info('Celestial north angle (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+    show_info('Celestial north angle (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     test = bp.celestial_east_angle()
-    show_info('Celestial east angle (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+    show_info('Celestial east angle (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -349,8 +349,8 @@ class Test_Sky(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY: 
-            return
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
         pass
 
 

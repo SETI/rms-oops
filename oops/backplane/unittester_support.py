@@ -2,63 +2,161 @@
 # oops/backplane/unittester_support.py
 ################################################################################
 
+import unittest
+import re
 import os
 import sys
 import numpy as np
 
+from polymath   import Scalar
+from PIL        import Image
+
 
 #===============================================================================
-def save_image(image, filename, lo=None, hi=None):
+def _read_image(filename):
     """Save an image file of a 2-D array.
 
+    Input:        filename    the name of the input file, which should end with
+                              the type, e.g., '.png' or '.jpg'
+    """
+    try:
+        im = Image.open(filename, mode="r")
+    except:
+        return(None)
+
+    return(Scalar.as_scalar((np.array(im))))
+
+
+
+#===============================================================================
+def _save_image(image, filename):
+    """Read an image file of a 2-D array.
+
     Input:
-        image       a 2-D array.
+        image       a 2-D byte array.
         filename    the name of the output file, which should end with the
                     type, e.g., '.png' or '.jpg'
-        lo          the array value to map to black; if None, then the
-                    minimum value in the array is used.
-        hi          the array value to map to white; if None, then the
-                    maximum value in the array is used.
     """
 
-    from PIL import Image
-
-    image = np.asfarray(image)
-
-    if lo is None:
-        lo = image.min()
-
-    if hi is None:
-        hi = image.max()
-
-    if hi == lo:
-        bytes = np.zeros(image.shape, dtype='uint8')
-    else:
-        scaled = (image[::-1] - lo) / float(hi - lo)
-        bytes = (256.*scaled).clip(0,255).astype('uint8')
-
-    im = Image.frombytes('L', (bytes.shape[1], bytes.shape[0]), bytes)
+    im = Image.frombytes('L', (image.shape[1], image.shape[0]), image)
     im.save(filename)
 
 
 
-#===========================================================================
-def show_info(title, array, printing=True, saving=False, dir='./'):
+#===============================================================================
+def _scale_image(array, minval, maxval):
+    """Rescales an image and converts to to byte.
+    """
+
+    image = array.vals.copy()
+    image[array.mask] = minval - 0.05 * (maxval - minval)
+
+    image = np.asfarray(image)
+
+    lo = image.min()
+    hi = image.max()
+
+    if hi == lo:
+        bytes = np.zeros(image.shape, dtype=np.int8)
+    else:
+        scaled = (image[::-1] - lo) / float(hi - lo)
+        bytes = (256.*scaled).clip(0,255).astype('uint8')
+
+    return(bytes)
+
+
+
+#===============================================================================
+def _compare_backplanes(array, reference, margin=0.05):
+    """
+    Compare a backplane array to the reference array.
+    """
+
+    array = Scalar.as_scalar(array)
+    reference = Scalar.as_scalar(reference)
+
+    diff = abs(array - reference)
+    assert(diff.max() <= reference.max()*margin)
+
+
+
+#===============================================================================
+def _convert_filename(filename):
+    """Converts file-system-unfriendly characters in a backplane filename.
+    """
+
+    filename = filename.replace(':','_')
+    filename = filename.replace('/','_')
+    filename = filename.replace(' ','_')
+    filename = filename.replace('(','_')
+    filename = filename.replace(')','_')
+    filename = filename.replace('[','_')
+    filename = filename.replace(']','_')
+    filename = filename.replace('&','_')
+    filename = filename.replace(',','_')
+    filename = filename.replace('-','_')
+    filename = filename.replace('__','_')
+    filename = filename.replace('__','_')
+    filename = filename.replace('_.','.')
+    filename = filename.replace("'",'')
+    return(filename.lower().rstrip('_'))
+
+
+
+#===============================================================================
+def _construct_filename(array, title, dir):
+    """Constructs a backplane filename.
+    """
+
+    # Construct base filename from title
+    filename = _convert_filename('backplane-' + title)
+
+    # Ensure unique filename by using the backplane key, if it exists
+    # NOTE: if no backplane key exists, a non-unique filename could result
+    try:
+        key = array.key
+        id = key[0]
+        for item in key[1:]:
+            if item != ():
+                id = id + '_' + str(item)
+        id = _convert_filename(id)
+        filename = filename + '[' + id + ']' + '.png'
+    except:
+        filename = filename + '.png'
+
+    # Add path
+    filename = os.path.join(dir, filename)
+    return(filename)
+
+
+
+#===============================================================================
+def _print(*x, printing=True):
+    """Prints contignent upon verbosity.
+    """
+    if not printing:
+        return
+
+    print(*x)
+
+
+#===============================================================================
+def show_info(title, array, printing=True, saving=False, dir='./', refdir=None):
     """Internal method to print summary information and display images as
     desired.
     """
 
     import numbers
 
-    if not printing and not saving:
+    if not printing and not saving and refdir==None:
         return
 
-    if printing:
-        print(title)
+    _print(title, printing=printing)
+
 
     # Scalar summary
     if isinstance(array, numbers.Number):
-        print('  ', array)
+        _print('  ', array, printing=printing)
 
     # Mask summary
     elif type(array.vals) == bool or \
@@ -67,8 +165,8 @@ def show_info(title, array, printing=True, saving=False, dir='./'):
         count = np.sum(array.vals)
         total = np.size(array.vals)
         percent = int(count / float(total) * 100. + 0.5)
-        print('  ', (count, total-count),
-                    (percent, 100-percent), '(True, False pixels)')
+        _print('  ', (count, total-count),
+            (percent, 100-percent), '(True, False pixels)', printing=printing)
         minval = 0.
         maxval = 1.
 
@@ -77,19 +175,19 @@ def show_info(title, array, printing=True, saving=False, dir='./'):
         minval = np.min(array.vals)
         maxval = np.max(array.vals)
         if minval == maxval:
-            print('  ', minval)
+            _print('  ', minval, printing=printing)
         else:
-            print('  ', (minval, maxval), '(min, max)')
+            _print('  ', (minval, maxval), '(min, max)', printing=printing)
 
     # Masked backplane summary
     else:
-        print('  ', (array.min().as_builtin(),
-                     array.max().as_builtin()), '(masked min, max)')
+        _print('  ', (array.min().as_builtin(),
+            array.max().as_builtin()), '(masked min, max)', printing=printing)
         total = np.size(array.mask)
         masked = np.sum(array.mask)
         percent = int(masked / float(total) * 100. + 0.5)
-        print('  ', (masked, total-masked),
-                    (percent, 100-percent), '(masked, unmasked pixels)')
+        _print('  ', (masked, total-masked),
+             (percent, 100-percent), '(masked, unmasked pixels)', printing=printing)
 
         if total == masked:
             minval = np.min(array.vals)
@@ -98,44 +196,49 @@ def show_info(title, array, printing=True, saving=False, dir='./'):
             minval = array.min().as_builtin()
             maxval = array.max().as_builtin()
 
-    if saving and array.shape != ():
+
+
+    # The rest of the method applies only to arrays
+    if array.shape == ():
+        return
+
+
+    # scale image
+    if minval == maxval:
+        maxval += 1.
+    image = _scale_image(array, minval, maxval)
+
+
+    # Save backplane array if directed
+    if saving:
         os.makedirs(dir, exist_ok=True)
 
-        if minval == maxval:
-            maxval += 1.
+        filename = _construct_filename(array, title, dir)
+        _save_image(image, filename)
 
-        image = array.vals.copy()
-        image[array.mask] = minval - 0.05 * (maxval - minval)
 
-        filename = 'backplane-' + title + '.png'
-        filename = filename.replace(':','_')
-        filename = filename.replace('/','_')
-        filename = filename.replace(' ','_')
-        filename = filename.replace('(','_')
-        filename = filename.replace(')','_')
-        filename = filename.replace('[','_')
-        filename = filename.replace(']','_')
-        filename = filename.replace('&','_')
-        filename = filename.replace(',','_')
-        filename = filename.replace('-','_')
-        filename = filename.replace('__','_')
-        filename = filename.replace('__','_')
-        filename = filename.replace('_.','.')
-        filename = os.path.join(dir, filename)
-        save_image(image, filename)
+    # Compare with reference array if refdir is known
+    if refdir is not None:
+        assert os.path.exists(refdir), \
+            "No reference directory.  Use --no_compare, --no_exercises, or --reference."
+
+        filename = _construct_filename(array, title, refdir)
+        reference = _read_image(filename)
+        if reference is not None:
+            _compare_backplanes(image, reference)
 
 
 
-#===========================================================================
+#===============================================================================
 def _diff_logs(old_log, new_log, verbose=False):
     """
-    For each numeric entry in the new log file that differs from that in the 
+    For each numeric entry in the new log file that differs from that in the
     old log file by more than 0.1%, this program prints out the header and the
     discrepant records, with the percentage changes in all numeric values
     appended.
 
     If the verbose option is specified, the program prints out the percentage
-    change in every numeric value; in this case, a string of asterisks is 
+    change in every numeric value; in this case, a string of asterisks is
     appended to the ends of rows where any change exceeds 0.1%.
     """
     REGEX = re.compile('r[-+]?\d+\.?\d*[eE]?[-+]?\d*')
@@ -232,17 +335,20 @@ def _diff_logs(old_log, new_log, verbose=False):
 
 #*******************************************************************************
 class Backplane_Settings(object):
+    ARGS = []
     DIFF = []
     EXERCISES_ONLY = False
     NO_EXERCISES = False
-    SAVING = False
-    OUTPUT = './output/'
+    NO_COMPARE = False
+    SAVING = True
     LOGGING = False
     PRINTING = True
-    PLANET_KEY = None
-    MOON_KEY = None
-    RING_KEY = None
-    UNDERSAMPLE = 1
+    UNDERSAMPLE = 16
+#    PLANET_KEY = None
+#    MOON_KEY = None
+#    RING_KEY = None
+    OUTPUT = './output/'
+    REFERENCE = os.path.join(OUTPUT, 'reference_' + str(UNDERSAMPLE) + '/')
 
 
 #===============================================================================
@@ -250,12 +356,24 @@ def backplane_unittester_args():
     """
     Parse command-line arguments for backplane unit tests.  Results are
     stored as Test_Backplane_Exercises attributes.
-    
-                  *** NOTE will not work with ipython ***
-                  
     """
 
+    # Generic arguments
+    if '--args' in sys.argv:
+        k = sys.argv.index('--args')
+        Backplane_Settings.ARGS = sys.argv[k+1:]
+        del sys.argv[k:]
+
+
     # Basic controls
+    if '--help' in sys.argv:
+        print("Usage:")
+        print("  python unittester.py [--output dir] [--no_output] [--exercises_only]")
+        print("                       [--no_exercises] [--reference] [--undersample #]")
+        print("                       [--test_level #] [--no_compare] [--silent] [--log]")
+        print("                       [--diff old new] [--help] [--args arg1 arg2 ...]")
+        exit()
+
     if '--silent' in sys.argv:
         Backplane_Settings.PRINTING = False
         sys.argv.remove('--silent')
@@ -265,7 +383,7 @@ def backplane_unittester_args():
         logs = sys.argv[k+1:k+3]
         del sys.argv[k:k+3]
         _diff_logs(logs[0], logs[1], verbose=Backplane_Settings.PRINTING)
-        exit
+        exit()
 
     if '--exercises_only' in sys.argv:
         Backplane_Settings.EXERCISES_ONLY = True
@@ -275,33 +393,33 @@ def backplane_unittester_args():
         Backplane_Settings.NO_EXERCISES = True
         sys.argv.remove('--no_exercises')
 
-    if '--png' in sys.argv:
-        Backplane_Settings.SAVING = True
-        sys.argv.remove('--png')
+    if '--no_compare' in sys.argv:
+        Backplane_Settings.NO_COMPARE = True
+        sys.argv.remove('--no_compare')
 
-    if '--out' in sys.argv:
-        Backplane_Settings.EXERCISES_ONLY = True
-        Backplane_Settings.SAVING = True
-        k = sys.argv.index('--out')
+    if '--output' in sys.argv:
+        k = sys.argv.index('--output')
         Backplane_Settings.OUTPUT = sys.argv[k+1]
         del sys.argv[k:k+2]
+
+    if '--no_output' in sys.argv:
+        Backplane_Settings.SAVING = False
+        sys.argv.remove('--no_output')
 
     if '--log' in sys.argv:
         Backplane_Settings.LOGGING = True
         sys.argv.remove('--log')
 
-    if '--reference' in sys.argv:
-        Backplane_Settings.EXERCISES_ONLY = True
-        Backplane_Settings.SAVING = True
-        Backplane_Settings.OUTPUT = \
-                       os.path.join(Backplane_Settings.OUTPUT, 'reference')
-        Backplane_Settings.UNDERSAMPLE = 16
-        sys.argv.remove('--reference')
-
     if '--undersample' in sys.argv:
         k = sys.argv.index('--undersample')
         Backplane_Settings.UNDERSAMPLE = int(sys.argv[k+1])
         del sys.argv[k:k+2]
+
+    if '--reference' in sys.argv:
+        Backplane_Settings.EXERCISES_ONLY = True
+        Backplane_Settings.SAVING = True
+        Backplane_Settings.OUTPUT = Backplane_Settings.REFERENCE
+        sys.argv.remove('--reference')
 
 
     # Pre-defined test configurations
@@ -327,6 +445,10 @@ def backplane_unittester_args():
         Backplane_Settings.UNDERSAMPLE = 1
 
 
+    # Implement NO_COMPARE
+    if Backplane_Settings.NO_COMPARE:
+        Backplane_Settings.REFERENCE = None
+
 #    # Body keywords
 #    if '--planet' in sys.argv:
 #        k = sys.argv.index('--planet')
@@ -342,6 +464,3 @@ def backplane_unittester_args():
 #        k = sys.argv.index('--ring')
 #        Backplane_Settings.PLANET_KEY = sys.argv[k+1]
 #        del sys.argv[k:k+2]
-
-
-

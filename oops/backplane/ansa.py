@@ -300,60 +300,60 @@ from oops.backplane.unittester_support   import show_info
 
 
 #===========================================================================
-def exercise_resolution(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_resolution(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for orbit.py"""
+    """generic unit tests for orbit.py"""
 
     if planet != None:
         test = bp.ansa_radial_resolution(planet+':ansa')
-        show_info('Ansa radial resolution (km)', test, 
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa radial resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_vertical_resolution(planet+':ansa')
-        show_info('Ansa vertical resolution (km)', test,  
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa vertical resolution (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 #===========================================================================
-def exercise_geometry(bp, obs, printing, saving, dir, 
-                        planet=None, moon=None, ring=None, 
+def exercise_geometry(bp, obs, printing, saving, dir, refdir,
+                        planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for orbit.py"""
-    
+    """generic unit tests for orbit.py"""
+
     if planet != None:
         test = bp.ansa_radius(planet+':ansa')
-        show_info('Ansa radius (km)', test,  
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa radius (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_altitude(planet+':ansa')
-        show_info('Ansa altitude (km)', test,  
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa altitude (km)', test,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_longitude(planet+':ansa', 'node')
-        show_info('Ansa longitude wrt node (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa longitude wrt node (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_longitude(planet+':ansa', 'aries')
-        show_info('Ansa longitude wrt Aries (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa longitude wrt Aries (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_longitude(planet+':ansa', 'obs')
-        show_info('Ansa longitude wrt observer (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa longitude wrt observer (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_longitude(planet+':ansa', 'oha')
-        show_info('Ansa longitude wrt OHA (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa longitude wrt OHA (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_longitude(planet+':ansa', 'sun')
-        show_info('Ansa longitude wrt Sun (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa longitude wrt Sun (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.ansa_longitude(planet+':ansa', 'sha')
-        show_info('Ansa longitude wrt SHA (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('Ansa longitude wrt SHA (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -364,8 +364,8 @@ class Test_Ansa(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY: 
-            return
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
         pass
 
 

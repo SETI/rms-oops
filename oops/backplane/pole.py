@@ -83,19 +83,19 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise(bp, obs, printing, saving, dir, 
-             planet=None, moon=None, ring=None, 
+def exercise(bp, obs, printing, saving, dir, refdir,
+             planet=None, moon=None, ring=None,
              undersample=16, use_inventory=False, inventory_border=2):
-    """Gerneric unit tests for pole.py"""
-    
+    """generic unit tests for pole.py"""
+
     if planet != None:
         test = bp.pole_clock_angle(planet)
-        show_info('planet pole clock angle (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet pole clock angle (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.pole_position_angle(planet)
-        show_info('planet pole position angle (deg)', test*DPR,   
-                                    printing=printing, saving=saving, dir=dir)
+        show_info('planet pole position angle (deg)', test*DPR,
+                     printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -105,8 +105,8 @@ class Test_Pole(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY: 
-            return
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
         pass
 
 
