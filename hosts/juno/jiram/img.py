@@ -4,14 +4,12 @@
 
 import numpy as np
 import julian
-import pdstable
 import cspyce
 from polymath import *
 import os.path
-import pdsparser
 import oops
 
-from . import JIRAM
+from hosts.juno.jiram import JIRAM
 
 ################################################################################
 # Standard class methods
@@ -19,7 +17,7 @@ from . import JIRAM
 
 #===============================================================================
 def from_file(filespec, label, fast_distortion=True,
-              return_all_planets=False, **parameters):
+                               return_all_planets=False, **parameters):
     """
     A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
@@ -146,8 +144,8 @@ class Metadata(object):
         try:
             self.exposure = label['EXPOSURE_DURATION']
         except:
-            print('No exposure information')
-            self.exposure = 1.      # This should go away after the labels are
+##            print('No exposure information')
+            self.exposure = 1.      # TODO: This should go away after the labels are
                                     # redelivered
 
         # Filters
@@ -211,8 +209,8 @@ class IMG(object):
     #===========================================================================
     @staticmethod
     def initialize(time, ck='reconstructed', planets=None, asof=None,
-               spk='reconstructed', gapfill=True,
-               mst_pck=True, irregulars=True):
+                         spk='reconstructed', gapfill=True,
+                         mst_pck=True, irregulars=True):
         """
         Initialize key information about the IMG instrument.
 
@@ -266,3 +264,66 @@ class IMG(object):
         JIRAM.reset()
 
 
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+import os.path
+
+import hosts.juno.jiram as jiram
+
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
+
+#*******************************************************************************
+class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest("")
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/jiram")
+
+
+        # Moon image
+        file = os.path.join(root, "JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG")
+        _obs = jiram.from_file(file); body_name = "MOON"; obs = _obs[1]
+
+        exercise_backplanes(obs, Backplane_Settings,
+                                 use_inventory=True, inventory_border=4,
+                                 planet_key=body_name)
+
+
+        # Europa image
+        file = os.path.join(root, "JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG")
+        _obs = jiram.from_file(file); body_name = "EUROPA"; obs = _obs[1]
+
+        exercise_backplanes(obs, Backplane_Settings,
+                                 use_inventory=True, inventory_border=4,
+                                 planet_key=body_name)
+
+
+        # Jupiter image
+        file = os.path.join(root, "JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG")
+        _obs = jiram.from_file(file); body_name = "EUROPA"; obs = _obs[0]
+
+        exercise_backplanes(obs, Backplane_Settings,
+                                 use_inventory=True, inventory_border=4,
+                                 planet_key=body_name)
+
+
+
+
+##############################################
+# See oops/backplane/unittester.py for usage
+from oops.backplane.unittester_support      import backplane_unittester_args
+
+if __name__ == '__main__':
+    backplane_unittester_args()
+    unittest.main(verbosity=2)
+################################################################################

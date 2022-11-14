@@ -4,7 +4,6 @@
 
 import numpy as np
 import julian
-import pdstable
 import cspyce
 from polymath import *
 import os.path
@@ -20,8 +19,7 @@ from hosts.juno import Juno
 
 
 #===============================================================================
-def from_file(filespec,
-              return_all_planets=False, **parameters):
+def from_file(filespec, return_all_planets=False, **parameters):
     """
     A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
@@ -52,16 +50,16 @@ def from_file(filespec,
     # Image
     if ext.upper() == '.IMG':
         from . import img
-        return(img.from_file(filespec, label,
-                                     return_all_planets=False, **parameters))
+        return img.from_file(filespec, label,
+                                     return_all_planets=False, **parameters)
 
     # Spectrum
     if ext.upper() == '.DAT':
         from . import spe
-        return(spe.from_file(filespec, label,
-                                     return_all_planets=False, **parameters))
+        return spe.from_file(filespec, label,
+                                     return_all_planets=False, **parameters)
 
-    return(None)
+    return None
 
 
 
@@ -190,5 +188,3 @@ class JIRAM(object):
         JIRAM.initialized = False
 
         Juno.reset()
-
-

@@ -99,14 +99,14 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise(bp, obs, printing, saving, dir, refdir,
-                        planet=None, moon=None, ring=None,
-                        undersample=16, use_inventory=False, inventory_border=2):
+def exercise(bp, printing, saving, dir, refdir,
+             planet=None, moon=None, ring=None,
+             undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for limb.py"""
 
     if planet != None:
         test = bp.limb_altitude(planet+':limb')
-        show_info('Limb altitude (km)', test,
+        show_info(bp, 'Limb altitude (km)', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 

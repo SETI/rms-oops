@@ -764,7 +764,7 @@ from oops.backplane.unittester_support  import Backplane_Settings
 
 
 UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                      'cassini/ISS/W1573721822_1.IMG')
+                                        'cassini/ISS/W1573721822_1.IMG')
 UNITTEST_RHEA_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                       'cassini/ISS/N1649465464_1.IMG')
 
@@ -1114,13 +1114,7 @@ class Test_Backplane_Exercises(unittest.TestCase):
                                 'cassini/ISS/W1573721822_1.IMG')
 
         obs = iss.from_file(filespec)
-        bp = exercise_backplanes(obs,
-                                 Backplane_Settings.PRINTING,
-                                 Backplane_Settings.LOGGING,
-                                 Backplane_Settings.SAVING,
-                                 Backplane_Settings.OUTPUT,
-                                 Backplane_Settings.REFERENCE,
-                                 undersample=Backplane_Settings.UNDERSAMPLE,
+        exercise_backplanes(obs,Backplane_Settings,
                                  use_inventory=True, inventory_border=4,
                                  planet_key='saturn',
                                  moon_key='epimetheus',

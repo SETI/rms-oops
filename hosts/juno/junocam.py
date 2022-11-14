@@ -5,14 +5,12 @@
 import re
 import numpy as np
 import julian
-import pdstable
 import cspyce
 from polymath import *
 import os.path
 import pdsparser
 import oops
 
-#from . import Juno
 from hosts.juno import Juno
 
 ################################################################################
@@ -405,13 +403,7 @@ class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
         file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
         _obs = junocam.from_file(file); body_name = "JUPITER"; obs = _obs[5]
 
-        bp = exercise_backplanes(obs,
-                                 Backplane_Settings.PRINTING,
-                                 Backplane_Settings.LOGGING,
-                                 Backplane_Settings.SAVING,
-                                 Backplane_Settings.OUTPUT,
-                                 Backplane_Settings.REFERENCE,
-                                 undersample=Backplane_Settings.UNDERSAMPLE,
+        exercise_backplanes(obs, Backplane_Settings,
                                  use_inventory=True, inventory_border=4,
                                  planet_key=body_name)
 

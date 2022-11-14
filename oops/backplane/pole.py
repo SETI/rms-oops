@@ -83,18 +83,18 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise(bp, obs, printing, saving, dir, refdir,
+def exercise(bp, printing, saving, dir, refdir,
              planet=None, moon=None, ring=None,
              undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for pole.py"""
 
     if planet != None:
         test = bp.pole_clock_angle(planet)
-        show_info('planet pole clock angle (deg)', test*DPR,
+        show_info(bp, 'planet pole clock angle (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.pole_position_angle(planet)
-        show_info('planet pole position angle (deg)', test*DPR,
+        show_info(bp, 'planet pole position angle (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 

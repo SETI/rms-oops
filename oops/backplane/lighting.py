@@ -217,43 +217,43 @@ from oops.backplane.unittester_support   import show_info
 
 
 #===========================================================================
-def exercise_planet(bp, obs, printing, saving, dir, refdir,
-                        planet=None, moon=None, ring=None,
-                        undersample=16, use_inventory=False, inventory_border=2):
+def exercise_planet(bp, printing, saving, dir, refdir,
+                    planet=None, moon=None, ring=None,
+                    undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for lighting.py"""
 
     if planet != None:
         test = bp.phase_angle(planet)
-        show_info('planet phase angle (deg)', test*DPR,
+        show_info(bp, 'planet phase angle (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.scattering_angle(planet)
-        show_info('planet scattering angle (deg)', test*DPR,
+        show_info(bp, 'planet scattering angle (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.incidence_angle(planet)
-        show_info('planet incidence angle (deg)', test*DPR,
+        show_info(bp, 'planet incidence angle (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.emission_angle(planet)
-        show_info('planet emission angle (deg)', test*DPR,
+        show_info(bp, 'planet emission angle (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.lambert_law(planet)
-        show_info('planet as a Lambert law', test,
+        show_info(bp, 'planet as a Lambert law', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
 #===========================================================================
-def exercise_ring(bp, obs, printing, saving, dir, refdir,
-                        planet=None, moon=None, ring=None,
-                        undersample=16, use_inventory=False, inventory_border=2):
-    """generic unit tests for lighting.py"""
+def exercise_ring(bp, printing, saving, dir, refdir,
+                  planet=None, moon=None, ring=None,
+                  undersample=16, use_inventory=False, inventory_border=2):
+    """generic unis for lighting.py"""
 
     if ring != None:
         test = bp.phase_angle(ring)
-        show_info('Ring phase angle (deg)', test*DPR,
+        show_info(bp, 'Ring phase angle (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 

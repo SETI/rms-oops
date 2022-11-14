@@ -103,34 +103,34 @@ from oops.backplane.unittester_support    import show_info
 
 
 #===========================================================================
-def exercise_longitude(bp, obs, printing, saving, dir, refdir,
-                        planet=None, moon=None, ring=None,
-                        undersample=16, use_inventory=False, inventory_border=2):
+def exercise_longitude(bp, printing, saving, dir, refdir,
+                       planet=None, moon=None, ring=None,
+                       undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for orbit.py"""
 
     if moon != None:
         test = bp.orbit_longitude(moon, reference='obs')
-        show_info('moon orbit longitude wrt observer (deg)', test*DPR,
+        show_info(bp, 'moon orbit longitude wrt observer (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.orbit_longitude(moon, reference='oha')
-        show_info('moon orbit longitude wrt OHA (deg)', test*DPR,
+        show_info(bp, 'moon orbit longitude wrt OHA (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.orbit_longitude(moon, reference='sun')
-        show_info('moon orbit longitude wrt Sun (deg)', test*DPR,
+        show_info(bp, 'moon orbit longitude wrt Sun (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.orbit_longitude(moon, reference='sha')
-        show_info('moon orbit longitude wrt SHA (deg)', test*DPR,
+        show_info(bp, 'moon orbit longitude wrt SHA (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.orbit_longitude(moon, reference='aries')
-        show_info('moon orbit longitude wrt Aries (deg)', test*DPR,
+        show_info(bp, 'moon orbit longitude wrt Aries (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.orbit_longitude(moon, reference='node')
-        show_info('moon orbit longitude wrt node (deg)', test*DPR,
+        show_info(bp, 'moon orbit longitude wrt node (deg)', test*DPR,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 

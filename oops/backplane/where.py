@@ -219,88 +219,88 @@ from oops.backplane.unittester_support  import show_info
 
 
 #===========================================================================
-def exercise(bp, obs, printing, saving, dir, refdir,
-                      planet=None, moon=None, ring=None,
-                      undersample=16, use_inventory=False, inventory_border=2):
+def exercise(bp, printing, saving, dir, refdir,
+             planet=None, moon=None, ring=None,
+             undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for where.py"""
 
     if planet != None:
         test = bp.where_intercepted(planet)
-        show_info('Mask of planet intercepted', test,
+        show_info(bp, 'Mask of planet intercepted', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.evaluate(('where_intercepted', planet))
-        show_info('Mask of planet intercepted via evaluate()', test,
+        show_info(bp, 'Mask of planet intercepted via evaluate()', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.where_sunward(planet)
-        show_info('Mask of planet sunward', test,
+        show_info(bp, 'Mask of planet sunward', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.evaluate(('where_sunward', planet))
-        show_info('Mask of planet sunward via evaluate()', test,
+        show_info(bp, 'Mask of planet sunward via evaluate()', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.where_below(('incidence_angle', planet), HALFPI)
-        show_info('Mask of planet sunward via where_below()', test,
+        show_info(bp, 'Mask of planet sunward via where_below()', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.where_antisunward(planet)
-        show_info('Mask of planet anti-sunward', test,
+        show_info(bp, 'Mask of planet anti-sunward', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.where_above(('incidence_angle', planet), HALFPI)
-        show_info('Mask of planet anti-sunward via where_above()', test,
+        show_info(bp, 'Mask of planet anti-sunward via where_above()', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.where_between(('incidence_angle', planet), HALFPI,3.2)
-        show_info('Mask of planet anti-sunward via where_between()', test,
+        show_info(bp, 'Mask of planet anti-sunward via where_between()', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         if ring != None:
             test = bp.where_in_front(planet, ring)
-            show_info('Mask of planet in front of rings', test,
+            show_info(bp, 'Mask of planet in front of rings', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
             test = bp.where_in_back(planet, ring)
-            show_info('Mask of planet behind rings', test,
+            show_info(bp, 'Mask of planet behind rings', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
             test = bp.where_inside_shadow(planet, ring)
-            show_info('Mask of planet in shadow of rings', test,
+            show_info(bp, 'Mask of planet in shadow of rings', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
             test = bp.where_outside_shadow(planet, ring)
-            show_info('Mask of planet outside shadow of rings', test,
+            show_info(bp, 'Mask of planet outside shadow of rings', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
             test = bp.where_in_front(ring, planet)
-            show_info('Mask of rings in front of planet', test,
+            show_info(bp, 'Mask of rings in front of planet', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
             test = bp.where_in_back(ring, planet)
-            show_info('Mask of rings behind planet', test,
+            show_info(bp, 'Mask of rings behind planet', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
             test = bp.where_inside_shadow(ring, planet)
-            show_info('Mask of rings in shadow of planet', test,
+            show_info(bp, 'Mask of rings in shadow of planet', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
             test = bp.where_outside_shadow(ring, planet)
-            show_info('Mask of rings outside shadow of planet', test,
+            show_info(bp, 'Mask of rings outside shadow of planet', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if ring != None:
         test = bp.where_intercepted(ring)
-        show_info('Mask of rings intercepted', test,
+        show_info(bp, 'Mask of rings intercepted', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.where_sunward(ring)
-        show_info('Mask of rings sunward', test,
+        show_info(bp, 'Mask of rings sunward', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.where_antisunward(ring)
-        show_info('Mask of rings anti-sunward', test,
+        show_info(bp, 'Mask of rings anti-sunward', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 

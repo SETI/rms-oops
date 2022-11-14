@@ -3,26 +3,26 @@
 ################################################################################
 #
 # Usage:
-#   python unittester.py [--output dir] [--no_output] [--exercises_only]
-#                        [--no_exercises] [--reference] [--undersample #]
-#                        [--test_level #] [--no_compare] [--silent] [--log]
+#   python unittester.py [--output dir] [--no-output] [--exercises-only]
+#                        [--no-exercises] [--reference] [--undersample #]
+#                        [--test-level #] [--no-compare] [--verbose] [--log]
 #                        [--diff old new] [--help] [--args arg1 arg2 ...]
 #
 #   --output dir         Directory in which to save backplane PNG images.
-#                        Default is './output/'.  If the directory does not
-#                        exist, it is created.
-#   --no_output          Disable saving of backplane PNG files.
-#   --exercises_only     Execute only the backplane exercises.
-#   --no_exercises       Execute all tests except the backplane exercises.
+#                        Default is TESTDATA_PARENT_DIRECTORY/[data dir].
+#                        If the directory does not exist, it is created.
+#   --no-output          Disable saving of backplane PNG files.
+#   --exercises-only     Execute only the backplane exercises.
+#   --no-exercises       Execute all tests except the backplane exercises.
 #   --reference          Generate reference backplanes in.
-#                        '[output dir]/reference_[undersample]/'.
+#                        [default output dir]/reference_[undersample]/.
 #   --undersample #      Amount to undersample backplanes.  Default is 16.
-#   --test_level #       Selects among pre-set parameter combinations:
+#   --test-level #       Selects among pre-set parameter combinations:
 #                         test_level 1: no printing, no saving, undersample 32.
 #                         test_level 2: printing, no saving, undersample 16.
 #                         test_level 3: printing, saving, no undersample.
-#   --no_compare         Do not compare backplanes with references.
-#   --silent             Don't print any output to the terminal.
+#   --no-compare         Do not compare backplanes with references.
+#   --verbose            Print output to the terminal.
 #   --log                Enable the internal oops logging.
 #   --diff old new       Compare new and old backplane logs.
 #   --help               Print usage message.

@@ -6,11 +6,8 @@
 ################################################################################
 
 import numpy as np
-import unittest
-import os.path
 
 import julian
-import textkernel
 import spicedb
 import cspyce
 import oops

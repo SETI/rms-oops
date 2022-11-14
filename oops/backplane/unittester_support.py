@@ -14,7 +14,8 @@ from PIL        import Image
 
 #===============================================================================
 def _read_image(filename):
-    """Save an image file of a 2-D array.
+    """
+    Save an image file of a 2-D array.
 
     Input:        filename    the name of the input file, which should end with
                               the type, e.g., '.png' or '.jpg'
@@ -22,15 +23,16 @@ def _read_image(filename):
     try:
         im = Image.open(filename, mode="r")
     except:
-        return(None)
+        return None
 
-    return(Scalar.as_scalar((np.array(im))))
+    return Scalar.as_scalar((np.array(im)))
 
 
 
 #===============================================================================
 def _save_image(image, filename):
-    """Read an image file of a 2-D array.
+    """
+    Read an image file of a 2-D array.
 
     Input:
         image       a 2-D byte array.
@@ -38,15 +40,18 @@ def _save_image(image, filename):
                     type, e.g., '.png' or '.jpg'
     """
 
-    im = Image.frombytes('L', (image.shape[1], image.shape[0]), image)
+    shape = image.shape[::-1]
+    if len(shape) == 1:
+        shape = (shape[0],1)
+
+    im = Image.frombytes('L', shape, image)
     im.save(filename)
 
 
 
 #===============================================================================
 def _scale_image(array, minval, maxval):
-    """Rescales an image and converts to to byte.
-    """
+    """Rescales an image and converts to byte."""
 
     image = array.vals.copy()
     image[array.mask] = minval - 0.05 * (maxval - minval)
@@ -62,28 +67,25 @@ def _scale_image(array, minval, maxval):
         scaled = (image[::-1] - lo) / float(hi - lo)
         bytes = (256.*scaled).clip(0,255).astype('uint8')
 
-    return(bytes)
+    return bytes
 
 
 
 #===============================================================================
 def _compare_backplanes(array, reference, margin=0.05):
-    """
-    Compare a backplane array to the reference array.
-    """
+    """Compare a backplane array to the reference array."""
 
     array = Scalar.as_scalar(array)
     reference = Scalar.as_scalar(reference)
 
     diff = abs(array - reference)
-    assert(diff.max() <= reference.max()*margin)
+    assert diff.max() <= reference.max()*margin
 
 
 
 #===============================================================================
 def _convert_filename(filename):
-    """Converts file-system-unfriendly characters in a backplane filename.
-    """
+    """Converts file-system-unfriendly characters in a backplane filename."""
 
     filename = filename.replace(':','_')
     filename = filename.replace('/','_')
@@ -99,17 +101,17 @@ def _convert_filename(filename):
     filename = filename.replace('__','_')
     filename = filename.replace('_.','.')
     filename = filename.replace("'",'')
-    return(filename.lower().rstrip('_'))
+    return filename.lower().rstrip('_')
 
 
 
 #===============================================================================
-def _construct_filename(array, title, dir):
-    """Constructs a backplane filename.
-    """
+def _construct_filename(bp, array, title, dir):
+    """Constructs a backplane filename."""
 
     # Construct base filename from title
-    filename = _convert_filename('backplane-' + title)
+    filename = _convert_filename('backplane-' + \
+                                 bp.obs.basename.split('.')[0] + '-' + title)
 
     # Ensure unique filename by using the backplane key, if it exists
     # NOTE: if no backplane key exists, a non-unique filename could result
@@ -126,14 +128,13 @@ def _construct_filename(array, title, dir):
 
     # Add path
     filename = os.path.join(dir, filename)
-    return(filename)
+    return filename
 
 
 
 #===============================================================================
 def _print(*x, printing=True):
-    """Prints contignent upon verbosity.
-    """
+    """Prints contignent upon verbosity."""
     if not printing:
         return
 
@@ -141,12 +142,16 @@ def _print(*x, printing=True):
 
 
 #===============================================================================
-def show_info(title, array, printing=True, saving=False, dir='./', refdir=None):
+def show_info(bp, title, array, printing=True, saving=False, dir='./',
+                                refdir=None):
     """Internal method to print summary information and display images as
     desired.
     """
 
     import numbers
+
+    if array is None:
+        return
 
     if not printing and not saving and refdir==None:
         return
@@ -213,7 +218,7 @@ def show_info(title, array, printing=True, saving=False, dir='./', refdir=None):
     if saving:
         os.makedirs(dir, exist_ok=True)
 
-        filename = _construct_filename(array, title, dir)
+        filename = _construct_filename(bp, array, title, dir)
         _save_image(image, filename)
 
 
@@ -222,7 +227,7 @@ def show_info(title, array, printing=True, saving=False, dir='./', refdir=None):
         assert os.path.exists(refdir), \
             "No reference directory.  Use --no_compare, --no_exercises, or --reference."
 
-        filename = _construct_filename(array, title, refdir)
+        filename = _construct_filename(bp, array, title, refdir)
         reference = _read_image(filename)
         if reference is not None:
             _compare_backplanes(image, reference)
@@ -335,6 +340,9 @@ def _diff_logs(old_log, new_log, verbose=False):
 
 #*******************************************************************************
 class Backplane_Settings(object):
+
+    from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+
     ARGS = []
     DIFF = []
     EXERCISES_ONLY = False
@@ -342,20 +350,22 @@ class Backplane_Settings(object):
     NO_COMPARE = False
     SAVING = True
     LOGGING = False
-    PRINTING = True
+    PRINTING = False
     UNDERSAMPLE = 16
 #    PLANET_KEY = None
 #    MOON_KEY = None
 #    RING_KEY = None
-    OUTPUT = './output/'
-    REFERENCE = os.path.join(OUTPUT, 'reference_' + str(UNDERSAMPLE) + '/')
+    OUTPUT = None
+    REFERENCE = None
+    REF = False
+
 
 
 #===============================================================================
 def backplane_unittester_args():
     """
     Parse command-line arguments for backplane unit tests.  Results are
-    stored as Test_Backplane_Exercises attributes.
+    stored as Backplane_Settings attributes.
     """
 
     # Generic arguments
@@ -374,9 +384,9 @@ def backplane_unittester_args():
         print("                       [--diff old new] [--help] [--args arg1 arg2 ...]")
         exit()
 
-    if '--silent' in sys.argv:
-        Backplane_Settings.PRINTING = False
-        sys.argv.remove('--silent')
+    if '--verbose' in sys.argv:
+        Backplane_Settings.PRINTING = True
+        sys.argv.remove('--verbose')
 
     if '--diff' in sys.argv:
         k = sys.argv.index('--diff')
@@ -385,26 +395,26 @@ def backplane_unittester_args():
         _diff_logs(logs[0], logs[1], verbose=Backplane_Settings.PRINTING)
         exit()
 
-    if '--exercises_only' in sys.argv:
+    if '--exercises-only' in sys.argv:
         Backplane_Settings.EXERCISES_ONLY = True
-        sys.argv.remove('--exercises_only')
+        sys.argv.remove('--exercises-only')
 
-    if '--no_exercises' in sys.argv:
+    if '--no-exercises' in sys.argv:
         Backplane_Settings.NO_EXERCISES = True
-        sys.argv.remove('--no_exercises')
+        sys.argv.remove('--no-exercises')
 
-    if '--no_compare' in sys.argv:
+    if '--no-compare' in sys.argv:
         Backplane_Settings.NO_COMPARE = True
-        sys.argv.remove('--no_compare')
+        sys.argv.remove('--no-compare')
 
     if '--output' in sys.argv:
         k = sys.argv.index('--output')
         Backplane_Settings.OUTPUT = sys.argv[k+1]
         del sys.argv[k:k+2]
 
-    if '--no_output' in sys.argv:
+    if '--no-output' in sys.argv:
         Backplane_Settings.SAVING = False
-        sys.argv.remove('--no_output')
+        sys.argv.remove('--no-output')
 
     if '--log' in sys.argv:
         Backplane_Settings.LOGGING = True
@@ -417,15 +427,16 @@ def backplane_unittester_args():
 
     if '--reference' in sys.argv:
         Backplane_Settings.EXERCISES_ONLY = True
+        Backplane_Settings.NO_COMPARE = True
         Backplane_Settings.SAVING = True
-        Backplane_Settings.OUTPUT = Backplane_Settings.REFERENCE
+        Backplane_Settings.REF = True
         sys.argv.remove('--reference')
 
 
     # Pre-defined test configurations
     test_level = 0
-    if '--test_level' in sys.argv:
-        k = sys.argv.index('--test_level')
+    if '--test-level' in sys.argv:
+        k = sys.argv.index('--test-level')
         test_level = int(sys.argv[k+1])
         del sys.argv[k:k+2]
 
