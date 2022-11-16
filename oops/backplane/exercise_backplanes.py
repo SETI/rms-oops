@@ -10,6 +10,9 @@ from oops.backplane    import Backplane
 from oops.meshgrid     import Meshgrid
 import oops.config as config
 
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.unittester_support  import Backplane_Settings
+
 
 #===============================================================================
 def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
@@ -207,12 +210,10 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
 
 
 #===============================================================================
-def exercise_backplanes(obs, Backplane_Settings, **kwargs):
-
+def exercise_backplanes_settings(obs):
     """Wrapper for exercise_backplanes(). Determines default directories
-       and fills in args based on settings."""
-
-    from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+       based on input observation object and fills in args based on
+       settings."""
 
     # determine default output and reference directories
     specname = obs.filespec.split(TESTDATA_PARENT_DIRECTORY)[1]
@@ -222,7 +223,6 @@ def exercise_backplanes(obs, Backplane_Settings, **kwargs):
     Backplane_Settings.REFERENCE = \
         os.path.join(outdir, 'reference_' + str(Backplane_Settings.UNDERSAMPLE))
 
-
     # determine specific output directory
     if Backplane_Settings.OUTPUT is None:
         Backplane_Settings.OUTPUT = outdir
@@ -230,13 +230,28 @@ def exercise_backplanes(obs, Backplane_Settings, **kwargs):
     if Backplane_Settings.REF:
         Backplane_Settings.OUTPUT = Backplane_Settings.REFERENCE
 
+    # Implement NO_COMPARE
+    if Backplane_Settings.NO_COMPARE:
+        Backplane_Settings.REFERENCE = None
+
+
+
+#===============================================================================
+def exercise_backplanes(obs, **kwargs):
+
+    """Wrapper for exercise_backplanes(). Determines default directories
+       based on input observation object and fills in args based on
+       settings."""
+
+    # complete settings that require observation information
+    exercise_backplanes_settings(obs)
+
 
     # perform the exercises
-    _exercise_backplanes(obs,
-                         Backplane_Settings.PRINTING,
-                         Backplane_Settings.LOGGING,
-                         Backplane_Settings.SAVING,
-                         Backplane_Settings.OUTPUT,
-                         Backplane_Settings.REFERENCE,
-                         undersample=Backplane_Settings.UNDERSAMPLE,
-                         **kwargs)
+    _exercise_backplanes(obs, Backplane_Settings.PRINTING,
+                              Backplane_Settings.LOGGING,
+                              Backplane_Settings.SAVING,
+                              Backplane_Settings.OUTPUT,
+                              Backplane_Settings.REFERENCE,
+                              undersample=Backplane_Settings.UNDERSAMPLE,
+                              **kwargs)

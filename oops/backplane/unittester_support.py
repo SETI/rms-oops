@@ -225,7 +225,7 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
     # Compare with reference array if refdir is known
     if refdir is not None:
         assert os.path.exists(refdir), \
-            "No reference directory.  Use --no_compare, --no_exercises, or --reference."
+            "No reference directory.  Use --no-compare, --no-exercises, or --reference."
 
         filename = _construct_filename(bp, array, title, refdir)
         reference = _read_image(filename)
@@ -368,97 +368,123 @@ def backplane_unittester_args():
     stored as Backplane_Settings attributes.
     """
 
+    import argparse
+    import sys
+
+
+    ## Define arguments ##
+    parser = argparse.ArgumentParser(description='Backplane unit tester.')
+
+
     # Generic arguments
-    if '--args' in sys.argv:
-        k = sys.argv.index('--args')
-        Backplane_Settings.ARGS = sys.argv[k+1:]
-        del sys.argv[k:]
+    parser.add_argument('--args', nargs='*', metavar='arg', default=None,
+                        help='Generic arguments to pass to the test modules. ' \
+                             'Must occur last in the argument list.')
 
 
     # Basic controls
-    if '--help' in sys.argv:
-        print("Usage:")
-        print("  python unittester.py [--output dir] [--no_output] [--exercises_only]")
-        print("                       [--no_exercises] [--reference] [--undersample #]")
-        print("                       [--test_level #] [--no_compare] [--silent] [--log]")
-        print("                       [--diff old new] [--help] [--args arg1 arg2 ...]")
+    parser.add_argument('--verbose', action='store_true', default=None,
+                        help='Print output to the terminal.')
+
+    parser.add_argument('--diff', nargs=2, metavar=('old', 'new'), default=None,
+                        help='Compare new and old backplane logs.')
+
+    parser.add_argument('--exercises-only', action='store_true', default=None,
+                        help='Execute only the backplane exercises.')
+
+    parser.add_argument('--no-exercises', action='store_true', default=None,
+                        help='Execute all tests except the backplane exercises.')
+
+    parser.add_argument('--no-compare', action='store_true', default=None,
+                        help='Do not compare backplanes with references.')
+
+    parser.add_argument('--output', nargs=1, metavar='dir', default=None,
+                        help='Directory in which to save backplane PNG images. ' \
+                             'Default is TESTDATA_PARENT_DIRECTORY/[data dir]. ' \
+                             'If the directory does not exist, it is created.')
+
+    parser.add_argument('--no-output', action='store_true', default=None,
+                        help='Disable saving of backplane PNG files.')
+
+    parser.add_argument('--log', action='store_true', default=None,
+                        help='Enable the internal oops logging.')
+
+    parser.add_argument('--undersample', nargs=1, type=int, metavar='N', default=None,
+                        help='Amount by which to undersample backplanes.  Default is 16.')
+
+
+    parser.add_argument('--reference', action='store_true', default=None,
+                        help='Generate reference backplanes and exit.')
+
+#TODO: currently only works for 80-char width
+    parser.add_argument('--test-level', nargs=1, type=int, metavar='N', default=None,
+                        help='Selects among pre-set parameter combinations:  ' \
+                              '-test_level 1: no printing, no saving, undersample 32. ' \
+                              '-test_level 2: printing, no saving, undersample 16. ' \
+                              '-test_level 3: printing, saving, no undersampling. ' \
+                              'These behaviors are overridden by other arguments.')
+
+
+    ## Parse arguments, leaving unknown args for some other parser ##
+    args, left = parser.parse_known_args()
+    sys.argv = sys.argv[:1]+left
+
+
+    ## Implement argments ##
+    if args.test_level is not None:
+        test_level = args.test_level[0]
+        if test_level == 1:
+            Backplane_Settings.PRINTING = False
+            Backplane_Settings.SAVING = False
+            Backplane_Settings.UNDERSAMPLE = 32
+
+        if test_level == 2:
+            Backplane_Settings.PRINTING = True
+            Backplane_Settings.SAVING = False
+            Backplane_Settings.UNDERSAMPLE = 16
+
+        if test_level == 3:
+            Backplane_Settings.PRINTING = True
+            Backplane_Settings.SAVING = True
+            Backplane_Settings.UNDERSAMPLE = 1
+
+    if args.args is not None:
+        Backplane_Settings.ARGS = args.args
+
+    if args.verbose is not None:
+        Backplane_Settings.PRINTING = args.verbose
+
+    if args.diff is not None:
+        _diff_logs(args.diff[0], args.diff[1], verbose=Backplane_Settings.PRINTING)
         exit()
 
-    if '--verbose' in sys.argv:
-        Backplane_Settings.PRINTING = True
-        sys.argv.remove('--verbose')
+    if args.exercises_only is not None:
+        Backplane_Settings.EXERCISES_ONLY = args.exercises_only
 
-    if '--diff' in sys.argv:
-        k = sys.argv.index('--diff')
-        logs = sys.argv[k+1:k+3]
-        del sys.argv[k:k+3]
-        _diff_logs(logs[0], logs[1], verbose=Backplane_Settings.PRINTING)
-        exit()
+    if args.no_exercises is not None:
+        Backplane_Settings.NO_EXERCISES = args.no_exercises
 
-    if '--exercises-only' in sys.argv:
-        Backplane_Settings.EXERCISES_ONLY = True
-        sys.argv.remove('--exercises-only')
+    if args.no_compare is not None:
+        Backplane_Settings.NO_COMPARE = args.no_compare
 
-    if '--no-exercises' in sys.argv:
-        Backplane_Settings.NO_EXERCISES = True
-        sys.argv.remove('--no-exercises')
+    if args.output is not None:
+        Backplane_Settings.OUTPUT = args.output[0]
 
-    if '--no-compare' in sys.argv:
-        Backplane_Settings.NO_COMPARE = True
-        sys.argv.remove('--no-compare')
+    if args.no_output is not None:
+        Backplane_Settings.SAVING = not args.no_output
 
-    if '--output' in sys.argv:
-        k = sys.argv.index('--output')
-        Backplane_Settings.OUTPUT = sys.argv[k+1]
-        del sys.argv[k:k+2]
+    if args.log is not None:
+        Backplane_Settings.LOGGING = args.log
 
-    if '--no-output' in sys.argv:
-        Backplane_Settings.SAVING = False
-        sys.argv.remove('--no-output')
+    if args.undersample is not None:
+        Backplane_Settings.UNDERSAMPLE = args.undersample[0]
 
-    if '--log' in sys.argv:
-        Backplane_Settings.LOGGING = True
-        sys.argv.remove('--log')
-
-    if '--undersample' in sys.argv:
-        k = sys.argv.index('--undersample')
-        Backplane_Settings.UNDERSAMPLE = int(sys.argv[k+1])
-        del sys.argv[k:k+2]
-
-    if '--reference' in sys.argv:
+    if args.reference is not None:
         Backplane_Settings.EXERCISES_ONLY = True
         Backplane_Settings.NO_COMPARE = True
         Backplane_Settings.SAVING = True
         Backplane_Settings.REF = True
-        sys.argv.remove('--reference')
 
-
-    # Pre-defined test configurations
-    test_level = 0
-    if '--test-level' in sys.argv:
-        k = sys.argv.index('--test-level')
-        test_level = int(sys.argv[k+1])
-        del sys.argv[k:k+2]
-
-    if test_level == 1:
-        Backplane_Settings.PRINTING = False
-        Backplane_Settings.SAVING = False
-        Backplane_Settings.UNDERSAMPLE = 32
-
-    if test_level == 2:
-        Backplane_Settings.PRINTING = True
-        Backplane_Settings.SAVING = False
-        Backplane_Settings.UNDERSAMPLE = 16
-
-    if test_level == 3:
-        Backplane_Settings.PRINTING = True
-        Backplane_Settings.SAVING = True
-        Backplane_Settings.UNDERSAMPLE = 1
-
-
-    # Implement NO_COMPARE
-    if Backplane_Settings.NO_COMPARE:
-        Backplane_Settings.REFERENCE = None
 
 #    # Body keywords
 #    if '--planet' in sys.argv:

@@ -403,14 +403,12 @@ class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
         file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
         _obs = junocam.from_file(file); body_name = "JUPITER"; obs = _obs[5]
 
-        exercise_backplanes(obs, Backplane_Settings,
-                                 use_inventory=True, inventory_border=4,
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key=body_name)
 
 
 
 ##############################################
-# See oops/backplane/unittester.py for usage
 from oops.backplane.unittester_support      import backplane_unittester_args
 
 if __name__ == '__main__':

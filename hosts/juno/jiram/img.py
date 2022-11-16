@@ -294,8 +294,7 @@ class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
         file = os.path.join(root, "JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG")
         _obs = jiram.from_file(file); body_name = "MOON"; obs = _obs[1]
 
-        exercise_backplanes(obs, Backplane_Settings,
-                                 use_inventory=True, inventory_border=4,
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key=body_name)
 
 
@@ -303,8 +302,7 @@ class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
         file = os.path.join(root, "JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG")
         _obs = jiram.from_file(file); body_name = "EUROPA"; obs = _obs[1]
 
-        exercise_backplanes(obs, Backplane_Settings,
-                                 use_inventory=True, inventory_border=4,
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key=body_name)
 
 
@@ -312,15 +310,13 @@ class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
         file = os.path.join(root, "JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG")
         _obs = jiram.from_file(file); body_name = "EUROPA"; obs = _obs[0]
 
-        exercise_backplanes(obs, Backplane_Settings,
-                                 use_inventory=True, inventory_border=4,
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key=body_name)
 
 
 
 
 ##############################################
-# See oops/backplane/unittester.py for usage
 from oops.backplane.unittester_support      import backplane_unittester_args
 
 if __name__ == '__main__':

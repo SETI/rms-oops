@@ -91,11 +91,11 @@ def exercise(bp, printing, saving, dir, refdir,
     if planet != None:
         test = bp.pole_clock_angle(planet)
         show_info(bp, 'planet pole clock angle (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.pole_position_angle(planet)
         show_info(bp, 'planet pole position angle (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 

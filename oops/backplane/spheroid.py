@@ -507,27 +507,27 @@ def exercise_limb_longitude(bp, printing, saving, dir, refdir,
     if planet != None:
         test = bp.longitude(planet+':limb', 'iau')
         show_info(bp, 'Limb longitude wrt IAU (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet+':limb', 'obs')
         show_info(bp, 'Limb longitude wrt observer (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet+':limb', reference='obs', minimum=-180)
         show_info(bp, 'Limb longitude wrt observer, -180 (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet+':limb', 'oha')
         show_info(bp, 'Limb longitude wrt OHA (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet+':limb', 'sun')
         show_info(bp, 'Limb longitude wrt Sun (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet+':limb', 'sha')
         show_info(bp, 'Limb longitude wrt SHA (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -541,15 +541,15 @@ def exercise_limb_latitude(bp, printing, saving, dir, refdir,
     if planet != None:
         test = bp.latitude(planet+':limb', lat_type='centric')
         show_info(bp, 'Limb planetocentric latitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.latitude(planet+':limb', lat_type='squashed')
         show_info(bp, 'Limb squashed latitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.latitude(planet+':limb', lat_type='graphic')
         show_info(bp, 'Limb planetographic latitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -563,44 +563,44 @@ def exercise_surface_latitude(bp, printing, saving, dir, refdir,
     if planet != None:
         test = bp.latitude(planet, lat_type='centric')
         show_info(bp, 'planet latitude, planetocentric (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.latitude(planet, lat_type='squashed')
         show_info(bp, 'planet latitude, squashed (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.latitude(planet, lat_type='graphic')
         show_info(bp, 'planet latitude, planetographic (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_observer_latitude(planet)
         show_info(bp, 'planet sub-observer latitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_solar_latitude(planet)
         show_info(bp, 'planet sub-solar latitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if moon != None:
         test = bp.latitude(moon, lat_type='centric')
         show_info(bp, 'moon latitude, planetocentric (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.latitude(moon, lat_type='squashed')
         show_info(bp, 'moon latitude, squashed (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.latitude(moon, lat_type='graphic')
         show_info(bp, 'moon latitude, planetographic (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_observer_latitude(moon)
         show_info(bp, 'moon sub-observer latitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_solar_latitude(moon)
         show_info(bp, 'moon sub-solar latitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -614,88 +614,88 @@ def exercise_surface_planet_moon(bp, printing, saving, dir, refdir,
     if planet != None:
         test = bp.longitude(planet)
         show_info(bp, 'planet longitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, reference='iau')
         show_info(bp, 'planet longitude wrt IAU frame (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, lon_type='centric')
         show_info(bp, 'planet longitude centric (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, lon_type='graphic')
         show_info(bp, 'planet longitude graphic (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, lon_type='squashed')
         show_info(bp, 'planet longitude squashed (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, direction='east')
         show_info(bp, 'planet longitude eastward (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, minimum=-180)
         show_info(bp, 'planet longitude with -180 minimum (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, reference='iau', minimum=-180)
         show_info(bp, 'planet longitude wrt IAU frame with -180 minimum (deg)',
-                          test*DPR, printing=printing, saving=saving, dir=dir)
+                  test*DPR, printing=printing, saving=saving, dir=dir)
 
         test = bp.longitude(planet, reference='sun')
         show_info(bp, 'planet longitude wrt Sun (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, reference='sha')
         show_info(bp, 'planet longitude wrt SHA (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, reference='obs')
         show_info(bp, 'planet longitude wrt observer (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.longitude(planet, reference='oha')
         show_info(bp, 'planet longitude wrt OHA (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_observer_longitude(planet, reference='iau')
         show_info(bp, 'planet sub-observer longitude wrt IAU (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_observer_longitude(planet, reference='sun', minimum=-180)
         show_info(bp, 'planet sub-observer longitude wrt Sun (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_observer_longitude(planet, reference='obs', minimum=-180)
         show_info(bp, 'planet sub-observer longitude wrt observer (deg)',
-                          test*DPR, printing=printing, saving=saving, dir=dir)
+                  test*DPR, printing=printing, saving=saving, dir=dir)
 
         test = bp.sub_solar_longitude(planet, reference='iau')
         show_info(bp, 'planet sub-solar longitude wrt IAU (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_solar_longitude(planet, reference='obs', minimum=-180)
         show_info(bp, 'planet sub-solar longitude wrt observer (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_solar_longitude(planet, reference='sun', minimum=-180)
         show_info(bp, 'planet sub-solar longitude wrt Sun (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if moon != None:
         test = bp.longitude(moon)
         show_info(bp, 'moon longitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_observer_longitude(moon)
         show_info(bp, 'moon sub-observer longitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.sub_solar_longitude(moon)
         show_info(bp, 'moon sub-solar longitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -708,7 +708,7 @@ def exercise_ring(bp, printing, saving, dir, refdir,
     if ring != None:
         test = bp.sub_observer_longitude(ring, 'sun', minimum=-180)
         show_info(bp, 'Ring observer-sun longitude (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 

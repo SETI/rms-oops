@@ -233,14 +233,12 @@ class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
         file = os.path.join(root, "JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT")
         (obs, slits) = jiram.from_file(file); body_name = "MOON"
 
-        exercise_backplanes(obs, Backplane_Settings,
-                                 use_inventory=True, inventory_border=4,
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key=body_name)
 
 
 
 ##############################################
-# See oops/backplane/unittester.py for usage
 from oops.backplane.unittester_support      import backplane_unittester_args
 
 if __name__ == '__main__':

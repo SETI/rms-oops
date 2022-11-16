@@ -107,7 +107,7 @@ def exercise(bp, printing, saving, dir, refdir,
     if planet != None:
         test = bp.limb_altitude(planet+':limb')
         show_info(bp, 'Limb altitude (km)', test,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 

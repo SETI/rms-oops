@@ -225,23 +225,23 @@ def exercise_planet(bp, printing, saving, dir, refdir,
     if planet != None:
         test = bp.phase_angle(planet)
         show_info(bp, 'planet phase angle (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.scattering_angle(planet)
         show_info(bp, 'planet scattering angle (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.incidence_angle(planet)
         show_info(bp, 'planet incidence angle (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.emission_angle(planet)
         show_info(bp, 'planet emission angle (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.lambert_law(planet)
         show_info(bp, 'planet as a Lambert law', test,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 
@@ -254,7 +254,7 @@ def exercise_ring(bp, printing, saving, dir, refdir,
     if ring != None:
         test = bp.phase_angle(ring)
         show_info(bp, 'Ring phase angle (deg)', test*DPR,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
 

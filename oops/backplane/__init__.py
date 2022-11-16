@@ -784,11 +784,6 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
 
-#       This doesn't seem necessary, and causes subsequent calls to
-#       [host].from_file() to crash because hosts assume the waypoint registry
-#       remains initialized forever.
-#        Body.reset_registry()
-
         # This only needed when this test is run before the SS has been
         # defined by a host from_file() method
         Body.define_solar_system('2000-01-01', '2020-01-01')
@@ -1114,8 +1109,7 @@ class Test_Backplane_Exercises(unittest.TestCase):
                                 'cassini/ISS/W1573721822_1.IMG')
 
         obs = iss.from_file(filespec)
-        exercise_backplanes(obs,Backplane_Settings,
-                                 use_inventory=True, inventory_border=4,
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key='saturn',
                                  moon_key='epimetheus',
                                  ring_key='saturn_main_rings')
@@ -1123,7 +1117,6 @@ class Test_Backplane_Exercises(unittest.TestCase):
 
 
 ##############################################
-# See oops/backplane/unittester.py for usage
 from oops.backplane.unittester_support      import backplane_unittester_args
 
 if __name__ == '__main__':
