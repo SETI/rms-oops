@@ -44,9 +44,9 @@ def from_file(filespec, label, fast_distortion=True,
     slits = []
     for i in range(meta.nsamples):
         item = oops.obs.Snapshot(("v","u"),
-                             meta.tstart, meta.exposure, meta.fov,
-                             "JUNO", "JUNO_JIRAM_S",
-                             data=np.reshape(data[:,i],(1,meta.nlines)) )
+                                 meta.tstart, meta.exposure, meta.fov,
+                                 "JUNO", "JUNO_JIRAM_S",
+                                 data=np.reshape(data[:,i],(1,meta.nlines)) )
 
 #        item.insert_subfield('spice_kernels',
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
@@ -59,8 +59,8 @@ def from_file(filespec, label, fast_distortion=True,
 
     # Construct Slit1D for all bands
     obs = oops.obs.Slit1D(("u","b"),
-                         meta.tstart, meta.exposure, meta.fov,
-                         "JUNO", "JUNO_JIRAM_S", data=data )
+                          meta.tstart, meta.exposure, meta.fov,
+                          "JUNO", "JUNO_JIRAM_S", data=data )
 
 #    obs.insert_subfield('spice_kernels',
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
@@ -184,8 +184,8 @@ class SPE(object):
 
         # initialize JIRAM
         JIRAM.initialize(ck=ck, planets=planets, asof=asof,
-                     spk=spk, gapfill=gapfill,
-                     mst_pck=mst_pck, irregulars=irregulars)
+                        spk=spk, gapfill=gapfill,
+                        mst_pck=mst_pck, irregulars=irregulars)
 
         # Construct the SpiceFrame
         JIRAM.create_frame(time, 'S')
@@ -231,10 +231,9 @@ class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
 
         root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/jiram")
         file = os.path.join(root, "JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT")
-        (obs, slits) = jiram.from_file(file); body_name = "MOON"
-
+        (obs, slits) = jiram.from_file(file)
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key=body_name)
+                                 planet_key="MOON")
 
 
 

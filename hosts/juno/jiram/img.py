@@ -46,11 +46,11 @@ def from_file(filespec, label, fast_distortion=True,
         fmeta = Metadata(flabels[i])
 
         item = (oops.obs.Snapshot(("v","u"),
-                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                 "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame,
-                                 instrument = "JIRAM_I",
-                                 filter = fmeta.filter,
-                                 data = framelets[:,:,i]))
+                                  fmeta.tstart, fmeta.exposure, fmeta.fov,
+                                  "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame,
+                                  instrument = "JIRAM_I",
+                                  filter = fmeta.filter,
+                                  data = framelets[:,:,i]))
 
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
@@ -239,8 +239,8 @@ class IMG(object):
 
         # initialize JIRAM
         JIRAM.initialize(ck=ck, planets=planets, asof=asof,
-                     spk=spk, gapfill=gapfill,
-                     mst_pck=mst_pck, irregulars=irregulars)
+                         spk=spk, gapfill=gapfill,
+                         mst_pck=mst_pck, irregulars=irregulars)
 
         # Construct the SpiceFrames
         JIRAM.create_frame(time, 'I_MBAND')
@@ -292,26 +292,23 @@ class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
 
         # Moon image
         file = os.path.join(root, "JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG")
-        _obs = jiram.from_file(file); body_name = "MOON"; obs = _obs[1]
-
+        obs = jiram.from_file(file)[1]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key=body_name)
+                                 planet_key="MOON")
 
 
         # Europa image
         file = os.path.join(root, "JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG")
-        _obs = jiram.from_file(file); body_name = "EUROPA"; obs = _obs[1]
-
+        obs = jiram.from_file(file)[1]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key=body_name)
+                                 planet_key="EUROPA")
 
 
         # Jupiter image
         file = os.path.join(root, "JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG")
-        _obs = jiram.from_file(file); body_name = "EUROPA"; obs = _obs[0]
-
+        obs = jiram.from_file(file)[0]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key=body_name)
+                                 planet_key="JUPITER")
 
 
 

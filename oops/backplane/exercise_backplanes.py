@@ -216,7 +216,8 @@ def exercise_backplanes_settings(obs):
        settings."""
 
     # determine default output and reference directories
-    specname = obs.filespec.split(TESTDATA_PARENT_DIRECTORY)[1]
+    specname = obs.filespec.split( \
+                    os.path.dirname(TESTDATA_PARENT_DIRECTORY) + '/')[1]
     basedir = os.path.dirname(specname)
     outdir = os.path.join(TESTDATA_PARENT_DIRECTORY,
                           'backplane_exercises', basedir)

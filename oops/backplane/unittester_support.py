@@ -153,7 +153,7 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
     if array is None:
         return
 
-    if not printing and not saving and refdir==None:
+    if not printing and not saving and refdir is None:
         return
 
     _print(title, printing=printing)
@@ -224,13 +224,13 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
 
     # Compare with reference array if refdir is known
     if refdir is not None:
-        assert os.path.exists(refdir), \
-            "No reference directory.  Use --no-compare, --no-exercises, or --reference."
+        assert os.path.exists(refdir), f"Reference directory not found: {refdir}"
 
         filename = _construct_filename(bp, array, title, refdir)
         reference = _read_image(filename)
-        if reference is not None:
-            _compare_backplanes(image, reference)
+        assert reference is not None, f"Reference directory not found: {reference}"
+
+        _compare_backplanes(image, reference)
 
 
 

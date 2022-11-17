@@ -12,15 +12,12 @@
 import numpy as np
 import numpy.lib.stride_tricks
 
-import tempfile
-import pylab
 import julian
-import pdstable
 import pdsparser
 import cspyce
 import oops
 
-from . import Cassini
+from hosts.cassini import Cassini
 
 # Timing correction as of 1/9/15 -- MRS
 # EXTRA_INTERSAMPLE_DELAY =  0.000363     # observed empirically in V1555349441
@@ -930,14 +927,51 @@ class VIMS(object):
 ################################################################################
 
 import unittest
+import os.path
 
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
+
+
+#*******************************************************************************
 class Test_Cassini_VIMS(unittest.TestCase):
 
+    #===========================================================================
     def runTest(self):
-
         pass
 
+
+
+#*******************************************************************************
+class Test_Cassini_VIMS_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest("")
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/VIMS")
+
+
+        file = os.path.join(root, "v1690952775_1.qub")
+        (obs_vis, obs_ir) = from_file(file)
+        exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
+                                     planet_key="SATURN")
+
+
+        file = os.path.join(root, "v1793917030_1.qub")
+        (obs_vis, obs_ir) = from_file(file)
+        exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
+                                     planet_key="SATURN")
+
+
+
 ############################################
+from oops.backplane.unittester_support      import backplane_unittester_args
+
 if __name__ == '__main__':
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

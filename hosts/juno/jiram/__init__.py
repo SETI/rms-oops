@@ -51,13 +51,13 @@ def from_file(filespec, return_all_planets=False, **parameters):
     if ext.upper() == '.IMG':
         from . import img
         return img.from_file(filespec, label,
-                                     return_all_planets=False, **parameters)
+                             return_all_planets=False, **parameters)
 
     # Spectrum
     if ext.upper() == '.DAT':
         from . import spe
         return spe.from_file(filespec, label,
-                                     return_all_planets=False, **parameters)
+                             return_all_planets=False, **parameters)
 
     return None
 
@@ -136,8 +136,8 @@ class JIRAM(object):
 
         # initialize Juno
         Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                           gapfill=gapfill,
-                           mst_pck=mst_pck, irregulars=irregulars)
+                        gapfill=gapfill,
+                        mst_pck=mst_pck, irregulars=irregulars)
         Juno.load_instruments(asof=asof)
 
 
@@ -166,13 +166,13 @@ class JIRAM(object):
         # Define fixed frame relative to J2000 from JIRAM orientation at
         # given time
         jiram_raw = \
-                 oops.frame.SpiceFrame(spice_frame, frame_id=spice_frame+"_RAW")
+            oops.frame.SpiceFrame(spice_frame, frame_id=spice_frame+"_RAW")
         xform = jiram_raw.transform_at_time(time)
 
         jiram_raw_j2000 = \
-             oops.frame.Cmatrix(xform.matrix, frame_id=spice_frame+"_RAW_J2000")
+            oops.frame.Cmatrix(xform.matrix, frame_id=spice_frame+"_RAW_J2000")
         jiram_frame = \
-                  oops.frame.Cmatrix(rot, jiram_raw_j2000, frame_id=spice_frame)
+            oops.frame.Cmatrix(rot, jiram_raw_j2000, frame_id=spice_frame)
 
 
 

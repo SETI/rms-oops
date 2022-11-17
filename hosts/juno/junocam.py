@@ -60,23 +60,25 @@ def from_file(filespec, fast_distortion=True,
         fmeta = Metadata(flabels[i])
 
         if snap:
-            item = (oops.obs.Snapshot(("v","u"),
-                                 (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM",
-                                 instrument = "JUNOCAM",
-                                 filter = fmeta.filter,
-                                 data = framelets[:,:,i]))
+            item = (oops.obs.Snapshot(
+                ("v","u"),
+                (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
+                "JUNO", "JUNO_JUNOCAM",
+                instrument = "JUNOCAM",
+                filter = fmeta.filter,
+                data = framelets[:,:,i]))
 
 
 
         if not snap:
-            item = (oops.obs.Pushframe(("vt","u"),
-                                (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
-                                 fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM",
-                                 instrument = "JUNOCAM",
-                                 filter = fmeta.filter,
-                                 data = framelets[:,:,i]))
+            item = (oops.obs.Pushframe(
+                        ("vt","u"),
+                        (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
+                        fmeta.fov,
+                        "JUNO", "JUNO_JUNOCAM",
+                        instrument = "JUNOCAM",
+                        filter = fmeta.filter,
+                        data = framelets[:,:,i]))
 
 
 #        item.insert_subfield('spice_kernels', \
@@ -278,9 +280,9 @@ class Metadata(object):
             distortion_coeff = [1,0,k1,0,k2]
 
             self.fov = oops.fov.RadialFOV(scale,
-                                            (self.nsamples, self.frlines),
-                                            coefft_uv_from_xy=distortion_coeff,
-                                            uv_los=(cx, cy))
+                                          (self.nsamples, self.frlines),
+                                          coefft_uv_from_xy=distortion_coeff,
+                                          uv_los=(cx, cy))
 
         return
 
@@ -349,8 +351,8 @@ class JUNOCAM(object):
 
         # Initialize Juno
         Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                           gapfill=gapfill,
-                           mst_pck=mst_pck, irregulars=irregulars)
+                        gapfill=gapfill,
+                        mst_pck=mst_pck, irregulars=irregulars)
         Juno.load_instruments(asof=asof)
 
         # Construct the SpiceFrame
@@ -384,11 +386,10 @@ class JUNOCAM(object):
 import unittest
 import os.path
 
-import hosts.juno.junocam as junocam
-
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
 from oops.backplane.unittester_support  import Backplane_Settings
+
 
 #*******************************************************************************
 class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
@@ -401,10 +402,9 @@ class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
 
         root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/junocam")
         file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
-        _obs = junocam.from_file(file); body_name = "JUPITER"; obs = _obs[5]
-
+        obs = from_file(file)[5]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key=body_name)
+                                 planet_key="JUPITER")
 
 
 

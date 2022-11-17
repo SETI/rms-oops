@@ -391,3 +391,42 @@ class ISS(object):
 ISS.initialize()
 
 ################################################################################
+
+
+
+################################################################################
+# UNIT TESTS
+################################################################################
+
+import unittest
+import os.path
+
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
+
+
+#*******************************************************************************
+class Test_Voyager_ISS_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest("")
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "voyager/ISS")
+        file = os.path.join(root, "c3440346.gem")
+        obs = from_file(file)
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key="SATURN")
+
+
+
+##############################################
+from oops.backplane.unittester_support      import backplane_unittester_args
+
+if __name__ == '__main__':
+    backplane_unittester_args()
+    unittest.main(verbosity=2)
+################################################################################

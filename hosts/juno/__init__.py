@@ -7,6 +7,7 @@
 
 import numpy as np
 
+import os
 import julian
 import spicedb
 import cspyce
@@ -255,7 +256,11 @@ class Juno(object):
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
 
-        kdir = "/home/spitale/ominas_data/trs/juno/kernels/"
+        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+
+        kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/kernels/')
+
+#        kdir = "/home/spitale/ominas_data/trs/juno/kernels/"
 
         cspyce.furnsh(kdir + "ck/juno_sc_rec_131006_131012_v01.bc")
         cspyce.furnsh(kdir + "spk/spk_rec_131005_131014_131101.bsp")
