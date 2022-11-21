@@ -246,8 +246,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -258,8 +256,7 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 from oops.constants    import DPR
 from oops.backplane.unittester_support    import show_info
 
-
-#===========================================================================
+#===============================================================================
 def exercise_right_ascension(bp, printing, saving, dir, refdir,
                              planet=None, moon=None, ring=None,
                              undersample=16, use_inventory=False, inventory_border=2):
@@ -273,7 +270,7 @@ def exercise_right_ascension(bp, printing, saving, dir, refdir,
     show_info(bp, 'Right ascension (deg, apparent)', test*DPR,
               printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if planet != None:
+    if planet is not None:
         test = bp.center_right_ascension(planet, apparent=False)
         show_info(bp, 'Right ascension of planet (deg, actual)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -282,7 +279,7 @@ def exercise_right_ascension(bp, printing, saving, dir, refdir,
         show_info(bp, 'Right ascension of planet (deg, apparent)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.center_right_ascension(moon, apparent=False)
         show_info(bp, 'Right ascension of moon (deg, actual)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -291,9 +288,7 @@ def exercise_right_ascension(bp, printing, saving, dir, refdir,
         show_info(bp, 'Right ascension of moon (deg, apparent)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_declination(bp, printing, saving, dir, refdir,
                          planet=None, moon=None, ring=None,
                          undersample=16, use_inventory=False, inventory_border=2):
@@ -307,7 +302,7 @@ def exercise_declination(bp, printing, saving, dir, refdir,
     show_info(bp, 'Declination (deg, apparent)', test*DPR,
               printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if planet != None:
+    if planet is not None:
         test = bp.center_declination(planet, apparent=False)
         show_info(bp, 'Declination of planet (deg, actual)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -316,7 +311,7 @@ def exercise_declination(bp, printing, saving, dir, refdir,
         show_info(bp, 'Declination of planet (deg, apparent)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.center_declination(moon, apparent=False)
         show_info(bp, 'Declination of moon (deg, actual)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -325,9 +320,7 @@ def exercise_declination(bp, printing, saving, dir, refdir,
         show_info(bp, 'Declination of moon (deg, apparent)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_celestial_and_polar_angles(bp, printing, saving, dir, refdir,
                                         planet=None, moon=None, ring=None,
                                         undersample=16, use_inventory=False,
@@ -343,7 +336,6 @@ def exercise_celestial_and_polar_angles(bp, printing, saving, dir, refdir,
               printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
-
 #*******************************************************************************
 class Test_Sky(unittest.TestCase):
 
@@ -353,7 +345,6 @@ class Test_Sky(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

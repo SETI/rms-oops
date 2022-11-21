@@ -7,9 +7,9 @@ from __future__ import print_function
 from oops.constants    import HALFPI
 from oops.backplane    import Backplane
 
-############################################################################
+################################################################################
 # Boolean Masks
-############################################################################
+################################################################################
 
 def where_intercepted(self, event_key):
     """A Boolean array where the surface was intercepted."""
@@ -23,7 +23,7 @@ def where_intercepted(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_inside_shadow(self, event_key, shadow_body):
     """A mask where the surface is in the shadow of a second body."""
 
@@ -38,7 +38,7 @@ def where_inside_shadow(self, event_key, shadow_body):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_outside_shadow(self, event_key, shadow_body):
     """A mask where the surface is outside the shadow of a second body."""
 
@@ -53,7 +53,7 @@ def where_outside_shadow(self, event_key, shadow_body):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_in_front(self, event_key, back_body):
     """A mask where the first surface is in not obscured by the second
     surface.
@@ -76,7 +76,7 @@ def where_in_front(self, event_key, back_body):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_in_back(self, event_key, front_body):
     """A mask where the first surface is behind (obscured by) the second
     surface.
@@ -92,7 +92,7 @@ def where_in_back(self, event_key, front_body):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_sunward(self, event_key):
     """A mask where the surface of a body is facing toward the Sun."""
 
@@ -104,7 +104,7 @@ def where_sunward(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_antisunward(self, event_key):
     """A mask where the surface of a body is facing away fron the Sun."""
 
@@ -116,9 +116,9 @@ def where_antisunward(self, event_key):
 
     return self.backplanes[key]
 
-############################################################################
+################################################################################
 # Masks derived from backplanes
-############################################################################
+################################################################################
 
 def where_below(self, backplane_key, value):
     """A mask where the backplane is <= the specified value."""
@@ -132,7 +132,7 @@ def where_below(self, backplane_key, value):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_above(self, backplane_key, value):
     """A mask where the backplane is >= the specified value."""
 
@@ -145,7 +145,7 @@ def where_above(self, backplane_key, value):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_between(self, backplane_key, low, high):
     """A mask where the backplane is between the given values, inclusive."""
 
@@ -158,7 +158,7 @@ def where_between(self, backplane_key, low, high):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_not(self, backplane_key):
     """A mask where the value of the given backplane is False, zero, or
     masked."""
@@ -171,7 +171,7 @@ def where_not(self, backplane_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_any(self, *backplane_keys):
     """A mask where any of the given backplanes is True."""
 
@@ -185,7 +185,7 @@ def where_any(self, *backplane_keys):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def where_all(self, *backplane_keys):
     """A mask where all of the given backplanes are True."""
 
@@ -206,8 +206,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -217,14 +215,13 @@ from oops.meshgrid                      import Meshgrid
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.unittester_support  import show_info
 
-
 #===========================================================================
 def exercise(bp, printing, saving, dir, refdir,
              planet=None, moon=None, ring=None,
              undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for where.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.where_intercepted(planet)
         show_info(bp, 'Mask of planet intercepted', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -257,7 +254,7 @@ def exercise(bp, printing, saving, dir, refdir,
         show_info(bp, 'Mask of planet anti-sunward via where_between()', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-        if ring != None:
+        if ring is not None:
             test = bp.where_in_front(planet, ring)
             show_info(bp, 'Mask of planet in front of rings', test,
                       printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -290,7 +287,7 @@ def exercise(bp, printing, saving, dir, refdir,
             show_info(bp, 'Mask of rings outside shadow of planet', test,
                       printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if ring != None:
+    if ring is not None:
         test = bp.where_intercepted(ring)
         show_info(bp, 'Mask of rings intercepted', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -304,12 +301,8 @@ def exercise(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
-
-
-
 #*******************************************************************************
 class Test_Where(unittest.TestCase):
-
 
     #===========================================================================
     def runTest(self):
@@ -317,7 +310,6 @@ class Test_Where(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

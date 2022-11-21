@@ -49,7 +49,6 @@ from oops.backplane.sky          import Test_Sky
 from oops.backplane.spheroid     import Test_Spheroid
 from oops.backplane.where        import Test_Where
 
-
 ########################################
 from oops.backplane.unittester_support      import backplane_unittester_args
 

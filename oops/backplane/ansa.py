@@ -286,8 +286,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -298,8 +296,7 @@ from oops.unittester_support             import TESTDATA_PARENT_DIRECTORY
 from oops.constants                      import DPR
 from oops.backplane.unittester_support   import show_info
 
-
-#===========================================================================
+#===============================================================================
 def exercise_resolution(bp, printing, saving, dir, refdir,
                         planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
@@ -307,7 +304,7 @@ def exercise_resolution(bp, printing, saving, dir, refdir,
 
     ### TODO: use Body.has_rings() once Mark has created it
     try:
-        if planet != None:
+        if planet is not None:
             test = bp.ansa_radial_resolution(planet+':ansa')
             show_info(bp, 'Ansa radial resolution (km)', test,
                       printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -318,9 +315,7 @@ def exercise_resolution(bp, printing, saving, dir, refdir,
     except:
         if printing: print("These tests require further development.")
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_geometry(bp, printing, saving, dir, refdir,
                       planet=None, moon=None, ring=None,
                       undersample=16, use_inventory=False, inventory_border=2):
@@ -328,7 +323,7 @@ def exercise_geometry(bp, printing, saving, dir, refdir,
 
     ### TODO: use Body.has_rings() once Mark has created it
     try:
-        if planet != None:
+        if planet is not None:
             test = bp.ansa_radius(planet+':ansa')
             show_info(bp, 'Ansa radius (km)', test,
                       printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -362,8 +357,6 @@ def exercise_geometry(bp, printing, saving, dir, refdir,
                       printing=printing, saving=saving, dir=dir, refdir=refdir)
     except:
         if printing: print("These tests require further development.")
-
-
 
 
 #*******************************************************************************

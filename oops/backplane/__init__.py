@@ -152,6 +152,7 @@ class Backplane(object):
     # internal buffers, but try to avoid any duplication
     ############################################################################
 
+    #===========================================================================
     def __getstate__(self):
 
         # Check for duplications between dictionaries
@@ -179,6 +180,7 @@ class Backplane(object):
                 surface_events, surface_events_w_derivs, self.path_events,
                 gridless_events, self.gridless_arrivals)
 
+    #===========================================================================
     def __setstate__(self, state):
 
         (obs, meshgrid, time, inventory, inventory_border,
@@ -196,6 +198,7 @@ class Backplane(object):
     # Key properties
     ############################################################################
 
+    #===========================================================================
     @property
     def dlos_duv(self):
         if self._filled_dlos_duv is None:
@@ -203,6 +206,7 @@ class Backplane(object):
 
         return self._filled_dlos_duv
 
+    #===========================================================================
     @property
     def duv_dlos(self):
         if self._filled_duv_dlos is None:
@@ -218,6 +222,7 @@ class Backplane(object):
     # and ends at the observer.
     ############################################################################
 
+    #===========================================================================
     def standardize_event_key(self, event_key):
         """Repair an event key to make it suitable for indexing a dictionary.
 
@@ -703,6 +708,7 @@ class Backplane(object):
 
     CALLABLES = set()
 
+    #===========================================================================
     def evaluate(self, backplane_key):
         """Evaluates the backplane or mask based on the given key. Equivalent
         to calling the function directly, but the name of the function is the
@@ -736,10 +742,6 @@ class Backplane(object):
                     Backplane.CALLABLES.add(key)
 
 
-
-
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -768,14 +770,12 @@ UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
 UNITTEST_RHEA_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                       'cassini/ISS/N1649465464_1.IMG')
 
-
-
 #*******************************************************************************
 class Test_Backplane_Surfaces(unittest.TestCase):
 
     OLD_RHEA_SURFACE = None
 
-    #========================================================================
+    #===========================================================================
     def setUp(self):
         global OLD_RHEA_SURFACE
 
@@ -801,8 +801,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         config.EVENT_CONFIG.collapse_threshold = 0.
         config.SURFACE_PHOTONS.collapse_threshold = 0.
 
-
-    #========================================================================
+    #===========================================================================
     def tearDown(self):
         global OLD_RHEA_SURFACE
 
@@ -814,7 +813,6 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         Body.as_body('RHEA').surface = OLD_RHEA_SURFACE
 
         ABERRATION.old = False
-
 
     #===========================================================================
     def runTest(self):
@@ -889,7 +887,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
             # Spheroid (lon,lat)
             lat = bp.latitude('saturn', lat_type='squashed')
             lon = bp.longitude('saturn', reference='iau', direction='east',
-                                                            lon_type='centric')
+                                         lon_type='centric')
             ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
             body = Body.as_body('SATURN')
             (_, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
@@ -901,7 +899,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
             # CentricSpheroid (lon,lat)
             lat = bp.latitude('saturn', lat_type='centric')
             lon = bp.longitude('saturn', reference='iau', direction='east',
-                                                            lon_type='centric')
+                                         lon_type='centric')
 
             ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
             body = Body.as_body('SATURN')
@@ -916,7 +914,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
             # GraphicSpheroid (lon,lat)
             lat = bp.latitude('saturn', lat_type='graphic')
             lon = bp.longitude('saturn', reference='iau', direction='east',
-                                                            lon_type='centric')
+                                         lon_type='centric')
 
             ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
             body = Body.as_body('SATURN')
@@ -941,7 +939,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
             # Ellipsoid (lon,lat)
             lat = bp.latitude('rhea', lat_type='squashed')
             lon = bp.longitude('rhea', reference='iau', direction='east',
-                                                           lon_type='squashed')
+                                       lon_type='squashed')
 
             ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
             body = Body.as_body('RHEA')
@@ -956,7 +954,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
             # CentricEllipsoid (lon,lat)
             lat = bp.latitude('rhea', lat_type='centric')
             lon = bp.longitude('rhea', reference='iau', direction='east',
-                                                            lon_type='centric')
+                                       lon_type='centric')
 
             ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
             body = Body.as_body('RHEA')
@@ -972,7 +970,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
             # GraphicEllipsoid (lon,lat)
             lat = bp.latitude('rhea', lat_type='graphic')
             lon = bp.longitude('rhea', reference='iau', direction='east',
-                                                            lon_type='graphic')
+                                       lon_type='graphic')
 
             ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
             body = Body.as_body('RHEA')
@@ -983,7 +981,6 @@ class Test_Backplane_Surfaces(unittest.TestCase):
             diff = uv - uv0
             #print(diff.norm().min(), diff.norm().max())
             self.assertTrue(diff.norm().max() < 2.e-7)
-
 
 
 #*******************************************************************************
@@ -1043,10 +1040,8 @@ class Test_Backplane_Borders(unittest.TestCase):
         self.assertTrue(count == 1715)
 
 
-
 #*******************************************************************************
 class Test_Backplane_Empty_Events(unittest.TestCase):
-
 
     #===========================================================================
     def runTest(self):
@@ -1092,7 +1087,6 @@ class Test_Backplane_Empty_Events(unittest.TestCase):
         self.assertTrue(percent == 100)
 
 
-
 #*******************************************************************************
 class Test_Backplane_Exercises(unittest.TestCase):
 
@@ -1115,9 +1109,8 @@ class Test_Backplane_Exercises(unittest.TestCase):
                                  ring_key='saturn_main_rings')
 
 
-
 ##############################################
-from oops.backplane.unittester_support      import backplane_unittester_args
+from oops.backplane.unittester_support import backplane_unittester_args
 
 if __name__ == '__main__':
     backplane_unittester_args()

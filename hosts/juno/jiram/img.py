@@ -9,7 +9,8 @@ from polymath import *
 import os.path
 import oops
 
-from hosts.juno.jiram import JIRAM
+from .juno.jiram import JIRAM
+#from hosts.juno.jiram import JIRAM
 
 ################################################################################
 # Standard class methods
@@ -314,7 +315,7 @@ class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
 
 
 ##############################################
-from oops.backplane.unittester_support      import backplane_unittester_args
+from oops.backplane.unittester_support import backplane_unittester_args
 
 if __name__ == '__main__':
     backplane_unittester_args()

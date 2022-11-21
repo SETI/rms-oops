@@ -85,30 +85,26 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
 
 import unittest
-from oops.meshgrid     import Meshgrid
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from oops.constants    import DPR
-from oops.backplane.unittester_support    import show_info
+from oops.meshgrid                      import Meshgrid
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.constants                     import DPR
+from oops.backplane.unittester_support  import show_info
 
-
-#===========================================================================
+#===============================================================================
 def exercise(bp, printing, saving, dir, refdir,
              planet=None, moon=None, ring=None,
              undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for limb.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.limb_altitude(planet+':limb')
         show_info(bp, 'Limb altitude (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
-
 
 
 #*******************************************************************************
@@ -120,7 +116,6 @@ class Test_Limb(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

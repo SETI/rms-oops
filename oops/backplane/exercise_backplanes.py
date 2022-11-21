@@ -13,7 +13,6 @@ import oops.config as config
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.unittester_support  import Backplane_Settings
 
-
 #===============================================================================
 def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
                          planet_key=None, moon_key=None, ring_key=None,
@@ -33,7 +32,6 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
         bp = Backplane(obs, meshgrid, inventory={})
     else:
         bp = Backplane(obs, meshgrid, inventory=None)
-
 
 
     if printing:
@@ -207,8 +205,6 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
 
     config.LOGGING.off()
 
-
-
 #===============================================================================
 def exercise_backplanes_settings(obs):
     """Wrapper for exercise_backplanes(). Determines default directories
@@ -234,8 +230,6 @@ def exercise_backplanes_settings(obs):
     # Implement NO_COMPARE
     if Backplane_Settings.NO_COMPARE:
         Backplane_Settings.REFERENCE = None
-
-
 
 #===============================================================================
 def exercise_backplanes(obs, **kwargs):

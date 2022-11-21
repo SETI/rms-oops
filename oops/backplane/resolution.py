@@ -122,8 +122,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -134,14 +132,13 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 from oops.constants    import DPR
 from oops.backplane.unittester_support    import show_info
 
-
 #===========================================================================
 def exercise_surface(bp, printing, saving, dir, refdir,
                      planet=None, moon=None, ring=None,
                      undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for resolution.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.resolution(planet, 'u')
         show_info(bp, 'planet resolution along u axis (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -166,7 +163,7 @@ def exercise_surface(bp, printing, saving, dir, refdir,
         show_info(bp, 'planet coarsest resolution (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.resolution(moon, 'u')
         show_info(bp, 'moon resolution along u axis (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -191,7 +188,7 @@ def exercise_surface(bp, printing, saving, dir, refdir,
         show_info(bp, 'moon coarsest resolution (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if ring != None:
+    if ring is not None:
         test = bp.resolution(ring, 'u')
         show_info(bp, 'Ring resolution along u axis (km)', test,
                      printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -216,16 +213,13 @@ def exercise_surface(bp, printing, saving, dir, refdir,
         show_info(bp, 'Ring coarsest resolution (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-
 #===========================================================================
 def exercise_ansa(bp, printing, saving, dir, refdir,
                   planet=None, moon=None, ring=None,
                   undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for resolution.py"""
 
-    if planet != None:
+    if planet is not None:
 
         ### TODO: use Body.has_rings() once Mark has created it
         try:
@@ -255,15 +249,13 @@ def exercise_ansa(bp, printing, saving, dir, refdir,
         except:
             if printing: print("These tests require further development.")
 
-
-
 #===========================================================================
 def exercise_limb(bp, printing, saving, dir, refdir,
                   planet=None, moon=None, ring=None,
                   undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for resolution.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.resolution(planet+':limb', 'u')
         show_info(bp, 'Limb resolution along u axis (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -289,12 +281,8 @@ def exercise_limb(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
-
-
-
 #*******************************************************************************
 class Test_Resolution(unittest.TestCase):
-
 
     #===========================================================================
     def runTest(self):
@@ -302,7 +290,6 @@ class Test_Resolution(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

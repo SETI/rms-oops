@@ -831,8 +831,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -843,14 +841,13 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 from oops.constants    import DPR
 from oops.backplane.unittester_support    import show_info
 
-
 #===========================================================================
 def exercise_resolution(bp, printing, saving, dir, refdir,
                         planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
     """Generic unit tests for ring.py"""
 
-    if ring != None:
+    if ring is not None:
         test = bp.ring_radial_resolution(ring)
         show_info(bp, 'Ring radial resolution (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -863,18 +860,16 @@ def exercise_resolution(bp, printing, saving, dir, refdir,
         show_info(bp, 'Ring angular resolution (km)', test * radii,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
 #===========================================================================
 def exercise_radial_modes(bp, printing, saving, dir, refdir,
                           planet=None, moon=None, ring=None,
                           undersample=16, use_inventory=False, inventory_border=2):
     """Generic unit tests for ring.py"""
 
-    if ring != None:
+    if ring is not None:
         test = bp.ring_radius(ring)
         show_info(bp, 'Ring radius (km)', test,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test0 = bp.ring_radius(ring, 70.e3, 100.e3)
         show_info(bp, 'Ring radius, 70-100 km (km)', test0,
@@ -894,9 +889,7 @@ def exercise_radial_modes(bp, printing, saving, dir, refdir,
 
         test = bp.ring_radius(ring).without_mask()
         show_info(bp, 'Ring radius unmasked (km)', test,
-                printing=printing, saving=saving, dir=dir, refdir=refdir)
-
-
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 #===========================================================================
 def exercise_radial_longitude_azimuth(bp, printing, saving, dir, refdir,
@@ -905,7 +898,7 @@ def exercise_radial_longitude_azimuth(bp, printing, saving, dir, refdir,
                                       inventory_border=2):
     """Generic unit tests for ring.py"""
 
-    if ring != None:
+    if ring is not None:
         test = bp.ring_longitude(ring, reference='node')
         show_info(bp, 'Ring longitude wrt node (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -984,7 +977,7 @@ def exercise_radial_longitude_azimuth(bp, printing, saving, dir, refdir,
         show_info(bp, 'Ring sub-solar longitude wrt observer (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if planet != None:
+    if planet is not None:
 
         ### TODO: use Body.has_rings() once Mark has created it
         try:
@@ -1012,14 +1005,13 @@ def exercise_radial_longitude_azimuth(bp, printing, saving, dir, refdir,
         except:
             if printing: print("These tests require further development.")
 
-
 #===========================================================================
 def exercise_photometry(bp, printing, saving, dir, refdir,
                         planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False, inventory_border=2):
     """Generic unit tests for ring.py"""
 
-    if ring != None:
+    if ring is not None:
         test = bp.ring_incidence_angle(ring, 'sunward')
         show_info(bp, 'Ring incidence angle, sunward (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -1094,7 +1086,7 @@ def exercise_photometry(bp, printing, saving, dir, refdir,
         show_info(bp, 'Ring center emission angle, prograde (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if planet != None:
+    if planet is not None:
 
         ### TODO: use Body.has_rings() once Mark has created it
         try:
@@ -1121,10 +1113,8 @@ def exercise_photometry(bp, printing, saving, dir, refdir,
             if printing: print("These tests require further development.")
 
 
-
 #*******************************************************************************
 class Test_Ring(unittest.TestCase):
-
 
     #===========================================================================
     def runTest(self):
@@ -1132,7 +1122,6 @@ class Test_Ring(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

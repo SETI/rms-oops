@@ -9,13 +9,13 @@ from polymath import Scalar
 from oops.backplane import Backplane
 from oops.constants import PI, TWOPI
 
-
-############################################################################
+################################################################################
 # Body surface geometry, surface intercept versions
 #   longitude()
 #   latitude()
-############################################################################
+################################################################################
 
+#===============================================================================
 def longitude(self, event_key, reference='iau', direction='west',
                                minimum=0, lon_type='centric'):
     """Longitude at the surface intercept point in the image.
@@ -101,7 +101,7 @@ def longitude(self, event_key, reference='iau', direction='west',
     self.register_backplane(key, lon)
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def latitude(self, event_key, lat_type='centric'):
     """Latitude at the surface intercept point in the image.
 
@@ -147,7 +147,7 @@ def latitude(self, event_key, lat_type='centric'):
     self.register_backplane(key, lat)
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _fill_surface_intercepts(self, event_key):
     """Internal method to fill in the surface intercept geometry backplanes.
     """
@@ -169,7 +169,7 @@ def _fill_surface_intercepts(self, event_key):
     self.register_backplane(lon_key, event.coord1)
     self.register_backplane(lat_key, event.coord2)
 
-#===========================================================================
+#===============================================================================
 def _sub_observer_longitude(self, event_key):
     """Sub-observer longitude. Used internally."""
 
@@ -185,7 +185,7 @@ def _sub_observer_longitude(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _sub_observer_latitude(self, event_key):
     """Sub-observer latitude. Used internally."""
 
@@ -201,7 +201,7 @@ def _sub_observer_latitude(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _sub_solar_longitude(self, event_key):
     """Sub-solar longitude. Used internally."""
 
@@ -218,7 +218,7 @@ def _sub_solar_longitude(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _sub_solar_latitude(self, event_key):
     """Sub-solar latitude. Used internally."""
 
@@ -234,14 +234,15 @@ def _sub_solar_latitude(self, event_key):
 
     return self.backplanes[key]
 
-############################################################################
+################################################################################
 # Surface geometry, path intercept versions
 #   sub_observer_longitude()
 #   sub_solar_longitude()
 #   sub_observer_latitude()
 #   sub_solar_latitude()
-############################################################################
+################################################################################
 
+#===============================================================================
 def sub_observer_longitude(self, event_key, reference='iau',
                                  direction='west', minimum=0):
     """Sub-observer longitude.
@@ -282,7 +283,7 @@ def sub_observer_longitude(self, event_key, reference='iau',
     self.register_gridless_backplane(key, lon)
     return lon
 
-#===========================================================================
+#===============================================================================
 def sub_solar_longitude(self, event_key, reference='iau',
                                          direction='west', minimum=0):
     """Sub-solar longitude.
@@ -326,7 +327,7 @@ def sub_solar_longitude(self, event_key, reference='iau',
     self.register_gridless_backplane(key, lon)
     return lon
 
-#===========================================================================
+#===============================================================================
 def _sub_longitude(self, event_key, lon, reference='iau',
                                          direction='west', minimum=0):
     """Sub-solar or sub-observer longitude."""
@@ -360,7 +361,7 @@ def _sub_longitude(self, event_key, lon, reference='iau',
 
     return lon
 
-#===========================================================================
+#===============================================================================
 def sub_observer_latitude(self, event_key, lat_type='centric'):
     """Sub-observer latitude at the center of the disk.
 
@@ -388,7 +389,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def sub_solar_latitude(self, event_key, lat_type='centric'):
     """Sub-solar latitude at the center of the disk.
 
@@ -416,7 +417,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def lambert_law(self, event_key):
     """Lambert law model cos(incidence_angle) for the surface.
 
@@ -433,7 +434,7 @@ def lambert_law(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def minnaert_law(self, event_key, k, k2=None):
     """Minnaert law model for the surface.
 
@@ -456,7 +457,7 @@ def minnaert_law(self, event_key, k, k2=None):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def lommel_seeliger_law(self, event_key):
     """Lommel-Seeliger law model for the surface.
 
@@ -484,8 +485,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -496,15 +495,14 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 from oops.constants    import DPR
 from oops.backplane.unittester_support    import show_info
 
-
-#===========================================================================
+#===============================================================================
 def exercise_limb_longitude(bp, printing, saving, dir, refdir,
                             planet=None, moon=None, ring=None,
                             undersample=16, use_inventory=False,
                             inventory_border=2):
     """generic unit tests for spheroid.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.longitude(planet+':limb', 'iau')
         show_info(bp, 'Limb longitude wrt IAU (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -529,16 +527,14 @@ def exercise_limb_longitude(bp, printing, saving, dir, refdir,
         show_info(bp, 'Limb longitude wrt SHA (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_limb_latitude(bp, printing, saving, dir, refdir,
                            planet=None, moon=None, ring=None,
                            undersample=16, use_inventory=False,
                            inventory_border=2):
     """generic unit tests for spheroid.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.latitude(planet+':limb', lat_type='centric')
         show_info(bp, 'Limb planetocentric latitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -551,16 +547,14 @@ def exercise_limb_latitude(bp, printing, saving, dir, refdir,
         show_info(bp, 'Limb planetographic latitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_surface_latitude(bp, printing, saving, dir, refdir,
                               planet=None, moon=None, ring=None,
                               undersample=16, use_inventory=False,
                               inventory_border=2):
     """generic unit tests for spheroid.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.latitude(planet, lat_type='centric')
         show_info(bp, 'planet latitude, planetocentric (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -581,7 +575,7 @@ def exercise_surface_latitude(bp, printing, saving, dir, refdir,
         show_info(bp, 'planet sub-solar latitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.latitude(moon, lat_type='centric')
         show_info(bp, 'moon latitude, planetocentric (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -602,16 +596,14 @@ def exercise_surface_latitude(bp, printing, saving, dir, refdir,
         show_info(bp, 'moon sub-solar latitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_surface_planet_moon(bp, printing, saving, dir, refdir,
                                  planet=None, moon=None, ring=None,
                                  undersample=16, use_inventory=False,
                                  inventory_border=2):
     """generic unit tests for spheroid.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.longitude(planet)
         show_info(bp, 'planet longitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -684,7 +676,7 @@ def exercise_surface_planet_moon(bp, printing, saving, dir, refdir,
         show_info(bp, 'planet sub-solar longitude wrt Sun (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.longitude(moon)
         show_info(bp, 'moon longitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -697,19 +689,16 @@ def exercise_surface_planet_moon(bp, printing, saving, dir, refdir,
         show_info(bp, 'moon sub-solar longitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_ring(bp, printing, saving, dir, refdir,
                   planet=None, moon=None, ring=None,
                   undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for spheroid.py"""
 
-    if ring != None:
+    if ring is not None:
         test = bp.sub_observer_longitude(ring, 'sun', minimum=-180)
         show_info(bp, 'Ring observer-sun longitude (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
-
 
 
 #*******************************************************************************
@@ -721,7 +710,6 @@ class Test_Spheroid(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

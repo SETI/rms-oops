@@ -203,8 +203,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -215,14 +213,13 @@ from oops.unittester_support             import TESTDATA_PARENT_DIRECTORY
 from oops.constants                      import DPR
 from oops.backplane.unittester_support   import show_info
 
-
-#===========================================================================
+#===============================================================================
 def exercise_planet(bp, printing, saving, dir, refdir,
                     planet=None, moon=None, ring=None,
                     undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for lighting.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.phase_angle(planet)
         show_info(bp, 'planet phase angle (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -243,20 +240,16 @@ def exercise_planet(bp, printing, saving, dir, refdir,
         show_info(bp, 'planet as a Lambert law', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_ring(bp, printing, saving, dir, refdir,
                   planet=None, moon=None, ring=None,
                   undersample=16, use_inventory=False, inventory_border=2):
     """generic unis for lighting.py"""
 
-    if ring != None:
+    if ring is not None:
         test = bp.phase_angle(ring)
         show_info(bp, 'Ring phase angle (deg)', test*DPR,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
-
-
 
 
 #*******************************************************************************
@@ -268,7 +261,6 @@ class Test_Lighting(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

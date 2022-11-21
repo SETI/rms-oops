@@ -142,8 +142,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -154,14 +152,13 @@ from oops.unittester_support import     TESTDATA_PARENT_DIRECTORY
 from oops.constants                     import DPR
 from oops.backplane.unittester_support  import show_info
 
-
-#===========================================================================
+#===============================================================================
 def exercise_observer(bp, printing, saving, dir, refdir,
                       planet=None, moon=None, ring=None,
                       undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for distance.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.distance(planet)
         show_info(bp, 'Distance observer to planet (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -172,7 +169,7 @@ def exercise_observer(bp, printing, saving, dir, refdir,
 
         test = bp.center_distance(planet)
         show_info(bp, 'Distance observer to planet center (km)', test,
-                printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.distance(planet+':limb')
         show_info(bp, 'Distance observer to planet limb (km)', test,
@@ -186,7 +183,7 @@ def exercise_observer(bp, printing, saving, dir, refdir,
         except:
             if printing: print("These tests require further development.")
 
-    if ring != None:
+    if ring is not None:
         test = bp.distance(ring)
         show_info(bp, 'Distance observer to rings (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -195,24 +192,22 @@ def exercise_observer(bp, printing, saving, dir, refdir,
         show_info(bp, 'Distance observer to ring center (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.distance(moon)
         show_info(bp, 'Distance observer to moon (km)', test,
-                     printing=printing, saving=saving, dir=dir, refdir=refdir)
+                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         test = bp.center_distance(moon)
         show_info(bp, 'Distance observer to moon center (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_sun(bp, printing, saving, dir, refdir,
                  planet=None, moon=None, ring=None,
                  undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for distance.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.distance(planet, direction='arr')
         show_info(bp, 'Distance Sun to planet, arrival (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -241,7 +236,7 @@ def exercise_sun(bp, printing, saving, dir, refdir,
         show_info(bp, 'Distance Sun to limb (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if ring != None:
+    if ring is not None:
         test = bp.distance(ring, direction='arr')
         show_info(bp, 'Distance Sun to rings, arrival (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -258,15 +253,13 @@ def exercise_sun(bp, printing, saving, dir, refdir,
         show_info(bp, 'Distance Sun to ring center, departure (km)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-#===========================================================================
+#===============================================================================
 def exercise_observer_light_time(bp, printing, saving, dir, refdir,
                       planet=None, moon=None, ring=None,
                       undersample=16, use_inventory=False, inventory_border=2):
     """generic unit tests for distance.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.light_time(planet)
         show_info(bp, 'Light-time observer to planet (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -291,7 +284,7 @@ def exercise_observer_light_time(bp, printing, saving, dir, refdir,
         show_info(bp, 'Light-time observer to planet center (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if ring != None:
+    if ring is not None:
         test = bp.light_time(ring)
         show_info(bp, 'Light-time observer to rings (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -300,7 +293,7 @@ def exercise_observer_light_time(bp, printing, saving, dir, refdir,
         show_info(bp, 'Light-time observer to ring center (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.light_time(moon)
         show_info(bp, 'Light-time observer to moon (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -308,8 +301,6 @@ def exercise_observer_light_time(bp, printing, saving, dir, refdir,
         test = bp.center_light_time(moon)
         show_info(bp, 'Light-time observer to moon center (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
-
-
 
 #===========================================================================
 def exercise_sun_light_time(bp, printing, saving, dir, refdir,
@@ -318,7 +309,7 @@ def exercise_sun_light_time(bp, printing, saving, dir, refdir,
                             inventory_border=2):
     """generic unit tests for distance.py"""
 
-    if planet != None:
+    if planet is not None:
         test = bp.light_time(planet)
         show_info(bp, 'Light-time observer to planet (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -343,7 +334,7 @@ def exercise_sun_light_time(bp, printing, saving, dir, refdir,
         show_info(bp, 'Light-time observer to planet center (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if ring != None:
+    if ring is not None:
         test = bp.light_time(ring)
         show_info(bp, 'Light-time observer to rings (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -352,7 +343,7 @@ def exercise_sun_light_time(bp, printing, saving, dir, refdir,
         show_info(bp, 'Light-time observer to ring center (sec)', test,
                  printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.light_time(moon)
         show_info(bp, 'Light-time observer to moon (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -361,10 +352,7 @@ def exercise_sun_light_time(bp, printing, saving, dir, refdir,
         show_info(bp, 'Light-time observer to moon center (sec)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-
-
-
-#===========================================================================
+#===============================================================================
 def exercise_event_time(bp, printing, saving, dir, refdir,
                         planet=None, moon=None, ring=None,
                         undersample=16, use_inventory=False,
@@ -379,7 +367,7 @@ def exercise_event_time(bp, printing, saving, dir, refdir,
     show_info(bp, 'Event time at Cassini center (sec, TDB)', test,
               printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if planet != None:
+    if planet is not None:
         test = bp.event_time(planet)
         show_info(bp, 'Event time at planet (sec, TDB)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -388,7 +376,7 @@ def exercise_event_time(bp, printing, saving, dir, refdir,
         show_info(bp, 'Event time at planet (sec, TDB)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if ring != None:
+    if ring is not None:
         test = bp.event_time(ring)
         show_info(bp, 'Event time at rings (sec, TDB)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -397,7 +385,7 @@ def exercise_event_time(bp, printing, saving, dir, refdir,
         show_info(bp, ' Event time at ring center (sec, TDB)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-    if moon != None:
+    if moon is not None:
         test = bp.event_time(moon)
         show_info(bp, 'Event time at moon (sec, TDB)', test,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
@@ -411,9 +399,6 @@ def exercise_event_time(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
 
-
-
-
 #*******************************************************************************
 class Test_Distance(unittest.TestCase):
 
@@ -423,7 +408,6 @@ class Test_Distance(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
-
 
 ########################################
 if __name__ == '__main__':

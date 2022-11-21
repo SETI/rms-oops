@@ -11,7 +11,6 @@ import numpy as np
 from polymath   import Scalar
 from PIL        import Image
 
-
 #===============================================================================
 def _read_image(filename):
     """
@@ -22,12 +21,10 @@ def _read_image(filename):
     """
     try:
         im = Image.open(filename, mode="r")
-    except:
+    except FileNotFoundError:
         return None
 
     return Scalar.as_scalar((np.array(im)))
-
-
 
 #===============================================================================
 def _save_image(image, filename):
@@ -46,8 +43,6 @@ def _save_image(image, filename):
 
     im = Image.frombytes('L', shape, image)
     im.save(filename)
-
-
 
 #===============================================================================
 def _scale_image(array, minval, maxval):
@@ -69,8 +64,6 @@ def _scale_image(array, minval, maxval):
 
     return bytes
 
-
-
 #===============================================================================
 def _compare_backplanes(array, reference, margin=0.05):
     """Compare a backplane array to the reference array."""
@@ -80,8 +73,6 @@ def _compare_backplanes(array, reference, margin=0.05):
 
     diff = abs(array - reference)
     assert diff.max() <= reference.max()*margin
-
-
 
 #===============================================================================
 def _convert_filename(filename):
@@ -103,34 +94,30 @@ def _convert_filename(filename):
     filename = filename.replace("'",'')
     return filename.lower().rstrip('_')
 
-
-
 #===============================================================================
 def _construct_filename(bp, array, title, dir):
     """Constructs a backplane filename."""
 
     # Construct base filename from title
-    filename = _convert_filename('backplane-' + \
+    filename = _convert_filename('backplane-' +
                                  bp.obs.basename.split('.')[0] + '-' + title)
 
     # Ensure unique filename by using the backplane key, if it exists
     # NOTE: if no backplane key exists, a non-unique filename could result
-    try:
+    if hasattr(array, 'key'):
         key = array.key
         id = key[0]
         for item in key[1:]:
             if item != ():
                 id = id + '_' + str(item)
         id = _convert_filename(id)
-        filename = filename + '[' + id + ']' + '.png'
-    except:
-        filename = filename + '.png'
+        filename = filename + '[' + id + ']'
+
+    filename = filename + '.png'
 
     # Add path
     filename = os.path.join(dir, filename)
     return filename
-
-
 
 #===============================================================================
 def _print(*x, printing=True):
@@ -139,7 +126,6 @@ def _print(*x, printing=True):
         return
 
     print(*x)
-
 
 #===============================================================================
 def show_info(bp, title, array, printing=True, saving=False, dir='./',
@@ -164,14 +150,14 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
         _print('  ', array, printing=printing)
 
     # Mask summary
-    elif type(array.vals) == bool or \
-            (isinstance(array.vals, np.ndarray) and \
-             array.vals.dtype == np.dtype('bool')):
+    elif (type(array.vals) == bool or
+            (isinstance(array.vals, np.ndarray) and
+             array.vals.dtype == np.dtype('bool'))):
         count = np.sum(array.vals)
         total = np.size(array.vals)
         percent = int(count / float(total) * 100. + 0.5)
         _print('  ', (count, total-count),
-            (percent, 100-percent), '(True, False pixels)', printing=printing)
+              (percent, 100-percent), '(True, False pixels)', printing=printing)
         minval = 0.
         maxval = 1.
 
@@ -187,12 +173,12 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
     # Masked backplane summary
     else:
         _print('  ', (array.min().as_builtin(),
-            array.max().as_builtin()), '(masked min, max)', printing=printing)
+               array.max().as_builtin()), '(masked min, max)', printing=printing)
         total = np.size(array.mask)
         masked = np.sum(array.mask)
         percent = int(masked / float(total) * 100. + 0.5)
         _print('  ', (masked, total-masked),
-             (percent, 100-percent), '(masked, unmasked pixels)', printing=printing)
+               (percent, 100-percent), '(masked, unmasked pixels)', printing=printing)
 
         if total == masked:
             minval = np.min(array.vals)
@@ -200,7 +186,6 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
         else:
             minval = array.min().as_builtin()
             maxval = array.max().as_builtin()
-
 
 
     # The rest of the method applies only to arrays
@@ -231,8 +216,6 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
         assert reference is not None, f"Reference directory not found: {reference}"
 
         _compare_backplanes(image, reference)
-
-
 
 #===============================================================================
 def _diff_logs(old_log, new_log, verbose=False):
@@ -337,7 +320,6 @@ def _diff_logs(old_log, new_log, verbose=False):
             print(newrec[:-1], '  (' + ', '.join(suffixes) + ')' + stars)
 
 
-
 #*******************************************************************************
 class Backplane_Settings(object):
 
@@ -358,8 +340,6 @@ class Backplane_Settings(object):
     OUTPUT = None
     REFERENCE = None
     REF = False
-
-
 
 #===============================================================================
 def backplane_unittester_args():
@@ -399,8 +379,8 @@ def backplane_unittester_args():
                         help='Do not compare backplanes with references.')
 
     parser.add_argument('--output', nargs=1, metavar='dir', default=None,
-                        help='Directory in which to save backplane PNG images. ' \
-                             'Default is TESTDATA_PARENT_DIRECTORY/[data dir]. ' \
+                        help='Directory in which to save backplane PNG images. '
+                             'Default is TESTDATA_PARENT_DIRECTORY/[data dir]. '
                              'If the directory does not exist, it is created.')
 
     parser.add_argument('--no-output', action='store_true', default=None,
@@ -418,10 +398,10 @@ def backplane_unittester_args():
 
 #TODO: currently only works for 80-char width
     parser.add_argument('--test-level', nargs=1, type=int, metavar='N', default=None,
-                        help='Selects among pre-set parameter combinations:  ' \
-                              '-test_level 1: no printing, no saving, undersample 32. ' \
-                              '-test_level 2: printing, no saving, undersample 16. ' \
-                              '-test_level 3: printing, saving, no undersampling. ' \
+                        help='Selects among pre-set parameter combinations:  '
+                              '-test_level 1: no printing, no saving, undersample 32. '
+                              '-test_level 2: printing, no saving, undersample 16. '
+                              '-test_level 3: printing, saving, no undersampling. '
                               'These behaviors are overridden by other arguments.')
 
 

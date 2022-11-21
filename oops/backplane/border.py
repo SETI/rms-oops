@@ -150,7 +150,6 @@ from oops.constants                      import DPR
 from oops.backplane.unittester_support   import show_info
 
 
-
 #*******************************************************************************
 class Test_Border(unittest.TestCase):
 
