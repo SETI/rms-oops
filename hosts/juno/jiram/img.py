@@ -9,8 +9,7 @@ from polymath import *
 import os.path
 import oops
 
-from .juno.jiram import JIRAM
-#from hosts.juno.jiram import JIRAM
+from hosts.juno.jiram import JIRAM
 
 ################################################################################
 # Standard class methods
