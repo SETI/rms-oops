@@ -4,8 +4,8 @@
 
 from __future__ import print_function
 
-from oops.constants    import HALFPI
-from oops.backplane    import Backplane
+from oops.constants import HALFPI
+from oops.backplane import Backplane
 
 ################################################################################
 # Boolean Masks

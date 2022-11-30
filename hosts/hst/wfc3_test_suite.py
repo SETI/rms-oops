@@ -25,7 +25,7 @@ import oops.inst.hst as hst
 #-------------------------------------------------------------------------------
 print(oops.Body.BODY_REGISTRY.keys())
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 #-------------------------------------------------------------------------------
 # Below is just a handy routine for illustrative purposes. Cut, paste, ignore.
@@ -316,4 +316,3 @@ print(moon_uv)
 (ra,dec) = image_event.ra_and_dec()
 radec = oops.Pair.from_scalars(ra, dec) * oops.DPR  # converted to degrees
 print(radec)
-

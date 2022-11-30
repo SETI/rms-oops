@@ -2,8 +2,7 @@
 # oops/backplanes/distance.py: Distance-related backplanes
 ################################################################################
 
-from polymath import Pair, Vector3
-
+from polymath       import Pair, Vector3
 from oops.backplane import Backplane
 from oops.surface   import Surface
 
@@ -127,10 +126,10 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 import unittest
-from oops.meshgrid     import Meshgrid
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from oops.constants    import DPR
-from oops.backplane.unittester_support    import show_info
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
 
 #===========================================================================
 def exercise_surface(bp, printing, saving, dir, refdir,
@@ -222,32 +221,30 @@ def exercise_ansa(bp, printing, saving, dir, refdir,
     if planet is not None:
 
         ### TODO: use Body.has_rings() once Mark has created it
-        try:
-            test = bp.resolution(planet+':ansa', 'u')
-            show_info(bp, 'Ansa resolution along u axis (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.resolution(planet+':ansa', 'u')
+        #show_info(bp, 'Ansa resolution along u axis (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            test = bp.resolution(planet+':ansa', 'v')
-            show_info(bp, 'Ansa resolution along v axis (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.resolution(planet+':ansa', 'v')
+        #show_info(bp, 'Ansa resolution along v axis (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            test = bp.center_resolution(planet+':ansa', 'u')
-            show_info(bp, 'Ansa center resolution along u axis (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.center_resolution(planet+':ansa', 'u')
+        #show_info(bp, 'Ansa center resolution along u axis (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            test = bp.center_resolution(planet+':ansa', 'v')
-            show_info(bp, 'Ansa center resolution along v axis (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.center_resolution(planet+':ansa', 'v')
+        #show_info(bp, 'Ansa center resolution along v axis (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            test = bp.finest_resolution(planet+':ansa')
-            show_info(bp, 'Ansa finest resolution (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.finest_resolution(planet+':ansa')
+        #show_info(bp, 'Ansa finest resolution (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            test = bp.coarsest_resolution(planet+':ansa')
-            show_info(bp, 'Ansa coarsest resolution (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
-        except:
-            if printing: print("These tests require further development.")
+        #test = bp.coarsest_resolution(planet+':ansa')
+        #show_info(bp, 'Ansa coarsest resolution (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
+        if printing: print("These tests require further development.")
 
 #===========================================================================
 def exercise_limb(bp, printing, saving, dir, refdir,

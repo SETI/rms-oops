@@ -1025,7 +1025,7 @@ class Test_HST(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import cspyce
         from .acs.hrc import HRC
 

@@ -836,10 +836,10 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 import unittest
-from oops.meshgrid     import Meshgrid
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from oops.constants    import DPR
-from oops.backplane.unittester_support    import show_info
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
 
 #===========================================================================
 def exercise_resolution(bp, printing, saving, dir, refdir,
@@ -978,32 +978,29 @@ def exercise_radial_longitude_azimuth(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if planet is not None:
-
         ### TODO: use Body.has_rings() once Mark has created it
-        try:
-            test = bp.ring_azimuth(planet+':ring', 'obs')
-            show_info(bp, 'Ring azimuth wrt observer (deg)', test*DPR,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.ring_azimuth(planet+':ring', 'obs')
+        #show_info(bp, 'Ring azimuth wrt observer (deg)', test*DPR,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            test = bp.ring_azimuth(planet+':ring', 'obs')
-            show_info(bp, 'Ring azimuth wrt observer, unmasked (deg)', test*DPR,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.ring_azimuth(planet+':ring', 'obs')
+        #show_info(bp, 'Ring azimuth wrt observer, unmasked (deg)', test*DPR,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            compare = bp.ring_longitude(planet+':ring', 'obs')
-            diff = test - compare
-            show_info(bp, 'Ring azimuth minus longitude wrt observer, unmasked (deg)',
-                      diff*DPR, printing=printing, saving=saving, dir=dir)
+        #compare = bp.ring_longitude(planet+':ring', 'obs')
+        #diff = test - compare
+        #show_info(bp, 'Ring azimuth minus longitude wrt observer, unmasked (deg)',
+        #          diff*DPR, printing=printing, saving=saving, dir=dir)
 
-            test = bp.ring_azimuth(planet+':ring', reference='sun')
-            show_info(bp, 'Ring azimuth wrt Sun, unmasked (deg)', test*DPR,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.ring_azimuth(planet+':ring', reference='sun')
+        #show_info(bp, 'Ring azimuth wrt Sun, unmasked (deg)', test*DPR,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            compare = bp.ring_longitude(planet+':ring', 'sun')
-            iff = test - compare
-            show_info(bp, 'Ring azimuth minus longitude wrt Sun, unmasked (deg)',
-                      diff*DPR, printing=printing, saving=saving, dir=dir)
-        except:
-            if printing: print("These tests require further development.")
+        #compare = bp.ring_longitude(planet+':ring', 'sun')
+        #iff = test - compare
+        #show_info(bp, 'Ring azimuth minus longitude wrt Sun, unmasked (deg)',
+        #          diff*DPR, printing=printing, saving=saving, dir=dir)
+        if printing: print("These tests require further development.")
 
 #===========================================================================
 def exercise_photometry(bp, printing, saving, dir, refdir,
@@ -1087,30 +1084,27 @@ def exercise_photometry(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
     if planet is not None:
-
         ### TODO: use Body.has_rings() once Mark has created it
-        try:
-            test = bp.ring_elevation(planet+':ring', reference='sun')
-            show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.ring_elevation(planet+':ring', reference='sun')
+        #show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            compare = bp.ring_incidence_angle(planet+':ring', 'north')
-            diff = test + compare
-            show_info(bp,
-                      'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
-                      diff*DPR, printing=printing, saving=saving, dir=dir)
+        #compare = bp.ring_incidence_angle(planet+':ring', 'north')
+        #diff = test + compare
+        #show_info(bp,
+        #          'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
+        #          diff*DPR, printing=printing, saving=saving, dir=dir)
 
-            test = bp.ring_elevation(planet+':ring', reference='obs')
-            show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
+        #test = bp.ring_elevation(planet+':ring', reference='obs')
+        #show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
 
-            compare = bp.ring_emission_angle(planet+':ring', 'north')
-            diff = test + compare
-            show_info(bp,
-                      'Ring elevation wrt observer plus north emission, unmasked (deg)',
-                      diff*DPR, printing=printing, saving=saving, dir=dir)
-        except:
-            if printing: print("These tests require further development.")
+        #compare = bp.ring_emission_angle(planet+':ring', 'north')
+        #diff = test + compare
+        #show_info(bp,
+        #          'Ring elevation wrt observer plus north emission, unmasked (deg)',
+        #          diff*DPR, printing=printing, saving=saving, dir=dir)
+        if printing: print("These tests require further development.")
 
 
 #*******************************************************************************

@@ -203,7 +203,7 @@ class Juno(object):
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
         """Load kernal pool."""
 
-        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/kernels/')
 

@@ -176,12 +176,10 @@ def exercise_observer(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         ### TODO: use Body.has_rings() once Mark has created it
-        try:
-            test = bp.distance(planet+':ansa')
-            show_info(bp, 'Distance observer to ansa (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
-        except:
-            if printing: print("These tests require further development.")
+        #test = bp.distance(planet+':ansa')
+        #show_info(bp, 'Distance observer to ansa (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
+        if printing: print("These tests require further development.")
 
     if ring is not None:
         test = bp.distance(ring)
@@ -225,12 +223,10 @@ def exercise_sun(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         ### TODO: use Body.has_rings() once Mark has created it
-        try:
-            test = bp.distance(planet+':ansa', direction='arr')
-            show_info(bp, 'Distance Sun to ansa (km)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
-        except:
-            if printing: print("These tests require further development.")
+        #test = bp.distance(planet+':ansa', direction='arr')
+        #show_info(bp, 'Distance Sun to ansa (km)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
+        if printing: print("These tests require further development.")
 
         test = bp.distance(planet+':limb', direction='arr')
         show_info(bp, 'Distance Sun to limb (km)', test,
@@ -255,8 +251,9 @@ def exercise_sun(bp, printing, saving, dir, refdir,
 
 #===============================================================================
 def exercise_observer_light_time(bp, printing, saving, dir, refdir,
-                      planet=None, moon=None, ring=None,
-                      undersample=16, use_inventory=False, inventory_border=2):
+                                 planet=None, moon=None, ring=None,
+                                 undersample=16, use_inventory=False,
+                                 inventory_border=2):
     """generic unit tests for distance.py"""
 
     if planet is not None:
@@ -273,12 +270,10 @@ def exercise_observer_light_time(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         ### TODO: use Body.has_rings() once Mark has created it
-        try:
-            test = bp.light_time(planet+':ansa')
-            show_info(bp, 'Light-time observer to ansa (sec)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
-        except:
-            if printing: print("These tests require further development.")
+        #test = bp.light_time(planet+':ansa')
+        #show_info(bp, 'Light-time observer to ansa (sec)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
+        if printing: print("These tests require further development.")
 
         test = bp.center_light_time(planet)
         show_info(bp, 'Light-time observer to planet center (sec)', test,
@@ -323,12 +318,10 @@ def exercise_sun_light_time(bp, printing, saving, dir, refdir,
                   printing=printing, saving=saving, dir=dir, refdir=refdir)
 
         ### TODO: use Body.has_rings() once Mark has created it
-        try:
-            test = bp.light_time(planet+':ansa')
-            show_info(bp, 'Light-time observer to ansa (sec)', test,
-                      printing=printing, saving=saving, dir=dir, refdir=refdir)
-        except:
-            if printing: print("These tests require further development.")
+        #test = bp.light_time(planet+':ansa')
+        #show_info(bp, 'Light-time observer to ansa (sec)', test,
+        #          printing=printing, saving=saving, dir=dir, refdir=refdir)
+        if printing: print("These tests require further development.")
 
         test = bp.center_light_time(planet)
         show_info(bp, 'Light-time observer to planet center (sec)', test,

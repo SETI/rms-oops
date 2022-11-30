@@ -8,8 +8,8 @@ import os
 import sys
 import numpy as np
 
-from polymath   import Scalar
-from PIL        import Image
+from polymath import Scalar
+from PIL      import Image
 
 #===============================================================================
 def _read_image(filename):
@@ -127,8 +127,7 @@ def _print(*x, printing=True):
     print(*x)
 
 #===============================================================================
-def show_info(bp, title, array, printing=True, saving=False, dir='./',
-                                refdir=None):
+def show_info(bp, title, array, printing=True, saving=False, dir='./', refdir=None):
     """Internal method to print summary information and display images."""
 
     import numbers
@@ -289,7 +288,7 @@ def backplane_unittester_args():
     parser.add_argument('--reference', action='store_true', default=None,
                         help='Generate reference backplanes and exit.')
 
-#TODO: currently only works for 80-char width
+### TODO: currently only works for 80-char width
     parser.add_argument('--test-level', nargs=1, type=int, metavar='N', default=None,
                         help='Selects among pre-set parameter combinations:  '
                               '-test_level 1: no printing, no saving, undersample 32. '

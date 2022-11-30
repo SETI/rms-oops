@@ -2,8 +2,7 @@
 # oops/backplanes/lighting.py: Lighting geometry backplanes
 ################################################################################
 
-from polymath import Boolean, Scalar
-
+from polymath       import Boolean, Scalar
 from oops.backplane import Backplane
 
 #===============================================================================

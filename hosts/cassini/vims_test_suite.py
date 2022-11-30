@@ -510,7 +510,7 @@ class Test_Cassini_VIMS_Suite(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         if UNITTEST_LOGGING: oops.config.LOGGING.on("        ")
 

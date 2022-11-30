@@ -3,8 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Vector3
-
+from polymath       import Scalar, Vector3
 from oops.backplane import Backplane
 from oops.frame     import Frame
 
@@ -251,10 +250,10 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 import unittest
-from oops.meshgrid     import Meshgrid
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from oops.constants    import DPR
-from oops.backplane.unittester_support    import show_info
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
 
 #===============================================================================
 def exercise_right_ascension(bp, printing, saving, dir, refdir,

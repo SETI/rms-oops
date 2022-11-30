@@ -4,8 +4,7 @@
 
 from __future__ import print_function
 
-from polymath import Scalar
-
+from polymath       import Scalar
 from oops.backplane import Backplane
 from oops.constants import PI, TWOPI
 
@@ -490,10 +489,10 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 import unittest
-from oops.meshgrid     import Meshgrid
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from oops.constants    import DPR
-from oops.backplane.unittester_support    import show_info
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
 
 #===============================================================================
 def exercise_limb_longitude(bp, printing, saving, dir, refdir,

@@ -301,8 +301,6 @@ class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
                                  planet_key='JUPITER')
 
 
-
-
 ##############################################
 from oops.backplane.unittester_support import backplane_unittester_args
 
