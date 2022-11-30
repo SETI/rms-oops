@@ -18,8 +18,7 @@ from hosts.juno.jiram import JIRAM
 #===============================================================================
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
-    """
-    A general, static method to return a Snapshot object based on a given
+    """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
 
     Inputs:
@@ -43,9 +42,9 @@ def from_file(filespec, label, fast_distortion=True,
     # Construct Snapshots for slit in each band
     slits = []
     for i in range(meta.nsamples):
-        item = oops.obs.Snapshot(("v","u"),
+        item = oops.obs.Snapshot(('v','u'),
                                  meta.tstart, meta.exposure, meta.fov,
-                                 "JUNO", "JUNO_JIRAM_S",
+                                 'JUNO', 'JUNO_JIRAM_S',
                                  data=np.reshape(data[:,i],(1,meta.nlines)) )
 
 #        item.insert_subfield('spice_kernels',
@@ -58,9 +57,9 @@ def from_file(filespec, label, fast_distortion=True,
 
 
     # Construct Slit1D for all bands
-    obs = oops.obs.Slit1D(("u","b"),
+    obs = oops.obs.Slit1D(('u','b'),
                           meta.tstart, meta.exposure, meta.fov,
-                          "JUNO", "JUNO_JIRAM_S", data=data )
+                          'JUNO', 'JUNO_JIRAM_S', data=data )
 
 #    obs.insert_subfield('spice_kernels',
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
@@ -73,8 +72,7 @@ def from_file(filespec, label, fast_distortion=True,
 
 #===============================================================================
 def _load_data(filespec, label, meta):
-    """
-    Loads the data array from the file and splits into individual framelets.
+    """Load the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -99,8 +97,7 @@ class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """
-        Uses the label to assemble the image metadata.
+        """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
@@ -145,9 +142,7 @@ class Metadata(object):
 
 #*******************************************************************************
 class SPE(object):
-    """
-    A instance-free class to hold SPE instrument parameters.
-    """
+    """A instance-free class to hold SPE instrument parameters."""
 
     initialized = False
 
@@ -197,9 +192,9 @@ class SPE(object):
     #===========================================================================
     @staticmethod
     def reset():
-        """
-        Resets the internal SPE parameters. Can be useful for
-        debugging.
+        """Reset the internal SPE parameters.
+
+        Can be useful for debugging.
         """
         SPE.initialized = False
 
@@ -227,13 +222,13 @@ class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
     def runTest(self):
 
         if Backplane_Settings.NO_EXERCISES:
-            self.skipTest("")
+            self.skipTest('')
 
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/jiram")
-        file = os.path.join(root, "JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT")
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/jiram')
+        file = os.path.join(root, 'JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT')
         (obs, slits) = jiram.from_file(file)
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key="MOON")
+                                 planet_key='MOON')
 
 
 

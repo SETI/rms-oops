@@ -100,15 +100,15 @@ def from_file(filespec, fast=False, **parameters):
 
     # Load a label via the fast procedure if specified
     if fast:
-        assert filespec.lower().endswith(".lbl")
+        assert filespec.lower().endswith('.lbl')
         f = open(filespec)
         lines = f.readlines()
         f.close()
 
         label = fast_dict(lines)
 
-        # Allow label["SPECTRAL_QUBE"] to work properly below
-        label["SPECTRAL_QUBE"] = label
+        # Allow label['SPECTRAL_QUBE'] to work properly below
+        label['SPECTRAL_QUBE'] = label
 
     # Otherwise, use the standard parser
     else:
@@ -121,39 +121,39 @@ def from_file(filespec, fast=False, **parameters):
 
             # In GAIN_MODE_ID and BACKGROUND_SAMPLING_MODE_ID, sometimes N/A is
             # not properly quoted
-            if line[:4] in ("GAIN", "BACK"):
+            if line[:4] in ('GAIN', 'BACK'):
                 lines[i] = line.replace('(N/A',  '("N/A"')
                 lines[i] = line.replace('N/A)',  '"N/A")')
 
             # Sometimes a comment begins on one line and and ends on the next
-            if line.strip().endswith("*/") and "/*" not in line:
-                lines[i] = "\n"
+            if line.strip().endswith('*/') and '/*' not in line:
+                lines[i] = '\n'
 
         label = pdsparser.PdsLabel.from_string(lines).as_dict()
 
-    is_isis_file = "QUBE" in label.keys()
+    is_isis_file = 'QUBE' in label.keys()
     if is_isis_file:                # If this is an ISIS file...
-        info = label["QUBE"]        # ... the info is in the QUBE object
+        info = label['QUBE']        # ... the info is in the QUBE object
     else:                           # Otherwise, this is a .LBL file
         info = label                # ... and the info is at the top level
-        info["CORE_ITEMS"] = label["SPECTRAL_QUBE"]["CORE_ITEMS"]
-        info["BAND_SUFFIX_NAME"] = label["SPECTRAL_QUBE"]["BAND_SUFFIX_NAME"]
-        info["PACKING"] = info["PACKING_FLAG"]
+        info['CORE_ITEMS'] = label['SPECTRAL_QUBE']['CORE_ITEMS']
+        info['BAND_SUFFIX_NAME'] = label['SPECTRAL_QUBE']['BAND_SUFFIX_NAME']
+        info['PACKING'] = info['PACKING_FLAG']
 
     # Load any needed SPICE kernels
-    tstart = julian.tdb_from_tai(julian.tai_from_iso(info["START_TIME"]))
+    tstart = julian.tdb_from_tai(julian.tai_from_iso(info['START_TIME']))
     Cassini.load_cks( tstart, tstart + 3600.)
     Cassini.load_spks(tstart, tstart + 3600.)
 
     # Check power state of each channel: [0] is IR; [1] is VIS
-    ir_is_off  = info["POWER_STATE_FLAG"][0] == "OFF"
-    vis_is_off = info["POWER_STATE_FLAG"][1] == "OFF"
+    ir_is_off  = info['POWER_STATE_FLAG'][0] == 'OFF'
+    vis_is_off = info['POWER_STATE_FLAG'][1] == 'OFF'
 
     ########################################
     # Load the data array
     ########################################
 
-    (samples, bands, lines) = info["CORE_ITEMS"]
+    (samples, bands, lines) = info['CORE_ITEMS']
     assert bands in (352, 256, 96)
 
     if is_isis_file:
@@ -179,8 +179,8 @@ def from_file(filespec, fast=False, **parameters):
     # Define the FOVs
     ########################################
 
-    swath_width = info["SWATH_WIDTH"]
-    swath_length = info["SWATH_LENGTH"]
+    swath_width = info['SWATH_WIDTH']
+    swath_length = info['SWATH_LENGTH']
 
     frame_size = swath_width * swath_length
     frames = (samples * lines) // frame_size
@@ -195,15 +195,15 @@ def from_file(filespec, fast=False, **parameters):
 
     uv_shape = (swath_width, swath_length)
 
-    x_offset = info["X_OFFSET"]
-    z_offset = info["Z_OFFSET"]
+    x_offset = info['X_OFFSET']
+    z_offset = info['Z_OFFSET']
     uv_los = (33. - x_offset, 33. - z_offset)
 
-    vis_sampling = info["SAMPLING_MODE_ID"][1].strip()  # handle " NORMAL"
-    ir_sampling  = info["SAMPLING_MODE_ID"][0].strip()
+    vis_sampling = info['SAMPLING_MODE_ID'][1].strip()  # handle ' NORMAL'
+    ir_sampling  = info['SAMPLING_MODE_ID'][0].strip()
 
     # VIS FOV
-    if vis_sampling == "HI-RES":
+    if vis_sampling == 'HI-RES':
         vis_fov = oops.fov.FlatFOV(VIS_HIRES_SCALE, uv_shape,
                     (VIS_HIRES_FACTOR * uv_los[0] - uv_shape[0],
                      VIS_HIRES_FACTOR * uv_los[1] - uv_shape[1]))
@@ -216,13 +216,13 @@ def from_file(filespec, fast=False, **parameters):
                     (IR_OVER_VIS * uv_los[0], IR_OVER_VIS * uv_los[1]))
 
     # IR FOV
-    if info["INSTRUMENT_MODE_ID"] == "OCCULTATION":
-        if ir_sampling == "NORMAL":
+    if info['INSTRUMENT_MODE_ID'] == 'OCCULTATION':
+        if ir_sampling == 'NORMAL':
             ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
         else:
             ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape, uv_los)
 
-    elif ir_sampling in ("HI-RES","UNDER"):
+    elif ir_sampling in ('HI-RES','UNDER'):
         ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape,
                     (IR_HIRES_FACTOR * uv_los[0] - uv_shape[0]/2., uv_los[1]))
 
@@ -233,7 +233,7 @@ def from_file(filespec, fast=False, **parameters):
         ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
 
     # Nyquist sampling
-    if ir_sampling == "UNDER":
+    if ir_sampling == 'UNDER':
         ### VIMS IR sampling mode UNDER is untested!!
         # Use ir_det_size = 2 for RasterSlit1D and RasterSlit observations
         # Use (1., ir_det_size) for RasterScan observations
@@ -247,12 +247,12 @@ def from_file(filespec, fast=False, **parameters):
     ########################################
 
     # Define cadences based on header parameters
-    ir_texp  = info["EXPOSURE_DURATION"][0] * 0.001 * TIME_FACTOR
-    vis_texp = info["EXPOSURE_DURATION"][1] * 0.001 * TIME_FACTOR
+    ir_texp  = info['EXPOSURE_DURATION'][0] * 0.001 * TIME_FACTOR
+    vis_texp = info['EXPOSURE_DURATION'][1] * 0.001 * TIME_FACTOR
     vis_texp_nonzero = max(vis_texp, 1.e-8) # avoids divide-by-zero in cadences
 
-    interframe_delay = info["INTERFRAME_DELAY_DURATION"] * 0.001 * TIME_FACTOR
-    interline_delay  = info["INTERLINE_DELAY_DURATION"]  * 0.001 * TIME_FACTOR
+    interframe_delay = info['INTERFRAME_DELAY_DURATION'] * 0.001 * TIME_FACTOR
+    interline_delay  = info['INTERLINE_DELAY_DURATION']  * 0.001 * TIME_FACTOR
 
     # Adjust the timing of one line, multiple frames
     if frames > 1 and frame_size != 1:
@@ -266,13 +266,13 @@ def from_file(filespec, fast=False, **parameters):
     if times is None:
         pass
 
-    elif info["OVERWRITTEN_CHANNEL_FLAG"] == "ON":
+    elif info['OVERWRITTEN_CHANNEL_FLAG'] == 'ON':
         times = times.ravel()
         assert times[0] < times[1]
         assert vis_is_off
         backplane_cadence = oops.cadence.Sequence(times, ir_texp)
 
-    elif info["PACKING"] == "ON":
+    elif info['PACKING'] == 'ON':
         times = times.ravel()
         assert times[0] == times[1]
         tstart = times[0]
@@ -300,11 +300,11 @@ def from_file(filespec, fast=False, **parameters):
     # Define the coordinate frames
     ########################################
 
-    vis_frame_id = "CASSINI_VIMS_V"
-    ir_frame_id  = "CASSINI_VIMS_IR"
+    vis_frame_id = 'CASSINI_VIMS_V'
+    ir_frame_id  = 'CASSINI_VIMS_IR'
 
-    if (info["TARGET_NAME"] == "SUN" or "_SOL" in info["OBSERVATION_ID"]):
-        ir_frame_id = "CASSINI_VIMS_IR_SOL"
+    if (info['TARGET_NAME'] == 'SUN' or '_SOL' in info['OBSERVATION_ID']):
+        ir_frame_id = 'CASSINI_VIMS_IR_SOL'
 
     ########################################
     # Construct the Observation objects
@@ -333,9 +333,9 @@ def from_file(filespec, fast=False, **parameters):
         if ir_data is not None:
             ir_data = ir_data.reshape((frames, 256))
 
-        ir_obs = oops.obs.Pixel(("t","b"),
+        ir_obs = oops.obs.Pixel(('t','b'),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id)
+                                'CASSINI', ir_frame_id)
 
     # Single LINE case
     elif swath_length == 1:
@@ -343,9 +343,9 @@ def from_file(filespec, fast=False, **parameters):
             if vis_data is not None:
                 vis_data = vis_data.reshape((samples, 96))
 
-            vis_obs = oops.obs.Slit1D(("u","b"),
+            vis_obs = oops.obs.Slit1D(('u','b'),
                                 tstart, vis_texp_nonzero, vis_fov,
-                                "CASSINI", vis_frame_id)
+                                'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if ir_data is not None:
@@ -354,16 +354,16 @@ def from_file(filespec, fast=False, **parameters):
             if backplane_cadence is not None:
                 ir_fast_cadence = backplane_cadence
 
-            ir_obs = oops.obs.RasterSlit1D(("ut","b"),
+            ir_obs = oops.obs.RasterSlit1D(('ut','b'),
                                 ir_fast_cadence, ir_fov,
-                                "CASSINI", ir_frame_id)
+                                'CASSINI', ir_frame_id)
 
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
-            vis_obs = oops.obs.Pushbroom(("vt","u","b"),
+            vis_obs = oops.obs.Pushbroom(('vt','u','b'),
                                 vis_header_cadence, vis_fov,
-                                "CASSINI", vis_frame_id)
+                                'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -373,16 +373,16 @@ def from_file(filespec, fast=False, **parameters):
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                 (lines,samples))
 
-            ir_obs = oops.obs.RasterScan(("vslow","ufast","b"),
+            ir_obs = oops.obs.RasterScan(('vslow','ufast','b'),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id)
+                                'CASSINI', ir_frame_id)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
-            vis_obs = oops.obs.Slit(("vt","u","b"),
+            vis_obs = oops.obs.Slit(('vt','u','b'),
                                 frame_cadence, vis_fov,
-                                "CASSINI", vis_frame_id)
+                                'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -392,9 +392,9 @@ def from_file(filespec, fast=False, **parameters):
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                 (lines,samples))
 
-            ir_obs = oops.obs.RasterSlit(("vslow","ufast","b"),
+            ir_obs = oops.obs.RasterSlit(('vslow','ufast','b'),
                                 ir_cadence, ir_fov,
-                                "CASSINI", ir_frame_id)
+                                'CASSINI', ir_frame_id)
 
 # 1/9/15 broken code no longer needed
 #     # Multiple 2-D IMAGE case
@@ -408,15 +408,15 @@ def from_file(filespec, fast=False, **parameters):
 #                                 vis_data.shape[-1])
 #
 #             # Define the first 2-D pushbroom observation
-#             vis_first_obs = oops.obs.Pushbroom(("t", "vt","u","b"), (1.,1.),
+#             vis_first_obs = oops.obs.Pushbroom(('t', 'vt','u','b'), (1.,1.),
 #                                 vis_header_cadence, vis_fov,
-#                                 "CASSINI", vis_frame_id)
+#                                 'CASSINI', vis_frame_id)
 #
 #             # Define the movie
 #             movie_cadence = oops.cadence.DualCadence(frame_cadence,
 #                                 vis_header_cadence)
 #
-#             vis_obs = oops.obs.Movie(("t","vt","u","b"), vis_first_obs,
+#             vis_obs = oops.obs.Movie(('t','vt','u','b'), vis_first_obs,
 #                                 movie_cadence)
 #
 #         if not ir_is_off:
@@ -427,10 +427,10 @@ def from_file(filespec, fast=False, **parameters):
 #                                           ir_data.shape[-1])
 #
 #             # Define the first 2-D raster-scan observation
-#             ir_first_obs = oops.obs.RasterScan(("vslow","ufast","b"),
+#             ir_first_obs = oops.obs.RasterScan(('vslow','ufast','b'),
 #                                 (1., ir_det_size),
 #                                 ir_first_cadence, ir_fov,
-#                                 "CASSINI", ir_frame_id)
+#                                 'CASSINI', ir_frame_id)
 #
 #             # Define the 3-D cadence
 #             if backplane_cadence is None:
@@ -444,7 +444,7 @@ def from_file(filespec, fast=False, **parameters):
 #                                 (frames,lines,samples))
 #
 #             # Define the movie
-#             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
+#             ir_obs = oops.obs.Movie(('t','vslow','ufast','b'), ir_first_obs,
 #                                 ir_cadence)
 #
 #             # Reshape the data array
@@ -453,10 +453,10 @@ def from_file(filespec, fast=False, **parameters):
 #                                           ir_data.shape[-1])
 #
 #             # Define the first 2-D raster-scan observation
-#             ir_first_obs = oops.obs.RasterScan(("vslow","ufast","b"),
+#             ir_first_obs = oops.obs.RasterScan(('vslow','ufast','b'),
 #                                 (1., ir_det_size),
 #                                 ir_first_cadence, ir_fov,
-#                                 "CASSINI", ir_frame_id)
+#                                 'CASSINI', ir_frame_id)
 #
 #             # Define the 3-D cadence
 #             if backplane_cadence is None:
@@ -470,39 +470,41 @@ def from_file(filespec, fast=False, **parameters):
 #                                 (frames,lines,samples))
 #
 #             # Define the movie
-#             ir_obs = oops.obs.Movie(("t","vslow","ufast","b"), ir_first_obs,
+#             ir_obs = oops.obs.Movie(('t','vslow','ufast','b'), ir_first_obs,
 #                                 ir_cadence)
 
     else:
-        raise ValueError("unsupported VIMS format in file " + filespec)
+        raise ValueError('unsupported VIMS format in file ' + filespec)
 
     # Insert the data array
     if vis_obs is not None:
-        vis_obs.insert_subfield("instrument", "VIMS")
-        vis_obs.insert_subfield("detector", "VIS")
-        vis_obs.insert_subfield("sampling", vis_sampling)
-        vis_obs.insert_subfield("dict", label)
-        vis_obs.insert_subfield("index_dict", label)# for backward compatibility
+        vis_obs.insert_subfield('instrument', 'VIMS')
+        vis_obs.insert_subfield('detector', 'VIS')
+        vis_obs.insert_subfield('sampling', vis_sampling)
+        vis_obs.insert_subfield('dict', label)
+        vis_obs.insert_subfield('index_dict', label)# for backward compatibility
 
         if vis_data is not None:
-            vis_obs.insert_subfield("data", vis_data)
+            vis_obs.insert_subfield('data', vis_data)
 
     if ir_obs is not None:
-        ir_obs.insert_subfield("instrument", "VIMS")
-        ir_obs.insert_subfield("detector", "IR")
-        ir_obs.insert_subfield("sampling", ir_sampling)
-        ir_obs.insert_subfield("dict", label)
-        ir_obs.insert_subfield("index_dict", label)# for backward compatibility
+        ir_obs.insert_subfield('instrument', 'VIMS')
+        ir_obs.insert_subfield('detector', 'IR')
+        ir_obs.insert_subfield('sampling', ir_sampling)
+        ir_obs.insert_subfield('dict', label)
+        ir_obs.insert_subfield('index_dict', label)# for backward compatibility
 
         if ir_data is not None:
-            ir_obs.insert_subfield("data", ir_data)
+            ir_obs.insert_subfield('data', ir_data)
 
     return (vis_obs, ir_obs)
 
 #===============================================================================
 def _load_data_and_times(filespec, label):
-    """Load the data array from the file. If time backplanes are present, also
-    return an array of times in seconds TDB as derived from these backplanes.
+    """Load the data array from the file.
+
+    If time backplanes are present, also return an array of times in seconds
+    TDB as derived from these backplanes.
 
     Input:
         filespec        full path to the data file.
@@ -517,35 +519,34 @@ def _load_data_and_times(filespec, label):
     Note: This procedure is absurdly complicated but it has been rather
     carefully debugged. --MRS 7/4/12.
     """
-
-    info = label["QUBE"]
+    info = label['QUBE']
 
     # Extract key parameters fro the file header
-    core_items   = info["CORE_ITEMS"]
+    core_items   = info['CORE_ITEMS']
     core_samples = core_items[0]
     core_bands   = core_items[1]
     core_lines   = core_items[2]
-    core_item_bytes = info["CORE_ITEM_BYTES"]
-    core_item_type  = info["CORE_ITEM_TYPE"]
+    core_item_bytes = info['CORE_ITEM_BYTES']
+    core_item_type  = info['CORE_ITEM_TYPE']
 
-    sample_suffix_items = info["SUFFIX_ITEMS"][0]
-    band_suffix_items   = info["SUFFIX_ITEMS"][1]
+    sample_suffix_items = info['SUFFIX_ITEMS'][0]
+    band_suffix_items   = info['SUFFIX_ITEMS'][1]
 
     suffix_item_bytes = 4
 
     if sample_suffix_items == 1:
-        suffix_item_type = info["SAMPLE_SUFFIX_ITEM_TYPE"]
+        suffix_item_type = info['SAMPLE_SUFFIX_ITEM_TYPE']
     elif sample_suffix_items > 1:
-        suffix_item_type = info["SAMPLE_SUFFIX_ITEM_TYPE"][0]
+        suffix_item_type = info['SAMPLE_SUFFIX_ITEM_TYPE'][0]
     elif band_suffix_items == 1:
-        suffix_item_type = info["BAND_SUFFIX_ITEM_TYPE"]
+        suffix_item_type = info['BAND_SUFFIX_ITEM_TYPE']
     elif band_suffix_items > 1:
-        suffix_item_type = info["BAND_SUFFIX_ITEM_TYPE"][0]
+        suffix_item_type = info['BAND_SUFFIX_ITEM_TYPE'][0]
     else:
-        suffix_item_type = ""
+        suffix_item_type = ''
 
-    record_bytes = label["RECORD_BYTES"]
-    header_bytes = record_bytes * (label["^QUBE"][1] - 1)
+    record_bytes = label['RECORD_BYTES']
+    header_bytes = record_bytes * (label['^QUBE'][1] - 1)
 
     # Make sure we have byte-aligned values
     assert (core_samples * core_item_bytes) % suffix_item_bytes == 0
@@ -568,24 +569,24 @@ def _load_data_and_times(filespec, label):
     size = line_stride * core_lines
 
     # Determine the dtype for the file core
-    if "SUN_" in core_item_type or "MSB_" in core_item_type:
-        core_dtype = ">"
-    elif "PC_" in core_item_type or  "LSB_" in core_item_type:
-        core_dtype = "<"
+    if 'SUN_' in core_item_type or 'MSB_' in core_item_type:
+        core_dtype = '>'
+    elif 'PC_' in core_item_type or  'LSB_' in core_item_type:
+        core_dtype = '<'
     else:
-        raise TypeError("Unrecognized byte order: " + core_item_type)
+        raise TypeError('Unrecognized byte order: ' + core_item_type)
 
-    if "UNSIGNED" in core_item_type:
-        core_dtype += "u"
-        native_dtype = "int"
-    elif "INTEGER" in core_item_type:
-        core_dtype += "i"
-        native_dtype = "int"
-    elif "REAL"    in core_item_type:
-        core_dtype += "f"
-        native_dtype = "float"
+    if 'UNSIGNED' in core_item_type:
+        core_dtype += 'u'
+        native_dtype = 'int'
+    elif 'INTEGER' in core_item_type:
+        core_dtype += 'i'
+        native_dtype = 'int'
+    elif 'REAL'    in core_item_type:
+        core_dtype += 'f'
+        native_dtype = 'float'
     else:
-        raise TypeError("Unrecognized core data type: " + core_item_type)
+        raise TypeError('Unrecognized core data type: ' + core_item_type)
 
     core_dtype += str(core_item_bytes)
 
@@ -604,31 +605,31 @@ def _load_data_and_times(filespec, label):
     data = data.astype(native_dtype)
 
     # If there are no time backplanes, we're done
-    band_suffix_name = info["BAND_SUFFIX_NAME"]
-    if "SLICE_TIME_SECONDS" not in band_suffix_name:
+    band_suffix_name = info['BAND_SUFFIX_NAME']
+    if 'SLICE_TIME_SECONDS' not in band_suffix_name:
         return (data, None)
 
     ############################
 
     # Determine the dtype for the file core
-    if "SUN_" in core_item_type or "MSB_" in suffix_item_type:
-        suffix_item_dtype = ">"
-    elif "PC_" in core_item_type or  "LSB_" in suffix_item_type:
-        suffix_item_dtype = "<"
+    if 'SUN_' in core_item_type or 'MSB_' in suffix_item_type:
+        suffix_item_dtype = '>'
+    elif 'PC_' in core_item_type or  'LSB_' in suffix_item_type:
+        suffix_item_dtype = '<'
     else:
-        raise TypeError("Unrecognized byte order: " + suffix_item_type)
+        raise TypeError('Unrecognized byte order: ' + suffix_item_type)
 
-    if "UNSIGNED" in suffix_item_type:
-        suffix_item_dtype += "u"
-        native_dtype = "int"
-    elif "INTEGER" in suffix_item_type:
-        suffix_item_dtype += "i"
-        native_dtype = "int"
-    elif "REAL"    in suffix_item_type:
-        suffix_item_dtype += "f"
-        native_dtype = "float"
+    if 'UNSIGNED' in suffix_item_type:
+        suffix_item_dtype += 'u'
+        native_dtype = 'int'
+    elif 'INTEGER' in suffix_item_type:
+        suffix_item_dtype += 'i'
+        native_dtype = 'int'
+    elif 'REAL'    in suffix_item_type:
+        suffix_item_dtype += 'f'
+        native_dtype = 'float'
     else:
-        raise TypeError("Unrecognized suffix data type: " + suffix_item_type)
+        raise TypeError('Unrecognized suffix data type: ' + suffix_item_type)
 
     suffix_item_dtype += str(suffix_item_bytes)
 
@@ -647,25 +648,25 @@ def _load_data_and_times(filespec, label):
                 shape   = (band_suffix_items, core_lines,  core_samples))
 
     # Convert to spacecraft clock
-    seconds = backplane[band_suffix_name.index("SLICE_TIME_SECONDS")]
-    ticks = backplane[band_suffix_name.index("SLICE_TIME_TICKS")]
+    seconds = backplane[band_suffix_name.index('SLICE_TIME_SECONDS')]
+    ticks = backplane[band_suffix_name.index('SLICE_TIME_TICKS')]
     sclock = seconds + ticks/15959.
 
     # Convert to TDB
     mask = (seconds == -8192)       # Sometimes all are -8192 except first
     if np.any(mask):
         assert np.all(mask.ravel()[1:])
-        formatted = "%16.3f" % sclock[0,0]
+        formatted = '%16.3f' % sclock[0,0]
         times = np.empty(sclock.shape)
         times[...] = cspyce.scs2e(-82, formatted)
 
     else:
         sclock_min = sclock.min()
-        formatted = "%16.3f" % sclock_min
+        formatted = '%16.3f' % sclock_min
         tdb_min = cspyce.scs2e(-82, formatted) + (sclock_min - float(formatted))
 
         sclock_max = sclock.max()
-        formatted = "%16.3f" % sclock_max
+        formatted = '%16.3f' % sclock_max
         tdb_max = cspyce.scs2e(-82, formatted) + (sclock_max - float(formatted))
 
         times = tdb_min + (sclock - sclock_min) * ((tdb_max - tdb_min) /
@@ -685,7 +686,6 @@ def pds_value_from_constants(string_value):
     Return:             a string of that constant or a tuple of strings of those
                         constants.
     """
-
     if string_value[0] == '(' and string_value[-1] == ')':
         words = string_value[1:-1].split(',')
         return words
@@ -704,8 +704,10 @@ def pds_value_from_constants(string_value):
 def fast_dict(lines):
     """A dictionary extracted from the PDS label of a VIMS file, containing the
     minimum required set of entries for the observation to be generated and
-    analyzed. This routine is much faster than a call to PdsLabel.from_file(),
-    because it does not use the pyparsing module.
+    analyzed.
+
+    This routine is much faster than a call to PdsLabel.from_file() because
+    it does not use the pyparsing module.
 
     Input:
         lines           a list containing all the lines of the file, as read by
@@ -730,23 +732,22 @@ def fast_dict(lines):
                             "X_OFFSET" = int
                             "Z_OFFSET" = int
     """
-
     def three_ints(string):
         string = string.strip()
-        assert string[0] == "(" and string[1] == ")"
-        (a,b,c) = string[1:-1].split(",")
+        assert string[0] == '(' and string[1] == ')'
+        (a,b,c) = string[1:-1].split(',')
         return (int(a), int(b), int(c))
 
     def two_floats(string):
         string = string.strip()
-        assert string[0] == "(" and string[1] == ")"
-        (a,b) = string[1:-1].split(",")
+        assert string[0] == '(' and string[1] == ')'
+        (a,b) = string[1:-1].split(',')
         return (float(a), float(b))
 
     def two_strings(string):
         string = string.strip()
-        assert string[0] == "(" and string[1] == ")"
-        (a,b) = string[1:-1].split(",")
+        assert string[0] == '(' and string[1] == ')'
+        (a,b) = string[1:-1].split(',')
         return (unquote(a), unquote(b))
 
     def unquote(string):
@@ -759,29 +760,29 @@ def fast_dict(lines):
     # Create a quick dictionary using the PDS keyword, equal to the string value
     dict = {}
     for line in lines:
-        pair = line.split("=")
+        pair = line.split('=')
         if len(pair) == 2:
             dict[pair[0].strip()] = pair[1]
 
     # Re-define the required keywords
 
-    dict["BAND_SUFFIX_NAME"]          = dict["BAND_SUFFIX_NAME"].strip()
-    dict["CORE_ITEMS"]                = three_ints(dict["CORE_ITEMS"])
-    dict["EXPOSURE_DURATION"]         = two_floats(dict["EXPOSURE_DURATION"])
-    dict["INSTRUMENT_MODE_ID"]        = unquote(dict["INSTRUMENT_MODE_ID"])
-    dict["INTERFRAME_DELAY_DURATION"] = float(dict["INTERFRAME_DELAY_DURATION"])
-    dict["INTERLINE_DELAY_DURATION"]  = float(dict["INTERLINE_DELAY_DURATION"])
-    dict["MISSION_PHASE_NAME"]        = unquote(["MISSION_PHASE_NAME"])
-    dict["OVERWRITTEN_CHANNEL_FLAG"]  = unquote(["OVERWRITTEN_CHANNEL_FLAG"])
-    dict["PACKING_FLAG"]              = unquote(dict["PACKING_FLAG"])
-    dict["POWER_STATE_FLAG"]          = two_strings(dict["POWER_STATE_FLAG"])
-    dict["SAMPLING_MODE_ID"]          = two_strings(dict["SAMPLING_MODE_ID"])
-    dict["START_TIME"]                = dict["START_TIME"].strip()
-    dict["SWATH_LENGTH"]              = int(dict["SWATH_LENGTH"])
-    dict["SWATH_WIDTH"]               = int(dict["SWATH_WIDTH"])
-    dict["TARGET_NAME"]               = unquote(dict["TARGET_NAME"])
-    dict["X_OFFSET"]                  = int(dict["X_OFFSET"])
-    dict["Z_OFFSET"]                  = int(dict["Z_OFFSET"])
+    dict['BAND_SUFFIX_NAME']          = dict['BAND_SUFFIX_NAME'].strip()
+    dict['CORE_ITEMS']                = three_ints(dict['CORE_ITEMS'])
+    dict['EXPOSURE_DURATION']         = two_floats(dict['EXPOSURE_DURATION'])
+    dict['INSTRUMENT_MODE_ID']        = unquote(dict['INSTRUMENT_MODE_ID'])
+    dict['INTERFRAME_DELAY_DURATION'] = float(dict['INTERFRAME_DELAY_DURATION'])
+    dict['INTERLINE_DELAY_DURATION']  = float(dict['INTERLINE_DELAY_DURATION'])
+    dict['MISSION_PHASE_NAME']        = unquote(['MISSION_PHASE_NAME'])
+    dict['OVERWRITTEN_CHANNEL_FLAG']  = unquote(['OVERWRITTEN_CHANNEL_FLAG'])
+    dict['PACKING_FLAG']              = unquote(dict['PACKING_FLAG'])
+    dict['POWER_STATE_FLAG']          = two_strings(dict['POWER_STATE_FLAG'])
+    dict['SAMPLING_MODE_ID']          = two_strings(dict['SAMPLING_MODE_ID'])
+    dict['START_TIME']                = dict['START_TIME'].strip()
+    dict['SWATH_LENGTH']              = int(dict['SWATH_LENGTH'])
+    dict['SWATH_WIDTH']               = int(dict['SWATH_WIDTH'])
+    dict['TARGET_NAME']               = unquote(dict['TARGET_NAME'])
+    dict['X_OFFSET']                  = int(dict['X_OFFSET'])
+    dict['Z_OFFSET']                  = int(dict['Z_OFFSET'])
 
     return dict
 
@@ -800,14 +801,13 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
 
     Return:             (mesgrid, time)
     """
+    shrinkage = {('IR',  'NORMAL'): (1,1),
+                 ('IR',  'HI-RES'): (2,1),
+                 ('IR',  'UNDER' ): (2,1),
+                 ('VIS', 'NORMAL'): (1,1),
+                 ('VIS', 'HI-RES'): (3,3)}
 
-    shrinkage = {("IR",  "NORMAL"): (1,1),
-                 ("IR",  "HI-RES"): (2,1),
-                 ("IR",  "UNDER" ): (2,1),
-                 ("VIS", "NORMAL"): (1,1),
-                 ("VIS", "HI-RES"): (3,3)}
-
-    assert obs.instrument == "VIMS"
+    assert obs.instrument == 'VIMS'
 
     (ushrink,vshrink) = shrinkage[(obs.detector, obs.sampling)]
 
@@ -852,14 +852,13 @@ def initialize(ck='reconstructed', planets=None, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-
     VIMS.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                     gapfill=gapfill, mst_pck=mst_pck, irregulars=irregulars)
 
 ################################################################################
 
 class VIMS(object):
-    """A instance-free class to hold Cassini VIMS instrument parameters."""
+    """An instance-free class to hold Cassini VIMS instrument parameters."""
 
     initialized = False
     instrument_kernel = None
@@ -900,20 +899,21 @@ class VIMS(object):
         Cassini.load_instruments(asof=asof)
 
         # Load the instrument kernel
-        VIMS.instrument_kernel = Cassini.spice_instrument_kernel("VIMS")[0]
+        VIMS.instrument_kernel = Cassini.spice_instrument_kernel('VIMS')[0]
 
         # Construct a SpiceFrame for each detector
-        ignore = oops.frame.SpiceFrame("CASSINI_VIMS_V")
-        ignore = oops.frame.SpiceFrame("CASSINI_VIMS_IR")
-        ignore = oops.frame.SpiceFrame("CASSINI_VIMS_IR_SOL")
+        ignore = oops.frame.SpiceFrame('CASSINI_VIMS_V')
+        ignore = oops.frame.SpiceFrame('CASSINI_VIMS_IR')
+        ignore = oops.frame.SpiceFrame('CASSINI_VIMS_IR_SOL')
 
         VIMS.initialized = True
 
     #===========================================================================
     @staticmethod
     def reset():
-        """Reset the internal Cassini VIMS parameters. Can be useful for
-        debugging.
+        """Reset the internal Cassini VIMS parameters.
+
+        Can be useful for debugging.
         """
 
         VIMS.instrument_kernel = None
@@ -950,21 +950,21 @@ class Test_Cassini_VIMS_Backplane_Exercises(unittest.TestCase):
     def runTest(self):
 
         if Backplane_Settings.NO_EXERCISES:
-            self.skipTest("")
+            self.skipTest('')
 
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/VIMS")
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/VIMS')
 
 
-        file = os.path.join(root, "v1690952775_1.qub")
+        file = os.path.join(root, 'v1690952775_1.qub')
         (obs_vis, obs_ir) = from_file(file)
         exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
-                                     planet_key="SATURN")
+                                     planet_key='SATURN')
 
 
-        file = os.path.join(root, "v1793917030_1.qub")
+        file = os.path.join(root, 'v1793917030_1.qub')
         (obs_vis, obs_ir) = from_file(file)
         exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
-                                     planet_key="SATURN")
+                                     planet_key='SATURN')
 
 
 

@@ -28,7 +28,6 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
                         warnings interface: 'error', 'ignore', 'always',
                         'default', 'module', 'once'.
     """
-
     ISS.initialize()    # Define everything the first time through
 
     # Load the PDS label if available
@@ -147,7 +146,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
                                image_frame,
                                dict = vicar_dict,           # Add the VICAR dict
                                data = vic.data_2d,          # Add the data array
-                               instrument = "ISS",
+                               instrument = 'ISS',
                                detector = camera,
                                filter = filter,
                                planet = planet,
@@ -175,7 +174,6 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
                         missing times from the returned list; False to include
                         them. If time is missing, tstart = 0.
     """
-
     ISS.initialize()    # Define everything the first time through
 
     # Read the index file
@@ -277,17 +275,17 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 ################################################################################
 
 class ISS(object):
-    """A instance-free class to hold Voyager ISS instrument parameters.
-    """
+    """An instance-free class to hold Voyager ISS instrument parameters."""
 
     fovs = {}
     frames = {}
     initialized = False
 
-    #===========================================================================
     @staticmethod
     def initialize(asof=None):
-        """Fills in key information about the WAC and NAC. Must be called first.
+        """Fill in key information about the WAC and NAC.
+
+        Must be called first.
         """
 
 #         TOL_TICKS = 800.
@@ -305,7 +303,7 @@ class ISS(object):
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         # Define some important paths and frames
-        oops.Body.define_solar_system("1979-01-06", "1989-10-02", asof=asof)
+        oops.Body.define_solar_system('1979-01-06', '1989-10-02', asof=asof)
 
         # Check the formatting of the "as of" date
         if asof is not None:
@@ -406,20 +404,18 @@ from oops.backplane.exercise_backplanes import exercise_backplanes
 from oops.backplane.unittester_support  import Backplane_Settings
 
 
-#*******************************************************************************
 class Test_Voyager_ISS_Backplane_Exercises(unittest.TestCase):
 
-    #===========================================================================
     def runTest(self):
 
         if Backplane_Settings.NO_EXERCISES:
-            self.skipTest("")
+            self.skipTest('')
 
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "voyager/ISS")
-        file = os.path.join(root, "c3440346.gem")
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'voyager/ISS')
+        file = os.path.join(root, 'c3440346.gem')
         obs = from_file(file)
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key="SATURN")
+                                 planet_key='SATURN')
 
 
 

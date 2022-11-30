@@ -2,10 +2,11 @@
 # oops/backplane/unittester.py
 ################################################################################
 #
-#usage: unittester.py [-h] [--args [arg [arg ...]]] [--verbose]
-#                     [--diff old new] [--exercises-only] [--no-exercises]
-#                     [--no-compare] [--output dir] [--no-output] [--log]
-#                     [--undersample N] [--reference] [--test-level N]
+# usage: unittester.py [-h] [--args [arg [arg ...]]] [--verbose]
+#                     [--exercises-only] [--no-exercises] [--no-compare]
+#                     [--output dir] [--no-output] [--log] [--undersample N]
+#                     [--reference] [--test-level N]
+#
 #
 # optional arguments:
 #  -h, --help            show this help message and exit
@@ -13,7 +14,6 @@
 #                        Generic arguments to pass to the test modules. Must
 #                        occur last in the argument list.
 #  --verbose             Print output to the terminal.
-#  --diff old new        Compare new and old backplane logs.
 #  --exercises-only      Execute only the backplane exercises.
 #  --no-exercises        Execute all tests except the backplane exercises.
 #  --no-compare          Do not compare backplanes with references.
@@ -30,6 +30,7 @@
 #                        -test_level 2: printing, no saving, undersample 16.
 #                        -test_level 3: printing, saving, no undersampling.
 #                        These behaviors are overridden by other arguments.
+
 import unittest
 
 from oops.backplane              import Test_Backplane_Surfaces

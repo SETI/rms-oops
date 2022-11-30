@@ -18,7 +18,7 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
                          planet_key=None, moon_key=None, ring_key=None,
                          undersample=16, use_inventory=False,
                          inventory_border=2):
-    """Generates info from every backplane."""
+    """Generate info from every backplane."""
 
     if printing and logging:
         config.LOGGING.on('        ')
@@ -207,22 +207,20 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
 
 #===============================================================================
 def exercise_backplanes_settings(obs):
-    """Wrapper for exercise_backplanes(). Determines default directories
-       based on input observation object and fills in args based on
-       settings."""
+    """Configure run-time backplane settings based on an observation."""
 
-    # determine default output and reference directories
-    specname = obs.filespec.split( \
-                    os.path.dirname(TESTDATA_PARENT_DIRECTORY) + '/')[1]
-    basedir = os.path.dirname(specname)
-    outdir = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                          'backplane_exercises', basedir)
-    Backplane_Settings.REFERENCE = \
-        os.path.join(outdir, 'reference_' + str(Backplane_Settings.UNDERSAMPLE))
+    # determine reference directory
+    testdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '')   # Ensure trailing
+                                                            # delimeter.
+    parts = obs.filespec.partition(testdir)
+    specdir = os.path.dirname(parts[2])
+    refdir = os.path.join('reference_' + str(Backplane_Settings.UNDERSAMPLE))
+    Backplane_Settings.REFERENCE = os.path.join(testdir, 'backplane_exercises', specdir, refdir)
 
     # determine specific output directory
-    if Backplane_Settings.OUTPUT is None:
-        Backplane_Settings.OUTPUT = outdir
+    if Backplane_Settings.OUTPUT is None and Backplane_Settings.SAVING:
+        Backplane_Settings.OUTPUT = \
+            os.path.join(os.environ['OOPS_BACKPLANE_OUTPUT_PATH'], specdir)
 
     if Backplane_Settings.REF:
         Backplane_Settings.OUTPUT = Backplane_Settings.REFERENCE
@@ -233,10 +231,11 @@ def exercise_backplanes_settings(obs):
 
 #===============================================================================
 def exercise_backplanes(obs, **kwargs):
+    """Wrapper for _exercise_backplanes().
 
-    """Wrapper for exercise_backplanes(). Determines default directories
-       based on input observation object and fills in args based on
-       settings."""
+    Determines default directories based on input observation object and fills
+    in args based on settings.
+    """
 
     # complete settings that require observation information
     exercise_backplanes_settings(obs)

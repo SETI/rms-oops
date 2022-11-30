@@ -18,8 +18,7 @@ from hosts.juno.jiram import JIRAM
 #===============================================================================
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
-    """
-    A general, static method to return a Snapshot object based on a given
+    """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
 
     Inputs:
@@ -45,10 +44,10 @@ def from_file(filespec, label, fast_distortion=True,
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
 
-        item = (oops.obs.Snapshot(("v","u"),
+        item = (oops.obs.Snapshot(('v','u'),
                                   fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                  "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame,
-                                  instrument = "JIRAM_I",
+                                  'JUNO', 'JUNO_JIRAM_I_' + fmeta.filter_frame,
+                                  instrument = 'JIRAM_I',
                                   filter = fmeta.filter,
                                   data = framelets[:,:,i]))
 
@@ -60,11 +59,9 @@ def from_file(filespec, label, fast_distortion=True,
 
     return obs
 
-
 #===============================================================================
 def _load_data(filespec, label, meta):
-    """
-    Loads the data array from the file and splits into individual framelets.
+    """Load the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -110,14 +107,12 @@ def _load_data(filespec, label, meta):
     return (framelets, framelet_labels)
 
 
-
 #*******************************************************************************
 class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """
-        Uses the label to assemble the image metadata.
+        """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
@@ -129,7 +124,6 @@ class Metadata(object):
                             order, or None if no time backplane is found in
                             the file.
             nframelets
-
         """
 
         # image dimensions
@@ -197,12 +191,9 @@ class Metadata(object):
         return
 
 
-
 #*******************************************************************************
 class IMG(object):
-    """
-    A instance-free class to hold IMG instrument parameters.
-    """
+    """An instance-free class to hold IMG instrument parameters."""
 
     initialized = False
 
@@ -211,8 +202,7 @@ class IMG(object):
     def initialize(time, ck='reconstructed', planets=None, asof=None,
                          spk='reconstructed', gapfill=True,
                          mst_pck=True, irregulars=True):
-        """
-        Initialize key information about the IMG instrument.
+        """Initialize key information about the IMG instrument.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
@@ -254,9 +244,9 @@ class IMG(object):
     @staticmethod
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Resets the internal IMG parameters. Can be useful for
-        debugging.
+        """Reset the internal IMG parameters.
+
+        Can be useful for debugging.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         IMG.initialized = False
@@ -285,30 +275,30 @@ class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
     def runTest(self):
 
         if Backplane_Settings.NO_EXERCISES:
-            self.skipTest("")
+            self.skipTest('')
 
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/jiram")
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/jiram')
 
 
         # Moon image
-        file = os.path.join(root, "JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG")
+        file = os.path.join(root, 'JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG')
         obs = jiram.from_file(file)[1]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key="MOON")
+                                 planet_key='MOON')
 
 
         # Europa image
-        file = os.path.join(root, "JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG")
+        file = os.path.join(root, 'JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG')
         obs = jiram.from_file(file)[1]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key="EUROPA")
+                                 planet_key='EUROPA')
 
 
         # Jupiter image
-        file = os.path.join(root, "JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG")
+        file = os.path.join(root, 'JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG')
         obs = jiram.from_file(file)[0]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key="JUPITER")
+                                 planet_key='JUPITER')
 
 
 

@@ -20,8 +20,7 @@ from hosts.juno import Juno
 #===============================================================================
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, **parameters):
-    """
-    A general, static method to return a Pushframe object based on a given
+    """A general, static method to return a Pushframe object based on a given
     JUNOCAM image file.
 
     Inputs:
@@ -36,7 +35,7 @@ def from_file(filespec, fast_distortion=True,
                             # defaults unless initialize() is called explicitly.
 
     # Load the PDS label
-    lbl_filespec = filespec.replace(".img", ".LBL")
+    lbl_filespec = filespec.replace('.img', '.LBL')
     recs = pdsparser.PdsLabel.load_file(lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
@@ -61,24 +60,24 @@ def from_file(filespec, fast_distortion=True,
 
         if snap:
             item = (oops.obs.Snapshot(
-                ("v","u"),
-                (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
-                "JUNO", "JUNO_JUNOCAM",
-                instrument = "JUNOCAM",
-                filter = fmeta.filter,
-                data = framelets[:,:,i]))
+                                ('v','u'),
+                                (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
+                                'JUNO', 'JUNO_JUNOCAM',
+                                instrument = 'JUNOCAM',
+                                filter = fmeta.filter,
+                                data = framelets[:,:,i]))
 
 
 
         if not snap:
             item = (oops.obs.Pushframe(
-                        ("vt","u"),
-                        (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
-                        fmeta.fov,
-                        "JUNO", "JUNO_JUNOCAM",
-                        instrument = "JUNOCAM",
-                        filter = fmeta.filter,
-                        data = framelets[:,:,i]))
+                                    ('vt','u'),
+                                    (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
+                                    fmeta.fov,
+                                    'JUNO', 'JUNO_JUNOCAM',
+                                    instrument = 'JUNOCAM',
+                                    filter = fmeta.filter,
+                                    data = framelets[:,:,i]))
 
 
 #        item.insert_subfield('spice_kernels', \
@@ -96,8 +95,7 @@ def from_file(filespec, fast_distortion=True,
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
-    """
-    Initialize key information about the JUNOCAM instrument.
+    """Initialize key information about the JUNOCAM instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
@@ -126,8 +124,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
 
 #===============================================================================
 def _load_data(filespec, label, meta):
-    """
-    Loads the data array from the file and splits into individual framelets.
+    """Load the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -182,8 +179,7 @@ class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """
-        Uses the label to assemble the image metadata.
+        """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
@@ -289,8 +285,7 @@ class Metadata(object):
 
     #===========================================================================
     def update_cy(self, label, cy):
-        """
-        Looks at label RATIONALE_DESC for a correction to DISTORTION_Y for
+        """Look at label RATIONALE_DESC for a correction to DISTORTION_Y for
         some methane images.
 
         Input:
@@ -302,7 +297,7 @@ class Metadata(object):
 
         """
         desc = label['RATIONALE_DESC']
-        desc = re.sub("\s+"," ", desc)                     # compress whitespace
+        desc = re.sub('\s+',' ', desc)                     # compress whitespace
         kv = desc.partition('INS-61504_DISTORTION_Y = ')   # parse keyword
         return float(kv[2].split()[0])                     # parse/convert value
 
@@ -310,9 +305,7 @@ class Metadata(object):
 
 #*******************************************************************************
 class JUNOCAM(object):
-    """
-    A instance-free class to hold JUNOCAM instrument parameters.
-    """
+    """A instance-free class to hold JUNOCAM instrument parameters."""
 
     instrument_kernel = None
     fovs = {}
@@ -366,9 +359,9 @@ class JUNOCAM(object):
     @staticmethod
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Resets the internal JUNOCAM parameters. Can be useful for
-        debugging.
+        """Reset the internal JUNOCAM parameters.
+
+        Can be useful for debugging.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         JUNOCAM.instrument_kernel = None
@@ -398,13 +391,13 @@ class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
     def runTest(self):
 
         if Backplane_Settings.NO_EXERCISES:
-            self.skipTest("")
+            self.skipTest('')
 
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/junocam")
-        file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/junocam')
+        file = os.path.join(root, '03/JNCR_2016347_03C00192_V01.img')
         obs = from_file(file)[5]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key="JUPITER")
+                                 planet_key='JUPITER')
 
 
 

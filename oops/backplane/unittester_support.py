@@ -13,14 +13,13 @@ from PIL        import Image
 
 #===============================================================================
 def _read_image(filename):
-    """
-    Save an image file of a 2-D array.
+    """Save an image file of a 2-D array.
 
     Input:        filename    the name of the input file, which should end with
                               the type, e.g., '.png' or '.jpg'
     """
     try:
-        im = Image.open(filename, mode="r")
+        im = Image.open(filename, mode='r')
     except FileNotFoundError:
         return None
 
@@ -28,8 +27,7 @@ def _read_image(filename):
 
 #===============================================================================
 def _save_image(image, filename):
-    """
-    Read an image file of a 2-D array.
+    """Read an image file of a 2-D array.
 
     Input:
         image       a 2-D byte array.
@@ -46,7 +44,7 @@ def _save_image(image, filename):
 
 #===============================================================================
 def _scale_image(array, minval, maxval):
-    """Rescales an image and converts to byte."""
+    """Rescale an image and convert to byte."""
 
     image = array.vals.copy()
     image[array.mask] = minval - 0.05 * (maxval - minval)
@@ -76,7 +74,7 @@ def _compare_backplanes(array, reference, margin=0.05):
 
 #===============================================================================
 def _convert_filename(filename):
-    """Converts file-system-unfriendly characters in a backplane filename."""
+    """Convert file-system-unfriendly characters in a backplane filename."""
 
     filename = filename.replace(':','_')
     filename = filename.replace('/','_')
@@ -96,7 +94,7 @@ def _convert_filename(filename):
 
 #===============================================================================
 def _construct_filename(bp, array, title, dir):
-    """Constructs a backplane filename."""
+    """Construct a backplane filename."""
 
     # Construct base filename from title
     filename = _convert_filename('backplane-' +
@@ -121,7 +119,8 @@ def _construct_filename(bp, array, title, dir):
 
 #===============================================================================
 def _print(*x, printing=True):
-    """Prints contignent upon verbosity."""
+    """Print contignent upon verbosity."""
+
     if not printing:
         return
 
@@ -130,9 +129,7 @@ def _print(*x, printing=True):
 #===============================================================================
 def show_info(bp, title, array, printing=True, saving=False, dir='./',
                                 refdir=None):
-    """Internal method to print summary information and display images as
-    desired.
-    """
+    """Internal method to print summary information and display images."""
 
     import numbers
 
@@ -209,119 +206,18 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./',
 
     # Compare with reference array if refdir is known
     if refdir is not None:
-        assert os.path.exists(refdir), f"Reference directory not found: {refdir}"
+        assert os.path.exists(refdir), f'Reference directory not found: {refdir}'
 
         filename = _construct_filename(bp, array, title, refdir)
         reference = _read_image(filename)
-        assert reference is not None, f"Reference directory not found: {reference}"
+        assert reference is not None, f'Reference directory not found: {reference}'
 
         _compare_backplanes(image, reference)
-
-#===============================================================================
-def _diff_logs(old_log, new_log, verbose=False):
-    """
-    For each numeric entry in the new log file that differs from that in the
-    old log file by more than 0.1%, this program prints out the header and the
-    discrepant records, with the percentage changes in all numeric values
-    appended.
-
-    If the verbose option is specified, the program prints out the percentage
-    change in every numeric value; in this case, a string of asterisks is
-    appended to the ends of rows where any change exceeds 0.1%.
-    """
-    REGEX = re.compile('r[-+]?\d+\.?\d*[eE]?[-+]?\d*')
-
-    if '--verbose' in sys.argv[1:]:
-        verbose = True
-        sys.argv.remove('--verbose')
-    else:
-        verbose = False
-
-    with open(sys.argv[1]) as f:
-        oldrecs = f.readlines()
-
-    with open(sys.argv[2]) as f:
-        newrecs = f.readlines()
-
-    header = ''
-    prev_header = ''
-    first_test_results_found = False
-    for k in range(min(len(oldrecs), len(newrecs))):
-        oldrec = oldrecs[k]
-        newrec = newrecs[k]
-
-        oldvals = REGEX.findall(oldrec)
-        newvals = REGEX.findall(newrec)
-
-        if oldrec.startswith('Ran 1 test in'):
-            if not first_test_results_found:
-                print('File structure has changed; no tests performed')
-            sys.exit()
-
-        if oldrec.startswith('**'):
-            first_test_results_found = True
-            continue
-
-        if not first_test_results_found:
-            continue
-
-        if oldrec[0].isupper():
-            header = oldrec
-
-            if oldrec != newrec:
-                print('File structure has changed')
-                sys.exit()
-
-            continue
-
-        if len(oldvals) != len(newvals):
-            print()
-            print(header[:-1])
-            print(oldrec[:-1])
-            print(newrec[:-1])
-            print('Mismatch in number of numeric values')
-            prev_header = header
-            prev_oldrec = oldrec
-
-        percentages = []
-        discrepancy = False
-        for j in range(min(len(oldvals), len(newvals))):
-            x = float(oldvals[j])
-            y = float(newvals[j])
-
-            if x == 0. and y == 0.:
-                percent = 0.
-            else:
-                percent = 200. * abs((x-y)/(x+y))
-
-            percentages.append(percent)
-            if percent > 0.1:
-                discrepancy = True
-
-        if not percentages:
-            continue
-
-        if verbose or discrepancy:
-            if prev_header != header:
-                print()
-                print(header[:-1])
-                prev_header = header
-
-            suffixes = []
-            for percent in percentages:
-                suffixes.append('%.4f' % percent)
-
-            if discrepancy and verbose:
-                stars = ' ********'
-            else:
-                stars = ''
-
-            print(oldrec[:-1])
-            print(newrec[:-1], '  (' + ', '.join(suffixes) + ')' + stars)
 
 
 #*******************************************************************************
 class Backplane_Settings(object):
+    """Class for storing command-line preferences."""
 
     from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 
@@ -343,10 +239,7 @@ class Backplane_Settings(object):
 
 #===============================================================================
 def backplane_unittester_args():
-    """
-    Parse command-line arguments for backplane unit tests.  Results are
-    stored as Backplane_Settings attributes.
-    """
+    """Parse command-line arguments for backplane unit tests."""
 
     import argparse
     import sys
@@ -366,9 +259,9 @@ def backplane_unittester_args():
     parser.add_argument('--verbose', action='store_true', default=None,
                         help='Print output to the terminal.')
 
-    parser.add_argument('--diff', nargs=2, metavar=('old', 'new'), default=None,
-                        help='Compare new and old backplane logs.')
-
+#    parser.add_argument('--diff', nargs=2, metavar=('old', 'new'), default=None,
+#                        help='Compare new and old backplane logs.')
+#
     parser.add_argument('--exercises-only', action='store_true', default=None,
                         help='Execute only the backplane exercises.')
 
@@ -434,9 +327,9 @@ def backplane_unittester_args():
     if args.verbose is not None:
         Backplane_Settings.PRINTING = args.verbose
 
-    if args.diff is not None:
-        _diff_logs(args.diff[0], args.diff[1], verbose=Backplane_Settings.PRINTING)
-        exit()
+#    if args.diff is not None:
+#        _diff_logs(args.diff[0], args.diff[1], verbose=Backplane_Settings.PRINTING)
+#        exit()
 
     if args.exercises_only is not None:
         Backplane_Settings.EXERCISES_ONLY = args.exercises_only

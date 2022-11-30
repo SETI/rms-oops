@@ -993,7 +993,7 @@ class Test_Backplane_Borders(unittest.TestCase):
         import hosts.cassini.iss as iss
 
         if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
+            self.skipTest('')
 
         # These test assume undersample = 1.
         if Backplane_Settings.UNDERSAMPLE != 1:
@@ -1048,7 +1048,7 @@ class Test_Backplane_Empty_Events(unittest.TestCase):
         import hosts.cassini.iss as iss
 
         if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
+            self.skipTest('')
 
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                 'cassini/ISS/W1573721822_1.IMG')
@@ -1095,7 +1095,7 @@ class Test_Backplane_Exercises(unittest.TestCase):
         import hosts.cassini.iss as iss
 
         if Backplane_Settings.NO_EXERCISES:
-            self.skipTest("")
+            self.skipTest('')
 
 #        iss.initialize(asof='2019-09-01', mst_pck=True)
 

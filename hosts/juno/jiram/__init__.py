@@ -20,8 +20,7 @@ from hosts.juno import Juno
 
 #===============================================================================
 def from_file(filespec, return_all_planets=False, **parameters):
-    """
-    A general, static method to return a Snapshot object based on a given
+    """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
 
     Inputs:
@@ -68,8 +67,7 @@ class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """
-        Uses the label to assemble the image metadata.
+        """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
@@ -96,9 +94,7 @@ class Metadata(object):
 
 #*******************************************************************************
 class JIRAM(object):
-    """
-    A instance-free class to hold JIRAM instrument parameters.
-    """
+    """A instance-free class to hold JIRAM instrument parameters."""
 
     instrument_kernel = None
     fovs = {}
@@ -109,8 +105,7 @@ class JIRAM(object):
     def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
-        """
-        Initialize key information about the JIRAM instrument.
+        """Initialize key information about the JIRAM instrument.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
@@ -147,8 +142,7 @@ class JIRAM(object):
     #===========================================================================
     @staticmethod
     def create_frame(time, name):
-        """
-        Create a frame for JIRAM component.
+        """Create a frame for a JIRAM component.
 
         Input:
             time  time at which to define the inertialy fixed mirror-corrected
@@ -156,7 +150,7 @@ class JIRAM(object):
 
             name  name of the component.
         """
-        spice_frame = "JUNO_JIRAM_" + name
+        spice_frame = 'JUNO_JIRAM_' + name
 
         # rotation to reorganize axes vectors
         rot = oops.Matrix3([[ 0,-1, 0],
@@ -166,11 +160,11 @@ class JIRAM(object):
         # Define fixed frame relative to J2000 from JIRAM orientation at
         # given time
         jiram_raw = \
-            oops.frame.SpiceFrame(spice_frame, frame_id=spice_frame+"_RAW")
+            oops.frame.SpiceFrame(spice_frame, frame_id=spice_frame+'_RAW')
         xform = jiram_raw.transform_at_time(time)
 
         jiram_raw_j2000 = \
-            oops.frame.Cmatrix(xform.matrix, frame_id=spice_frame+"_RAW_J2000")
+            oops.frame.Cmatrix(xform.matrix, frame_id=spice_frame+'_RAW_J2000')
         jiram_frame = \
             oops.frame.Cmatrix(rot, jiram_raw_j2000, frame_id=spice_frame)
 
@@ -179,9 +173,9 @@ class JIRAM(object):
     #===========================================================================
     @staticmethod
     def reset():
-        """
-        Resets the internal JIRAM parameters. Can be useful for
-        debugging.
+        """Reset the internal JIRAM parameters.
+
+        Can be useful for debugging.
         """
         JIRAM.instrument_kernel = None
         JIRAM.fovs = {}
