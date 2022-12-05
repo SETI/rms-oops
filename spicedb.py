@@ -11,6 +11,7 @@ import datetime
 import numbers
 import os
 import unittest
+import warnings
 
 import interval
 import julian
@@ -1450,9 +1451,13 @@ def furnish_kernels(kernel_list, fast=True):
     # For each kernel...
     for kernel in kernel_list:
 
-        # Verify the existence of the kernel file
-        if os.path.exists(os.path.join(spice_path, kernel.filespec)):
-            
+        # Flag non-existence of the kernel file
+        testpath = os.path.join(spice_path, kernel.filespec)
+        if not os.path.exists(testpath):
+            warnings.warn('SPICE kernel not found: ' + testpath, RuntimeWarning)
+
+        # Otherwise add kernel name to the list
+        else:    
             # Add the full name to the end of the name list
             name = kernel.full_name
             if name not in name_list:
