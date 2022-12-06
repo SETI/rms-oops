@@ -1451,50 +1451,46 @@ def furnish_kernels(kernel_list, fast=True):
     # For each kernel...
     for kernel in kernel_list:
 
-        # Flag non-existence of the kernel file
-        testpath = os.path.join(spice_path, kernel.filespec)
-        if not os.path.exists(testpath):
-            warnings.warn('SPICE kernel not found: ' + testpath, RuntimeWarning)
+        # Add the full name to the end of the name list
+        name = kernel.full_name
+        if name not in name_list:
+            name_list.append(name)
+            name_types[name] = kernel.kernel_type
 
-        # Otherwise add kernel name to the list
-        else:    
-            # Add the full name to the end of the name list
-            name = kernel.full_name
-            if name not in name_list:
-                name_list.append(name)
-                name_types[name] = kernel.kernel_type
+        # Keep track of file_nos required
+        if kernel.file_no is not None:
+            if name not in fileno_dict:
+                fileno_dict[name] = []
 
-            # Keep track of file_nos required
-            if kernel.file_no is not None:
-                if name not in fileno_dict:
-                    fileno_dict[name] = []
+            if kernel.file_no not in fileno_dict[name]:
+                fileno_dict[name].append(kernel.file_no)
 
-                if kernel.file_no not in fileno_dict[name]:
-                    fileno_dict[name].append(kernel.file_no)
+        # Update the list of files to furnish
+        filepaths = kernel.filespec.split(',')
+        abspaths = [os.path.join(spice_path, f) for f in filepaths]
+        if TRANSLATOR:
+            new_abspaths = []
+            for oldpath in abspaths:
+                newpath = TRANSLATOR(oldpath)
+                if newpath:
+                    new_abspaths.append(newpath)
 
-            # Update the list of files to furnish
-            filepaths = kernel.filespec.split(',')
-            abspaths = [os.path.join(spice_path, f) for f in filepaths]
-            if TRANSLATOR:
-                new_abspaths = []
-                for oldpath in abspaths:
-                    newpath = TRANSLATOR(oldpath)
-                    if newpath:
-                        new_abspaths.append(newpath)
+            abspaths = new_abspaths
 
-                abspaths = new_abspaths
+        for abspath in abspaths:
 
-            for abspath in abspaths:
+            # Remove the name from earlier in the list if necessary
+            if abspath in abspath_list:
+                abspath_list.remove(abspath)
 
-                # Remove the name from earlier in the list if necessary
-                if abspath in abspath_list:
-                    abspath_list.remove(abspath)
+            # Always add it at the end
+            abspath_list.append(abspath)
+            abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
-                # Always add it at the end
-                abspath_list.append(abspath)
-                abspath_types[abspath] = kernel.kernel_type     # track kernel types
-
-                # Save the info for each furnished file
+            # Save the info for each furnished file if it exists
+            if not os.path.exists(abspath):
+                warnings.warn('SPICE kernel not found: ' + testpath, RuntimeWarning)
+            else:
                 basename = os.path.basename(abspath)
                 if basename in FURNISHED_INFO:
                     if kernel not in FURNISHED_INFO[basename]:
