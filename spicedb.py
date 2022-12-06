@@ -1488,9 +1488,7 @@ def furnish_kernels(kernel_list, fast=True):
             abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
             # Save the info for each furnished file if it exists
-            if not os.path.exists(abspath):
-                warnings.warn('SPICE kernel not found: ' + testpath, RuntimeWarning)
-            else:
+            if os.path.exists(abspath):
                 basename = os.path.basename(abspath)
                 if basename in FURNISHED_INFO:
                     if kernel not in FURNISHED_INFO[basename]:
@@ -1498,7 +1496,10 @@ def furnish_kernels(kernel_list, fast=True):
                 else:
                     FURNISHED_INFO[basename] = [kernel]
 
-
+            # Otherwise flag it and remove from abspath_list
+            else:
+                warnings.warn('SPICE kernel not found: ' + abspath, RuntimeWarning)
+                abspath_list.remove(abspath)
 
     # Furnish the kernel files...
     if DEBUG:

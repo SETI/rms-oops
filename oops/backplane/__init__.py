@@ -751,19 +751,17 @@ import os
 
 import oops.config as config
 
-from polymath                   import Vector3
+from polymath                           import Vector3
 
-from oops.config                import ABERRATION
-from oops.meshgrid              import Meshgrid
-from oops.body                  import Body
-from oops.event                 import Event
-from oops.surface.ansa          import Ansa
+from oops.config                        import ABERRATION
+from oops.meshgrid                      import Meshgrid
+from oops.body                          import Body
+from oops.event                         import Event
+from oops.surface.ansa                  import Ansa
 
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
 from oops.backplane.unittester_support  import Backplane_Settings
-
-
 
 UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                         'cassini/ISS/W1573721822_1.IMG')
@@ -779,7 +777,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
     def setUp(self):
         global OLD_RHEA_SURFACE
 
-        from oops.surface.ellipsoid  import Ellipsoid
+        from oops.surface.ellipsoid import Ellipsoid
 
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
@@ -817,8 +815,8 @@ class Test_Backplane_Surfaces(unittest.TestCase):
     #===========================================================================
     def runTest(self):
 
-        from oops.surface.centricspheroid import CentricSpheroid
-        from oops.surface.graphicspheroid import GraphicSpheroid
+        from oops.surface.centricspheroid  import CentricSpheroid
+        from oops.surface.graphicspheroid  import GraphicSpheroid
         from oops.surface.centricellipsoid import CentricEllipsoid
         from oops.surface.graphicellipsoid import GraphicEllipsoid
 

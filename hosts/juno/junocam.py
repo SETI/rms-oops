@@ -50,10 +50,7 @@ def from_file(filespec, fast_distortion=True,
     Juno.load_spks(meta.tstart0, meta.tstart0 + 3600.)
 
     # Construct a Pushframe for each framelet
-
     snap = False
-
-
     obs = []
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
@@ -67,8 +64,6 @@ def from_file(filespec, fast_distortion=True,
                                 filter = fmeta.filter,
                                 data = framelets[:,:,i]))
 
-
-
         if not snap:
             item = (oops.obs.Pushframe(
                                     ('vt','u'),
@@ -79,17 +74,13 @@ def from_file(filespec, fast_distortion=True,
                                     filter = fmeta.filter,
                                     data = framelets[:,:,i]))
 
-
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'junocam', return_all_planets))
-
-
         item.insert_subfield('filespec', filespec)
         item.insert_subfield('basename', os.path.basename(filespec))
         obs.append(item)
 
     return obs
-
 
 #===============================================================================
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
@@ -119,8 +110,6 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
     JUNOCAM.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
-
-
 
 #===============================================================================
 def _load_data(filespec, label, meta):
@@ -171,7 +160,6 @@ def _load_data(filespec, label, meta):
 
 
     return (framelets, framelet_labels)
-
 
 
 #*******************************************************************************
@@ -282,7 +270,6 @@ class Metadata(object):
 
         return
 
-
     #===========================================================================
     def update_cy(self, label, cy):
         """Look at label RATIONALE_DESC for a correction to DISTORTION_Y for
@@ -300,7 +287,6 @@ class Metadata(object):
         desc = re.sub('\s+',' ', desc)                     # compress whitespace
         kv = desc.partition('INS-61504_DISTORTION_Y = ')   # parse keyword
         return float(kv[2].split()[0])                     # parse/convert value
-
 
 
 #*******************************************************************************
@@ -353,8 +339,6 @@ class JUNOCAM(object):
 
         JUNOCAM.initialized = True
 
-
-
     #===========================================================================
     @staticmethod
     def reset():
@@ -398,7 +382,6 @@ class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
         obs = from_file(file)[5]
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key='JUPITER')
-
 
 
 ##############################################

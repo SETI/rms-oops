@@ -6,6 +6,7 @@ import unittest
 import re
 import os
 import sys
+import numbers
 import numpy as np
 
 from polymath import Scalar
@@ -127,11 +128,16 @@ def _print(*x, printing=True):
     print(*x)
 
 #===============================================================================
-def show_info(bp, title, array, printing=True, saving=False, dir='./', refdir=None):
+def show_info(bp, title, array, **options):
     """Internal method to print summary information and display images."""
 
-    import numbers
+    #Get options
+    printing =  options.get('printing', True)
+    saving =    options.get('saving', False)
+    dir =       options.get('dir', './')
+    refdir =    options.get('refdir', None)
 
+    # No action if no input arary or no actions requested
     if array is None:
         return
 
@@ -139,7 +145,6 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./', refdir=No
         return
 
     _print(title, printing=printing)
-
 
     # Scalar summary
     if isinstance(array, numbers.Number):
@@ -153,7 +158,7 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./', refdir=No
         total = np.size(array.vals)
         percent = int(count / float(total) * 100. + 0.5)
         _print('  ', (count, total-count),
-              (percent, 100-percent), '(True, False pixels)', printing=printing)
+               (percent, 100-percent), '(True, False pixels)', printing=printing)
         minval = 0.
         maxval = 1.
 
@@ -218,9 +223,10 @@ def show_info(bp, title, array, printing=True, saving=False, dir='./', refdir=No
 class Backplane_Settings(object):
     """Class for storing command-line preferences."""
 
-    from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+    from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
     ARGS = []
+    ARGV = []
     DIFF = []
     EXERCISES_ONLY = False
     NO_EXERCISES = False
@@ -250,7 +256,7 @@ def backplane_unittester_args():
 
     # Generic arguments
     parser.add_argument('--args', nargs='*', metavar='arg', default=None,
-                        help='Generic arguments to pass to the test modules. ' \
+                        help='Generic arguments to pass to the test modules. '
                              'Must occur last in the argument list.')
 
 
@@ -298,13 +304,13 @@ def backplane_unittester_args():
 
 
     ## Parse arguments, leaving unknown args for some other parser ##
-    args, left = parser.parse_known_args()
+    argv, left = parser.parse_known_args()
     sys.argv = sys.argv[:1]+left
-
+    Backplane_Settings.ARGV = argv                # Save command args
 
     ## Implement argments ##
-    if args.test_level is not None:
-        test_level = args.test_level[0]
+    if argv.test_level is not None:
+        test_level = argv.test_level[0]
         if test_level == 1:
             Backplane_Settings.PRINTING = False
             Backplane_Settings.SAVING = False
@@ -320,38 +326,38 @@ def backplane_unittester_args():
             Backplane_Settings.SAVING = True
             Backplane_Settings.UNDERSAMPLE = 1
 
-    if args.args is not None:
-        Backplane_Settings.ARGS = args.args
+    if argv.args is not None:
+        Backplane_Settings.ARGS = argv.args
 
-    if args.verbose is not None:
-        Backplane_Settings.PRINTING = args.verbose
+    if argv.verbose is not None:
+        Backplane_Settings.PRINTING = argv.verbose
 
-#    if args.diff is not None:
-#        _diff_logs(args.diff[0], args.diff[1], verbose=Backplane_Settings.PRINTING)
+#    if argv.diff is not None:
+#        _diff_logs(argv.diff[0], argv.diff[1], verbose=Backplane_Settings.PRINTING)
 #        exit()
 
-    if args.exercises_only is not None:
-        Backplane_Settings.EXERCISES_ONLY = args.exercises_only
+    if argv.exercises_only is not None:
+        Backplane_Settings.EXERCISES_ONLY = argv.exercises_only
 
-    if args.no_exercises is not None:
-        Backplane_Settings.NO_EXERCISES = args.no_exercises
+    if argv.no_exercises is not None:
+        Backplane_Settings.NO_EXERCISES = argv.no_exercises
 
-    if args.no_compare is not None:
-        Backplane_Settings.NO_COMPARE = args.no_compare
+    if argv.no_compare is not None:
+        Backplane_Settings.NO_COMPARE = argv.no_compare
 
-    if args.output is not None:
-        Backplane_Settings.OUTPUT = args.output[0]
+    if argv.output is not None:
+        Backplane_Settings.OUTPUT = argv.output[0]
 
-    if args.no_output is not None:
-        Backplane_Settings.SAVING = not args.no_output
+    if argv.no_output is not None:
+        Backplane_Settings.SAVING = not argv.no_output
 
-    if args.log is not None:
-        Backplane_Settings.LOGGING = args.log
+    if argv.log is not None:
+        Backplane_Settings.LOGGING = argv.log
 
-    if args.undersample is not None:
-        Backplane_Settings.UNDERSAMPLE = args.undersample[0]
+    if argv.undersample is not None:
+        Backplane_Settings.UNDERSAMPLE = argv.undersample[0]
 
-    if args.reference is not None:
+    if argv.reference is not None:
         Backplane_Settings.EXERCISES_ONLY = True
         Backplane_Settings.NO_COMPARE = True
         Backplane_Settings.SAVING = True

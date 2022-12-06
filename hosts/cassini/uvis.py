@@ -578,7 +578,7 @@ class Test_Cassini_UVIS_Backplane_Exercises(unittest.TestCase):
 
 
 ############################################
-from oops.backplane.unittester_support      import backplane_unittester_args
+from oops.backplane.unittester_support import backplane_unittester_args
 
 if __name__ == '__main__':
     backplane_unittester_args()

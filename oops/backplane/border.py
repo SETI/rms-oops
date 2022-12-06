@@ -4,8 +4,7 @@
 
 import numpy as np
 
-from polymath import Boolean
-
+from polymath       import Boolean
 from oops.backplane import Backplane
 
 #===============================================================================
@@ -145,9 +144,9 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 import unittest
-from oops.unittester_support             import TESTDATA_PARENT_DIRECTORY
-from oops.constants                      import DPR
-from oops.backplane.unittester_support   import show_info
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
 
 
 #*******************************************************************************

@@ -90,21 +90,21 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 import unittest
-from oops.meshgrid                      import Meshgrid
-from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-from oops.constants                     import DPR
-from oops.backplane.unittester_support  import show_info
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
 
 #===============================================================================
-def exercise(bp, printing, saving, dir, refdir,
+def exercise(bp,
              planet=None, moon=None, ring=None,
-             undersample=16, use_inventory=False, inventory_border=2):
+             undersample=16, use_inventory=False, inventory_border=2,
+             **options):
     """generic unit tests for limb.py"""
 
     if planet is not None:
         test = bp.limb_altitude(planet+':limb')
-        show_info(bp, 'Limb altitude (km)', test,
-                  printing=printing, saving=saving, dir=dir, refdir=refdir)
+        show_info(bp, 'Limb altitude (km)', test, **options)
 
 
 #*******************************************************************************

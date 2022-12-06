@@ -207,48 +207,40 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 import unittest
-from oops.meshgrid                       import Meshgrid
-from oops.unittester_support             import TESTDATA_PARENT_DIRECTORY
-from oops.constants                      import DPR
-from oops.backplane.unittester_support   import show_info
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
 
 #===============================================================================
-def exercise_planet(bp, printing, saving, dir, refdir,
+def exercise_planet(bp,
                     planet=None, moon=None, ring=None,
-                    undersample=16, use_inventory=False, inventory_border=2):
+                    undersample=16, use_inventory=False, inventory_border=2,
+                    **options):
     """generic unit tests for lighting.py"""
 
     if planet is not None:
         test = bp.phase_angle(planet)
-        show_info(bp, 'planet phase angle (deg)', test*DPR,
-                  printing=printing, saving=saving, dir=dir, refdir=refdir)
-
+        show_info(bp, 'planet phase angle (deg)', test*DPR, **options)
         test = bp.scattering_angle(planet)
-        show_info(bp, 'planet scattering angle (deg)', test*DPR,
-                  printing=printing, saving=saving, dir=dir, refdir=refdir)
-
+        show_info(bp, 'planet scattering angle (deg)', test*DPR, **options)
         test = bp.incidence_angle(planet)
-        show_info(bp, 'planet incidence angle (deg)', test*DPR,
-                  printing=printing, saving=saving, dir=dir, refdir=refdir)
-
+        show_info(bp, 'planet incidence angle (deg)', test*DPR, **options)
         test = bp.emission_angle(planet)
-        show_info(bp, 'planet emission angle (deg)', test*DPR,
-                  printing=printing, saving=saving, dir=dir, refdir=refdir)
-
+        show_info(bp, 'planet emission angle (deg)', test*DPR, **options)
         test = bp.lambert_law(planet)
-        show_info(bp, 'planet as a Lambert law', test,
-                  printing=printing, saving=saving, dir=dir, refdir=refdir)
+        show_info(bp, 'planet as a Lambert law', test, **options)
 
 #===============================================================================
-def exercise_ring(bp, printing, saving, dir, refdir,
+def exercise_ring(bp,
                   planet=None, moon=None, ring=None,
-                  undersample=16, use_inventory=False, inventory_border=2):
+                  undersample=16, use_inventory=False, inventory_border=2,
+                  **options):
     """generic unis for lighting.py"""
 
     if ring is not None:
         test = bp.phase_angle(ring)
-        show_info(bp, 'Ring phase angle (deg)', test*DPR,
-                  printing=printing, saving=saving, dir=dir, refdir=refdir)
+        show_info(bp, 'Ring phase angle (deg)', test*DPR,**options)
 
 
 #*******************************************************************************
