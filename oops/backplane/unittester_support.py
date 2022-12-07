@@ -313,7 +313,6 @@ def backplane_unittester_args():
     argv, left = parser.parse_known_args()
     sys.argv = sys.argv[:1]+left
     Backplane_Settings.ARGV = argv                # Save command args
-    print(Backplane_Settings.ARGV)
 
     ## Implement argments ##
     if argv.test_level is not None:
