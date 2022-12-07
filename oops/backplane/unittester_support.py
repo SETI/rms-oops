@@ -223,11 +223,9 @@ def show_info(bp, title, array, **options):
 class Backplane_Settings(object):
     """Class for storing command-line preferences."""
 
-    from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-
+    # Static default values
+    ARGV = None
     ARGS = []
-    ARGV = []
-    DIFF = []
     EXERCISES_ONLY = False
     NO_EXERCISES = False
     NO_COMPARE = False
@@ -235,20 +233,29 @@ class Backplane_Settings(object):
     LOGGING = False
     PRINTING = False
     UNDERSAMPLE = 16
+    REF = False
+
+    # TBD attributes
+#    DIFF = []
 #    PLANET_KEY = None
 #    MOON_KEY = None
 #    RING_KEY = None
+
+
+    # Attributes that depend on the input file.  Defaults are determined
+    # in exercise_backplanes_settings() for each input file.
     OUTPUT = None
     REFERENCE = None
-    REF = False
+
 
 #===============================================================================
 def backplane_unittester_args():
-    """Parse command-line arguments for backplane unit tests."""
+    """Parse command-line arguments for backplane unit tests.
 
+    This function must be called by main() in order for these arguments to
+    to be parsed.  If not, the above default values will apply."""
     import argparse
     import sys
-
 
     ## Define arguments ##
     parser = argparse.ArgumentParser(description='Backplane unit tester.')
@@ -290,7 +297,6 @@ def backplane_unittester_args():
     parser.add_argument('--undersample', nargs=1, type=int, metavar='N', default=None,
                         help='Amount by which to undersample backplanes.  Default is 16.')
 
-
     parser.add_argument('--reference', action='store_true', default=None,
                         help='Generate reference backplanes and exit.')
 
@@ -307,6 +313,7 @@ def backplane_unittester_args():
     argv, left = parser.parse_known_args()
     sys.argv = sys.argv[:1]+left
     Backplane_Settings.ARGV = argv                # Save command args
+    print(Backplane_Settings.ARGV)
 
     ## Implement argments ##
     if argv.test_level is not None:
@@ -332,6 +339,7 @@ def backplane_unittester_args():
     if argv.verbose is not None:
         Backplane_Settings.PRINTING = argv.verbose
 
+#   TBD
 #    if argv.diff is not None:
 #        _diff_logs(argv.diff[0], argv.diff[1], verbose=Backplane_Settings.PRINTING)
 #        exit()
@@ -364,6 +372,7 @@ def backplane_unittester_args():
         Backplane_Settings.REF = True
 
 
+#   TBD
 #    # Body keywords
 #    if '--planet' in sys.argv:
 #        k = sys.argv.index('--planet')

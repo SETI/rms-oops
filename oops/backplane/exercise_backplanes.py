@@ -224,7 +224,7 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
 def exercise_backplanes_settings(obs):
     """Configure run-time backplane settings based on an observation."""
 
-    # determine reference directory
+    # Determine reference directory
     testdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '')   # Ensure trailing
                                                             # delimeter.
     parts = obs.filespec.partition(testdir)
@@ -232,8 +232,8 @@ def exercise_backplanes_settings(obs):
     refdir = os.path.join('reference_' + str(Backplane_Settings.UNDERSAMPLE))
     Backplane_Settings.REFERENCE = os.path.join(testdir, 'backplane_exercises', specdir, refdir)
 
-    # determine specific output directory
-    if Backplane_Settings.ARGV.output is None and Backplane_Settings.SAVING:
+    # Determine specific output directory
+    if Backplane_Settings.OUTPUT is None and Backplane_Settings.SAVING:
         Backplane_Settings.OUTPUT = \
             os.path.join(os.environ['OOPS_BACKPLANE_OUTPUT_PATH'], specdir)
 
@@ -252,10 +252,10 @@ def exercise_backplanes(obs, **kwargs):
     in args based on settings.
     """
 
-    # complete settings that require observation information
+    # Complete settings that require observation information
     exercise_backplanes_settings(obs)
 
-    # perform the exercises
+    # Perform the exercises
     _exercise_backplanes(obs, Backplane_Settings.PRINTING,
                               Backplane_Settings.LOGGING,
                               Backplane_Settings.SAVING,
@@ -263,3 +263,7 @@ def exercise_backplanes(obs, **kwargs):
                               Backplane_Settings.REFERENCE,
                               undersample=Backplane_Settings.UNDERSAMPLE,
                               **kwargs)
+
+    # Reset input-dependent backplane settings
+    Backplane_Settings.OUTPUT = None
+    Backplane_Settings.REFERENCE = None
