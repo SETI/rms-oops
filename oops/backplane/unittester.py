@@ -18,7 +18,7 @@
 #  --no-exercises        Execute all tests except the backplane exercises.
 #  --no-compare          Do not compare backplanes with references.
 #  --output dir          Directory in which to save backplane PNG images.
-#                        Default is TESTDATA_PARENT_DIRECTORY/[data dir]. If
+#                        Default is $OOPS_BACKPLANE_OUTPUT_PATH/[data dir]. If
 #                        the directory does not exist, it is created.
 #  --no-output           Disable saving of backplane PNG files.
 #  --log                 Enable the internal oops logging.
