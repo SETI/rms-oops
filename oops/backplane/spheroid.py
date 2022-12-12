@@ -482,12 +482,8 @@ def lommel_seeliger_law(self, event_key):
 Backplane._define_backplane_names(globals().copy())
 
 ################################################################################
-
-
-################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 from oops.meshgrid                     import Meshgrid
 from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
@@ -643,6 +639,7 @@ class Test_Spheroid(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
+
 
 ########################################
 if __name__ == '__main__':

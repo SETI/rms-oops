@@ -414,8 +414,6 @@ class ISS(object):
 
         Cassini.reset()
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -459,7 +457,6 @@ class Test_Cassini_ISS_Backplane_Exercises(unittest.TestCase):
         obs = from_file(file)
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key='SATURN')
-
 
 
 ############################################

@@ -10,7 +10,6 @@ from oops.backplane import Backplane
 ################################################################################
 # Boolean Masks
 ################################################################################
-
 def where_intercepted(self, event_key):
     """A Boolean array where the surface was intercepted."""
 
@@ -204,12 +203,8 @@ def where_all(self, *backplane_keys):
 Backplane._define_backplane_names(globals().copy())
 
 ################################################################################
-
-
-################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 from oops.meshgrid                     import Meshgrid
 from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
@@ -276,6 +271,7 @@ class Test_Where(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
+
 
 ########################################
 if __name__ == '__main__':

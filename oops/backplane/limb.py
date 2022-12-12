@@ -83,12 +83,8 @@ def _fill_limb_intercepts(self, event_key, limit=None, lock_limits=False):
 Backplane._define_backplane_names(globals().copy())
 
 ################################################################################
-
-
-################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 from oops.meshgrid                     import Meshgrid
 from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
@@ -116,6 +112,7 @@ class Test_Limb(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
+
 
 ########################################
 if __name__ == '__main__':

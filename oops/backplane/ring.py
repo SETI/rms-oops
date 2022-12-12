@@ -829,12 +829,8 @@ def ring_radius_in_front(self, event_key, ring_body):
 Backplane._define_backplane_names(globals().copy())
 
 ################################################################################
-
-
-################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 from oops.meshgrid                     import Meshgrid
 from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
@@ -1028,6 +1024,7 @@ class Test_Ring(unittest.TestCase):
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest("")
         pass
+
 
 ########################################
 if __name__ == '__main__':

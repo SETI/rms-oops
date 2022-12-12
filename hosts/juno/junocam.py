@@ -56,23 +56,20 @@ def from_file(filespec, fast_distortion=True,
         fmeta = Metadata(flabels[i])
 
         if snap:
-            item = (oops.obs.Snapshot(
-                                ('v','u'),
-                                (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
-                                'JUNO', 'JUNO_JUNOCAM',
-                                instrument = 'JUNOCAM',
-                                filter = fmeta.filter,
-                                data = framelets[:,:,i]))
+            item = oops.obs.Snapshot(('v','u'),
+                                     (fmeta.tstart, fmeta.tdi_texp),
+                                     fmeta.fov, 'JUNO', 'JUNO_JUNOCAM',
+                                     instrument = 'JUNOCAM',
+                                     filter = fmeta.filter,
+                                     data = framelets[:,:,i])
 
         if not snap:
-            item = (oops.obs.Pushframe(
-                                    ('vt','u'),
-                                    (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
-                                    fmeta.fov,
-                                    'JUNO', 'JUNO_JUNOCAM',
-                                    instrument = 'JUNOCAM',
-                                    filter = fmeta.filter,
-                                    data = framelets[:,:,i]))
+            item = oops.obs.Pushframe(('vt','u'),
+                                      (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
+                                      fmeta.fov, 'JUNO', 'JUNO_JUNOCAM',
+                                      instrument = 'JUNOCAM',
+                                      filter = fmeta.filter,
+                                      data = framelets[:,:,i])
 
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'junocam', return_all_planets))
@@ -354,12 +351,9 @@ class JUNOCAM(object):
 
         Juno.reset()
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 import os.path
 

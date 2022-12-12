@@ -44,12 +44,12 @@ def from_file(filespec, label, fast_distortion=True,
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
 
-        item = (oops.obs.Snapshot(('v','u'),
-                                  fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                  'JUNO', 'JUNO_JIRAM_I_' + fmeta.filter_frame,
-                                  instrument = 'JIRAM_I',
-                                  filter = fmeta.filter,
-                                  data = framelets[:,:,i]))
+        item = oops.obs.Snapshot(('v','u'),
+                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
+                                 'JUNO', 'JUNO_JIRAM_I_' + fmeta.filter_frame,
+                                 instrument = 'JIRAM_I',
+                                 filter = fmeta.filter,
+                                 data = framelets[:,:,i])
 
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
@@ -239,7 +239,6 @@ class IMG(object):
 
         IMG.initialized = True
 
-
     #===========================================================================
     @staticmethod
     def reset():
@@ -253,12 +252,9 @@ class IMG(object):
 
         JIRAM.reset()
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 import os.path
 
@@ -267,6 +263,7 @@ import hosts.juno.jiram as jiram
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
 from oops.backplane.unittester_support  import Backplane_Settings
+
 
 #*******************************************************************************
 class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):

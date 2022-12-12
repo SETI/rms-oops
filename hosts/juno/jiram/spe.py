@@ -69,7 +69,6 @@ def from_file(filespec, label, fast_distortion=True,
 
     return (obs, slits)
 
-
 #===============================================================================
 def _load_data(filespec, label, meta):
     """Load the data array from the file and splits into individual framelets.
@@ -188,7 +187,6 @@ class SPE(object):
 
         SPE.initialized = True
 
-
     #===========================================================================
     @staticmethod
     def reset():
@@ -200,12 +198,9 @@ class SPE(object):
 
         JIRAM.reset()
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 import os.path
 
@@ -214,6 +209,7 @@ import hosts.juno.jiram as jiram
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
 from oops.backplane.unittester_support  import Backplane_Settings
+
 
 #*******************************************************************************
 class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
@@ -229,7 +225,6 @@ class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
         (obs, slits) = jiram.from_file(file)
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key='MOON')
-
 
 
 ##############################################

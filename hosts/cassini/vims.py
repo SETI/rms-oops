@@ -925,7 +925,6 @@ class VIMS(object):
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 import os.path
 
@@ -940,7 +939,6 @@ class Test_Cassini_VIMS(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         pass
-
 
 
 #*******************************************************************************
@@ -965,7 +963,6 @@ class Test_Cassini_VIMS_Backplane_Exercises(unittest.TestCase):
         (obs_vis, obs_ir) = from_file(file)
         exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
                                      planet_key='SATURN')
-
 
 
 ############################################

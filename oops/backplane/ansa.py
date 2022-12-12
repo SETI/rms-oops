@@ -284,12 +284,8 @@ def ansa_vertical_resolution(self, event_key):
 Backplane._define_backplane_names(globals().copy())
 
 ################################################################################
-
-
-################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 from oops.meshgrid                     import Meshgrid
 from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY

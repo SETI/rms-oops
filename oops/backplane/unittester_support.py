@@ -193,12 +193,10 @@ def show_info(bp, title, array, **options):
     if array.shape == ():
         return
 
-
     # scale image
     if minval == maxval:
         maxval += 1.
     image = _scale_image(array, minval, maxval)
-
 
     # Save backplane array if directed
     if saving:
@@ -206,7 +204,6 @@ def show_info(bp, title, array, **options):
 
         filename = _construct_filename(bp, array, title, dir)
         _save_image(image, filename)
-
 
     # Compare with reference array if refdir is known
     if refdir is not None:
@@ -241,7 +238,6 @@ class Backplane_Settings(object):
 #    MOON_KEY = None
 #    RING_KEY = None
 
-
     # Attributes that depend on the input file.  Defaults are determined
     # in exercise_backplanes_settings() for each input file.
     OUTPUT = None
@@ -260,12 +256,10 @@ def backplane_unittester_args():
     ## Define arguments ##
     parser = argparse.ArgumentParser(description='Backplane unit tester.')
 
-
     # Generic arguments
     parser.add_argument('--args', nargs='*', metavar='arg', default=None,
                         help="""Generic arguments to pass to the test modules.
                                 Must occur last in the argument list.""")
-
 
     # Basic controls
     parser.add_argument('--verbose', action='store_true', default=None,
@@ -307,7 +301,6 @@ def backplane_unittester_args():
                                 -test-level 2: printing, no saving, undersample 16.
                                 -test-level 3: printing, saving, no undersampling.
                                 These behaviors are overridden by other arguments.""")
-
 
     ## Parse arguments, leaving unknown args for some other parser ##
     args, left = parser.parse_known_args()
@@ -369,7 +362,6 @@ def backplane_unittester_args():
         Backplane_Settings.NO_COMPARE = True
         Backplane_Settings.SAVING = True
         Backplane_Settings.REF = True
-
 
 #   TBD
 #    # Body keywords
